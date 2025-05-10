@@ -1,19 +1,25 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronDown, ArrowRight, Code2, Palette, Target, Terminal, GitBranch, Activity, Coffee } from 'lucide-react';
+import { ArrowRight, Code2, Palette, Target, Terminal, GitBranch, Activity, Coffee } from 'lucide-react';
+
+// Define a type for particles
+interface Particle {
+  id: number;
+  x: number;
+  y: number;
+  size: number;
+  speedX: number;
+  speedY: number;
+  opacity: number;
+}
 
 const Hero = () => {
   const [scrollPosition, setScrollPosition] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
   const [isTerminalActive, setIsTerminalActive] = useState(false);
   const [codeLineIndex, setCodeLineIndex] = useState(0);
-  const [particles, setParticles] = useState<any[]>([]);
-  const [serviceStats, setServiceStats] = useState({
-    software: { uptime: 99.9, activity: 87 },
-    design: { uptime: 98.7, activity: 93 },
-    mgmt: { uptime: 99.2, activity: 89 }
-  });
+  const [particles, setParticles] = useState<Particle[]>([]);
   const heroRef = useRef<HTMLDivElement | null>(null);
   const terminalRef = useRef<HTMLDivElement | null>(null);
   const [isMounted, setIsMounted] = useState(false);
@@ -61,30 +67,6 @@ const Hero = () => {
     return () => clearInterval(interval);
   }, [isMounted]);
 
-  // Service stats animation
-  useEffect(() => {
-    if (!isMounted) return;
-    
-    const interval = setInterval(() => {
-      setServiceStats(prev => ({
-        software: {
-          uptime: Math.min(100, prev.software.uptime + Math.random() * 0.1 - 0.05),
-          activity: Math.max(80, Math.min(95, prev.software.activity + Math.random() * 4 - 2))
-        },
-        design: {
-          uptime: Math.min(100, prev.design.uptime + Math.random() * 0.1 - 0.05),
-          activity: Math.max(85, Math.min(98, prev.design.activity + Math.random() * 3 - 1.5))
-        },
-        mgmt: {
-          uptime: Math.min(100, prev.mgmt.uptime + Math.random() * 0.1 - 0.05),
-          activity: Math.max(82, Math.min(96, prev.mgmt.activity + Math.random() * 3.5 - 1.75))
-        }
-      }));
-    }, 2000);
-
-    return () => clearInterval(interval);
-  }, [isMounted]);
-
   useEffect(() => {
     setIsMounted(true);
     setIsVisible(true);
@@ -109,7 +91,7 @@ const Hero = () => {
     }, 800 + Math.random() * 400);
     
     return () => clearTimeout(timer);
-  }, [isTerminalActive, codeLineIndex]);
+  }, [isTerminalActive, codeLineIndex, codeLines.length]);
 
   // 6. Add 3s delay before terminal starts
   useEffect(() => {
@@ -131,7 +113,6 @@ const Hero = () => {
 
   // Parallax effect values
   const parallaxY = scrollPosition * 0.3;
-  const fadeOpacity = Math.max(0, 1 - scrollPosition / 400);
 
   // Button interaction handlers
   const handleButtonPress = (button: 'custom' | 'login') => {
