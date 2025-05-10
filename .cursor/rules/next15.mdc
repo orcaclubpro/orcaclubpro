@@ -1,0 +1,160 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+---
+description: 
+globs: 
+alwaysApply: true
+---
+---
+description: This rule provides comprehensive guidance for Next.js development, covering code organization, performance, security, testing, and common pitfalls. It helps developers build robust, scalable, and maintainable Next.js applications by adhering to community-accepted best practices and coding standards.
+globs: **/*.{js,jsx,ts,tsx}
+---
+# Next.js Best Practices
+
+This document outlines best practices for developing Next.js applications, focusing on code organization, performance optimization, security, testing strategies, and common pitfalls to avoid. Adhering to these guidelines will help you build robust, scalable, and maintainable applications.
+
+When using other development tools to integrate with our next.js application, use context7 to get up to date documentation. 
+
+## 1. Code Organization and Structure
+
+### Directory Structure
+
+*   **`app/`**: (Recommended - Next.js 13+) Contains route handlers, server components, and client components.
+    *   `page.tsx`: Represents the UI for a route.
+    *   `layout.tsx`: Defines the layout for a route and its children.
+    *   `loading.tsx`: Displays a loading UI while a route segment is loading.
+    *   `error.tsx`: Handles errors within a route segment.
+    *   `head.tsx`: Manages the `<head>` metadata for a route.
+    *   `route.ts`: Defines server-side route handlers (API routes).
+    *   `[dynamic-segment]`: Dynamic route segments, using brackets.
+    *   `@folder-name`:  Route Groups to organize routes without affecting URL structure.
+
+    *   `api/`: Serverless functions (API routes).
+    *   `_app.js/tsx`: Custom App component (wraps all pages).
+    *   `_document.js/tsx`: Custom Document component (control the entire HTML document).
+*   **`_components/`**: Reusable UI components.
+*   **`_lib/`**: Utility functions, helper functions, and third-party integrations.
+*   **`hooks/`**: Custom React hooks.
+*   **`styles/`**: Global styles and CSS modules.
+*   **`public/`**: Static assets (images, fonts, etc.).
+*   **`types/`**: TypeScript type definitions and interfaces.
+*   **`utils/`**: Contains utilities and helper functions, along with any API-related logic.
+
+**Recommendation:**  Prefer the `app/` directory structure for new projects as it aligns with the latest Next.js features and best practices.  When using `pages/`, keep it simple and migrate to `app/` when feasible.
+
+### File Naming Conventions
+
+*   **Components:** `ComponentName.jsx` or `ComponentName.tsx`
+*   **Pages:** `page.js`, `page.jsx`, `page.ts`, `page.tsx` (within the `app` or `pages` directory)
+*   **Layouts:** `layout.js`, `layout.jsx`, `layout.ts`, `layout.tsx` (within the `app` directory)
+*   **API Routes:** `route.js`, `route.ts` (within the `app/api` directory or `pages/api` directory)
+*   **Hooks:** `useHookName.js` or `useHookName.ts`
+*   **Styles:** `ComponentName.module.css` or `ComponentName.module.scss`
+*   **Types:** `types.ts` or `interfaces.ts`
+
+### Module Organization
+
+*   **Co-location:** Keep related components, styles, and tests in the same directory.
+*   **Feature-based modules:** Group files by feature rather than type (e.g., `components/user-profile/`, not `components/button`, `components/form`).
+*   **Avoid deeply nested directories:** Keep the directory structure relatively flat to improve navigation.
+
+### Component Architecture
+
+*   **Presentational vs. Container Components:** Separate components that handle data fetching and state management (container components) from those that only render UI (presentational components).
+*   **Atomic Design:** Organize components into atoms, molecules, organisms, templates, and pages for better reusability and maintainability.
+*   **Composition over inheritance:** Favor composition to create flexible and reusable components.
+*   **Server Components (app directory):**  Use server components by default for improved performance.  Only use client components when interactivity (event handlers, useState, useEffect) is required.
+
+### Code Splitting
+
+*   **Dynamic imports:** Use `next/dynamic` to load components only when they are needed, improving initial load time.  Example: `dynamic(() => import('../components/MyComponent'))`.
+*   **Route-level code splitting:** Next.js automatically splits code based on routes, so each page only loads the necessary JavaScript.
+*   **Granular code splitting:** Break down large components into smaller chunks that can be loaded independently.
+
+## 2. Common Patterns and Anti-patterns
+
+### Design Patterns
+
+*   **UTILIZE SHADCN-UI**: cleaner premium designs
+*   **UNIQUE DESINGS**: Utilize css to create elegant designs
+
+*   **Higher-Order Components (HOCs):** Reusable component logic.
+*   **Render Props:** Sharing code between React components using a prop whose value is a function.
+*   **Hooks:** Extracting stateful logic into reusable functions.
+*   **Context API:** Managing global state.
+*   **Compound Components:** Combining multiple components that work together implicitly.
+
+### Recommended Approaches
+
+*   **Data fetching:** Use `getServerSideProps` or `getStaticProps` or server components for fetching data on the server-side. Use `SWR` or `React Query` for client-side data fetching and caching.
+*   **Styling:** Use CSS Modules, Styled Components, or Tailwind CSS for component-level styling.  Prefer Tailwind CSS for rapid development.
+*   **State Management:** Use React Context, Zustand, Jotai, or Recoil for managing global state.  Redux is an option, but often overkill for smaller Next.js projects.
+*   **Form Handling:** Use `react-hook-form` for managing forms and validation.
+*   **API Routes:** Use Next.js API routes for serverless functions.
+
+### Anti-patterns and Code Smells
+
+*   **Over-fetching data:** Only fetch the data that is needed by the component.
+*   **Blocking the main thread:** Avoid long-running synchronous operations in the main thread.
+*   **Mutating state directly:** Always use `setState` or hooks to update state.
+*   **Not memoizing components:** Use `React.memo` to prevent unnecessary re-renders.
+*   **Using `useEffect` without a dependency array:** Ensure the dependency array is complete to prevent unexpected behavior.
+*   **Writing server side code in client components:** Can expose secrets or cause unexpected behavior.
+
+### State Management
+
+*   **Local State:** Use `useState` for component-specific state.
+*   **Context API:** Use `useContext` for application-wide state that doesn't change often.
+*   **Third-party libraries:** Use `Zustand`, `Jotai`, or `Recoil` for more complex state management needs. These are simpler and more performant alternatives to Redux for many Next.js use cases.
+
+### Error Handling
+
+*   **`try...catch`:** Use `try...catch` blocks for handling errors in asynchronous operations.
+*   **Error Boundary Components:** Create reusable error boundary components to catch errors in child components. Implement `getDerivedStateFromError` or `componentDidCatch` lifecycle methods.
+*   **Centralized error logging:** Log errors to a central service like Sentry or Bugsnag.
+*   **Custom Error Pages:** Use `_error.js` or `_error.tsx` to create custom error pages.
+*   **Route-level error handling (app directory):** Use `error.tsx` within route segments to handle errors specific to that route.
+
+## 3. Performance Considerations
+
+### Optimization Techniques
+
+*   **Image optimization:** Use `next/image` component for automatic image optimization, including lazy loading and responsive images.
+*   **Font optimization:**  Use `next/font` to optimize font loading and prevent layout shift.
+*   **Code splitting:** Use dynamic imports and route-level code splitting to reduce initial load time.
+*   **Caching:** Use caching strategies (e.g., `Cache-Control` headers, `SWR`, `React Query`) to reduce data fetching overhead.
+*   **Memoization:** Use `React.memo` to prevent unnecessary re-renders of components.
+*   **Prefetching:** Use the `<Link prefetch>` tag to prefetch pages that are likely to be visited.
+*   **SSR/SSG:** Use Static Site Generation (SSG) for content that doesn't change often and Server-Side Rendering (SSR) for dynamic content.
+*   **Incremental Static Regeneration (ISR):** Use ISR to update statically generated pages on a regular interval.
+
+### Memory Management
+
+*   **Avoid memory leaks:** Clean up event listeners and timers in `useEffect` hooks.
+*   **Minimize re-renders:** Only update state when necessary to reduce the number of re-renders.
+*   **Use immutable data structures:** Avoid mutating data directly to prevent unexpected side effects.
+
+### Rendering Optimization
+
+*   **Server Components (app directory):**  Render as much as possible on the server to reduce client-side JavaScript.
+*   **Client Components (app directory):** Only use client components when interactivity is required. Defer rendering of non-critical client components using `React.lazy`.
+
+### Bundle Size Optimization
+
+*   **Analyze bundle size:** Use tools like `webpack-bundle-analyzer` to identify large dependencies.
+*   **Remove unused code:** Use tree shaking to remove unused code from your bundles.
+*   **Use smaller dependencies:** Replace large dependencies with smaller, more lightweight alternatives.
+*   **Compression:** Enable Gzip or Brotli compression on your server to reduce the size of the transferred files.
+
+### Lazy Loading
+
+*   **Images:** Use `next/image` for automatic lazy loading of images.
+*   **Components:** Use `next/dynamic` for lazy loading of components.
+*   **Intersection Observer:** Use the Intersection Observer API for manual lazy loading of content.
+
+Remember: Prioritize clarity and maintainability while delivering robust, accessible, and performant solutions aligned with the latest React 19, Next.js 15, and  features and best practices.
+
+
