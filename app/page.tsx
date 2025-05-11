@@ -3,7 +3,7 @@ import { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: 'orcaclub.pro | redesign your workflow.',
-  description: 'Streamline your operations, boost productivity, and drive growth with our comprehensive business management solution.',
+  description: 'Streamline your operations, boost productivity, and drive growth with our comprehensive business management and analysis solution.',
 }
 
 export default function HomePage() {
