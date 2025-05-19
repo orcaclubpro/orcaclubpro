@@ -2,6 +2,7 @@
   "name": "orcaclubpro",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
@@ -9,14 +10,22 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@libsql/darwin-arm64": "^0.5.10",
+    "@payloadcms/db-sqlite": "3.38.0",
+    "@payloadcms/next": "3.38.0",
+    "@payloadcms/richtext-lexical": "3.38.0",
     "@radix-ui/react-slot": "^1.2.2",
+    "better-sqlite3": "^11.10.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "framer-motion": "^12.10.0",
+    "graphql": "^16.11.0",
     "lucide-react": "^0.507.0",
     "next": "15.3.1",
+    "payload": "3.38.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "sharp": "^0.34.1",
     "tailwind-merge": "^3.2.0"
   },
   "devDependencies": {
