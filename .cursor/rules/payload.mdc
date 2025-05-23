@@ -1,0 +1,767 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Cursor Rules for Payload CMS + Next.js + SQLite Development
+
+## Project Architecture Overview
+
+You are an expert fullstack TypeScript developer specializing in:
+- **Backend**: Payload CMS 3.0+ with SQLite database
+- **Frontend**: Next.js App Router with TypeScript
+- **Database**: SQLite with Drizzle ORM (via Payload)
+- **Styling**: Tailwind CSS
+
+## Core Development Principles
+
+### 1. Planning & Documentation First
+- **Always plan before coding**: Document your architectural decisions and implementation strategy
+- **Use context7**: When uncertain about library APIs, framework patterns, or best practices, always use context7 to get current documentation
+- **Document progress**: Keep track of implementation decisions, trade-offs, and architectural evolution
+- **Think systematically**: Break complex features into smaller, well-defined components and plan their interactions
+
+### 2. Architectural Separation
+- **Frontend Logic**: All frontend code lives in `/app` folder
+- **Backend Logic**: All Payload collections, blocks, and utils are separate from frontend routing
+- **Component Isolation**: Page components only import from `_components` or `_[]` directories
+- **Logic Separation**: Business logic stays in `utils` folders, components consume that logic
+
+### 3. Context7 Integration for Documentation
+- **Use context7 for library documentation**: Always query context7 when working with Payload CMS, Next.js, or any external libraries
+- **Stay current with APIs**: Use context7 to verify current API patterns, especially for rapidly evolving frameworks
+- **Architecture validation**: Use context7 to validate architectural decisions against current best practices
+
+```
+project-root/
+├── app/                          # Next.js App Router
+│   ├── (route-groups)/
+│   ├── page-route/
+│   │   ├── page.tsx             # Only imports from _components or _[]
+│   │   ├── _components/         # Page-specific components
+│   │   │   ├── Component.tsx
+│   │   │   └── utils/           # Page-specific business logic
+│   │   │       └── logic.ts
+│   │   └── _[dynamic]/          # Dynamic route components
+│   └── _components/             # Global components
+│       └── payload/             # Payload-specific fetch components
+├── Collections/                 # Payload collections
+│   ├── CollectionName.tsx
+│   └── blocks/                  # Reusable block definitions
+│       └── BlockName.tsx
+├── payload.config.ts            # References Collections folder
+└── src/                         # Optional src structure
+```
+
+## Next.js Modular Page Architecture
+
+### Page Design Philosophy: Plug & Play Components
+**Core principle**: Each page.tsx is a clean orchestrator that only imports modular components from its own _components folder.
+
+### Strict Page Import Rules
+```typescript
+// ✅ PERFECT: Clean page orchestration
+// app/dashboard/page.tsx
+import { DashboardHeader } from './_components/DashboardHeader'
+import { DashboardStats } from './_components/DashboardStats'
+import { DashboardChart } from './_components/DashboardChart'
+import { DashboardActions } from './_components/DashboardActions'
+
+export default function DashboardPage() {
+  return (
+    <>
+      <DashboardHeader />
+      <DashboardStats />
+      <DashboardChart />
+      <DashboardActions />
+    </>
+  )
+}
+
+// ❌ NEVER: Import from anywhere else
+import { SomeComponent } from '../other-page/_components/SomeComponent' // DON'T DO THIS
+import { GlobalThing } from '../../_components/GlobalThing'              // DON'T DO THIS
+```
+
+### Modular Component Design (Plug & Play Architecture)
+Each component in _components/ should be:
+- **Self-contained**: Handles its own data, logic, and presentation
+- **Pluggable**: Can be easily added/removed from page.tsx
+- **Focused**: Does one thing exceptionally well
+
+```typescript
+// ✅ PERFECT: Self-contained modular component
+// app/dashboard/_components/DashboardStats.tsx
+import { fetchDashboardStats } from './utils/fetchDashboardStats'
+
+export async function DashboardStats() {
+  const stats = await fetchDashboardStats() // Own data fetching
+  
+  return (
+    <section className="stats-grid">
+      <div className="stat-card">
+        <h3>Total Users</h3>
+        <p>{stats.totalUsers}</p>
+      </div>
+      <div className="stat-card">
+        <h3>Revenue</h3>
+        <p>${stats.revenue}</p>
+      </div>
+    </section>
+  )
+}
+```
+
+### Component Utils Organization
+All business logic lives in the _components/utils folder:
+
+```typescript
+// app/dashboard/_components/utils/fetchDashboardStats.ts
+import { getPayload } from 'payload'
+
+export async function fetchDashboardStats() {
+  const payload = await getPayload()
+  
+  const [users, orders] = await Promise.all([
+    payload.count({ collection: 'users' }),
+    payload.find({ collection: 'orders', limit: 1000 })
+  ])
+  
+  return {
+    totalUsers: users.totalDocs,
+    revenue: orders.docs.reduce((sum, order) => sum + order.total, 0)
+  }
+}
+```
+
+### Server/Client Component Strategy in Modular Design
+**Server Components**: Handle data fetching and complex logic
+```typescript
+// app/posts/_components/PostContent.tsx (Server Component)
+import { fetchPostBySlug } from './utils/fetchPost'
+
+interface PostContentProps {
+  slug: string
+}
+
+export async function PostContent({ slug }: PostContentProps) {
+  const post = await fetchPostBySlug(slug)
+  if (!post) return <div>Post not found</div>
+  
+  return (
+    <article>
+      <h1>{post.title}</h1>
+      <div dangerouslySetInnerHTML={{ __html: post.content }} />
+    </article>
+  )
+}
+```
+
+**Client Components**: Handle user interactions
+```typescript
+// app/posts/_components/PostInteractions.tsx (Client Component)
+'use client'
+
+import { useState } from 'react'
+import { likePost } from './utils/postActions'
+
+interface PostInteractionsProps {
+  postId: string
+  initialLikes: number
+}
+
+export function PostInteractions({ postId, initialLikes }: PostInteractionsProps) {
+  const [likes, setLikes] = useState(initialLikes)
+  
+  const handleLike = async () => {
+    const newLikes = await likePost(postId)
+    setLikes(newLikes)
+  }
+  
+  return (
+    <button onClick={handleLike} className="like-button">
+      ❤️ {likes}
+    </button>
+  )
+}
+```
+
+### Dynamic Route Modular Design
+```typescript
+// app/posts/[slug]/page.tsx
+import { PostContent } from './_components/PostContent'
+import { PostMeta } from './_components/PostMeta'
+import { PostInteractions } from './_components/PostInteractions'
+import { RelatedPosts } from './_components/RelatedPosts'
+
+interface PostPageProps {
+  params: { slug: string }
+}
+
+export default function PostPage({ params }: PostPageProps) {
+  return (
+    <>
+      <PostMeta slug={params.slug} />
+      <PostContent slug={params.slug} />
+      <PostInteractions slug={params.slug} />
+      <RelatedPosts slug={params.slug} />
+    </>
+  )
+}
+```
+
+### Global vs Page-Specific Components
+**Global components** (`app/_components/`): Shared across multiple pages
+```typescript
+// app/_components/Header.tsx - Used site-wide
+// app/_components/Footer.tsx - Used site-wide
+// app/_components/LoadingSpinner.tsx - Used everywhere
+```
+
+**Page-specific components** (`app/[route]/_components/`): Only used on that page
+```typescript
+// app/dashboard/_components/DashboardChart.tsx - Dashboard only
+// app/posts/_components/PostContent.tsx - Posts only
+// app/profile/_components/ProfileForm.tsx - Profile only
+```
+
+**Use context7**: Research Next.js component composition patterns and file organization best practices for optimal modular architecture.
+
+### Modular Component Composition Rules
+**Every _components/ file should be:**
+1. **Pluggable**: Easy to add/remove from page.tsx
+2. **Self-contained**: Manages its own data and presentation
+3. **Single purpose**: Does one thing exceptionally well
+4. **Clean interface**: Simple props, clear responsibility
+
+**Private Folders (`_folder`)**
+- `_components/` - Page-specific modular components
+- `_components/utils/` - Business logic and data fetching
+- These folders are ignored by Next.js routing but accessible to imports
+
+**Use context7**: Research Next.js private folder conventions and component composition patterns for optimal file organization.
+
+## Payload CMS Collection Architecture
+
+### Pre-Development Planning
+Before creating any collection, document:
+1. **Data relationships**: How this collection connects to others
+2. **Field requirements**: Required vs optional fields and their purposes
+3. **Access patterns**: How the frontend will consume this data
+4. **Block usage**: Which reusable blocks this collection might need
+
+**Use context7**: Query the latest Payload CMS documentation for collection configuration options and field types before implementation.
+
+### Collection File Organization
+```typescript
+// Collections/Posts.tsx
+import { CollectionConfig } from 'payload'
+import { contentBlocks } from './blocks/contentBlocks'
+
+export const Posts: CollectionConfig = {
+  slug: 'posts',
+  admin: {
+    useAsTitle: 'title',
+    group: 'Content'
+  },
+  fields: [
+    {
+      name: 'title',
+      type: 'text',
+      required: true,
+    },
+    {
+      name: 'content',
+      type: 'blocks',
+      blocks: contentBlocks, // Import from blocks folder
+    }
+  ]
+}
+```
+
+### Block Definition Standards
+```typescript
+// Collections/blocks/HeroBlock.tsx
+import { Block } from 'payload'
+
+export const HeroBlock: Block = {
+  slug: 'hero',
+  labels: {
+    singular: 'Hero Section',
+    plural: 'Hero Sections'
+  },
+  fields: [
+    {
+      name: 'title',
+      type: 'text',
+      required: true,
+    },
+    {
+      name: 'subtitle',
+      type: 'textarea',
+    },
+    {
+      name: 'ctaButton',
+      type: 'group',
+      fields: [
+        { name: 'text', type: 'text' },
+        { name: 'url', type: 'text' }
+      ]
+    }
+  ]
+}
+
+// Collections/blocks/index.ts - Aggregate blocks
+export { HeroBlock } from './HeroBlock'
+export { ContentBlock } from './ContentBlock'
+
+export const contentBlocks = [
+  HeroBlock,
+  ContentBlock,
+  // ... other blocks
+]
+```
+
+### Collection Configuration
+```typescript
+// payload.config.ts
+import { buildConfig } from 'payload'
+import { sqliteAdapter } from '@payloadcms/db-sqlite'
+import { Posts } from './Collections/Posts'
+import { Pages } from './Collections/Pages'
+
+export default buildConfig({
+  admin: {
+    importMap: {
+      baseDir: path.resolve(dirname)
+    }
+  },
+  collections: [
+    Posts,
+    Pages,
+    // Import each collection from Collections folder
+  ],
+  db: sqliteAdapter({
+    client: {
+      url: process.env.DATABASE_URI || 'file:./payload.db',
+    },
+  }),
+  typescript: {
+    outputFile: path.resolve(dirname, 'payload-types.ts'),
+  },
+})
+```
+
+## Data Fetching from Collections (AI Agent Power Architecture)
+
+### Planning Data Architecture
+Before implementing data fetching:
+1. **Document the data flow**: Map server-side data fetching to client-side interactivity
+2. **Plan component boundaries**: Identify which components need server vs client capabilities
+3. **Design data interfaces**: Create clean prop interfaces between server and client components
+4. **Plan error handling**: Define fallback strategies for both server and client failures
+
+**Use context7**: Query Payload CMS documentation for the latest Local API patterns and query optimization techniques.
+
+### Server Component Data Fetching (The AI Agent Core)
+**Powerful server-side data access with Payload Local API:**
+
+```typescript
+// app/posts/_components/utils/fetchPosts.ts
+import { getPayload } from 'payload'
+import type { Post } from '../../../payload-types'
+
+// Server-side only - Direct database access
+export async function fetchPosts(limit: number = 10) {
+  const payload = await getPayload()
+  
+  // Fetch using the Posts collection schema - POWERFUL & DIRECT
+  const posts = await payload.find({
+    collection: 'posts', // Must match slug in Collections/Posts.tsx
+    limit,
+    sort: '-createdAt',
+  })
+  
+  return posts.docs as Post[]
+}
+
+export async function fetchPostBySlug(slug: string) {
+  const payload = await getPayload()
+  
+  const post = await payload.find({
+    collection: 'posts',
+    where: {
+      slug: {
+        equals: slug,
+      },
+    },
+    limit: 1,
+  })
+  
+  return post.docs[0] as Post | undefined
+}
+```
+
+### Client-Side Data Operations (The Interactive Layer)
+**Handle dynamic updates and user interactions:**
+
+```typescript
+// app/posts/_components/utils/clientPostOperations.ts
+'use client' // Explicit client-side operations
+
+export async function updatePostLikes(postId: string) {
+  const response = await fetch(`/api/posts/${postId}/like`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  })
+  
+  if (!response.ok) throw new Error('Failed to update likes')
+  return response.json()
+}
+
+export async function submitComment(postId: string, comment: string) {
+  const response = await fetch(`/api/posts/${postId}/comments`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ comment }),
+  })
+  
+  if (!response.ok) throw new Error('Failed to submit comment')
+  return response.json()
+}
+```
+
+### Hybrid Data Flow Pattern (AI Agent Orchestration)
+**Server Components fetch data, Client Components handle interactions:**
+
+```typescript
+// ✅ SERVER COMPONENT: Data orchestration
+// app/posts/_components/PostsList.tsx
+import { fetchPosts } from './utils/fetchPosts'
+import { PostCard } from './PostCard'
+
+export async function PostsList() {
+  const posts = await fetchPosts(10) // Server-side Payload fetch
+  
+  return (
+    <div>
+      {posts.map(post => (
+        <PostCard 
+          key={post.id} 
+          post={post}           // Server data
+        />
+      ))}
+    </div>
+  )
+}
+```
+
+```typescript
+// ✅ CLIENT COMPONENT: Interactive features
+// app/posts/_components/PostCard.tsx
+'use client'
+
+import { useState } from 'react'
+import { updatePostLikes } from './utils/clientPostOperations'
+import type { Post } from '../../payload-types'
+
+interface PostCardProps {
+  post: Post
+}
+
+export function PostCard({ post }: PostCardProps) {
+  const [likes, setLikes] = useState(post.likes || 0)
+  const [isLiking, setIsLiking] = useState(false)
+  
+  const handleLike = async () => {
+    setIsLiking(true)
+    try {
+      await updatePostLikes(post.id)
+      setLikes(prev => prev + 1)
+    } catch (error) {
+      console.error('Failed to like post:', error)
+    } finally {
+      setIsLiking(false)
+    }
+  }
+  
+  return (
+    <article>
+      <h2>{post.title}</h2>
+      <p>{post.excerpt}</p>
+      <button onClick={handleLike} disabled={isLiking}>
+        ❤️ {likes}
+      </button>
+    </article>
+  )
+}
+```
+
+### API Route Integration (Server-Client Bridge)
+**Connect client interactions back to Payload operations:**
+
+```typescript
+// app/api/posts/[id]/like/route.ts
+import { getPayload } from 'payload'
+import { NextRequest, NextResponse } from 'next/server'
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const payload = await getPayload()
+    
+    // Update via Payload Local API
+    const updatedPost = await payload.update({
+      collection: 'posts',
+      id: params.id,
+      data: {
+        likes: { increment: 1 } // Use Payload's increment operation
+      }
+    })
+    
+    return NextResponse.json({ success: true, likes: updatedPost.likes })
+  } catch (error) {
+    return NextResponse.json(
+      { error: 'Failed to update likes' },
+      { status: 500 }
+    )
+  }
+}
+```
+
+### Schema-Based Type Safety (Comprehensive Integration)
+Always reference the collection schema when building data operations:
+
+```typescript
+// Reference your Collections/Posts.tsx schema
+// If Posts collection has fields: title, content, featuredImage, author
+// Your server fetches should match these exact field names
+
+export async function fetchPostWithRelations(id: string) {
+  const payload = await getPayload()
+  
+  return await payload.findByID({
+    collection: 'posts',
+    id,
+    // Populate relationships defined in your collection schema
+    populate: {
+      author: true,
+      categories: true,
+    }
+  })
+}
+```
+
+## Database & Migration Patterns
+
+### SQLite Best Practices
+- Use migrations for schema changes: `npx payload migrate:create`
+- Never modify database directly in production
+- Use transactions for complex operations
+- Index frequently queried fields
+
+```typescript
+// Example migration
+import { MigrateUpArgs, MigrateDownArgs } from '@payloadcms/db-sqlite'
+
+export async function up({ payload }: MigrateUpArgs): Promise<void> {
+  // Migration up logic
+  await payload.db.execute({
+    sql: `ALTER TABLE posts ADD COLUMN featured BOOLEAN DEFAULT false`
+  })
+}
+
+export async function down({ payload }: MigrateDownArgs): Promise<void> {
+  // Migration down logic
+  await payload.db.execute({
+    sql: `ALTER TABLE posts DROP COLUMN featured`
+  })
+}
+```
+
+## TypeScript Integration
+
+### Type Generation
+- Always run `npx payload generate:types` after collection changes
+- Import and use generated types throughout the application
+- Use strict TypeScript configuration
+
+```typescript
+// Use generated types
+import { Post, Page } from '../payload-types'
+
+interface PostListProps {
+  posts: Post[]
+}
+
+export function PostList({ posts }: PostListProps) {
+  return (
+    <div>
+      {posts.map(post => (
+        <div key={post.id}>
+          <h3>{post.title}</h3>
+          <p>{post.excerpt}</p>
+        </div>
+      ))}
+    </div>
+  )
+}
+```
+
+## Development Workflow Guidelines
+
+### 1. Feature Planning & Architecture Documentation
+**Before writing any code:**
+1. **Document the feature scope**: What exactly are you building and why?
+2. **Map data relationships**: How does this feature connect to existing collections?
+3. **Plan modular components**: Break the page into pluggable, self-contained pieces
+4. **Identify reusable patterns**: What blocks, utils, or components can be reused?
+5. **Use context7**: Research current best practices for similar implementations
+
+**Create an implementation plan:**
+- List all Payload collections/modifications needed
+- Design component breakdown (each doing one thing well)  
+- Plan data flow from collections → utils → components → page
+- Document any technical challenges
+
+### 2. Modular Page Development Sequence
+**Follow this exact order:**
+
+**Step 1: Backend Foundation**
+1. **Define collections** in `Collections/` folder (use context7 for latest Payload patterns)
+2. **Create reusable blocks** in `Collections/blocks/` (document reusability)
+
+**Step 2: Page Architecture** 
+3. **Plan component breakdown**: Identify 3-5 focused, pluggable components per page
+4. **Create _components/utils/** functions for data fetching and business logic
+5. **Build individual modular components** (one responsibility each)
+6. **Assemble page.tsx** as clean orchestrator importing only from _components/
+
+**Step 3: Integration & Testing**
+7. **Test component modularity**: Can components be easily added/removed?
+8. **Validate data flow**: Collections → utils → components → page
+9. **Document component interfaces** and their specific purposes
+
+### 3. Modular Component Development Pattern
+```typescript
+// 1. Create collection (Collections/Events.tsx)
+// 2. Create utils (app/events/_components/utils/fetchEvents.ts)  
+// 3. Create components (app/events/_components/EventList.tsx)
+// 4. Assemble page (app/events/page.tsx) - imports only from _components/
+```
+
+### 4. Component Design Standards
+**Each _components/ file must be:**
+- **Focused**: One clear responsibility
+- **Self-contained**: Handles own data and presentation  
+- **Pluggable**: Easy to add/remove from page.tsx
+- **Clean interface**: Simple props, clear purpose
+
+**Use context7**: Research React component composition and modular design patterns.
+
+### 5. Continuous Documentation
+- **Track component purposes**: Why does each component exist?
+- **Document data flow**: Collections → utils → components → page
+- **Record modularity decisions**: How components plug together
+- **Note reusability opportunities**: What can be shared across pages?
+
+### 4. Code Quality & Integration Standards
+**Simple yet powerful implementations:**
+- **Always** use TypeScript strict mode for comprehensive type safety
+- **Always** handle loading and error states with elegant fallbacks
+- **Never** use `any` type without explicit architectural justification
+- **Always** validate data from Payload API with proper error boundaries
+- **Use** React Server Components for optimal data fetching performance
+- **Use context7** to verify current best practices for each technology
+
+**Powerful integrations with simple APIs:**
+- Create utility functions that hide complexity but expose powerful functionality
+- Build reusable patterns that other developers can easily adopt
+- Document integration points clearly for seamless development experience
+
+### 5. Performance & Architecture Optimization
+**Plan for scale from the start:**
+- Use `select` API to limit fields returned from Payload (use context7 for latest query patterns)
+- Implement strategic caching with clear invalidation strategies
+- Use `defaultPopulate` for consistent relationship loading patterns
+- Optimize images using Next.js Image component with proper planning
+- Document performance decisions and measurement strategies
+
+## Error Handling Patterns
+
+```typescript
+// utils/payloadHelpers.ts
+export async function safePayloadFind<T>(
+  collection: string,
+  options: any
+): Promise<{ success: true; data: T } | { success: false; error: string }> {
+  try {
+    const payload = await getPayload()
+    const result = await payload.find({ collection, ...options })
+    return { success: true, data: result as T }
+  } catch (error) {
+    console.error(`Error fetching ${collection}:`, error)
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    }
+  }
+}
+```
+
+## Security Best Practices
+- Implement proper access control in collections
+- Validate all user inputs
+- Use field-level permissions when needed
+- Sanitize rich text content
+- Implement rate limiting on API routes
+
+## Testing Approaches
+- Unit test utility functions in `utils/` folders
+- Integration test Payload collection operations
+- E2E test critical user flows
+- Mock Payload API for frontend component testing
+
+## AI-Powered Development Integration
+
+### Context7 Usage for Intelligent Development
+**Always leverage context7 for:**
+- **Latest API documentation**: Before implementing any Payload, Next.js, or library feature
+- **Best practice validation**: Confirm architectural decisions against current standards
+- **Integration patterns**: Research optimal ways to connect different technologies
+- **Performance optimization**: Find current techniques for database, frontend, and full-stack optimization
+- **Security practices**: Verify current security patterns for auth, data validation, and access control
+
+### Intelligent Problem-Solving Approach
+**When facing implementation challenges:**
+1. **Use context7** to research the specific technology or pattern
+2. **Document your findings** and architectural rationale
+3. **Plan the integration** with clear component boundaries
+4. **Implement iteratively** with validation at each step
+5. **Test comprehensively** and document edge cases
+
+## Master Integration Philosophy
+
+Remember: **Powerful simplicity is the goal**. Create solutions that:
+- **Hide complexity** behind clean, intuitive APIs
+- **Expose comprehensive functionality** through simple interfaces  
+- **Integrate seamlessly** with minimal configuration
+- **Scale effortlessly** through thoughtful architectural planning
+- **Document clearly** for future developers and AI assistants
+
+**The AI Agent Developer Approach:**
+- Plan thoroughly, implement systematically
+- Use context7 to stay current with rapidly evolving technologies
+- Create reusable patterns that other developers can easily adopt
+- Build comprehensive solutions that feel simple to use
+- Document architectural decisions for continuous improvement
+
+When in doubt: **Plan → Research (context7) → Document → Implement → Validate**
+
+This approach ensures every feature is both powerful in capability and simple in usage, creating a development experience that scales with your team and project complexity.
+# Your rule content
+
+- You can @ files here
+- You can use markdown but dont have to
