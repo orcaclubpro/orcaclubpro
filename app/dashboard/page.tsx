@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { Terminal } from 'lucide-react';
-import { DashboardLogin } from './_components/DashboardLogin';
+import { DashboardLogin } from './components/DashboardLogin';
 import { useDashboard } from './layout';
 
 export default function DashboardPage() {
@@ -27,7 +27,7 @@ export default function DashboardPage() {
         >
           <h1 className="text-4xl md:text-5xl text-white leading-none mb-2" style={{ letterSpacing: '-0.02em' }}>
             <span className="font-light tracking-wide">ORCA</span>
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-500 font-medium">CLUB</span>
+            <span className="text-transparent bg-clip-text bg-linear-to-r from-cyan-300 to-blue-500 font-medium">CLUB</span>
           </h1>
           <p className="text-lg text-cyan-200 font-light tracking-wider">
             {isAuthenticated ? 'secure workspace' : 'pod access portal'}

@@ -25,8 +25,7 @@ import {
 } from 'lucide-react';
 
 interface SettingsPageProps {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  params: Promise<{ userId: string }>; // Keep for potential future use, but disable linting for now
+  params: Promise<{ userId: string }>;
 }
 
 const containerVariants = {
@@ -226,7 +225,7 @@ export default function SettingsPage({ /* params */ }: SettingsPageProps) {
         <div className="relative">
           <motion.div
             whileHover={{ scale: 1.05 }}
-            className="w-24 h-24 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-2xl font-bold cursor-pointer"
+            className="w-24 h-24 bg-linear-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-2xl font-bold cursor-pointer"
           >
             {profile.firstName[0]}{profile.lastName[0]}
           </motion.div>
@@ -528,7 +527,7 @@ export default function SettingsPage({ /* params */ }: SettingsPageProps) {
 
   const renderBillingSettings = () => (
     <motion.div variants={cardVariants} className="space-y-6">
-      <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
+      <div className="bg-linear-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -541,7 +540,7 @@ export default function SettingsPage({ /* params */ }: SettingsPageProps) {
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-lg"
+            className="bg-linear-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-lg"
           >
             Upgrade Plan
           </motion.button>
@@ -683,7 +682,7 @@ export default function SettingsPage({ /* params */ }: SettingsPageProps) {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Sidebar */}
           <motion.div variants={itemVariants} className="lg:col-span-1">
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xs border border-gray-200 dark:border-gray-700 p-4">
               <nav className="space-y-2">
                 {tabs.map((tab) => (
                   <motion.button
@@ -710,7 +709,7 @@ export default function SettingsPage({ /* params */ }: SettingsPageProps) {
 
           {/* Content */}
           <motion.div variants={itemVariants} className="lg:col-span-3">
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xs border border-gray-200 dark:border-gray-700 p-6">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={activeTab}
@@ -731,7 +730,7 @@ export default function SettingsPage({ /* params */ }: SettingsPageProps) {
                 <motion.button
                   onClick={handleSave}
                   disabled={isLoading}
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 text-white px-6 py-3 rounded-lg flex items-center space-x-2 transition-all duration-200"
+                  className="bg-linear-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 text-white px-6 py-3 rounded-lg flex items-center space-x-2 transition-all duration-200"
                   whileHover={{ scale: isLoading ? 1 : 1.05 }}
                   whileTap={{ scale: isLoading ? 1 : 0.95 }}
                 >

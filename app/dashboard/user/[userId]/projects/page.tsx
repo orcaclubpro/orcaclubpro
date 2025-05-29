@@ -45,7 +45,6 @@ interface Project {
 }
 
 interface ProjectsPageProps {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   params: Promise<{ userId: string }>;
 }
 
@@ -220,13 +219,13 @@ const ProjectCard = ({ project, index }: ProjectCardProps) => {
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => setIsHovered(false)}
       transition={{ delay: index * 0.1 }}
-      className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700 cursor-pointer relative overflow-hidden"
+      className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-xs border border-gray-200 dark:border-gray-700 cursor-pointer relative overflow-hidden"
     >
       {/* Background gradient on hover */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: isHovered ? 0.05 : 0 }}
-        className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-600"
+        className="absolute inset-0 bg-linear-to-br from-blue-500 to-purple-600"
       />
 
       <div className="relative z-10">
@@ -286,7 +285,7 @@ const ProjectCard = ({ project, index }: ProjectCardProps) => {
               initial={{ width: 0 }}
               animate={{ width: `${project.progress}%` }}
               transition={{ duration: 1, delay: index * 0.1 }}
-              className="bg-gradient-to-r from-blue-500 to-purple-600 h-2 rounded-full"
+              className="bg-linear-to-r from-blue-500 to-purple-600 h-2 rounded-full"
             />
           </div>
         </div>
@@ -318,7 +317,7 @@ const ProjectCard = ({ project, index }: ProjectCardProps) => {
               {project.team.slice(0, 3).map((member: string, i: number) => (
                 <div
                   key={i}
-                  className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-400 to-purple-600 flex items-center justify-center text-xs font-semibold text-white border-2 border-white dark:border-gray-800"
+                  className="w-6 h-6 rounded-full bg-linear-to-br from-blue-400 to-purple-600 flex items-center justify-center text-xs font-semibold text-white border-2 border-white dark:border-gray-800"
                 >
                   {member.split(' ').map((n: string) => n[0]).join('')}
                 </div>
@@ -398,7 +397,7 @@ export default function ProjectsPage({ /* params */ }: ProjectsPageProps) {
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-all duration-200"
+            className="bg-linear-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-all duration-200"
           >
             <Plus className="h-5 w-5" />
             <span>New Project</span>
@@ -420,7 +419,7 @@ export default function ProjectsPage({ /* params */ }: ProjectsPageProps) {
               key={stat.label}
               variants={itemVariants}
               whileHover={{ scale: 1.02 }}
-              className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700"
+              className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-xs border border-gray-200 dark:border-gray-700"
             >
               <div className="flex items-center justify-between">
                 <div>
@@ -444,7 +443,7 @@ export default function ProjectsPage({ /* params */ }: ProjectsPageProps) {
           {/* Project Timeline */}
           <motion.div
             variants={itemVariants}
-            className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700"
+            className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-xs border border-gray-200 dark:border-gray-700"
           >
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
               Project Timeline
@@ -470,7 +469,7 @@ export default function ProjectsPage({ /* params */ }: ProjectsPageProps) {
           {/* Budget Overview */}
           <motion.div
             variants={itemVariants}
-            className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700"
+            className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-xs border border-gray-200 dark:border-gray-700"
           >
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
               Budget Overview

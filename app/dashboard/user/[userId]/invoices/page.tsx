@@ -55,7 +55,6 @@ interface Invoice {
 }
 
 interface InvoicesPageProps {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   params: Promise<{ userId: string }>;
 }
 
@@ -226,13 +225,13 @@ const InvoiceCard = ({ invoice, index }: { invoice: Invoice; index: number }) =>
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => setIsHovered(false)}
       transition={{ delay: index * 0.1 }}
-      className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700 cursor-pointer relative overflow-hidden"
+      className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-xs border border-gray-200 dark:border-gray-700 cursor-pointer relative overflow-hidden"
     >
       {/* Background gradient on hover */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: isHovered ? 0.05 : 0 }}
-        className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-600"
+        className="absolute inset-0 bg-linear-to-br from-blue-500 to-purple-600"
       />
 
       <div className="relative z-10">
@@ -416,7 +415,7 @@ export default function InvoicesPage({ /* params */ }: InvoicesPageProps) {
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-all duration-200"
+            className="bg-linear-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-all duration-200"
           >
             <Plus className="h-5 w-5" />
             <span>New Invoice</span>
@@ -466,7 +465,7 @@ export default function InvoicesPage({ /* params */ }: InvoicesPageProps) {
               key={stat.label}
               variants={itemVariants}
               whileHover={{ scale: 1.02 }}
-              className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700"
+              className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-xs border border-gray-200 dark:border-gray-700"
             >
               <div className="flex items-center justify-between mb-4">
                 <div className={`p-3 bg-${stat.color}-50 dark:bg-${stat.color}-900/20 rounded-lg`}>
@@ -500,7 +499,7 @@ export default function InvoicesPage({ /* params */ }: InvoicesPageProps) {
           {/* Revenue Trend */}
           <motion.div
             variants={itemVariants}
-            className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700"
+            className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-xs border border-gray-200 dark:border-gray-700"
           >
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
               Revenue Trend
@@ -540,7 +539,7 @@ export default function InvoicesPage({ /* params */ }: InvoicesPageProps) {
           {/* Invoice Status Distribution */}
           <motion.div
             variants={itemVariants}
-            className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700"
+            className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-xs border border-gray-200 dark:border-gray-700"
           >
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
               Invoice Status

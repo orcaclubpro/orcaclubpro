@@ -103,7 +103,7 @@ export function DashboardLogin({ onAuthSuccess }: DashboardLoginProps) {
         className="bg-white/5 backdrop-blur-md rounded-2xl border border-cyan-900/30 p-6"
       >
         <div className="text-center mb-6">
-          <div className="w-12 h-12 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-xl flex items-center justify-center mx-auto mb-4">
+          <div className="w-12 h-12 bg-linear-to-br from-cyan-400 to-blue-600 rounded-xl flex items-center justify-center mx-auto mb-4">
             <Shield className="h-6 w-6 text-white" />
           </div>
           <h2 className="text-xl text-white font-medium mb-2">Secure Access</h2>
@@ -175,7 +175,7 @@ export function DashboardLogin({ onAuthSuccess }: DashboardLoginProps) {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             disabled={isLoading || isSuccess || !email || !password}
-            className="w-full bg-gradient-to-r from-cyan-600 to-blue-700 text-white p-3 rounded-lg font-medium transition-all duration-300 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+            className="w-full bg-linear-to-r from-cyan-600 to-blue-700 text-white p-3 rounded-lg font-medium transition-all duration-300 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
           >
             {isLoading ? (
               <>

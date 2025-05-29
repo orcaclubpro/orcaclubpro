@@ -144,7 +144,7 @@ const Hero = () => {
 
       {/* Background ecosystem */}
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-black via-gray-900 to-black" />
+        <div className="absolute inset-0 bg-linear-to-br from-black via-gray-900 to-black" />
         
         {/* Floating particles with connections */}
         <svg 
@@ -244,7 +244,7 @@ const buildFuture = async () => {
           >
             <span className="inline-block">
               <span className="font-light tracking-wide">ORCA</span>
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-300 to-blue-500 font-medium">CLUB</span>
+              <span className="text-transparent bg-clip-text bg-linear-to-r from-blue-300 to-blue-500 font-medium">CLUB</span>
             </span>
           </h1>
           {/* Tagline directly under branding */}
@@ -333,13 +333,13 @@ const buildFuture = async () => {
             </div>
             
             {/* Button shimmer effect */}
-            <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+            <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-linear-to-r from-transparent via-white/20 to-transparent" />
           </button>
 
           {/* Pod Login Button */}
           <button 
             onMouseDown={() => handleButtonPress('login')}
-            className="group relative w-full overflow-hidden bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 rounded-lg font-medium transition-all duration-300"
+            className="group relative w-full overflow-hidden bg-linear-to-r from-blue-600 to-blue-700 text-white p-4 rounded-lg font-medium transition-all duration-300"
             style={{
               transform: buttonStates.login === 'pressed' ? 'scale(0.98)' : 'scale(1)',
               boxShadow: buttonStates.login === 'pressed' 
@@ -354,7 +354,7 @@ const buildFuture = async () => {
             </div>
             
             {/* Button shimmer effect */}
-            <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+            <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-linear-to-r from-transparent via-white/20 to-transparent" />
           </button>
           
           {/* Terminal output with breathing space */}

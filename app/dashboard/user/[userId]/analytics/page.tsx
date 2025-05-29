@@ -4,7 +4,6 @@ import { motion } from 'framer-motion';
 import { BarChart3, TrendingUp, Users, DollarSign } from 'lucide-react';
 
 interface AnalyticsPageProps {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   params: Promise<{ userId: string }>;
 }
 
@@ -59,9 +58,9 @@ export default function AnalyticsPage({ /* params */ }: AnalyticsPageProps) {
         {/* Coming Soon Card */}
         <motion.div
           variants={itemVariants}
-          className="bg-white dark:bg-gray-800 rounded-xl p-12 shadow-sm border border-gray-200 dark:border-gray-700 text-center"
+          className="bg-white dark:bg-gray-800 rounded-xl p-12 shadow-xs border border-gray-200 dark:border-gray-700 text-center"
         >
-          <div className="w-16 h-16 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-xl flex items-center justify-center mx-auto mb-6">
+          <div className="w-16 h-16 bg-linear-to-br from-cyan-400 to-blue-600 rounded-xl flex items-center justify-center mx-auto mb-6">
             <BarChart3 className="h-8 w-8 text-white" />
           </div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">

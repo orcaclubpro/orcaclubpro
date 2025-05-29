@@ -11,7 +11,13 @@ You are an expert fullstack TypeScript developer specializing in:
 - **Backend**: Payload CMS 3.0+ with SQLite database
 - **Frontend**: Next.js App Router with TypeScript
 - **Database**: SQLite with Drizzle ORM (via Payload)
-- **Styling**: Tailwind CSS
+- **Styling**: Tailwind CSS v4
+USE BUN.SH 
+bun run dev
+bun run build
+bun run start
+
+TYPESCRIPT: use &apos; when typing a single "'" for typescript standards
 
 ## Core Development Principles
 
@@ -24,7 +30,7 @@ You are an expert fullstack TypeScript developer specializing in:
 ### 2. Architectural Separation
 - **Frontend Logic**: All frontend code lives in `/app` folder
 - **Backend Logic**: All Payload collections, blocks, and utils are separate from frontend routing
-- **Component Isolation**: Page components only import from `_components` or `_[]` directories
+- **Component Isolation**: Page components only import from `components` or `[]` directories
 - **Logic Separation**: Business logic stays in `utils` folders, components consume that logic
 
 ### 3. Context7 Integration for Documentation
@@ -37,13 +43,13 @@ project-root/
 ├── app/                          # Next.js App Router
 │   ├── (route-groups)/
 │   ├── page-route/
-│   │   ├── page.tsx             # Only imports from _components or _[]
-│   │   ├── _components/         # Page-specific components
+│   │   ├── page.tsx             # Only imports from components or []
+│   │   ├── components/         # Page-specific components
 │   │   │   ├── Component.tsx
 │   │   │   └── utils/           # Page-specific business logic
 │   │   │       └── logic.ts
-│   │   └── _[dynamic]/          # Dynamic route components
-│   └── _components/             # Global components
+│   │   └── [dynamic]/          # Dynamic route components
+│   └── components/             # Global components
 │       └── payload/             # Payload-specific fetch components
 ├── Collections/                 # Payload collections
 │   ├── CollectionName.tsx
@@ -56,16 +62,16 @@ project-root/
 ## Next.js Modular Page Architecture
 
 ### Page Design Philosophy: Plug & Play Components
-**Core principle**: Each page.tsx is a clean orchestrator that only imports modular components from its own _components folder.
+**Core principle**: Each page.tsx is a clean orchestrator that only imports modular components from its own components folder.
 
 ### Strict Page Import Rules
 ```typescript
 // ✅ PERFECT: Clean page orchestration
 // app/dashboard/page.tsx
-import { DashboardHeader } from './_components/DashboardHeader'
-import { DashboardStats } from './_components/DashboardStats'
-import { DashboardChart } from './_components/DashboardChart'
-import { DashboardActions } from './_components/DashboardActions'
+import { DashboardHeader } from './components/DashboardHeader'
+import { DashboardStats } from './components/DashboardStats'
+import { DashboardChart } from './components/DashboardChart'
+import { DashboardActions } from './components/DashboardActions'
 
 export default function DashboardPage() {
   return (
@@ -79,19 +85,19 @@ export default function DashboardPage() {
 }
 
 // ❌ NEVER: Import from anywhere else
-import { SomeComponent } from '../other-page/_components/SomeComponent' // DON'T DO THIS
-import { GlobalThing } from '../../_components/GlobalThing'              // DON'T DO THIS
+import { SomeComponent } from '../other-page/components/SomeComponent' // DON'T DO THIS
+import { GlobalThing } from '../../components/GlobalThing'              // DON'T DO THIS
 ```
 
 ### Modular Component Design (Plug & Play Architecture)
-Each component in _components/ should be:
+Each component in components/ should be:
 - **Self-contained**: Handles its own data, logic, and presentation
 - **Pluggable**: Can be easily added/removed from page.tsx
 - **Focused**: Does one thing exceptionally well
 
 ```typescript
 // ✅ PERFECT: Self-contained modular component
-// app/dashboard/_components/DashboardStats.tsx
+// app/dashboard/components/DashboardStats.tsx
 import { fetchDashboardStats } from './utils/fetchDashboardStats'
 
 export async function DashboardStats() {
@@ -113,10 +119,10 @@ export async function DashboardStats() {
 ```
 
 ### Component Utils Organization
-All business logic lives in the _components/utils folder:
+All business logic lives in the components/utils folder:
 
 ```typescript
-// app/dashboard/_components/utils/fetchDashboardStats.ts
+// app/dashboard/components/utils/fetchDashboardStats.ts
 import { getPayload } from 'payload'
 
 export async function fetchDashboardStats() {
@@ -137,7 +143,7 @@ export async function fetchDashboardStats() {
 ### Server/Client Component Strategy in Modular Design
 **Server Components**: Handle data fetching and complex logic
 ```typescript
-// app/posts/_components/PostContent.tsx (Server Component)
+// app/posts/components/PostContent.tsx (Server Component)
 import { fetchPostBySlug } from './utils/fetchPost'
 
 interface PostContentProps {
@@ -151,7 +157,7 @@ export async function PostContent({ slug }: PostContentProps) {
   return (
     <article>
       <h1>{post.title}</h1>
-      <div dangerouslySetInnerHTML={{ __html: post.content }} />
+      <div dangerouslySetInnerHTML={{ html: post.content }} />
     </article>
   )
 }
@@ -159,7 +165,7 @@ export async function PostContent({ slug }: PostContentProps) {
 
 **Client Components**: Handle user interactions
 ```typescript
-// app/posts/_components/PostInteractions.tsx (Client Component)
+// app/posts/components/PostInteractions.tsx (Client Component)
 'use client'
 
 import { useState } from 'react'
@@ -189,10 +195,10 @@ export function PostInteractions({ postId, initialLikes }: PostInteractionsProps
 ### Dynamic Route Modular Design
 ```typescript
 // app/posts/[slug]/page.tsx
-import { PostContent } from './_components/PostContent'
-import { PostMeta } from './_components/PostMeta'
-import { PostInteractions } from './_components/PostInteractions'
-import { RelatedPosts } from './_components/RelatedPosts'
+import { PostContent } from './components/PostContent'
+import { PostMeta } from './components/PostMeta'
+import { PostInteractions } from './components/PostInteractions'
+import { RelatedPosts } from './components/RelatedPosts'
 
 interface PostPageProps {
   params: { slug: string }
@@ -211,32 +217,32 @@ export default function PostPage({ params }: PostPageProps) {
 ```
 
 ### Global vs Page-Specific Components
-**Global components** (`app/_components/`): Shared across multiple pages
+**Global components** (`app/components/`): Shared across multiple pages
 ```typescript
-// app/_components/Header.tsx - Used site-wide
-// app/_components/Footer.tsx - Used site-wide
-// app/_components/LoadingSpinner.tsx - Used everywhere
+// app/components/Header.tsx - Used site-wide
+// app/components/Footer.tsx - Used site-wide
+// app/components/LoadingSpinner.tsx - Used everywhere
 ```
 
-**Page-specific components** (`app/[route]/_components/`): Only used on that page
+**Page-specific components** (`app/[route]/components/`): Only used on that page
 ```typescript
-// app/dashboard/_components/DashboardChart.tsx - Dashboard only
-// app/posts/_components/PostContent.tsx - Posts only
-// app/profile/_components/ProfileForm.tsx - Profile only
+// app/dashboard/components/DashboardChart.tsx - Dashboard only
+// app/posts/components/PostContent.tsx - Posts only
+// app/profile/components/ProfileForm.tsx - Profile only
 ```
 
 **Use context7**: Research Next.js component composition patterns and file organization best practices for optimal modular architecture.
 
 ### Modular Component Composition Rules
-**Every _components/ file should be:**
+**Every components/ file should be:**
 1. **Pluggable**: Easy to add/remove from page.tsx
 2. **Self-contained**: Manages its own data and presentation
 3. **Single purpose**: Does one thing exceptionally well
 4. **Clean interface**: Simple props, clear responsibility
 
-**Private Folders (`_folder`)**
-- `_components/` - Page-specific modular components
-- `_components/utils/` - Business logic and data fetching
+**Private Folders (`folder`)**
+- `components/` - Page-specific modular components
+- `components/utils/` - Business logic and data fetching
 - These folders are ignored by Next.js routing but accessible to imports
 
 **Use context7**: Research Next.js private folder conventions and component composition patterns for optimal file organization.
@@ -343,7 +349,7 @@ export default buildConfig({
   ],
   db: sqliteAdapter({
     client: {
-      url: process.env.DATABASE_URI || 'file:./payload.db',
+      url: process.env.DATABASEURI || 'file:./payload.db',
     },
   }),
   typescript: {
@@ -367,7 +373,7 @@ Before implementing data fetching:
 **Powerful server-side data access with Payload Local API:**
 
 ```typescript
-// app/posts/_components/utils/fetchPosts.ts
+// app/posts/components/utils/fetchPosts.ts
 import { getPayload } from 'payload'
 import type { Post } from '../../../payload-types'
 
@@ -406,7 +412,7 @@ export async function fetchPostBySlug(slug: string) {
 **Handle dynamic updates and user interactions:**
 
 ```typescript
-// app/posts/_components/utils/clientPostOperations.ts
+// app/posts/components/utils/clientPostOperations.ts
 'use client' // Explicit client-side operations
 
 export async function updatePostLikes(postId: string) {
@@ -436,7 +442,7 @@ export async function submitComment(postId: string, comment: string) {
 
 ```typescript
 // ✅ SERVER COMPONENT: Data orchestration
-// app/posts/_components/PostsList.tsx
+// app/posts/components/PostsList.tsx
 import { fetchPosts } from './utils/fetchPosts'
 import { PostCard } from './PostCard'
 
@@ -458,7 +464,7 @@ export async function PostsList() {
 
 ```typescript
 // ✅ CLIENT COMPONENT: Interactive features
-// app/posts/_components/PostCard.tsx
+// app/posts/components/PostCard.tsx
 'use client'
 
 import { useState } from 'react'
@@ -635,9 +641,9 @@ export function PostList({ posts }: PostListProps) {
 
 **Step 2: Page Architecture** 
 3. **Plan component breakdown**: Identify 3-5 focused, pluggable components per page
-4. **Create _components/utils/** functions for data fetching and business logic
+4. **Create components/utils/** functions for data fetching and business logic
 5. **Build individual modular components** (one responsibility each)
-6. **Assemble page.tsx** as clean orchestrator importing only from _components/
+6. **Assemble page.tsx** as clean orchestrator importing only from components/
 
 **Step 3: Integration & Testing**
 7. **Test component modularity**: Can components be easily added/removed?
@@ -647,13 +653,13 @@ export function PostList({ posts }: PostListProps) {
 ### 3. Modular Component Development Pattern
 ```typescript
 // 1. Create collection (Collections/Events.tsx)
-// 2. Create utils (app/events/_components/utils/fetchEvents.ts)  
-// 3. Create components (app/events/_components/EventList.tsx)
-// 4. Assemble page (app/events/page.tsx) - imports only from _components/
+// 2. Create utils (app/events/components/utils/fetchEvents.ts)  
+// 3. Create components (app/events/components/EventList.tsx)
+// 4. Assemble page (app/events/page.tsx) - imports only from components/
 ```
 
 ### 4. Component Design Standards
-**Each _components/ file must be:**
+**Each components/ file must be:**
 - **Focused**: One clear responsibility
 - **Self-contained**: Handles own data and presentation  
 - **Pluggable**: Easy to add/remove from page.tsx

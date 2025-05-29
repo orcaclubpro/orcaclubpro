@@ -36,7 +36,7 @@ export function QuickActions() {
             className="flex items-center justify-between p-4 bg-gray-900/50 border border-gray-700/50 rounded-lg hover:border-blue-500/50 transition-all group"
           >
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-lg flex items-center justify-center group-hover:from-blue-500/30 group-hover:to-purple-500/30 transition-all">
+              <div className="w-10 h-10 bg-linear-to-br from-blue-500/20 to-purple-500/20 rounded-lg flex items-center justify-center group-hover:from-blue-500/30 group-hover:to-purple-500/30 transition-all">
                 <IconComponent className="h-5 w-5 text-blue-400" />
               </div>
               <div className="text-left">

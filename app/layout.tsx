@@ -1,54 +1,43 @@
-import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
+import type React from "react"
+import type { Metadata } from "next"
+import { Inter, JetBrains_Mono } from "next/font/google"
+import "./globals.css"
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
   subsets: ["latin"],
-});
+  variable: "--font-inter",
+  display: "swap",
+})
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
-});
+  variable: "--font-mono",
+  display: "swap",
+})
 
 export const metadata: Metadata = {
-  title: "orcaclub.pro",
-  description: "Advanced POD workspace platform - Your premium command center for development and collaboration",
-  formatDetection: {
-    telephone: false,
-    date: false,
-    address: false,
-    email: false,
-  }
-};
-
-export const viewport: Viewport = {
-  width: 'device-width',
-  initialScale: 1,
-  maximumScale: 5,
-  minimumScale: 1,
-  userScalable: true,
-  viewportFit: 'cover',
-  // iOS specific settings to enhance mobile experience
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: 'white' },
-    { media: '(prefers-color-scheme: dark)', color: 'black' },
-  ],
-};
+  title: "ORCACLUB - Intelligent Digital Predator",
+  description:
+    "We don't just build software—we engineer competitive advantages. Premium solutions with mathematical precision.",
+  keywords: "premium software agency, AI workflows, intelligent automation, digital transformation",
+  authors: [{ name: "ORCACLUB" }],
+  openGraph: {
+    title: "ORCACLUB - Intelligent Digital Predator",
+    description: "Premium solutions with mathematical precision",
+    type: "website",
+  },
+}
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: {
+  children: React.ReactNode
+}) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
+      <body className="font-sans antialiased bg-black text-white overflow-x-hidden">
         {children}
       </body>
     </html>
-  );
+  )
 }
