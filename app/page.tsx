@@ -3,6 +3,7 @@
 import FloatingNavigation from "./components/floating-navigation"
 import AnimatedBackground from "./components/animated-background"
 import ScrollReveal from "./components/scroll-reveal"
+import DynamicGreeting from "./components/dynamic-greeting"
 import Link from "next/link"
 import { ArrowRight, Code, Zap, Target, Brain, ChevronDown } from "lucide-react"
 
@@ -18,17 +19,7 @@ export default function HomePage() {
           {/* Strategic top padding to create centerpiece effect */}
           <div className="pt-32 md:pt-40">
             <ScrollReveal>
-              <div className="text-reveal mb-20">
-                <span className="block text-6xl md:text-8xl font-extralight tracking-tighter leading-tight mb-8">
-                  We engineer
-                </span>
-                <span className="block text-6xl md:text-8xl font-light gradient-text tracking-tighter leading-tight mb-8">
-                  competitive
-                </span>
-                <span className="block text-6xl md:text-8xl font-extralight tracking-tighter leading-tight">
-                  advantages
-                </span>
-              </div>
+              <DynamicGreeting className="mb-20" />
             </ScrollReveal>
 
             <ScrollReveal delay={400}>

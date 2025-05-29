@@ -329,6 +329,87 @@ body {
   left: 100%;
 }
 
+/* Dynamic greeting animations */
+@keyframes greetingFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(64px) scale(0.95);
+    filter: blur(4px);
+  }
+  60% {
+    opacity: 0.8;
+    transform: translateY(8px) scale(0.98);
+    filter: blur(1px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+.greeting-animate {
+  animation: greetingFadeIn 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Orca logo animations */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-8px) rotate(1deg);
+  }
+  50% {
+    transform: translateY(-12px) rotate(0deg);
+  }
+  75% {
+    transform: translateY(-6px) rotate(-1deg);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(1.1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.15);
+  }
+}
+
+/* Enhanced glow effects for brand experience */
+@keyframes logoGlow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(103, 232, 249, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(103, 232, 249, 0.6);
+  }
+}
+
+/* Brand signature underline animation */
+.brand-underline {
+  position: relative;
+  overflow: hidden;
+}
+
+.brand-underline::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #67e8f9, #3b82f6);
+  transition: width 0.3s ease-out;
+}
+
+.brand-underline:hover::after {
+  width: 100%;
+}
+
 @theme inline {
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
@@ -347,4 +428,9 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Gradient radial utility */
+.bg-gradient-radial {
+  background: radial-gradient(circle, var(--tw-gradient-stops));
 }
