@@ -186,7 +186,7 @@ export default function DynamicGreeting({ className = "" }: DynamicGreetingProps
         {/* Dynamic Greeting Text - Centered */}
         <div className="flex flex-col items-center">
           <div 
-            className={`text-4xl md:text-6xl lg:text-7xl xl:text-8xl font-light tracking-tighter leading-tight transition-all duration-700 ease-in-out whitespace-nowrap ${
+            className={`text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-light tracking-tighter leading-tight transition-all duration-700 ease-in-out whitespace-nowrap ${
               isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-[-60px]'
             }`}
             style={{ 
@@ -197,7 +197,7 @@ export default function DynamicGreeting({ className = "" }: DynamicGreetingProps
             <span className="text-white">
               {greetingContent.first}
             </span>
-            <span className="ml-3 md:ml-4 lg:ml-6">
+            <span className="ml-2 md:ml-3 lg:ml-4 xl:ml-6">
               <span className="gradient-text">
                 {greetingContent.second}
               </span>
