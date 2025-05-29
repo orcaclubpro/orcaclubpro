@@ -1,6 +1,6 @@
 import * as React from "react";
 import Image from "next/image";
-import { cn } from "@/app/_shared/lib/utils";
+import { cn } from "@/app/shared/lib/utils";
 
 interface AvatarProps extends React.HTMLAttributes<HTMLDivElement> {
   src?: string;
