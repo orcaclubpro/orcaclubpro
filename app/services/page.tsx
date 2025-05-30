@@ -16,8 +16,6 @@ import {
   Clock,
   Sparkles,
   Star,
-  Award,
-  Workflow,
   ChevronDown,
 } from "lucide-react"
 

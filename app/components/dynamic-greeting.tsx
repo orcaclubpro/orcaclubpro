@@ -145,7 +145,7 @@ export default function DynamicGreeting({ className = "" }: DynamicGreetingProps
     }, 15000)
 
     return () => clearInterval(languageInterval)
-  }, [mounted, currentLanguageIndex, isTransitioning])
+  }, [mounted, currentLanguageIndex, isTransitioning, animateToNextGreeting])
 
   // Time of day checking effect (separate from language cycling)
   useEffect(() => {

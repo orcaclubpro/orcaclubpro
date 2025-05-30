@@ -59,12 +59,6 @@ export default function HomePage() {
             </ScrollReveal>
           </div>
 
-          {/* Scroll indicator positioned relative to bottom */}
-          <ScrollReveal delay={1200}>
-            <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2">
-              <ChevronDown className="w-6 h-6 text-gray-500 animate-bounce" />
-            </div>
-          </ScrollReveal>
         </div>
       </section>
 
