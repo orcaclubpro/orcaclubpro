@@ -9,7 +9,6 @@ import Link from "next/link"
 import {
   ArrowRight,
   Zap,
-  ChevronDown,
   Target,
   Brain,
   Code2

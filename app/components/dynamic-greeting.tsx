@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import Image from "next/image"
 import Link from "next/link"
 
@@ -86,7 +86,7 @@ export default function DynamicGreeting({ className = "" }: DynamicGreetingProps
     return currentGreetings[langIndex % currentGreetings.length]
   }
 
-  const animateToNextGreeting = () => {
+  const animateToNextGreeting = useCallback(() => {
     if (isTransitioning) return // Prevent overlapping animations
     
     // Start exit animation (swipe up)
@@ -109,7 +109,7 @@ export default function DynamicGreeting({ className = "" }: DynamicGreetingProps
         setIsVisible(true)
       }, 150)
     }, 600) // Slightly longer exit animation for more fluid feel
-  }
+  }, [isTransitioning, currentLanguageIndex])
 
   // Initial setup
   useEffect(() => {
