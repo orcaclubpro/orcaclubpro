@@ -7,7 +7,7 @@ import { Menu, X } from "lucide-react"
 
 const navigation = [
   { name: "Services", href: "/services" },
-  { name: "Portfolio", href: "/portfolio" },
+  { name: "Work", href: "/portfolio" },
   { name: "Insights", href: "/insights" },
   { name: "Connect", href: "/contact" },
 ]
@@ -47,7 +47,7 @@ export default function Navigation() {
               href="/dashboard"
               className="bg-linear-to-r from-blue-600 to-cyan-500 text-white px-6 py-2 rounded-lg text-sm font-medium hover:scale-105 transition-transform"
             >
-              Dashboard
+              pod access
             </Link>
           </div>
 

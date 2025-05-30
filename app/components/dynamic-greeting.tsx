@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Image from "next/image"
+import Link from "next/link"
 
 interface DynamicGreetingProps {
   className?: string
@@ -173,14 +174,16 @@ export default function DynamicGreeting({ className = "" }: DynamicGreetingProps
         <div className={`transition-all duration-1000 ease-out ${
           logoVisible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-[-30px] scale-95'
         }`}>
-          <Image
-            src="/orcaclubpro.png"
-            alt="ORCACLUB Pro"
-            width={200}
-            height={200}
-            className="w-24 h-24 md:w-32 md:h-32 lg:w-40 lg:h-40 object-contain"
-            priority
-          />
+          <Link href="/about" className="group transition-all duration-300 hover:scale-105 cursor-pointer">
+            <Image
+              src="/orcaclubpro.png"
+              alt="ORCACLUB Pro"
+              width={200}
+              height={200}
+              className="w-24 h-24 md:w-32 md:h-32 lg:w-40 lg:h-40 object-contain group-hover:opacity-80 transition-opacity duration-300"
+              priority
+            />
+          </Link>
         </div>
 
         {/* Dynamic Greeting Text - Centered */}

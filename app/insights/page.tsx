@@ -1,7 +1,55 @@
 import Navigation from "../components/navigation"
 import Link from "next/link"
 import Image from "next/image"
+import type { Metadata } from 'next'
 import { Calendar, Clock, ArrowRight, TrendingUp, Code, Brain, Target } from "lucide-react"
+
+export const metadata: Metadata = {
+  title: "Technical Insights & Software Development Expertise | Industry Analysis - orcaclub",
+  description: "Expert technical insights on software development, AI automation, web design, and digital transformation. Read in-depth articles from our software consultants on industry trends, best practices, and innovative solutions.",
+  keywords: [
+    "software development insights",
+    "technical blog",
+    "software company insights",
+    "AI automation insights",
+    "web design best practices",
+    "software development trends",
+    "technology insights",
+    "software engineering articles",
+    "digital transformation insights",
+    "software consultant insights",
+    "business automation insights",
+    "web development insights",
+    "software architecture insights",
+    "technology strategy",
+    "software development best practices",
+    "AI workflow insights",
+    "software industry analysis",
+    "tech innovation insights",
+    "software development expertise",
+    "enterprise software insights"
+  ],
+  openGraph: {
+    title: "Technical Insights & Software Development Expertise | Industry Analysis",
+    description: "Expert technical insights on software development, AI automation, web design, and digital transformation. Read in-depth articles from our software consultants.",
+    type: "website",
+    url: "https://orcaclub.pro/insights",
+    images: [{
+      url: "/og-insights.jpg",
+      width: 1200,
+      height: 630,
+      alt: "orcaclub Technical Insights - Software Development Expertise"
+    }]
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Technical Insights & Software Development Expertise | Industry Analysis",
+    description: "Expert technical insights on software development, AI automation, web design, and digital transformation from our software consultants."
+  },
+  alternates: {
+    canonical: "https://orcaclub.pro/insights"
+  }
+}
 
 const blogPosts = [
   {
@@ -95,14 +143,15 @@ export default function InsightsPage() {
           {/* Header */}
           <div className="text-center mb-16">
             <h1 className="text-5xl md:text-6xl font-light tracking-tight mb-6">
-              Technical{" "}
+              Expert Software Development{" "}
               <span className="bg-linear-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent font-medium">
                 Insights
               </span>
             </h1>
             <p className="text-xl text-gray-400 max-w-3xl mx-auto leading-relaxed">
-              Deep technical knowledge and strategic thinking. We share our expertise to help you make informed
-              decisions about your digital future.
+              In-depth technical knowledge and strategic thinking from our <strong>software development</strong> experts. 
+              Discover insights on <strong>AI automation</strong>, <strong>web design</strong>, and digital transformation 
+              to help you make informed decisions about your technology strategy.
             </p>
           </div>
 

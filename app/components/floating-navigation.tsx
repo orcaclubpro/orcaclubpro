@@ -7,7 +7,7 @@ import { Menu, X } from "lucide-react"
 
 const navigation = [
   { name: "Services", href: "/services" },
-  { name: "Work", href: "/work" },
+  { name: "Work", href: "/portfolio" },
   { name: "Insights", href: "/insights" },
   { name: "Connect", href: "/contact" },
 ]
@@ -69,7 +69,7 @@ export default function FloatingNavigation() {
             href="/dashboard"
             className="hidden md:block ml-8 px-6 py-2 bg-linear-to-r from-blue-600/20 to-cyan-500/20 border border-cyan-400/30 rounded-full text-sm font-light text-cyan-400 hover:bg-linear-to-r hover:from-blue-600/30 hover:to-cyan-500/30 transition-all duration-300 magnetic"
           >
-            Workspace
+            POD Login
           </Link>
 
           {/* Mobile menu button */}
