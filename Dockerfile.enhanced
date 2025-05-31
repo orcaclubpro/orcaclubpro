@@ -1,0 +1,110 @@
+# syntax=docker/dockerfile:1
+# Enhanced Multi-stage Dockerfile for Next.js + Payload CMS with Bun
+# Optimized for production deployment with security, performance, and size improvements
+
+# ============================================================================
+# Stage 1: Base Dependencies Setup
+# ============================================================================
+FROM oven/bun:alpine AS base
+
+# Install system dependencies
+RUN apk add --no-cache \
+    libc6-compat \
+    dumb-init \
+    && rm -rf /var/cache/apk/*
+
+# Create app user for security
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
+
+WORKDIR /app
+
+# ============================================================================
+# Stage 2: Dependencies Installation
+# ============================================================================
+FROM base AS deps
+
+# Copy package files for dependency installation
+COPY package.json ./
+COPY bun.lockb* ./
+COPY package-lock.json* ./
+
+# Install dependencies with optimal caching and fallback handling
+RUN --mount=type=cache,target=/root/.bun/install/cache \
+    if [ -f bun.lockb ]; then \
+        echo "Installing with bun.lockb" && \
+        bun install --frozen-lockfile --production=false; \
+    elif [ -f package-lock.json ]; then \
+        echo "Installing with package-lock.json (converting to bun)" && \
+        bun install --production=false; \
+    else \
+        echo "Installing without lockfile" && \
+        bun install --production=false; \
+    fi
+
+# ============================================================================
+# Stage 3: Build Stage
+# ============================================================================
+FROM base AS builder
+
+# Set build environment
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV SKIP_MIGRATIONS=true
+
+# Copy dependencies from deps stage
+COPY --from=deps /app/node_modules ./node_modules
+
+# Copy source code
+COPY . .
+
+# Generate Payload types and build
+RUN --mount=type=cache,target=/root/.bun/install/cache \
+    bun run payload:generate
+
+# Build the application using your comprehensive build script
+RUN bun run scripts/build.js
+
+# ============================================================================
+# Stage 4: Production Runtime
+# ============================================================================
+FROM base AS runner
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+# Install minimal runtime dependencies for Payload CMS
+RUN apk add --no-cache sqlite && rm -rf /var/cache/apk/*
+
+# Copy built application using Next.js standalone output
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+
+# Copy Payload-specific files
+COPY --from=builder --chown=nextjs:nodejs /app/payload-types.ts ./
+COPY --from=builder --chown=nextjs:nodejs /app/payload.config.ts ./
+
+# Create database directory with proper permissions
+RUN mkdir -p ./data && chown nextjs:nodejs ./data
+
+# Copy any existing database (optional)
+COPY --from=builder --chown=nextjs:nodejs /app/payload.db* ./data/ 2>/dev/null || true
+
+# Switch to non-root user
+USER nextjs
+
+# Expose port
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD bun --version > /dev/null || exit 1
+
+# Use dumb-init for proper signal handling
+ENTRYPOINT ["dumb-init", "--"]
+
+# Start the application with better error handling
+CMD ["sh", "-c", "DATABASE_URI=${DATABASE_URI:-file:./data/payload.db} bun run server.js"] 

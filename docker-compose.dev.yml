@@ -1,0 +1,48 @@
+version: '3.8'
+
+# Development Docker Compose for OrcaClubPro
+# Optimized for local development with hot reloading
+
+services:
+  app-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.enhanced
+      target: builder
+    container_name: orcaclubpro-dev
+    
+    ports:
+      - "3000:3000"
+    
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URI=file:./data/payload.db
+      - PAYLOAD_SECRET=development-secret-change-in-production
+      - NEXT_TELEMETRY_DISABLED=1
+      - USE_BUN_RUNTIME=true
+      - VERBOSE=true
+    
+    volumes:
+      # Mount source code for hot reloading
+      - .:/app
+      - node_modules:/app/node_modules
+      # Persist database in development
+      - dev_db_data:/app/data
+    
+    # Override command for development
+    command: ["bun", "run", "dev"]
+    
+    # Enable hot reloading and file watching
+    stdin_open: true
+    tty: true
+    
+    # Development resource limits (more generous)
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+
+volumes:
+  node_modules:
+  dev_db_data: 
