@@ -1,0 +1,24 @@
+# nixpacks.toml configuration for Bun-based Next.js project
+
+# Extend auto-detected providers and ensure Node.js provider runs
+providers = ["...", "node"]
+
+[phases.install]
+# Use bun install to install dependencies
+cmds = ["bun install"]
+
+[phases.build] 
+# Use your build command that runs payload build and next build
+cmds = ["bun run build"]
+
+[start]
+# Use your start command
+cmd = "bun run start"
+
+# Optional: Add any additional Nix packages if needed
+# [phases.setup]
+# nixPkgs = ["...", "sqlite"]
+
+# Environment variables (add if needed)
+# [variables]
+# NODE_ENV = "production"
