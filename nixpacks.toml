@@ -4,12 +4,15 @@
 providers = ["node"]
 
 [phases.setup]
-# Ensure bun is available
-nixPkgs = ["bun"]
+# Ensure bun and build tools are available
+nixPkgs = ["bun", "nodejs", "python3", "gcc", "gnumake", "pkg-config"]
 
 [phases.install]
-# Use bun install to install dependencies
-cmds = ["bun install --frozen-lockfile"]
+# Use bun install and rebuild native modules
+cmds = [
+  "bun install --no-frozen-lockfile",
+  "npm rebuild better-sqlite3 --build-from-source"
+]
 
 [phases.build] 
 # Use your build command that runs payload build and next build
@@ -22,3 +25,6 @@ cmd = "bun run start"
 # Environment variables
 [variables]
 NODE_ENV = "production"
+# Ensure proper node-gyp environment
+npm_config_cache = "/tmp/.npm"
+npm_config_build_from_source = "true"
