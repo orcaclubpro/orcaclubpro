@@ -8,8 +8,9 @@ providers = ["node"]
 nixPkgs = ["bun", "nodejs", "python3", "gcc", "gnumake", "pkg-config"]
 
 [phases.install]
-# Use bun install and rebuild native modules
+# Install node-gyp globally first, then use bun install and rebuild native modules
 cmds = [
+  "npm install -g node-gyp",
   "bun install --no-frozen-lockfile",
   "npm rebuild better-sqlite3 --build-from-source"
 ]

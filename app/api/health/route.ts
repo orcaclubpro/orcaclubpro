@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@payload-config'
 
@@ -41,7 +41,7 @@ interface HealthStatus {
   error?: string
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   const startTime = Date.now()
   
   try {
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
       // Simple database test - try to count a collection
       // This tests both Payload initialization and database connectivity
       try {
-        const dbTest = await payload.count({
+        await payload.count({
           collection: 'users', // Adjust this to match your actual collections
         })
         
@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
           status: 'initialized',
           collections: 'accessible',
         }
-      } catch (collectionError) {
+      } catch {
         // Collection might not exist, but Payload is still working
         healthStatus.database = {
           status: 'connected',
@@ -155,12 +155,12 @@ export async function GET(request: NextRequest) {
 }
 
 // Also handle HEAD requests for simple health checks
-export async function HEAD(request: NextRequest) {
+export async function HEAD() {
   try {
     // Quick health check without full response body
-    const payload = await getPayload({ config })
+    await getPayload({ config })
     return new NextResponse(null, { status: 200 })
-  } catch (error) {
+  } catch {
     return new NextResponse(null, { status: 503 })
   }
 } 
