@@ -3,5 +3,5 @@ export default function FrontendLayout({
 }: {
   children: React.ReactNode
 }) {
-  return children
+  return <>{children}</>
 }

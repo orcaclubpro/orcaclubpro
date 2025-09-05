@@ -52,5 +52,11 @@ export default function ContactLayout({
 }: {
   children: React.ReactNode
 }) {
-  return <>{children}</>
+  return (
+    <div className="pt-32 pb-20 px-8">
+      <div className="max-w-4xl mx-auto">
+        {children}
+      </div>
+    </div>
+  )
 } 

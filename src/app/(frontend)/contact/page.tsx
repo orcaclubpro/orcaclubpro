@@ -3,7 +3,6 @@
 import type React from "react"
 
 import { useState } from "react"
-import Navigation from "@/components/layout/navigation"
 import { Send, CheckCircle, Mail, Phone, MapPin } from "lucide-react"
 
 export default function ContactPage() {
@@ -32,11 +31,7 @@ export default function ContactPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black">
-      <Navigation />
-
-      <div className="pt-32 pb-20 px-8">
-        <div className="max-w-6xl mx-auto">
+    <>
           {/* Header */}
           <div className="text-center mb-16">
             <h1 className="text-5xl md:text-6xl font-light tracking-tight mb-6">
@@ -253,21 +248,6 @@ export default function ContactPage() {
               </div>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Footer */}
-      <footer className="border-t border-slate-800 py-12 px-8">
-        <div className="max-w-6xl mx-auto text-center">
-          <div className="text-xl tracking-tight mb-4">
-            <span className="font-light">ORCA</span>
-            <span className="font-medium bg-linear-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
-              CLUB
-            </span>
-          </div>
-          <p className="text-gray-400 text-sm">Premium software agency & digital innovation</p>
-        </div>
-      </footer>
-    </div>
+    </>
   )
 }

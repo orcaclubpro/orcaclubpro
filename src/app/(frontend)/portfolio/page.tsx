@@ -1,55 +1,6 @@
-import Navigation from "@/components/layout/navigation"
 import Link from "next/link"
 import Image from "next/image"
-import type { Metadata } from 'next'
 import { ExternalLink, ArrowRight } from "lucide-react"
-
-export const metadata: Metadata = {
-  title: "Portfolio - Software Development Projects & Web Design Examples | orcaclub",
-  description: "View our portfolio of successful software development projects, beautiful web designs, AI automation solutions & digital transformations. See real results from our software company's work.",
-  keywords: [
-    "software development portfolio",
-    "web design portfolio",
-    "software company projects",
-    "AI automation examples",
-    "web design examples",
-    "software development case studies",
-    "custom software projects",
-    "digital transformation portfolio",
-    "software agency work",
-    "business automation projects",
-    "web application examples",
-    "software consultant portfolio",
-    "technology solutions examples",
-    "innovative software projects",
-    "successful web designs",
-    "software development showcase",
-    "AI workflow examples",
-    "enterprise software portfolio",
-    "mobile app development portfolio",
-    "ecommerce development examples"
-  ],
-  openGraph: {
-    title: "Portfolio - Software Development Projects & Web Design Examples",
-    description: "View our portfolio of successful software development projects, beautiful web designs, AI automation solutions & digital transformations. See real results from our work.",
-    type: "website",
-    url: "https://orcaclub.pro/portfolio",
-    images: [{
-      url: "/og-portfolio.jpg",
-      width: 1200,
-      height: 630,
-      alt: "orcaclub Portfolio - Software Development & Web Design Projects"
-    }]
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Portfolio - Software Development Projects & Web Design Examples",
-    description: "View our portfolio of successful software development projects, beautiful web designs, AI automation solutions & digital transformations."
-  },
-  alternates: {
-    canonical: "https://orcaclub.pro/portfolio"
-  }
-}
 
 const portfolioItems = [
   {
@@ -96,11 +47,7 @@ const portfolioItems = [
 
 export default function PortfolioPage() {
   return (
-    <div className="min-h-screen bg-black">
-      <Navigation />
-
-      <div className="pt-32 pb-20 px-8">
-        <div className="max-w-6xl mx-auto">
+    <>
           {/* Header */}
           <div className="text-center mb-16">
             <h1 className="text-5xl md:text-6xl font-light tracking-tight mb-6">
@@ -207,21 +154,6 @@ export default function PortfolioPage() {
               Start Your Project <ArrowRight size={20} />
             </Link>
           </div>
-        </div>
-      </div>
-
-      {/* Footer */}
-      <footer className="border-t border-slate-800 py-12 px-8">
-        <div className="max-w-6xl mx-auto text-center">
-          <div className="text-xl tracking-tight mb-4">
-            <span className="font-light">ORCA</span>
-            <span className="font-medium bg-linear-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
-              CLUB
-            </span>
-          </div>
-          <p className="text-gray-400 text-sm">Premium software agency & digital innovation</p>
-        </div>
-      </footer>
-    </div>
+    </>
   )
 }
