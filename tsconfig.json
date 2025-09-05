@@ -18,9 +18,16 @@
         "name": "next"
       }
     ],
+    "baseUrl": "./",
     "paths": {
-     "@payload-config": ["./payload.config.ts"],
-     "@/*": ["./*"]
+      "@payload-config": ["./src/lib/payload/payload.config.ts"],
+      "@/*": ["./src/*"],
+      "@/components/*": ["./src/components/*"],
+      "@/lib/*": ["./src/lib/*"],
+      "@/app/*": ["./src/app/*"],
+      "@/ui/*": ["./src/components/ui/*"],
+      "@/hooks/*": ["./src/hooks/*"],
+      "@/types/*": ["./src/types/*"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
