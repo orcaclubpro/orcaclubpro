@@ -68,6 +68,7 @@ export interface Config {
   blocks: {};
   collections: {
     users: User;
+    'kaiju-hunting-tasks': KaijuHuntingTask;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
     'payload-migrations': PayloadMigration;
@@ -75,6 +76,7 @@ export interface Config {
   collectionsJoins: {};
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
+    'kaiju-hunting-tasks': KaijuHuntingTasksSelect<false> | KaijuHuntingTasksSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
     'payload-migrations': PayloadMigrationsSelect<false> | PayloadMigrationsSelect<true>;
@@ -138,14 +140,68 @@ export interface User {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "kaiju-hunting-tasks".
+ */
+export interface KaijuHuntingTask {
+  id: string;
+  /**
+   * The name of the kaiju hunting task
+   */
+  title: string;
+  /**
+   * Detailed description of the hunting task
+   */
+  description?: string | null;
+  status: 'pending' | 'in_progress' | 'completed' | 'failed';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  /**
+   * Type of kaiju (e.g., Godzilla, Mothra, King Ghidorah)
+   */
+  kaijuType: string;
+  /**
+   * Location where the kaiju was spotted
+   */
+  location: string;
+  difficulty: 'easy' | 'medium' | 'hard' | 'legendary';
+  /**
+   * Estimated duration in hours
+   */
+  estimatedDuration?: number | null;
+  /**
+   * Equipment needed for the hunt
+   */
+  requiredEquipment?: string | null;
+  /**
+   * Points or credits awarded for completion
+   */
+  rewards?: number | null;
+  /**
+   * When the task must be completed
+   */
+  dueDate?: string | null;
+  /**
+   * Hunter assigned to this task
+   */
+  assignedHunter?: (string | null) | User;
+  category: 'reconnaissance' | 'capture' | 'elimination' | 'rescue' | 'research';
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-locked-documents".
  */
 export interface PayloadLockedDocument {
   id: string;
-  document?: {
-    relationTo: 'users';
-    value: string | User;
-  } | null;
+  document?:
+    | ({
+        relationTo: 'users';
+        value: string | User;
+      } | null)
+    | ({
+        relationTo: 'kaiju-hunting-tasks';
+        value: string | KaijuHuntingTask;
+      } | null);
   globalSlug?: string | null;
   user: {
     relationTo: 'users';
@@ -207,6 +263,27 @@ export interface UsersSelect<T extends boolean = true> {
   _verificationToken?: T;
   loginAttempts?: T;
   lockUntil?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "kaiju-hunting-tasks_select".
+ */
+export interface KaijuHuntingTasksSelect<T extends boolean = true> {
+  title?: T;
+  description?: T;
+  status?: T;
+  priority?: T;
+  kaijuType?: T;
+  location?: T;
+  difficulty?: T;
+  estimatedDuration?: T;
+  requiredEquipment?: T;
+  rewards?: T;
+  dueDate?: T;
+  assignedHunter?: T;
+  category?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
