@@ -2,6 +2,7 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Inter, JetBrains_Mono } from "next/font/google"
 import Script from "next/script"
+import { Toaster } from "sonner"
 import "./globals.css"
 
 const inter = Inter({
@@ -303,6 +304,13 @@ export default function RootLayout({
           `}
         </Script>
         {children}
+        <Toaster
+          position="bottom-right"
+          theme="dark"
+          richColors
+          duration={4000}
+          className="pointer-events-auto"
+        />
       </body>
     </html>
   )

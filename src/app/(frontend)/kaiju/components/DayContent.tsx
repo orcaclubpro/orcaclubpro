@@ -16,6 +16,7 @@ import {
 interface DayContentProps {
   dayData: TripDay
   dayIndex: number
+  startDate: string
   onAddActivity: () => void
   onEditActivity: (activityIndex: number) => void
   onDeleteActivity: (activityIndex: number) => void
@@ -24,6 +25,7 @@ interface DayContentProps {
 export function DayContent({
   dayData,
   dayIndex,
+  startDate,
   onAddActivity,
   onEditActivity,
   onDeleteActivity
@@ -102,10 +104,10 @@ export function DayContent({
             {/* Mission header with glow */}
             <div className="relative mb-4">
               <h2 className="text-4xl md:text-5xl font-bold text-cyan-100 font-mono tracking-wider relative z-10">
-                DAY {String(dayIndex + 1).padStart(2, '0')} - {dayData.location.toUpperCase()}
+                NOV {new Date(new Date(startDate).getTime() + dayIndex * 24 * 60 * 60 * 1000).getDate()} - {dayData.location.toUpperCase()}
               </h2>
               <div className="absolute inset-0 text-4xl md:text-5xl font-bold text-cyan-400/30 blur-sm font-mono tracking-wider">
-                DAY {String(dayIndex + 1).padStart(2, '0')} - {dayData.location.toUpperCase()}
+                NOV {new Date(new Date(startDate).getTime() + dayIndex * 24 * 60 * 60 * 1000).getDate()} - {dayData.location.toUpperCase()}
               </div>
             </div>
             
@@ -247,54 +249,6 @@ export function DayContent({
         )}
       </div>
 
-        {/* Mission Summary Stats */}
-        {sortedActivities.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-            className="mt-12 pt-8 border-t border-cyan-400/20"
-          >
-            <div className="bg-slate-800/50 backdrop-blur-sm border border-cyan-400/30 rounded-xl p-6">
-              <h4 className="text-cyan-100 font-mono font-bold tracking-wider mb-4 flex items-center gap-2">
-                <Target className="w-4 h-4 text-pink-400" />
-                MISSION STATISTICS
-              </h4>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                <div className="flex items-center gap-3">
-                  <div className="w-3 h-3 bg-cyan-400 rounded-full animate-pulse" />
-                  <div className="font-mono text-sm">
-                    <div className="text-cyan-300 tracking-wide">SCHEDULED</div>
-                    <div className="text-cyan-100 font-bold">
-                      {sortedActivities.filter(a => a.hasTime).length} MISSIONS
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-3">
-                  <div className="w-3 h-3 bg-pink-400 rounded-full animate-pulse" />
-                  <div className="font-mono text-sm">
-                    <div className="text-pink-300 tracking-wide">FLEXIBLE</div>
-                    <div className="text-pink-100 font-bold">
-                      {sortedActivities.filter(a => !a.hasTime).length} MISSIONS
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-3">
-                  <div className="w-3 h-3 bg-yellow-400 rounded-full animate-pulse" />
-                  <div className="font-mono text-sm">
-                    <div className="text-yellow-300 tracking-wide">TOTAL</div>
-                    <div className="text-yellow-100 font-bold">
-                      {sortedActivities.length} MISSIONS
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
       </div>
     </motion.div>
   )

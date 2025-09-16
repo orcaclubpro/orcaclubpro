@@ -1,0 +1,189 @@
+'use client'
+
+import { useState, useTransition } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { useRouter } from 'next/navigation'
+import { TripHeader } from './TripHeader'
+import { FloatingDaySelector } from './FloatingDaySelector'
+import { DayContent } from './DayContent'
+import { ActivityModal } from './ActivityModal'
+import { tripData as staticTripData, type Activity, type TripDay, type TripData } from '../data/tripData'
+import { createKaijuActivity, updateKaijuActivity, deleteKaijuActivity } from '../lib/actions'
+import { useScrollPosition } from '../hooks/useScrollPosition'
+import { toast } from 'sonner'
+
+interface JapanTripPlannerProps {
+  initialTripData?: TripData | null
+}
+
+interface EditingActivity {
+  dayIndex: number
+  activityIndex: number
+  activity: Activity
+  taskId?: string // Add taskId for Payload CMS integration
+}
+
+export function JapanTripPlanner({ initialTripData }: JapanTripPlannerProps) {
+  // Use Payload data if available, otherwise fallback to static data
+  const tripData = initialTripData || staticTripData
+  const router = useRouter()
+  const [isPending, startTransition] = useTransition()
+  const { isScrolledPastHero } = useScrollPosition()
+
+  const [currentDay, setCurrentDay] = useState(0)
+  const [activities, setActivities] = useState<Record<number, Activity[]>>(
+    Object.fromEntries(
+      tripData.days.map((_, index) => [index, tripData.days[index].activities])
+    )
+  )
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editingActivity, setEditingActivity] = useState<EditingActivity | null>(null)
+
+  const handleAddActivity = (dayIndex: number) => {
+    setEditingActivity(null)
+    setCurrentDay(dayIndex)
+    setIsModalOpen(true)
+  }
+
+  const handleEditActivity = (dayIndex: number, activityIndex: number) => {
+    const activity = activities[dayIndex][activityIndex]
+    // We'll need to find the taskId - for now, we'll use the activity id as taskId
+    setEditingActivity({
+      dayIndex,
+      activityIndex,
+      activity,
+      taskId: activity.id // Assuming the activity id matches the Payload task id
+    })
+    setIsModalOpen(true)
+  }
+
+  const handleDeleteActivity = async (dayIndex: number, activityIndex: number) => {
+    const activity = activities[dayIndex][activityIndex]
+
+    startTransition(async () => {
+      try {
+        // Delete from Payload CMS
+        if (activity.id) {
+          await deleteKaijuActivity(activity.id)
+          toast.success('Kaiju activity eliminated successfully!')
+        }
+
+        // Update local state
+        setActivities(prev => ({
+          ...prev,
+          [dayIndex]: prev[dayIndex].filter((_, index) => index !== activityIndex)
+        }))
+
+        // Refresh the page to get updated data from server
+        router.refresh()
+      } catch (error) {
+        console.error('Error deleting activity:', error)
+        toast.error('Failed to eliminate kaiju activity. Please try again.')
+      }
+    })
+  }
+
+  const handleSaveActivity = async (activity: Activity) => {
+    startTransition(async () => {
+      try {
+        const dayData = tripData.days[currentDay]
+        const startDate = new Date(tripData.startDate)
+        const activityDate = new Date(startDate)
+        activityDate.setDate(startDate.getDate() + currentDay)
+
+        if (editingActivity && editingActivity.taskId) {
+          // Edit existing activity in Payload CMS
+          await updateKaijuActivity(editingActivity.taskId, activity, dayData.location, dayData.city, dayData.phase)
+          toast.success('Kaiju activity updated successfully!')
+
+          // Update local state
+          setActivities(prev => ({
+            ...prev,
+            [editingActivity.dayIndex]: prev[editingActivity.dayIndex].map((a, index) =>
+              index === editingActivity.activityIndex ? activity : a
+            )
+          }))
+        } else {
+          // Add new activity to Payload CMS
+          const newActivity = await createKaijuActivity(activity, dayData.location, dayData.city, dayData.phase)
+          // Update the activity id to match the created activity id
+          activity.id = newActivity?.id || activity.id
+          toast.success('New kaiju activity deployed successfully!')
+
+          // Add to local state
+          setActivities(prev => ({
+            ...prev,
+            [currentDay]: [...(prev[currentDay] || []), activity]
+          }))
+        }
+
+        setIsModalOpen(false)
+        setEditingActivity(null)
+
+        // Refresh the page to get updated data from server
+        router.refresh()
+      } catch (error) {
+        console.error('Error saving activity:', error)
+        toast.error('Kaiju activity deployment failed. Please try again.')
+      }
+    })
+  }
+
+  const navigateDay = (direction: number) => {
+    const newDay = currentDay + direction
+    if (newDay >= 0 && newDay < tripData.days.length) {
+      setCurrentDay(newDay)
+    }
+  }
+
+  const currentDayData: TripDay = {
+    ...tripData.days[currentDay],
+    activities: activities[currentDay] || []
+  }
+
+  return (
+    <div className="min-h-screen">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.8 }}
+        className="relative z-10"
+      >
+        <TripHeader />
+
+        <FloatingDaySelector
+          currentDay={currentDay}
+          totalDays={tripData.days.length}
+          onJumpToDay={setCurrentDay}
+          onNavigate={navigateDay}
+          isVisible={isScrolledPastHero}
+          startDate={tripData.startDate}
+        />
+
+        <AnimatePresence mode="wait">
+          <DayContent
+            key={currentDay}
+            dayData={currentDayData}
+            dayIndex={currentDay}
+            startDate={tripData.startDate}
+            onAddActivity={() => handleAddActivity(currentDay)}
+            onEditActivity={(activityIndex) => handleEditActivity(currentDay, activityIndex)}
+            onDeleteActivity={(activityIndex) => handleDeleteActivity(currentDay, activityIndex)}
+          />
+        </AnimatePresence>
+      </motion.div>
+
+      <ActivityModal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false)
+          setEditingActivity(null)
+        }}
+        onSave={handleSaveActivity}
+        activity={editingActivity?.activity}
+        isEdit={!!editingActivity}
+        isPending={isPending}
+      />
+    </div>
+  )
+}

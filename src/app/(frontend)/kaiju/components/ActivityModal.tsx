@@ -59,6 +59,7 @@ interface ActivityModalProps {
   onSave: (activity: Activity) => void
   activity?: Activity
   isEdit?: boolean
+  isPending?: boolean
 }
 
 export function ActivityModal({
@@ -66,7 +67,8 @@ export function ActivityModal({
   onClose,
   onSave,
   activity,
-  isEdit = false
+  isEdit = false,
+  isPending = false
 }: ActivityModalProps) {
   const form = useForm<ActivityFormData>({
     resolver: zodResolver(activitySchema),
@@ -297,26 +299,32 @@ export function ActivityModal({
                 type="button"
                 variant="outline"
                 onClick={handleClose}
+                disabled={isPending}
                 className="
-                  flex-1 sm:flex-none bg-slate-800/50 border-slate-500 text-slate-300 
+                  flex-1 sm:flex-none bg-slate-800/50 border-slate-500 text-slate-300
                   hover:bg-slate-700 hover:border-slate-400 hover:text-slate-100
-                  font-mono tracking-wider
+                  font-mono tracking-wider disabled:opacity-50 disabled:cursor-not-allowed
                 "
               >
                 ABORT
               </Button>
               <Button
                 type="submit"
+                disabled={isPending}
                 className="
-                  flex-1 sm:flex-none bg-gradient-to-r from-cyan-500 to-cyan-600 
-                  hover:from-cyan-400 hover:to-cyan-500 text-slate-900 
+                  flex-1 sm:flex-none bg-gradient-to-r from-cyan-500 to-cyan-600
+                  hover:from-cyan-400 hover:to-cyan-500 text-slate-900
                   font-mono font-bold tracking-wider
                   shadow-[0_0_20px_rgba(0,255,255,0.3)]
                   hover:shadow-[0_0_30px_rgba(0,255,255,0.5)]
-                  border-none
+                  border-none disabled:opacity-50 disabled:cursor-not-allowed
+                  disabled:from-slate-500 disabled:to-slate-600
                 "
               >
-                {isEdit ? 'UPDATE MISSION' : 'DEPLOY MISSION'}
+                {isPending ?
+                  (isEdit ? 'UPDATING MISSION...' : 'DEPLOYING MISSION...') :
+                  (isEdit ? 'UPDATE MISSION' : 'DEPLOY MISSION')
+                }
               </Button>
             </DialogFooter>
           </form>

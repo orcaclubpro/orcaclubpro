@@ -44,10 +44,11 @@ export function TripHeader() {
       {/* Hero Image Background */}
       <div className="absolute inset-0">
         <div className="relative w-full h-full">
-          <img 
-            src="/kaiju.png" 
+          <img
+            src="/kaiju.png"
             alt="Cyberpunk Japan Adventure - Two hunters in neon-lit Tokyo street"
-            className="w-full h-full object-cover opacity-60"
+            className="w-full h-full object-cover opacity-80"
+            style={{ imageRendering: 'crisp-edges' }}
           />
           {/* Light overlay for text readability */}
           <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-slate-900/30 to-slate-900/20" />

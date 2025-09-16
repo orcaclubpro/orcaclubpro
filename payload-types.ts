@@ -68,7 +68,10 @@ export interface Config {
   blocks: {};
   collections: {
     users: User;
-    'kaiju-hunting-tasks': KaijuHuntingTask;
+    activities: Activity;
+    'trip-days': TripDay;
+    trips: Trip;
+    'kaiju-activities': KaijuActivity;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
     'payload-migrations': PayloadMigration;
@@ -76,7 +79,10 @@ export interface Config {
   collectionsJoins: {};
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
-    'kaiju-hunting-tasks': KaijuHuntingTasksSelect<false> | KaijuHuntingTasksSelect<true>;
+    activities: ActivitiesSelect<false> | ActivitiesSelect<true>;
+    'trip-days': TripDaysSelect<false> | TripDaysSelect<true>;
+    trips: TripsSelect<false> | TripsSelect<true>;
+    'kaiju-activities': KaijuActivitiesSelect<false> | KaijuActivitiesSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
     'payload-migrations': PayloadMigrationsSelect<false> | PayloadMigrationsSelect<true>;
@@ -140,50 +146,78 @@ export interface User {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "kaiju-hunting-tasks".
+ * via the `definition` "activities".
  */
-export interface KaijuHuntingTask {
+export interface Activity {
+  id: string;
+  title: string;
+  description?: string | null;
+  /**
+   * Time in HH:MM format
+   */
+  time?: string | null;
+  hasTime?: boolean | null;
+  category?: ('cultural' | 'food' | 'nature' | 'shopping' | 'entertainment' | 'transport') | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "trip-days".
+ */
+export interface TripDay {
+  id: string;
+  location: string;
+  city: 'tokyo' | 'kyoto' | 'osaka' | 'fuji';
+  phase: string;
+  activities?: (string | Activity)[] | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "trips".
+ */
+export interface Trip {
+  id: string;
+  title: string;
+  startDate: string;
+  days?: (string | TripDay)[] | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "kaiju-activities".
+ */
+export interface KaijuActivity {
   id: string;
   /**
-   * The name of the kaiju hunting task
+   * Activity title (e.g., "Explore Shibuya Crossing")
    */
   title: string;
   /**
-   * Detailed description of the hunting task
+   * Optional description of the activity
    */
   description?: string | null;
-  status: 'pending' | 'in_progress' | 'completed' | 'failed';
-  priority: 'low' | 'medium' | 'high' | 'urgent';
   /**
-   * Type of kaiju (e.g., Godzilla, Mothra, King Ghidorah)
+   * Time in HH:MM format (e.g., "14:30")
    */
-  kaijuType: string;
+  time?: string | null;
   /**
-   * Location where the kaiju was spotted
+   * Whether this activity has a specific time
+   */
+  hasTime?: boolean | null;
+  category?: ('cultural' | 'food' | 'nature' | 'shopping' | 'entertainment' | 'transport') | null;
+  /**
+   * Location (e.g., "Tokyo", "Kyoto", "Osaka", "Mt. Fuji")
    */
   location: string;
-  difficulty: 'easy' | 'medium' | 'hard' | 'legendary';
+  city: 'tokyo' | 'kyoto' | 'osaka' | 'fuji';
   /**
-   * Estimated duration in hours
+   * Trip phase (e.g., "Arrival & First Exploration")
    */
-  estimatedDuration?: number | null;
-  /**
-   * Equipment needed for the hunt
-   */
-  requiredEquipment?: string | null;
-  /**
-   * Points or credits awarded for completion
-   */
-  rewards?: number | null;
-  /**
-   * When the task must be completed
-   */
-  dueDate?: string | null;
-  /**
-   * Hunter assigned to this task
-   */
-  assignedHunter?: (string | null) | User;
-  category: 'reconnaissance' | 'capture' | 'elimination' | 'rescue' | 'research';
+  phase: string;
   updatedAt: string;
   createdAt: string;
 }
@@ -199,8 +233,20 @@ export interface PayloadLockedDocument {
         value: string | User;
       } | null)
     | ({
-        relationTo: 'kaiju-hunting-tasks';
-        value: string | KaijuHuntingTask;
+        relationTo: 'activities';
+        value: string | Activity;
+      } | null)
+    | ({
+        relationTo: 'trip-days';
+        value: string | TripDay;
+      } | null)
+    | ({
+        relationTo: 'trips';
+        value: string | Trip;
+      } | null)
+    | ({
+        relationTo: 'kaiju-activities';
+        value: string | KaijuActivity;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -266,22 +312,53 @@ export interface UsersSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "kaiju-hunting-tasks_select".
+ * via the `definition` "activities_select".
  */
-export interface KaijuHuntingTasksSelect<T extends boolean = true> {
+export interface ActivitiesSelect<T extends boolean = true> {
   title?: T;
   description?: T;
-  status?: T;
-  priority?: T;
-  kaijuType?: T;
-  location?: T;
-  difficulty?: T;
-  estimatedDuration?: T;
-  requiredEquipment?: T;
-  rewards?: T;
-  dueDate?: T;
-  assignedHunter?: T;
+  time?: T;
+  hasTime?: T;
   category?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "trip-days_select".
+ */
+export interface TripDaysSelect<T extends boolean = true> {
+  location?: T;
+  city?: T;
+  phase?: T;
+  activities?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "trips_select".
+ */
+export interface TripsSelect<T extends boolean = true> {
+  title?: T;
+  startDate?: T;
+  days?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "kaiju-activities_select".
+ */
+export interface KaijuActivitiesSelect<T extends boolean = true> {
+  title?: T;
+  description?: T;
+  time?: T;
+  hasTime?: T;
+  category?: T;
+  location?: T;
+  city?: T;
+  phase?: T;
   updatedAt?: T;
   createdAt?: T;
 }

@@ -33,7 +33,7 @@
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
     "@libsql/darwin-arm64": "^0.5.10",
-    "@payloadcms/db-mongodb": "^3.54.0",
+    "@payloadcms/db-mongodb": "3.38.0",
     "@payloadcms/db-sqlite": "3.38.0",
     "@payloadcms/next": "3.38.0",
     "@payloadcms/richtext-lexical": "3.38.0",
@@ -62,6 +62,7 @@
     "react-hook-form": "^7.62.0",
     "recharts": "^2.15.3",
     "sharp": "^0.34.1",
+    "sonner": "^2.0.7",
     "tailwind-merge": "^3.3.0",
     "tailwindcss": "^4.1.8",
     "tailwindcss-animate": "^1.0.7",

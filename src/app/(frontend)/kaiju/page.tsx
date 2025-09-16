@@ -1,6 +1,14 @@
 import { JapanTripPlanner } from './components/JapanTripPlanner'
+import { fetchKaijuActivities } from './lib/actions'
 
-export default function JapanPage() {
+export default async function KaijuPage() {
+  // Fetch trip data from simplified KaijuActivities collection
+  let tripData = null
+  try {
+    tripData = await fetchKaijuActivities()
+  } catch (error) {
+    console.error('Error fetching kaiju activities:', error)
+  }
   return (
     <div className="min-h-screen bg-slate-900 relative overflow-hidden">
       {/* Cyberpunk background effects */}
@@ -22,13 +30,13 @@ export default function JapanPage() {
         <div className="absolute bottom-0 left-0 w-24 h-24 border-l-2 border-b-2 border-pink-400/20" />
         <div className="absolute bottom-0 right-0 w-24 h-24 border-r-2 border-b-2 border-pink-400/20" />
       </div>
-      
-      <JapanTripPlanner />
+
+      <JapanTripPlanner initialTripData={tripData} />
     </div>
   )
 }
 
 export const metadata = {
   title: '懐郷ハンターズ - Orcaclub Kaiju Hunting Adventure',
-  description: 'Epic 14-Day Japan Journey • November 4-17, 2024 • Cyberpunk Japan Adventure',
+  description: 'Epic 14-Day Japan Journey • November 4-17, 2024 • Cyberpunk Kaiju Hunting Adventure',
 }

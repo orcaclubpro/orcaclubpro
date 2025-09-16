@@ -56,12 +56,141 @@ const Users: CollectionConfig = {
   ],
 }
 
-// KaijuHuntingTasks collection for kaiju hunting task management
-const KaijuHuntingTasks: CollectionConfig = {
-  slug: 'kaiju-hunting-tasks',
+// Activities collection for trip activities
+const Activities: CollectionConfig = {
+  slug: 'activities',
   admin: {
     useAsTitle: 'title',
-    defaultColumns: ['title', 'status', 'priority', 'kaijuType', 'location'],
+    defaultColumns: ['title', 'category', 'hasTime', 'time'],
+  },
+  access: {
+    read: () => true,
+    create: () => true,
+    update: () => true,
+    delete: () => true,
+  },
+  fields: [
+    {
+      name: 'title',
+      type: 'text',
+      required: true,
+    },
+    {
+      name: 'description',
+      type: 'textarea',
+    },
+    {
+      name: 'time',
+      type: 'text',
+      admin: {
+        description: 'Time in HH:MM format',
+      },
+    },
+    {
+      name: 'hasTime',
+      type: 'checkbox',
+      defaultValue: false,
+    },
+    {
+      name: 'category',
+      type: 'select',
+      options: [
+        { label: 'Cultural', value: 'cultural' },
+        { label: 'Food', value: 'food' },
+        { label: 'Nature', value: 'nature' },
+        { label: 'Shopping', value: 'shopping' },
+        { label: 'Entertainment', value: 'entertainment' },
+        { label: 'Transport', value: 'transport' },
+      ],
+      defaultValue: 'cultural',
+    },
+  ],
+}
+
+// TripDays collection for daily itineraries
+const TripDays: CollectionConfig = {
+  slug: 'trip-days',
+  admin: {
+    useAsTitle: 'location',
+    defaultColumns: ['location', 'city', 'phase'],
+  },
+  access: {
+    read: () => true,
+    create: () => true,
+    update: () => true,
+    delete: () => true,
+  },
+  fields: [
+    {
+      name: 'location',
+      type: 'text',
+      required: true,
+    },
+    {
+      name: 'city',
+      type: 'select',
+      required: true,
+      options: [
+        { label: 'Tokyo', value: 'tokyo' },
+        { label: 'Kyoto', value: 'kyoto' },
+        { label: 'Osaka', value: 'osaka' },
+        { label: 'Mt. Fuji', value: 'fuji' },
+      ],
+    },
+    {
+      name: 'phase',
+      type: 'text',
+      required: true,
+    },
+    {
+      name: 'activities',
+      type: 'relationship',
+      relationTo: 'activities',
+      hasMany: true,
+    },
+  ],
+}
+
+// Trips collection for overall trip metadata
+const Trips: CollectionConfig = {
+  slug: 'trips',
+  admin: {
+    useAsTitle: 'title',
+    defaultColumns: ['title', 'startDate'],
+  },
+  access: {
+    read: () => true,
+    create: () => true,
+    update: () => true,
+    delete: () => true,
+  },
+  fields: [
+    {
+      name: 'title',
+      type: 'text',
+      required: true,
+      defaultValue: 'Japan Trip 2024',
+    },
+    {
+      name: 'startDate',
+      type: 'date',
+      required: true,
+    },
+    {
+      name: 'days',
+      type: 'relationship',
+      relationTo: 'trip-days',
+      hasMany: true,
+    },
+  ],
+}
+
+// KaijuActivities collection - simplified to mirror Activity interface exactly
+const KaijuActivities: CollectionConfig = {
+  slug: 'kaiju-activities',
+  admin: {
+    useAsTitle: 'title',
+    defaultColumns: ['title', 'category', 'location', 'hasTime', 'time'],
   },
   access: {
     read: () => true,
@@ -75,116 +204,72 @@ const KaijuHuntingTasks: CollectionConfig = {
       type: 'text',
       required: true,
       admin: {
-        description: 'The name of the kaiju hunting task',
+        description: 'Activity title (e.g., "Explore Shibuya Crossing")',
       },
     },
     {
       name: 'description',
       type: 'textarea',
       admin: {
-        description: 'Detailed description of the hunting task',
+        description: 'Optional description of the activity',
       },
     },
     {
-      name: 'status',
-      type: 'select',
-      required: true,
-      defaultValue: 'pending',
-      options: [
-        { label: 'Pending', value: 'pending' },
-        { label: 'In Progress', value: 'in_progress' },
-        { label: 'Completed', value: 'completed' },
-        { label: 'Failed', value: 'failed' },
-      ],
-    },
-    {
-      name: 'priority',
-      type: 'select',
-      required: true,
-      defaultValue: 'medium',
-      options: [
-        { label: 'Low', value: 'low' },
-        { label: 'Medium', value: 'medium' },
-        { label: 'High', value: 'high' },
-        { label: 'Urgent', value: 'urgent' },
-      ],
-    },
-    {
-      name: 'kaijuType',
+      name: 'time',
       type: 'text',
-      required: true,
       admin: {
-        description: 'Type of kaiju (e.g., Godzilla, Mothra, King Ghidorah)',
+        description: 'Time in HH:MM format (e.g., "14:30")',
+        placeholder: '14:30',
       },
     },
     {
-      name: 'location',
-      type: 'text',
-      required: true,
+      name: 'hasTime',
+      type: 'checkbox',
+      defaultValue: false,
       admin: {
-        description: 'Location where the kaiju was spotted',
-      },
-    },
-    {
-      name: 'difficulty',
-      type: 'select',
-      required: true,
-      defaultValue: 'medium',
-      options: [
-        { label: 'Easy', value: 'easy' },
-        { label: 'Medium', value: 'medium' },
-        { label: 'Hard', value: 'hard' },
-        { label: 'Legendary', value: 'legendary' },
-      ],
-    },
-    {
-      name: 'estimatedDuration',
-      type: 'number',
-      admin: {
-        description: 'Estimated duration in hours',
-      },
-    },
-    {
-      name: 'requiredEquipment',
-      type: 'textarea',
-      admin: {
-        description: 'Equipment needed for the hunt',
-      },
-    },
-    {
-      name: 'rewards',
-      type: 'number',
-      admin: {
-        description: 'Points or credits awarded for completion',
-      },
-    },
-    {
-      name: 'dueDate',
-      type: 'date',
-      admin: {
-        description: 'When the task must be completed',
-      },
-    },
-    {
-      name: 'assignedHunter',
-      type: 'relationship',
-      relationTo: 'users',
-      admin: {
-        description: 'Hunter assigned to this task',
+        description: 'Whether this activity has a specific time',
       },
     },
     {
       name: 'category',
       type: 'select',
-      required: true,
-      defaultValue: 'reconnaissance',
+      defaultValue: 'cultural',
       options: [
-        { label: 'Reconnaissance', value: 'reconnaissance' },
-        { label: 'Capture', value: 'capture' },
-        { label: 'Elimination', value: 'elimination' },
-        { label: 'Rescue', value: 'rescue' },
-        { label: 'Research', value: 'research' },
+        { label: 'Cultural', value: 'cultural' },
+        { label: 'Food', value: 'food' },
+        { label: 'Nature', value: 'nature' },
+        { label: 'Shopping', value: 'shopping' },
+        { label: 'Entertainment', value: 'entertainment' },
+        { label: 'Transport', value: 'transport' },
       ],
+    },
+    // Organization fields for trip structure
+    {
+      name: 'location',
+      type: 'text',
+      required: true,
+      admin: {
+        description: 'Location (e.g., "Tokyo", "Kyoto", "Osaka", "Mt. Fuji")',
+      },
+    },
+    {
+      name: 'city',
+      type: 'select',
+      required: true,
+      options: [
+        { label: 'Tokyo', value: 'tokyo' },
+        { label: 'Kyoto', value: 'kyoto' },
+        { label: 'Osaka', value: 'osaka' },
+        { label: 'Mt. Fuji', value: 'fuji' },
+      ],
+    },
+    {
+      name: 'phase',
+      type: 'text',
+      required: true,
+      admin: {
+        description: 'Trip phase (e.g., "Arrival & First Exploration")',
+      },
     },
   ],
 }
@@ -194,13 +279,13 @@ export default buildConfig({
   editor: lexicalEditor(),
 
   // Define and configure your collections in this array
-  collections: [Users, KaijuHuntingTasks],
+  collections: [Users, Activities, TripDays, Trips, KaijuActivities],
 
   // Your Payload secret - should be a complex and secure string, unguessable
   secret: process.env.PAYLOAD_SECRET || 'your-secret-here',
-  // Using MongoDB adapter 
+  // Using MongoDB adapter
   db: mongooseAdapter({
-    url: process.env.DATABASE_URI || 'mongodb+srv://chance:ara9YRAkRe7blAqF@orcapod.f5yp3f7.mongodb.net/ORCACLUB',
+    url: process.env.DATABASE_URI || 'mongodb+srv://chance:ara9YRAkRe7blAqF@orcapod.f5yp3f7.mongodb.net/orcapod',
   }),
   // If you want to resize images, crop, set focal point, etc.
   // make sure to install it and pass it to the config.
