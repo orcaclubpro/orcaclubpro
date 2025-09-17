@@ -210,6 +210,7 @@ export function JapanTripPlanner({ initialTripData }: JapanTripPlannerProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-transparent via-slate-900/20 to-slate-900/50">
+
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}

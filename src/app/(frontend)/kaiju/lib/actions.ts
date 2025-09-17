@@ -239,3 +239,100 @@ export async function searchKaijuActivities(query: string, dayIndex?: number): P
   }
 }
 
+/**
+ * Extended interface for scheduled activities with computed datetime
+ */
+export interface ScheduledActivity {
+  id: string
+  title: string
+  time: string
+  dayIndex: number
+  location: string
+  dateTime: Date
+  timeRemaining: string
+  category?: Activity['category']
+}
+
+/**
+ * Fetch all scheduled activities across all 16 days with computed date times
+ */
+export async function fetchAllScheduledActivities(): Promise<ScheduledActivity[]> {
+  try {
+    const payload = await getPayload({ config })
+
+    // Trip start date from static data
+    const tripStartDate = '2024-11-04'
+
+    // Get all activities that have scheduled times
+    const result = await payload.find({
+      collection: 'kaiju-activities',
+      where: {
+        hasTime: {
+          equals: true,
+        },
+      },
+      sort: ['dayIndex', 'time'],
+      limit: 1000,
+    })
+
+    const kaijuActivities = result.docs as KaijuActivity[]
+
+    // Get trip data for location information
+    const { tripData } = await import('../data/tripData')
+
+    // Convert to ScheduledActivity format with computed DateTime
+    const scheduledActivities: ScheduledActivity[] = kaijuActivities
+      .filter(activity => activity.time) // Ensure time exists
+      .map(activity => {
+        // Get location from trip data
+        const dayData = tripData.days[activity.dayIndex]
+        const location = dayData ? dayData.location : 'Unknown Location'
+
+        // Compute full DateTime: startDate + dayIndex + time
+        const startDate = new Date(tripStartDate)
+        const activityDate = new Date(startDate)
+        activityDate.setDate(startDate.getDate() + activity.dayIndex)
+
+        // Parse time (assuming format like "09:00" or "14:30")
+        const [hours, minutes] = (activity.time || '00:00').split(':').map(Number)
+        activityDate.setHours(hours, minutes, 0, 0)
+
+        // Calculate time remaining
+        const now = new Date()
+        const timeDiff = activityDate.getTime() - now.getTime()
+
+        let timeRemaining = ''
+        if (timeDiff > 0) {
+          const hoursRemaining = Math.floor(timeDiff / (1000 * 60 * 60))
+          const minutesRemaining = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60))
+
+          if (hoursRemaining > 0) {
+            timeRemaining = `${hoursRemaining}h ${minutesRemaining}m`
+          } else {
+            timeRemaining = `${minutesRemaining}m`
+          }
+        } else {
+          timeRemaining = 'Past'
+        }
+
+        return {
+          id: activity.id,
+          title: activity.title,
+          time: activity.time || '',
+          dayIndex: activity.dayIndex,
+          location,
+          dateTime: activityDate,
+          timeRemaining,
+          category: activity.category,
+        }
+      })
+      // Sort by computed dateTime
+      .sort((a, b) => a.dateTime.getTime() - b.dateTime.getTime())
+
+    return scheduledActivities
+  } catch (error) {
+    console.error('Error fetching all scheduled activities:', error)
+    return []
+  }
+}
+

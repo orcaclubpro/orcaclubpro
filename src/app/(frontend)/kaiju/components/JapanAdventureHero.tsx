@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Calendar, MapPin, Plane, Compass, Camera, Heart } from 'lucide-react';
+import { Calendar, MapPin, Plane, Compass, Camera, Heart, Clock } from 'lucide-react';
 import Image from 'next/image';
+import { fetchAllScheduledActivities } from '../lib/actions';
+import { type Activity } from '../data/tripData';
 
 // Define a type for particles
 interface Particle {
@@ -39,10 +41,15 @@ const JapanAdventureHero = () => {
   const [particles, setParticles] = useState<Particle[]>([]);
   const [geometricShapes, setGeometricShapes] = useState<GeometricShape[]>([]);
   const [isHoveringTitle, setIsHoveringTitle] = useState(false);
-  const [mousePosition, setMousePosition] = useState({ x: 50, y: 50 });
   const heroRef = useRef<HTMLDivElement | null>(null);
   const terminalRef = useRef<HTMLDivElement | null>(null);
   const [isMounted, setIsMounted] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Up Next functionality state
+  const [nextActivity, setNextActivity] = useState<Activity | null>(null);
+  const [tokyoTime, setTokyoTime] = useState(new Date());
+  const [timeUntilNext, setTimeUntilNext] = useState<string>('');
 
   // Terminal code animation - Japan themed
   const codeLines = [
@@ -80,36 +87,17 @@ const JapanAdventureHero = () => {
     setGeometricShapes(initShapes);
   }, []);
 
-  // Update particles position with mouse attraction
+  // Update particles position
   useEffect(() => {
     if (!isMounted) return;
 
     const interval = setInterval(() => {
       setParticles(prevParticles =>
-        prevParticles.map(particle => {
-          // Calculate distance to mouse
-          const distanceToMouse = Math.sqrt(
-            Math.pow(mousePosition.x - particle.x, 2) +
-            Math.pow(mousePosition.y - particle.y, 2)
-          );
-
-          // If particle is close to mouse, attract it
-          const attractionRadius = 30;
-          let newX = particle.x + particle.speedX;
-          let newY = particle.y + particle.speedY;
-
-          if (distanceToMouse < attractionRadius) {
-            const attractionStrength = 0.02;
-            newX += (mousePosition.x - particle.x) * attractionStrength;
-            newY += (mousePosition.y - particle.y) * attractionStrength;
-          }
-
-          return {
-            ...particle,
-            x: (newX + 100) % 100,
-            y: (newY + 100) % 100,
-          };
-        })
+        prevParticles.map(particle => ({
+          ...particle,
+          x: (particle.x + particle.speedX + 100) % 100,
+          y: (particle.y + particle.speedY + 100) % 100,
+        }))
       );
 
       // Update geometric shapes rotation
@@ -124,11 +112,19 @@ const JapanAdventureHero = () => {
     }, 50);
 
     return () => clearInterval(interval);
-  }, [isMounted, mousePosition]);
+  }, [isMounted]);
 
   useEffect(() => {
     setIsMounted(true);
     setIsVisible(true);
+
+    // Mobile detection
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth < 768); // 768px is Tailwind's md breakpoint
+    };
+
+    checkIsMobile();
+    window.addEventListener('resize', checkIsMobile);
 
     const handleScroll = () => {
       const position = window.scrollY;
@@ -150,6 +146,7 @@ const JapanAdventureHero = () => {
     return () => {
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('resize', checkIsMobile);
     };
   }, []);
 
@@ -172,6 +169,79 @@ const JapanAdventureHero = () => {
       setIsTerminalActive(true);
     }, 3000);
     return () => clearTimeout(timer);
+  }, []);
+
+  // Up Next functionality - Tokyo time tracking and activity loading
+  useEffect(() => {
+    let isActive = true;
+
+    const updateTokyoTimeAndActivity = async () => {
+      const now = new Date();
+      const tokyoNow = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Tokyo"}));
+      setTokyoTime(tokyoNow);
+
+      try {
+        const activities = await fetchAllScheduledActivities();
+
+        if (activities && activities.length > 0) {
+          // Get trip start date (November 4, 2024)
+          const tripStart = new Date('2024-11-04T00:00:00+09:00');
+
+          // Find next upcoming activity
+          const upcoming = activities
+            .map(activity => {
+              if (!activity.time || !activity.hasTime) return null;
+
+              const [hours, minutes] = activity.time.split(':').map(Number);
+              const activityDate = new Date(tripStart);
+              activityDate.setDate(tripStart.getDate() + activity.dayIndex);
+              activityDate.setHours(hours, minutes, 0, 0);
+
+              return {
+                ...activity,
+                datetime: activityDate
+              };
+            })
+            .filter(activity => activity && activity.datetime > tokyoNow)
+            .sort((a, b) => a!.datetime.getTime() - b!.datetime.getTime());
+
+          if (upcoming.length > 0 && isActive) {
+            const next = upcoming[0]!;
+            setNextActivity(next);
+
+            // Calculate time until next activity
+            const timeDiff = next.datetime.getTime() - tokyoNow.getTime();
+            const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+
+            if (days > 0) {
+              setTimeUntilNext(`${days}d ${hours}h ${minutes}m`);
+            } else if (hours > 0) {
+              setTimeUntilNext(`${hours}h ${minutes}m`);
+            } else {
+              setTimeUntilNext(`${minutes}m`);
+            }
+          } else if (isActive) {
+            setNextActivity(null);
+            setTimeUntilNext('');
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching activities:', error);
+      }
+    };
+
+    // Update immediately
+    updateTokyoTimeAndActivity();
+
+    // Update every 30 seconds
+    const interval = setInterval(updateTokyoTimeAndActivity, 30000);
+
+    return () => {
+      isActive = false;
+      clearInterval(interval);
+    };
   }, []);
 
   // Scroll page with terminal output
@@ -200,10 +270,21 @@ const JapanAdventureHero = () => {
       <div className="absolute inset-0 overflow-hidden">
         {/* Hero background image */}
         <div
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-transform duration-100 ease-out"
+          className={`absolute inset-0 bg-no-repeat ${
+            isMobile
+              ? 'bg-cover bg-center' // Mobile: cover ensures full viewport coverage
+              : 'bg-cover bg-center transition-transform duration-100 ease-out' // Desktop: with smooth parallax
+          }`}
           style={{
             backgroundImage: 'url(/kaiju_hd.png)',
-            transform: `translate(${parallaxY * 0.2}px, ${parallaxY * 0.4}px) scale(1.2)`,
+            transform: isMobile
+              ? 'none' // No parallax on mobile, image fills viewport properly
+              : `translate(${parallaxY * 0.2}px, ${parallaxY * 0.4}px) scale(1.2)`, // Parallax on desktop
+            ...(isMobile && {
+              // Additional mobile optimizations
+              backgroundAttachment: 'scroll', // Better performance on mobile
+              willChange: 'auto', // Disable GPU acceleration when not needed
+            }),
           }}
         />
 
@@ -331,7 +412,7 @@ X CASAMIGOS`}
         ref={heroRef}
         className="relative z-10 flex flex-col items-center justify-center min-h-screen text-white px-6 pb-20 pt-28"
       >
-        {/* Status bar */}
+        {/* Up Next Status bar */}
         <div
           className="fixed top-12 left-6 right-6 flex justify-between items-center py-2 px-4 bg-gray-900/40 backdrop-blur-md rounded-lg border border-white/5"
           style={{
@@ -341,13 +422,31 @@ X CASAMIGOS`}
           }}
         >
           <div className="flex items-center gap-3">
-            <div className="w-2 h-2 rounded-full bg-pink-400 animate-pulse" />
-            <span className="text-xs text-gray-300 font-mono">adventure ready</span>
+            <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+            <span className="text-xs text-gray-300 font-mono">
+              {nextActivity ? 'up next' : 'planning mode'}
+            </span>
           </div>
           <div className="flex items-center gap-4">
-            <Plane className="w-3 h-3 text-gray-400" />
-            <Compass className="w-3 h-3 text-gray-400" />
-            <Camera className="w-3 h-3 text-gray-400" />
+            {nextActivity ? (
+              <>
+                <div className="flex items-center gap-2">
+                  <Clock className="w-3 h-3 text-cyan-400" />
+                  <span className="text-xs text-cyan-300 font-mono">{timeUntilNext}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-xs text-pink-300 font-mono truncate max-w-24 sm:max-w-none">
+                    {nextActivity.title}
+                  </span>
+                </div>
+              </>
+            ) : (
+              <>
+                <Plane className="w-3 h-3 text-gray-400" />
+                <Compass className="w-3 h-3 text-gray-400" />
+                <Camera className="w-3 h-3 text-gray-400" />
+              </>
+            )}
           </div>
         </div>
 
@@ -498,18 +597,6 @@ X CASAMIGOS`}
           </div>
         </div>
 
-        {/* Mouse cursor follower effect */}
-        <div
-          className="absolute pointer-events-none z-20 transition-all duration-300 ease-out"
-          style={{
-            left: `${mousePosition.x}%`,
-            top: `${mousePosition.y}%`,
-            transform: 'translate(-50%, -50%)',
-          }}
-        >
-          <div className="w-8 h-8 border border-pink-400/30 rounded-full bg-pink-400/5 backdrop-blur-sm animate-pulse" />
-          <div className="absolute inset-0 w-8 h-8 border border-cyan-400/20 rounded-full animate-ping" style={{ animationDuration: '3s' }} />
-        </div>
 
       </div>
 
