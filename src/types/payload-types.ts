@@ -68,6 +68,7 @@ export interface Config {
   blocks: {};
   collections: {
     users: User;
+    'kaiju-activities': KaijuActivity;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
     'payload-migrations': PayloadMigration;
@@ -75,12 +76,13 @@ export interface Config {
   collectionsJoins: {};
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
+    'kaiju-activities': KaijuActivitiesSelect<false> | KaijuActivitiesSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
     'payload-migrations': PayloadMigrationsSelect<false> | PayloadMigrationsSelect<true>;
   };
   db: {
-    defaultIDType: number;
+    defaultIDType: string;
   };
   globals: {};
   globalsSelect: {};
@@ -116,7 +118,13 @@ export interface UserAuthOperations {
  * via the `definition` "users".
  */
 export interface User {
-  id: number;
+  id: string;
+  name: string;
+  role: 'admin' | 'user';
+  /**
+   * User workspace identifier
+   */
+  workspace?: string | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -124,24 +132,61 @@ export interface User {
   resetPasswordExpiration?: string | null;
   salt?: string | null;
   hash?: string | null;
+  _verified?: boolean | null;
+  _verificationToken?: string | null;
   loginAttempts?: number | null;
   lockUntil?: string | null;
   password?: string | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "kaiju-activities".
+ */
+export interface KaijuActivity {
+  id: string;
+  /**
+   * Activity title (e.g., "Explore Shibuya Crossing")
+   */
+  title: string;
+  /**
+   * Optional description of the activity
+   */
+  description?: string | null;
+  /**
+   * Time in HH:MM format (e.g., "14:30")
+   */
+  time?: string | null;
+  /**
+   * Whether this activity has a specific time
+   */
+  hasTime?: boolean | null;
+  category?: ('cultural' | 'food' | 'nature' | 'shopping' | 'entertainment' | 'transport') | null;
+  /**
+   * Day index (0-15) for 16-day trip
+   */
+  dayIndex: number;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-locked-documents".
  */
 export interface PayloadLockedDocument {
-  id: number;
-  document?: {
-    relationTo: 'users';
-    value: number | User;
-  } | null;
+  id: string;
+  document?:
+    | ({
+        relationTo: 'users';
+        value: string | User;
+      } | null)
+    | ({
+        relationTo: 'kaiju-activities';
+        value: string | KaijuActivity;
+      } | null);
   globalSlug?: string | null;
   user: {
     relationTo: 'users';
-    value: number | User;
+    value: string | User;
   };
   updatedAt: string;
   createdAt: string;
@@ -151,10 +196,10 @@ export interface PayloadLockedDocument {
  * via the `definition` "payload-preferences".
  */
 export interface PayloadPreference {
-  id: number;
+  id: string;
   user: {
     relationTo: 'users';
-    value: number | User;
+    value: string | User;
   };
   key?: string | null;
   value?:
@@ -174,7 +219,7 @@ export interface PayloadPreference {
  * via the `definition` "payload-migrations".
  */
 export interface PayloadMigration {
-  id: number;
+  id: string;
   name?: string | null;
   batch?: number | null;
   updatedAt: string;
@@ -185,6 +230,9 @@ export interface PayloadMigration {
  * via the `definition` "users_select".
  */
 export interface UsersSelect<T extends boolean = true> {
+  name?: T;
+  role?: T;
+  workspace?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -192,8 +240,24 @@ export interface UsersSelect<T extends boolean = true> {
   resetPasswordExpiration?: T;
   salt?: T;
   hash?: T;
+  _verified?: T;
+  _verificationToken?: T;
   loginAttempts?: T;
   lockUntil?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "kaiju-activities_select".
+ */
+export interface KaijuActivitiesSelect<T extends boolean = true> {
+  title?: T;
+  description?: T;
+  time?: T;
+  hasTime?: T;
+  category?: T;
+  dayIndex?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
