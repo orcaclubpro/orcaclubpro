@@ -139,7 +139,7 @@ export function ActivityModal({
         <DialogHeader className="border-b border-cyan-400/20 pb-6">
           <DialogTitle className="text-2xl font-bold font-mono tracking-wider text-cyan-100 flex items-center gap-3">
             <Target className="w-6 h-6 text-pink-400" />
-            {isEdit ? 'MODIFY MISSION' : 'DEPLOY NEW MISSION'}
+            {isEdit ? 'Edit Activity' : 'New Activity'}
           </DialogTitle>
         </DialogHeader>
 
@@ -322,8 +322,8 @@ export function ActivityModal({
                 "
               >
                 {isPending ?
-                  (isEdit ? 'UPDATING MISSION...' : 'DEPLOYING MISSION...') :
-                  (isEdit ? 'UPDATE MISSION' : 'DEPLOY MISSION')
+                  (isEdit ? 'Updating...' : 'Creating...') :
+                  (isEdit ? 'Update' : 'Create')
                 }
               </Button>
             </DialogFooter>

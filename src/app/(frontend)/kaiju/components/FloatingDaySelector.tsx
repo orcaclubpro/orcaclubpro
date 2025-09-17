@@ -70,7 +70,7 @@ export function FloatingDaySelector({
                 <div className="flex items-center gap-3">
                   <Calendar className="w-4 h-4 text-cyan-400" />
                   <div className="font-mono text-sm">
-                    <span className="text-cyan-100">Nov {new Date(new Date(startDate).getTime() + currentDay * 24 * 60 * 60 * 1000).getDate()}</span>
+                    <span className="text-cyan-100">Nov {4 + currentDay}</span>
                     <span className="text-slate-400 mx-2">|</span>
                     <span className="text-cyan-300 text-xs">{getCurrentDate()}</span>
                   </div>
@@ -140,7 +140,8 @@ export function FloatingDaySelector({
                   <div className="grid grid-cols-5 sm:grid-cols-7 gap-2 max-h-[40vh] overflow-y-auto">
                     {Array.from({ length: totalDays }, (_, index) => {
                       const isActive = index === currentDay
-                      const dayDate = new Date(new Date(startDate).getTime() + index * 24 * 60 * 60 * 1000)
+                      const novemberDay = 4 + index // Nov 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19
+                      const dayDate = new Date(2024, 10, novemberDay) // Month 10 = November (0-indexed)
 
                       return (
                         <motion.button
@@ -157,7 +158,7 @@ export function FloatingDaySelector({
                           whileTap={{ scale: 0.95 }}
                         >
                           <div className="text-center">
-                            <div className="font-bold text-sm sm:text-base">{dayDate.getDate()}</div>
+                            <div className="font-bold text-sm sm:text-base">{novemberDay}</div>
                             <div className="text-[10px] sm:text-xs opacity-75 leading-tight">
                               {dayDate.toLocaleDateString('en-US', { weekday: 'short' })}
                             </div>

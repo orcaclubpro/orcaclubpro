@@ -13,13 +13,13 @@ export function useScrollPosition() {
 
     // Also check current scroll position on mount (in case user refreshed while scrolled down)
     const currentScrollY = window.scrollY
-    const heroThreshold = window.innerHeight * 0.8
+    const heroThreshold = window.innerHeight * 0.3
     const isCurrentlyPastHero = currentScrollY > heroThreshold
 
     if (storedHasScrolled || isCurrentlyPastHero) {
       setHasEverScrolledPastHero(true)
       // If we're currently past the top threshold, show the selector
-      const topThreshold = window.innerHeight * 0.2
+      const topThreshold = window.innerHeight * 0.1
       setIsScrolledPastHero(currentScrollY > topThreshold)
     }
 
@@ -27,10 +27,10 @@ export function useScrollPosition() {
       const currentScrollY = window.scrollY
       setScrollY(currentScrollY)
 
-      // Hero activation threshold - 80% of viewport height
-      const heroThreshold = window.innerHeight * 0.8
+      // Hero activation threshold - 30% of viewport height (more accessible)
+      const heroThreshold = window.innerHeight * 0.3
       // Top threshold - only hide when very close to top
-      const topThreshold = window.innerHeight * 0.2
+      const topThreshold = window.innerHeight * 0.1
 
       // If user scrolls past hero for the first time, remember it
       if (currentScrollY > heroThreshold && !hasEverScrolledPastHero) {

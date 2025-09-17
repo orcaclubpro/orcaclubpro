@@ -185,12 +185,12 @@ const Trips: CollectionConfig = {
   ],
 }
 
-// KaijuActivities collection - simplified to mirror Activity interface exactly
+// KaijuActivities collection - simplified with ONLY dayIndex for day-aware activities
 const KaijuActivities: CollectionConfig = {
   slug: 'kaiju-activities',
   admin: {
     useAsTitle: 'title',
-    defaultColumns: ['title', 'category', 'location', 'hasTime', 'time'],
+    defaultColumns: ['title', 'dayIndex', 'category', 'hasTime', 'time'],
   },
   access: {
     read: () => true,
@@ -198,6 +198,13 @@ const KaijuActivities: CollectionConfig = {
     update: () => true,
     delete: () => true,
   },
+  // Add indexes for optimal day-based querying
+  indexes: [
+    {
+      fields: ['dayIndex'],
+      unique: false,
+    },
+  ],
   fields: [
     {
       name: 'title',
@@ -243,32 +250,20 @@ const KaijuActivities: CollectionConfig = {
         { label: 'Transport', value: 'transport' },
       ],
     },
-    // Organization fields for trip structure
+    // ONLY dayIndex field for day-aware activities - simplified integration
     {
-      name: 'location',
-      type: 'text',
+      name: 'dayIndex',
+      type: 'number',
       required: true,
       admin: {
-        description: 'Location (e.g., "Tokyo", "Kyoto", "Osaka", "Mt. Fuji")',
+        description: 'Day index (0-15) for 16-day trip',
+        position: 'sidebar',
       },
-    },
-    {
-      name: 'city',
-      type: 'select',
-      required: true,
-      options: [
-        { label: 'Tokyo', value: 'tokyo' },
-        { label: 'Kyoto', value: 'kyoto' },
-        { label: 'Osaka', value: 'osaka' },
-        { label: 'Mt. Fuji', value: 'fuji' },
-      ],
-    },
-    {
-      name: 'phase',
-      type: 'text',
-      required: true,
-      admin: {
-        description: 'Trip phase (e.g., "Arrival & First Exploration")',
+      validate: (value: any) => {
+        if (typeof value !== 'number' || value < 0 || value > 15) {
+          return 'Day index must be between 0 and 15'
+        }
+        return true
       },
     },
   ],

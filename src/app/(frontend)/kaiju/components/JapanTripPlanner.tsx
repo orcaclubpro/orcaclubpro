@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { TripHeader } from './TripHeader'
@@ -8,12 +8,12 @@ import { FloatingDaySelector } from './FloatingDaySelector'
 import { DayContent } from './DayContent'
 import { ActivityModal } from './ActivityModal'
 import { tripData as staticTripData, type Activity, type TripDay, type TripData } from '../data/tripData'
-import { createKaijuActivity, updateKaijuActivity, deleteKaijuActivity } from '../lib/actions'
+import { createKaijuActivity, updateKaijuActivity, deleteKaijuActivity, fetchActivitiesByDay } from '../lib/actions'
 import { useScrollPosition } from '../hooks/useScrollPosition'
 import { toast } from 'sonner'
 
 interface JapanTripPlannerProps {
-  initialTripData?: TripData | null
+  initialTripData?: Record<number, Activity[]> | null
 }
 
 interface EditingActivity {
@@ -24,17 +24,23 @@ interface EditingActivity {
 }
 
 export function JapanTripPlanner({ initialTripData }: JapanTripPlannerProps) {
-  // Use Payload data if available, otherwise fallback to static data
-  const tripData = initialTripData || staticTripData
-  const router = useRouter()
+  // Always use static trip data for structure, but activities come from Payload
+  const tripData = staticTripData
   const [isPending, startTransition] = useTransition()
+  const [isClient, setIsClient] = useState(false)
+
+  // Initialize client-only hooks after hydration
+  const router = useRouter()
   const { isScrolledPastHero } = useScrollPosition()
+
+  // Ensure we're on the client before using browser APIs
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
 
   const [currentDay, setCurrentDay] = useState(0)
   const [activities, setActivities] = useState<Record<number, Activity[]>>(
-    Object.fromEntries(
-      tripData.days.map((_, index) => [index, tripData.days[index].activities])
-    )
+    initialTripData || {}
   )
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingActivity, setEditingActivity] = useState<EditingActivity | null>(null)
@@ -68,14 +74,12 @@ export function JapanTripPlanner({ initialTripData }: JapanTripPlannerProps) {
           toast.success('Kaiju activity eliminated successfully!')
         }
 
-        // Update local state
+        // Refresh activities for current day
+        const updatedActivities = await fetchActivitiesByDay(dayIndex)
         setActivities(prev => ({
           ...prev,
-          [dayIndex]: prev[dayIndex].filter((_, index) => index !== activityIndex)
+          [dayIndex]: updatedActivities
         }))
-
-        // Refresh the page to get updated data from server
-        router.refresh()
       } catch (error) {
         console.error('Error deleting activity:', error)
         toast.error('Failed to eliminate kaiju activity. Please try again.')
@@ -86,14 +90,9 @@ export function JapanTripPlanner({ initialTripData }: JapanTripPlannerProps) {
   const handleSaveActivity = async (activity: Activity) => {
     startTransition(async () => {
       try {
-        const dayData = tripData.days[currentDay]
-        const startDate = new Date(tripData.startDate)
-        const activityDate = new Date(startDate)
-        activityDate.setDate(startDate.getDate() + currentDay)
-
         if (editingActivity && editingActivity.taskId) {
-          // Edit existing activity in Payload CMS
-          await updateKaijuActivity(editingActivity.taskId, activity, dayData.location, dayData.city, dayData.phase)
+          // Edit existing activity in Payload CMS - use currentDay as dayIndex
+          await updateKaijuActivity(editingActivity.taskId, activity, currentDay)
           toast.success('Kaiju activity updated successfully!')
 
           // Update local state
@@ -104,8 +103,8 @@ export function JapanTripPlanner({ initialTripData }: JapanTripPlannerProps) {
             )
           }))
         } else {
-          // Add new activity to Payload CMS
-          const newActivity = await createKaijuActivity(activity, dayData.location, dayData.city, dayData.phase)
+          // Add new activity to Payload CMS - use currentDay as dayIndex
+          const newActivity = await createKaijuActivity(activity, currentDay)
           // Update the activity id to match the created activity id
           activity.id = newActivity?.id || activity.id
           toast.success('New kaiju activity deployed successfully!')
@@ -120,8 +119,12 @@ export function JapanTripPlanner({ initialTripData }: JapanTripPlannerProps) {
         setIsModalOpen(false)
         setEditingActivity(null)
 
-        // Refresh the page to get updated data from server
-        router.refresh()
+        // Refresh activities for current day
+        const updatedActivities = await fetchActivitiesByDay(currentDay)
+        setActivities(prev => ({
+          ...prev,
+          [currentDay]: updatedActivities
+        }))
       } catch (error) {
         console.error('Error saving activity:', error)
         toast.error('Kaiju activity deployment failed. Please try again.')
@@ -133,8 +136,33 @@ export function JapanTripPlanner({ initialTripData }: JapanTripPlannerProps) {
     const newDay = currentDay + direction
     if (newDay >= 0 && newDay < tripData.days.length) {
       setCurrentDay(newDay)
+      // Load activities for the new day
+      loadActivitiesForDay(newDay)
     }
   }
+
+  const handleJumpToDay = (dayIndex: number) => {
+    setCurrentDay(dayIndex)
+    // Load activities for the selected day
+    loadActivitiesForDay(dayIndex)
+  }
+
+  const loadActivitiesForDay = async (dayIndex: number) => {
+    try {
+      const dayActivities = await fetchActivitiesByDay(dayIndex)
+      setActivities(prev => ({
+        ...prev,
+        [dayIndex]: dayActivities
+      }))
+    } catch (error) {
+      console.error('Error loading activities for day:', error)
+    }
+  }
+
+  // Load activities for current day on component mount
+  useEffect(() => {
+    loadActivitiesForDay(currentDay)
+  }, [])
 
   const currentDayData: TripDay = {
     ...tripData.days[currentDay],
@@ -154,7 +182,7 @@ export function JapanTripPlanner({ initialTripData }: JapanTripPlannerProps) {
         <FloatingDaySelector
           currentDay={currentDay}
           totalDays={tripData.days.length}
-          onJumpToDay={setCurrentDay}
+          onJumpToDay={handleJumpToDay}
           onNavigate={navigateDay}
           isVisible={isScrolledPastHero}
           startDate={tripData.startDate}

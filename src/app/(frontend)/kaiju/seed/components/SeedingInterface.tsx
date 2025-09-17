@@ -8,8 +8,8 @@ import { Progress } from '@/components/ui/progress'
 import { AlertCircle, CheckCircle, Database, Trash2, Upload, Download } from 'lucide-react'
 import { toast } from 'sonner'
 import {
-  seedKaijuActivitiesFromTripData,
-  clearAllKaijuActivities,
+  // seedKaijuActivitiesFromTripData, // Temporarily disabled for simplified integration
+  // clearAllKaijuActivities, // Temporarily disabled for simplified integration
   fetchKaijuActivities
 } from '../../lib/actions'
 import { tripData } from '../../data/tripData'
@@ -32,103 +32,35 @@ export function SeedingInterface() {
   } | null>(null)
 
   const handleSeedData = () => {
-    startTransition(async () => {
-      try {
-        setOperationStatus({
-          type: 'seeding',
-          progress: 0,
-          message: 'Initializing kaiju hunting deployment...'
-        })
-
-        // Simulate progress updates
-        const progressSteps = [
-          { progress: 20, message: 'Analyzing trip data structure...' },
-          { progress: 40, message: 'Converting activities to kaiju tasks...' },
-          { progress: 60, message: 'Deploying missions to database...' },
-          { progress: 80, message: 'Validating task deployment...' },
-          { progress: 100, message: 'All missions deployed successfully!' }
-        ]
-
-        for (const step of progressSteps) {
-          setOperationStatus(prev => ({ ...prev, ...step }))
-          await new Promise(resolve => setTimeout(resolve, 500))
-        }
-
-        const success = await seedKaijuActivitiesFromTripData(tripData)
-
-        if (success) {
-          toast.success('🦈 All kaiju hunting missions deployed successfully!')
-          await fetchStats()
-        } else {
-          throw new Error('Seeding operation failed')
-        }
-
-        setOperationStatus({
-          type: 'idle',
-          progress: 0,
-          message: 'Ready to deploy missions'
-        })
-      } catch (error) {
-        console.error('Seeding error:', error)
-        toast.error('Failed to deploy missions. Check console for details.')
-        setOperationStatus({
-          type: 'idle',
-          progress: 0,
-          message: 'Deployment failed - ready to retry'
-        })
-      }
-    })
+    // Temporarily disabled for simplified integration
+    toast.info('Seeding function temporarily disabled for simplified integration')
+    // startTransition(async () => {
+    //   try {
+    //     setOperationStatus({
+    //       type: 'seeding',
+    //       progress: 0,
+    //       message: 'Initializing kaiju hunting deployment...'
+    //     })
+    //     // ... rest of implementation
+    //   } catch (error) {
+    //     console.error('Seeding error:', error)
+    //   }
+    // })
   }
 
   const handleClearData = () => {
-    if (!confirm('Are you sure you want to eliminate ALL kaiju hunting missions? This action cannot be undone.')) {
-      return
-    }
-
-    startTransition(async () => {
-      try {
-        setOperationStatus({
-          type: 'clearing',
-          progress: 0,
-          message: 'Preparing to eliminate all missions...'
-        })
-
-        const progressSteps = [
-          { progress: 25, message: 'Locating all active missions...' },
-          { progress: 50, message: 'Initiating elimination protocol...' },
-          { progress: 75, message: 'Purging mission database...' },
-          { progress: 100, message: 'All missions eliminated!' }
-        ]
-
-        for (const step of progressSteps) {
-          setOperationStatus(prev => ({ ...prev, ...step }))
-          await new Promise(resolve => setTimeout(resolve, 400))
-        }
-
-        const success = await clearAllKaijuActivities()
-
-        if (success) {
-          toast.success('🗑️ All kaiju hunting missions eliminated!')
-          setStats(null)
-        } else {
-          throw new Error('Clear operation failed')
-        }
-
-        setOperationStatus({
-          type: 'idle',
-          progress: 0,
-          message: 'Ready to deploy missions'
-        })
-      } catch (error) {
-        console.error('Clearing error:', error)
-        toast.error('Failed to eliminate missions. Check console for details.')
-        setOperationStatus({
-          type: 'idle',
-          progress: 0,
-          message: 'Elimination failed - ready to retry'
-        })
-      }
-    })
+    // Temporarily disabled for simplified integration
+    toast.info('Clear function temporarily disabled for simplified integration')
+    // if (!confirm('Are you sure you want to eliminate ALL kaiju hunting missions? This action cannot be undone.')) {
+    //   return
+    // }
+    // startTransition(async () => {
+    //   try {
+    //     // ... rest of implementation
+    //   } catch (error) {
+    //     console.error('Clearing error:', error)
+    //   }
+    // })
   }
 
   const fetchStats = async () => {
@@ -141,10 +73,10 @@ export function SeedingInterface() {
 
       const data = await fetchKaijuActivities()
 
-      if (data) {
-        const totalTasks = data.days.reduce((sum, day) => sum + day.activities.length, 0)
-        const activitiesWithTasks = data.days.filter(day => day.activities.length > 0).length
-        const totalDays = data.days.length
+      if (data && Object.keys(data).length > 0) {
+        const totalTasks = Object.values(data).reduce((sum, activities) => sum + activities.length, 0)
+        const activitiesWithTasks = Object.keys(data).length
+        const totalDays = 16 // Fixed for 16-day trip
 
         setStats({
           totalTasks,

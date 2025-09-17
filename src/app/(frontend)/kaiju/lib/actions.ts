@@ -1,17 +1,15 @@
 /**
  * Simplified server actions for managing KaijuActivities via Payload CMS
- *
- * These functions use Payload's Local API to create, read, update, and delete
- * kaiju activities (trip activities) with direct 1:1 mapping to Activity interface.
+ * ONLY uses dayIndex field for day-aware activities - minimal integration
  */
 
 'use server'
 
 import { getPayload } from 'payload'
 import config from '@payload-config'
-import type { Activity, TripDay, TripData } from '../data/tripData'
+import type { Activity } from '../data/tripData'
 
-// Define the simplified KaijuActivity type that matches our collection
+// Define the simplified KaijuActivity type with ONLY dayIndex
 export interface KaijuActivity {
   id: string
   title: string
@@ -19,9 +17,7 @@ export interface KaijuActivity {
   time?: string
   hasTime: boolean
   category?: 'cultural' | 'food' | 'nature' | 'shopping' | 'entertainment' | 'transport'
-  location: string
-  city: 'tokyo' | 'kyoto' | 'osaka' | 'fuji'
-  phase: string
+  dayIndex: number
   createdAt?: string
   updatedAt?: string
 }
@@ -41,13 +37,11 @@ function kaijuActivityToActivity(kaijuActivity: KaijuActivity): Activity {
 }
 
 /**
- * Convert Activity to KaijuActivity data for creation/update
+ * Convert Activity to KaijuActivity data for creation/update (ONLY dayIndex)
  */
 function activityToKaijuActivityData(
   activity: Activity,
-  location: string,
-  city: 'tokyo' | 'kyoto' | 'osaka' | 'fuji',
-  phase: string
+  dayIndex: number
 ): Partial<KaijuActivity> {
   return {
     title: activity.title,
@@ -55,66 +49,84 @@ function activityToKaijuActivityData(
     time: activity.time,
     hasTime: activity.hasTime,
     category: activity.category,
-    location,
-    city,
-    phase,
+    dayIndex,
   }
 }
 
 /**
- * Fetch all kaiju activities and organize them into TripData structure
+ * Fetch activities organized by day (0-15)
  */
-export async function fetchKaijuActivities(): Promise<TripData | null> {
+export async function fetchActivitiesByDay(dayIndex: number): Promise<Activity[]> {
   try {
     const payload = await getPayload({ config })
 
-    // Fetch all kaiju activities
     const result = await payload.find({
       collection: 'kaiju-activities',
-      limit: 1000, // Large limit to get all activities
-      sort: 'createdAt', // Sort by creation order
+      where: {
+        dayIndex: {
+          equals: dayIndex,
+        },
+      },
+      sort: 'createdAt',
+      limit: 1000,
+    })
+
+    const kaijuActivities = result.docs as KaijuActivity[]
+    return kaijuActivities.map(kaijuActivityToActivity)
+  } catch (error) {
+    console.error('Error fetching activities by day:', error)
+    return []
+  }
+}
+
+/**
+ * Fetch all activities organized by day index
+ */
+export async function fetchKaijuActivities(): Promise<Record<number, Activity[]>> {
+  try {
+    const payload = await getPayload({ config })
+
+    const result = await payload.find({
+      collection: 'kaiju-activities',
+      limit: 1000,
+      sort: 'createdAt',
     })
 
     if (!result.docs.length) {
-      return null
+      return {}
     }
 
     const kaijuActivities = result.docs as KaijuActivity[]
 
-    // Group activities by location and phase to recreate trip structure
-    const groupedActivities = groupActivitiesByLocationAndPhase(kaijuActivities)
+    // Group activities by dayIndex
+    const activitiesByDay: Record<number, Activity[]> = {}
 
-    // Convert to TripData structure
-    const days: TripDay[] = Object.entries(groupedActivities).map(([key, group]) => ({
-      location: group.location,
-      city: group.city,
-      phase: group.phase,
-      activities: group.activities.map(kaijuActivityToActivity),
-    }))
-
-    return {
-      startDate: '2024-11-04', // Default start date
-      days,
+    for (const kaijuActivity of kaijuActivities) {
+      const dayIndex = kaijuActivity.dayIndex
+      if (!activitiesByDay[dayIndex]) {
+        activitiesByDay[dayIndex] = []
+      }
+      activitiesByDay[dayIndex].push(kaijuActivityToActivity(kaijuActivity))
     }
+
+    return activitiesByDay
   } catch (error) {
     console.error('Error fetching kaiju activities:', error)
-    return null
+    return {}
   }
 }
 
 /**
- * Create a new kaiju activity
+ * Create a new kaiju activity with only dayIndex
  */
 export async function createKaijuActivity(
   activity: Activity,
-  location: string,
-  city: 'tokyo' | 'kyoto' | 'osaka' | 'fuji',
-  phase: string
+  dayIndex: number
 ): Promise<KaijuActivity | null> {
   try {
     const payload = await getPayload({ config })
 
-    const activityData = activityToKaijuActivityData(activity, location, city, phase)
+    const activityData = activityToKaijuActivityData(activity, dayIndex)
 
     const newActivity = await payload.create({
       collection: 'kaiju-activities',
@@ -129,19 +141,17 @@ export async function createKaijuActivity(
 }
 
 /**
- * Update an existing kaiju activity
+ * Update an existing kaiju activity with only dayIndex
  */
 export async function updateKaijuActivity(
   activityId: string,
   activity: Activity,
-  location: string,
-  city: 'tokyo' | 'kyoto' | 'osaka' | 'fuji',
-  phase: string
+  dayIndex: number
 ): Promise<KaijuActivity | null> {
   try {
     const payload = await getPayload({ config })
 
-    const activityData = activityToKaijuActivityData(activity, location, city, phase)
+    const activityData = activityToKaijuActivityData(activity, dayIndex)
 
     const updatedActivity = await payload.update({
       collection: 'kaiju-activities',
@@ -175,176 +185,54 @@ export async function deleteKaijuActivity(activityId: string): Promise<boolean> 
   }
 }
 
+
+
+
+
 /**
- * Get activities for a specific location
+ * Search activities by title or description within a specific day
  */
-export async function getActivitiesByLocation(location: string): Promise<KaijuActivity[]> {
+export async function searchKaijuActivities(query: string, dayIndex?: number): Promise<Activity[]> {
   try {
     const payload = await getPayload({ config })
 
-    const result = await payload.find({
-      collection: 'kaiju-activities',
-      where: {
-        location: {
-          equals: location,
-        },
-      },
-      sort: 'createdAt',
-      limit: 1000,
-    })
-
-    return result.docs as KaijuActivity[]
-  } catch (error) {
-    console.error('Error fetching activities by location:', error)
-    return []
-  }
-}
-
-/**
- * Get activities for a specific city
- */
-export async function getActivitiesByCity(city: 'tokyo' | 'kyoto' | 'osaka' | 'fuji'): Promise<KaijuActivity[]> {
-  try {
-    const payload = await getPayload({ config })
-
-    const result = await payload.find({
-      collection: 'kaiju-activities',
-      where: {
-        city: {
-          equals: city,
-        },
-      },
-      sort: 'createdAt',
-      limit: 1000,
-    })
-
-    return result.docs as KaijuActivity[]
-  } catch (error) {
-    console.error('Error fetching activities by city:', error)
-    return []
-  }
-}
-
-/**
- * Seed initial kaiju activities from static trip data
- */
-export async function seedKaijuActivitiesFromTripData(tripData: TripData): Promise<boolean> {
-  try {
-    const payload = await getPayload({ config })
-
-    for (const day of tripData.days) {
-      for (const activity of day.activities) {
-        const activityData = activityToKaijuActivityData(
-          activity,
-          day.location,
-          day.city,
-          day.phase
-        )
-
-        await payload.create({
-          collection: 'kaiju-activities',
-          data: activityData as any,
-        })
-      }
-    }
-
-    return true
-  } catch (error) {
-    console.error('Error seeding kaiju activities:', error)
-    throw new Error(`Failed to seed kaiju activities: ${error instanceof Error ? error.message : 'Unknown error'}`)
-  }
-}
-
-/**
- * Clear all kaiju activities (for reset/cleanup)
- */
-export async function clearAllKaijuActivities(): Promise<boolean> {
-  try {
-    const payload = await getPayload({ config })
-
-    // First, fetch all activities to get their IDs
-    const result = await payload.find({
-      collection: 'kaiju-activities',
-      limit: 1000,
-    })
-
-    // Delete each activity individually
-    for (const activity of result.docs) {
-      await payload.delete({
-        collection: 'kaiju-activities',
-        id: activity.id,
-      })
-    }
-
-    return true
-  } catch (error) {
-    console.error('Error clearing kaiju activities:', error)
-    throw new Error(`Failed to clear kaiju activities: ${error instanceof Error ? error.message : 'Unknown error'}`)
-  }
-}
-
-/**
- * Helper function to group activities by location and phase
- */
-function groupActivitiesByLocationAndPhase(activities: KaijuActivity[]): Record<string, {
-  location: string
-  city: 'tokyo' | 'kyoto' | 'osaka' | 'fuji'
-  phase: string
-  activities: KaijuActivity[]
-}> {
-  const grouped: Record<string, {
-    location: string
-    city: 'tokyo' | 'kyoto' | 'osaka' | 'fuji'
-    phase: string
-    activities: KaijuActivity[]
-  }> = {}
-
-  for (const activity of activities) {
-    const key = `${activity.location}-${activity.phase}`
-
-    if (!grouped[key]) {
-      grouped[key] = {
-        location: activity.location,
-        city: activity.city,
-        phase: activity.phase,
-        activities: []
-      }
-    }
-
-    grouped[key].activities.push(activity)
-  }
-
-  return grouped
-}
-
-/**
- * Search activities by title or description
- */
-export async function searchKaijuActivities(query: string): Promise<KaijuActivity[]> {
-  try {
-    const payload = await getPayload({ config })
-
-    const result = await payload.find({
-      collection: 'kaiju-activities',
-      where: {
-        or: [
-          {
-            title: {
-              contains: query,
-            },
+    const whereClause: any = {
+      or: [
+        {
+          title: {
+            contains: query,
           },
-          {
-            description: {
-              contains: query,
-            },
+        },
+        {
+          description: {
+            contains: query,
           },
-        ],
-      },
+        },
+      ],
+    }
+
+    // If dayIndex is provided, filter by day as well
+    if (typeof dayIndex === 'number') {
+      whereClause.and = [
+        whereClause,
+        {
+          dayIndex: {
+            equals: dayIndex,
+          },
+        },
+      ]
+      delete whereClause.or
+    }
+
+    const result = await payload.find({
+      collection: 'kaiju-activities',
+      where: whereClause,
       sort: 'createdAt',
       limit: 100,
     })
 
-    return result.docs as KaijuActivity[]
+    const kaijuActivities = result.docs as KaijuActivity[]
+    return kaijuActivities.map(kaijuActivityToActivity)
   } catch (error) {
     console.error('Error searching kaiju activities:', error)
     return []

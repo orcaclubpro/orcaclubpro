@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion'
 import { Badge } from '@/components/ui/badge'
 import { Zap, Users, Calendar, MapPin } from 'lucide-react'
+import Image from 'next/image'
 
 export function TripHeader() {
   return (
@@ -57,111 +58,169 @@ export function TripHeader() {
       </div>
 
       {/* Main hero content */}
-      <div className="relative z-10 container mx-auto px-6 py-16 flex items-center min-h-[100vh]">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center w-full">
-          
-          {/* Left side - Text content */}
-          <div className="space-y-8">
-            <motion.div
-              initial={{ opacity: 0, x: -50 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8 }}
-            >
-              {/* Organization badge */}
-              <Badge 
-                variant="secondary" 
-                className="mb-6 bg-cyan-400/20 text-cyan-300 border-cyan-400/50 backdrop-blur-sm hover:bg-cyan-400/30 font-mono tracking-wider text-sm px-4 py-2"
-              >
-                <Users className="w-4 h-4 mr-2" />
-                Orcaclub
-              </Badge>
-              
-              {/* Main title with glow effect */}
-              <div className="relative">
-                <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold mb-6 relative z-10">
-                  <span className="bg-gradient-to-r from-cyan-300 via-cyan-100 to-cyan-300 bg-clip-text text-transparent font-mono tracking-tight">
-                    懐郷
-                  </span>
-                  <br />
-                  <span className="bg-gradient-to-r from-pink-300 via-pink-100 to-pink-300 bg-clip-text text-transparent font-mono tracking-tight">
-                    HUNTERS
-                  </span>
-                </h1>
-                {/* Glow effect */}
-                <div className="absolute inset-0 text-5xl md:text-7xl lg:text-8xl font-bold font-mono tracking-tight blur-lg opacity-30">
-                  <span className="text-cyan-400">懐郷</span>
-                  <br />
-                  <span className="text-pink-400">HUNTERS</span>
-                </div>
-              </div>
-              
-              {/* Subtitle */}
-              <div className="space-y-4">
-                <motion.p 
-                  className="text-xl md:text-2xl text-cyan-100 font-mono tracking-wide"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8, delay: 0.4 }}
-                >
-                  Kaiju Hunting Adventure
-                </motion.p>
-                
-                {/* Mission details */}
-                <motion.div 
-                  className="space-y-3"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8, delay: 0.6 }}
-                >
-                  <div className="flex items-center gap-3 text-slate-300 font-mono">
-                    <Calendar className="w-5 h-5 text-cyan-400" />
-                    <span>Epic 14-Day Japan Journey</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-slate-300 font-mono">
-                    <MapPin className="w-5 h-5 text-pink-400" />
-                    <span>November 4-17, 2024</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-slate-300 font-mono">
-                    <Zap className="w-5 h-5 text-yellow-400" />
-                    <span>Proudly sponsored by Casamigos</span>
-                  </div>
-                </motion.div>
-              </div>
-            </motion.div>
+      <div className="relative z-10 container mx-auto px-6 py-16 flex items-center justify-center min-h-[100vh]">
+        <div className="flex flex-col items-center text-center space-y-12">
 
-            {/* Status indicators */}
-            <motion.div 
-              className="flex flex-wrap gap-4"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.8 }}
-            >
-              <div className="bg-slate-800/80 border border-cyan-400/50 rounded-lg px-4 py-2 backdrop-blur-sm">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                  <span className="text-sm font-mono text-cyan-100">MISSION ACTIVE</span>
-                </div>
-              </div>
-              <div className="bg-slate-800/80 border border-pink-400/50 rounded-lg px-4 py-2 backdrop-blur-sm">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-pink-400 rounded-full animate-pulse" />
-                  <span className="text-sm font-mono text-pink-100">CASAMIGOS READY</span>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-
-          {/* Right side - Floating UI elements over the image */}
+          {/* Logo at top */}
           <motion.div
-            className="relative lg:min-h-[60vh] flex items-center justify-center"
-            initial={{ opacity: 0, x: 50, scale: 0.9 }}
-            animate={{ opacity: 1, x: 0, scale: 1 }}
+            className="relative flex items-center justify-center"
+            initial={{ opacity: 0, y: -50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ duration: 1, delay: 0.2 }}
           >
             <div className="relative">
+              <motion.div
+                className="relative"
+                animate={{
+                  scale: [1, 1.05, 1],
+                }}
+                transition={{
+                  duration: 4,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+              >
+                <Image
+                  src="/orcaclubpro.png"
+                  alt="ORCACLUB Pro"
+                  width={300}
+                  height={300}
+                  className="w-48 h-48 md:w-64 md:h-64 lg:w-80 lg:h-80 object-contain opacity-80 hover:opacity-100 transition-opacity duration-300"
+                  priority
+                />
 
+                {/* Subtle glow effect */}
+                <motion.div
+                  className="absolute inset-0 w-48 h-48 md:w-64 md:h-64 lg:w-80 lg:h-80 bg-gradient-to-r from-cyan-400/20 to-pink-400/20 rounded-full blur-3xl"
+                  animate={{
+                    opacity: [0.3, 0.6, 0.3],
+                    scale: [0.8, 1.2, 0.8],
+                  }}
+                  transition={{
+                    duration: 6,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }}
+                />
+              </motion.div>
             </div>
           </motion.div>
+
+          {/* Centered content */}
+          <div className="space-y-8 flex flex-col items-center">
+            <motion.div
+              initial={{ opacity: 0, y: 50 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.6 }}
+            >
+
+              {/* Main title with neon sign effect */}
+              <div className="relative">
+                <motion.h1
+                  className="text-5xl md:text-7xl lg:text-8xl font-bold mb-6 relative z-10"
+                  animate={{
+                    filter: [
+                      'drop-shadow(0 0 10px rgba(34, 211, 238, 0.5))',
+                      'drop-shadow(0 0 20px rgba(34, 211, 238, 0.8))',
+                      'drop-shadow(0 0 10px rgba(34, 211, 238, 0.5))'
+                    ]
+                  }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }}
+                  style={{
+                    textShadow: `
+                      0 0 5px rgba(34, 211, 238, 0.5),
+                      0 0 10px rgba(34, 211, 238, 0.3),
+                      0 0 15px rgba(34, 211, 238, 0.2),
+                      0 0 20px rgba(34, 211, 238, 0.1)
+                    `
+                  }}
+                >
+                  <motion.span
+                    className="bg-gradient-to-r from-cyan-300 via-cyan-100 to-cyan-300 bg-clip-text text-transparent font-mono tracking-tight"
+                    animate={{
+                      filter: [
+                        'brightness(1)',
+                        'brightness(1.3)',
+                        'brightness(1)'
+                      ]
+                    }}
+                    transition={{
+                      duration: 1.5,
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                  >
+                    懐郷
+                  </motion.span>
+                  <br />
+                  <motion.span
+                    className="bg-gradient-to-r from-pink-300 via-pink-100 to-pink-300 bg-clip-text text-transparent font-mono tracking-tight"
+                    animate={{
+                      filter: [
+                        'brightness(1)',
+                        'brightness(1.3)',
+                        'brightness(1)'
+                      ]
+                    }}
+                    transition={{
+                      duration: 1.5,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                      delay: 0.7
+                    }}
+                    style={{
+                      textShadow: `
+                        0 0 5px rgba(244, 114, 182, 0.5),
+                        0 0 10px rgba(244, 114, 182, 0.3),
+                        0 0 15px rgba(244, 114, 182, 0.2)
+                      `
+                    }}
+                  >
+                    HUNTING
+                  </motion.span>
+                </motion.h1>
+                {/* Enhanced glow effect */}
+                <motion.div
+                  className="absolute inset-0 text-5xl md:text-7xl lg:text-8xl font-bold font-mono tracking-tight blur-lg opacity-30"
+                  animate={{
+                    opacity: [0.3, 0.6, 0.3]
+                  }}
+                  transition={{
+                    duration: 3,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }}
+                >
+                  <span className="text-cyan-400">懐郷</span>
+                  <br />
+                  <span className="text-pink-400">HUNTING</span>
+                </motion.div>
+                {/* Additional neon tube effect */}
+                <motion.div
+                  className="absolute inset-0 text-5xl md:text-7xl lg:text-8xl font-bold font-mono tracking-tight blur-2xl opacity-20"
+                  animate={{
+                    opacity: [0.2, 0.4, 0.2],
+                    scale: [1, 1.02, 1]
+                  }}
+                  transition={{
+                    duration: 4,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                    delay: 1
+                  }}
+                >
+                  <span className="text-cyan-300">懐郷</span>
+                  <br />
+                  <span className="text-pink-300">HUNTING</span>
+                </motion.div>
+              </div>
+
+            </motion.div>
+          </div>
         </div>
       </div>
 

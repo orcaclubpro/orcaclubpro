@@ -210,14 +210,9 @@ export interface KaijuActivity {
   hasTime?: boolean | null;
   category?: ('cultural' | 'food' | 'nature' | 'shopping' | 'entertainment' | 'transport') | null;
   /**
-   * Location (e.g., "Tokyo", "Kyoto", "Osaka", "Mt. Fuji")
+   * Day index (0-15) for 16-day trip
    */
-  location: string;
-  city: 'tokyo' | 'kyoto' | 'osaka' | 'fuji';
-  /**
-   * Trip phase (e.g., "Arrival & First Exploration")
-   */
-  phase: string;
+  dayIndex: number;
   updatedAt: string;
   createdAt: string;
 }
@@ -356,9 +351,7 @@ export interface KaijuActivitiesSelect<T extends boolean = true> {
   time?: T;
   hasTime?: T;
   category?: T;
-  location?: T;
-  city?: T;
-  phase?: T;
+  dayIndex?: T;
   updatedAt?: T;
   createdAt?: T;
 }

@@ -77,7 +77,7 @@ export function DayContent({
             "
           >
             <Plus className="w-4 h-4 mr-2" />
-            DEPLOY FIRST MISSION
+            New
           </Button>
         </motion.div>
       </div>
@@ -104,10 +104,10 @@ export function DayContent({
             {/* Mission header with glow */}
             <div className="relative mb-4">
               <h2 className="text-4xl md:text-5xl font-bold text-cyan-100 font-mono tracking-wider relative z-10">
-                NOV {new Date(new Date(startDate).getTime() + dayIndex * 24 * 60 * 60 * 1000).getDate()} - {dayData.location.toUpperCase()}
+                NOV {4 + dayIndex} - {dayData.location.toUpperCase()}
               </h2>
               <div className="absolute inset-0 text-4xl md:text-5xl font-bold text-cyan-400/30 blur-sm font-mono tracking-wider">
-                NOV {new Date(new Date(startDate).getTime() + dayIndex * 24 * 60 * 60 * 1000).getDate()} - {dayData.location.toUpperCase()}
+                NOV {4 + dayIndex} - {dayData.location.toUpperCase()}
               </div>
             </div>
             
@@ -134,7 +134,7 @@ export function DayContent({
             "
           >
             <Plus className="w-4 h-4 mr-2" />
-            DEPLOY MISSION
+            New
           </Button>
         </div>
 

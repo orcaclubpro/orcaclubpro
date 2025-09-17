@@ -38,5 +38,5 @@ export default async function KaijuPage() {
 
 export const metadata = {
   title: '懐郷ハンターズ - Orcaclub Kaiju Hunting Adventure',
-  description: 'Epic 14-Day Japan Journey • November 4-17, 2024 • Cyberpunk Kaiju Hunting Adventure',
+  description: 'Epic 16-Day Japan Journey • November 4-19, 2024 • Cyberpunk Kaiju Hunting Adventure',
 }

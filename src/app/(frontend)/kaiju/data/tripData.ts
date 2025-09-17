@@ -186,6 +186,12 @@ export const tripData: TripData = {
       city: 'tokyo',
       phase: 'Farewell Tokyo',
       activities: []
+    },
+    {
+      location: 'Tokyo',
+      city: 'tokyo',
+      phase: 'Departure Day',
+      activities: []
     }
   ]
 }
