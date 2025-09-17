@@ -68,9 +68,6 @@ export interface Config {
   blocks: {};
   collections: {
     users: User;
-    activities: Activity;
-    'trip-days': TripDay;
-    trips: Trip;
     'kaiju-activities': KaijuActivity;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -79,9 +76,6 @@ export interface Config {
   collectionsJoins: {};
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
-    activities: ActivitiesSelect<false> | ActivitiesSelect<true>;
-    'trip-days': TripDaysSelect<false> | TripDaysSelect<true>;
-    trips: TripsSelect<false> | TripsSelect<true>;
     'kaiju-activities': KaijuActivitiesSelect<false> | KaijuActivitiesSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -146,48 +140,6 @@ export interface User {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "activities".
- */
-export interface Activity {
-  id: string;
-  title: string;
-  description?: string | null;
-  /**
-   * Time in HH:MM format
-   */
-  time?: string | null;
-  hasTime?: boolean | null;
-  category?: ('cultural' | 'food' | 'nature' | 'shopping' | 'entertainment' | 'transport') | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "trip-days".
- */
-export interface TripDay {
-  id: string;
-  location: string;
-  city: 'tokyo' | 'kyoto' | 'osaka' | 'fuji';
-  phase: string;
-  activities?: (string | Activity)[] | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "trips".
- */
-export interface Trip {
-  id: string;
-  title: string;
-  startDate: string;
-  days?: (string | TripDay)[] | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "kaiju-activities".
  */
 export interface KaijuActivity {
@@ -226,18 +178,6 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'users';
         value: string | User;
-      } | null)
-    | ({
-        relationTo: 'activities';
-        value: string | Activity;
-      } | null)
-    | ({
-        relationTo: 'trip-days';
-        value: string | TripDay;
-      } | null)
-    | ({
-        relationTo: 'trips';
-        value: string | Trip;
       } | null)
     | ({
         relationTo: 'kaiju-activities';
@@ -304,42 +244,6 @@ export interface UsersSelect<T extends boolean = true> {
   _verificationToken?: T;
   loginAttempts?: T;
   lockUntil?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "activities_select".
- */
-export interface ActivitiesSelect<T extends boolean = true> {
-  title?: T;
-  description?: T;
-  time?: T;
-  hasTime?: T;
-  category?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "trip-days_select".
- */
-export interface TripDaysSelect<T extends boolean = true> {
-  location?: T;
-  city?: T;
-  phase?: T;
-  activities?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "trips_select".
- */
-export interface TripsSelect<T extends boolean = true> {
-  title?: T;
-  startDate?: T;
-  days?: T;
-  updatedAt?: T;
-  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

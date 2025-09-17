@@ -56,134 +56,6 @@ const Users: CollectionConfig = {
   ],
 }
 
-// Activities collection for trip activities
-const Activities: CollectionConfig = {
-  slug: 'activities',
-  admin: {
-    useAsTitle: 'title',
-    defaultColumns: ['title', 'category', 'hasTime', 'time'],
-  },
-  access: {
-    read: () => true,
-    create: () => true,
-    update: () => true,
-    delete: () => true,
-  },
-  fields: [
-    {
-      name: 'title',
-      type: 'text',
-      required: true,
-    },
-    {
-      name: 'description',
-      type: 'textarea',
-    },
-    {
-      name: 'time',
-      type: 'text',
-      admin: {
-        description: 'Time in HH:MM format',
-      },
-    },
-    {
-      name: 'hasTime',
-      type: 'checkbox',
-      defaultValue: false,
-    },
-    {
-      name: 'category',
-      type: 'select',
-      options: [
-        { label: 'Cultural', value: 'cultural' },
-        { label: 'Food', value: 'food' },
-        { label: 'Nature', value: 'nature' },
-        { label: 'Shopping', value: 'shopping' },
-        { label: 'Entertainment', value: 'entertainment' },
-        { label: 'Transport', value: 'transport' },
-      ],
-      defaultValue: 'cultural',
-    },
-  ],
-}
-
-// TripDays collection for daily itineraries
-const TripDays: CollectionConfig = {
-  slug: 'trip-days',
-  admin: {
-    useAsTitle: 'location',
-    defaultColumns: ['location', 'city', 'phase'],
-  },
-  access: {
-    read: () => true,
-    create: () => true,
-    update: () => true,
-    delete: () => true,
-  },
-  fields: [
-    {
-      name: 'location',
-      type: 'text',
-      required: true,
-    },
-    {
-      name: 'city',
-      type: 'select',
-      required: true,
-      options: [
-        { label: 'Tokyo', value: 'tokyo' },
-        { label: 'Kyoto', value: 'kyoto' },
-        { label: 'Osaka', value: 'osaka' },
-        { label: 'Mt. Fuji', value: 'fuji' },
-      ],
-    },
-    {
-      name: 'phase',
-      type: 'text',
-      required: true,
-    },
-    {
-      name: 'activities',
-      type: 'relationship',
-      relationTo: 'activities',
-      hasMany: true,
-    },
-  ],
-}
-
-// Trips collection for overall trip metadata
-const Trips: CollectionConfig = {
-  slug: 'trips',
-  admin: {
-    useAsTitle: 'title',
-    defaultColumns: ['title', 'startDate'],
-  },
-  access: {
-    read: () => true,
-    create: () => true,
-    update: () => true,
-    delete: () => true,
-  },
-  fields: [
-    {
-      name: 'title',
-      type: 'text',
-      required: true,
-      defaultValue: 'Japan Trip 2024',
-    },
-    {
-      name: 'startDate',
-      type: 'date',
-      required: true,
-    },
-    {
-      name: 'days',
-      type: 'relationship',
-      relationTo: 'trip-days',
-      hasMany: true,
-    },
-  ],
-}
 
 // KaijuActivities collection - simplified with ONLY dayIndex for day-aware activities
 const KaijuActivities: CollectionConfig = {
@@ -274,7 +146,7 @@ export default buildConfig({
   editor: lexicalEditor(),
 
   // Define and configure your collections in this array
-  collections: [Users, Activities, TripDays, Trips, KaijuActivities],
+  collections: [Users, KaijuActivities],
 
   // Your Payload secret - should be a complex and secure string, unguessable
   secret: process.env.PAYLOAD_SECRET || 'your-secret-here',
