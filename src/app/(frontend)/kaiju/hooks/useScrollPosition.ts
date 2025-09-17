@@ -8,6 +8,9 @@ export function useScrollPosition() {
   const [hasEverScrolledPastHero, setHasEverScrolledPastHero] = useState(false)
 
   useEffect(() => {
+    // Only run on client-side
+    if (typeof window === 'undefined') return
+
     // Check localStorage on mount to see if user has previously scrolled past hero
     const storedHasScrolled = localStorage.getItem('kaiju-has-scrolled-past-hero') === 'true'
 
@@ -24,6 +27,8 @@ export function useScrollPosition() {
     }
 
     const handleScroll = () => {
+      if (typeof window === 'undefined') return
+
       const currentScrollY = window.scrollY
       setScrollY(currentScrollY)
 

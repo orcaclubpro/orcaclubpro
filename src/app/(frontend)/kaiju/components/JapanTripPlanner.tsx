@@ -29,7 +29,7 @@ export function JapanTripPlanner({ initialTripData }: JapanTripPlannerProps) {
   const [isPending, startTransition] = useTransition()
   const [isClient, setIsClient] = useState(false)
 
-  // Initialize client-only hooks after hydration
+  // Always call hooks (React rules), but guard their usage
   const router = useRouter()
   const { isScrolledPastHero } = useScrollPosition()
 
