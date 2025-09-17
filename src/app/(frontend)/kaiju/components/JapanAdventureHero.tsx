@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Calendar, MapPin, Plane, Compass, Camera, Heart, Clock } from 'lucide-react';
 import Image from 'next/image';
-import { fetchAllScheduledActivities } from '../lib/actions';
+import { fetchAllScheduledActivities, fetchNextChronologicalActivity, type ScheduledActivity } from '../lib/actions';
 import { type Activity } from '../data/tripData';
 
 // Define a type for particles
@@ -48,6 +48,7 @@ const JapanAdventureHero = () => {
 
   // Up Next functionality state
   const [nextActivity, setNextActivity] = useState<Activity | null>(null);
+  const [planningActivity, setPlanningActivity] = useState<ScheduledActivity | null>(null);
   const [tokyoTime, setTokyoTime] = useState(new Date());
   const [timeUntilNext, setTimeUntilNext] = useState<string>('');
 
@@ -131,21 +132,10 @@ const JapanAdventureHero = () => {
       setScrollPosition(position);
     };
 
-    const handleMouseMove = (e: MouseEvent) => {
-      if (heroRef.current) {
-        const rect = heroRef.current.getBoundingClientRect();
-        const x = ((e.clientX - rect.left) / rect.width) * 100;
-        const y = ((e.clientY - rect.top) / rect.height) * 100;
-        setMousePosition({ x: Math.max(0, Math.min(100, x)), y: Math.max(0, Math.min(100, y)) });
-      }
-    };
-
     window.addEventListener('scroll', handleScroll);
-    window.addEventListener('mousemove', handleMouseMove);
 
     return () => {
       window.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('resize', checkIsMobile);
     };
   }, []);
@@ -190,7 +180,7 @@ const JapanAdventureHero = () => {
           // Find next upcoming activity
           const upcoming = activities
             .map(activity => {
-              if (!activity.time || !activity.hasTime) return null;
+              if (!activity.time) return null;
 
               const [hours, minutes] = activity.time.split(':').map(Number);
               const activityDate = new Date(tripStart);
@@ -207,7 +197,16 @@ const JapanAdventureHero = () => {
 
           if (upcoming.length > 0 && isActive) {
             const next = upcoming[0]!;
-            setNextActivity(next);
+            // Convert ScheduledActivity back to Activity type for state
+            const activityForState: Activity = {
+              id: next.id,
+              title: next.title,
+              time: next.time,
+              hasTime: true, // Since this came from ScheduledActivity, it always has time
+              category: next.category
+            };
+            setNextActivity(activityForState);
+            setPlanningActivity(null); // Clear planning activity when we have upcoming activities
 
             // Calculate time until next activity
             const timeDiff = next.datetime.getTime() - tokyoNow.getTime();
@@ -223,8 +222,17 @@ const JapanAdventureHero = () => {
               setTimeUntilNext(`${minutes}m`);
             }
           } else if (isActive) {
+            // No upcoming activities - fetch the next chronological activity for planning mode
             setNextActivity(null);
             setTimeUntilNext('');
+
+            try {
+              const planningNext = await fetchNextChronologicalActivity();
+              setPlanningActivity(planningNext);
+            } catch (error) {
+              console.error('Error fetching planning activity:', error);
+              setPlanningActivity(null);
+            }
           }
         }
       } catch (error) {
@@ -257,10 +265,10 @@ const JapanAdventureHero = () => {
   // Parallax effect values - much more dramatic
   const parallaxY = scrollPosition * 0.8;
 
-  // Calculate gradient position based on mouse movement
+  // Calculate gradient position - static on mobile, centered on desktop
   const gradientPosition = {
-    x: mousePosition.x,
-    y: mousePosition.y
+    x: isMobile ? 50 : 50, // Centered gradient for mobile and desktop
+    y: isMobile ? 50 : 50
   };
 
 
@@ -270,10 +278,10 @@ const JapanAdventureHero = () => {
       <div className="absolute inset-0 overflow-hidden">
         {/* Hero background image */}
         <div
-          className={`absolute inset-0 bg-no-repeat ${
+          className={`absolute bg-no-repeat ${
             isMobile
-              ? 'bg-cover bg-center' // Mobile: cover ensures full viewport coverage
-              : 'bg-cover bg-center transition-transform duration-100 ease-out' // Desktop: with smooth parallax
+              ? 'inset-0 bg-cover bg-center' // Mobile: cover ensures full viewport coverage with proper inset
+              : 'inset-0 bg-cover bg-center transition-transform duration-100 ease-out' // Desktop: with smooth parallax
           }`}
           style={{
             backgroundImage: 'url(/kaiju_hd.png)',
@@ -281,8 +289,12 @@ const JapanAdventureHero = () => {
               ? 'none' // No parallax on mobile, image fills viewport properly
               : `translate(${parallaxY * 0.2}px, ${parallaxY * 0.4}px) scale(1.2)`, // Parallax on desktop
             ...(isMobile && {
-              // Additional mobile optimizations
+              // Additional mobile optimizations for full coverage
               backgroundAttachment: 'scroll', // Better performance on mobile
+              backgroundPosition: 'center center', // Ensure centered positioning
+              backgroundSize: 'cover', // Ensure complete coverage
+              minHeight: '100vh', // Ensure full viewport height coverage
+              minWidth: '100vw', // Ensure full viewport width coverage
               willChange: 'auto', // Disable GPU acceleration when not needed
             }),
           }}
@@ -305,8 +317,15 @@ const JapanAdventureHero = () => {
           }}
         />
 
-        {/* Floating geometric shapes with mouse influence */}
-        <svg className="absolute inset-0 w-full h-full opacity-20 transition-transform duration-150 ease-out" style={{ transform: `translate(${parallaxY * 0.15}px, ${parallaxY * 0.25}px)` }}>
+        {/* Floating geometric shapes */}
+        <svg
+          className="absolute inset-0 w-full h-full opacity-20 transition-transform duration-150 ease-out"
+          style={{
+            transform: isMobile
+              ? 'none' // No parallax on mobile
+              : `translate(${parallaxY * 0.15}px, ${parallaxY * 0.25}px)` // Parallax on desktop
+          }}
+        >
           {geometricShapes.map(shape => {
             const getShapePath = () => {
               switch (shape.type) {
@@ -342,7 +361,9 @@ const JapanAdventureHero = () => {
         <svg
           className="absolute inset-0 w-full h-full opacity-40 transition-transform duration-200 ease-out"
           style={{
-            transform: `translate(${parallaxY * 0.3}px, ${parallaxY * 0.5}px)`,
+            transform: isMobile
+              ? 'none' // No parallax on mobile
+              : `translate(${parallaxY * 0.3}px, ${parallaxY * 0.5}px)`, // Parallax on desktop
           }}
         >
           {particles.map(particle => (
@@ -424,7 +445,7 @@ X CASAMIGOS`}
           <div className="flex items-center gap-3">
             <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
             <span className="text-xs text-gray-300 font-mono">
-              {nextActivity ? 'up next' : 'planning mode'}
+              {nextActivity ? 'up next' : planningActivity ? 'planning' : 'planning mode'}
             </span>
           </div>
           <div className="flex items-center gap-4">
@@ -437,6 +458,18 @@ X CASAMIGOS`}
                 <div className="flex items-center gap-1">
                   <span className="text-xs text-pink-300 font-mono truncate max-w-24 sm:max-w-none">
                     {nextActivity.title}
+                  </span>
+                </div>
+              </>
+            ) : planningActivity ? (
+              <>
+                <div className="flex items-center gap-2">
+                  <Clock className="w-3 h-3 text-purple-400" />
+                  <span className="text-xs text-purple-300 font-mono">{planningActivity.time}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-xs text-pink-300 font-mono truncate max-w-24 sm:max-w-none">
+                    {planningActivity.title}
                   </span>
                 </div>
               </>

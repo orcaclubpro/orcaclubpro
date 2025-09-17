@@ -336,3 +336,69 @@ export async function fetchAllScheduledActivities(): Promise<ScheduledActivity[]
   }
 }
 
+/**
+ * Fetch the next chronological activity for planning mode
+ * This returns the very first activity in chronological order when no upcoming activities exist
+ */
+export async function fetchNextChronologicalActivity(): Promise<ScheduledActivity | null> {
+  try {
+    const payload = await getPayload({ config })
+
+    // Trip start date from static data
+    const tripStartDate = '2024-11-04'
+
+    // Get ALL activities that have scheduled times, sorted chronologically
+    const result = await payload.find({
+      collection: 'kaiju-activities',
+      where: {
+        hasTime: {
+          equals: true,
+        },
+      },
+      sort: ['dayIndex', 'time'], // Sort by day first, then by time
+      limit: 1000,
+    })
+
+    const kaijuActivities = result.docs as KaijuActivity[]
+
+    if (kaijuActivities.length === 0) {
+      return null // No activities exist at all
+    }
+
+    // Get trip data for location information
+    const { tripData } = await import('../data/tripData')
+
+    // Convert the first activity to ScheduledActivity format
+    const firstActivity = kaijuActivities[0]
+
+    // Get location from trip data
+    const dayData = tripData.days[firstActivity.dayIndex]
+    const location = dayData ? dayData.location : 'Unknown Location'
+
+    // Compute full DateTime: startDate + dayIndex + time
+    const startDate = new Date(tripStartDate)
+    const activityDate = new Date(startDate)
+    activityDate.setDate(startDate.getDate() + firstActivity.dayIndex)
+
+    // Parse time (assuming format like "09:00" or "14:30")
+    const [hours, minutes] = (firstActivity.time || '00:00').split(':').map(Number)
+    activityDate.setHours(hours, minutes, 0, 0)
+
+    // For planning mode, we don't need time remaining calculation
+    // since this is for planning the next logical activity
+    return {
+      id: firstActivity.id,
+      title: firstActivity.title,
+      time: firstActivity.time || '',
+      dayIndex: firstActivity.dayIndex,
+      location,
+      dateTime: activityDate,
+      timeRemaining: 'Planning',
+      category: firstActivity.category,
+    }
+  } catch (error) {
+    console.error('Error fetching next chronological activity:', error)
+    return null
+  }
+}
+
