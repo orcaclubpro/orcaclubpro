@@ -54,25 +54,22 @@ export function FloatingDaySelector({
             <motion.div
               layout
               className="
-                bg-slate-900/90 backdrop-blur-md border border-cyan-400/50
-                rounded-full px-6 py-3 shadow-[0_0_30px_rgba(0,255,255,0.2)]
-                cursor-pointer hover:bg-slate-800/90 transition-all duration-300
-                hover:shadow-[0_0_40px_rgba(0,255,255,0.3)]
+                bg-background/95 backdrop-blur-md border border-border
+                rounded-full px-6 py-3 shadow-lg
+                cursor-pointer hover:bg-accent/50 transition-all duration-300
+                hover:shadow-xl
                 group relative overflow-hidden
                 min-w-[280px] max-w-[90vw]
               "
               onClick={() => setIsExpanded(!isExpanded)}
             >
-              {/* Subtle scanning line effect */}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-400/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-
               <div className="flex items-center justify-between relative z-10">
                 <div className="flex items-center gap-3">
-                  <Calendar className="w-4 h-4 text-cyan-400" />
-                  <div className="font-mono text-sm">
-                    <span className="text-cyan-100">Nov {4 + currentDay}</span>
-                    <span className="text-slate-400 mx-2">|</span>
-                    <span className="text-cyan-300 text-xs">{getCurrentDate()}</span>
+                  <Calendar className="w-4 h-4 text-muted-foreground" />
+                  <div className="text-sm">
+                    <span className="text-foreground font-medium">Nov {4 + currentDay}</span>
+                    <span className="text-muted-foreground mx-2">•</span>
+                    <span className="text-muted-foreground text-xs">{getCurrentDate()}</span>
                   </div>
                 </div>
 
@@ -86,10 +83,7 @@ export function FloatingDaySelector({
                       onNavigate(-1)
                     }}
                     disabled={currentDay === 0}
-                    className="
-                      w-6 h-6 p-0 text-cyan-400 hover:text-cyan-300
-                      hover:bg-cyan-400/10 disabled:opacity-30 disabled:hover:bg-transparent
-                    "
+                    className="w-6 h-6 p-0"
                   >
                     <ChevronLeft className="w-3 h-3" />
                   </Button>
@@ -102,10 +96,7 @@ export function FloatingDaySelector({
                       onNavigate(1)
                     }}
                     disabled={currentDay === totalDays - 1}
-                    className="
-                      w-6 h-6 p-0 text-cyan-400 hover:text-cyan-300
-                      hover:bg-cyan-400/10 disabled:opacity-30 disabled:hover:bg-transparent
-                    "
+                    className="w-6 h-6 p-0"
                   >
                     <ChevronRight className="w-3 h-3" />
                   </Button>
@@ -115,7 +106,7 @@ export function FloatingDaySelector({
                     animate={{ rotate: isExpanded ? 180 : 0 }}
                     transition={{ duration: 0.2 }}
                   >
-                    <ChevronDown className="w-4 h-4 text-cyan-400" />
+                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
                   </motion.div>
                 </div>
               </div>
@@ -131,8 +122,8 @@ export function FloatingDaySelector({
                   transition={{ duration: 0.2 }}
                   className="
                     absolute bottom-full left-0 right-0 mb-2
-                    bg-slate-900/95 backdrop-blur-md border border-cyan-400/50
-                    rounded-xl p-4 shadow-[0_0_40px_rgba(0,255,255,0.3)]
+                    bg-background/95 backdrop-blur-md border border-border
+                    rounded-xl p-4 shadow-xl
                     min-w-[320px] max-w-[95vw] mx-auto
                   "
                 >
@@ -147,10 +138,10 @@ export function FloatingDaySelector({
                         <motion.button
                           key={index}
                           className={`
-                            relative p-2 sm:p-3 rounded-lg font-mono text-xs sm:text-sm transition-all duration-200 min-h-[3rem] flex items-center justify-center
+                            relative p-2 sm:p-3 rounded-lg text-xs sm:text-sm transition-all duration-200 min-h-[3rem] flex items-center justify-center
                             ${isActive
-                              ? 'bg-cyan-400/20 text-cyan-100 border-2 border-cyan-400 shadow-[0_0_15px_rgba(0,255,255,0.4)]'
-                              : 'bg-slate-800/50 text-slate-300 border border-slate-600 hover:bg-slate-700/50 hover:border-slate-500 hover:text-cyan-100'
+                              ? 'bg-primary text-primary-foreground border-2 border-primary'
+                              : 'bg-muted text-muted-foreground border border-border hover:bg-accent hover:text-accent-foreground'
                             }
                           `}
                           onClick={() => handleDaySelect(index)}
@@ -158,36 +149,27 @@ export function FloatingDaySelector({
                           whileTap={{ scale: 0.95 }}
                         >
                           <div className="text-center">
-                            <div className="font-bold text-sm sm:text-base">{novemberDay}</div>
+                            <div className="font-semibold text-sm sm:text-base">{novemberDay}</div>
                             <div className="text-[10px] sm:text-xs opacity-75 leading-tight">
                               {dayDate.toLocaleDateString('en-US', { weekday: 'short' })}
                             </div>
                           </div>
-
-                          {/* Active day glow effect */}
-                          {isActive && (
-                            <motion.div
-                              className="absolute inset-0 rounded-lg border border-cyan-400/50"
-                              animate={{ scale: [1, 1.1, 1] }}
-                              transition={{ duration: 2, repeat: Infinity }}
-                            />
-                          )}
                         </motion.button>
                       )
                     })}
                   </div>
 
                   {/* Progress indicator */}
-                  <div className="mt-4 pt-3 border-t border-cyan-400/20">
-                    <div className="flex items-center justify-between text-xs font-mono text-slate-400">
+                  <div className="mt-4 pt-3 border-t border-border">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
                       <span>Progress</span>
-                      <span className="text-cyan-400">
+                      <span className="text-foreground font-medium">
                         {Math.round(((currentDay + 1) / totalDays) * 100)}% Complete
                       </span>
                     </div>
-                    <div className="mt-2 h-1 bg-slate-700 rounded-full overflow-hidden">
+                    <div className="mt-2 h-2 bg-muted rounded-full overflow-hidden">
                       <motion.div
-                        className="h-full bg-gradient-to-r from-cyan-400 to-pink-400 rounded-full"
+                        className="h-full bg-primary rounded-full"
                         initial={{ width: 0 }}
                         animate={{ width: `${((currentDay + 1) / totalDays) * 100}%` }}
                         transition={{ duration: 0.5 }}

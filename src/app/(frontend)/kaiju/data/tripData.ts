@@ -9,14 +9,33 @@ export interface Activity {
 
 export interface TripDay {
   location: string
-  city: 'tokyo' | 'kyoto' | 'osaka' | 'fuji'
+  city: 'tokyo' | 'kyoto' | 'osaka' | 'fuji' | 'custom'
   phase: string
   activities: Activity[]
+  customCityName?: string
 }
 
 export interface TripData {
   startDate: string
   days: TripDay[]
+}
+
+export interface TripConfig {
+  id?: string
+  title: string
+  description?: string
+  startDate: string
+  numberOfDays: number
+  days: TripDayConfig[]
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface TripDayConfig {
+  location: string
+  city: 'tokyo' | 'kyoto' | 'osaka' | 'fuji' | 'custom'
+  phase: string
+  customCityName?: string
 }
 
 const generateId = () => Math.random().toString(36).substr(2, 9)
@@ -228,4 +247,76 @@ export const getCategoryColor = (category: Activity['category']) => {
     transport: 'bg-gray-100 text-gray-800 border-gray-200'
   }
   return colors[category || 'cultural']
+}
+
+// Default trip configuration based on static data
+export const getDefaultTripConfig = (): TripConfig => ({
+  title: '懐郷 HUNTING - Japan Adventure',
+  description: 'Cyberpunk Japan adventure across Tokyo, Kyoto, Osaka, and Mt. Fuji',
+  startDate: '2024-11-04',
+  numberOfDays: 16,
+  days: tripData.days.map(day => ({
+    location: day.location,
+    city: day.city,
+    phase: day.phase,
+    customCityName: day.city === 'custom' ? day.location : undefined
+  }))
+})
+
+// Convert TripConfig to TripData format
+export const tripConfigToTripData = (config: TripConfig): TripData => ({
+  startDate: config.startDate,
+  days: config.days.map(dayConfig => ({
+    location: dayConfig.location,
+    city: dayConfig.city,
+    phase: dayConfig.phase,
+    activities: [] // Activities are loaded separately
+  }))
+})
+
+// Utility to get city display name
+export const getCityDisplayName = (city: string, customName?: string) => {
+  if (city === 'custom' && customName) return customName
+  const cityNames = {
+    tokyo: 'Tokyo',
+    kyoto: 'Kyoto',
+    osaka: 'Osaka',
+    fuji: 'Mt. Fuji'
+  }
+  return cityNames[city as keyof typeof cityNames] || city
+}
+
+// Validate trip configuration
+export const validateTripConfig = (config: TripConfig): string[] => {
+  const errors: string[] = []
+
+  if (!config.title?.trim()) {
+    errors.push('Trip title is required')
+  }
+
+  if (!config.startDate) {
+    errors.push('Start date is required')
+  }
+
+  if (config.numberOfDays < 1 || config.numberOfDays > 365) {
+    errors.push('Number of days must be between 1 and 365')
+  }
+
+  if (config.days.length !== config.numberOfDays) {
+    errors.push('Number of day configurations must match number of days')
+  }
+
+  config.days.forEach((day, index) => {
+    if (!day.location?.trim()) {
+      errors.push(`Day ${index + 1}: Location is required`)
+    }
+    if (!day.phase?.trim()) {
+      errors.push(`Day ${index + 1}: Phase description is required`)
+    }
+    if (day.city === 'custom' && !day.customCityName?.trim()) {
+      errors.push(`Day ${index + 1}: Custom city name is required`)
+    }
+  })
+
+  return errors
 }

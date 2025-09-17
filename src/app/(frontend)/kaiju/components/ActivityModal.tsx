@@ -33,14 +33,15 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
-import { type Activity } from '../data/tripData'
+import { type Activity, type TripData } from '../data/tripData'
 
 const activitySchema = z.object({
   title: z.string().min(1, 'Title is required').max(100, 'Title must be less than 100 characters'),
   description: z.string().max(500, 'Description must be less than 500 characters').optional(),
   time: z.string().optional(),
   hasTime: z.boolean(),
-  category: z.enum(['cultural', 'food', 'nature', 'shopping', 'entertainment', 'transport']).optional()
+  category: z.enum(['cultural', 'food', 'nature', 'shopping', 'entertainment', 'transport']).optional(),
+  dayIndex: z.number().min(0).max(15)
 }).refine((data) => {
   if (data.hasTime && !data.time) {
     return false
@@ -56,10 +57,12 @@ type ActivityFormData = z.infer<typeof activitySchema>
 interface ActivityModalProps {
   isOpen: boolean
   onClose: () => void
-  onSave: (activity: Activity) => void
+  onSave: (activity: Activity, dayIndex: number) => void
   activity?: Activity
   isEdit?: boolean
   isPending?: boolean
+  currentDay: number
+  tripData: TripData
 }
 
 export function ActivityModal({
@@ -68,7 +71,9 @@ export function ActivityModal({
   onSave,
   activity,
   isEdit = false,
-  isPending = false
+  isPending = false,
+  currentDay,
+  tripData
 }: ActivityModalProps) {
   const form = useForm<ActivityFormData>({
     resolver: zodResolver(activitySchema),
@@ -77,7 +82,8 @@ export function ActivityModal({
       description: '',
       time: '',
       hasTime: false,
-      category: undefined
+      category: undefined,
+      dayIndex: currentDay
     }
   })
 
@@ -91,7 +97,8 @@ export function ActivityModal({
         description: activity.description || '',
         time: activity.time || '',
         hasTime: activity.hasTime,
-        category: activity.category
+        category: activity.category,
+        dayIndex: currentDay
       })
     } else {
       form.reset({
@@ -99,10 +106,11 @@ export function ActivityModal({
         description: '',
         time: '',
         hasTime: false,
-        category: undefined
+        category: undefined,
+        dayIndex: currentDay
       })
     }
-  }, [activity, isEdit, form])
+  }, [activity, isEdit, form, currentDay])
 
   useEffect(() => {
     if (!hasTime) {
@@ -119,8 +127,8 @@ export function ActivityModal({
       hasTime: data.hasTime,
       category: data.category
     }
-    
-    onSave(newActivity)
+
+    onSave(newActivity, data.dayIndex)
     form.reset()
   }
 
@@ -131,11 +139,7 @@ export function ActivityModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="
-        sm:max-w-[700px] max-h-[90vh] overflow-y-auto
-        bg-slate-900/95 backdrop-blur-sm border border-cyan-400/50
-        shadow-[0_0_50px_rgba(0,255,255,0.3)]
-      ">
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto bg-slate-900/95 backdrop-blur-sm border border-cyan-400/50 shadow-[0_0_50px_rgba(0,255,255,0.3)]">
         <DialogHeader className="border-b border-cyan-400/20 pb-6">
           <DialogTitle className="text-2xl font-bold font-mono tracking-wider text-cyan-100 flex items-center gap-3">
             <Target className="w-6 h-6 text-pink-400" />
@@ -158,8 +162,8 @@ export function ActivityModal({
                     {hasTime ? 'SCHEDULED MISSION' : 'FLEXIBLE MISSION'}
                   </Label>
                   <p className="text-sm text-slate-300 font-mono tracking-wide mt-1">
-                    {hasTime 
-                      ? 'Deploy at specific time coordinates' 
+                    {hasTime
+                      ? 'Deploy at specific time coordinates'
                       : 'Execute when tactical situation allows'
                     }
                   </p>
@@ -212,6 +216,41 @@ export function ActivityModal({
               )}
             </AnimatePresence>
 
+            {/* Day Selection */}
+            <FormField
+              control={form.control}
+              name="dayIndex"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-cyan-100 font-mono font-bold tracking-wider">
+                    MISSION DAY *
+                  </FormLabel>
+                  <Select
+                    onValueChange={(value) => field.onChange(parseInt(value))}
+                    value={field.value?.toString()}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="bg-slate-800/50 border-cyan-400/50 text-cyan-100 font-mono tracking-wide focus:border-cyan-400">
+                        <SelectValue placeholder="SELECT MISSION DAY" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent className="bg-slate-800 border-cyan-400/50 max-h-60">
+                      {tripData.days.map((day, index) => (
+                        <SelectItem
+                          key={index}
+                          value={index.toString()}
+                          className="text-cyan-100 font-mono hover:bg-slate-700"
+                        >
+                          Day {index + 1} - {day.location} ({day.phase})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage className="text-pink-300 font-mono text-xs" />
+                </FormItem>
+              )}
+            />
+
             {/* Mission Title */}
             <FormField
               control={form.control}
@@ -225,11 +264,7 @@ export function ActivityModal({
                     <Input
                       placeholder="e.g., INFILTRATE SENSO-JI TEMPLE"
                       {...field}
-                      className="
-                        bg-slate-800/50 border-cyan-400/50 text-cyan-100 
-                        placeholder:text-slate-400 font-mono tracking-wide
-                        focus:border-cyan-400 focus:ring-cyan-400/20
-                      "
+                      className="bg-slate-800/50 border-cyan-400/50 text-cyan-100 placeholder:text-slate-400 font-mono tracking-wide focus:border-cyan-400 focus:ring-cyan-400/20"
                     />
                   </FormControl>
                   <FormMessage className="text-pink-300 font-mono text-xs" />
@@ -248,10 +283,7 @@ export function ActivityModal({
                   </FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
-                      <SelectTrigger className="
-                        bg-slate-800/50 border-cyan-400/50 text-cyan-100 
-                        font-mono tracking-wide focus:border-cyan-400
-                      ">
+                      <SelectTrigger className="bg-slate-800/50 border-cyan-400/50 text-cyan-100 font-mono tracking-wide focus:border-cyan-400">
                         <SelectValue placeholder="SELECT MISSION TYPE" />
                       </SelectTrigger>
                     </FormControl>
@@ -281,11 +313,7 @@ export function ActivityModal({
                   <FormControl>
                     <Textarea
                       placeholder="Tactical notes, objectives, and operational details..."
-                      className="
-                        min-h-[120px] resize-none bg-slate-800/50 border-cyan-400/50 
-                        text-cyan-100 placeholder:text-slate-400 font-mono tracking-wide
-                        focus:border-cyan-400 focus:ring-cyan-400/20
-                      "
+                      className="min-h-[120px] resize-none bg-slate-800/50 border-cyan-400/50 text-cyan-100 placeholder:text-slate-400 font-mono tracking-wide focus:border-cyan-400 focus:ring-cyan-400/20"
                       {...field}
                     />
                   </FormControl>
@@ -300,26 +328,14 @@ export function ActivityModal({
                 variant="outline"
                 onClick={handleClose}
                 disabled={isPending}
-                className="
-                  flex-1 sm:flex-none bg-slate-800/50 border-slate-500 text-slate-300
-                  hover:bg-slate-700 hover:border-slate-400 hover:text-slate-100
-                  font-mono tracking-wider disabled:opacity-50 disabled:cursor-not-allowed
-                "
+                className="flex-1 sm:flex-none bg-slate-800/50 border-slate-500 text-slate-300 hover:bg-slate-700 hover:border-slate-400 hover:text-slate-100 font-mono tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 ABORT
               </Button>
               <Button
                 type="submit"
                 disabled={isPending}
-                className="
-                  flex-1 sm:flex-none bg-gradient-to-r from-cyan-500 to-cyan-600
-                  hover:from-cyan-400 hover:to-cyan-500 text-slate-900
-                  font-mono font-bold tracking-wider
-                  shadow-[0_0_20px_rgba(0,255,255,0.3)]
-                  hover:shadow-[0_0_30px_rgba(0,255,255,0.5)]
-                  border-none disabled:opacity-50 disabled:cursor-not-allowed
-                  disabled:from-slate-500 disabled:to-slate-600
-                "
+                className="flex-1 sm:flex-none bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-400 hover:to-cyan-500 text-slate-900 font-mono font-bold tracking-wider shadow-[0_0_20px_rgba(0,255,255,0.3)] hover:shadow-[0_0_30px_rgba(0,255,255,0.5)] border-none disabled:opacity-50 disabled:cursor-not-allowed disabled:from-slate-500 disabled:to-slate-600"
               >
                 {isPending ?
                   (isEdit ? 'Updating...' : 'Creating...') :

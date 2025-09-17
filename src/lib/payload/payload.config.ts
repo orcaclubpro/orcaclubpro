@@ -141,12 +141,118 @@ const KaijuActivities: CollectionConfig = {
   ],
 }
 
+// TripConfigs collection - stores trip configuration and structure
+const TripConfigs: CollectionConfig = {
+  slug: 'trip-configs',
+  admin: {
+    useAsTitle: 'title',
+    defaultColumns: ['title', 'startDate', 'numberOfDays'],
+  },
+  access: {
+    read: () => true,
+    create: () => true,
+    update: () => true,
+    delete: () => true,
+  },
+  fields: [
+    {
+      name: 'title',
+      type: 'text',
+      required: true,
+      admin: {
+        description: 'Trip title (e.g., "Japan Adventure 2024")',
+      },
+    },
+    {
+      name: 'description',
+      type: 'textarea',
+      admin: {
+        description: 'Optional trip description',
+      },
+    },
+    {
+      name: 'startDate',
+      type: 'date',
+      required: true,
+      admin: {
+        description: 'Trip start date',
+      },
+    },
+    {
+      name: 'numberOfDays',
+      type: 'number',
+      required: true,
+      admin: {
+        description: 'Total number of days in the trip',
+      },
+      validate: (value: any) => {
+        if (typeof value !== 'number' || value < 1 || value > 365) {
+          return 'Number of days must be between 1 and 365'
+        }
+        return true
+      },
+    },
+    {
+      name: 'days',
+      type: 'array',
+      required: true,
+      admin: {
+        description: 'Day-by-day trip configuration',
+      },
+      fields: [
+        {
+          name: 'location',
+          type: 'text',
+          required: true,
+          admin: {
+            description: 'Location name (e.g., "Tokyo", "Shibuya District")',
+          },
+        },
+        {
+          name: 'city',
+          type: 'select',
+          required: true,
+          defaultValue: 'tokyo',
+          options: [
+            { label: 'Tokyo', value: 'tokyo' },
+            { label: 'Kyoto', value: 'kyoto' },
+            { label: 'Osaka', value: 'osaka' },
+            { label: 'Mt. Fuji', value: 'fuji' },
+            { label: 'Custom Location', value: 'custom' },
+          ],
+          admin: {
+            description: 'City category for styling and grouping',
+          },
+        },
+        {
+          name: 'phase',
+          type: 'text',
+          required: true,
+          admin: {
+            description: 'Phase description (e.g., "Arrival & First Exploration")',
+          },
+        },
+        {
+          name: 'customCityName',
+          type: 'text',
+          admin: {
+            description: 'Custom city name (required when city is "custom")',
+            condition: (data: any, siblingData: any) => {
+              return siblingData?.city === 'custom'
+            },
+          },
+        },
+      ],
+    },
+  ],
+}
+
 export default buildConfig({
   // If you'd like to use Rich Text, pass your editor here
   editor: lexicalEditor(),
 
   // Define and configure your collections in this array
-  collections: [Users, KaijuActivities],
+  collections: [Users, KaijuActivities, TripConfigs],
 
   // Your Payload secret - should be a complex and secure string, unguessable
   secret: process.env.PAYLOAD_SECRET || 'your-secret-here',

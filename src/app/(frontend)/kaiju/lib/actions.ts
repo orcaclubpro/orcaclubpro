@@ -7,7 +7,7 @@
 
 import { getPayload } from 'payload'
 import config from '@payload-config'
-import type { Activity } from '../data/tripData'
+import type { Activity, TripConfig } from '../data/tripData'
 
 // Define the simplified KaijuActivity type with ONLY dayIndex
 export interface KaijuActivity {
@@ -238,3 +238,4 @@ export async function searchKaijuActivities(query: string, dayIndex?: number): P
     return []
   }
 }
+

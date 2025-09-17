@@ -69,6 +69,7 @@ export interface Config {
   collections: {
     users: User;
     'kaiju-activities': KaijuActivity;
+    'trip-configs': TripConfig;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
     'payload-migrations': PayloadMigration;
@@ -77,6 +78,7 @@ export interface Config {
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
     'kaiju-activities': KaijuActivitiesSelect<false> | KaijuActivitiesSelect<true>;
+    'trip-configs': TripConfigsSelect<false> | TripConfigsSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
     'payload-migrations': PayloadMigrationsSelect<false> | PayloadMigrationsSelect<true>;
@@ -170,6 +172,53 @@ export interface KaijuActivity {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "trip-configs".
+ */
+export interface TripConfig {
+  id: string;
+  /**
+   * Trip title (e.g., "Japan Adventure 2024")
+   */
+  title: string;
+  /**
+   * Optional trip description
+   */
+  description?: string | null;
+  /**
+   * Trip start date
+   */
+  startDate: string;
+  /**
+   * Total number of days in the trip
+   */
+  numberOfDays: number;
+  /**
+   * Day-by-day trip configuration
+   */
+  days: {
+    /**
+     * Location name (e.g., "Tokyo", "Shibuya District")
+     */
+    location: string;
+    /**
+     * City category for styling and grouping
+     */
+    city: 'tokyo' | 'kyoto' | 'osaka' | 'fuji' | 'custom';
+    /**
+     * Phase description (e.g., "Arrival & First Exploration")
+     */
+    phase: string;
+    /**
+     * Custom city name (required when city is "custom")
+     */
+    customCityName?: string | null;
+    id?: string | null;
+  }[];
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-locked-documents".
  */
 export interface PayloadLockedDocument {
@@ -182,6 +231,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'kaiju-activities';
         value: string | KaijuActivity;
+      } | null)
+    | ({
+        relationTo: 'trip-configs';
+        value: string | TripConfig;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -256,6 +309,27 @@ export interface KaijuActivitiesSelect<T extends boolean = true> {
   hasTime?: T;
   category?: T;
   dayIndex?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "trip-configs_select".
+ */
+export interface TripConfigsSelect<T extends boolean = true> {
+  title?: T;
+  description?: T;
+  startDate?: T;
+  numberOfDays?: T;
+  days?:
+    | T
+    | {
+        location?: T;
+        city?: T;
+        phase?: T;
+        customCityName?: T;
+        id?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
 }
