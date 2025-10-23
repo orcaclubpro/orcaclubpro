@@ -5,9 +5,9 @@
 
 @theme {
   /* Font families */
-  --font-inter: "Inter", sans-serif;
+  --font-montserrat: "Montserrat", sans-serif;
   --font-mono: "JetBrains Mono", monospace;
-  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-sans: var(--font-montserrat), system-ui, sans-serif;
 
   /* Custom spacing */
   --spacing-18: 4.5rem;
@@ -124,7 +124,7 @@ html {
 }
 
 body {
-  font-family: var(--font-inter);
+  font-family: var(--font-montserrat);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -208,6 +208,24 @@ body {
   50% { background-position: 100% 50%; }
 }
 
+@keyframes waveFlow {
+  0% {
+    background-position: 0% 50%;
+  }
+  25% {
+    background-position: 50% 25%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  75% {
+    background-position: 50% 75%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
 @keyframes textReveal {
   to { transform: translateY(0); }
 }
@@ -251,6 +269,23 @@ body {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   animation: gradientShift 4s ease-in-out infinite;
+}
+
+/* Wave text animation - ocean-like flowing effect */
+.wave-text {
+  background: linear-gradient(
+    110deg,
+    #67e8f9 0%,
+    #3b82f6 25%,
+    #1e40af 50%,
+    #3b82f6 75%,
+    #67e8f9 100%
+  );
+  background-size: 200% 200%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: waveFlow 6s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
 }
 
 /* Parallax container */
@@ -433,4 +468,31 @@ body {
 /* Gradient radial utility */
 .bg-gradient-radial {
   background: radial-gradient(circle, var(--tw-gradient-stops));
+}
+
+/* Typography utilities for bold headings */
+h1, .text-heading-1 {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+h2, .text-heading-2 {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+h3, .text-heading-3 {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+h4, .text-heading-4 {
+  font-weight: 600;
+}
+
+/* Large display text utility */
+.text-display {
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
 }

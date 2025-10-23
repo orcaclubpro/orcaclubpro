@@ -1,6 +1,5 @@
 "use client";
 
-import FloatingNavigation from "@/components/layout/floating-navigation"
 import AnimatedBackground from "@/components/layout/animated-background"
 import ScrollReveal from "@/components/layout/scroll-reveal"
 import DynamicGreeting from "@/components/layout/dynamic-greeting"
@@ -17,7 +16,6 @@ import {
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-black relative overflow-hidden">
-      <FloatingNavigation />
       <AnimatedBackground />
 
       {/* Hero Section */}

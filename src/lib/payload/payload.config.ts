@@ -52,7 +52,59 @@ const Users: CollectionConfig = {
       admin: {
         description: 'User workspace identifier',
       },
-    }
+    },
+    // Stripe Integration Fields
+    {
+      name: 'stripeCustomerId',
+      type: 'text',
+      admin: {
+        description: 'Stripe customer ID',
+      },
+    },
+    {
+      name: 'stripeSubscriptionId',
+      type: 'text',
+      admin: {
+        description: 'Current active subscription ID',
+      },
+    },
+    {
+      name: 'subscriptionStatus',
+      type: 'select',
+      defaultValue: 'free',
+      options: [
+        { label: 'Free', value: 'free' },
+        { label: 'Trialing', value: 'trialing' },
+        { label: 'Active', value: 'active' },
+        { label: 'Past Due', value: 'past_due' },
+        { label: 'Canceled', value: 'canceled' },
+        { label: 'Incomplete', value: 'incomplete' },
+      ],
+      admin: {
+        description: 'Current subscription status',
+      },
+    },
+    {
+      name: 'subscriptionTier',
+      type: 'select',
+      defaultValue: 'free',
+      options: [
+        { label: 'Free', value: 'free' },
+        { label: 'Basic', value: 'basic' },
+        { label: 'Pro', value: 'pro' },
+        { label: 'Enterprise', value: 'enterprise' },
+      ],
+      admin: {
+        description: 'Subscription tier level',
+      },
+    },
+    {
+      name: 'billingEmail',
+      type: 'email',
+      admin: {
+        description: 'Email address for billing purposes',
+      },
+    },
   ],
 }
 
@@ -247,12 +299,270 @@ const TripConfigs: CollectionConfig = {
   ],
 }
 
+// Subscriptions collection - tracks Stripe subscriptions
+const Subscriptions: CollectionConfig = {
+  slug: 'subscriptions',
+  admin: {
+    useAsTitle: 'stripeSubscriptionId',
+    defaultColumns: ['user', 'status', 'stripePriceId', 'currentPeriodEnd'],
+  },
+  access: {
+    read: () => true,
+    create: () => true,
+    update: () => true,
+    delete: () => true,
+  },
+  indexes: [
+    {
+      fields: ['stripeSubscriptionId'],
+      unique: true,
+    },
+  ],
+  fields: [
+    {
+      name: 'user',
+      type: 'relationship',
+      relationTo: 'users',
+      required: true,
+      hasMany: false,
+      admin: {
+        description: 'User associated with this subscription',
+      },
+    },
+    {
+      name: 'stripeSubscriptionId',
+      type: 'text',
+      required: true,
+      unique: true,
+      admin: {
+        description: 'Stripe subscription ID',
+      },
+    },
+    {
+      name: 'stripeCustomerId',
+      type: 'text',
+      required: true,
+      admin: {
+        description: 'Stripe customer ID',
+      },
+    },
+    {
+      name: 'stripePriceId',
+      type: 'text',
+      required: true,
+      admin: {
+        description: 'Stripe price ID for this subscription',
+      },
+    },
+    {
+      name: 'status',
+      type: 'select',
+      required: true,
+      options: [
+        { label: 'Active', value: 'active' },
+        { label: 'Canceled', value: 'canceled' },
+        { label: 'Past Due', value: 'past_due' },
+        { label: 'Trialing', value: 'trialing' },
+        { label: 'Incomplete', value: 'incomplete' },
+        { label: 'Unpaid', value: 'unpaid' },
+        { label: 'Paused', value: 'paused' },
+      ],
+      admin: {
+        description: 'Current subscription status',
+      },
+    },
+    {
+      name: 'currentPeriodStart',
+      type: 'date',
+      admin: {
+        description: 'Start of the current billing period',
+      },
+    },
+    {
+      name: 'currentPeriodEnd',
+      type: 'date',
+      admin: {
+        description: 'End of the current billing period',
+      },
+    },
+    {
+      name: 'cancelAtPeriodEnd',
+      type: 'checkbox',
+      defaultValue: false,
+      admin: {
+        description: 'Whether subscription will be canceled at period end',
+      },
+    },
+    {
+      name: 'canceledAt',
+      type: 'date',
+      admin: {
+        description: 'Date when subscription was canceled',
+      },
+    },
+    {
+      name: 'trialStart',
+      type: 'date',
+      admin: {
+        description: 'Trial period start date',
+      },
+    },
+    {
+      name: 'trialEnd',
+      type: 'date',
+      admin: {
+        description: 'Trial period end date',
+      },
+    },
+    {
+      name: 'metadata',
+      type: 'json',
+      admin: {
+        description: 'Additional metadata from Stripe',
+      },
+    },
+  ],
+}
+
+// Invoices collection - tracks Stripe invoices
+const Invoices: CollectionConfig = {
+  slug: 'invoices',
+  admin: {
+    useAsTitle: 'stripeInvoiceId',
+    defaultColumns: ['user', 'amount', 'status', 'paid', 'dueDate'],
+  },
+  access: {
+    read: () => true,
+    create: () => true,
+    update: () => true,
+    delete: () => true,
+  },
+  indexes: [
+    {
+      fields: ['stripeInvoiceId'],
+      unique: true,
+    },
+  ],
+  fields: [
+    {
+      name: 'user',
+      type: 'relationship',
+      relationTo: 'users',
+      required: true,
+      hasMany: false,
+      admin: {
+        description: 'User associated with this invoice',
+      },
+    },
+    {
+      name: 'subscription',
+      type: 'relationship',
+      relationTo: 'subscriptions' as any,
+      hasMany: false,
+      admin: {
+        description: 'Subscription associated with this invoice (if any)',
+      },
+    },
+    {
+      name: 'stripeInvoiceId',
+      type: 'text',
+      required: true,
+      unique: true,
+      admin: {
+        description: 'Stripe invoice ID',
+      },
+    },
+    {
+      name: 'stripeCustomerId',
+      type: 'text',
+      required: true,
+      admin: {
+        description: 'Stripe customer ID',
+      },
+    },
+    {
+      name: 'amount',
+      type: 'number',
+      required: true,
+      admin: {
+        description: 'Amount in cents',
+      },
+    },
+    {
+      name: 'currency',
+      type: 'text',
+      defaultValue: 'usd',
+      admin: {
+        description: 'Currency code (e.g., usd, eur)',
+      },
+    },
+    {
+      name: 'status',
+      type: 'select',
+      required: true,
+      options: [
+        { label: 'Draft', value: 'draft' },
+        { label: 'Open', value: 'open' },
+        { label: 'Paid', value: 'paid' },
+        { label: 'Void', value: 'void' },
+        { label: 'Uncollectible', value: 'uncollectible' },
+      ],
+      admin: {
+        description: 'Invoice status',
+      },
+    },
+    {
+      name: 'paid',
+      type: 'checkbox',
+      defaultValue: false,
+      admin: {
+        description: 'Whether the invoice has been paid',
+      },
+    },
+    {
+      name: 'invoiceUrl',
+      type: 'text',
+      admin: {
+        description: 'URL to view the invoice in Stripe',
+      },
+    },
+    {
+      name: 'pdfUrl',
+      type: 'text',
+      admin: {
+        description: 'URL to download invoice PDF',
+      },
+    },
+    {
+      name: 'dueDate',
+      type: 'date',
+      admin: {
+        description: 'Invoice due date',
+      },
+    },
+    {
+      name: 'paidAt',
+      type: 'date',
+      admin: {
+        description: 'Date when invoice was paid',
+      },
+    },
+    {
+      name: 'metadata',
+      type: 'json',
+      admin: {
+        description: 'Additional metadata from Stripe',
+      },
+    },
+  ],
+}
+
 export default buildConfig({
   // If you'd like to use Rich Text, pass your editor here
   editor: lexicalEditor(),
 
   // Define and configure your collections in this array
-  collections: [Users, KaijuActivities, TripConfigs],
+  collections: [Users, Subscriptions, Invoices, KaijuActivities, TripConfigs],
 
   // Your Payload secret - should be a complex and secure string, unguessable
   secret: process.env.PAYLOAD_SECRET || 'your-secret-here',

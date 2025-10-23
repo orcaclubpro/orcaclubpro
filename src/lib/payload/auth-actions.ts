@@ -146,13 +146,13 @@ export async function logoutUser(): Promise<{ success: boolean }> {
   }
 }
 
-export async function getCurrentUser(): Promise<LoginResult['user'] | null> {
+export async function getCurrentUser() {
   try {
     const payload = await getPayload({ config })
     const cookieStore = await cookies()
-    
+
     const token = cookieStore.get('payload-token')?.value
-    
+
     if (!token) {
       return null
     }
@@ -164,14 +164,25 @@ export async function getCurrentUser(): Promise<LoginResult['user'] | null> {
     })
 
     if (user.user) {
-      return {
+      // Fetch full user object with all fields including Stripe data
+      const fullUser = await payload.findByID({
+        collection: 'users',
         id: user.user.id as string,
-        email: user.user.email,
-        name: user.user.name as string,
-        role: user.user.role as string,
+      }) as any
+
+      return {
+        id: fullUser.id as string,
+        email: fullUser.email,
+        name: fullUser.name,
+        role: fullUser.role,
+        stripeCustomerId: fullUser.stripeCustomerId,
+        stripeSubscriptionId: fullUser.stripeSubscriptionId,
+        subscriptionStatus: fullUser.subscriptionStatus,
+        subscriptionTier: fullUser.subscriptionTier,
+        billingEmail: fullUser.billingEmail,
       }
     }
-    
+
     return null
   } catch (error) {
     console.error('Get current user error:', error)

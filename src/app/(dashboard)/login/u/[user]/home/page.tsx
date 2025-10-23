@@ -89,13 +89,13 @@ function QuickActionsSkeleton() {
   );
 }
 
-// Server Component - handles static content
+// Client Component - handles dynamic content
 interface UserHomePageProps {
-  params: Promise<{ userId: string }>;
+  params: Promise<{ user: string }>;
 }
 
 export default function UserHomePage({ params }: UserHomePageProps) {
-  const { userId } = use(params);
+  const { user: userId } = use(params);
 
   return (
     <motion.div

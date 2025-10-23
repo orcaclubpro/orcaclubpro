@@ -59,12 +59,12 @@ const publicNavigation = [
 ];
 
 const authenticatedNavigation = [
-  { id: 'workspace', name: 'Workspace', icon: Home, href: '/dashboard/login/u/{userId}/home' },
-  { id: 'analytics', name: 'Analytics', icon: BarChart3, href: '/dashboard/login/u/{userId}/analytics' },
-  { id: 'projects', name: 'Projects', icon: FolderOpen, href: '/dashboard/login/u/{userId}/projects' },
-  { id: 'documents', name: 'Documents', icon: FileText, href: '/dashboard/login/u/{userId}/invoices' },
-  { id: 'calendar', name: 'Calendar', icon: Calendar, href: '/dashboard/login/u/{userId}/calendar' },
-  { id: 'settings', name: 'Settings', icon: Settings, href: '/dashboard/login/u/{userId}/settings' },
+  { id: 'workspace', name: 'Workspace', icon: Home, href: '/login/u/{userId}/home' },
+  { id: 'analytics', name: 'Analytics', icon: BarChart3, href: '/login/u/{userId}/analytics' },
+  { id: 'projects', name: 'Projects', icon: FolderOpen, href: '/login/u/{userId}/projects' },
+  { id: 'documents', name: 'Documents', icon: FileText, href: '/login/u/{userId}/invoices' },
+  { id: 'calendar', name: 'Calendar', icon: Calendar, href: '/login/u/{userId}/calendar' },
+  { id: 'settings', name: 'Settings', icon: Settings, href: '/login/u/{userId}/settings' },
 ];
 
 export default function DashboardLayout({
@@ -123,10 +123,10 @@ export default function DashboardLayout({
 
   // Update authentication state based on URL
   useEffect(() => {
-    const isUserPath = pathname.includes('/dashboard/login/u/');
+    const isUserPath = pathname.includes('/login/u/');
     if (isUserPath && !isAuthenticated) {
       // Extract user ID from path
-      const userIdMatch = pathname.match(/\/dashboard\/login\/u\/([^\/]+)/);
+      const userIdMatch = pathname.match(/\/login\/u\/([^\/]+)/);
       if (userIdMatch) {
         setIsAuthenticated(true);
         setCurrentUser(userIdMatch[1]);
@@ -153,7 +153,7 @@ export default function DashboardLayout({
       setActiveTab('workspace');
       // Automatically redirect to user's home page after successful authentication
       if (userId) {
-        router.push(`/dashboard/login/u/${userId}/home`);
+        router.push(`/login/u/${userId}/home`);
       }
     } else {
       setActiveTab('login');
@@ -166,7 +166,7 @@ export default function DashboardLayout({
       const href = item.href.replace('{userId}', currentUser || 'demo');
       router.push(href);
     } else if (item.id === 'login') {
-      router.push('/dashboard/login');
+      router.push('/login');
     }
     setActiveTab(item.id);
   };
@@ -175,7 +175,7 @@ export default function DashboardLayout({
     setIsAuthenticated(false);
     setCurrentUser(null);
     setActiveTab('login');
-    router.push('/dashboard/login');
+    router.push('/login');
   };
 
   const navigation = isAuthenticated ? authenticatedNavigation : publicNavigation;

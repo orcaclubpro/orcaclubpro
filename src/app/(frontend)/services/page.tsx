@@ -1,4 +1,3 @@
-import FloatingNavigation from "@/components/layout/floating-navigation"
 import AnimatedBackground from "@/components/layout/animated-background"
 import ScrollReveal from "@/components/layout/scroll-reveal"
 import Link from "next/link"
@@ -170,7 +169,6 @@ const faqs = [
 export default function ServicesPage() {
   return (
     <div className="min-h-screen bg-black relative overflow-hidden">
-      <FloatingNavigation />
       <AnimatedBackground />
 
       {/* Hero Section */}
