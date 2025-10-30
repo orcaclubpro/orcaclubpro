@@ -1,14 +1,12 @@
 'use client';
 
-import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Check, Loader2 } from 'lucide-react';
+import { Check } from 'lucide-react';
 
 const PRICING_TIERS = [
   {
     name: 'Free',
     price: '$0',
-    priceId: null,
     features: [
       'Basic workspace access',
       '5 projects',
@@ -19,7 +17,6 @@ const PRICING_TIERS = [
   {
     name: 'Basic',
     price: '$9',
-    priceId: 'price_1SKWZUHINe8KmzTAi0jU3k0g',
     features: [
       'Everything in Free',
       'Unlimited projects',
@@ -31,7 +28,6 @@ const PRICING_TIERS = [
   {
     name: 'Pro',
     price: '$29',
-    priceId: 'price_1SKWb4HINe8KmzTAVwyEwDGC',
     features: [
       'Everything in Basic',
       'Advanced analytics',
@@ -45,7 +41,6 @@ const PRICING_TIERS = [
   {
     name: 'Enterprise',
     price: 'Custom',
-    priceId: null,
     features: [
       'Everything in Pro',
       'Unlimited storage',
@@ -58,40 +53,9 @@ const PRICING_TIERS = [
 ];
 
 export default function PricingPage() {
-  const [loading, setLoading] = useState<string | null>(null);
-
-  const handleSubscribe = async (priceId: string | null, tierName: string) => {
-    if (!priceId) {
-      // Handle free tier or enterprise contact
-      return;
-    }
-
-    setLoading(tierName);
-
-    try {
-      const response = await fetch('/api/stripe/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ priceId }),
-      });
-
-      const { url, error } = await response.json();
-
-      if (error) {
-        console.error(error);
-        alert('Error creating checkout session');
-        return;
-      }
-
-      if (url) {
-        window.location.href = url;
-      }
-    } catch (error) {
-      console.error(error);
-      alert('Error creating checkout session');
-    } finally {
-      setLoading(null);
-    }
+  const handleSubscribe = (tierName: string) => {
+    // Navigate to contact or signup page
+    console.log(`Selected tier: ${tierName}`);
   };
 
   return (
@@ -149,20 +113,14 @@ export default function PricingPage() {
               </ul>
 
               <button
-                onClick={() => handleSubscribe(tier.priceId, tier.name)}
-                disabled={loading === tier.name}
+                onClick={() => handleSubscribe(tier.name)}
                 className={`w-full py-3 rounded-lg font-medium transition-all ${
                   tier.popular
                     ? 'bg-gradient-to-r from-cyan-600 to-blue-700 text-white hover:shadow-lg hover:shadow-cyan-500/30'
                     : 'bg-gray-800 text-white hover:bg-gray-700'
-                } disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center`}
+                }`}
               >
-                {loading === tier.name ? (
-                  <>
-                    <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                    Processing...
-                  </>
-                ) : tier.price === 'Custom' ? (
+                {tier.price === 'Custom' ? (
                   'Contact Sales'
                 ) : tier.price === '$0' ? (
                   'Get Started'

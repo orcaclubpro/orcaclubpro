@@ -68,8 +68,6 @@ export interface Config {
   blocks: {};
   collections: {
     users: User;
-    subscriptions: Subscription;
-    invoices: Invoice;
     'kaiju-activities': KaijuActivity;
     'trip-configs': TripConfig;
     'payload-locked-documents': PayloadLockedDocument;
@@ -79,8 +77,6 @@ export interface Config {
   collectionsJoins: {};
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
-    subscriptions: SubscriptionsSelect<false> | SubscriptionsSelect<true>;
-    invoices: InvoicesSelect<false> | InvoicesSelect<true>;
     'kaiju-activities': KaijuActivitiesSelect<false> | KaijuActivitiesSelect<true>;
     'trip-configs': TripConfigsSelect<false> | TripConfigsSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -131,26 +127,6 @@ export interface User {
    * User workspace identifier
    */
   workspace?: string | null;
-  /**
-   * Stripe customer ID
-   */
-  stripeCustomerId?: string | null;
-  /**
-   * Current active subscription ID
-   */
-  stripeSubscriptionId?: string | null;
-  /**
-   * Current subscription status
-   */
-  subscriptionStatus?: ('free' | 'trialing' | 'active' | 'past_due' | 'canceled' | 'incomplete') | null;
-  /**
-   * Subscription tier level
-   */
-  subscriptionTier?: ('free' | 'basic' | 'pro' | 'enterprise') | null;
-  /**
-   * Email address for billing purposes
-   */
-  billingEmail?: string | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -163,140 +139,6 @@ export interface User {
   loginAttempts?: number | null;
   lockUntil?: string | null;
   password?: string | null;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "subscriptions".
- */
-export interface Subscription {
-  id: string;
-  /**
-   * User associated with this subscription
-   */
-  user: string | User;
-  /**
-   * Stripe subscription ID
-   */
-  stripeSubscriptionId: string;
-  /**
-   * Stripe customer ID
-   */
-  stripeCustomerId: string;
-  /**
-   * Stripe price ID for this subscription
-   */
-  stripePriceId: string;
-  /**
-   * Current subscription status
-   */
-  status: 'active' | 'canceled' | 'past_due' | 'trialing' | 'incomplete' | 'unpaid' | 'paused';
-  /**
-   * Start of the current billing period
-   */
-  currentPeriodStart?: string | null;
-  /**
-   * End of the current billing period
-   */
-  currentPeriodEnd?: string | null;
-  /**
-   * Whether subscription will be canceled at period end
-   */
-  cancelAtPeriodEnd?: boolean | null;
-  /**
-   * Date when subscription was canceled
-   */
-  canceledAt?: string | null;
-  /**
-   * Trial period start date
-   */
-  trialStart?: string | null;
-  /**
-   * Trial period end date
-   */
-  trialEnd?: string | null;
-  /**
-   * Additional metadata from Stripe
-   */
-  metadata?:
-    | {
-        [k: string]: unknown;
-      }
-    | unknown[]
-    | string
-    | number
-    | boolean
-    | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "invoices".
- */
-export interface Invoice {
-  id: string;
-  /**
-   * User associated with this invoice
-   */
-  user: string | User;
-  /**
-   * Subscription associated with this invoice (if any)
-   */
-  subscription?: (string | null) | Subscription;
-  /**
-   * Stripe invoice ID
-   */
-  stripeInvoiceId: string;
-  /**
-   * Stripe customer ID
-   */
-  stripeCustomerId: string;
-  /**
-   * Amount in cents
-   */
-  amount: number;
-  /**
-   * Currency code (e.g., usd, eur)
-   */
-  currency?: string | null;
-  /**
-   * Invoice status
-   */
-  status: 'draft' | 'open' | 'paid' | 'void' | 'uncollectible';
-  /**
-   * Whether the invoice has been paid
-   */
-  paid?: boolean | null;
-  /**
-   * URL to view the invoice in Stripe
-   */
-  invoiceUrl?: string | null;
-  /**
-   * URL to download invoice PDF
-   */
-  pdfUrl?: string | null;
-  /**
-   * Invoice due date
-   */
-  dueDate?: string | null;
-  /**
-   * Date when invoice was paid
-   */
-  paidAt?: string | null;
-  /**
-   * Additional metadata from Stripe
-   */
-  metadata?:
-    | {
-        [k: string]: unknown;
-      }
-    | unknown[]
-    | string
-    | number
-    | boolean
-    | null;
-  updatedAt: string;
-  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -387,14 +229,6 @@ export interface PayloadLockedDocument {
         value: string | User;
       } | null)
     | ({
-        relationTo: 'subscriptions';
-        value: string | Subscription;
-      } | null)
-    | ({
-        relationTo: 'invoices';
-        value: string | Invoice;
-      } | null)
-    | ({
         relationTo: 'kaiju-activities';
         value: string | KaijuActivity;
       } | null)
@@ -452,11 +286,6 @@ export interface UsersSelect<T extends boolean = true> {
   name?: T;
   role?: T;
   workspace?: T;
-  stripeCustomerId?: T;
-  stripeSubscriptionId?: T;
-  subscriptionStatus?: T;
-  subscriptionTier?: T;
-  billingEmail?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -468,47 +297,6 @@ export interface UsersSelect<T extends boolean = true> {
   _verificationToken?: T;
   loginAttempts?: T;
   lockUntil?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "subscriptions_select".
- */
-export interface SubscriptionsSelect<T extends boolean = true> {
-  user?: T;
-  stripeSubscriptionId?: T;
-  stripeCustomerId?: T;
-  stripePriceId?: T;
-  status?: T;
-  currentPeriodStart?: T;
-  currentPeriodEnd?: T;
-  cancelAtPeriodEnd?: T;
-  canceledAt?: T;
-  trialStart?: T;
-  trialEnd?: T;
-  metadata?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "invoices_select".
- */
-export interface InvoicesSelect<T extends boolean = true> {
-  user?: T;
-  subscription?: T;
-  stripeInvoiceId?: T;
-  stripeCustomerId?: T;
-  amount?: T;
-  currency?: T;
-  status?: T;
-  paid?: T;
-  invoiceUrl?: T;
-  pdfUrl?: T;
-  dueDate?: T;
-  paidAt?: T;
-  metadata?: T;
-  updatedAt?: T;
-  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

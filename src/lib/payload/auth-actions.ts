@@ -164,7 +164,7 @@ export async function getCurrentUser() {
     })
 
     if (user.user) {
-      // Fetch full user object with all fields including Stripe data
+      // Fetch full user object with all fields
       const fullUser = await payload.findByID({
         collection: 'users',
         id: user.user.id as string,
@@ -175,11 +175,6 @@ export async function getCurrentUser() {
         email: fullUser.email,
         name: fullUser.name,
         role: fullUser.role,
-        stripeCustomerId: fullUser.stripeCustomerId,
-        stripeSubscriptionId: fullUser.stripeSubscriptionId,
-        subscriptionStatus: fullUser.subscriptionStatus,
-        subscriptionTier: fullUser.subscriptionTier,
-        billingEmail: fullUser.billingEmail,
       }
     }
 
