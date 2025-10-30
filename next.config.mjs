@@ -2,15 +2,13 @@ import { withPayload } from '@payloadcms/next/withPayload';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Enable standalone output for Docker and deployment optimization
-  output: 'standalone',
-  
+  // Turbopack configuration (stable in Next.js 15)
+  turbopack: {
+    // Configure turbopack options if needed
+  },
+
   // Experimental features for better performance
   experimental: {
-    // Enable turbo mode for faster builds
-    turbo: {
-      // Configure turbo options if needed
-    },
     // Optimize package imports
     optimizePackageImports: [
       '@payloadcms/next',
