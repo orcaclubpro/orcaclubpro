@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: "Portfolio - Software Development Projects & Web Design Examples | orcaclub",
+  title: "Portfolio | ORCACLUB",
   description: "View our portfolio of successful software development projects, beautiful web designs, AI automation solutions & digital transformations. See real results from our software company's work.",
   keywords: [
     "software development portfolio",
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     "ecommerce development examples"
   ],
   openGraph: {
-    title: "Portfolio - Software Development Projects & Web Design Examples",
+    title: "Portfolio | ORCACLUB",
     description: "View our portfolio of successful software development projects, beautiful web designs, AI automation solutions & digital transformations. See real results from our work.",
     type: "website",
     url: "https://orcaclub.pro/portfolio",
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Portfolio - Software Development Projects & Web Design Examples",
+    title: "Portfolio | ORCACLUB",
     description: "View our portfolio of successful software development projects, beautiful web designs, AI automation solutions & digital transformations."
   },
   alternates: {

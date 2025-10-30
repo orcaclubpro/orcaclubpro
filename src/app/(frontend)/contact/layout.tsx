@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: "Contact Us - Get a Quote for Software Development & Web Design | orcaclub",
+  title: "Contact Us | ORCACLUB",
   description: "Contact our software development company for custom web design, AI automation, and digital transformation projects. Get a free consultation and quote for your business needs.",
   keywords: [
     "contact software company",
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     "business software solutions inquiry"
   ],
   openGraph: {
-    title: "Contact Us - Get a Quote for Software Development & Web Design",
+    title: "Contact Us | ORCACLUB",
     description: "Contact our software development company for custom web design, AI automation, and digital transformation projects. Get a free consultation and quote.",
     type: "website",
     url: "https://orcaclub.pro/contact",
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Contact Us - Get a Quote for Software Development & Web Design", 
+    title: "Contact Us | ORCACLUB", 
     description: "Contact our software development company for custom web design, AI automation, and digital transformation projects."
   },
   alternates: {

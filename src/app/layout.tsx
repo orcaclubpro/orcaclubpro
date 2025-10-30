@@ -20,7 +20,7 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://orcaclub.pro'),
-  title: "orcaclub - tailored software solutions",
+  title: "ORCACLUB - Tailored Software Solutions",
   description:
     "Leading software company crafting tailored solutions for modern businesses. Expert web design, AI agents, workflow automation, and custom software development. Top-rated software consultants delivering beautiful designs and intelligent automation for SMBs and enterprises.",
   keywords: [
@@ -68,8 +68,8 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     url: "https://orcaclub.pro",
-    siteName: "orcaclub",
-    title: "orcaclub - Leading Software Company | Web Design & AI Agents",
+    siteName: "ORCACLUB",
+    title: "ORCACLUB - Leading Software Company | Web Design & AI Agents",
     description: "Expert software company specializing in beautiful web design, AI agents, and custom software solutions. Transform your business with our tailored automation and intelligent workflows.",
     images: [
       {
@@ -82,7 +82,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "orcaclub - Leading Software Company | Web Design & AI Agents",
+    title: "ORCACLUB - Leading Software Company | Web Design & AI Agents",
     description: "Expert software company specializing in beautiful web design, AI agents, and custom software solutions. Transform your business with tailored automation.",
     creator: "@orcaclub",
     images: ["/og-image.jpg"],
