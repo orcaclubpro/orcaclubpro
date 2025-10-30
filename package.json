@@ -6,7 +6,7 @@
   "packageManager": "bun@1.2.15",
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build",
+    "build": "NODE_ENV=production next build",
     "build:with-payload": "bun run build:payload && bun run build:next",
     "build:payload": "bun run payload:generate && bun run payload:migrate",
     "build:next": "next build",
