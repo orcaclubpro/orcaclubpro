@@ -84,8 +84,7 @@ export class GoogleCalendarService {
         reminders: {
           useDefault: false,
           overrides: [
-            { method: 'email', minutes: 24 * 60 }, // 1 day before
-            { method: 'popup', minutes: 60 }, // 1 hour before
+            { method: 'popup', minutes: 60 }, // 1 hour before (popup only, no email)
           ],
         },
         conferenceData: {

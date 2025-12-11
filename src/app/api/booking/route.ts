@@ -250,7 +250,9 @@ Visit us: https://orcaclub.pro
 `,
     })
 
-    // Send notification email to admin
+    // Admin notification email - DISABLED (you'll see bookings in calendar instead)
+    // Uncomment below if you want to receive email notifications for each booking
+    /*
     const adminEmail = await resend.emails.send({
       from: FROM_EMAIL,
       to: ADMIN_EMAIL,
@@ -440,16 +442,12 @@ Submitted: ${new Date().toLocaleString("en-US", {
 })}
 `,
     })
+    */
 
-    // Check if emails were sent successfully
+    // Check if email was sent successfully
     if (customerEmail.error) {
       console.error("Failed to send customer email:", customerEmail.error)
       throw new Error("Failed to send confirmation email")
-    }
-
-    if (adminEmail.error) {
-      console.error("Failed to send admin notification:", adminEmail.error)
-      // Still return success since customer email was sent
     }
 
     // Create Google Calendar event if preferred date is provided
@@ -501,7 +499,6 @@ Booked via ORCACLUB Booking System
         success: true,
         message: "Booking request submitted successfully",
         customerEmailId: customerEmail.data?.id,
-        adminEmailId: adminEmail.data?.id,
         calendarEventLink,
       },
       { status: 200 }
