@@ -40,18 +40,18 @@ export function DashboardHeader({ userId }: DashboardHeaderProps) {
       </div>
       
       <div className="flex items-center space-x-4">
-        <motion.div 
+        <motion.div
           className="flex items-center space-x-2 bg-gray-900/50 rounded-lg px-4 py-2 border border-gray-700/50"
           whileHover={{ scale: 1.02 }}
-          transition={{ type: "spring", stiffness: 400, damping: 25 }}
+          transition={{ type: "spring" as const, stiffness: 400, damping: 25 }}
         >
           <Wifi className="h-4 w-4 text-green-400" />
           <span className="text-sm font-mono text-gray-300">Connected</span>
         </motion.div>
-        <motion.div 
+        <motion.div
           className="flex items-center space-x-2 bg-gray-900/50 rounded-lg px-4 py-2 border border-gray-700/50"
           whileHover={{ scale: 1.02 }}
-          transition={{ type: "spring", stiffness: 400, damping: 25 }}
+          transition={{ type: "spring" as const, stiffness: 400, damping: 25 }}
         >
           <Shield className="h-4 w-4 text-blue-400" />
           <span className="text-sm font-mono text-gray-300">Secure</span>

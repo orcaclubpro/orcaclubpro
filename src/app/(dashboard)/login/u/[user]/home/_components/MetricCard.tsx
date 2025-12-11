@@ -61,7 +61,7 @@ export function MetricCard({
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              transition={{ delay: 0.5, type: "spring", stiffness: 200 }}
+              transition={{ delay: 0.5, type: "spring" as const, stiffness: 200 }}
               className="text-2xl font-mono font-bold text-white mb-1"
             >
               {value}{unit}

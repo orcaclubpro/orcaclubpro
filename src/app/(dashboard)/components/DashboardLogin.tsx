@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, type Variants } from 'framer-motion';
 import { 
   Mail, 
   Lock, 
@@ -287,7 +287,7 @@ export function DashboardLogin({ onAuthSuccess }: DashboardLoginProps) {
               </label>
               <motion.div
                 animate={{ scale: focusedField === 'name' ? 1.02 : 1 }}
-                transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                transition={{ type: "spring" as const, stiffness: 300, damping: 20 }}
                 className="relative"
               >
                 <UserPlus className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -313,7 +313,7 @@ export function DashboardLogin({ onAuthSuccess }: DashboardLoginProps) {
             </label>
             <motion.div
               animate={{ scale: focusedField === 'email' ? 1.02 : 1 }}
-              transition={{ type: "spring", stiffness: 300, damping: 20 }}
+              transition={{ type: "spring" as const, stiffness: 300, damping: 20 }}
               className="relative"
             >
               <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -338,7 +338,7 @@ export function DashboardLogin({ onAuthSuccess }: DashboardLoginProps) {
             </label>
             <motion.div
               animate={{ scale: focusedField === 'password' ? 1.02 : 1 }}
-              transition={{ type: "spring", stiffness: 300, damping: 20 }}
+              transition={{ type: "spring" as const, stiffness: 300, damping: 20 }}
               className="relative"
             >
               <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />

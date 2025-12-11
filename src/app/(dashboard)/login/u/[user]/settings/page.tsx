@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, ElementType } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { 
   User, 
   Bell, 
@@ -28,7 +28,7 @@ interface SettingsPageProps {
   params: Promise<{ userId: string }>;
 }
 
-const containerVariants = {
+const containerVariants: Variants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
@@ -39,26 +39,26 @@ const containerVariants = {
   }
 };
 
-const itemVariants = {
+const itemVariants: Variants = {
   hidden: { y: 20, opacity: 0 },
   visible: {
     y: 0,
     opacity: 1,
     transition: {
-      type: "spring",
+      type: "spring" as const,
       stiffness: 100,
       damping: 12
     }
   }
 };
 
-const cardVariants = {
+const cardVariants: Variants = {
   hidden: { scale: 0.95, opacity: 0 },
   visible: {
     scale: 1,
     opacity: 1,
     transition: {
-      type: "spring",
+      type: "spring" as const,
       stiffness: 100,
       damping: 15
     }
@@ -81,7 +81,7 @@ const ToggleSwitch = ({ enabled, onChange, label }: { enabled: boolean; onChange
             enabled ? 'translate-x-6' : 'translate-x-1'
           }`}
           layout
-          transition={{ type: "spring", stiffness: 500, damping: 30 }}
+          transition={{ type: "spring" as const, stiffness: 500, damping: 30 }}
         />
       </motion.button>
     </div>
@@ -130,7 +130,7 @@ const InputField = ({
           animate={{
             scale: isFocused ? 1.02 : 1,
           }}
-          transition={{ type: "spring", stiffness: 300, damping: 20 }}
+          transition={{ type: "spring" as const, stiffness: 300, damping: 20 }}
         />
         {type === 'password' && (
           <motion.button

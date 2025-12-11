@@ -1,5 +1,7 @@
+import type { Variants } from 'framer-motion';
+
 // Animation variants for dashboard components
-export const containerVariants = {
+export const containerVariants: Variants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
@@ -10,52 +12,52 @@ export const containerVariants = {
   }
 };
 
-export const itemVariants = {
+export const itemVariants: Variants = {
   hidden: { y: 20, opacity: 0 },
   visible: {
     y: 0,
     opacity: 1,
     transition: {
-      type: "spring",
+      type: "spring" as const,
       stiffness: 300,
       damping: 20
     }
   }
 };
 
-export const cardHoverVariants = {
-  hover: { 
-    scale: 1.02, 
+export const cardHoverVariants: Variants = {
+  hover: {
+    scale: 1.02,
     y: -2,
     transition: {
-      type: "spring",
+      type: "spring" as const,
       stiffness: 400,
       damping: 25
     }
   },
-  tap: { 
+  tap: {
     scale: 0.98,
     transition: {
-      type: "spring",
+      type: "spring" as const,
       stiffness: 600,
       damping: 30
     }
   }
 };
 
-export const buttonVariants = {
-  hover: { 
+export const buttonVariants: Variants = {
+  hover: {
     scale: 1.1,
     transition: {
-      type: "spring",
+      type: "spring" as const,
       stiffness: 400,
       damping: 25
     }
   },
-  tap: { 
+  tap: {
     scale: 0.9,
     transition: {
-      type: "spring",
+      type: "spring" as const,
       stiffness: 600,
       damping: 30
     }
