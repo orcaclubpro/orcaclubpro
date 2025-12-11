@@ -3,6 +3,11 @@ import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import { mongooseAdapter } from '@payloadcms/db-mongodb'
 import { buildConfig } from 'payload'
 import type { CollectionConfig } from 'payload'
+import { fileURLToPath } from 'node:url'
+import path from 'path'
+
+const filename = fileURLToPath(import.meta.url)
+const dirname = path.dirname(filename)
 
 // Users collection for authentication
 const Users: CollectionConfig = {
@@ -266,16 +271,19 @@ export default buildConfig({
   },
   // Admin panel customization - ORCACLUB Branding
   admin: {
+    importMap: {
+      baseDir: path.resolve(dirname, '../../'),
+    },
     components: {
       // Custom branding graphics
       graphics: {
-        Logo: '/components/payload/Logo',
-        Icon: '/components/payload/Icon',
+        Logo: '@/components/payload/Logo',
+        Icon: '@/components/payload/Icon',
       },
       // Custom login page elements
-      beforeLogin: ['/components/payload/BeforeLogin'],
+      beforeLogin: ['@/components/payload/BeforeLogin'],
       // Custom CSS provider for ORCACLUB theme
-      providers: ['/components/payload/PayloadStyleProvider#PayloadStyleProvider'],
+      providers: ['@/components/payload/PayloadStyleProvider#PayloadStyleProvider'],
     },
   },
   // If you want to resize images, crop, set focal point, etc.
