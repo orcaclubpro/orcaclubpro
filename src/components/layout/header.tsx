@@ -5,6 +5,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Menu, X } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { BookingModal } from "@/components/booking-modal"
 
 const navigation = [
   { name: "About", href: "/about" },
@@ -74,8 +75,10 @@ export function Header() {
           })}
         </div>
 
-        {/* Spacer for layout balance */}
-        <div className="hidden md:flex md:flex-1 md:justify-end" />
+        {/* Booking Button */}
+        <div className="hidden md:flex md:flex-1 md:justify-end">
+          <BookingModal />
+        </div>
       </nav>
 
       {/* Mobile menu */}
@@ -99,6 +102,10 @@ export function Header() {
                 </Link>
               )
             })}
+            {/* Mobile Booking Button */}
+            <div className="pt-4 pb-2">
+              <BookingModal />
+            </div>
           </div>
         </div>
       )}

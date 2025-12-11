@@ -264,6 +264,20 @@ export default buildConfig({
   typescript: {
     outputFile: './src/types/payload-types.ts',
   },
+  // Admin panel customization - ORCACLUB Branding
+  admin: {
+    components: {
+      // Custom branding graphics
+      graphics: {
+        Logo: '/components/payload/Logo',
+        Icon: '/components/payload/Icon',
+      },
+      // Custom login page elements
+      beforeLogin: ['/components/payload/BeforeLogin'],
+      // Custom CSS provider for ORCACLUB theme
+      providers: ['/components/payload/PayloadStyleProvider#PayloadStyleProvider'],
+    },
+  },
   // If you want to resize images, crop, set focal point, etc.
   // make sure to install it and pass it to the config.
   // This is optional - if you don't need to do these things,

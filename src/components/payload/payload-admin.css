@@ -1,0 +1,303 @@
+/* ORCACLUB PayloadCMS Admin Branding */
+
+@layer payload-default {
+  /* Root Variables - ORCACLUB Theme */
+  :root {
+    /* ORCACLUB Brand Colors */
+    --theme-bg: #000000;
+    --theme-elevation-50: #0f172a;
+    --theme-elevation-100: #1e293b;
+    --theme-elevation-150: #1e293b;
+    --theme-elevation-200: #1e293b;
+    --theme-elevation-250: #334155;
+    --theme-elevation-300: #334155;
+    --theme-elevation-400: #475569;
+    --theme-elevation-500: #1e293b;
+    --theme-elevation-600: #64748b;
+    --theme-elevation-700: #94a3b8;
+    --theme-elevation-800: #cbd5e1;
+    --theme-elevation-900: #e2e8f0;
+    --theme-elevation-1000: #f1f5f9;
+
+    /* ORCACLUB Cyan Accent */
+    --theme-success-50: #67e8f9;
+    --theme-success-100: #67e8f9;
+    --theme-success-150: #67e8f9;
+    --theme-success-200: #67e8f9;
+    --theme-success-250: #67e8f9;
+    --theme-success-300: #67e8f9;
+    --theme-success-350: #67e8f9;
+    --theme-success-400: #67e8f9;
+    --theme-success-450: #67e8f9;
+    --theme-success-500: #67e8f9;
+    --theme-success-550: #67e8f9;
+    --theme-success-600: #3b82f6;
+    --theme-success-650: #3b82f6;
+    --theme-success-700: #1e40af;
+    --theme-success-750: #1e40af;
+
+    /* Text Colors */
+    --theme-text: #ffffff;
+    --theme-input-bg: rgba(15, 23, 42, 0.8);
+    --theme-input-border: rgba(103, 232, 249, 0.2);
+
+    /* Borders */
+    --theme-border-color: rgba(103, 232, 249, 0.2);
+  }
+
+  /* Global Background */
+  body,
+  #app,
+  .template-default,
+  .dashboard,
+  .collection-list,
+  .edit-view,
+  .doc-controls {
+    background-color: var(--theme-bg) !important;
+  }
+
+  /* Login Page Styling */
+  .login {
+    background: linear-gradient(135deg, #000000 0%, #0f172a 100%);
+  }
+
+  .login__wrapper {
+    background: rgba(15, 23, 42, 0.8);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(103, 232, 249, 0.2);
+    border-radius: 1rem;
+    padding: 2rem;
+  }
+
+  /* Buttons - ORCACLUB Cyan */
+  button[type="submit"],
+  .btn--style-primary,
+  .form-submit button,
+  .popup-button-list__button,
+  .btn--icon-style-with-background,
+  .table__select-all {
+    background: linear-gradient(to right, rgba(59, 130, 246, 0.2), rgba(103, 232, 249, 0.2)) !important;
+    border: 1px solid rgba(103, 232, 249, 0.3) !important;
+    color: #67e8f9 !important;
+    transition: all 0.3s ease;
+  }
+
+  button[type="submit"]:hover,
+  .btn--style-primary:hover,
+  .form-submit button:hover {
+    background: linear-gradient(to right, rgba(59, 130, 246, 0.3), rgba(103, 232, 249, 0.3)) !important;
+    box-shadow: 0 0 20px rgba(103, 232, 249, 0.2);
+  }
+
+  /* Input Fields */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  textarea,
+  select,
+  .input {
+    background-color: rgba(15, 23, 42, 0.8) !important;
+    border: 1px solid rgba(103, 232, 249, 0.2) !important;
+    color: #ffffff !important;
+    border-radius: 0.5rem;
+  }
+
+  input[type="text"]:focus,
+  input[type="email"]:focus,
+  input[type="password"]:focus,
+  input[type="number"]:focus,
+  textarea:focus,
+  select:focus,
+  .input:focus {
+    border-color: rgba(103, 232, 249, 0.5) !important;
+    box-shadow: 0 0 0 3px rgba(103, 232, 249, 0.1) !important;
+  }
+
+  /* Navigation Sidebar */
+  .nav,
+  .nav__wrap {
+    background-color: rgba(15, 23, 42, 0.9) !important;
+    border-right: 1px solid rgba(103, 232, 249, 0.1);
+  }
+
+  .nav-group__toggle,
+  .nav__link {
+    color: rgba(255, 255, 255, 0.8) !important;
+    transition: all 0.3s ease;
+  }
+
+  .nav-group__toggle:hover,
+  .nav__link:hover,
+  .nav__link--active {
+    color: #67e8f9 !important;
+    background-color: rgba(103, 232, 249, 0.1) !important;
+  }
+
+  .nav__link--active {
+    border-left: 3px solid #67e8f9;
+  }
+
+  /* Cards & Containers */
+  .card,
+  .collection-list__item,
+  .row,
+  .gutter,
+  .render-fields,
+  .field-type {
+    background-color: rgba(15, 23, 42, 0.8) !important;
+    border: 1px solid rgba(103, 232, 249, 0.1) !important;
+    border-radius: 0.75rem;
+  }
+
+  /* Tables */
+  .table,
+  .table__wrapper,
+  .table thead th {
+    background-color: rgba(15, 23, 42, 0.8) !important;
+    border-color: rgba(103, 232, 249, 0.1) !important;
+  }
+
+  .table tbody tr {
+    border-bottom: 1px solid rgba(103, 232, 249, 0.1) !important;
+    transition: background-color 0.2s ease;
+  }
+
+  .table tbody tr:hover {
+    background-color: rgba(103, 232, 249, 0.05) !important;
+  }
+
+  /* Header */
+  .app-header,
+  .step-nav {
+    background-color: rgba(15, 23, 42, 0.95) !important;
+    border-bottom: 1px solid rgba(103, 232, 249, 0.1) !important;
+    backdrop-filter: blur(10px);
+  }
+
+  /* Typography */
+  h1, h2, h3, h4, h5, h6 {
+    color: #ffffff !important;
+    font-family: 'Montserrat', sans-serif;
+  }
+
+  p, span, label, .label {
+    color: rgba(255, 255, 255, 0.9) !important;
+  }
+
+  /* Links */
+  a {
+    color: #67e8f9 !important;
+    transition: color 0.2s ease;
+  }
+
+  a:hover {
+    color: #3b82f6 !important;
+  }
+
+  /* Tooltips & Popups */
+  .tooltip,
+  .popup,
+  .popup-button-list {
+    background-color: rgba(15, 23, 42, 0.95) !important;
+    border: 1px solid rgba(103, 232, 249, 0.2) !important;
+    border-radius: 0.5rem;
+    backdrop-filter: blur(10px);
+  }
+
+  /* Status Indicators */
+  .pill--style-success,
+  .status--published {
+    background-color: rgba(103, 232, 249, 0.2) !important;
+    color: #67e8f9 !important;
+    border: 1px solid rgba(103, 232, 249, 0.3) !important;
+  }
+
+  /* Loading Indicators */
+  .loading-bar {
+    background-color: #67e8f9 !important;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: rgba(15, 23, 42, 0.5);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(to bottom, #67e8f9, #3b82f6);
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #67e8f9;
+  }
+
+  /* Focus States */
+  *:focus {
+    outline: 2px solid rgba(103, 232, 249, 0.5) !important;
+    outline-offset: 2px;
+  }
+
+  /* Dashboard Widgets */
+  .dashboard__widgets,
+  .collection-stats {
+    background-color: rgba(15, 23, 42, 0.8) !important;
+    border: 1px solid rgba(103, 232, 249, 0.1) !important;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+  }
+
+  /* Rich Text Editor */
+  .rich-text-editor,
+  .lexical-editor {
+    background-color: rgba(15, 23, 42, 0.8) !important;
+    border: 1px solid rgba(103, 232, 249, 0.2) !important;
+    border-radius: 0.5rem;
+    color: #ffffff !important;
+  }
+
+  /* File Upload Areas */
+  .upload,
+  .file-field,
+  .upload__card {
+    background-color: rgba(15, 23, 42, 0.8) !important;
+    border: 2px dashed rgba(103, 232, 249, 0.3) !important;
+    border-radius: 0.75rem;
+    transition: all 0.3s ease;
+  }
+
+  .upload:hover,
+  .file-field:hover {
+    border-color: rgba(103, 232, 249, 0.5) !important;
+    background-color: rgba(103, 232, 249, 0.05) !important;
+  }
+
+  /* Notifications & Toasts */
+  .toast,
+  .notification {
+    background-color: rgba(15, 23, 42, 0.95) !important;
+    border: 1px solid rgba(103, 232, 249, 0.3) !important;
+    border-radius: 0.5rem;
+    backdrop-filter: blur(20px);
+    color: #ffffff !important;
+  }
+
+  /* Modal Overlays */
+  .modal,
+  .drawer {
+    background-color: rgba(15, 23, 42, 0.95) !important;
+    border: 1px solid rgba(103, 232, 249, 0.2) !important;
+    border-radius: 1rem;
+  }
+
+  .modal__overlay,
+  .drawer__overlay {
+    background-color: rgba(0, 0, 0, 0.8) !important;
+    backdrop-filter: blur(5px);
+  }
+}
