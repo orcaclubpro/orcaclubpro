@@ -9,6 +9,181 @@ import path from 'path'
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 
+// Media collection for uploads (logos, images, etc.)
+const Media: CollectionConfig = {
+  slug: 'media',
+  upload: {
+    staticDir: 'media',
+    imageSizes: [
+      {
+        name: 'thumbnail',
+        width: 400,
+        height: 300,
+        position: 'centre',
+      },
+      {
+        name: 'card',
+        width: 768,
+        height: 768,
+        position: 'centre',
+      },
+      {
+        name: 'logo',
+        width: 200,
+        height: 200,
+        position: 'centre',
+      },
+    ],
+    adminThumbnail: 'thumbnail',
+    mimeTypes: ['image/*'],
+  },
+  access: {
+    read: () => true,
+    create: () => true,
+    update: () => true,
+    delete: () => true,
+  },
+  fields: [
+    {
+      name: 'alt',
+      type: 'text',
+      required: true,
+      admin: {
+        description: 'Alt text for accessibility',
+      },
+    },
+  ],
+}
+
+// Clients collection - for client logos/brands
+const Clients: CollectionConfig = {
+  slug: 'clients',
+  admin: {
+    useAsTitle: 'name',
+    defaultColumns: ['name', 'logo', 'displayOrder'],
+    group: 'Content',
+  },
+  access: {
+    read: () => true,
+    create: () => true,
+    update: () => true,
+    delete: () => true,
+  },
+  fields: [
+    {
+      name: 'name',
+      type: 'text',
+      required: true,
+      admin: {
+        description: 'Client/Brand name',
+      },
+    },
+    {
+      name: 'logo',
+      type: 'upload',
+      // @ts-expect-error - media collection exists
+      relationTo: 'media',
+      required: true,
+      filterOptions: {
+        mimeType: { contains: 'image' },
+      },
+      admin: {
+        description: 'Client logo image',
+      },
+    },
+    {
+      name: 'website',
+      type: 'text',
+      admin: {
+        description: 'Optional client website URL',
+      },
+    },
+    {
+      name: 'displayOrder',
+      type: 'number',
+      defaultValue: 0,
+      admin: {
+        description: 'Order in which to display (lower numbers first)',
+      },
+    },
+  ],
+}
+
+// Services collection - for service offerings
+const Services: CollectionConfig = {
+  slug: 'services',
+  admin: {
+    useAsTitle: 'title',
+    defaultColumns: ['title', 'category', 'displayOrder'],
+    group: 'Content',
+  },
+  access: {
+    read: () => true,
+    create: () => true,
+    update: () => true,
+    delete: () => true,
+  },
+  fields: [
+    {
+      name: 'title',
+      type: 'text',
+      required: true,
+      admin: {
+        description: 'Service title (e.g., "Elegant Web Design")',
+      },
+    },
+    {
+      name: 'description',
+      type: 'textarea',
+      required: true,
+      admin: {
+        description: 'Brief service description',
+      },
+    },
+    {
+      name: 'icon',
+      type: 'select',
+      required: true,
+      defaultValue: 'Code2',
+      options: [
+        { label: 'Code', value: 'Code2' },
+        { label: 'Lightning', value: 'Zap' },
+        { label: 'Target', value: 'Target' },
+        { label: 'Brain', value: 'Brain' },
+        { label: 'Sparkles', value: 'Sparkles' },
+        { label: 'Rocket', value: 'Rocket' },
+        { label: 'Search', value: 'Search' },
+      ],
+      admin: {
+        description: 'Icon to display with the service',
+      },
+    },
+    {
+      name: 'category',
+      type: 'select',
+      defaultValue: 'development',
+      options: [
+        { label: 'Development', value: 'development' },
+        { label: 'Design', value: 'design' },
+        { label: 'Automation', value: 'automation' },
+        { label: 'Marketing', value: 'marketing' },
+        { label: 'AI', value: 'ai' },
+      ],
+      admin: {
+        description: 'Service category',
+      },
+    },
+    {
+      name: 'displayOrder',
+      type: 'number',
+      defaultValue: 0,
+      admin: {
+        description: 'Order in which to display (lower numbers first)',
+      },
+    },
+  ],
+}
+
 // Users collection for authentication
 const Users: CollectionConfig = {
   slug: 'users',
@@ -257,7 +432,7 @@ export default buildConfig({
   editor: lexicalEditor(),
 
   // Define and configure your collections in this array
-  collections: [Users, KaijuActivities, TripConfigs],
+  collections: [Media, Clients, Services, Users, KaijuActivities, TripConfigs],
 
   // Your Payload secret - should be a complex and secure string, unguessable
   secret: process.env.PAYLOAD_SECRET || 'your-secret-here',

@@ -1,19 +1,35 @@
-"use client";
-
 import AnimatedBackground from "@/components/layout/animated-background"
 import ScrollReveal from "@/components/layout/scroll-reveal"
 import DynamicGreeting from "@/components/layout/dynamic-greeting"
-import WorkflowCanvas from "@/components/layout/workflow-canvas"
+import ClientsSection from "@/components/sections/ClientsSection"
+import ServicesGrid from "@/components/sections/ServicesGrid"
 import Link from "next/link"
 import {
   ArrowRight,
-  Zap,
-  Target,
-  Brain,
-  Code2
 } from "lucide-react"
+import { getPayload } from "payload"
+import config from "@payload-config"
 
-export default function HomePage() {
+export default async function HomePage() {
+  // Fetch clients and services from Payload
+  const payload = await getPayload({ config })
+
+  const clientsData = await payload.find({
+    // @ts-expect-error - clients collection exists in config
+    collection: 'clients',
+    sort: 'displayOrder',
+    limit: 12,
+  })
+
+  const servicesData = await payload.find({
+    // @ts-expect-error - services collection exists in config
+    collection: 'services',
+    sort: 'displayOrder',
+    limit: 4,
+  })
+
+  const clients = clientsData.docs
+  const services = servicesData.docs
   return (
     <div className="min-h-screen bg-black relative overflow-hidden">
       <AnimatedBackground />
@@ -59,6 +75,9 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Clients Section */}
+      <ClientsSection clients={clients} />
+
       {/* Capabilities Section */}
       <section className="py-40 px-8 relative z-10">
         <div className="max-w-7xl mx-auto">
@@ -68,71 +87,13 @@ export default function HomePage() {
                 Tailored <span className="gradient-text font-light">solutions</span> for modern business
               </h2>
               <p className="text-xl text-gray-400 max-w-3xl mx-auto font-light leading-relaxed">
-                We believe every business deserves software that works perfectly for their unique needs. 
+                We believe every business deserves software that works perfectly for their unique needs.
                 Here&apos;s how we make that happen.
               </p>
             </div>
           </ScrollReveal>
 
-          <div className="grid lg:grid-cols-2 gap-20 items-center">
-            {/* Left side - Services */}
-            <div className="space-y-16">
-              {[
-                {
-                  icon: Code2,
-                  title: "Elegant Web Design",
-                  description:
-                    "Beautiful, responsive websites that convert visitors into customers. We focus on user experience, performance, and modern design principles that make your brand stand out.",
-                  metric: "95% client satisfaction",
-                },
-                {
-                  icon: Zap,
-                  title: "Workflow Automation",
-                  description:
-                    "Automate repetitive processes and streamline operations with custom solutions. From data processing to customer communications, we help you work smarter, not harder.",
-                  metric: "60% time savings average",
-                },
-                {
-                  icon: Target,
-                  title: "Visibility Engineering",
-                  description:
-                    "Get found by the right customers with strategic SEO and digital marketing solutions. We help businesses increase their online presence and drive organic growth.",
-                  metric: "300% search visibility boost",
-                },
-                {
-                  icon: Brain,
-                  title: "AI Workflows",
-                  description:
-                    "Deploy intelligent AI agents that handle customer service, content creation, and data analysis. Custom AI solutions that integrate seamlessly with your existing systems.",
-                  metric: "24/7 intelligent assistance",
-                },
-              ].map((service, index) => (
-                <ScrollReveal key={index} delay={index * 200}>
-                  <div className="group workspace-card rounded-2xl p-10 morph">
-                    <div className="flex items-start gap-8">
-                      <div className="p-5 bg-gradient-to-r from-blue-600/20 to-cyan-500/20 rounded-xl">
-                        <service.icon className="w-8 h-8 text-cyan-400" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="text-2xl font-light mb-4 text-white group-hover:text-cyan-400 transition-colors">
-                          {service.title}
-                        </h3>
-                        <p className="text-gray-400 leading-relaxed mb-6 font-light text-lg">{service.description}</p>
-                        <div className="text-sm text-cyan-400 font-mono">{service.metric}</div>
-                      </div>
-                    </div>
-                  </div>
-                </ScrollReveal>
-              ))}
-            </div>
-
-            {/* Right side - Interactive Workflow Canvas */}
-            <ScrollReveal delay={400}>
-              <div className="relative">
-                <WorkflowCanvas />
-              </div>
-            </ScrollReveal>
-          </div>
+          <ServicesGrid services={services} />
         </div>
       </section>
 
