@@ -29,7 +29,6 @@ export default async function ServicesPage() {
   // Fetch services from Payload
   const payload = await getPayload({ config })
   const servicesData = await payload.find({
-    // @ts-expect-error - services collection exists in config
     collection: 'services',
     sort: 'displayOrder',
   })

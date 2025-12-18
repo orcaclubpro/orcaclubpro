@@ -81,7 +81,6 @@ const Clients: CollectionConfig = {
     {
       name: 'logo',
       type: 'upload',
-      // @ts-expect-error - media collection exists
       relationTo: 'media',
       required: true,
       filterOptions: {

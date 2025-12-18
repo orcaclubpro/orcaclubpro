@@ -15,14 +15,12 @@ export default async function HomePage() {
   const payload = await getPayload({ config })
 
   const clientsData = await payload.find({
-    // @ts-expect-error - clients collection exists in config
     collection: 'clients',
     sort: 'displayOrder',
     limit: 12,
   })
 
   const servicesData = await payload.find({
-    // @ts-expect-error - services collection exists in config
     collection: 'services',
     sort: 'displayOrder',
     limit: 4,
