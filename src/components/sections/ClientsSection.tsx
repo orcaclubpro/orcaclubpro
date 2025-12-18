@@ -40,7 +40,7 @@ export default function ClientsSection({ clients }: ClientsSectionProps) {
                 }}
               >
                 {logoUrl ? (
-                  <div className="relative w-full h-20 md:h-24 grayscale hover:grayscale-0 transition-all duration-500 opacity-50 hover:opacity-100">
+                  <div className="relative w-full h-20 md:h-24 hover:scale-105 transition-all duration-500">
                     <Image
                       src={logoUrl}
                       alt={logo.alt || client.name}
