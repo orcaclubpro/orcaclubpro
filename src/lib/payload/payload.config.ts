@@ -81,7 +81,7 @@ const Clients: CollectionConfig = {
     {
       name: 'logo',
       type: 'upload',
-      relationTo: 'media',
+      relationTo: 'media' as any,
       required: true,
       filterOptions: {
         mimeType: { contains: 'image' },

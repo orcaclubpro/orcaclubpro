@@ -15,13 +15,13 @@ export default async function HomePage() {
   const payload = await getPayload({ config })
 
   const clientsData = await payload.find({
-    collection: 'clients',
+    collection: 'clients' as any,
     sort: 'displayOrder',
     limit: 12,
   })
 
   const servicesData = await payload.find({
-    collection: 'services',
+    collection: 'services' as any,
     sort: 'displayOrder',
     limit: 4,
   })
