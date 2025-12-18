@@ -56,7 +56,7 @@
     "googleapis": "^168.0.0",
     "graphql": "^16.12.0",
     "lucide-react": "^0.511.0",
-    "next": "15.3.3",
+    "next": "15.3.6",
     "payload": "3.44.0",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",

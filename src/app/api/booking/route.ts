@@ -16,6 +16,7 @@ interface BookingFormData {
   service: string
   message: string
   preferredDate: string
+  preferredTime: string
 }
 
 export async function POST(request: NextRequest) {
@@ -23,7 +24,7 @@ export async function POST(request: NextRequest) {
     const body: BookingFormData = await request.json()
 
     // Validate required fields
-    if (!body.name || !body.email || !body.service || !body.message) {
+    if (!body.name || !body.email || !body.service || !body.message || !body.preferredDate || !body.preferredTime) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -39,15 +40,24 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { name, email, phone, company, service, message, preferredDate } = body
+    const { name, email, phone, company, service, message, preferredDate, preferredTime } = body
 
-    // Format the preferred date for display
+    // Format the preferred date and time for display
     const formattedDate = preferredDate
       ? new Date(preferredDate).toLocaleDateString("en-US", {
           weekday: "long",
           year: "numeric",
           month: "long",
           day: "numeric",
+        })
+      : "Not specified"
+
+    const formattedTime = preferredTime
+      ? new Date(preferredTime).toLocaleTimeString("en-US", {
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: true,
+          timeZone: "America/Los_Angeles",
         })
       : "Not specified"
 
@@ -126,8 +136,8 @@ export async function POST(request: NextRequest) {
                                 </tr>
                                 ` : ''}
                                 <tr>
-                                  <td style="padding: 8px 0; font-size: 14px; color: #94a3b8; font-weight: 400;">Preferred Date</td>
-                                  <td style="padding: 8px 0; font-size: 14px; color: #ffffff; font-weight: 400;">${formattedDate}</td>
+                                  <td style="padding: 8px 0; font-size: 14px; color: #94a3b8; font-weight: 400;">Scheduled Time</td>
+                                  <td style="padding: 8px 0; font-size: 14px; color: #ffffff; font-weight: 400;">${formattedDate} at ${formattedTime}</td>
                                 </tr>
                               </table>
                             </td>
@@ -228,7 +238,7 @@ YOUR REQUEST DETAILS
 Service: ${service}
 ${company ? `Company: ${company}` : ''}
 ${phone ? `Phone: ${phone}` : ''}
-Preferred Date: ${formattedDate}
+Scheduled Time: ${formattedDate} at ${formattedTime}
 
 WHAT HAPPENS NEXT
 ━━━━━━━━━━━━━━━━━━━━━━
@@ -350,8 +360,8 @@ Visit us: https://orcaclub.pro
                             </td>
                           </tr>
                           <tr style="border-top: 1px solid #f1f5f9;">
-                            <td style="padding: 10px 0; font-size: 14px; color: #64748b; font-weight: 500;">Timeline</td>
-                            <td style="padding: 10px 0; font-size: 15px; color: #0f172a; font-weight: 500;">${formattedDate}</td>
+                            <td style="padding: 10px 0; font-size: 14px; color: #64748b; font-weight: 500;">Scheduled</td>
+                            <td style="padding: 10px 0; font-size: 15px; color: #0f172a; font-weight: 500;">${formattedDate} at ${formattedTime}</td>
                           </tr>
                         </table>
                       </td>
@@ -425,7 +435,7 @@ ${company ? `Company: ${company}` : ''}
 PROJECT INFORMATION
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Service: ${service}
-Timeline: ${formattedDate}
+Scheduled: ${formattedDate} at ${formattedTime}
 
 THEIR MESSAGE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -450,17 +460,32 @@ Submitted: ${new Date().toLocaleString("en-US", {
       throw new Error("Failed to send confirmation email")
     }
 
-    // Create Google Calendar event if preferred date is provided
+    // Create Google Calendar event with selected date and time
     let calendarEventLink: string | null = null
-    if (preferredDate) {
+    if (preferredDate && preferredTime) {
       try {
-        // Parse the preferred date and create start/end times
-        const startDate = new Date(preferredDate)
+        // Parse the selected date and time
+        const startDate = new Date(preferredTime)
 
-        // Default meeting time: 10:00 AM - 11:00 AM on the selected date
-        startDate.setHours(10, 0, 0, 0)
+        // Create end time (1 hour after start)
         const endDate = new Date(startDate)
-        endDate.setHours(11, 0, 0, 0)
+        endDate.setHours(startDate.getHours() + 1)
+
+        // Verify the time slot is still available (prevent double booking)
+        const isAvailable = await googleCalendar.isTimeSlotAvailable(
+          startDate.toISOString(),
+          endDate.toISOString()
+        )
+
+        if (!isAvailable) {
+          return NextResponse.json(
+            {
+              error: "Time slot no longer available",
+              details: "This time slot was just booked. Please select another time.",
+            },
+            { status: 409 }
+          )
+        }
 
         // Create calendar event with Google Meet link
         calendarEventLink = await googleCalendar.createEvent({

@@ -141,6 +141,124 @@ export class GoogleCalendarService {
   }
 
   /**
+   * Get free/busy information for a specific date range using FreeBusy API
+   */
+  async getFreeBusyInfo(
+    startDateTime: string,
+    endDateTime: string
+  ): Promise<{ start: string; end: string }[]> {
+    if (!this.calendar) {
+      console.warn('Google Calendar not initialized. Returning empty busy periods.')
+      return []
+    }
+
+    try {
+      const response = await this.calendar.freebusy.query({
+        requestBody: {
+          timeMin: startDateTime,
+          timeMax: endDateTime,
+          items: [{ id: this.calendarId }],
+        },
+      })
+
+      const calendarBusy = response.data.calendars?.[this.calendarId]?.busy || []
+      return calendarBusy.map((period) => ({
+        start: period.start || '',
+        end: period.end || '',
+      }))
+    } catch (error) {
+      console.error('Failed to get FreeBusy info:', error)
+      return []
+    }
+  }
+
+  /**
+   * Get available time slots for a specific date
+   * @param date - The date to check (YYYY-MM-DD format)
+   * @param slotDurationMinutes - Duration of each slot in minutes (default: 60)
+   * @param businessHoursStart - Start of business hours (default: 9)
+   * @param businessHoursEnd - End of business hours (default: 17)
+   * @param timeZone - Timezone for the slots (default: America/Los_Angeles)
+   */
+  async getAvailableSlots(
+    date: string,
+    slotDurationMinutes: number = 60,
+    businessHoursStart: number = 9,
+    businessHoursEnd: number = 17,
+    timeZone: string = 'America/Los_Angeles'
+  ): Promise<{ start: string; end: string; label: string }[]> {
+    if (!this.calendar) {
+      console.warn('Google Calendar not initialized. Returning empty slots.')
+      return []
+    }
+
+    try {
+      // Parse the date and create start/end of business day
+      const startOfDay = new Date(`${date}T00:00:00`)
+      const endOfDay = new Date(`${date}T23:59:59`)
+
+      // Get busy periods for the entire day
+      const busyPeriods = await this.getFreeBusyInfo(
+        startOfDay.toISOString(),
+        endOfDay.toISOString()
+      )
+
+      // Generate all possible time slots
+      const allSlots: { start: Date; end: Date }[] = []
+      const dayStart = new Date(`${date}T${businessHoursStart.toString().padStart(2, '0')}:00:00`)
+      const dayEnd = new Date(`${date}T${businessHoursEnd.toString().padStart(2, '0')}:00:00`)
+
+      let currentSlotStart = new Date(dayStart)
+      while (currentSlotStart < dayEnd) {
+        const currentSlotEnd = new Date(currentSlotStart.getTime() + slotDurationMinutes * 60000)
+        if (currentSlotEnd <= dayEnd) {
+          allSlots.push({
+            start: new Date(currentSlotStart),
+            end: new Date(currentSlotEnd),
+          })
+        }
+        currentSlotStart = new Date(currentSlotEnd)
+      }
+
+      // Filter out slots that conflict with busy periods
+      const availableSlots = allSlots.filter((slot) => {
+        return !busyPeriods.some((busy) => {
+          const busyStart = new Date(busy.start)
+          const busyEnd = new Date(busy.end)
+          // Check if slot overlaps with busy period
+          return (
+            (slot.start >= busyStart && slot.start < busyEnd) ||
+            (slot.end > busyStart && slot.end <= busyEnd) ||
+            (slot.start <= busyStart && slot.end >= busyEnd)
+          )
+        })
+      })
+
+      // Format slots with labels
+      return availableSlots.map((slot) => ({
+        start: slot.start.toISOString(),
+        end: slot.end.toISOString(),
+        label: this.formatTimeLabel(slot.start, timeZone),
+      }))
+    } catch (error) {
+      console.error('Failed to get available slots:', error)
+      return []
+    }
+  }
+
+  /**
+   * Format a date as a time label (e.g., "10:00 AM")
+   */
+  private formatTimeLabel(date: Date, timeZone: string): string {
+    return date.toLocaleTimeString('en-US', {
+      timeZone,
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    })
+  }
+
+  /**
    * Get upcoming events
    */
   async getUpcomingEvents(maxResults: number = 10): Promise<calendar_v3.Schema$Event[]> {

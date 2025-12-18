@@ -24,11 +24,20 @@ interface BookingFormData {
   service: string
   message: string
   preferredDate: string
+  preferredTime: string
+}
+
+interface TimeSlot {
+  start: string
+  end: string
+  label: string
 }
 
 export function BookingModal() {
   const [open, setOpen] = React.useState(false)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
+  const [isLoadingSlots, setIsLoadingSlots] = React.useState(false)
+  const [availableSlots, setAvailableSlots] = React.useState<TimeSlot[]>([])
   const [formData, setFormData] = React.useState<BookingFormData>({
     name: "",
     email: "",
@@ -37,6 +46,7 @@ export function BookingModal() {
     service: "",
     message: "",
     preferredDate: "",
+    preferredTime: "",
   })
 
   const handleInputChange = (
@@ -44,6 +54,41 @@ export function BookingModal() {
   ) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
+
+    // If date changed, fetch available time slots
+    if (name === "preferredDate" && value) {
+      fetchAvailableSlots(value)
+    }
+  }
+
+  const fetchAvailableSlots = async (date: string) => {
+    setIsLoadingSlots(true)
+    setAvailableSlots([])
+    setFormData((prev) => ({ ...prev, preferredTime: "" }))
+
+    try {
+      const response = await fetch(`/api/booking/available-slots?date=${date}`)
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to fetch available slots")
+      }
+
+      setAvailableSlots(data.slots || [])
+
+      if (data.slots.length === 0) {
+        toast.info("No available slots", {
+          description: "This date is fully booked. Please select another date.",
+        })
+      }
+    } catch (error) {
+      console.error("Failed to fetch slots:", error)
+      toast.error("Unable to load available times", {
+        description: "Please try selecting a different date.",
+      })
+    } finally {
+      setIsLoadingSlots(false)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -78,7 +123,9 @@ export function BookingModal() {
         service: "",
         message: "",
         preferredDate: "",
+        preferredTime: "",
       })
+      setAvailableSlots([])
       setOpen(false)
     } catch (error) {
       toast.error("Something went wrong", {
@@ -213,7 +260,7 @@ export function BookingModal() {
           {/* Preferred Date */}
           <div className="space-y-2">
             <Label htmlFor="preferredDate" className="text-white font-medium">
-              Preferred Date
+              Preferred Date <span className="text-red-500">*</span>
             </Label>
             <div className="relative">
               <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/50" />
@@ -221,6 +268,7 @@ export function BookingModal() {
                 id="preferredDate"
                 name="preferredDate"
                 type="date"
+                required
                 value={formData.preferredDate}
                 onChange={handleInputChange}
                 min={new Date().toISOString().split('T')[0]}
@@ -228,6 +276,41 @@ export function BookingModal() {
               />
             </div>
           </div>
+
+          {/* Preferred Time */}
+          {formData.preferredDate && (
+            <div className="space-y-2">
+              <Label htmlFor="preferredTime" className="text-white font-medium">
+                Preferred Time <span className="text-red-500">*</span>
+              </Label>
+              {isLoadingSlots ? (
+                <div className="flex items-center justify-center h-12 bg-white/5 border border-white/20 rounded-md">
+                  <Loader2 className="h-5 w-5 animate-spin text-[#67e8f9]" />
+                  <span className="ml-2 text-white/70 text-sm">Loading available times...</span>
+                </div>
+              ) : availableSlots.length > 0 ? (
+                <select
+                  id="preferredTime"
+                  name="preferredTime"
+                  required
+                  value={formData.preferredTime}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 bg-white/5 border border-white/20 text-white rounded-md focus:border-[#67e8f9] focus:ring-1 focus:ring-[#67e8f9] focus:outline-none"
+                >
+                  <option value="" className="bg-black">Select a time...</option>
+                  {availableSlots.map((slot, index) => (
+                    <option key={index} value={slot.start} className="bg-black">
+                      {slot.label}
+                    </option>
+                  ))}
+                </select>
+              ) : formData.preferredDate ? (
+                <div className="flex items-center justify-center h-12 bg-white/5 border border-white/20 rounded-md">
+                  <span className="text-white/70 text-sm">No available time slots for this date</span>
+                </div>
+              ) : null}
+            </div>
+          )}
 
           {/* Message Field */}
           <div className="space-y-2">
