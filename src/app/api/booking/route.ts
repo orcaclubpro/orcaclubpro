@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
     const customerEmail = await resend.emails.send({
       from: FROM_EMAIL,
       to: email,
-      subject: "Your Consultation Request - ORCACLUB",
+      subject: "ORCACLUB Consultation",
       html: `
         <!DOCTYPE html>
         <html>
@@ -489,7 +489,7 @@ Submitted: ${new Date().toLocaleString("en-US", {
 
         // Create calendar event with Google Meet link
         calendarEventLink = await googleCalendar.createEvent({
-          summary: `ORCACLUB Consultation - ${name}`,
+          summary: `ORCACLUB Consultation Invite`,
           description: `
 Consultation with ${name}${company ? ` from ${company}` : ''}
 
@@ -507,7 +507,7 @@ Booked via ORCACLUB Booking System
           endDateTime: endDate.toISOString(),
           attendeeEmail: email,
           attendeeName: name,
-          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          timeZone: 'America/Los_Angeles',
         })
 
         if (calendarEventLink) {

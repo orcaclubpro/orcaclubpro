@@ -193,9 +193,38 @@ export class GoogleCalendarService {
     }
 
     try {
-      // Parse the date and create start/end of business day
-      const startOfDay = new Date(`${date}T00:00:00`)
-      const endOfDay = new Date(`${date}T23:59:59`)
+      // Helper function to create date in Pacific timezone
+      const createPacificDate = (dateStr: string, hours: number, minutes: number = 0) => {
+        // Determine Pacific timezone offset for the given date (handles DST automatically)
+        // Create a temp date to check the offset
+        const tempDate = new Date(`${dateStr}T12:00:00Z`)
+        const pacificTime = tempDate.toLocaleString('en-US', {
+          timeZone: 'America/Los_Angeles',
+          hour12: false,
+        })
+
+        // Get offset by checking what hour shows for noon UTC in Pacific
+        const offsetMatch = pacificTime.match(/(\d+):00:00/)
+        if (!offsetMatch) {
+          // Fallback to PST offset
+          const isoString = `${dateStr}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00-08:00`
+          return new Date(isoString)
+        }
+
+        const pacificNoonHour = parseInt(offsetMatch[1])
+        const offset = 12 - pacificNoonHour // Calculate offset from UTC
+        const offsetStr = offset === 8 ? '-08:00' : '-07:00' // PST or PDT
+
+        // Create ISO string with Pacific timezone offset
+        const isoString = `${dateStr}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00${offsetStr}`
+        return new Date(isoString)
+      }
+
+      // Create start/end of business day in Pacific timezone
+      const dayStart = createPacificDate(date, businessHoursStart)
+      const dayEnd = createPacificDate(date, businessHoursEnd)
+      const startOfDay = createPacificDate(date, 0)
+      const endOfDay = createPacificDate(date, 23, 59)
 
       // Get busy periods for the entire day
       const busyPeriods = await this.getFreeBusyInfo(
@@ -205,8 +234,6 @@ export class GoogleCalendarService {
 
       // Generate all possible time slots
       const allSlots: { start: Date; end: Date }[] = []
-      const dayStart = new Date(`${date}T${businessHoursStart.toString().padStart(2, '0')}:00:00`)
-      const dayEnd = new Date(`${date}T${businessHoursEnd.toString().padStart(2, '0')}:00:00`)
 
       let currentSlotStart = new Date(dayStart)
       while (currentSlotStart < dayEnd) {
