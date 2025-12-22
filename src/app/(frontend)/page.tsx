@@ -95,41 +95,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Intelligence Metrics */}
-      <section className="py-40 px-8 border-t border-slate-800/50 relative z-10">
-        <div className="max-w-6xl mx-auto">
-          <ScrollReveal>
-            <div className="text-center mb-28">
-              <h2 className="text-3xl md:text-4xl font-extralight mb-8">
-                Proven <span className="gradient-text font-light">results</span> that matter
-              </h2>
-              <p className="text-lg text-gray-400 max-w-2xl mx-auto font-light leading-relaxed">
-                We measure success by the impact we create for our clients. Here&apos;s what working with us delivers.
-              </p>
-            </div>
-          </ScrollReveal>
-
-          <div className="grid md:grid-cols-4 gap-16">
-            {[
-              { metric: "150+", label: "Projects Delivered", sublabel: "Across all industries" },
-              { metric: "99.9%", label: "Uptime Guarantee", sublabel: "Reliable performance" },
-              { metric: "30+", label: "Happy Clients", sublabel: "Long-term partnerships" },
-              { metric: "24/7", label: "Support Available", sublabel: "Always here to help" },
-            ].map((stat, index) => (
-              <ScrollReveal key={index} delay={index * 150}>
-                <div className="text-center group">
-                  <div className="text-4xl md:text-5xl font-mono font-light text-cyan-400 mb-4 group-hover:scale-110 transition-transform duration-300">
-                    {stat.metric}
-                  </div>
-                  <div className="text-xl font-light text-white mb-2">{stat.label}</div>
-                  <div className="text-sm text-gray-500 font-light">{stat.sublabel}</div>
-                </div>
-              </ScrollReveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* Call to Action */}
       <section className="py-40 px-8 relative z-10">
         <div className="max-w-4xl mx-auto text-center">

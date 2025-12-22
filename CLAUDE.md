@@ -46,7 +46,9 @@ src/
 ├── lib/                        # Utilities & Business Logic
 │   ├── utils.ts               # General utility functions
 │   └── payload/               # PayloadCMS configuration
-│       └── payload.config.ts  # CMS configuration
+│       ├── payload.config.ts  # CMS configuration
+│       └── hooks/             # PayloadCMS hooks
+│           └── revalidate.ts  # Cache revalidation hooks
 ├── hooks/                      # Custom React Hooks
 │   └── use-mobile.ts          # Mobile detection hook
 ├── types/                      # TypeScript Definitions
@@ -277,6 +279,78 @@ import type { User, Post } from '@/types/payload-types'
 // Config import
 import { payloadConfig } from '@payload-config'
 ```
+
+### Cache Revalidation & Hooks
+
+We use PayloadCMS hooks to automatically refresh Next.js cached pages when CMS content changes. This ensures the frontend stays in sync with backend updates without manual intervention.
+
+**Location:** `src/lib/payload/hooks/revalidate.ts`
+
+#### How It Works
+When you update a client or service in the PayloadCMS admin panel:
+1. PayloadCMS triggers an `afterChange` hook
+2. The hook calls Next.js `revalidatePath()` to invalidate cached pages
+3. Next request to those pages fetches fresh data from the database
+4. Frontend automatically reflects CMS changes
+
+#### Implementation Pattern
+```typescript
+// Basic usage in collections
+import { revalidateHomepage, revalidateHomepageOnDelete } from './hooks/revalidate'
+
+const MyCollection: CollectionConfig = {
+  slug: 'my-collection',
+  hooks: {
+    afterChange: [revalidateHomepage],
+    afterDelete: [revalidateHomepageOnDelete],
+  },
+  // ... rest of config
+}
+```
+
+#### Multi-Path Revalidation
+For content appearing on multiple pages:
+```typescript
+import { createMultiPathRevalidate, createMultiPathRevalidateOnDelete } from './hooks/revalidate'
+
+const MyCollection: CollectionConfig = {
+  slug: 'my-collection',
+  hooks: {
+    afterChange: [createMultiPathRevalidate(['/', '/services', '/portfolio'])],
+    afterDelete: [createMultiPathRevalidateOnDelete(['/', '/services', '/portfolio'])],
+  },
+}
+```
+
+#### Active Collections
+Current collections with auto-revalidation:
+- **Clients** → Revalidates `/` (homepage)
+- **Services** → Revalidates `/` (homepage)
+
+#### Preventing Infinite Loops
+The hooks respect a `disableRevalidate` context flag to prevent infinite loops when updating documents within other hooks:
+```typescript
+await req.payload.update({
+  collection: 'my-collection',
+  id: doc.id,
+  data: { /* ... */ },
+  context: {
+    disableRevalidate: true, // Prevents revalidation hook from running
+  },
+})
+```
+
+#### Monitoring
+All revalidation events are logged with the `[Revalidation]` prefix:
+```
+[Revalidation] Homepage revalidated due to change in document: 67abc123
+```
+
+#### Best Practices
+1. **Use path-based revalidation** for simplicity (default approach)
+2. **Use multi-path hooks** when content appears on multiple pages
+3. **Always set `disableRevalidate: true`** when updating docs inside hooks
+4. **Monitor logs** to verify revalidation triggers correctly
 
 ## 📱 Mobile & Responsive Design
 

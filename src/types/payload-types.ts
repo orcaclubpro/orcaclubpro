@@ -70,6 +70,7 @@ export interface Config {
     media: Media;
     clients: Client;
     services: Service;
+    leads: Lead;
     users: User;
     'kaiju-activities': KaijuActivity;
     'trip-configs': TripConfig;
@@ -82,6 +83,7 @@ export interface Config {
     media: MediaSelect<false> | MediaSelect<true>;
     clients: ClientsSelect<false> | ClientsSelect<true>;
     services: ServicesSelect<false> | ServicesSelect<true>;
+    leads: LeadsSelect<false> | LeadsSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
     'kaiju-activities': KaijuActivitiesSelect<false> | KaijuActivitiesSelect<true>;
     'trip-configs': TripConfigsSelect<false> | TripConfigsSelect<true>;
@@ -224,6 +226,69 @@ export interface Service {
   createdAt: string;
 }
 /**
+ * Consultation booking requests from the website
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "leads".
+ */
+export interface Lead {
+  id: string;
+  /**
+   * Customer full name
+   */
+  name: string;
+  /**
+   * Customer email address
+   */
+  email: string;
+  /**
+   * Customer phone number (optional)
+   */
+  phone?: string | null;
+  /**
+   * Customer company name (optional)
+   */
+  company?: string | null;
+  /**
+   * Service the customer is interested in
+   */
+  service: 'web-design' | 'ai-automation' | 'custom-software' | 'seo-services' | 'consulting' | 'other';
+  /**
+   * Project details and customer message
+   */
+  message: string;
+  /**
+   * Customer preferred consultation date
+   */
+  preferredDate: string;
+  /**
+   * Customer preferred time (ISO 8601 format)
+   */
+  preferredTime: string;
+  /**
+   * Lead status for tracking
+   */
+  status: 'new' | 'contacted' | 'scheduled' | 'completed' | 'cancelled';
+  /**
+   * Whether confirmation email was sent
+   */
+  emailSent?: boolean | null;
+  /**
+   * Whether calendar event was created
+   */
+  calendarCreated?: boolean | null;
+  /**
+   * Google Calendar event link
+   */
+  calendarEventLink?: string | null;
+  /**
+   * Internal notes about this lead
+   */
+  notes?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "users".
  */
@@ -350,6 +415,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'services';
         value: string | Service;
+      } | null)
+    | ({
+        relationTo: 'leads';
+        value: string | Lead;
       } | null)
     | ({
         relationTo: 'users';
@@ -479,6 +548,27 @@ export interface ServicesSelect<T extends boolean = true> {
   icon?: T;
   category?: T;
   displayOrder?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "leads_select".
+ */
+export interface LeadsSelect<T extends boolean = true> {
+  name?: T;
+  email?: T;
+  phone?: T;
+  company?: T;
+  service?: T;
+  message?: T;
+  preferredDate?: T;
+  preferredTime?: T;
+  status?: T;
+  emailSent?: T;
+  calendarCreated?: T;
+  calendarEventLink?: T;
+  notes?: T;
   updatedAt?: T;
   createdAt?: T;
 }

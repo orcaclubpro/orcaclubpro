@@ -5,6 +5,7 @@ import { buildConfig } from 'payload'
 import type { CollectionConfig } from 'payload'
 import { fileURLToPath } from 'node:url'
 import path from 'path'
+import { revalidateHomepage, revalidateHomepageOnDelete } from './hooks/revalidate'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -13,7 +14,7 @@ const dirname = path.dirname(filename)
 const Media: CollectionConfig = {
   slug: 'media',
   upload: {
-    staticDir: 'media',
+    staticDir: 'public/media',
     imageSizes: [
       {
         name: 'thumbnail',
@@ -69,6 +70,10 @@ const Clients: CollectionConfig = {
     update: () => true,
     delete: () => true,
   },
+  hooks: {
+    afterChange: [revalidateHomepage],
+    afterDelete: [revalidateHomepageOnDelete],
+  },
   fields: [
     {
       name: 'name',
@@ -121,6 +126,10 @@ const Services: CollectionConfig = {
     create: () => true,
     update: () => true,
     delete: () => true,
+  },
+  hooks: {
+    afterChange: [revalidateHomepage],
+    afterDelete: [revalidateHomepageOnDelete],
   },
   fields: [
     {
@@ -178,6 +187,145 @@ const Services: CollectionConfig = {
       defaultValue: 0,
       admin: {
         description: 'Order in which to display (lower numbers first)',
+      },
+    },
+  ],
+}
+
+// Leads collection - stores booking/consultation requests
+const Leads: CollectionConfig = {
+  slug: 'leads',
+  admin: {
+    useAsTitle: 'name',
+    defaultColumns: ['name', 'email', 'service', 'preferredDate', 'status', 'createdAt'],
+    group: 'Content',
+    description: 'Consultation booking requests from the website',
+  },
+  access: {
+    read: () => true,
+    create: () => true, // Allow API to create leads
+    update: () => true,
+    delete: () => true,
+  },
+  fields: [
+    {
+      name: 'name',
+      type: 'text',
+      required: true,
+      admin: {
+        description: 'Customer full name',
+      },
+    },
+    {
+      name: 'email',
+      type: 'email',
+      required: true,
+      admin: {
+        description: 'Customer email address',
+      },
+    },
+    {
+      name: 'phone',
+      type: 'text',
+      admin: {
+        description: 'Customer phone number (optional)',
+      },
+    },
+    {
+      name: 'company',
+      type: 'text',
+      admin: {
+        description: 'Customer company name (optional)',
+      },
+    },
+    {
+      name: 'service',
+      type: 'select',
+      required: true,
+      options: [
+        { label: 'Web Design', value: 'web-design' },
+        { label: 'AI & Automation', value: 'ai-automation' },
+        { label: 'Custom Software Development', value: 'custom-software' },
+        { label: 'SEO Services', value: 'seo-services' },
+        { label: 'Consulting', value: 'consulting' },
+        { label: 'Other', value: 'other' },
+      ],
+      admin: {
+        description: 'Service the customer is interested in',
+      },
+    },
+    {
+      name: 'message',
+      type: 'textarea',
+      required: true,
+      admin: {
+        description: 'Project details and customer message',
+      },
+    },
+    {
+      name: 'preferredDate',
+      type: 'date',
+      required: true,
+      admin: {
+        description: 'Customer preferred consultation date',
+      },
+    },
+    {
+      name: 'preferredTime',
+      type: 'text',
+      required: true,
+      admin: {
+        description: 'Customer preferred time (ISO 8601 format)',
+      },
+    },
+    {
+      name: 'status',
+      type: 'select',
+      required: true,
+      defaultValue: 'new',
+      options: [
+        { label: 'New', value: 'new' },
+        { label: 'Contacted', value: 'contacted' },
+        { label: 'Scheduled', value: 'scheduled' },
+        { label: 'Completed', value: 'completed' },
+        { label: 'Cancelled', value: 'cancelled' },
+      ],
+      admin: {
+        description: 'Lead status for tracking',
+        position: 'sidebar',
+      },
+    },
+    {
+      name: 'emailSent',
+      type: 'checkbox',
+      defaultValue: false,
+      admin: {
+        description: 'Whether confirmation email was sent',
+        position: 'sidebar',
+      },
+    },
+    {
+      name: 'calendarCreated',
+      type: 'checkbox',
+      defaultValue: false,
+      admin: {
+        description: 'Whether calendar event was created',
+        position: 'sidebar',
+      },
+    },
+    {
+      name: 'calendarEventLink',
+      type: 'text',
+      admin: {
+        description: 'Google Calendar event link',
+        position: 'sidebar',
+      },
+    },
+    {
+      name: 'notes',
+      type: 'textarea',
+      admin: {
+        description: 'Internal notes about this lead',
       },
     },
   ],
@@ -431,7 +579,7 @@ export default buildConfig({
   editor: lexicalEditor(),
 
   // Define and configure your collections in this array
-  collections: [Media, Clients, Services, Users, KaijuActivities, TripConfigs],
+  collections: [Media, Clients, Services, Leads, Users, KaijuActivities, TripConfigs],
 
   // Your Payload secret - should be a complex and secure string, unguessable
   secret: process.env.PAYLOAD_SECRET || 'your-secret-here',

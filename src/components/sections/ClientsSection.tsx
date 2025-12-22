@@ -24,39 +24,58 @@ export default function ClientsSection({ clients }: ClientsSectionProps) {
           </div>
         </ScrollReveal>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-12 md:gap-16">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-12 md:gap-16 justify-items-center">
           {clients.map((client, index) => {
             const logo = client.logo
             const logoUrl = typeof logo === 'object' && logo?.url ? logo.url : null
+            const hasWebsite = client.website && client.website.trim() !== ''
+
+            const logoContent = logoUrl ? (
+              <div className="relative w-full h-32 md:h-48 hover:scale-110 transition-all duration-500">
+                <Image
+                  src={logoUrl}
+                  alt={logo.alt || client.name}
+                  fill
+                  className="object-contain"
+                  priority={index < 4}
+                />
+              </div>
+            ) : (
+              <div className="text-gray-400 text-sm font-light">{client.name}</div>
+            )
 
             return (
               <div
                 key={client.id || index}
-                className="flex items-center justify-center group"
+                className="flex items-center justify-center group w-full client-logo-animate"
                 style={{
-                  opacity: 0,
-                  transform: 'translateY(-30px) scale(0.95)',
-                  animation: `float-in 1s cubic-bezier(0.16, 1, 0.3, 1) forwards ${index * 150}ms, float 6s ease-in-out infinite ${index * 150 + 1000}ms`,
+                  animationDelay: `${index * 150}ms`,
                 }}
               >
-                {logoUrl ? (
-                  <div className="relative w-full h-20 md:h-24 hover:scale-105 transition-all duration-500">
-                    <Image
-                      src={logoUrl}
-                      alt={logo.alt || client.name}
-                      fill
-                      className="object-contain"
-                      priority={index < 4}
-                    />
-                  </div>
+                {hasWebsite ? (
+                  <a
+                    href={client.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full cursor-pointer"
+                    aria-label={`Visit ${client.name} website`}
+                  >
+                    {logoContent}
+                  </a>
                 ) : (
-                  <div className="text-gray-400 text-sm font-light">{client.name}</div>
+                  logoContent
                 )}
               </div>
             )
           })}
         </div>
         <style jsx>{`
+          .client-logo-animate {
+            opacity: 0;
+            animation: float-in 1s cubic-bezier(0.16, 1, 0.3, 1) forwards,
+                       float 6s ease-in-out infinite 1s;
+            will-change: transform;
+          }
           @keyframes float-in {
             0% {
               opacity: 0;

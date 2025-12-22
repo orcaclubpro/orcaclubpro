@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { Resend } from "resend"
 import { googleCalendar } from "@/lib/google-calendar"
+import { getPayload } from "payload"
+import config from "@payload-config"
+import type { Lead } from "@/types/payload-types"
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -20,6 +23,8 @@ interface BookingFormData {
 }
 
 export async function POST(request: NextRequest) {
+  let leadId: string | null = null
+
   try {
     const body: BookingFormData = await request.json()
 
@@ -41,6 +46,39 @@ export async function POST(request: NextRequest) {
     }
 
     const { name, email, phone, company, service, message, preferredDate, preferredTime } = body
+
+    // ==========================================
+    // STEP 1: SAVE TO PAYLOADCMS FIRST (CRITICAL)
+    // ==========================================
+    // This ensures we never lose a lead, even if email/calendar fails
+    try {
+      const payload = await getPayload({ config })
+
+      const lead = await payload.create({
+        collection: 'leads' as any,
+        data: {
+          name,
+          email,
+          phone: phone || '',
+          company: company || '',
+          service,
+          message,
+          preferredDate,
+          preferredTime,
+          status: 'new',
+          emailSent: false,
+          calendarCreated: false,
+        },
+      })
+
+      leadId = lead.id
+      console.log(`[Booking] Lead created in PayloadCMS: ${leadId}`)
+    } catch (payloadError) {
+      // CRITICAL: If we can't save to Payload, we should still try to continue
+      // but log the error prominently
+      console.error('[Booking] CRITICAL: Failed to save lead to PayloadCMS:', payloadError)
+      // We'll continue with email/calendar, but won't have a leadId to update
+    }
 
     // Format the preferred date and time for display
     const formattedDate = preferredDate
@@ -455,13 +493,34 @@ Submitted: ${new Date().toLocaleString("en-US", {
     */
 
     // Check if email was sent successfully
+    let emailSent = false
     if (customerEmail.error) {
-      console.error("Failed to send customer email:", customerEmail.error)
-      throw new Error("Failed to send confirmation email")
+      console.error("[Booking] Failed to send customer email:", customerEmail.error)
+      // Don't throw - we already saved the lead, continue with calendar
+    } else {
+      emailSent = true
+      console.log(`[Booking] Email sent successfully: ${customerEmail.data?.id}`)
+
+      // Update lead with email status
+      if (leadId) {
+        try {
+          const payload = await getPayload({ config })
+          await payload.update({
+            collection: 'leads' as any,
+            id: leadId,
+            data: {
+              emailSent: true,
+            },
+          })
+        } catch (updateError) {
+          console.error('[Booking] Failed to update lead email status:', updateError)
+        }
+      }
     }
 
     // Create Google Calendar event with selected date and time
     let calendarEventLink: string | null = null
+    let calendarCreated = false
     if (preferredDate && preferredTime) {
       try {
         // Parse the selected date and time
@@ -478,10 +537,27 @@ Submitted: ${new Date().toLocaleString("en-US", {
         )
 
         if (!isAvailable) {
+          // Update lead with failure reason
+          if (leadId) {
+            try {
+              const payload = await getPayload({ config })
+              await payload.update({
+                collection: 'leads' as any,
+                id: leadId,
+                data: {
+                  notes: 'Time slot was no longer available at booking time',
+                },
+              })
+            } catch (updateError) {
+              console.error('[Booking] Failed to update lead notes:', updateError)
+            }
+          }
+
           return NextResponse.json(
             {
               error: "Time slot no longer available",
               details: "This time slot was just booked. Please select another time.",
+              leadId, // Still return leadId so we know it was saved
             },
             { status: 409 }
           )
@@ -502,6 +578,7 @@ ${message}
 
 ---
 Booked via ORCACLUB Booking System
+Lead ID: ${leadId || 'N/A'}
           `.trim(),
           startDateTime: startDate.toISOString(),
           endDateTime: endDate.toISOString(),
@@ -511,11 +588,31 @@ Booked via ORCACLUB Booking System
         })
 
         if (calendarEventLink) {
-          console.log('Calendar event created successfully:', calendarEventLink)
+          calendarCreated = true
+          console.log('[Booking] Calendar event created successfully:', calendarEventLink)
+
+          // Update lead with calendar status
+          if (leadId) {
+            try {
+              const payload = await getPayload({ config })
+              await payload.update({
+                collection: 'leads' as any,
+                id: leadId,
+                data: {
+                  calendarCreated: true,
+                  calendarEventLink,
+                  status: 'scheduled' as any, // Update status to scheduled
+                },
+              })
+            } catch (updateError) {
+              console.error('[Booking] Failed to update lead calendar status:', updateError)
+            }
+          }
         }
       } catch (calendarError) {
-        console.error('Failed to create calendar event:', calendarError)
+        console.error('[Booking] Failed to create calendar event:', calendarError)
         // Don't fail the entire request if calendar creation fails
+        // Lead is already saved in PayloadCMS
       }
     }
 
@@ -523,17 +620,27 @@ Booked via ORCACLUB Booking System
       {
         success: true,
         message: "Booking request submitted successfully",
+        leadId,
         customerEmailId: customerEmail.data?.id,
         calendarEventLink,
+        emailSent,
+        calendarCreated,
       },
       { status: 200 }
     )
   } catch (error) {
-    console.error("Booking API error:", error)
+    console.error("[Booking] API error:", error)
+
+    // If we have a leadId, the lead was saved even though something else failed
+    if (leadId) {
+      console.log(`[Booking] Lead ${leadId} was saved to PayloadCMS despite error`)
+    }
+
     return NextResponse.json(
       {
         error: "Failed to process booking request",
         details: error instanceof Error ? error.message : "Unknown error",
+        leadId, // Include leadId so admin knows it was saved
       },
       { status: 500 }
     )

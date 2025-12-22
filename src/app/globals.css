@@ -248,6 +248,8 @@ body {
 /* Floating elements */
 .float {
   animation: float 6s ease-in-out infinite;
+  transform: translateZ(0); /* Force GPU acceleration */
+  will-change: transform;
 }
 
 /* Text reveal animation */
@@ -288,6 +290,30 @@ body {
   animation: waveFlow 6s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
 }
 
+/* ========================================
+   PERFORMANCE OPTIMIZATIONS
+   ======================================== */
+
+/* GPU acceleration hints for animated elements */
+.gradient-text,
+.wave-text,
+.morph {
+  will-change: transform;
+  transform: translateZ(0); /* Force GPU layer */
+}
+
+.float {
+  will-change: transform;
+}
+
+.workspace-card {
+  will-change: transform, background-color, border-color;
+}
+
+.interactive::before {
+  will-change: left;
+}
+
 /* Parallax container */
 .parallax {
   transform-style: preserve-3d;
@@ -320,7 +346,7 @@ body {
 
 /* Workspace styles */
 .workspace-card {
-  backdrop-filter: blur(20px);
+  backdrop-filter: blur(10px); /* Reduced from 20px for better performance */
   background: rgba(15, 23, 42, 0.8);
   border: 1px solid rgba(103, 232, 249, 0.1);
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
@@ -358,6 +384,7 @@ body {
   height: 100%;
   background: linear-gradient(90deg, transparent, rgba(103, 232, 249, 0.1), transparent);
   transition: left 0.5s ease;
+  will-change: left; /* Performance hint for animated property */
 }
 
 .interactive:hover::before {
