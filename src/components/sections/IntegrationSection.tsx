@@ -2,6 +2,7 @@
 
 import { motion, useInView } from 'framer-motion'
 import { useRef } from 'react'
+import Link from 'next/link'
 import { Check, Zap, Lock, ArrowRight, Network } from "lucide-react"
 
 export default function IntegrationSection() {
@@ -55,7 +56,7 @@ export default function IntegrationSection() {
           </p>
 
           {/* Features */}
-          <div className="space-y-3 flex flex-col md:items-end">
+          <div className="space-y-3 flex flex-col md:items-end mb-8">
             {['Reduce manpower by 90%', 'Intelligent automation', 'Custom integrations', 'Enterprise security'].map((feature, i) => (
               <motion.div
                 key={feature}
@@ -70,6 +71,21 @@ export default function IntegrationSection() {
               </motion.div>
             ))}
           </div>
+
+          {/* Learn More Button */}
+          <motion.div
+            className="md:flex md:justify-end"
+            initial={{ opacity: 0, y: 10 }}
+            animate={isInView ? { opacity: 1, y: 0 } : {}}
+            transition={{ delay: 1.2 }}
+          >
+            <Link
+              href="/services/integration-automation"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-purple-400/10 border border-purple-400/30 rounded-lg text-sm font-medium text-purple-400 hover:bg-purple-400/20 transition-all duration-300 group"
+            >
+              Learn More <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </Link>
+          </motion.div>
         </motion.div>
 
         {/* Integration Network - Left Side */}

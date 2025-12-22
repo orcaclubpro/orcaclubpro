@@ -2,6 +2,7 @@
 
 import { motion, useInView } from 'framer-motion'
 import { useRef, useState, useEffect } from 'react'
+import Link from 'next/link'
 import {
   Code2,
   Target,
@@ -91,7 +92,7 @@ function WebDevSection() {
           </p>
 
           {/* Features */}
-          <div className="space-y-3">
+          <div className="space-y-3 mb-8">
             {['2 week - 1 month development time', 'Custom business tools', 'Analytics & dashboards', 'CRM integrations'].map((feature, i) => (
               <motion.div
                 key={feature}
@@ -105,6 +106,20 @@ function WebDevSection() {
               </motion.div>
             ))}
           </div>
+
+          {/* Learn More Button */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={isInView ? { opacity: 1, y: 0 } : {}}
+            transition={{ delay: 1.2 }}
+          >
+            <Link
+              href="/services/web-development"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-cyan-400/10 border border-cyan-400/30 rounded-lg text-sm font-medium text-cyan-400 hover:bg-cyan-400/20 transition-all duration-300 group"
+            >
+              Learn More <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </Link>
+          </motion.div>
         </motion.div>
 
         {/* Browser Mockup - Right Side */}
@@ -237,7 +252,7 @@ function MarketingSection() {
           </p>
 
           {/* Features */}
-          <div className="space-y-3 flex flex-col md:items-end">
+          <div className="space-y-3 flex flex-col md:items-end mb-8">
             {['Campaign funnels', 'Ad management', 'Brand strategy', 'Metric tracking'].map((feature, i) => (
               <motion.div
                 key={feature}
@@ -252,6 +267,21 @@ function MarketingSection() {
               </motion.div>
             ))}
           </div>
+
+          {/* Learn More Button */}
+          <motion.div
+            className="md:flex md:justify-end"
+            initial={{ opacity: 0, y: 10 }}
+            animate={isInView ? { opacity: 1, y: 0 } : {}}
+            transition={{ delay: 1.2 }}
+          >
+            <Link
+              href="/services/digital-marketing"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-blue-400/10 border border-blue-400/30 rounded-lg text-sm font-medium text-blue-400 hover:bg-blue-400/20 transition-all duration-300 group"
+            >
+              Learn More <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </Link>
+          </motion.div>
         </motion.div>
 
         {/* Marketing Funnel - Left Side */}
@@ -363,7 +393,7 @@ function SEOSection() {
           </p>
 
           {/* Features */}
-          <div className="space-y-3">
+          <div className="space-y-3 mb-8">
             {['Content management', 'Visibility engineering', 'Website optimization', 'Traffic growth'].map((feature, i) => (
               <motion.div
                 key={feature}
@@ -377,6 +407,20 @@ function SEOSection() {
               </motion.div>
             ))}
           </div>
+
+          {/* Learn More Button */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={isInView ? { opacity: 1, y: 0 } : {}}
+            transition={{ delay: 1.2 }}
+          >
+            <Link
+              href="/services/seo-services"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-teal-400/10 border border-teal-400/30 rounded-lg text-sm font-medium text-teal-400 hover:bg-teal-400/20 transition-all duration-300 group"
+            >
+              Learn More <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </Link>
+          </motion.div>
         </motion.div>
 
         {/* SEO Visualizations - Right Side */}
