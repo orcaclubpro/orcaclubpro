@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import AnimatedBackground from "@/components/layout/animated-background"
 import ScrollReveal from "@/components/layout/scroll-reveal"
 import Link from "next/link"
@@ -6,6 +7,42 @@ import {
 } from "lucide-react"
 import { services } from '@/data/services'
 import ServicesGrid from '@/components/sections/ServicesGrid'
+
+export const metadata: Metadata = {
+  title: 'Our Services - Web Development, AI Automation, SEO & Digital Marketing | OrcaClub',
+  description: 'Comprehensive software development services including custom web development (2-4 weeks), AI workflow automation, SEO optimization, and digital marketing. Tailored solutions for modern businesses with expert execution and transparent pricing.',
+  keywords: [
+    'software development services',
+    'web development services',
+    'AI automation services',
+    'SEO services',
+    'digital marketing services',
+    'custom web development',
+    'workflow automation',
+    'business automation',
+    'software consultants',
+    'technology solutions',
+    'React development',
+    'Next.js development',
+    'CRM integration',
+    'marketing automation'
+  ],
+  openGraph: {
+    title: 'OrcaClub Services - Web Development, AI Automation & Marketing',
+    description: 'Expert software services: Fast web development, intelligent automation, SEO optimization, and ROI-driven marketing campaigns. Transform your business with tailored solutions.',
+    url: 'https://orcaclub.pro/services',
+    siteName: 'OrcaClub',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'OrcaClub Services - Complete Software Development Solutions',
+    description: 'Web development, AI automation, SEO, and digital marketing services for modern businesses.',
+  },
+  alternates: {
+    canonical: 'https://orcaclub.pro/services',
+  },
+}
 
 export default async function ServicesPage() {
 

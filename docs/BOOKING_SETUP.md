@@ -1,4 +1,6 @@
-# OrcaClubPro Booking System - Complete Development Guide
+# OrcaClubPro Contact & Booking System - Complete Development Guide
+
+> **📢 System Update (v2.0)**: This system now includes **dual functionality** - a simple contact form AND consultation booking. See [CONTACT_FUNCTIONALITY_UPDATE.md](./CONTACT_FUNCTIONALITY_UPDATE.md) for detailed information about the new contact form features.
 
 ## Table of Contents
 
@@ -23,32 +25,50 @@
 
 ## System Overview
 
-### What is the Booking System?
+### What is the Contact & Booking System?
 
-The OrcaClubPro booking system is a **real-time consultation scheduling platform** that enables visitors to book appointments directly through the website. The system provides:
+The OrcaClubPro system provides **dual functionality** for customer engagement:
+
+1. **Contact Form** - Simple inquiry submission without scheduling
+2. **Consultation Booking** - Real-time appointment scheduling with calendar integration
+
+Both workflows are built into a single, unified contact page with tabbed navigation, ensuring all customer inquiries are captured and managed through PayloadCMS.
+
+#### Contact Form Features
+
+- **Simple inquiry submission** without scheduling requirements
+- **Lead capture** saved to PayloadCMS MongoDB database
+- **Professional email confirmation** to customers
+- **No Google Calendar integration** (simpler, faster workflow)
+- **Same form fields** as booking (except date/time)
+
+#### Consultation Booking Features
 
 - **Real-time availability checking** via Google Calendar FreeBusy API
 - **Automatic calendar event creation** with Google Meet video conference links
-- **Professional email notifications** to customers and admins
+- **Professional email notifications** with consultation details
 - **Timezone-aware scheduling** (Pacific Time by default)
 - **Double-booking prevention** through atomic availability checks
-- **Modern, accessible UI** built with shadcn/ui and Tailwind CSS
+- **Lead saved to PayloadCMS** with calendar link reference
 
 ### Key Features
 
 #### For Customers
-- ✅ Browse available time slots in real-time
+- ✅ **Two ways to connect**: Contact form or schedule consultation
+- ✅ Browse available time slots in real-time (booking only)
 - ✅ Select preferred service type
 - ✅ Receive instant email confirmation
-- ✅ Automatic Google Calendar invitation with Meet link
-- ✅ Mobile-responsive booking form
+- ✅ Automatic Google Calendar invitation with Meet link (booking only)
+- ✅ Mobile-responsive tabbed interface
+- ✅ Seamless switching between contact and booking modes
 
 #### For Administrators
-- ✅ All bookings automatically added to Google Calendar
-- ✅ Optional email notifications for new bookings
-- ✅ Centralized calendar management
-- ✅ Google Meet links auto-generated for each consultation
-- ✅ Customer information included in calendar event
+- ✅ **All inquiries saved to PayloadCMS** (contact + bookings)
+- ✅ Consultation bookings automatically added to Google Calendar
+- ✅ Google Meet links auto-generated for scheduled consultations
+- ✅ Lead tracking and status management via PayloadCMS admin
+- ✅ Differentiate between contacts (status: "new") and bookings (status: "scheduled")
+- ✅ Never lose a lead - saved before email/calendar operations
 
 ### User Flow (Updated with PayloadCMS)
 
@@ -1721,7 +1741,9 @@ Return success with leadId
 #### Leads Collection Schema
 
 **Collection**: `leads`
-**Location**: `src/lib/payload/payload.config.ts` (lines 196-332)
+**Location**: `src/lib/payload/payload.config.ts` (lines 117-253)
+
+> **⚠️ v2.0 Update**: `preferredDate` and `preferredTime` are now **OPTIONAL** to support contact form submissions without scheduling.
 
 ##### Required Fields
 
@@ -1731,17 +1753,17 @@ Return success with leadId
 | `email` | email | required | Customer email address |
 | `service` | select | required | Selected service type |
 | `message` | textarea | required | Project details and requirements |
-| `preferredDate` | date | required | Preferred consultation date |
-| `preferredTime` | text | required | Preferred time (ISO 8601 format) |
 | `status` | select | required, default: "new" | Lead status tracking |
 
-##### Optional Fields
+##### Optional Fields (Including Booking Fields)
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `phone` | text | Customer phone number |
 | `company` | text | Customer company name |
 | `notes` | textarea | Internal admin notes |
+| `preferredDate` | date | **⚠️ v2.0: OPTIONAL** - Preferred consultation date (NULL for contact form) |
+| `preferredTime` | text | **⚠️ v2.0: OPTIONAL** - Preferred time in ISO 8601 format (NULL for contact form) |
 
 ##### System Tracking Fields
 
@@ -3402,12 +3424,28 @@ Before deploying to production:
 
 ### File Reference
 
+#### Core Booking Files
+
 | File Path | Purpose | Lines of Code |
 |-----------|---------|---------------|
-| `src/components/booking-modal.tsx` | Main booking form UI | ~365 |
-| `src/app/api/booking/route.ts` | Booking submission endpoint | ~542 |
+| `src/components/booking-modal.tsx` | Booking form modal (legacy, still functional) | ~365 |
+| `src/app/api/booking/route.ts` | Booking submission endpoint | ~649 |
 | `src/app/api/booking/available-slots/route.ts` | Available slots endpoint | ~90 |
 | `src/lib/google-calendar.ts` | Google Calendar service | ~382 |
+
+#### New Contact Form Files (v2.0)
+
+| File Path | Purpose | Lines of Code |
+|-----------|---------|---------------|
+| `src/app/(frontend)/contact/page.tsx` | Tabbed contact page with dual functionality | ~606 |
+| `src/app/api/contact/route.ts` | Contact form submission endpoint | ~280 |
+| `src/components/ui/tabs.tsx` | Tabs UI component (shadcn/ui) | ~60 |
+
+#### Configuration Files
+
+| File Path | Purpose | Notes |
+|-----------|---------|-------|
+| `src/lib/payload/payload.config.ts` | PayloadCMS configuration | Modified: Lines 186-200 (optional date/time) |
 
 ### Dependencies
 
@@ -3439,6 +3477,13 @@ For questions or issues:
 
 ---
 
-**Last Updated**: December 21, 2025
-**Version**: 1.0.0
+**Last Updated**: December 21, 2025 (v2.0 - Added Contact Form)
+**Version**: 2.0.0
 **Author**: ORCACLUB Development Team
+
+> **Note**: This document primarily covers the booking/consultation scheduling workflow. For the new contact form functionality, see [CONTACT_FUNCTIONALITY_UPDATE.md](./CONTACT_FUNCTIONALITY_UPDATE.md) which includes:
+> - Contact form workflow and API documentation
+> - Updated PayloadCMS schema details
+> - Contact page component architecture
+> - Migration guide from v1.0 to v2.0
+> - Testing checklist for both workflows

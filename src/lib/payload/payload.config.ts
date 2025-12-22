@@ -186,17 +186,17 @@ const Leads: CollectionConfig = {
     {
       name: 'preferredDate',
       type: 'date',
-      required: true,
+      required: false, // Optional - only for booking consultations
       admin: {
-        description: 'Customer preferred consultation date',
+        description: 'Customer preferred consultation date (optional - for bookings only)',
       },
     },
     {
       name: 'preferredTime',
       type: 'text',
-      required: true,
+      required: false, // Optional - only for booking consultations
       admin: {
-        description: 'Customer preferred time (ISO 8601 format)',
+        description: 'Customer preferred time (ISO 8601 format, optional - for bookings only)',
       },
     },
     {

@@ -7,7 +7,7 @@ export function Footer() {
   return (
     <footer className="relative z-10 bg-zinc-950 border-t border-white/10">
       <div className="max-w-7xl mx-auto px-8 py-20">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
           {/* Column 1: Brand */}
           <div className="space-y-4">
             <h3 className="text-xl font-bold text-white tracking-tight">ORCACLUB</h3>
@@ -36,48 +36,7 @@ export function Footer() {
             </div>
           </div>
 
-          {/* Column 2: Company */}
-          <div className="space-y-4">
-            <h4 className="text-sm font-semibold text-white uppercase tracking-wider">
-              Company
-            </h4>
-            <ul className="space-y-3">
-              <li>
-                <Link
-                  href="/about"
-                  className="text-gray-400 hover:text-white transition-colors duration-200 text-sm"
-                >
-                  About
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/portfolio"
-                  className="text-gray-400 hover:text-white transition-colors duration-200 text-sm"
-                >
-                  Portfolio
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/insights"
-                  className="text-gray-400 hover:text-white transition-colors duration-200 text-sm"
-                >
-                  Insights
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/pricing"
-                  className="text-gray-400 hover:text-white transition-colors duration-200 text-sm"
-                >
-                  Pricing
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Column 3: Services */}
+          {/* Column 2: Services */}
           <div className="space-y-4">
             <h4 className="text-sm font-semibold text-white uppercase tracking-wider">
               Services
@@ -85,7 +44,7 @@ export function Footer() {
             <ul className="space-y-3">
               <li>
                 <Link
-                  href="/services"
+                  href="/services/web-development"
                   className="text-gray-400 hover:text-white transition-colors duration-200 text-sm"
                 >
                   Web Development
@@ -93,32 +52,32 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  href="/services"
+                  href="/services/digital-marketing"
                   className="text-gray-400 hover:text-white transition-colors duration-200 text-sm"
                 >
-                  AI Solutions
+                  Digital Marketing
                 </Link>
               </li>
               <li>
                 <Link
-                  href="/studio"
+                  href="/services/seo-services"
                   className="text-gray-400 hover:text-white transition-colors duration-200 text-sm"
                 >
-                  Studio
+                  SEO Services
                 </Link>
               </li>
               <li>
                 <Link
-                  href="/products"
+                  href="/services/integration-automation"
                   className="text-gray-400 hover:text-white transition-colors duration-200 text-sm"
                 >
-                  Products
+                  Integration & Automation
                 </Link>
               </li>
             </ul>
           </div>
 
-          {/* Column 4: Contact */}
+          {/* Column 3: Contact */}
           <div className="space-y-4">
             <h4 className="text-sm font-semibold text-white uppercase tracking-wider">
               Contact
