@@ -69,11 +69,8 @@ export interface Config {
   collections: {
     media: Media;
     clients: Client;
-    services: Service;
     leads: Lead;
     users: User;
-    'kaiju-activities': KaijuActivity;
-    'trip-configs': TripConfig;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
     'payload-migrations': PayloadMigration;
@@ -82,11 +79,8 @@ export interface Config {
   collectionsSelect: {
     media: MediaSelect<false> | MediaSelect<true>;
     clients: ClientsSelect<false> | ClientsSelect<true>;
-    services: ServicesSelect<false> | ServicesSelect<true>;
     leads: LeadsSelect<false> | LeadsSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
-    'kaiju-activities': KaijuActivitiesSelect<false> | KaijuActivitiesSelect<true>;
-    'trip-configs': TripConfigsSelect<false> | TripConfigsSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
     'payload-migrations': PayloadMigrationsSelect<false> | PayloadMigrationsSelect<true>;
@@ -197,35 +191,6 @@ export interface Client {
   createdAt: string;
 }
 /**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "services".
- */
-export interface Service {
-  id: string;
-  /**
-   * Service title (e.g., "Elegant Web Design")
-   */
-  title: string;
-  /**
-   * Brief service description
-   */
-  description: string;
-  /**
-   * Icon to display with the service
-   */
-  icon: 'Code2' | 'Zap' | 'Target' | 'Brain' | 'Sparkles' | 'Rocket' | 'Search';
-  /**
-   * Service category
-   */
-  category?: ('development' | 'design' | 'automation' | 'marketing' | 'ai') | null;
-  /**
-   * Order in which to display (lower numbers first)
-   */
-  displayOrder?: number | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
  * Consultation booking requests from the website
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -322,83 +287,6 @@ export interface User {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "kaiju-activities".
- */
-export interface KaijuActivity {
-  id: string;
-  /**
-   * Activity title (e.g., "Explore Shibuya Crossing")
-   */
-  title: string;
-  /**
-   * Optional description of the activity
-   */
-  description?: string | null;
-  /**
-   * Time in HH:MM format (e.g., "14:30")
-   */
-  time?: string | null;
-  /**
-   * Whether this activity has a specific time
-   */
-  hasTime?: boolean | null;
-  category?: ('cultural' | 'food' | 'nature' | 'shopping' | 'entertainment' | 'transport') | null;
-  /**
-   * Day index (0-15) for 16-day trip
-   */
-  dayIndex: number;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "trip-configs".
- */
-export interface TripConfig {
-  id: string;
-  /**
-   * Trip title (e.g., "Japan Adventure 2024")
-   */
-  title: string;
-  /**
-   * Optional trip description
-   */
-  description?: string | null;
-  /**
-   * Trip start date
-   */
-  startDate: string;
-  /**
-   * Total number of days in the trip
-   */
-  numberOfDays: number;
-  /**
-   * Day-by-day trip configuration
-   */
-  days: {
-    /**
-     * Location name (e.g., "Tokyo", "Shibuya District")
-     */
-    location: string;
-    /**
-     * City category for styling and grouping
-     */
-    city: 'tokyo' | 'kyoto' | 'osaka' | 'fuji' | 'custom';
-    /**
-     * Phase description (e.g., "Arrival & First Exploration")
-     */
-    phase: string;
-    /**
-     * Custom city name (required when city is "custom")
-     */
-    customCityName?: string | null;
-    id?: string | null;
-  }[];
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-locked-documents".
  */
 export interface PayloadLockedDocument {
@@ -413,24 +301,12 @@ export interface PayloadLockedDocument {
         value: string | Client;
       } | null)
     | ({
-        relationTo: 'services';
-        value: string | Service;
-      } | null)
-    | ({
         relationTo: 'leads';
         value: string | Lead;
       } | null)
     | ({
         relationTo: 'users';
         value: string | User;
-      } | null)
-    | ({
-        relationTo: 'kaiju-activities';
-        value: string | KaijuActivity;
-      } | null)
-    | ({
-        relationTo: 'trip-configs';
-        value: string | TripConfig;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -540,19 +416,6 @@ export interface ClientsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "services_select".
- */
-export interface ServicesSelect<T extends boolean = true> {
-  title?: T;
-  description?: T;
-  icon?: T;
-  category?: T;
-  displayOrder?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "leads_select".
  */
 export interface LeadsSelect<T extends boolean = true> {
@@ -598,41 +461,6 @@ export interface UsersSelect<T extends boolean = true> {
         createdAt?: T;
         expiresAt?: T;
       };
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "kaiju-activities_select".
- */
-export interface KaijuActivitiesSelect<T extends boolean = true> {
-  title?: T;
-  description?: T;
-  time?: T;
-  hasTime?: T;
-  category?: T;
-  dayIndex?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "trip-configs_select".
- */
-export interface TripConfigsSelect<T extends boolean = true> {
-  title?: T;
-  description?: T;
-  startDate?: T;
-  numberOfDays?: T;
-  days?:
-    | T
-    | {
-        location?: T;
-        city?: T;
-        phase?: T;
-        customCityName?: T;
-        id?: T;
-      };
-  updatedAt?: T;
-  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

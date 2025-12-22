@@ -262,14 +262,6 @@ const Hero = () => {
 
       {/* Background ecosystem */}
       <div className="absolute inset-0 overflow-hidden">
-        {/* Hero background image */}
-        <div
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-          style={{
-            backgroundImage: 'url(/kaiju_hd.png)',
-            transform: `translate(${parallaxY * 0.05}px, ${parallaxY * 0.1}px) scale(1.1)`,
-          }}
-        />
 
         {/* Dynamic morphing gradient overlay */}
         <div

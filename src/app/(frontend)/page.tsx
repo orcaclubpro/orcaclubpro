@@ -11,7 +11,7 @@ import { getPayload } from "payload"
 import config from "@payload-config"
 
 export default async function HomePage() {
-  // Fetch clients and services from Payload
+  // Fetch clients from Payload
   const payload = await getPayload({ config })
 
   const clientsData = await payload.find({
@@ -20,14 +20,7 @@ export default async function HomePage() {
     limit: 12,
   })
 
-  const servicesData = await payload.find({
-    collection: 'services' as any,
-    sort: 'displayOrder',
-    limit: 4,
-  })
-
   const clients = clientsData.docs
-  const services = servicesData.docs
   return (
     <div className="min-h-screen bg-black relative overflow-hidden">
       <AnimatedBackground />
@@ -91,7 +84,7 @@ export default async function HomePage() {
             </div>
           </ScrollReveal>
 
-          <ServicesGrid services={services} />
+          <ServicesGrid />
         </div>
       </section>
 
@@ -119,16 +112,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-slate-800/50 py-20 px-8 relative z-10">
-        <div className="max-w-6xl mx-auto text-center">
-          <div className="text-2xl tracking-tight mb-6">
-            <span className="font-extralight">ORCA</span>
-            <span className="font-light gradient-text">CLUB</span>
-          </div>
-          <p className="text-gray-500 text-sm font-light">Software Agency • Tailored Solutions • Smarter Workflows</p>
-        </div>
-      </footer>
+      {/* Footer is now in the layout */}
     </div>
   )
 }

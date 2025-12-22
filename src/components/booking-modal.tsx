@@ -143,7 +143,7 @@ export function BookingModal() {
           variant="default"
           className="bg-[#67e8f9] text-black hover:bg-[#67e8f9]/90 font-semibold transition-all duration-200"
         >
-          Free Consultation
+          Contact
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto bg-black border-white/20">
