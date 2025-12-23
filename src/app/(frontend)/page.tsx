@@ -12,37 +12,37 @@ import { getPayload } from "payload"
 import config from "@payload-config"
 
 export const metadata: Metadata = {
-  title: 'OrcaClub - Custom Web Development, AI Automation & SEO Services | 2-4 Week Delivery',
-  description: 'Leading software development company specializing in custom web development (2-4 weeks), AI workflow automation, SEO services, and digital marketing. Transform your business with tailored solutions built on React, Next.js, and modern technology. Trusted by SMBs and enterprises.',
+  title: 'ORCACLUB | Web Design, Integration, and Automation',
+  description: 'Marketing Agency specializing in technical integration and business tailored solutions. We transform marketing operations through seamless system integrations, intelligent automation, and custom technical solutions designed to amplify your marketing impact.',
   keywords: [
-    'custom web development',
-    'fast website development',
-    'AI automation services',
-    'workflow automation',
-    'SEO services',
-    'digital marketing agency',
-    'React development',
-    'Next.js websites',
-    'software development company',
-    'tailored software solutions',
-    'business automation',
-    '2-4 week website delivery',
-    'modern web design',
+    'marketing agency',
+    'technical integration',
+    'business solutions',
+    'marketing automation',
+    'system integration',
     'CRM integration',
-    'custom dashboards',
-    'software consultants'
+    'marketing technology',
+    'business automation',
+    'custom integrations',
+    'marketing operations',
+    'digital marketing',
+    'workflow automation',
+    'tailored solutions',
+    'marketing tech stack',
+    'API integrations',
+    'data integration'
   ],
   openGraph: {
-    title: 'OrcaClub - Custom Websites & AI Automation Delivered in 2-4 Weeks',
-    description: 'Expert software company building custom web applications, AI-powered automation, and SEO-optimized websites. Launch-ready solutions with modern technology stack.',
+    title: 'ORCACLUB - Marketing Agency | Technical Integration & Business Solutions',
+    description: 'Transform your marketing operations with seamless technical integrations and business tailored solutions. Expert marketing agency delivering intelligent automation and custom solutions.',
     url: 'https://orcaclub.pro',
-    siteName: 'OrcaClub',
+    siteName: 'ORCACLUB',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'OrcaClub - Custom Web Development & AI Automation in 2-4 Weeks',
-    description: 'Transform your business with custom web applications, AI automation, and SEO services. Modern technology, fast delivery.',
+    title: 'ORCACLUB - Marketing Agency | Technical Integration & Business Solutions',
+    description: 'Marketing Agency specializing in technical integration and business tailored solutions. Transform your marketing impact with intelligent automation.',
   },
   alternates: {
     canonical: 'https://orcaclub.pro',
@@ -97,13 +97,11 @@ export default async function HomePage() {
             <ScrollReveal delay={400}>
               <div className="pt-8 mb-20">
                 <p className="text-xl md:text-2xl text-gray-400 max-w-4xl mx-auto font-light leading-relaxed">
-                  <span className="text-cyan-400 font-medium">OrcaClub</span> is a leading <span className="text-white font-medium">software development company</span> that crafts{" "}
-                  <span className="text-white font-medium">custom web applications</span>, <span className="text-white font-medium">AI-powered automation</span>, and{" "}
-                  <span className="text-white font-medium">SEO-optimized websites</span> for modern businesses. We deliver{" "}
-                  <span className="text-white font-medium">tailored software solutions</span> in 2-4 weeks—from{" "}
-                  <span className="text-cyan-400">React & Next.js web development</span> to{" "}
-                  <span className="text-cyan-400">intelligent workflow automation</span> and{" "}
-                  <span className="text-cyan-400">digital marketing services</span>.
+                  <span className="text-cyan-400 font-medium">ORCACLUB</span> is a <span className="text-white font-medium">Marketing Agency</span> specializing in{" "}
+                  <span className="text-white font-medium">technical integration</span> and <span className="text-white font-medium">business tailored solutions</span>.
+                  We transform marketing operations through{" "}
+                  <span className="text-cyan-400">seamless system integrations</span>, <span className="text-cyan-400">intelligent automation</span>, and{" "}
+                  <span className="text-cyan-400">custom technical solutions</span> designed to amplify your marketing impact and drive measurable business growth.
                 </p>
               </div>
             </ScrollReveal>

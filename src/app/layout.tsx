@@ -20,7 +20,7 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://orcaclub.pro'),
-  title: "ORCACLUB - Tailored Software Solutions",
+  title: "ORCACLUB | Web Design, Integration, and Automation",
   description:
     "Leading software company crafting tailored solutions for modern businesses. Expert web design, AI agents, workflow automation, and custom software development. Top-rated software consultants delivering beautiful designs and intelligent automation for SMBs and enterprises.",
   keywords: [

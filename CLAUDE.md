@@ -1,8 +1,8 @@
-# OrcaClubPro - Claude Development Guide
+# ORCACLUB - Claude Development Guide
 
 ## Project Overview
 
-OrcaClubPro is a modern web application built with cutting-edge technologies, optimized for performance and developer experience. This is a professional SaaS platform with integrated CMS capabilities, featuring a clean, modern interface and robust backend infrastructure.
+ORCACLUB is a Marketing Agency platform that delivers technical integration and business tailored solutions. Built with cutting-edge technologies and optimized for performance, ORCACLUB provides a professional web application with integrated CMS capabilities, featuring a clean, modern interface designed to support marketing operations and client service delivery.
 
 ## 🏗️ Architecture & Structure
 
