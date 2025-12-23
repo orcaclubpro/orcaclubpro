@@ -9,8 +9,8 @@ import { cn } from "@/lib/utils"
 import { BookingModal } from "@/components/booking-modal"
 
 const navigation = [
-  { name: "About", href: "/about" },
   { name: "Services", href: "/services" },
+  { name: "Pricing", href: "/pricing" },
   { name: "Studio", href: "/studio" },
   { name: "Products", href: "/products" },
   { name: "Merchandise", href: "/merchandise" },

@@ -1,10 +1,9 @@
 "use client"
 
 import AnimatedBackground from "@/components/layout/animated-background"
-import ScrollReveal from "@/components/layout/scroll-reveal"
 import Link from "next/link"
-import { motion, useInView } from "framer-motion"
-import { useRef, useState, useEffect } from "react"
+import { motion } from "motion/react"
+import { useState, useEffect, useRef } from "react"
 import {
   ArrowRight,
   Code2,
@@ -49,9 +48,8 @@ export default function WebDevelopmentContent() {
 
 // Hero Section with Value Proposition
 function HeroSection() {
-  const ref = useRef(null)
-  const isInView = useInView(ref, { once: true })
   const [code, setCode] = useState('')
+  const [hasAnimated, setHasAnimated] = useState(false)
 
   const fullCode = `function YourBusiness() {
   return (
@@ -64,41 +62,62 @@ function HeroSection() {
 }`
 
   useEffect(() => {
-    if (isInView && code.length < fullCode.length) {
+    // Start typewriter effect after initial render (hero is always in viewport)
+    if (!hasAnimated) {
+      setHasAnimated(true)
+    }
+
+    if (hasAnimated && code.length < fullCode.length) {
       const timeout = setTimeout(() => {
         setCode(fullCode.slice(0, code.length + 1))
       }, 30)
       return () => clearTimeout(timeout)
     }
-  }, [isInView, code, fullCode])
+  }, [hasAnimated, code, fullCode])
 
   return (
-    <section ref={ref} className="pt-32 pb-20 px-8 relative z-10">
+    <section className="pt-32 pb-20 px-8 relative z-10">
       <div className="max-w-7xl mx-auto">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           {/* Left: Content */}
           <div>
-            <ScrollReveal>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0 }}
+            >
               <div className="inline-block px-4 py-2 bg-cyan-400/10 border border-cyan-400/20 rounded-full text-sm font-medium text-cyan-400 uppercase tracking-wider mb-6">
                 Custom Web Development
               </div>
-            </ScrollReveal>
+            </motion.div>
 
-            <ScrollReveal delay={200}>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+            >
               <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight">
                 Custom Websites Built in{" "}
                 <span className="gradient-text">Weeks</span>, Not Months
               </h1>
-            </ScrollReveal>
+            </motion.div>
 
-            <ScrollReveal delay={400}>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+            >
               <p className="text-xl md:text-2xl text-gray-400 mb-8 leading-relaxed">
                 Launch-ready websites in 2-4 weeks. Custom business tools, analytics dashboards, and seamless integrations—without sacrificing quality.
               </p>
-            </ScrollReveal>
+            </motion.div>
 
             {/* Comparison Stats */}
-            <ScrollReveal delay={600}>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.6 }}
+            >
               <div className="grid grid-cols-2 gap-6 mb-10 max-w-md">
                 <div className="bg-slate-900/60 backdrop-blur-xl border border-red-400/20 rounded-lg p-4">
                   <div className="text-sm text-gray-400 mb-2">Traditional Agency</div>
@@ -112,10 +131,14 @@ function HeroSection() {
                   <div className="text-3xl font-bold text-cyan-400">2-4 wk</div>
                 </div>
               </div>
-            </ScrollReveal>
+            </motion.div>
 
             {/* Key Benefits */}
-            <ScrollReveal delay={800}>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.8 }}
+            >
               <div className="space-y-3 mb-10">
                 {[
                   'Modern tech stack (React, Next.js, TypeScript)',
@@ -127,7 +150,7 @@ function HeroSection() {
                     key={benefit}
                     className="flex items-center gap-3"
                     initial={{ opacity: 0, x: -20 }}
-                    animate={isInView ? { opacity: 1, x: 0 } : {}}
+                    animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.9 + i * 0.1 }}
                   >
                     <CheckCircle2 className="w-5 h-5 text-cyan-400 flex-shrink-0" />
@@ -135,10 +158,14 @@ function HeroSection() {
                   </motion.div>
                 ))}
               </div>
-            </ScrollReveal>
+            </motion.div>
 
             {/* CTAs */}
-            <ScrollReveal delay={1200}>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 1.2 }}
+            >
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link
                   href="/contact"
@@ -153,14 +180,14 @@ function HeroSection() {
                   View Our Work <ArrowRight size={16} className="opacity-50" />
                 </Link>
               </div>
-            </ScrollReveal>
+            </motion.div>
           </div>
 
           {/* Right: Code Editor Mockup */}
           <motion.div
             className="relative"
             initial={{ opacity: 0, rotateY: 15 }}
-            animate={isInView ? { opacity: 1, rotateY: 0 } : {}}
+            animate={{ opacity: 1, rotateY: 0 }}
             transition={{ duration: 0.8, delay: 0.4 }}
           >
             <div className="relative bg-slate-900/60 backdrop-blur-xl border border-cyan-400/20 rounded-xl shadow-2xl shadow-cyan-400/10 overflow-hidden">
@@ -213,7 +240,7 @@ function HeroSection() {
                   key={tech.name}
                   className={`px-4 py-2 rounded-lg bg-gradient-to-r ${tech.color} text-white text-sm font-medium shadow-lg`}
                   initial={{ opacity: 0, scale: 0.8, y: 20 }}
-                  animate={isInView ? { opacity: 1, scale: 1, y: 0 } : {}}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
                   transition={{ delay: 1.4 + i * 0.1 }}
                   whileHover={{ scale: 1.05, y: -2 }}
                 >
@@ -230,9 +257,6 @@ function HeroSection() {
 
 // Process Timeline Section
 function ProcessSection() {
-  const ref = useRef(null)
-  const isInView = useInView(ref, { once: true, margin: "-100px" })
-
   const weeks = [
     {
       week: 'Week 1',
@@ -265,9 +289,14 @@ function ProcessSection() {
   ]
 
   return (
-    <section ref={ref} className="py-32 px-8 relative z-10 border-t border-slate-800/50">
+    <section className="py-32 px-8 relative z-10 border-t border-slate-800/50">
       <div className="max-w-7xl mx-auto">
-        <ScrollReveal>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.1 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+        >
           <div className="text-center mb-20">
             <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
               Our <span className="gradient-text">4-Week Process</span>
@@ -276,7 +305,7 @@ function ProcessSection() {
               Transparent, collaborative, and fast. Here's exactly how we'll bring your website to life.
             </p>
           </div>
-        </ScrollReveal>
+        </motion.div>
 
         {/* Timeline */}
         <div className="relative">
@@ -299,7 +328,8 @@ function ProcessSection() {
                   key={item.week}
                   className={`flex flex-col md:flex-row items-center gap-8 ${isEven ? 'md:flex-row' : 'md:flex-row-reverse'}`}
                   initial={{ opacity: 0, y: 30 }}
-                  animate={isInView ? { opacity: 1, y: 0 } : {}}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.3 }}
                   transition={{ delay: 0.2 + i * 0.2 }}
                 >
                   {/* Content Card */}
@@ -332,14 +362,19 @@ function ProcessSection() {
         </div>
 
         {/* Timeline Footer */}
-        <ScrollReveal delay={1000}>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.3 }}
+          transition={{ duration: 0.6, delay: 1.0 }}
+        >
           <div className="mt-20 text-center">
             <div className="inline-flex items-center gap-2 px-6 py-3 bg-slate-900/60 backdrop-blur-xl border border-cyan-400/20 rounded-full">
               <Clock className="w-5 h-5 text-cyan-400" />
               <span className="text-gray-300">Average Project: 2-4 Weeks from Kickoff to Launch</span>
             </div>
           </div>
-        </ScrollReveal>
+        </motion.div>
       </div>
     </section>
   )
@@ -347,8 +382,55 @@ function ProcessSection() {
 
 // Technology & Capabilities Section
 function TechnologySection() {
-  const ref = useRef(null)
-  const isInView = useInView(ref, { once: true, margin: "-100px" })
+  const [isTechVisible, setIsTechVisible] = useState(false)
+  const [isCapabilitiesVisible, setIsCapabilitiesVisible] = useState(false)
+  const [isIntegrationsVisible, setIsIntegrationsVisible] = useState(false)
+
+  const techRef = useRef<HTMLDivElement>(null)
+  const capabilitiesRef = useRef<HTMLDivElement>(null)
+  const integrationsRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const techObserver = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !isTechVisible) {
+          setIsTechVisible(true)
+          techObserver.disconnect()
+        }
+      },
+      { threshold: 0.2 }
+    )
+
+    const capabilitiesObserver = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !isCapabilitiesVisible) {
+          setIsCapabilitiesVisible(true)
+          capabilitiesObserver.disconnect()
+        }
+      },
+      { threshold: 0.2 }
+    )
+
+    const integrationsObserver = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !isIntegrationsVisible) {
+          setIsIntegrationsVisible(true)
+          integrationsObserver.disconnect()
+        }
+      },
+      { threshold: 0.2 }
+    )
+
+    if (techRef.current) techObserver.observe(techRef.current)
+    if (capabilitiesRef.current) capabilitiesObserver.observe(capabilitiesRef.current)
+    if (integrationsRef.current) integrationsObserver.observe(integrationsRef.current)
+
+    return () => {
+      techObserver.disconnect()
+      capabilitiesObserver.disconnect()
+      integrationsObserver.disconnect()
+    }
+  }, [isTechVisible, isCapabilitiesVisible, isIntegrationsVisible])
 
   const technologies = [
     {
@@ -410,10 +492,15 @@ function TechnologySection() {
   ]
 
   return (
-    <section ref={ref} className="py-32 px-8 relative z-10 border-t border-slate-800/50">
+    <section className="py-32 px-8 relative z-10 border-t border-slate-800/50">
       <div className="max-w-7xl mx-auto">
         {/* Tech Stack */}
-        <ScrollReveal>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.3 }}
+          transition={{ duration: 0.6 }}
+        >
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
               Built with <span className="gradient-text">Modern Technology</span>
@@ -422,45 +509,46 @@ function TechnologySection() {
               We use cutting-edge frameworks that deliver speed, security, and scalability
             </p>
           </div>
-        </ScrollReveal>
+        </motion.div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-32">
+        <div ref={techRef} className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-32">
           {technologies.map((tech, i) => (
-            <motion.div
+            <div
               key={tech.name}
-              className="bg-slate-900/60 backdrop-blur-xl border border-slate-700/50 rounded-xl p-6 hover:border-cyan-400/30 transition-all duration-300 group"
-              initial={{ opacity: 0, y: 20 }}
-              animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ delay: 0.2 + i * 0.1 }}
-              whileHover={{ y: -4 }}
+              className={`bg-slate-900/60 backdrop-blur-xl border border-slate-700/50 rounded-xl p-6 hover:border-cyan-400/30 transition-all duration-500 group hover:-translate-y-1 ${
+                isTechVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'
+              }`}
+              style={{
+                transitionDelay: isTechVisible ? `${i * 100}ms` : '0ms'
+              }}
             >
               <tech.icon className={`w-10 h-10 text-${tech.color}-400 mb-4 group-hover:scale-110 transition-transform`} />
               <h3 className="text-xl font-bold text-white mb-3">{tech.name}</h3>
               <p className="text-gray-400 text-sm leading-relaxed">{tech.description}</p>
-            </motion.div>
+            </div>
           ))}
         </div>
 
         {/* Capabilities */}
-        <ScrollReveal>
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-              What We <span className="gradient-text">Build</span>
-            </h2>
-            <p className="text-xl text-gray-400 max-w-3xl mx-auto leading-relaxed">
-              From simple marketing sites to complex business applications
-            </p>
-          </div>
-        </ScrollReveal>
+        <div className="text-center mb-16">
+          <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
+            What We <span className="gradient-text">Build</span>
+          </h2>
+          <p className="text-xl text-gray-400 max-w-3xl mx-auto leading-relaxed">
+            From simple marketing sites to complex business applications
+          </p>
+        </div>
 
-        <div className="grid md:grid-cols-2 gap-8 mb-32">
+        <div ref={capabilitiesRef} className="grid md:grid-cols-2 gap-8 mb-32">
           {capabilities.map((cap, i) => (
-            <motion.div
+            <div
               key={cap.title}
-              className="flex gap-4 bg-slate-900/60 backdrop-blur-xl border border-slate-700/50 rounded-xl p-8 hover:border-cyan-400/30 transition-all duration-300"
-              initial={{ opacity: 0, x: i % 2 === 0 ? -20 : 20 }}
-              animate={isInView ? { opacity: 1, x: 0 } : {}}
-              transition={{ delay: 0.2 + i * 0.1 }}
+              className={`flex gap-4 bg-slate-900/60 backdrop-blur-xl border border-slate-700/50 rounded-xl p-8 hover:border-cyan-400/30 transition-all duration-500 ${
+                isCapabilitiesVisible ? 'opacity-100 translate-x-0' : `opacity-0 ${i % 2 === 0 ? '-translate-x-5' : 'translate-x-5'}`
+              }`}
+              style={{
+                transitionDelay: isCapabilitiesVisible ? `${i * 100}ms` : '0ms'
+              }}
             >
               <div className="flex-shrink-0">
                 <div className="p-3 rounded-lg bg-cyan-400/10">
@@ -471,36 +559,35 @@ function TechnologySection() {
                 <h3 className="text-xl font-bold text-white mb-3">{cap.title}</h3>
                 <p className="text-gray-400 leading-relaxed">{cap.description}</p>
               </div>
-            </motion.div>
+            </div>
           ))}
         </div>
 
         {/* Integrations */}
-        <ScrollReveal>
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-              <span className="gradient-text">Seamless Integrations</span>
-            </h2>
-            <p className="text-xl text-gray-400 max-w-3xl mx-auto leading-relaxed">
-              Connect with the tools you already use. We integrate with virtually any platform
-            </p>
-          </div>
-        </ScrollReveal>
+        <div className="text-center mb-16">
+          <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
+            <span className="gradient-text">Seamless Integrations</span>
+          </h2>
+          <p className="text-xl text-gray-400 max-w-3xl mx-auto leading-relaxed">
+            Connect with the tools you already use. We integrate with virtually any platform
+          </p>
+        </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+        <div ref={integrationsRef} className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
           {integrations.map((integration, i) => (
-            <motion.div
+            <div
               key={integration.name}
-              className="bg-slate-900/60 backdrop-blur-xl border border-slate-700/50 rounded-xl p-6 text-center hover:border-cyan-400/30 transition-all duration-300 group"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={isInView ? { opacity: 1, scale: 1 } : {}}
-              transition={{ delay: 0.1 + i * 0.05 }}
-              whileHover={{ scale: 1.05 }}
+              className={`bg-slate-900/60 backdrop-blur-xl border border-slate-700/50 rounded-xl p-6 text-center hover:border-cyan-400/30 hover:scale-105 transition-all duration-500 group ${
+                isIntegrationsVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-90'
+              }`}
+              style={{
+                transitionDelay: isIntegrationsVisible ? `${i * 50}ms` : '0ms'
+              }}
             >
               <integration.icon className="w-8 h-8 text-gray-400 mx-auto mb-3 group-hover:text-cyan-400 transition-colors" />
               <div className="text-sm font-medium text-white mb-1">{integration.name}</div>
               <div className="text-xs text-gray-500">{integration.description}</div>
-            </motion.div>
+            </div>
           ))}
         </div>
       </div>
@@ -510,14 +597,29 @@ function TechnologySection() {
 
 // FAQ & CTA Section
 function FAQSection() {
-  const ref = useRef(null)
-  const isInView = useInView(ref, { once: true, margin: "-100px" })
   const [openIndex, setOpenIndex] = useState<number | null>(0)
+  const [isFaqVisible, setIsFaqVisible] = useState(false)
+  const faqRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !isFaqVisible) {
+          setIsFaqVisible(true)
+          observer.disconnect()
+        }
+      },
+      { threshold: 0.2 }
+    )
+
+    if (faqRef.current) observer.observe(faqRef.current)
+    return () => observer.disconnect()
+  }, [isFaqVisible])
 
   const faqs = [
     {
       question: 'How much does a custom website cost?',
-      answer: 'Projects typically range from $5,000 to $25,000 depending on complexity. Simple marketing sites start around $5K, while custom business tools with integrations can go higher. We provide a detailed quote after understanding your needs in a free consultation.'
+      answer: 'We know different projects have varying complexities and different businesses require different tools. While marketing agencies typically charge anywhere from $5k to $25k per project, ORCACLUB works with your needs to establish the best bang for your buck.'
     },
     {
       question: 'What information do you need to get started?',
@@ -542,31 +644,31 @@ function FAQSection() {
   ]
 
   return (
-    <section ref={ref} className="py-32 px-8 relative z-10 border-t border-slate-800/50">
+    <section className="py-32 px-8 relative z-10 border-t border-slate-800/50">
       <div className="max-w-5xl mx-auto">
         {/* FAQ */}
-        <ScrollReveal>
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-              Frequently Asked <span className="gradient-text">Questions</span>
-            </h2>
-            <p className="text-xl text-gray-400 max-w-3xl mx-auto leading-relaxed">
-              Everything you need to know about working with us
-            </p>
-          </div>
-        </ScrollReveal>
+        <div className="text-center mb-16">
+          <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
+            Frequently Asked <span className="gradient-text">Questions</span>
+          </h2>
+          <p className="text-xl text-gray-400 max-w-3xl mx-auto leading-relaxed">
+            Everything you need to know about working with us
+          </p>
+        </div>
 
-        <div className="space-y-4 mb-32">
+        <div ref={faqRef} className="space-y-4 mb-32">
           {faqs.map((faq, i) => {
             const isOpen = openIndex === i
 
             return (
-              <motion.div
+              <div
                 key={i}
-                className="bg-slate-900/60 backdrop-blur-xl border border-slate-700/50 rounded-xl overflow-hidden hover:border-cyan-400/30 transition-all duration-300"
-                initial={{ opacity: 0, y: 20 }}
-                animate={isInView ? { opacity: 1, y: 0 } : {}}
-                transition={{ delay: 0.1 + i * 0.05 }}
+                className={`bg-slate-900/60 backdrop-blur-xl border border-slate-700/50 rounded-xl overflow-hidden hover:border-cyan-400/30 transition-all duration-500 ${
+                  isFaqVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'
+                }`}
+                style={{
+                  transitionDelay: isFaqVisible ? `${i * 50}ms` : '0ms'
+                }}
               >
                 <button
                   onClick={() => setOpenIndex(isOpen ? null : i)}
@@ -577,23 +679,24 @@ function FAQSection() {
                     className={`w-5 h-5 text-cyan-400 flex-shrink-0 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
                   />
                 </button>
-                <motion.div
-                  initial={false}
-                  animate={{ height: isOpen ? 'auto' : 0 }}
-                  transition={{ duration: 0.3 }}
-                  className="overflow-hidden"
+                <div
+                  className="overflow-hidden transition-all duration-300"
+                  style={{
+                    height: isOpen ? 'auto' : 0,
+                    maxHeight: isOpen ? '500px' : 0
+                  }}
                 >
                   <div className="px-8 pb-6 text-gray-400 leading-relaxed">
                     {faq.answer}
                   </div>
-                </motion.div>
-              </motion.div>
+                </div>
+              </div>
             )
           })}
         </div>
 
         {/* Final CTA */}
-        <ScrollReveal>
+        <div>
           <div className="text-center bg-gradient-to-r from-blue-600/10 to-cyan-500/10 border border-cyan-400/20 rounded-2xl p-12">
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
               Ready to Launch Your <span className="gradient-text">Custom Website</span>?
@@ -619,7 +722,7 @@ function FAQSection() {
               No commitment required • Response within 24 hours • Projects starting at $5,000
             </p>
           </div>
-        </ScrollReveal>
+        </div>
       </div>
     </section>
   )

@@ -223,13 +223,13 @@ export interface Lead {
    */
   message: string;
   /**
-   * Customer preferred consultation date
+   * Customer preferred consultation date (optional - for bookings only)
    */
-  preferredDate: string;
+  preferredDate?: string | null;
   /**
-   * Customer preferred time (ISO 8601 format)
+   * Customer preferred time (ISO 8601 format, optional - for bookings only)
    */
-  preferredTime: string;
+  preferredTime?: string | null;
   /**
    * Lead status for tracking
    */
