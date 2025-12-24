@@ -4,7 +4,8 @@ import * as React from "react"
 import { useState } from "react"
 import { Mail, Phone, MapPin, User, Building2, MessageSquare, Calendar, Loader2 } from "lucide-react"
 import { toast } from "sonner"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import AnimatedBackground from "@/components/layout/animated-background"
+import Image from 'next/image'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -28,7 +29,7 @@ interface TimeSlot {
 }
 
 export default function ContactPage() {
-  const [activeTab, setActiveTab] = useState("contact")
+  const [activeTab, setActiveTab] = useState<'contact' | 'booking'>('contact')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoadingSlots, setIsLoadingSlots] = useState(false)
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([])
@@ -180,427 +181,486 @@ export default function ContactPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white py-20 px-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-16">
-          <h1 className="text-5xl md:text-6xl font-light tracking-tight mb-6">
-            Let's build something{" "}
-            <span className="bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent font-medium">
-              extraordinary
-            </span>
+    <div className="min-h-screen bg-black relative overflow-hidden">
+      <AnimatedBackground />
+
+      {/* Hero Section */}
+      <section className="relative z-10 pb-8 px-6">
+        <div className="max-w-4xl mx-auto text-center">
+          <div className="mb-4 animate-fade-in">
+            <Image
+              src="/orcaclubpro.png"
+              alt="ORCACLUB Pro"
+              width={120}
+              height={120}
+              className="w-20 h-20 md:w-24 md:h-24 object-contain mx-auto"
+              priority
+            />
+          </div>
+
+          <h1 className="text-5xl md:text-6xl font-bold text-cyan-400 mb-2 animate-slide-up">
+            CONTACT
           </h1>
-          <p className="text-xl text-gray-400 max-w-3xl mx-auto leading-relaxed">
-            Ready to transform your digital presence? Choose how you'd like to connect with us.
+
+          <p className="text-lg md:text-xl text-gray-400 font-light animate-slide-up-delay">
+            Let's discuss how we can help you achieve your goals
           </p>
         </div>
+      </section>
 
-        <div className="grid lg:grid-cols-2 gap-16">
-          {/* Form Section with Tabs */}
-          <div>
-            <Tabs defaultValue="contact" value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-2 mb-8">
-                <TabsTrigger value="contact">Contact Us</TabsTrigger>
-                <TabsTrigger value="booking">Schedule Consultation</TabsTrigger>
-              </TabsList>
-
-              {/* Contact Form Tab */}
-              <TabsContent value="contact">
-                <form onSubmit={handleContactSubmit} className="space-y-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="name" className="text-white font-medium">
-                      Full Name <span className="text-red-500">*</span>
-                    </Label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/50" />
-                      <Input
-                        id="name"
-                        name="name"
-                        type="text"
-                        required
-                        value={formData.name}
-                        onChange={handleInputChange}
-                        placeholder="John Doe"
-                        className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:border-[#67e8f9] focus:ring-[#67e8f9]"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="email" className="text-white font-medium">
-                      Email Address <span className="text-red-500">*</span>
-                    </Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/50" />
-                      <Input
-                        id="email"
-                        name="email"
-                        type="email"
-                        required
-                        value={formData.email}
-                        onChange={handleInputChange}
-                        placeholder="john@example.com"
-                        className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:border-[#67e8f9] focus:ring-[#67e8f9]"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="phone" className="text-white font-medium">
-                      Phone Number
-                    </Label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/50" />
-                      <Input
-                        id="phone"
-                        name="phone"
-                        type="tel"
-                        value={formData.phone}
-                        onChange={handleInputChange}
-                        placeholder="+1 (555) 123-4567"
-                        className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:border-[#67e8f9] focus:ring-[#67e8f9]"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="company" className="text-white font-medium">
-                      Company Name
-                    </Label>
-                    <div className="relative">
-                      <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/50" />
-                      <Input
-                        id="company"
-                        name="company"
-                        type="text"
-                        value={formData.company}
-                        onChange={handleInputChange}
-                        placeholder="Acme Inc."
-                        className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:border-[#67e8f9] focus:ring-[#67e8f9]"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="service" className="text-white font-medium">
-                      Service Interested In <span className="text-red-500">*</span>
-                    </Label>
-                    <select
-                      id="service"
-                      name="service"
-                      required
-                      value={formData.service}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 bg-white/5 border border-white/20 text-white rounded-md focus:border-[#67e8f9] focus:ring-1 focus:ring-[#67e8f9] focus:outline-none"
-                    >
-                      <option value="" className="bg-black">Select a service...</option>
-                      <option value="web-design" className="bg-black">Web Design</option>
-                      <option value="ai-automation" className="bg-black">AI & Automation</option>
-                      <option value="custom-software" className="bg-black">Custom Software Development</option>
-                      <option value="seo-services" className="bg-black">SEO Services</option>
-                      <option value="consulting" className="bg-black">Consulting</option>
-                      <option value="other" className="bg-black">Other</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="message" className="text-white font-medium">
-                      Message <span className="text-red-500">*</span>
-                    </Label>
-                    <div className="relative">
-                      <MessageSquare className="absolute left-3 top-3 h-4 w-4 text-white/50" />
-                      <Textarea
-                        id="message"
-                        name="message"
-                        required
-                        value={formData.message}
-                        onChange={handleInputChange}
-                        placeholder="Tell us about your project, goals, and any specific requirements..."
-                        rows={4}
-                        className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:border-[#67e8f9] focus:ring-[#67e8f9] resize-none"
-                      />
-                    </div>
-                  </div>
-
-                  <Button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="w-full bg-[#67e8f9] text-black hover:bg-[#67e8f9]/90 font-semibold"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Sending...
-                      </>
-                    ) : (
-                      "Send Message"
-                    )}
-                  </Button>
-                </form>
-              </TabsContent>
-
-              {/* Booking Form Tab */}
-              <TabsContent value="booking">
-                <form onSubmit={handleBookingSubmit} className="space-y-6">
-                  {/* Same fields as contact */}
-                  <div className="space-y-2">
-                    <Label htmlFor="name-booking" className="text-white font-medium">
-                      Full Name <span className="text-red-500">*</span>
-                    </Label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/50" />
-                      <Input
-                        id="name-booking"
-                        name="name"
-                        type="text"
-                        required
-                        value={formData.name}
-                        onChange={handleInputChange}
-                        placeholder="John Doe"
-                        className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:border-[#67e8f9] focus:ring-[#67e8f9]"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="email-booking" className="text-white font-medium">
-                      Email Address <span className="text-red-500">*</span>
-                    </Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/50" />
-                      <Input
-                        id="email-booking"
-                        name="email"
-                        type="email"
-                        required
-                        value={formData.email}
-                        onChange={handleInputChange}
-                        placeholder="john@example.com"
-                        className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:border-[#67e8f9] focus:ring-[#67e8f9]"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="phone-booking" className="text-white font-medium">
-                      Phone Number
-                    </Label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/50" />
-                      <Input
-                        id="phone-booking"
-                        name="phone"
-                        type="tel"
-                        value={formData.phone}
-                        onChange={handleInputChange}
-                        placeholder="+1 (555) 123-4567"
-                        className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:border-[#67e8f9] focus:ring-[#67e8f9]"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="company-booking" className="text-white font-medium">
-                      Company Name
-                    </Label>
-                    <div className="relative">
-                      <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/50" />
-                      <Input
-                        id="company-booking"
-                        name="company"
-                        type="text"
-                        value={formData.company}
-                        onChange={handleInputChange}
-                        placeholder="Acme Inc."
-                        className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:border-[#67e8f9] focus:ring-[#67e8f9]"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="service-booking" className="text-white font-medium">
-                      Service Interested In <span className="text-red-500">*</span>
-                    </Label>
-                    <select
-                      id="service-booking"
-                      name="service"
-                      required
-                      value={formData.service}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 bg-white/5 border border-white/20 text-white rounded-md focus:border-[#67e8f9] focus:ring-1 focus:ring-[#67e8f9] focus:outline-none"
-                    >
-                      <option value="" className="bg-black">Select a service...</option>
-                      <option value="web-design" className="bg-black">Web Design</option>
-                      <option value="ai-automation" className="bg-black">AI & Automation</option>
-                      <option value="custom-software" className="bg-black">Custom Software Development</option>
-                      <option value="seo-services" className="bg-black">SEO Services</option>
-                      <option value="consulting" className="bg-black">Consulting</option>
-                      <option value="other" className="bg-black">Other</option>
-                    </select>
-                  </div>
-
-                  {/* Booking-specific fields */}
-                  <div className="space-y-2">
-                    <Label htmlFor="preferredDate" className="text-white font-medium">
-                      Preferred Date <span className="text-red-500">*</span>
-                    </Label>
-                    <div className="relative">
-                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/50" />
-                      <Input
-                        id="preferredDate"
-                        name="preferredDate"
-                        type="date"
-                        required
-                        value={formData.preferredDate}
-                        onChange={handleInputChange}
-                        min={new Date().toISOString().split('T')[0]}
-                        className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:border-[#67e8f9] focus:ring-[#67e8f9]"
-                      />
-                    </div>
-                  </div>
-
-                  {formData.preferredDate && (
-                    <div className="space-y-2">
-                      <Label htmlFor="preferredTime" className="text-white font-medium">
-                        Preferred Time <span className="text-red-500">*</span>
-                      </Label>
-                      {isLoadingSlots ? (
-                        <div className="flex items-center justify-center h-12 bg-white/5 border border-white/20 rounded-md">
-                          <Loader2 className="h-5 w-5 animate-spin text-[#67e8f9]" />
-                          <span className="ml-2 text-white/70 text-sm">Loading available times...</span>
-                        </div>
-                      ) : availableSlots.length > 0 ? (
-                        <select
-                          id="preferredTime"
-                          name="preferredTime"
-                          required
-                          value={formData.preferredTime}
-                          onChange={handleInputChange}
-                          className="w-full px-3 py-2 bg-white/5 border border-white/20 text-white rounded-md focus:border-[#67e8f9] focus:ring-1 focus:ring-[#67e8f9] focus:outline-none"
-                        >
-                          <option value="" className="bg-black">Select a time...</option>
-                          {availableSlots.map((slot, index) => (
-                            <option key={index} value={slot.start} className="bg-black">
-                              {slot.label}
-                            </option>
-                          ))}
-                        </select>
-                      ) : formData.preferredDate ? (
-                        <div className="flex items-center justify-center h-12 bg-white/5 border border-white/20 rounded-md">
-                          <span className="text-white/70 text-sm">No available time slots for this date</span>
-                        </div>
-                      ) : null}
-                    </div>
-                  )}
-
-                  <div className="space-y-2">
-                    <Label htmlFor="message-booking" className="text-white font-medium">
-                      Project Details <span className="text-red-500">*</span>
-                    </Label>
-                    <div className="relative">
-                      <MessageSquare className="absolute left-3 top-3 h-4 w-4 text-white/50" />
-                      <Textarea
-                        id="message-booking"
-                        name="message"
-                        required
-                        value={formData.message}
-                        onChange={handleInputChange}
-                        placeholder="Tell us about your project, goals, and any specific requirements..."
-                        rows={4}
-                        className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:border-[#67e8f9] focus:ring-[#67e8f9] resize-none"
-                      />
-                    </div>
-                  </div>
-
-                  <Button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="w-full bg-[#67e8f9] text-black hover:bg-[#67e8f9]/90 font-semibold"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Booking...
-                      </>
-                    ) : (
-                      "Schedule Consultation"
-                    )}
-                  </Button>
-                </form>
-              </TabsContent>
-            </Tabs>
+      {/* Tabs and Forms */}
+      <section className="relative z-10 px-6 pb-32">
+        <div className="max-w-2xl mx-auto">
+          {/* Tab Buttons */}
+          <div className="flex gap-4 mb-8 animate-scale-in">
+            <button
+              onClick={() => setActiveTab('contact')}
+              className={`flex-1 px-6 py-3 rounded-lg font-medium transition-all duration-300 ${
+                activeTab === 'contact'
+                  ? 'bg-cyan-400 text-black'
+                  : 'bg-slate-900/40 text-gray-400 hover:text-white hover:bg-slate-900/60'
+              }`}
+            >
+              Contact Us
+            </button>
+            <button
+              onClick={() => setActiveTab('booking')}
+              className={`flex-1 px-6 py-3 rounded-lg font-medium transition-all duration-300 ${
+                activeTab === 'booking'
+                  ? 'bg-cyan-400 text-black'
+                  : 'bg-slate-900/40 text-gray-400 hover:text-white hover:bg-slate-900/60'
+              }`}
+            >
+              Schedule Consultation
+            </button>
           </div>
 
-          {/* Contact Information Sidebar */}
-          <div className="space-y-8">
-            <div>
-              <h2 className="text-2xl font-light mb-6">Get in Touch</h2>
-              <p className="text-gray-400 leading-relaxed mb-8">
-                We believe in building lasting partnerships with our clients. Every project begins with understanding
-                your unique challenges and goals.
-              </p>
-            </div>
-
-            <div className="space-y-6">
-              <div className="flex items-start gap-4">
-                <div className="p-3 bg-gradient-to-r from-blue-600/20 to-cyan-500/20 rounded-lg">
-                  <Mail className="w-5 h-5 text-cyan-400" />
-                </div>
-                <div>
-                  <h3 className="font-medium mb-1">Email</h3>
-                  <p className="text-gray-400">chance@orcaclub.pro</p>
-                  <p className="text-sm text-gray-500">We respond within 24 hours</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-4">
-                <div className="p-3 bg-gradient-to-r from-blue-600/20 to-cyan-500/20 rounded-lg">
-                  <Phone className="w-5 h-5 text-cyan-400" />
-                </div>
-                <div>
-                  <h3 className="font-medium mb-1">Phone</h3>
-                  <p className="text-gray-400">Available by appointment</p>
-                  <p className="text-sm text-gray-500">Mon-Fri, 9AM-5PM PST</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-4">
-                <div className="p-3 bg-gradient-to-r from-blue-600/20 to-cyan-500/20 rounded-lg">
-                  <MapPin className="w-5 h-5 text-cyan-400" />
-                </div>
-                <div>
-                  <h3 className="font-medium mb-1">Location</h3>
-                  <p className="text-gray-400">Portland, OR</p>
-                  <p className="text-sm text-gray-500">Remote-first team</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Process Overview */}
-            <div className="mt-12 p-6 border border-slate-800 rounded-lg">
-              <h3 className="text-lg font-medium mb-4">Our Process</h3>
-              <div className="space-y-4">
-                {[
-                  { step: "1", title: "Discovery Call", desc: "Understanding your needs and goals" },
-                  { step: "2", title: "Proposal", desc: "Detailed project scope and timeline" },
-                  { step: "3", title: "Development", desc: "Iterative build with regular updates" },
-                  { step: "4", title: "Launch", desc: "Deployment and ongoing support" },
-                ].map((item, index) => (
-                  <div key={index} className="flex items-center gap-4">
-                    <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-cyan-500 rounded-full flex items-center justify-center text-sm font-medium">
-                      {item.step}
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-sm">{item.title}</h4>
-                      <p className="text-gray-400 text-xs">{item.desc}</p>
-                    </div>
+          {/* Contact Form */}
+          {activeTab === 'contact' && (
+            <div className="bg-slate-900/40 backdrop-blur-sm border border-white/10 rounded-xl p-8 animate-fade-in">
+              <form onSubmit={handleContactSubmit} className="space-y-6">
+                {/* Name Field */}
+                <div className="space-y-2">
+                  <Label htmlFor="name" className="text-white font-medium">
+                    Full Name <span className="text-cyan-400">*</span>
+                  </Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/50" />
+                    <Input
+                      id="name"
+                      name="name"
+                      type="text"
+                      required
+                      value={formData.name}
+                      onChange={handleInputChange}
+                      placeholder="John Doe"
+                      className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:border-cyan-400 focus:ring-cyan-400"
+                    />
                   </div>
-                ))}
+                </div>
+
+                {/* Email Field */}
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-white font-medium">
+                    Email Address <span className="text-cyan-400">*</span>
+                  </Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/50" />
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      required
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      placeholder="john@example.com"
+                      className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:border-cyan-400 focus:ring-cyan-400"
+                    />
+                  </div>
+                </div>
+
+                {/* Phone Field */}
+                <div className="space-y-2">
+                  <Label htmlFor="phone" className="text-white font-medium">
+                    Phone Number
+                  </Label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/50" />
+                    <Input
+                      id="phone"
+                      name="phone"
+                      type="tel"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      placeholder="+1 (555) 123-4567"
+                      className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:border-cyan-400 focus:ring-cyan-400"
+                    />
+                  </div>
+                </div>
+
+                {/* Company Field */}
+                <div className="space-y-2">
+                  <Label htmlFor="company" className="text-white font-medium">
+                    Company Name
+                  </Label>
+                  <div className="relative">
+                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/50" />
+                    <Input
+                      id="company"
+                      name="company"
+                      type="text"
+                      value={formData.company}
+                      onChange={handleInputChange}
+                      placeholder="Acme Inc."
+                      className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:border-cyan-400 focus:ring-cyan-400"
+                    />
+                  </div>
+                </div>
+
+                {/* Service Selection */}
+                <div className="space-y-2">
+                  <Label htmlFor="service" className="text-white font-medium">
+                    Service Interested In <span className="text-cyan-400">*</span>
+                  </Label>
+                  <select
+                    id="service"
+                    name="service"
+                    required
+                    value={formData.service}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 bg-white/5 border border-white/20 text-white rounded-md focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none"
+                  >
+                    <option value="" className="bg-black">Select a service...</option>
+                    <option value="website-development" className="bg-black">Website Development</option>
+                    <option value="digital-marketing" className="bg-black">Digital Marketing</option>
+                    <option value="seo-visibility" className="bg-black">SEO & Visibility</option>
+                    <option value="automations" className="bg-black">Automations</option>
+                    <option value="other" className="bg-black">Other</option>
+                  </select>
+                </div>
+
+                {/* Message Field */}
+                <div className="space-y-2">
+                  <Label htmlFor="message" className="text-white font-medium">
+                    Message <span className="text-cyan-400">*</span>
+                  </Label>
+                  <div className="relative">
+                    <MessageSquare className="absolute left-3 top-3 h-4 w-4 text-white/50" />
+                    <Textarea
+                      id="message"
+                      name="message"
+                      required
+                      value={formData.message}
+                      onChange={handleInputChange}
+                      placeholder="Tell us about your project, goals, and any specific requirements..."
+                      rows={5}
+                      className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:border-cyan-400 focus:ring-cyan-400 resize-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Submit Button */}
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full bg-cyan-400 text-black hover:bg-cyan-500 font-semibold py-6 text-base"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    "Send Message"
+                  )}
+                </Button>
+              </form>
+            </div>
+          )}
+
+          {/* Booking Form */}
+          {activeTab === 'booking' && (
+            <div className="bg-slate-900/40 backdrop-blur-sm border border-white/10 rounded-xl p-8 animate-fade-in">
+              <form onSubmit={handleBookingSubmit} className="space-y-6">
+                {/* Name Field */}
+                <div className="space-y-2">
+                  <Label htmlFor="name-booking" className="text-white font-medium">
+                    Full Name <span className="text-cyan-400">*</span>
+                  </Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/50" />
+                    <Input
+                      id="name-booking"
+                      name="name"
+                      type="text"
+                      required
+                      value={formData.name}
+                      onChange={handleInputChange}
+                      placeholder="John Doe"
+                      className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:border-cyan-400 focus:ring-cyan-400"
+                    />
+                  </div>
+                </div>
+
+                {/* Email Field */}
+                <div className="space-y-2">
+                  <Label htmlFor="email-booking" className="text-white font-medium">
+                    Email Address <span className="text-cyan-400">*</span>
+                  </Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/50" />
+                    <Input
+                      id="email-booking"
+                      name="email"
+                      type="email"
+                      required
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      placeholder="john@example.com"
+                      className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:border-cyan-400 focus:ring-cyan-400"
+                    />
+                  </div>
+                </div>
+
+                {/* Phone Field */}
+                <div className="space-y-2">
+                  <Label htmlFor="phone-booking" className="text-white font-medium">
+                    Phone Number
+                  </Label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/50" />
+                    <Input
+                      id="phone-booking"
+                      name="phone"
+                      type="tel"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      placeholder="+1 (555) 123-4567"
+                      className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:border-cyan-400 focus:ring-cyan-400"
+                    />
+                  </div>
+                </div>
+
+                {/* Company Field */}
+                <div className="space-y-2">
+                  <Label htmlFor="company-booking" className="text-white font-medium">
+                    Company Name
+                  </Label>
+                  <div className="relative">
+                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/50" />
+                    <Input
+                      id="company-booking"
+                      name="company"
+                      type="text"
+                      value={formData.company}
+                      onChange={handleInputChange}
+                      placeholder="Acme Inc."
+                      className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:border-cyan-400 focus:ring-cyan-400"
+                    />
+                  </div>
+                </div>
+
+                {/* Service Selection */}
+                <div className="space-y-2">
+                  <Label htmlFor="service-booking" className="text-white font-medium">
+                    Service Interested In <span className="text-cyan-400">*</span>
+                  </Label>
+                  <select
+                    id="service-booking"
+                    name="service"
+                    required
+                    value={formData.service}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 bg-white/5 border border-white/20 text-white rounded-md focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none"
+                  >
+                    <option value="" className="bg-black">Select a service...</option>
+                    <option value="website-development" className="bg-black">Website Development</option>
+                    <option value="digital-marketing" className="bg-black">Digital Marketing</option>
+                    <option value="seo-visibility" className="bg-black">SEO & Visibility</option>
+                    <option value="automations" className="bg-black">Automations</option>
+                    <option value="other" className="bg-black">Other</option>
+                  </select>
+                </div>
+
+                {/* Preferred Date */}
+                <div className="space-y-2">
+                  <Label htmlFor="preferredDate" className="text-white font-medium">
+                    Preferred Date <span className="text-cyan-400">*</span>
+                  </Label>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/50" />
+                    <Input
+                      id="preferredDate"
+                      name="preferredDate"
+                      type="date"
+                      required
+                      value={formData.preferredDate}
+                      onChange={handleInputChange}
+                      min={new Date().toISOString().split('T')[0]}
+                      className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:border-cyan-400 focus:ring-cyan-400"
+                    />
+                  </div>
+                </div>
+
+                {/* Preferred Time */}
+                {formData.preferredDate && (
+                  <div className="space-y-2">
+                    <Label htmlFor="preferredTime" className="text-white font-medium">
+                      Preferred Time <span className="text-cyan-400">*</span>
+                    </Label>
+                    {isLoadingSlots ? (
+                      <div className="flex items-center justify-center h-12 bg-white/5 border border-white/20 rounded-md">
+                        <Loader2 className="h-5 w-5 animate-spin text-cyan-400" />
+                        <span className="ml-2 text-white/70 text-sm">Loading available times...</span>
+                      </div>
+                    ) : availableSlots.length > 0 ? (
+                      <select
+                        id="preferredTime"
+                        name="preferredTime"
+                        required
+                        value={formData.preferredTime}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 bg-white/5 border border-white/20 text-white rounded-md focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none"
+                      >
+                        <option value="" className="bg-black">Select a time...</option>
+                        {availableSlots.map((slot, index) => (
+                          <option key={index} value={slot.start} className="bg-black">
+                            {slot.label}
+                          </option>
+                        ))}
+                      </select>
+                    ) : formData.preferredDate ? (
+                      <div className="flex items-center justify-center h-12 bg-white/5 border border-white/20 rounded-md">
+                        <span className="text-white/70 text-sm">No available time slots for this date</span>
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+
+                {/* Message Field */}
+                <div className="space-y-2">
+                  <Label htmlFor="message-booking" className="text-white font-medium">
+                    Project Details <span className="text-cyan-400">*</span>
+                  </Label>
+                  <div className="relative">
+                    <MessageSquare className="absolute left-3 top-3 h-4 w-4 text-white/50" />
+                    <Textarea
+                      id="message-booking"
+                      name="message"
+                      required
+                      value={formData.message}
+                      onChange={handleInputChange}
+                      placeholder="Tell us about your project, goals, and any specific requirements..."
+                      rows={4}
+                      className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:border-cyan-400 focus:ring-cyan-400 resize-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Submit Button */}
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full bg-cyan-400 text-black hover:bg-cyan-500 font-semibold py-6 text-base"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Booking...
+                    </>
+                  ) : (
+                    "Schedule Consultation"
+                  )}
+                </Button>
+              </form>
+            </div>
+          )}
+
+          {/* Contact Info */}
+          <div className="mt-12 grid md:grid-cols-3 gap-6 animate-fade-in-delay">
+            <div className="text-center p-6 bg-slate-900/20 backdrop-blur-sm border border-white/5 rounded-lg">
+              <div className="inline-flex items-center justify-center w-12 h-12 bg-cyan-400/10 rounded-lg mb-4">
+                <Mail className="w-5 h-5 text-cyan-400" />
               </div>
+              <h3 className="text-white font-medium mb-1">Email</h3>
+              <p className="text-sm text-gray-400">chance@orcaclub.pro</p>
+            </div>
+
+            <div className="text-center p-6 bg-slate-900/20 backdrop-blur-sm border border-white/5 rounded-lg">
+              <div className="inline-flex items-center justify-center w-12 h-12 bg-cyan-400/10 rounded-lg mb-4">
+                <Phone className="w-5 h-5 text-cyan-400" />
+              </div>
+              <h3 className="text-white font-medium mb-1">Phone</h3>
+              <p className="text-sm text-gray-400">By appointment</p>
+            </div>
+
+            <div className="text-center p-6 bg-slate-900/20 backdrop-blur-sm border border-white/5 rounded-lg">
+              <div className="inline-flex items-center justify-center w-12 h-12 bg-cyan-400/10 rounded-lg mb-4">
+                <MapPin className="w-5 h-5 text-cyan-400" />
+              </div>
+              <h3 className="text-white font-medium mb-1">Location</h3>
+              <p className="text-sm text-gray-400">Portland, OR</p>
             </div>
           </div>
         </div>
-      </div>
+      </section>
+
+      <style jsx>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+
+        @keyframes slideUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes scaleIn {
+          from {
+            opacity: 0;
+            transform: scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        .animate-fade-in {
+          animation: fadeIn 0.6s ease-out forwards;
+        }
+
+        .animate-slide-up {
+          animation: slideUp 0.6s ease-out 0.2s forwards;
+          opacity: 0;
+        }
+
+        .animate-slide-up-delay {
+          animation: slideUp 0.6s ease-out 0.3s forwards;
+          opacity: 0;
+        }
+
+        .animate-scale-in {
+          animation: scaleIn 0.5s ease-out 0.4s forwards;
+          opacity: 0;
+        }
+
+        .animate-fade-in-delay {
+          animation: fadeIn 0.6s ease-out 0.6s forwards;
+          opacity: 0;
+        }
+      `}</style>
     </div>
   )
 }

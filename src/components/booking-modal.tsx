@@ -33,7 +33,12 @@ interface TimeSlot {
   label: string
 }
 
-export function BookingModal() {
+interface BookingModalProps {
+  triggerClassName?: string
+  triggerText?: string
+}
+
+export function BookingModal({ triggerClassName, triggerText = "Contact" }: BookingModalProps = {}) {
   const [open, setOpen] = React.useState(false)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [isLoadingSlots, setIsLoadingSlots] = React.useState(false)
@@ -141,25 +146,25 @@ export function BookingModal() {
       <DialogTrigger asChild>
         <Button
           variant="default"
-          className="bg-[#67e8f9] text-black hover:bg-[#67e8f9]/90 font-semibold transition-all duration-200"
+          className={triggerClassName || "bg-cyan-400 text-black hover:bg-cyan-500 font-semibold transition-all duration-200"}
         >
-          Contact
+          {triggerText}
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto bg-black border-white/20">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto bg-slate-900/95 backdrop-blur-xl border-white/20">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-white">
             Book a Consultation
           </DialogTitle>
-          <DialogDescription className="text-white/70">
+          <DialogDescription className="text-gray-400">
             Fill out the form below and we'll get back to you within 24 hours to schedule your consultation.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-6 mt-4">
+        <form onSubmit={handleSubmit} className="space-y-5 mt-4">
           {/* Name Field */}
           <div className="space-y-2">
             <Label htmlFor="name" className="text-white font-medium">
-              Full Name <span className="text-red-500">*</span>
+              Full Name <span className="text-cyan-400">*</span>
             </Label>
             <div className="relative">
               <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/50" />
@@ -171,7 +176,7 @@ export function BookingModal() {
                 value={formData.name}
                 onChange={handleInputChange}
                 placeholder="John Doe"
-                className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:border-[#67e8f9] focus:ring-[#67e8f9]"
+                className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:border-cyan-400 focus:ring-cyan-400"
               />
             </div>
           </div>
@@ -179,7 +184,7 @@ export function BookingModal() {
           {/* Email Field */}
           <div className="space-y-2">
             <Label htmlFor="email" className="text-white font-medium">
-              Email Address <span className="text-red-500">*</span>
+              Email Address <span className="text-cyan-400">*</span>
             </Label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/50" />
@@ -191,7 +196,7 @@ export function BookingModal() {
                 value={formData.email}
                 onChange={handleInputChange}
                 placeholder="john@example.com"
-                className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:border-[#67e8f9] focus:ring-[#67e8f9]"
+                className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:border-cyan-400 focus:ring-cyan-400"
               />
             </div>
           </div>
@@ -210,7 +215,7 @@ export function BookingModal() {
                 value={formData.phone}
                 onChange={handleInputChange}
                 placeholder="+1 (555) 123-4567"
-                className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:border-[#67e8f9] focus:ring-[#67e8f9]"
+                className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:border-cyan-400 focus:ring-cyan-400"
               />
             </div>
           </div>
@@ -229,7 +234,7 @@ export function BookingModal() {
                 value={formData.company}
                 onChange={handleInputChange}
                 placeholder="Acme Inc."
-                className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:border-[#67e8f9] focus:ring-[#67e8f9]"
+                className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:border-cyan-400 focus:ring-cyan-400"
               />
             </div>
           </div>
@@ -237,7 +242,7 @@ export function BookingModal() {
           {/* Service Selection */}
           <div className="space-y-2">
             <Label htmlFor="service" className="text-white font-medium">
-              Service Interested In <span className="text-red-500">*</span>
+              Service Interested In <span className="text-cyan-400">*</span>
             </Label>
             <select
               id="service"
@@ -245,14 +250,13 @@ export function BookingModal() {
               required
               value={formData.service}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 bg-white/5 border border-white/20 text-white rounded-md focus:border-[#67e8f9] focus:ring-1 focus:ring-[#67e8f9] focus:outline-none"
+              className="w-full px-3 py-2 bg-white/5 border border-white/20 text-white rounded-md focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none"
             >
               <option value="" className="bg-black">Select a service...</option>
-              <option value="web-design" className="bg-black">Web Design</option>
-              <option value="ai-automation" className="bg-black">AI & Automation</option>
-              <option value="custom-software" className="bg-black">Custom Software Development</option>
-              <option value="seo-services" className="bg-black">SEO Services</option>
-              <option value="consulting" className="bg-black">Consulting</option>
+              <option value="website-development" className="bg-black">Website Development</option>
+              <option value="digital-marketing" className="bg-black">Digital Marketing</option>
+              <option value="seo-visibility" className="bg-black">SEO & Visibility</option>
+              <option value="automations" className="bg-black">Automations</option>
               <option value="other" className="bg-black">Other</option>
             </select>
           </div>
@@ -260,7 +264,7 @@ export function BookingModal() {
           {/* Preferred Date */}
           <div className="space-y-2">
             <Label htmlFor="preferredDate" className="text-white font-medium">
-              Preferred Date <span className="text-red-500">*</span>
+              Preferred Date <span className="text-cyan-400">*</span>
             </Label>
             <div className="relative">
               <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/50" />
@@ -272,7 +276,7 @@ export function BookingModal() {
                 value={formData.preferredDate}
                 onChange={handleInputChange}
                 min={new Date().toISOString().split('T')[0]}
-                className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:border-[#67e8f9] focus:ring-[#67e8f9]"
+                className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:border-cyan-400 focus:ring-cyan-400"
               />
             </div>
           </div>
@@ -281,11 +285,11 @@ export function BookingModal() {
           {formData.preferredDate && (
             <div className="space-y-2">
               <Label htmlFor="preferredTime" className="text-white font-medium">
-                Preferred Time <span className="text-red-500">*</span>
+                Preferred Time <span className="text-cyan-400">*</span>
               </Label>
               {isLoadingSlots ? (
                 <div className="flex items-center justify-center h-12 bg-white/5 border border-white/20 rounded-md">
-                  <Loader2 className="h-5 w-5 animate-spin text-[#67e8f9]" />
+                  <Loader2 className="h-5 w-5 animate-spin text-cyan-400" />
                   <span className="ml-2 text-white/70 text-sm">Loading available times...</span>
                 </div>
               ) : availableSlots.length > 0 ? (
@@ -295,7 +299,7 @@ export function BookingModal() {
                   required
                   value={formData.preferredTime}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 bg-white/5 border border-white/20 text-white rounded-md focus:border-[#67e8f9] focus:ring-1 focus:ring-[#67e8f9] focus:outline-none"
+                  className="w-full px-3 py-2 bg-white/5 border border-white/20 text-white rounded-md focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none"
                 >
                   <option value="" className="bg-black">Select a time...</option>
                   {availableSlots.map((slot, index) => (
@@ -315,7 +319,7 @@ export function BookingModal() {
           {/* Message Field */}
           <div className="space-y-2">
             <Label htmlFor="message" className="text-white font-medium">
-              Project Details <span className="text-red-500">*</span>
+              Project Details <span className="text-cyan-400">*</span>
             </Label>
             <div className="relative">
               <MessageSquare className="absolute left-3 top-3 h-4 w-4 text-white/50" />
@@ -327,7 +331,7 @@ export function BookingModal() {
                 onChange={handleInputChange}
                 placeholder="Tell us about your project, goals, and any specific requirements..."
                 rows={4}
-                className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:border-[#67e8f9] focus:ring-[#67e8f9] resize-none"
+                className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:border-cyan-400 focus:ring-cyan-400 resize-none"
               />
             </div>
           </div>
@@ -346,7 +350,7 @@ export function BookingModal() {
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="flex-1 bg-[#67e8f9] text-black hover:bg-[#67e8f9]/90 font-semibold"
+              className="flex-1 bg-cyan-400 text-black hover:bg-cyan-500 font-semibold"
             >
               {isSubmitting ? (
                 <>

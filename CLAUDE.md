@@ -2,7 +2,12 @@
 
 ## Project Overview
 
-ORCACLUB is a Marketing Agency platform that delivers technical integration and business tailored solutions. Built with cutting-edge technologies and optimized for performance, ORCACLUB provides a professional web application with integrated CMS capabilities, featuring a clean, modern interface designed to support marketing operations and client service delivery.
+**ORCACLUB est 2025** is a full-service branding, marketing, and consulting agency. We help businesses build powerful brands, execute strategic marketing campaigns, and navigate complex business challenges with expert consulting services. Built with cutting-edge technologies and optimized for performance, ORCACLUB provides a professional web application with integrated CMS capabilities, featuring a clean, modern interface designed to support branding initiatives, marketing operations, and client service delivery.
+
+### Core Services
+- **Branding** - Brand strategy, identity design, and positioning
+- **Marketing** - Strategic campaigns, digital marketing, and growth initiatives
+- **Consulting** - Business consulting, strategic planning, and expert guidance
 
 ## 🏗️ Architecture & Structure
 
@@ -164,6 +169,122 @@ We use Tailwind CSS v4 with the new `@theme` directive for design tokens:
 - **Status Colors**: Success, caution, alert
 - **shadcn/ui System**: Primary, secondary, muted, accent
 - **Dark Mode**: Automatic with Tailwind's dark: prefix
+
+## 🎨 Brand Guidelines
+
+### ORCACLUB Brand Identity
+
+**Established:** 2025
+**Positioning:** Full-service branding, marketing, and consulting agency
+**Tagline:** "est 2025" - Emphasizes fresh perspective and modern approach
+
+### ORCACLUB Logo Styling
+The ORCACLUB brand name should always be presented with consistent styling across the application:
+
+**Typography Pattern:**
+```tsx
+// ✅ Correct - Use this pattern everywhere
+<span className="text-xl md:text-2xl font-bold text-white">ORCA</span>
+<span className="text-xl md:text-2xl font-bold gradient-text">CLUB</span>
+
+// With "est 2025" tagline (for headers, hero sections, marketing materials)
+<div className="flex items-center gap-2">
+  <span className="text-xl md:text-2xl font-bold text-white">ORCA</span>
+  <span className="text-xl md:text-2xl font-bold gradient-text">CLUB</span>
+  <span className="text-xs md:text-sm text-gray-400 font-light ml-2">est 2025</span>
+</div>
+
+// Desktop header example
+<button className="flex items-center focus:outline-none focus:ring-2 focus:ring-white/20 rounded-md px-2 py-1 group">
+  <span className="text-xl md:text-2xl font-bold text-white">ORCA</span>
+  <span className="text-xl md:text-2xl font-bold gradient-text">CLUB</span>
+  <ChevronDown className="h-4 w-4 text-gray-400 transition-transform duration-200 ml-1" />
+</button>
+
+// Mobile menu example
+<div className="px-3 mb-3">
+  <span className="text-sm font-bold text-white">ORCA</span>
+  <span className="text-sm font-bold gradient-text">CLUB</span>
+</div>
+```
+
+**Styling Rules:**
+1. **"ORCA"** - Always `text-white` with `font-bold`
+2. **"CLUB"** - Always uses `gradient-text` class (defined in globals.css)
+3. **NO spacing** - The two words should appear together with no gap
+4. **"est 2025" tagline** - Use `text-gray-400` with `font-light`, smaller size than main logo
+5. **Responsive sizing** - Use `text-xl md:text-2xl` for headers, smaller sizes for mobile menus
+6. **Consistent font weight** - Always `font-bold` for both parts of main logo
+
+**The `gradient-text` Class:**
+Defined in `src/app/globals.css` (lines 267-274):
+```css
+.gradient-text {
+  background: linear-gradient(45deg, #67e8f9, #3b82f6, #1e40af, #67e8f9);
+  background-size: 300% 300%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradientShift 4s ease-in-out infinite;
+}
+```
+
+This creates an **animated gradient effect** that shifts between:
+- `#67e8f9` - Intelligence cyan (primary brand color)
+- `#3b82f6` - Intelligence blue
+- `#1e40af` - Intelligence blue deep
+
+The animation runs continuously, creating a dynamic, premium look that reinforces the brand's modern, professional identity.
+
+**Where to Apply:**
+- Header navigation (desktop and mobile)
+- Page titles and hero sections
+- Any prominent brand mention
+- Marketing materials and CTAs
+- Footer branding
+
+**When to Include "est 2025":**
+- Page titles and metadata (e.g., "ORCACLUB est 2025 | Branding, Marketing, and Consulting")
+- Hero sections and main landing pages
+- Marketing materials and promotional content
+- About page and company history sections
+- **NOT in navigation headers** (keeps header clean and scannable)
+
+**Example Implementations:**
+- `src/components/layout/header.tsx` - Navigation header
+- `src/components/layout/dynamic-greeting.tsx` - Homepage hero
+- `src/app/(frontend)/page.tsx` - Homepage metadata with "est 2025"
+- `src/app/layout.tsx` - Root layout metadata
+
+### Brand Messaging & Voice
+
+**Brand Essence:**
+ORCACLUB (est 2025) is a full-service branding, marketing, and consulting agency that helps businesses build powerful brands, execute strategic marketing campaigns, and navigate complex business challenges.
+
+**Core Value Proposition:**
+- **Branding** - Strategic brand development, identity design, and positioning
+- **Marketing** - Data-driven campaigns, digital marketing, and growth strategies
+- **Consulting** - Expert business guidance, strategic planning, and problem-solving
+
+**Key Messaging Pillars:**
+1. **Fresh Perspective** - Established in 2025, bringing modern thinking to traditional challenges
+2. **Full-Service Excellence** - Comprehensive solutions across branding, marketing, and consulting
+3. **Strategic Partnership** - Not just vendors, but true business partners invested in client success
+4. **Measurable Results** - Focus on tangible outcomes and business growth
+
+**Tone of Voice:**
+- Professional yet approachable
+- Strategic and insightful
+- Confident without being arrogant
+- Clear and jargon-free communication
+- Modern and forward-thinking
+
+**Avoid:**
+- Overly technical jargon (unless in technical contexts)
+- Generic marketing speak
+- Unsubstantiated claims
+- Over-promising
+- Outdated business terminology
 
 ## 🚀 Development Workflow
 

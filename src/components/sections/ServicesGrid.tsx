@@ -21,6 +21,7 @@ import {
 } from "lucide-react"
 import { services } from '@/data/services'
 import IntegrationSection from './IntegrationSection'
+import { BookingModal } from '@/components/booking-modal'
 
 export default function ServicesGrid() {
   return (
@@ -107,12 +108,17 @@ function WebDevSection() {
             ))}
           </div>
 
-          {/* Learn More Button */}
+          {/* CTA Buttons */}
           <motion.div
+            className="flex flex-col sm:flex-row gap-4"
             initial={{ opacity: 0, y: 10 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ delay: 1.2 }}
           >
+            <BookingModal
+              triggerClassName="px-6 py-3 bg-cyan-400/20 border border-cyan-400/40 rounded-lg text-sm font-medium text-cyan-400 hover:bg-cyan-400/30 transition-all duration-300"
+              triggerText="Get a Quote"
+            />
             <Link
               href="/services/web-development"
               className="inline-flex items-center gap-2 px-6 py-3 bg-cyan-400/10 border border-cyan-400/30 rounded-lg text-sm font-medium text-cyan-400 hover:bg-cyan-400/20 transition-all duration-300 group"
@@ -268,13 +274,17 @@ function MarketingSection() {
             ))}
           </div>
 
-          {/* Learn More Button */}
+          {/* CTA Buttons */}
           <motion.div
-            className="md:flex md:justify-end"
+            className="flex flex-col sm:flex-row gap-4 md:justify-end"
             initial={{ opacity: 0, y: 10 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ delay: 1.2 }}
           >
+            <BookingModal
+              triggerClassName="px-6 py-3 bg-blue-400/20 border border-blue-400/40 rounded-lg text-sm font-medium text-blue-400 hover:bg-blue-400/30 transition-all duration-300"
+              triggerText="Get a Quote"
+            />
             <Link
               href="/services/digital-marketing"
               className="inline-flex items-center gap-2 px-6 py-3 bg-blue-400/10 border border-blue-400/30 rounded-lg text-sm font-medium text-blue-400 hover:bg-blue-400/20 transition-all duration-300 group"
@@ -408,12 +418,17 @@ function SEOSection() {
             ))}
           </div>
 
-          {/* Learn More Button */}
+          {/* CTA Buttons */}
           <motion.div
+            className="flex flex-col sm:flex-row gap-4"
             initial={{ opacity: 0, y: 10 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ delay: 1.2 }}
           >
+            <BookingModal
+              triggerClassName="px-6 py-3 bg-teal-400/20 border border-teal-400/40 rounded-lg text-sm font-medium text-teal-400 hover:bg-teal-400/30 transition-all duration-300"
+              triggerText="Get a Quote"
+            />
             <Link
               href="/services/seo-services"
               className="inline-flex items-center gap-2 px-6 py-3 bg-teal-400/10 border border-teal-400/30 rounded-lg text-sm font-medium text-teal-400 hover:bg-teal-400/20 transition-all duration-300 group"

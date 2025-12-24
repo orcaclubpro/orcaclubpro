@@ -1,48 +1,46 @@
 import type { Metadata } from 'next'
 import AnimatedBackground from "@/components/layout/animated-background"
 import ScrollReveal from "@/components/layout/scroll-reveal"
-import DynamicGreeting from "@/components/layout/dynamic-greeting"
+import HeroSection from "@/components/sections/HeroSection"
 import ClientsSection from "@/components/sections/ClientsSection"
 import ServicesGrid from "@/components/sections/ServicesGrid"
 import Link from "next/link"
-import {
-  ArrowRight,
-} from "lucide-react"
+import { ArrowRight } from "lucide-react"
 import { getPayload } from "payload"
 import config from "@payload-config"
 
 export const metadata: Metadata = {
-  title: 'ORCACLUB | Web Design, Integration, and Automation',
-  description: 'Marketing Agency specializing in technical integration and business tailored solutions. We transform marketing operations through seamless system integrations, intelligent automation, and custom technical solutions designed to amplify your marketing impact.',
+  title: 'ORCACLUB est 2025 | Branding, Marketing, and Consulting',
+  description: 'Full-service branding, marketing, and consulting agency. We help businesses build powerful brands, execute strategic marketing campaigns, and navigate complex business challenges with expert consulting services.',
   keywords: [
+    'branding agency',
     'marketing agency',
-    'technical integration',
-    'business solutions',
-    'marketing automation',
-    'system integration',
-    'CRM integration',
-    'marketing technology',
-    'business automation',
-    'custom integrations',
-    'marketing operations',
+    'business consulting',
+    'brand strategy',
+    'marketing consulting',
+    'brand development',
     'digital marketing',
-    'workflow automation',
-    'tailored solutions',
-    'marketing tech stack',
-    'API integrations',
-    'data integration'
+    'brand identity',
+    'marketing strategy',
+    'business consulting services',
+    'creative agency',
+    'brand consulting',
+    'marketing campaigns',
+    'brand design',
+    'strategic consulting',
+    'brand positioning'
   ],
   openGraph: {
-    title: 'ORCACLUB - Marketing Agency | Technical Integration & Business Solutions',
-    description: 'Transform your marketing operations with seamless technical integrations and business tailored solutions. Expert marketing agency delivering intelligent automation and custom solutions.',
+    title: 'ORCACLUB est 2025 | Branding, Marketing, and Consulting',
+    description: 'Full-service branding, marketing, and consulting agency. Build powerful brands, execute strategic marketing, and navigate business challenges with expert guidance.',
     url: 'https://orcaclub.pro',
     siteName: 'ORCACLUB',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'ORCACLUB - Marketing Agency | Technical Integration & Business Solutions',
-    description: 'Marketing Agency specializing in technical integration and business tailored solutions. Transform your marketing impact with intelligent automation.',
+    title: 'ORCACLUB est 2025 | Branding, Marketing, and Consulting',
+    description: 'Full-service branding, marketing, and consulting agency. Build powerful brands and execute strategic marketing with expert consulting.',
   },
   alternates: {
     canonical: 'https://orcaclub.pro',
@@ -86,51 +84,7 @@ export default async function HomePage() {
       <AnimatedBackground />
 
       {/* Hero Section */}
-      <section className="min-h-screen relative z-10">
-        <div className="max-w-6xl mx-auto px-8 text-center relative">
-          {/* Strategic top padding to create centerpiece effect */}
-          <div className="pt-32 md:pt-40">
-            <ScrollReveal>
-              <DynamicGreeting className="mb-20" />
-            </ScrollReveal>
-
-            <ScrollReveal delay={400}>
-              <div className="pt-8 mb-20">
-                <p className="text-xl md:text-2xl text-gray-400 max-w-4xl mx-auto font-light leading-relaxed">
-                  <span className="text-cyan-400 font-medium">ORCACLUB</span> is a <span className="text-white font-medium">Marketing Agency</span> specializing in{" "}
-                  <span className="text-white font-medium">technical integration</span> and <span className="text-white font-medium">business tailored solutions</span>.
-                  We transform marketing operations through{" "}
-                  <span className="text-cyan-400">seamless system integrations</span>, <span className="text-cyan-400">intelligent automation</span>, and{" "}
-                  <span className="text-cyan-400">custom technical solutions</span> designed to amplify your marketing impact and drive measurable business growth.
-                </p>
-              </div>
-            </ScrollReveal>
-
-            <ScrollReveal delay={800}>
-              <div className="flex flex-col sm:flex-row gap-8 justify-center items-center mb-20">
-                <Link
-                  href="/services"
-                  className="group relative px-12 py-6 bg-gradient-to-r from-blue-600/20 to-cyan-500/20 border border-cyan-400/30 rounded-full text-lg font-light text-cyan-400 hover:bg-gradient-to-r hover:from-blue-600/30 hover:to-cyan-500/30 transition-all duration-500 magnetic interactive"
-                >
-                  <span className="relative z-10 flex items-center gap-3">
-                    Start Your Project <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
-                  </span>
-                </Link>
-                <Link
-                  href="/portfolio"
-                  className="text-lg font-light text-gray-300 hover:text-white transition-colors duration-300 flex items-center gap-2 magnetic"
-                >
-                  View Our Work <ArrowRight size={16} className="opacity-50" />
-                </Link>
-              </div>
-            </ScrollReveal>
-          </div>
-
-        </div>
-      </section>
-
-      {/* Clients Section */}
-      <ClientsSection clients={clients} />
+      <HeroSection clients={clients} />
 
       {/* Capabilities Section */}
       <section className="py-40 px-8 relative z-10">
@@ -150,6 +104,9 @@ export default async function HomePage() {
           <ServicesGrid />
         </div>
       </section>
+
+      {/* Clients Section */}
+      <ClientsSection clients={clients} />
 
       {/* Call to Action */}
       <section className="py-40 px-8 relative z-10">

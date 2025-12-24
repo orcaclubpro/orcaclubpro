@@ -11,7 +11,7 @@ export default function ClientsSection({ clients }: ClientsSectionProps) {
   if (clients.length === 0) return null
 
   return (
-    <section className="py-20 px-8 border-t border-slate-800/50 relative z-10">
+    <section id="our-work" data-section="clients" className="py-20 px-8 border-t border-slate-800/50 relative z-10">
       <div className="max-w-6xl mx-auto">
         <ScrollReveal>
           <div className="text-center mb-16">
@@ -19,7 +19,7 @@ export default function ClientsSection({ clients }: ClientsSectionProps) {
               Our <span className="gradient-text font-light">Work</span>
             </h2>
             <p className="text-lg text-gray-400 max-w-3xl mx-auto font-light">
-              Check out the brands that orcaclub has helped create solutions for.
+              Check out the brands that ORCACLUB has helped create solutions for.
             </p>
           </div>
         </ScrollReveal>
