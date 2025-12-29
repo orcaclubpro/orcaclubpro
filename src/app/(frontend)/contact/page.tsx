@@ -331,10 +331,11 @@ export default function ContactPage() {
                     className="w-full px-3 py-2 bg-white/5 border border-white/20 text-white rounded-md focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none"
                   >
                     <option value="" className="bg-black">Select a service...</option>
-                    <option value="website-development" className="bg-black">Website Development</option>
-                    <option value="digital-marketing" className="bg-black">Digital Marketing</option>
-                    <option value="seo-visibility" className="bg-black">SEO & Visibility</option>
-                    <option value="automations" className="bg-black">Automations</option>
+                    <option value="web-design" className="bg-black">Web Design</option>
+                    <option value="ai-automation" className="bg-black">AI & Automation</option>
+                    <option value="custom-software" className="bg-black">Custom Software Development</option>
+                    <option value="seo-services" className="bg-black">SEO Services</option>
+                    <option value="consulting" className="bg-black">Consulting</option>
                     <option value="other" className="bg-black">Other</option>
                   </select>
                 </div>
@@ -474,10 +475,11 @@ export default function ContactPage() {
                     className="w-full px-3 py-2 bg-white/5 border border-white/20 text-white rounded-md focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none"
                   >
                     <option value="" className="bg-black">Select a service...</option>
-                    <option value="website-development" className="bg-black">Website Development</option>
-                    <option value="digital-marketing" className="bg-black">Digital Marketing</option>
-                    <option value="seo-visibility" className="bg-black">SEO & Visibility</option>
-                    <option value="automations" className="bg-black">Automations</option>
+                    <option value="web-design" className="bg-black">Web Design</option>
+                    <option value="ai-automation" className="bg-black">AI & Automation</option>
+                    <option value="custom-software" className="bg-black">Custom Software Development</option>
+                    <option value="seo-services" className="bg-black">SEO Services</option>
+                    <option value="consulting" className="bg-black">Consulting</option>
                     <option value="other" className="bg-black">Other</option>
                   </select>
                 </div>

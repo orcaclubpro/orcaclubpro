@@ -283,14 +283,14 @@ export default function RootLayout({
   }
 
   return (
-    <html lang="en" className={`${montserrat.variable} ${jetbrainsMono.variable}`}>
+    <html lang="en" className={`${montserrat.variable} ${jetbrainsMono.variable}`} suppressHydrationWarning>
       <head>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
-      <body className="font-sans antialiased bg-black text-white overflow-x-hidden">
+      <body className="font-sans antialiased bg-black text-white overflow-x-hidden" suppressHydrationWarning>
         {/* Google Analytics */}
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-SL0EWEX39P"

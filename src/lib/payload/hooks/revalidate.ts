@@ -17,15 +17,23 @@ import { revalidatePath } from 'next/cache'
  * }
  * ```
  */
-export const revalidateHomepage: CollectionAfterChangeHook = ({
+export const revalidateHomepage: CollectionAfterChangeHook = async ({
   doc,
   req: { payload, context },
 }) => {
   // Skip revalidation if disabled via context flag
   // This prevents infinite loops when updating docs within hooks
   if (!context.disableRevalidate) {
-    payload.logger.info(`[Revalidation] Homepage revalidated due to change in document: ${doc.id}`)
-    revalidatePath('/', 'page')
+    // Defer revalidation to prevent "during render" errors in Next.js 15
+    // Using setImmediate allows the revalidation to happen after the response
+    setImmediate(() => {
+      try {
+        payload.logger.info(`[Revalidation] Homepage revalidated due to change in document: ${doc.id}`)
+        revalidatePath('/', 'page')
+      } catch (error) {
+        payload.logger.error(`[Revalidation] Error revalidating homepage: ${error}`)
+      }
+    })
   }
   return doc
 }
@@ -46,13 +54,19 @@ export const revalidateHomepage: CollectionAfterChangeHook = ({
  * }
  * ```
  */
-export const revalidateHomepageOnDelete: CollectionAfterDeleteHook = ({
+export const revalidateHomepageOnDelete: CollectionAfterDeleteHook = async ({
   doc,
   req: { payload, context },
 }) => {
   if (!context.disableRevalidate) {
-    payload.logger.info(`[Revalidation] Homepage revalidated due to deletion of document: ${doc.id}`)
-    revalidatePath('/', 'page')
+    setImmediate(() => {
+      try {
+        payload.logger.info(`[Revalidation] Homepage revalidated due to deletion of document: ${doc.id}`)
+        revalidatePath('/', 'page')
+      } catch (error) {
+        payload.logger.error(`[Revalidation] Error revalidating homepage: ${error}`)
+      }
+    })
   }
   return doc
 }
@@ -77,11 +91,17 @@ export const revalidateHomepageOnDelete: CollectionAfterDeleteHook = ({
  * ```
  */
 export const createMultiPathRevalidate = (paths: string[]): CollectionAfterChangeHook => {
-  return ({ doc, req: { payload, context } }) => {
+  return async ({ doc, req: { payload, context } }) => {
     if (!context.disableRevalidate) {
-      paths.forEach(path => {
-        payload.logger.info(`[Revalidation] Path ${path} revalidated due to change in document: ${doc.id}`)
-        revalidatePath(path, 'page')
+      setImmediate(() => {
+        paths.forEach(path => {
+          try {
+            payload.logger.info(`[Revalidation] Path ${path} revalidated due to change in document: ${doc.id}`)
+            revalidatePath(path, 'page')
+          } catch (error) {
+            payload.logger.error(`[Revalidation] Error revalidating ${path}: ${error}`)
+          }
+        })
       })
     }
     return doc
@@ -108,11 +128,17 @@ export const createMultiPathRevalidate = (paths: string[]): CollectionAfterChang
  * ```
  */
 export const createMultiPathRevalidateOnDelete = (paths: string[]): CollectionAfterDeleteHook => {
-  return ({ doc, req: { payload, context } }) => {
+  return async ({ doc, req: { payload, context } }) => {
     if (!context.disableRevalidate) {
-      paths.forEach(path => {
-        payload.logger.info(`[Revalidation] Path ${path} revalidated due to deletion of document: ${doc.id}`)
-        revalidatePath(path, 'page')
+      setImmediate(() => {
+        paths.forEach(path => {
+          try {
+            payload.logger.info(`[Revalidation] Path ${path} revalidated due to deletion of document: ${doc.id}`)
+            revalidatePath(path, 'page')
+          } catch (error) {
+            payload.logger.error(`[Revalidation] Error revalidating ${path}: ${error}`)
+          }
+        })
       })
     }
     return doc

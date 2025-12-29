@@ -3,6 +3,7 @@ import { Resend } from "resend"
 import { getPayload } from "payload"
 import config from "@payload-config"
 import type { Lead } from "@/types/payload-types"
+import { createCustomerSafely } from "@/lib/shopify/customers"
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -73,6 +74,77 @@ export async function POST(request: NextRequest) {
       // but log the error prominently
       console.error('[Contact] CRITICAL: Failed to save lead to PayloadCMS:', payloadError)
       // We'll continue with email, but won't have a leadId to update
+    }
+
+    // ==========================================
+    // STEP 1.5: CREATE SHOPIFY CUSTOMER
+    // ==========================================
+    // This creates a customer account in Shopify for future marketing/commerce
+    let shopifyCustomerId: string | null = null
+    if (leadId) {
+      try {
+        const shopifyResult = await createCustomerSafely({
+          name,
+          email,
+          phone,
+          acceptsMarketing: true,
+        })
+
+        if (shopifyResult.success && shopifyResult.customerId) {
+          shopifyCustomerId = shopifyResult.customerId
+          console.log(`[Contact] Shopify customer created: ${shopifyCustomerId}`)
+
+          // Update PayloadCMS lead with Shopify customer ID
+          try {
+            const payload = await getPayload({ config })
+            await payload.update({
+              collection: 'leads' as any,
+              id: leadId,
+              data: {
+                shopifyCustomerId,
+                shopifyPasswordGenerated: true,
+              },
+            })
+          } catch (updateError) {
+            console.error('[Contact] Failed to update lead with Shopify customer ID:', updateError)
+          }
+        } else if (shopifyResult.isDuplicate) {
+          // Customer already exists - this is fine, just log it
+          console.log(`[Contact] Shopify customer already exists for ${email}`)
+
+          try {
+            const payload = await getPayload({ config })
+            await payload.update({
+              collection: 'leads' as any,
+              id: leadId,
+              data: {
+                notes: `Shopify: Customer already exists (${email})`,
+              },
+            })
+          } catch (updateError) {
+            console.error('[Contact] Failed to update lead notes:', updateError)
+          }
+        } else {
+          // Creation failed - log but don't fail the request
+          console.error('[Contact] Shopify customer creation failed:', shopifyResult.error)
+
+          try {
+            const payload = await getPayload({ config })
+            await payload.update({
+              collection: 'leads' as any,
+              id: leadId,
+              data: {
+                notes: `Shopify: Failed to create customer - ${shopifyResult.error}`,
+              },
+            })
+          } catch (updateError) {
+            console.error('[Contact] Failed to update lead notes:', updateError)
+          }
+        }
+      } catch (shopifyError) {
+        // Catch any unexpected errors - don't fail the request
+        console.error('[Contact] Unexpected Shopify error:', shopifyError)
+      }
     }
 
     // ==========================================

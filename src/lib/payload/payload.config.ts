@@ -5,7 +5,15 @@ import { buildConfig } from 'payload'
 import type { CollectionConfig } from 'payload'
 import { fileURLToPath } from 'node:url'
 import path from 'path'
-import { revalidateHomepage, revalidateHomepageOnDelete } from './hooks/revalidate'
+import { revalidatePath } from 'next/cache'
+import { revalidateHomepage, revalidateHomepageOnDelete, createMultiPathRevalidate, createMultiPathRevalidateOnDelete } from './hooks/revalidate'
+
+// Helper function to format strings as URL-friendly slugs
+const formatSlug = (val: string): string =>
+  val
+    .replace(/ /g, '-')
+    .replace(/[^\w-]+/g, '')
+    .toLowerCase()
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -249,6 +257,328 @@ const Leads: CollectionConfig = {
         description: 'Internal notes about this lead',
       },
     },
+    {
+      name: 'shopifyCustomerId',
+      type: 'text',
+      admin: {
+        description: 'Shopify customer ID (auto-populated)',
+        position: 'sidebar',
+        readOnly: true,
+      },
+    },
+    {
+      name: 'shopifyPasswordGenerated',
+      type: 'checkbox',
+      defaultValue: false,
+      admin: {
+        description: 'Whether a Shopify password was generated',
+        position: 'sidebar',
+        readOnly: true,
+      },
+    },
+  ],
+}
+
+// Categories collection - taxonomy for blog posts
+const Categories: CollectionConfig = {
+  slug: 'categories',
+  admin: {
+    useAsTitle: 'name',
+    defaultColumns: ['name', 'slug'],
+    group: 'Blog',
+  },
+  access: {
+    read: () => true,
+    create: () => true,
+    update: () => true,
+    delete: () => true,
+  },
+  fields: [
+    {
+      name: 'name',
+      type: 'text',
+      required: true,
+      index: true,
+      admin: {
+        description: 'Category name',
+      },
+    },
+    {
+      name: 'slug',
+      type: 'text',
+      required: true,
+      unique: true,
+      index: true,
+      admin: {
+        position: 'sidebar',
+        description: 'URL-friendly identifier (auto-generated from name)',
+      },
+      hooks: {
+        beforeValidate: [
+          ({ value, data }) => {
+            if (typeof value === 'string') {
+              return formatSlug(value)
+            }
+            if (data?.name) {
+              return formatSlug(data.name as string)
+            }
+            return value
+          },
+        ],
+      },
+    },
+    {
+      name: 'description',
+      type: 'textarea',
+      admin: {
+        description: 'Brief description of this category',
+      },
+    },
+  ],
+}
+
+// Tags collection - flexible keywords for blog posts
+const Tags: CollectionConfig = {
+  slug: 'tags',
+  admin: {
+    useAsTitle: 'name',
+    defaultColumns: ['name', 'slug'],
+    group: 'Blog',
+  },
+  access: {
+    read: () => true,
+    create: () => true,
+    update: () => true,
+    delete: () => true,
+  },
+  fields: [
+    {
+      name: 'name',
+      type: 'text',
+      required: true,
+      unique: true,
+      index: true,
+      admin: {
+        description: 'Tag name',
+      },
+    },
+    {
+      name: 'slug',
+      type: 'text',
+      required: true,
+      unique: true,
+      index: true,
+      admin: {
+        position: 'sidebar',
+        description: 'URL-friendly identifier (auto-generated from name)',
+      },
+      hooks: {
+        beforeValidate: [
+          ({ value, data }) => {
+            if (typeof value === 'string') {
+              return formatSlug(value)
+            }
+            if (data?.name) {
+              return formatSlug(data.name as string)
+            }
+            return value
+          },
+        ],
+      },
+    },
+  ],
+}
+
+// Posts collection - blog posts with drafts, versioning, and full content management
+const Posts: CollectionConfig = {
+  slug: 'posts',
+  admin: {
+    useAsTitle: 'title',
+    defaultColumns: ['title', 'author', 'category', '_status', 'publishedDate'],
+    group: 'Blog',
+  },
+  access: {
+    read: ({ req: { user } }) => {
+      // Authenticated users see all posts (including drafts)
+      if (user) return true
+
+      // Public users only see published posts
+      return {
+        _status: {
+          equals: 'published',
+        },
+      }
+    },
+    create: () => true,
+    update: () => true,
+    delete: () => true,
+  },
+  versions: {
+    drafts: {
+      autosave: true,
+      schedulePublish: true,
+      validate: false, // Don't validate drafts - allows saving incomplete content
+    },
+    maxPerDoc: 50, // Keep last 50 versions per post
+  },
+  hooks: {
+    afterChange: [
+      // Revalidate blog listing pages
+      createMultiPathRevalidate(['/', '/sonar']),
+      // Revalidate individual post page
+      async ({ doc, req: { payload, context } }) => {
+        if (!context.disableRevalidate && doc.slug) {
+          setImmediate(() => {
+            try {
+              payload.logger.info(`[Revalidation] Post page /sonar/${doc.slug} revalidated`)
+              revalidatePath(`/sonar/${doc.slug}`, 'page')
+            } catch (error) {
+              payload.logger.error(`[Revalidation] Error revalidating post page: ${error}`)
+            }
+          })
+        }
+        return doc
+      },
+    ],
+    afterDelete: [
+      createMultiPathRevalidateOnDelete(['/', '/sonar']),
+      // Revalidate deleted post page
+      async ({ doc, req: { payload, context } }) => {
+        if (!context.disableRevalidate && doc.slug) {
+          setImmediate(() => {
+            try {
+              payload.logger.info(`[Revalidation] Deleted post page /sonar/${doc.slug} revalidated`)
+              revalidatePath(`/sonar/${doc.slug}`, 'page')
+            } catch (error) {
+              payload.logger.error(`[Revalidation] Error revalidating deleted post: ${error}`)
+            }
+          })
+        }
+        return doc
+      },
+    ],
+    beforeChange: [
+      // Auto-set publishedDate when post is published
+      ({ data, operation, originalDoc }) => {
+        // Only set publishedDate if transitioning to published status and no date is set
+        if (data._status === 'published' && !data.publishedDate) {
+          data.publishedDate = new Date().toISOString()
+        }
+        return data
+      },
+    ],
+  },
+  fields: [
+    {
+      name: 'title',
+      type: 'text',
+      required: true,
+      index: true,
+      admin: {
+        description: 'Post title',
+      },
+    },
+    {
+      name: 'slug',
+      type: 'text',
+      required: true,
+      unique: true,
+      index: true,
+      admin: {
+        position: 'sidebar',
+        description: 'URL-friendly identifier (auto-generated from title)',
+      },
+      hooks: {
+        beforeValidate: [
+          ({ value, data }) => {
+            if (typeof value === 'string') {
+              return formatSlug(value)
+            }
+            if (data?.title) {
+              return formatSlug(data.title as string)
+            }
+            return value
+          },
+        ],
+      },
+    },
+    {
+      name: 'excerpt',
+      type: 'textarea',
+      maxLength: 200,
+      admin: {
+        description: 'Brief excerpt for SEO and previews (max 200 characters)',
+      },
+    },
+    {
+      name: 'content',
+      type: 'richText',
+      required: true,
+      admin: {
+        description: 'Main post content',
+      },
+    },
+    {
+      name: 'featuredImage',
+      type: 'upload',
+      relationTo: 'media' as any,
+      filterOptions: {
+        mimeType: { contains: 'image' },
+      },
+      admin: {
+        description: 'Featured image for the post',
+      },
+    },
+    {
+      name: 'author',
+      type: 'relationship',
+      relationTo: 'users' as any,
+      required: true,
+      maxDepth: 2,
+      admin: {
+        description: 'Post author',
+        position: 'sidebar',
+      },
+    },
+    {
+      name: 'category',
+      type: 'relationship',
+      relationTo: 'categories' as any,
+      hasMany: false,
+      admin: {
+        description: 'Primary category for this post',
+        position: 'sidebar',
+      },
+    },
+    {
+      name: 'tags',
+      type: 'relationship',
+      relationTo: 'tags' as any,
+      hasMany: true,
+      admin: {
+        description: 'Tags for this post',
+        position: 'sidebar',
+      },
+    },
+    {
+      name: 'publishedDate',
+      type: 'date',
+      admin: {
+        description: 'Date when the post was published (auto-set on first publish)',
+        position: 'sidebar',
+        date: {
+          pickerAppearance: 'dayAndTime',
+        },
+      },
+    },
+    {
+      name: 'readTime',
+      type: 'number',
+      admin: {
+        description: 'Estimated read time in minutes',
+        position: 'sidebar',
+      },
+    },
   ],
 }
 
@@ -311,7 +641,7 @@ export default buildConfig({
   editor: lexicalEditor(),
 
   // Define and configure your collections in this array
-  collections: [Media, Clients, Leads, Users],
+  collections: [Media, Clients, Leads, Categories, Tags, Posts, Users],
 
   // Your Payload secret - should be a complex and secure string, unguessable
   secret: process.env.PAYLOAD_SECRET || 'your-secret-here',
