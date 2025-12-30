@@ -1,0 +1,193 @@
+/* Dark theme styling for PayloadCMS */
+
+.searchContainer {
+  position: relative !important;
+  margin-bottom: 1rem !important;
+}
+
+.searchIcon {
+  position: absolute !important;
+  left: 12px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  width: 20px !important;
+  height: 20px !important;
+  color: #9ca3af !important;
+  pointer-events: none !important;
+  z-index: 1 !important;
+}
+
+.searchInput {
+  width: 100% !important;
+  padding: 12px 16px 12px 40px !important;
+  border: 1px solid #374151 !important;
+  border-radius: 8px !important;
+  font-size: 14px !important;
+  background-color: #1f2937 !important;
+  color: #f9fafb !important;
+  outline: none !important;
+  font-family: inherit !important;
+}
+
+.searchInput::placeholder {
+  color: #6b7280 !important;
+  opacity: 1 !important;
+}
+
+.searchInput:focus {
+  border-color: #3b82f6 !important;
+  background-color: #111827 !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
+}
+
+.selectedCustomer {
+  background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%) !important;
+  border: 2px solid #3b82f6 !important;
+  border-radius: 8px !important;
+  padding: 1rem !important;
+  margin-bottom: 1rem !important;
+}
+
+.selectedCustomerText {
+  font-size: 14px !important;
+  color: #93c5fd !important;
+  margin-bottom: 4px !important;
+}
+
+.selectedCustomerName {
+  font-weight: 600 !important;
+  color: #ffffff !important;
+  margin-bottom: 4px !important;
+  font-size: 16px !important;
+}
+
+.selectedCustomerEmail {
+  font-size: 14px !important;
+  color: #dbeafe !important;
+}
+
+.changeButton {
+  font-size: 14px !important;
+  color: #60a5fa !important;
+  text-decoration: underline !important;
+  background: none !important;
+  border: none !important;
+  cursor: pointer !important;
+  padding: 4px 8px !important;
+}
+
+.changeButton:hover {
+  color: #93c5fd !important;
+}
+
+.customerList {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+  max-height: 400px !important;
+  overflow-y: auto !important;
+  padding: 4px !important;
+  margin: -4px !important;
+}
+
+.customerCard {
+  width: 100% !important;
+  text-align: left !important;
+  background-color: #1f2937 !important;
+  border: 1px solid #374151 !important;
+  border-radius: 8px !important;
+  padding: 1rem !important;
+  cursor: pointer !important;
+  transition: all 0.2s !important;
+}
+
+.customerCard:hover {
+  background-color: #111827 !important;
+  border-color: #3b82f6 !important;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15) !important;
+  transform: translateY(-1px) !important;
+}
+
+.customerName {
+  font-weight: 600 !important;
+  color: #f9fafb !important;
+  margin: 0 !important;
+  font-size: 15px !important;
+}
+
+.customerDetail {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  font-size: 14px !important;
+  color: #d1d5db !important;
+  margin: 4px 0 !important;
+}
+
+.customerIcon {
+  width: 14px !important;
+  height: 14px !important;
+  color: #9ca3af !important;
+  flex-shrink: 0 !important;
+}
+
+.emptyState {
+  text-align: center !important;
+  padding: 3rem 0 !important;
+  color: #9ca3af !important;
+  font-size: 14px !important;
+  background-color: #1f2937 !important;
+  border-radius: 8px !important;
+  border: 1px dashed #374151 !important;
+}
+
+.loadingSpinner {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 3rem 0 !important;
+}
+
+.spinner {
+  width: 32px !important;
+  height: 32px !important;
+  border: 2px solid transparent !important;
+  border-top-color: #3b82f6 !important;
+  border-right-color: #3b82f6 !important;
+  border-radius: 50% !important;
+  animation: spin 1s linear infinite !important;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.errorBox {
+  background-color: #7f1d1d !important;
+  border: 1px solid #dc2626 !important;
+  border-radius: 8px !important;
+  padding: 1rem !important;
+  color: #fecaca !important;
+  font-size: 14px !important;
+}
+
+.customerCount {
+  font-size: 14px !important;
+  color: #9ca3af !important;
+  text-align: center !important;
+  margin: 0 !important;
+  margin-top: 0.5rem !important;
+}
+
+.arrow {
+  color: #60a5fa !important;
+  font-size: 18px !important;
+  margin-left: 16px !important;
+  transition: transform 0.2s !important;
+}
+
+.customerCard:hover .arrow {
+  transform: translateX(4px) !important;
+}

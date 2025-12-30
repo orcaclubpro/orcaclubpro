@@ -668,6 +668,15 @@ export default buildConfig({
       beforeLogin: ['@/components/payload/BeforeLogin'],
       // Custom CSS provider for ORCACLUB theme
       providers: ['@/components/payload/PayloadStyleProvider#PayloadStyleProvider'],
+      // Custom admin actions (floating action button)
+      actions: ['@/components/payload/actions/CreateOrderButton'],
+      // Custom views
+      views: {
+        order: {
+          Component: '@/components/payload/order-creation/OrderCreationView#OrderCreationView',
+          path: '/order',
+        },
+      },
     },
   },
   // If you want to resize images, crop, set focal point, etc.
