@@ -84,7 +84,10 @@ export default async function HomePage() {
       <AnimatedBackground />
 
       {/* Hero Section */}
-      <HeroSection clients={clients} />
+      <HeroSection />
+
+      {/* Our Work Section - Clients */}
+      <ClientsSection clients={clients} />
 
       {/* Capabilities Section */}
       <section className="py-40 px-8 relative z-10">
@@ -105,9 +108,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Clients Section */}
-      <ClientsSection clients={clients} />
-
       {/* Call to Action */}
       <section className="py-40 px-8 relative z-10">
         <div className="max-w-4xl mx-auto text-center">
@@ -116,17 +116,24 @@ export default async function HomePage() {
               Ready to transform your <span className="gradient-text font-light">business workflows</span>?
             </h2>
             <p className="text-xl text-gray-400 mb-16 font-light leading-relaxed max-w-3xl mx-auto">
-              Let&apos;s discuss how we can create tailored solutions that make your business more efficient, 
-              more profitable, and more competitive in today&apos;s digital landscape.
+              Choose from our three project tiers—Launch, Scale, or Enterprise. Fixed pricing, fast delivery, and transparent timelines from day one.
             </p>
-            <Link
-              href="/contact"
-              className="inline-flex items-center gap-4 px-12 py-6 bg-gradient-to-r from-blue-600/20 to-cyan-500/20 border border-cyan-400/30 rounded-full text-lg font-light text-cyan-400 hover:bg-gradient-to-r hover:from-blue-600/30 hover:to-cyan-500/30 transition-all duration-500 magnetic interactive mb-8"
-            >
-              Start Your Project <ArrowRight size={20} />
-            </Link>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
+              <Link
+                href="/project"
+                className="inline-flex items-center gap-4 px-12 py-6 bg-gradient-to-r from-blue-600/20 to-cyan-500/20 border border-cyan-400/30 rounded-full text-lg font-light text-cyan-400 hover:bg-gradient-to-r hover:from-blue-600/30 hover:to-cyan-500/30 transition-all duration-500 magnetic interactive"
+              >
+                View Project Tiers <ArrowRight size={20} />
+              </Link>
+              <Link
+                href="/contact"
+                className="inline-flex items-center gap-2 px-12 py-6 bg-white/5 border border-white/10 rounded-full text-lg font-light text-white hover:bg-white/10 hover:border-white/20 transition-all duration-500 magnetic interactive"
+              >
+                Free Consultation
+              </Link>
+            </div>
             <p className="text-xs text-gray-600 font-light">
-              Free consultation • Custom solutions • Transparent pricing
+              3-21 Day Delivery • Fixed Pricing • $1K-30K
             </p>
           </ScrollReveal>
         </div>

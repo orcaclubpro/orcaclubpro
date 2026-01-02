@@ -42,6 +42,9 @@ export default function SEOServicesPage() {
       {/* Traffic Growth */}
       <TrafficGrowthSection />
 
+      {/* Website Development Callout */}
+      <WebsiteCalloutSection />
+
       {/* CTA Section */}
       <CTASection />
     </div>
@@ -577,6 +580,42 @@ function TrafficGrowthSection() {
               </motion.div>
             ))}
           </div>
+        </motion.div>
+      </div>
+    </section>
+  )
+}
+
+// Website Development Callout Section
+function WebsiteCalloutSection() {
+  const ref = useRef(null)
+  const isInView = useInView(ref, { once: true, margin: "-100px" })
+
+  return (
+    <section ref={ref} className="py-20 px-8 relative z-10 border-t border-slate-800/50">
+      <div className="max-w-5xl mx-auto">
+        <motion.div
+          className="bg-gradient-to-r from-slate-900/60 to-slate-800/60 border border-teal-400/20 rounded-2xl p-8 md:p-12 text-center"
+          initial={{ opacity: 0, y: 30 }}
+          animate={isInView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.6 }}
+        >
+          <h3 className="text-2xl md:text-3xl font-bold text-white mb-4">
+            Need a New SEO-Optimized Website?
+          </h3>
+          <p className="text-lg text-gray-400 mb-6 max-w-2xl mx-auto">
+            All our websites are built with SEO best practices from day one. Fast loading times, mobile-responsive, and search engine ready.
+          </p>
+          <Link
+            href="/project"
+            className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-teal-600/20 to-blue-500/20 border border-teal-400/30 rounded-full text-lg font-medium text-teal-400 hover:bg-gradient-to-r hover:from-teal-600/30 hover:to-blue-500/30 transition-all duration-300 group"
+          >
+            View Website Development Tiers
+            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+          </Link>
+          <p className="text-xs text-gray-500 mt-4">
+            SEO optimization included in all project tiers
+          </p>
         </motion.div>
       </div>
     </section>

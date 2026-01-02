@@ -41,6 +41,9 @@ export default function DigitalMarketingContent() {
       {/* Results Section */}
       <ResultsSection />
 
+      {/* Website Development Callout */}
+      <WebsiteCalloutSection />
+
       {/* Final CTA Section */}
       <FinalCTASection />
     </div>
@@ -611,6 +614,39 @@ function ResultsSection() {
             </motion.div>
           ))}
         </div>
+      </div>
+    </section>
+  )
+}
+
+// Website Development Callout Section
+function WebsiteCalloutSection() {
+  const ref = useRef(null)
+  const isInView = useInView(ref, { once: true, margin: "-100px" })
+
+  return (
+    <section ref={ref} className="py-20 px-8 relative z-10 border-t border-slate-800/50">
+      <div className="max-w-5xl mx-auto">
+        <motion.div
+          className="bg-gradient-to-r from-slate-900/60 to-slate-800/60 border border-blue-400/20 rounded-2xl p-8 md:p-12 text-center"
+          initial={{ opacity: 0, y: 30 }}
+          animate={isInView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.6 }}
+        >
+          <h3 className="text-2xl md:text-3xl font-bold text-white mb-4">
+            Need a High-Converting Website?
+          </h3>
+          <p className="text-lg text-gray-400 mb-6 max-w-2xl mx-auto">
+            Marketing campaigns perform best with optimized landing pages. We also offer website development with fast turnaround times.
+          </p>
+          <Link
+            href="/project"
+            className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-blue-600/20 to-cyan-500/20 border border-blue-400/30 rounded-full text-lg font-medium text-blue-400 hover:bg-gradient-to-r hover:from-blue-600/30 hover:to-cyan-500/30 transition-all duration-300 group"
+          >
+            View Website Development Tiers
+            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+          </Link>
+        </motion.div>
       </div>
     </section>
   )

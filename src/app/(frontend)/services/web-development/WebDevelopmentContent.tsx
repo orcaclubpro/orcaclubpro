@@ -34,6 +34,9 @@ export default function WebDevelopmentContent() {
       {/* Hero Section */}
       <HeroSection />
 
+      {/* Tier Recommendations Section */}
+      <TierRecommendationsSection />
+
       {/* Process Timeline Section */}
       <ProcessSection />
 
@@ -168,16 +171,16 @@ function HeroSection() {
             >
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link
-                  href="/contact"
+                  href="/project"
                   className="inline-flex items-center justify-center gap-3 px-8 py-4 bg-gradient-to-r from-blue-600/20 to-cyan-500/20 border border-cyan-400/30 rounded-full text-lg font-medium text-cyan-400 hover:bg-gradient-to-r hover:from-blue-600/30 hover:to-cyan-500/30 transition-all duration-500 magnetic interactive"
                 >
-                  Start Your Project <ArrowRight size={20} />
+                  View Project Tiers <ArrowRight size={20} />
                 </Link>
                 <Link
                   href="/portfolio"
                   className="inline-flex items-center justify-center gap-2 px-8 py-4 text-lg font-medium text-gray-300 hover:text-white transition-colors magnetic"
                 >
-                  View Our Work <ArrowRight size={16} className="opacity-50" />
+                  See Examples <ArrowRight size={16} className="opacity-50" />
                 </Link>
               </div>
             </motion.div>
@@ -250,6 +253,107 @@ function HeroSection() {
             </div>
           </motion.div>
         </div>
+      </div>
+    </section>
+  )
+}
+
+// Tier Recommendations Section
+function TierRecommendationsSection() {
+  const tiers = [
+    {
+      name: 'Launch Tier',
+      priceRange: '$1K-3K',
+      timeline: '3-5 days',
+      color: 'cyan',
+      borderColor: 'border-cyan-400/30',
+      bgColor: 'bg-cyan-400/5',
+      description: 'Perfect for simple websites, landing pages, and MVP launches',
+      idealFor: 'Startups, simple marketing sites, portfolio websites'
+    },
+    {
+      name: 'Scale Tier',
+      priceRange: '$3K-5K',
+      timeline: '7-10 days',
+      color: 'blue',
+      borderColor: 'border-blue-400/30',
+      bgColor: 'bg-blue-400/5',
+      description: 'Ideal for e-commerce stores, complex features, and business tools',
+      idealFor: 'E-commerce, custom dashboards, multi-page applications'
+    },
+    {
+      name: 'Enterprise Tier',
+      priceRange: '$6K-30K',
+      timeline: '14-21 days',
+      color: 'indigo',
+      borderColor: 'border-indigo-400/30',
+      bgColor: 'bg-indigo-400/5',
+      description: 'For headless CMS, advanced integrations, and custom architecture',
+      idealFor: 'Complex integrations, headless CMS, custom business applications'
+    }
+  ]
+
+  return (
+    <section className="py-20 px-8 relative z-10 border-t border-slate-800/50">
+      <div className="max-w-7xl mx-auto">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.1 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+        >
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+              Choose Your <span className="gradient-text">Project Tier</span>
+            </h2>
+            <p className="text-lg text-gray-400 max-w-3xl mx-auto leading-relaxed">
+              This service is available across our project tiers. Select the tier that matches your project complexity.
+            </p>
+          </div>
+        </motion.div>
+
+        <div className="grid md:grid-cols-3 gap-6 mb-12">
+          {tiers.map((tier, i) => (
+            <motion.div
+              key={tier.name}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.3 }}
+              transition={{ delay: 0.1 + i * 0.1 }}
+              className={`${tier.bgColor} ${tier.borderColor} border rounded-xl p-6 hover:border-opacity-60 transition-all duration-300`}
+            >
+              <h3 className={`text-xl font-bold text-${tier.color}-400 mb-2`}>{tier.name}</h3>
+              <div className="flex items-baseline gap-2 mb-1">
+                <span className="text-2xl font-bold text-white">{tier.priceRange}</span>
+                <span className="text-sm text-gray-500">•</span>
+                <span className="text-sm text-gray-400">{tier.timeline}</span>
+              </div>
+              <p className="text-sm text-gray-400 mb-4">{tier.description}</p>
+              <div className="pt-4 border-t border-slate-700/50">
+                <div className="text-xs text-gray-500 uppercase tracking-wide mb-2">Ideal for:</div>
+                <div className="text-sm text-gray-300">{tier.idealFor}</div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.3 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+          className="text-center"
+        >
+          <Link
+            href="/project"
+            className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-blue-600 to-cyan-500 rounded-full text-lg font-semibold text-white hover:shadow-2xl hover:shadow-cyan-400/20 transition-all duration-500"
+          >
+            View All Project Tiers <ArrowRight size={20} />
+          </Link>
+          <p className="text-xs text-gray-500 mt-4">
+            Not sure which tier? We'll help you choose during your free consultation.
+          </p>
+        </motion.div>
       </div>
     </section>
   )
@@ -706,16 +810,16 @@ function FAQSection() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-6">
               <Link
-                href="/contact"
+                href="/project"
                 className="inline-flex items-center justify-center gap-3 px-10 py-5 bg-gradient-to-r from-blue-600 to-cyan-500 rounded-full text-lg font-semibold text-white hover:shadow-2xl hover:shadow-cyan-400/20 transition-all duration-500 magnetic"
               >
-                Get Your Free Consultation <ArrowRight size={20} />
+                View Project Tiers <ArrowRight size={20} />
               </Link>
               <Link
                 href="/portfolio"
                 className="inline-flex items-center justify-center gap-2 px-10 py-5 border border-cyan-400/30 rounded-full text-lg font-medium text-cyan-400 hover:bg-cyan-400/10 transition-all duration-300 magnetic"
               >
-                View Portfolio <Globe size={18} />
+                See Examples <Globe size={18} />
               </Link>
             </div>
             <p className="text-sm text-gray-500">

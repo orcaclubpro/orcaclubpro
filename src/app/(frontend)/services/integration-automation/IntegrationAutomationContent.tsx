@@ -33,6 +33,9 @@ export default function IntegrationAutomationContent() {
       {/* Hero Section - Dramatic Before/After */}
       <HeroSection />
 
+      {/* Tier Recommendations Section */}
+      <TierRecommendationsSection />
+
       {/* Integration Ecosystem Section */}
       <IntegrationEcosystemSection />
 
@@ -205,6 +208,129 @@ function HeroSection() {
   )
 }
 
+// Tier Recommendations Section
+function TierRecommendationsSection() {
+  const ref = useRef(null)
+  const isInView = useInView(ref, { once: true, margin: "-100px" })
+
+  return (
+    <section ref={ref} className="py-20 px-8 relative z-10 border-t border-slate-800/50">
+      <div className="max-w-6xl mx-auto">
+        <ScrollReveal>
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+              Integration & Automation <span className="bg-gradient-to-r from-violet-400 to-fuchsia-400 bg-clip-text text-transparent">Pricing Tiers</span>
+            </h2>
+            <p className="text-lg text-gray-400 max-w-3xl mx-auto leading-relaxed">
+              Integration and automation projects are available in our Scale and Enterprise tiers, depending on complexity.
+            </p>
+          </div>
+        </ScrollReveal>
+
+        <div className="grid md:grid-cols-2 gap-6 mb-12">
+          {/* Scale Tier */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={isInView ? { opacity: 1, y: 0 } : {}}
+            transition={{ delay: 0.1 }}
+            className="bg-purple-900/20 border border-purple-400/30 rounded-xl p-8 hover:border-purple-400/50 transition-all duration-300"
+          >
+            <h3 className="text-2xl font-bold text-purple-400 mb-3">Scale Tier</h3>
+            <div className="flex items-baseline gap-2 mb-4">
+              <span className="text-3xl font-bold text-white">$3K-5K</span>
+              <span className="text-sm text-gray-500">•</span>
+              <span className="text-sm text-gray-400">7-10 days</span>
+            </div>
+            <p className="text-gray-300 mb-6">
+              Perfect for standard integrations between 2-4 platforms with moderate complexity.
+            </p>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm text-gray-300">
+                <CheckCircle2 className="w-4 h-4 text-purple-400 flex-shrink-0" />
+                <span>Connect 2-4 platforms</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-gray-300">
+                <CheckCircle2 className="w-4 h-4 text-purple-400 flex-shrink-0" />
+                <span>Basic workflow automation</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-gray-300">
+                <CheckCircle2 className="w-4 h-4 text-purple-400 flex-shrink-0" />
+                <span>Standard data syncing</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-gray-300">
+                <CheckCircle2 className="w-4 h-4 text-purple-400 flex-shrink-0" />
+                <span>Documentation & training</span>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Enterprise Tier */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={isInView ? { opacity: 1, y: 0 } : {}}
+            transition={{ delay: 0.2 }}
+            className="bg-gradient-to-br from-purple-900/30 via-violet-900/20 to-fuchsia-900/30 border border-fuchsia-400/30 rounded-xl p-8 hover:border-fuchsia-400/50 transition-all duration-300 relative overflow-hidden"
+          >
+            <div className="absolute top-4 right-4 bg-fuchsia-500/20 border border-fuchsia-500/40 rounded-full px-3 py-1 text-xs font-medium text-fuchsia-400 uppercase">
+              Most Popular
+            </div>
+            <h3 className="text-2xl font-bold bg-gradient-to-r from-violet-400 to-fuchsia-400 bg-clip-text text-transparent mb-3">
+              Enterprise Tier
+            </h3>
+            <div className="flex items-baseline gap-2 mb-4">
+              <span className="text-3xl font-bold text-white">$6K-30K</span>
+              <span className="text-sm text-gray-500">•</span>
+              <span className="text-sm text-gray-400">14-21 days</span>
+            </div>
+            <p className="text-gray-300 mb-6">
+              For complex multi-platform integrations, custom API development, and advanced automation workflows.
+            </p>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm text-gray-300">
+                <CheckCircle2 className="w-4 h-4 text-fuchsia-400 flex-shrink-0" />
+                <span>Unlimited platform connections</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-gray-300">
+                <CheckCircle2 className="w-4 h-4 text-fuchsia-400 flex-shrink-0" />
+                <span>Custom API development</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-gray-300">
+                <CheckCircle2 className="w-4 h-4 text-fuchsia-400 flex-shrink-0" />
+                <span>Complex workflow automation</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-gray-300">
+                <CheckCircle2 className="w-4 h-4 text-fuchsia-400 flex-shrink-0" />
+                <span>Advanced data transformations</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-gray-300">
+                <CheckCircle2 className="w-4 h-4 text-fuchsia-400 flex-shrink-0" />
+                <span>Enterprise security & compliance</span>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={isInView ? { opacity: 1, y: 0 } : {}}
+          transition={{ delay: 0.4 }}
+          className="text-center"
+        >
+          <Link
+            href="/project#scale"
+            className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-purple-500 to-fuchsia-600 rounded-full text-lg font-semibold text-white hover:shadow-2xl hover:shadow-purple-500/30 transition-all duration-500"
+          >
+            View All Integration Tiers <ArrowRight size={20} />
+          </Link>
+          <p className="text-xs text-gray-500 mt-4">
+            Not sure which tier fits your needs? Schedule a free workflow audit.
+          </p>
+        </motion.div>
+      </div>
+    </section>
+  )
+}
+
 // Integration Ecosystem Section - Interactive Tool Network
 function IntegrationEcosystemSection() {
   const ref = useRef(null)
@@ -314,10 +440,10 @@ function IntegrationEcosystemSection() {
             If it has an API (or even if it doesn't), we can connect it.
           </p>
           <Link
-            href="/contact"
+            href="/project#scale"
             className="inline-flex items-center gap-3 px-8 py-4 bg-purple-500 hover:bg-purple-600 text-white rounded-lg font-medium transition-all duration-300 group"
           >
-            Request Custom Integration
+            View Integration Tiers
             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
           </Link>
         </motion.div>
@@ -651,17 +777,17 @@ function CTASection() {
 
           <div className="flex flex-col sm:flex-row gap-6 justify-center mb-8">
             <Link
-              href="/contact"
+              href="/project#scale"
               className="inline-flex items-center gap-3 px-10 py-5 bg-gradient-to-r from-purple-500 to-fuchsia-600 hover:from-purple-600 hover:to-fuchsia-700 text-white rounded-lg text-lg font-semibold transition-all duration-300 shadow-lg shadow-purple-500/30 group"
             >
-              Start Your Automation Journey
+              View Integration Tiers
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Link>
             <Link
               href="/portfolio"
               className="inline-flex items-center gap-2 px-10 py-5 border border-purple-400/30 text-purple-400 hover:bg-purple-400/10 rounded-lg text-lg font-medium transition-all duration-300"
             >
-              View Integration Case Studies
+              See Examples
             </Link>
           </div>
 

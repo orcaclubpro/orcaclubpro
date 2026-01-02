@@ -17,6 +17,7 @@ interface FormData {
   phone: string
   company: string
   service: string
+  package: string
   message: string
   preferredDate: string
   preferredTime: string
@@ -39,10 +40,20 @@ export default function ContactPage() {
     phone: "",
     company: "",
     service: "",
+    package: "",
     message: "",
     preferredDate: "",
     preferredTime: "",
   })
+
+  // Pre-populate package from URL parameter
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const pkg = params.get('package')
+    if (pkg) {
+      setFormData(prev => ({ ...prev, package: pkg }))
+    }
+  }, [])
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -102,6 +113,7 @@ export default function ContactPage() {
           phone: formData.phone,
           company: formData.company,
           service: formData.service,
+          package: formData.package,
           message: formData.message,
         }),
       })
@@ -123,6 +135,7 @@ export default function ContactPage() {
         phone: "",
         company: "",
         service: "",
+        package: "",
         message: "",
         preferredDate: "",
         preferredTime: "",
@@ -166,6 +179,7 @@ export default function ContactPage() {
         phone: "",
         company: "",
         service: "",
+        package: "",
         message: "",
         preferredDate: "",
         preferredTime: "",
@@ -340,6 +354,31 @@ export default function ContactPage() {
                   </select>
                 </div>
 
+                {/* Package Selection */}
+                <div className="space-y-2">
+                  <Label htmlFor="package" className="text-white font-medium">
+                    Package Interested In <span className="text-cyan-400">*</span>
+                  </Label>
+                  <select
+                    id="package"
+                    name="package"
+                    required
+                    value={formData.package}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 bg-white/5 border border-white/20 text-white rounded-md focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none"
+                  >
+                    <option value="" className="bg-black">Select a package...</option>
+                    <option value="launch" className="bg-black">Launch Tier ($1K-3K, 3-5 days)</option>
+                    <option value="scale" className="bg-black">Scale Tier ($3K-5K, 7-10 days)</option>
+                    <option value="enterprise" className="bg-black">Enterprise Tier ($6K-30K, 14-21 days)</option>
+                    <option value="maintenance-essential" className="bg-black">Essential Maintenance ($300/mo)</option>
+                    <option value="maintenance-growth" className="bg-black">Growth Maintenance ($600/mo)</option>
+                    <option value="maintenance-partner" className="bg-black">Partner Maintenance ($1,200/mo)</option>
+                    <option value="hourly" className="bg-black">Custom Hourly Work ($75/hr)</option>
+                    <option value="not-sure" className="bg-black">Not Sure - Need Consultation</option>
+                  </select>
+                </div>
+
                 {/* Message Field */}
                 <div className="space-y-2">
                   <Label htmlFor="message" className="text-white font-medium">
@@ -481,6 +520,31 @@ export default function ContactPage() {
                     <option value="seo-services" className="bg-black">SEO Services</option>
                     <option value="consulting" className="bg-black">Consulting</option>
                     <option value="other" className="bg-black">Other</option>
+                  </select>
+                </div>
+
+                {/* Package Selection */}
+                <div className="space-y-2">
+                  <Label htmlFor="package-booking" className="text-white font-medium">
+                    Package Interested In <span className="text-cyan-400">*</span>
+                  </Label>
+                  <select
+                    id="package-booking"
+                    name="package"
+                    required
+                    value={formData.package}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 bg-white/5 border border-white/20 text-white rounded-md focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none"
+                  >
+                    <option value="" className="bg-black">Select a package...</option>
+                    <option value="launch" className="bg-black">Launch Tier ($1K-3K, 3-5 days)</option>
+                    <option value="scale" className="bg-black">Scale Tier ($3K-5K, 7-10 days)</option>
+                    <option value="enterprise" className="bg-black">Enterprise Tier ($6K-30K, 14-21 days)</option>
+                    <option value="maintenance-essential" className="bg-black">Essential Maintenance ($300/mo)</option>
+                    <option value="maintenance-growth" className="bg-black">Growth Maintenance ($600/mo)</option>
+                    <option value="maintenance-partner" className="bg-black">Partner Maintenance ($1,200/mo)</option>
+                    <option value="hourly" className="bg-black">Custom Hourly Work ($75/hr)</option>
+                    <option value="not-sure" className="bg-black">Not Sure - Need Consultation</option>
                   </select>
                 </div>
 

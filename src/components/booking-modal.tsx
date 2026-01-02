@@ -36,10 +36,19 @@ interface TimeSlot {
 interface BookingModalProps {
   triggerClassName?: string
   triggerText?: string
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
-export function BookingModal({ triggerClassName, triggerText = "Contact" }: BookingModalProps = {}) {
-  const [open, setOpen] = React.useState(false)
+export function BookingModal({
+  triggerClassName,
+  triggerText = "Contact",
+  open: controlledOpen,
+  onOpenChange
+}: BookingModalProps = {}) {
+  const [internalOpen, setInternalOpen] = React.useState(false)
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen
+  const setOpen = onOpenChange || setInternalOpen
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [isLoadingSlots, setIsLoadingSlots] = React.useState(false)
   const [availableSlots, setAvailableSlots] = React.useState<TimeSlot[]>([])
@@ -143,14 +152,16 @@ export function BookingModal({ triggerClassName, triggerText = "Contact" }: Book
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button
-          variant="default"
-          className={triggerClassName || "bg-cyan-400 text-black hover:bg-cyan-500 font-semibold transition-all duration-200"}
-        >
-          {triggerText}
-        </Button>
-      </DialogTrigger>
+      {triggerText && (
+        <DialogTrigger asChild>
+          <Button
+            variant="default"
+            className={triggerClassName || "bg-cyan-400 text-black hover:bg-cyan-500 font-semibold transition-all duration-200"}
+          >
+            {triggerText}
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto bg-slate-900/95 backdrop-blur-xl border-white/20">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-white">
