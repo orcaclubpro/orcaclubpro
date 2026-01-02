@@ -412,7 +412,7 @@ export default function ProjectPage() {
               { icon: "💰", title: "TRANSPARENT", desc: "Fixed pricing, no surprises" },
               { icon: "🎯", title: "FOCUSED", desc: "Direct developer access" },
               { icon: "🛠️", title: "MODERN TECH", desc: "React, Next.js, Payload, Shopify" },
-              { icon: "📦", title: "PRODUCTIZED", desc: "Streamlined processes" },
+              { icon: "📦", title: "TAILORED", desc: "Custom solutions for your needs" },
               { icon: "🤝", title: "PARTNERSHIP", desc: "Ongoing support available" }
             ].map((benefit, index) => (
               <ScrollReveal key={index} delay={index * 100}>

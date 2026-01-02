@@ -10,37 +10,36 @@ import { getPayload } from "payload"
 import config from "@payload-config"
 
 export const metadata: Metadata = {
-  title: 'ORCACLUB est 2025 | Branding, Marketing, and Consulting',
-  description: 'Full-service branding, marketing, and consulting agency. We help businesses build powerful brands, execute strategic marketing campaigns, and navigate complex business challenges with expert consulting services.',
+  title: 'Web Development in 3-21 Days | Fixed Price | ORCACLUB',
+  description: 'Technical Operations Development Studio offering tailored web development services. Fixed-price project tiers ($1K-30K), fast delivery (3-21 days), and transparent pricing. Launch, Scale, or Enterprise—choose your tier and start building.',
   keywords: [
-    'branding agency',
-    'marketing agency',
-    'business consulting',
-    'brand strategy',
-    'marketing consulting',
-    'brand development',
-    'digital marketing',
-    'brand identity',
-    'marketing strategy',
-    'business consulting services',
-    'creative agency',
-    'brand consulting',
-    'marketing campaigns',
-    'brand design',
-    'strategic consulting',
-    'brand positioning'
+    'technical operations studio',
+    'tailored development services',
+    'web development fixed price',
+    'next.js development',
+    'headless cms setup',
+    'shopify integration',
+    'stripe integration',
+    'business automation',
+    'api development',
+    'fast website launch',
+    'cms setup',
+    'web development services',
+    'digital transformation',
+    'technical consulting',
+    'development studio'
   ],
   openGraph: {
-    title: 'ORCACLUB est 2025 | Branding, Marketing, and Consulting',
-    description: 'Full-service branding, marketing, and consulting agency. Build powerful brands, execute strategic marketing, and navigate business challenges with expert guidance.',
+    title: 'Web Development in 3-21 Days | Fixed Price | ORCACLUB',
+    description: 'Technical Operations Development Studio. Fixed-price tiers, 3-21 day delivery, transparent pricing. Web development, integrations, and automation for modern businesses.',
     url: 'https://orcaclub.pro',
     siteName: 'ORCACLUB',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'ORCACLUB est 2025 | Branding, Marketing, and Consulting',
-    description: 'Full-service branding, marketing, and consulting agency. Build powerful brands and execute strategic marketing with expert consulting.',
+    title: 'Web Development in 3-21 Days | Fixed Price | ORCACLUB',
+    description: 'Technical Operations Development Studio. Fixed-price project tiers with 3-21 day delivery. Choose Launch, Scale, or Enterprise.',
   },
   alternates: {
     canonical: 'https://orcaclub.pro',
@@ -95,11 +94,10 @@ export default async function HomePage() {
           <ScrollReveal>
             <div className="text-center mb-32">
               <h2 className="text-4xl md:text-5xl font-extralight mb-8 tracking-tight">
-                Tailored <span className="gradient-text font-light">solutions</span> for modern business
+                Tailored <span className="gradient-text font-light">solutions</span> for scaling businesses
               </h2>
               <p className="text-xl text-gray-400 max-w-3xl mx-auto font-light leading-relaxed">
-                We believe every business deserves software that works perfectly for their unique needs.
-                Here&apos;s how we make that happen.
+                Fixed-price tiers, fast delivery, and modern tech. Choose Launch, Scale, or Enterprise.
               </p>
             </div>
           </ScrollReveal>
@@ -113,10 +111,10 @@ export default async function HomePage() {
         <div className="max-w-4xl mx-auto text-center">
           <ScrollReveal>
             <h2 className="text-4xl md:text-5xl font-extralight mb-10 tracking-tight">
-              Ready to transform your <span className="gradient-text font-light">business workflows</span>?
+              Ready to launch your <span className="gradient-text font-light">next project</span>?
             </h2>
             <p className="text-xl text-gray-400 mb-16 font-light leading-relaxed max-w-3xl mx-auto">
-              Choose from our three project tiers—Launch, Scale, or Enterprise. Fixed pricing, fast delivery, and transparent timelines from day one.
+              No opaque quotes. No lengthy sales cycles. Just transparent pricing, fast delivery, and direct developer access.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
               <Link

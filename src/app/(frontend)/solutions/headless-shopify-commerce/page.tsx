@@ -5,7 +5,7 @@ import Link from "next/link"
 import { ArrowRight, Check, Clock, Zap, Code, Sparkles } from "lucide-react"
 
 export const metadata: Metadata = {
-  title: 'Headless Shopify Development - Launch in 14-21 Days | ORCACLUB',
+  title: 'Headless Shopify Development in 14-21 Days | ORCACLUB',
   description: 'Custom headless Shopify integration with React/Next.js. Enterprise tier: $6K-30K, 14-21 day delivery. Modern, fast, fully customizable commerce platform without theme limitations.',
   keywords: [
     'headless shopify',

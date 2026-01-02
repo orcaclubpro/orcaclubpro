@@ -2,11 +2,11 @@
 
 ## Project Overview
 
-**ORCACLUB est 2025** is a **Technical Operations Development Studio** offering productized development services. We provide businesses with fixed-price project tiers for web development, integrations, and business automation—delivered in 3-21 days with transparent pricing and fast turnaround.
+**ORCACLUB est 2025** is a **Technical Operations Development Studio** offering tailored development services. We provide businesses with fixed-price project tiers for web development, integrations, and business automation—delivered in 3-21 days with transparent pricing and fast turnaround.
 
-### Business Model: Productized Services
+### Business Model: Tailored Services
 
-ORCACLUB operates as a solo technical operator running a **productized service business**, NOT a traditional agency:
+ORCACLUB operates as a solo technical operator running a **tailored service business**, NOT a traditional agency:
 
 - **Fixed-Price Tiers** - Launch ($1K-3K), Scale ($3K-5K), Enterprise ($6K-30K)
 - **Fast Delivery** - 3-5 days (Launch), 7-10 days (Scale), 14-21 days (Enterprise)
@@ -130,7 +130,7 @@ src/
 ### Route Groups Strategy
 
 - **`(payload)`** - PayloadCMS admin interface
-- **`(frontend)`** - Public-facing productized service funnel
+- **`(frontend)`** - Public-facing tailored service funnel
 - **`(dashboard)`** - Future client dashboard (reserved)
 
 **Key Benefits:**
@@ -140,7 +140,7 @@ src/
 
 ---
 
-## 🎯 Productized Service Funnel Architecture
+## 🎯 Tailored Service Funnel Architecture
 
 The site is built around a **conversion funnel** that drives users to the `/project` page:
 
@@ -307,7 +307,7 @@ We use Tailwind CSS v4 with the new `@theme` directive for design tokens:
 
 **Established:** 2025
 **Positioning:** Technical Operations Development Studio
-**Business Model:** Productized Services (NOT traditional agency)
+**Business Model:** Tailored Services (NOT traditional agency)
 **Tagline:** "est 2025" - Emphasizes modern approach and fresh thinking
 
 ### ORCACLUB Logo Styling
@@ -380,7 +380,7 @@ Creates an animated gradient effect shifting between cyan and blue shades.
 
 **Brand Essence:**
 
-ORCACLUB (est 2025) is a Technical Operations Development Studio offering productized development services. We deliver fixed-price projects in 3-21 days with transparent pricing—web development, integrations, and automation for businesses that need technical expertise but can't afford full-time staff.
+ORCACLUB (est 2025) is a Technical Operations Development Studio offering tailored development services. We deliver fixed-price projects in 3-21 days with transparent pricing—web development, integrations, and automation for businesses that need technical expertise but can't afford full-time staff.
 
 **Core Value Proposition:**
 
@@ -388,7 +388,7 @@ ORCACLUB (est 2025) is a Technical Operations Development Studio offering produc
 - **Transparency** - Fixed pricing, no opaque quotes or scope creep
 - **Efficiency** - Direct developer access, no overhead
 - **Expertise** - Modern tech stack (React, Next.js, Payload, Shopify)
-- **Productized** - Streamlined processes ensure quality + speed
+- **Tailored** - Custom solutions adapted to each client's needs
 - **Partnership** - Ongoing support via maintenance packages
 
 **Key Messaging Pillars:**
@@ -397,7 +397,7 @@ ORCACLUB (est 2025) is a Technical Operations Development Studio offering produc
 2. **Fast Delivery** - "Launch in 3-21 days, not months"
 3. **Technical Expertise** - "Modern stack, best practices, clean code"
 4. **Solo Operator Advantage** - "Direct access to your developer, no middlemen"
-5. **Productized Efficiency** - "Streamlined processes, consistent quality"
+5. **Tailored Solutions** - "Custom solutions adapted to your specific needs"
 
 **Tone of Voice:**
 
@@ -824,7 +824,7 @@ Ensure all development supports tracking these metrics:
 
 Before adding new features, ask:
 
-1. Does this support the productized service model?
+1. Does this support the tailored service model?
 2. Does this funnel users to /project?
 3. Does this reduce friction in package selection?
 4. Does this increase transparency or speed?
@@ -832,4 +832,4 @@ Before adding new features, ask:
 
 ---
 
-This project follows modern React/Next.js patterns with a focus on **productized service delivery**, **conversion optimization**, and **solo operator efficiency**. The structure is designed to scale the business through clear package offerings, fast delivery, and transparent pricing—not through team expansion or custom agency work.
+This project follows modern React/Next.js patterns with a focus on **tailored service delivery**, **conversion optimization**, and **solo operator efficiency**. The structure is designed to scale the business through clear package offerings, fast delivery, and transparent pricing—not through team expansion or custom agency work.
