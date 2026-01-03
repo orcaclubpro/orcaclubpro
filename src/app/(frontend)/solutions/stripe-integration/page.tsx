@@ -5,8 +5,8 @@ import Link from "next/link"
 import { ArrowRight, Check, Clock, CreditCard, Shield, Zap } from "lucide-react"
 
 export const metadata: Metadata = {
-  title: 'Stripe Payment Integration - Setup in 7-10 Days | ORCACLUB',
-  description: 'Custom Stripe payment integration for your platform. Scale tier: $3K-5K, 7-10 day implementation. Subscriptions, webhooks, customer portal, production-ready.',
+  title: 'Stripe Integration Services | ORCACLUB TechOps',
+  description: 'Custom Stripe payment integration with subscriptions, webhooks, and customer portal. Scale tier: $3K-5K, 7-10 day implementation. Production-ready payment processing and workflow automation.',
   keywords: [
     'stripe integration',
     'payment processing setup',
@@ -17,18 +17,19 @@ export const metadata: Metadata = {
     'customer portal',
     'recurring payments',
     'stripe checkout',
-    'payment processing'
+    'payment automation',
+    'techops stripe integration'
   ],
   openGraph: {
-    title: 'Stripe Payment Integration - Setup in 7-10 Days | ORCACLUB',
-    description: 'Custom Stripe integration with subscriptions, webhooks, and customer portal. $3K-5K, 7-10 days.',
+    title: 'Stripe Integration Services | ORCACLUB TechOps',
+    description: 'Custom Stripe integration with subscriptions, webhooks, and customer portal. Production-ready in 7-10 days.',
     url: 'https://orcaclub.pro/solutions/stripe-integration',
     siteName: 'ORCACLUB',
     type: 'article',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Stripe Payment Integration - Setup in 7-10 Days',
+    title: 'Stripe Integration Services | ORCACLUB TechOps',
     description: 'Custom Stripe integration. Subscriptions, webhooks, customer portal. Production-ready.',
   },
   alternates: {

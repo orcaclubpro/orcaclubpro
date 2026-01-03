@@ -11,6 +11,36 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 
+export const metadata = {
+  title: 'Get Started | ORCACLUB TechOps Studio',
+  description: 'Contact ORCACLUB for custom integrations, workflow automation, and full stack development. Schedule a free consultation or send us a message. We respond within 24 hours.',
+  keywords: [
+    'contact techops studio',
+    'development consultation',
+    'custom integration quote',
+    'workflow automation inquiry',
+    'full stack developer contact',
+    'software development consultation',
+    'get started',
+    'free consultation'
+  ],
+  openGraph: {
+    title: 'Get Started | ORCACLUB TechOps Studio',
+    description: 'Contact us for custom integrations and workflow automation. Free consultation available.',
+    url: 'https://orcaclub.pro/contact',
+    siteName: 'ORCACLUB',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Get Started | ORCACLUB TechOps Studio',
+    description: 'Schedule a free consultation for custom integrations and automation solutions.',
+  },
+  alternates: {
+    canonical: 'https://orcaclub.pro/contact',
+  },
+}
+
 interface FormData {
   name: string
   email: string

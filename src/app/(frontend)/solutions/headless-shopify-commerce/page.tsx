@@ -5,8 +5,8 @@ import Link from "next/link"
 import { ArrowRight, Check, Clock, Zap, Code, Sparkles } from "lucide-react"
 
 export const metadata: Metadata = {
-  title: 'Headless Shopify Development in 14-21 Days | ORCACLUB',
-  description: 'Custom headless Shopify integration with React/Next.js. Enterprise tier: $6K-30K, 14-21 day delivery. Modern, fast, fully customizable commerce platform without theme limitations.',
+  title: 'Headless Shopify Development | ORCACLUB TechOps',
+  description: 'Custom headless Shopify integration with React/Next.js. Break free from theme limitations with enterprise-grade performance. $6K-30K, 14-21 day delivery. Full design control and workflow automation.',
   keywords: [
     'headless shopify',
     'shopify headless integration',
@@ -15,21 +15,22 @@ export const metadata: Metadata = {
     'shopify react',
     'shopify storefront api',
     'custom ecommerce',
-    'shopify developer',
+    'shopify workflow automation',
     'headless commerce',
-    'shopify performance'
+    'shopify performance',
+    'techops shopify'
   ],
   openGraph: {
-    title: 'Headless Shopify Development - Launch in 14-21 Days | ORCACLUB',
-    description: 'Custom headless Shopify with Next.js. Enterprise performance without theme limitations. $6K-30K, 14-21 days.',
+    title: 'Headless Shopify Development | ORCACLUB TechOps',
+    description: 'Custom headless Shopify with Next.js. Enterprise performance without theme limitations. 14-21 day delivery.',
     url: 'https://orcaclub.pro/solutions/headless-shopify-commerce',
     siteName: 'ORCACLUB',
     type: 'article',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Headless Shopify Development - Launch in 14-21 Days',
-    description: 'Custom headless Shopify with Next.js. Enterprise performance without theme limitations.',
+    title: 'Headless Shopify Development | ORCACLUB TechOps',
+    description: 'Custom headless Shopify with full design control and enterprise performance.',
   },
   alternates: {
     canonical: 'https://orcaclub.pro/solutions/headless-shopify-commerce',

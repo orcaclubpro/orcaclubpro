@@ -8,6 +8,38 @@ import ScrollReveal from "@/components/layout/scroll-reveal"
 import { BookingModal } from "@/components/booking-modal"
 import { cn } from "@/lib/utils"
 
+export const metadata = {
+  title: 'Development Packages | ORCACLUB TechOps Studio',
+  description: 'Fixed-price development packages for custom integrations, workflow automation, and full stack solutions. Launch ($1K-3K), Scale ($3K-5K), Enterprise ($6K-30K). Fast delivery in 3-21 days with transparent pricing.',
+  keywords: [
+    'development packages',
+    'fixed-price development',
+    'techops services',
+    'custom integrations',
+    'workflow automation',
+    'full stack development',
+    'web development pricing',
+    'software development packages',
+    'business automation services',
+    'custom software pricing'
+  ],
+  openGraph: {
+    title: 'Development Packages | ORCACLUB TechOps Studio',
+    description: 'Fixed-price packages for custom integrations and automation. Launch, Scale, or Enterprise tiers with 3-21 day delivery.',
+    url: 'https://orcaclub.pro/project',
+    siteName: 'ORCACLUB',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Development Packages | ORCACLUB TechOps Studio',
+    description: 'Fixed-price development packages. Launch ($1K-3K), Scale ($3K-5K), Enterprise ($6K-30K). Fast delivery.',
+  },
+  alternates: {
+    canonical: 'https://orcaclub.pro/project',
+  },
+}
+
 interface TierCardProps {
   id: string
   tier: string

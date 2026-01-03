@@ -5,30 +5,31 @@ import Link from "next/link"
 import { ArrowRight, Check, Clock, Rocket, Layers, Globe } from "lucide-react"
 
 export const metadata: Metadata = {
-  title: 'Fast Website Development - Launch in 3-5 Days | ORCACLUB',
-  description: 'Professional website in 3-5 days. Headless CMS, mobile responsive, SEO optimized. Launch tier: $1K-3K. Modern tech stack with PayloadCMS or Sanity.',
+  title: 'Fast Website Development | ORCACLUB TechOps',
+  description: 'Professional website in 3-5 days with headless CMS, mobile responsive design, and SEO optimization. Launch tier: $1K-3K. Modern tech stack with PayloadCMS or Sanity for easy content management.',
   keywords: [
     'fast website development',
     'quick website launch',
     'website in days',
-    'rapid website development',
+    'rapid web development',
     'headless cms website',
     'payload cms',
     'sanity cms',
     'next.js website',
     'professional website',
+    'techops web development',
     'fast turnaround website'
   ],
   openGraph: {
-    title: 'Fast Website Development - Launch in 3-5 Days | ORCACLUB',
-    description: 'Professional website in 3-5 days. Headless CMS, mobile responsive, SEO optimized. $1K-3K.',
+    title: 'Fast Website Development | ORCACLUB TechOps',
+    description: 'Professional website in 3-5 days. Headless CMS, mobile responsive, SEO optimized. Launch tier: $1K-3K.',
     url: 'https://orcaclub.pro/solutions/fast-website-launch',
     siteName: 'ORCACLUB',
     type: 'article',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Fast Website Development - Launch in 3-5 Days',
+    title: 'Fast Website Development | ORCACLUB TechOps',
     description: 'Professional website with headless CMS in 3-5 days. Mobile responsive, SEO optimized.',
   },
   alternates: {

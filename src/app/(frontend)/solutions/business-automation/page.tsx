@@ -5,30 +5,31 @@ import Link from "next/link"
 import { ArrowRight, Check, Clock, Workflow, Zap, Link2 } from "lucide-react"
 
 export const metadata: Metadata = {
-  title: 'Business Workflow Automation - Launch in 7-10 Days | ORCACLUB',
-  description: 'Automate your business workflows with custom integrations. Scale tier: $3K-5K, 7-10 days. Connect tools, eliminate manual processes, save time.',
+  title: 'Workflow Automation Solutions | ORCACLUB TechOps',
+  description: 'Automate business workflows with custom integrations and technical operations. Scale tier: $3K-5K, 7-10 days. Connect tools, eliminate manual processes, optimize operations with intelligent automation.',
   keywords: [
     'business automation',
     'workflow automation',
     'process automation',
     'api integration',
-    'zapier alternative',
     'custom automation',
     'workflow optimization',
     'business process automation',
     'integration development',
-    'automation developer'
+    'techops automation',
+    'intelligent automation',
+    'custom integrations'
   ],
   openGraph: {
-    title: 'Business Workflow Automation - Launch in 7-10 Days | ORCACLUB',
-    description: 'Automate workflows with custom integrations. Connect tools, eliminate manual work. $3K-5K, 7-10 days.',
+    title: 'Workflow Automation Solutions | ORCACLUB TechOps',
+    description: 'Automate workflows with custom integrations. Connect tools, eliminate manual work. Scale tier: 7-10 days.',
     url: 'https://orcaclub.pro/solutions/business-automation',
     siteName: 'ORCACLUB',
     type: 'article',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Business Workflow Automation - Launch in 7-10 Days',
+    title: 'Workflow Automation Solutions | ORCACLUB TechOps',
     description: 'Automate workflows with custom integrations. Eliminate manual processes.',
   },
   alternates: {
