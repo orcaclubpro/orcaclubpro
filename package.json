@@ -35,6 +35,7 @@
     "@libsql/darwin-arm64": "^0.5.22",
     "@payloadcms/db-mongodb": "3.44.0",
     "@payloadcms/db-sqlite": "3.44.0",
+    "@payloadcms/email-nodemailer": "3.44.0",
     "@payloadcms/next": "3.44.0",
     "@payloadcms/richtext-lexical": "3.44.0",
     "@radix-ui/react-avatar": "^1.1.11",

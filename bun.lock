@@ -8,6 +8,7 @@
         "@libsql/darwin-arm64": "^0.5.22",
         "@payloadcms/db-mongodb": "3.44.0",
         "@payloadcms/db-sqlite": "3.44.0",
+        "@payloadcms/email-nodemailer": "3.44.0",
         "@payloadcms/next": "3.44.0",
         "@payloadcms/richtext-lexical": "3.44.0",
         "@radix-ui/react-avatar": "^1.1.11",
@@ -401,6 +402,8 @@
     "@payloadcms/db-sqlite": ["@payloadcms/db-sqlite@3.44.0", "", { "dependencies": { "@libsql/client": "0.14.0", "@payloadcms/drizzle": "3.44.0", "console-table-printer": "2.12.1", "drizzle-kit": "0.31.1", "drizzle-orm": "0.44.2", "prompts": "2.4.2", "to-snake-case": "1.0.0", "uuid": "9.0.0" }, "peerDependencies": { "payload": "3.44.0" } }, "sha512-oOlG48N0Unx9AZ9D7KBYVblzOrv1qkBkeVCn5AWTta8wd2auATqQ1vbBA5Eiyat5GBamvyjjZZgKdKPg9dulBw=="],
 
     "@payloadcms/drizzle": ["@payloadcms/drizzle@3.44.0", "", { "dependencies": { "console-table-printer": "2.12.1", "dequal": "2.0.3", "drizzle-orm": "0.44.2", "prompts": "2.4.2", "to-snake-case": "1.0.0", "uuid": "9.0.0" }, "peerDependencies": { "payload": "3.44.0" } }, "sha512-YjIiasyCZsaxdoM6ENShSZMqisZ047lvoIy0K5n+Ypy8j8JbtCmgpm5GmnjCo/5POTz9kAc89FuPa3ZJ0F/6Eg=="],
+
+    "@payloadcms/email-nodemailer": ["@payloadcms/email-nodemailer@3.44.0", "", { "dependencies": { "nodemailer": "6.9.16" }, "peerDependencies": { "payload": "3.44.0" } }, "sha512-NOctR0RBjd1QyIyjP78Rk0wsjm5Kr3QCfj5m3JvCreHKtFkTVo/2Dzh5yug32739RHyKvX2hinNxmVFfDSe1hA=="],
 
     "@payloadcms/graphql": ["@payloadcms/graphql@3.44.0", "", { "dependencies": { "graphql-scalars": "1.22.2", "pluralize": "8.0.0", "ts-essentials": "10.0.3", "tsx": "4.19.2" }, "peerDependencies": { "graphql": "^16.8.1", "payload": "3.44.0" }, "bin": { "payload-graphql": "bin.js" } }, "sha512-6YsRSYAyL3HMl1geRTvVCljOJ109fl1q23+BsoVCf+0cqkJGJfodDJxVzReQFLtFAuMhZAHb4d+p7GitJ4uozw=="],
 
@@ -1409,6 +1412,8 @@
     "node-fetch": ["node-fetch@3.3.2", "", { "dependencies": { "data-uri-to-buffer": "^4.0.0", "fetch-blob": "^3.1.4", "formdata-polyfill": "^4.0.10" } }, "sha512-dRB78srN/l6gqWulah9SrxeYnxeddIG30+GOqK/9OlLVyLg3HPnr6SqOWTWOXKRwC2eGYCkZ59NNuSgvSrpgOA=="],
 
     "node-releases": ["node-releases@2.0.27", "", {}, "sha512-nmh3lCkYZ3grZvqcCH+fjmQ7X+H0OeZgP40OierEaAptX4XofMh5kwNbWh7lBduUzCcV/8kZ+NDLCwm2iorIlA=="],
+
+    "nodemailer": ["nodemailer@6.9.16", "", {}, "sha512-psAuZdTIRN08HKVd/E8ObdV6NO7NTBY3KsC30F7M4H1OnmLCUNaS56FpYxyb26zWLSyYF9Ozch9KYHhHegsiOQ=="],
 
     "normalize-path": ["normalize-path@3.0.0", "", {}, "sha512-6eZs5Ls3WtCisHWp9S2GUy8dqkpGi4BVSz3GaqiE6ezub0512ESztXUwUB6C6IKbQkY2Pnb/mD4WYojCRwcwLA=="],
 

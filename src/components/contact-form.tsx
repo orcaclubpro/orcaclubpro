@@ -4,8 +4,6 @@ import * as React from "react"
 import { useState } from "react"
 import { Mail, Phone, MapPin, User, Building2, MessageSquare, Calendar, Loader2 } from "lucide-react"
 import { toast } from "sonner"
-import AnimatedBackground from "@/components/layout/animated-background"
-import Image from 'next/image'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -29,7 +27,7 @@ interface TimeSlot {
   label: string
 }
 
-export default function ContactPage() {
+export function ContactForm() {
   const [activeTab, setActiveTab] = useState<'contact' | 'booking'>('contact')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoadingSlots, setIsLoadingSlots] = useState(false)
@@ -195,33 +193,7 @@ export default function ContactPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black relative overflow-hidden">
-      <AnimatedBackground />
-
-      {/* Hero Section */}
-      <section className="relative z-10 pb-8 px-6">
-        <div className="max-w-4xl mx-auto text-center">
-          <div className="mb-4 animate-fade-in">
-            <Image
-              src="/orcaclubpro.png"
-              alt="ORCACLUB Pro"
-              width={120}
-              height={120}
-              className="w-20 h-20 md:w-24 md:h-24 object-contain mx-auto"
-              priority
-            />
-          </div>
-
-          <h1 className="text-5xl md:text-6xl font-bold text-cyan-400 mb-2 animate-slide-up">
-            CONTACT
-          </h1>
-
-          <p className="text-lg md:text-xl text-gray-400 font-light animate-slide-up-delay">
-            Let's discuss how we can help you achieve your goals
-          </p>
-        </div>
-      </section>
-
+    <>
       {/* Tabs and Forms */}
       <section className="relative z-10 px-6 pb-32">
         <div className="max-w-2xl mx-auto">
@@ -727,6 +699,6 @@ export default function ContactPage() {
           opacity: 0;
         }
       `}</style>
-    </div>
+    </>
   )
 }

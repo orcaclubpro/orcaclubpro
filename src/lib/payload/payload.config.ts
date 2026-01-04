@@ -1,6 +1,7 @@
 import sharp from 'sharp'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import { mongooseAdapter } from '@payloadcms/db-mongodb'
+import { nodemailerAdapter } from '@payloadcms/email-nodemailer'
 import { buildConfig } from 'payload'
 import type { CollectionConfig } from 'payload'
 import { fileURLToPath } from 'node:url'
@@ -648,6 +649,20 @@ export default buildConfig({
   // Using MongoDB adapter
   db: mongooseAdapter({
     url: process.env.DATABASE_URI || 'mongodb+srv://chance:ara9YRAkRe7blAqF@orcapod.f5yp3f7.mongodb.net/orcapod',
+  }),
+  // Email configuration using Gmail SMTP via nodemailer
+  email: nodemailerAdapter({
+    defaultFromAddress: process.env.EMAIL_FROM || 'chance@orcaclub.pro',
+    defaultFromName: process.env.EMAIL_FROM_NAME || 'ORCACLUB',
+    transportOptions: {
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: parseInt(process.env.SMTP_PORT || '587'),
+      secure: false, // Use TLS
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    },
   }),
   // TypeScript configuration
   typescript: {

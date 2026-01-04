@@ -3,7 +3,6 @@
 import * as React from "react"
 import Link from "next/link"
 import { ArrowDown, Check, Clock, DollarSign, Zap, Target, Wrench, Package, Headphones, ChevronDown } from "lucide-react"
-import AnimatedBackground from "@/components/layout/animated-background"
 import ScrollReveal from "@/components/layout/scroll-reveal"
 import { BookingModal } from "@/components/booking-modal"
 import { cn } from "@/lib/utils"
@@ -140,7 +139,7 @@ function FAQItem({ question, answer }: FAQItemProps) {
   )
 }
 
-export default function ProjectPage() {
+export function ProjectTiers() {
   const scrollToTiers = () => {
     document.getElementById('tiers')?.scrollIntoView({ behavior: 'smooth' })
   }
@@ -253,9 +252,7 @@ export default function ProjectPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-black relative overflow-hidden">
-      <AnimatedBackground />
-
+    <>
       {/* SECTION 1: HERO */}
       <section className="relative z-10 pt-32 pb-20 px-6">
         <div className="max-w-5xl mx-auto text-center">
@@ -511,6 +508,6 @@ export default function ProjectPage() {
           </ScrollReveal>
         </div>
       </section>
-    </div>
+    </>
   )
 }
