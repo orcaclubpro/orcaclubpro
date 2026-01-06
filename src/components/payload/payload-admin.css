@@ -248,7 +248,7 @@
   input[type="search"],
   input[type="url"],
   textarea,
-  select,
+  select:not([role]):not([aria-haspopup]),
   .input,
   .text-input,
   .select-input {
@@ -763,11 +763,11 @@
    * RELATIONSHIP FIELDS - Better Selection
    * ======================================== */
 
+  /* Remove background from wrapper to prevent black box overlay */
   .relationship,
   .relationship__wrap {
-    background-color: rgba(10, 10, 10, 0.9) !important;
-    border: 1px solid rgba(103, 232, 249, 0.15) !important;
-    border-radius: var(--border-radius-m);
+    background-color: transparent !important;
+    border: none !important;
   }
 
   .relationship__option {
@@ -1062,6 +1062,8 @@
     border-radius: var(--border-radius-m) !important;
     min-height: 48px !important;
     cursor: pointer !important;
+    position: relative !important;
+    z-index: 2 !important;
   }
 
   .react-select__control:hover,
@@ -1073,6 +1075,8 @@
   .select__control--is-focused {
     border-color: rgba(103, 232, 249, 0.4) !important;
     box-shadow: 0 0 0 4px rgba(103, 232, 249, 0.08) !important;
+    background-color: rgba(10, 10, 10, 1) !important;
+    z-index: 3 !important;
   }
 
   .react-select__menu,
@@ -1080,8 +1084,29 @@
     background-color: rgba(10, 10, 10, 0.98) !important;
     border: 1px solid rgba(103, 232, 249, 0.2) !important;
     border-radius: var(--border-radius-m) !important;
-    backdrop-filter: blur(24px);
+    backdrop-filter: blur(8px) !important;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6) !important;
+    margin-top: 8px !important;
+    z-index: 1000 !important;
+  }
+
+  /* FIX: Prevent black box overlay from react-select's internal input */
+  .react-select__input-container,
+  .react-select__input,
+  .select__input-container,
+  .select__input {
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .react-select__input-container input,
+  .select__input-container input {
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
   }
 
   .react-select__option,
@@ -1116,5 +1141,205 @@
   .react-select__clear-indicator:hover,
   .select__clear-indicator:hover {
     color: #67e8f9 !important;
+  }
+
+  /* ========================================
+   * FIX: Radix UI Select & Button Overlays
+   * ======================================== */
+
+  /* Radix UI Select triggers should not have input styling */
+  button[role="combobox"],
+  button[aria-haspopup="listbox"],
+  select[role="combobox"],
+  [data-radix-select-trigger] {
+    background-color: rgba(10, 10, 10, 0.9) !important;
+    border: 1px solid rgba(103, 232, 249, 0.15) !important;
+    color: #ffffff !important;
+    border-radius: var(--border-radius-m) !important;
+    padding: 14px 16px !important;
+    font-size: var(--font-size-md) !important;
+    cursor: pointer !important;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+  }
+
+  button[role="combobox"]:hover,
+  button[aria-haspopup="listbox"]:hover,
+  [data-radix-select-trigger]:hover {
+    border-color: rgba(103, 232, 249, 0.25) !important;
+  }
+
+  button[role="combobox"][data-state="open"],
+  button[aria-haspopup="listbox"][data-state="open"],
+  [data-radix-select-trigger][data-state="open"] {
+    border-color: rgba(103, 232, 249, 0.4) !important;
+    box-shadow: 0 0 0 3px rgba(103, 232, 249, 0.1) !important;
+    background-color: rgba(10, 10, 10, 1) !important;
+  }
+
+  /* Remove any overlay spans or divs inside Radix triggers */
+  button[role="combobox"] > span,
+  button[aria-haspopup="listbox"] > span,
+  [data-radix-select-trigger] > span {
+    background-color: transparent !important;
+    border: none !important;
+    display: inline !important;
+  }
+
+  /* Radix Select Value should not have backgrounds */
+  [data-radix-select-value],
+  button[role="combobox"] [data-state],
+  button[aria-haspopup="listbox"] [data-state] {
+    background-color: transparent !important;
+    border: none !important;
+  }
+
+  /* Radix Select Content (dropdown menu) */
+  [data-radix-select-content],
+  [data-radix-select-viewport],
+  [role="listbox"] {
+    background-color: rgba(10, 10, 10, 0.98) !important;
+    border: 1px solid rgba(103, 232, 249, 0.2) !important;
+    border-radius: var(--border-radius-m) !important;
+    backdrop-filter: blur(8px) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6) !important;
+    z-index: 1000 !important;
+  }
+
+  /* Radix Select Items */
+  [data-radix-select-item],
+  [role="option"] {
+    padding: 12px 16px !important;
+    font-size: var(--font-size-base) !important;
+    cursor: pointer !important;
+    background-color: transparent !important;
+    transition: background-color 0.15s ease !important;
+  }
+
+  [data-radix-select-item][data-highlighted],
+  [role="option"][data-highlighted],
+  [data-radix-select-item]:hover,
+  [role="option"]:hover {
+    background-color: rgba(103, 232, 249, 0.08) !important;
+    color: #67e8f9 !important;
+    outline: none !important;
+  }
+
+  [data-radix-select-item][data-state="checked"],
+  [role="option"][aria-selected="true"] {
+    background-color: rgba(103, 232, 249, 0.15) !important;
+    color: #67e8f9 !important;
+  }
+
+  /* ========================================
+   * FIX: PayloadCMS Chips/Pills/Tags (Selected Values)
+   * ======================================== */
+
+  /* Remove dark backgrounds from chip/pill elements in relationship fields */
+  .chip,
+  .pill,
+  .tag,
+  .badge,
+  [class*="chip"],
+  [class*="pill"],
+  [class*="tag-"],
+  [class*="badge"],
+  [class*="value-container"] > div,
+  button[role="combobox"] > div:not([data-radix-select-icon]),
+  button[aria-haspopup="listbox"] > div:first-child {
+    background-color: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Specifically target PayloadCMS relationship field value displays */
+  [class*="relationship"] [class*="value"],
+  [class*="relationship"] [class*="item"],
+  [class*="relationship"] [class*="multi"],
+  .relationship-item,
+  .relationship-value,
+  .multi-value,
+  .multi-value__label,
+  .multi-value__remove {
+    background-color: transparent !important;
+    border: none !important;
+  }
+
+  /* Target any absolutely positioned overlay divs */
+  button[role="combobox"] > div[style*="position"],
+  button[aria-haspopup] > div[style*="position"],
+  [data-radix-select-trigger] > div[style*="position"] {
+    background-color: transparent !important;
+    border: none !important;
+  }
+
+  /* Ensure all nested divs in select triggers are transparent */
+  button[role="combobox"] div,
+  button[aria-haspopup="listbox"] div,
+  [data-radix-select-trigger] div {
+    background-color: transparent !important;
+  }
+
+  /* NUCLEAR OPTION: Force transparency on ALL child elements of select/button triggers */
+  button[role="combobox"] *,
+  button[aria-haspopup="listbox"] *,
+  button[aria-haspopup="menu"] *,
+  [data-radix-select-trigger] *,
+  select[role="combobox"] * {
+    background-color: transparent !important;
+    background-image: none !important;
+    background: transparent !important;
+  }
+
+  /* Specifically target the field wrapper divs */
+  .field-type > div,
+  .field-type > div > div,
+  [class*="field"] > button > *,
+  [class*="relationship"] > * > * {
+    background-color: transparent !important;
+    background: none !important;
+  }
+
+  /* Override any utility classes that might add backgrounds */
+  .bg-black,
+  .bg-gray-900,
+  .bg-gray-800,
+  [class*="bg-"] button[role] > *,
+  [class*="bg-"] button[aria-haspopup] > * {
+    background-color: transparent !important;
+    background: none !important;
+  }
+
+  /* Target common wrapper patterns */
+  button > div > div,
+  button > span > div,
+  button > div > span,
+  [role="combobox"] > *,
+  [aria-haspopup] > * {
+    background-color: transparent !important;
+  }
+
+  /* ABSOLUTE LAST RESORT: Override inline styles */
+  button[role="combobox"] [style*="background"],
+  button[aria-haspopup] [style*="background"],
+  [data-radix-select-trigger] [style*="background"] {
+    background-color: transparent !important;
+    background-image: none !important;
+    background: transparent !important;
+  }
+
+  /* Prevent ANY element with a dark background from appearing inside triggers */
+  button[role="combobox"] [class],
+  button[aria-haspopup="listbox"] [class],
+  [data-radix-select-trigger] [class] {
+    background-color: transparent !important;
+  }
+
+  /* Make sure text inside buttons is visible */
+  button[role="combobox"] span,
+  button[aria-haspopup="listbox"] span,
+  [data-radix-select-trigger] span {
+    color: inherit !important;
+    background-color: transparent !important;
   }
 }

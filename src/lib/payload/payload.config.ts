@@ -8,6 +8,10 @@ import { fileURLToPath } from 'node:url'
 import path from 'path'
 import { revalidatePath } from 'next/cache'
 import { revalidateHomepage, revalidateHomepageOnDelete, createMultiPathRevalidate, createMultiPathRevalidateOnDelete } from './hooks/revalidate'
+import { sendTwoFactorEmailHook } from './hooks/sendTwoFactorEmail'
+import { beforeLoginHook } from './hooks/beforeLogin'
+import ClientAccounts from './collections/ClientAccounts'
+import Orders from './collections/Orders'
 
 // Helper function to format strings as URL-friendly slugs
 const formatSlug = (val: string): string =>
@@ -275,6 +279,16 @@ const Leads: CollectionConfig = {
         description: 'Whether a Shopify password was generated',
         position: 'sidebar',
         readOnly: true,
+      },
+    },
+    {
+      name: 'convertToClient',
+      type: 'ui',
+      admin: {
+        position: 'sidebar',
+        components: {
+          Field: '@/components/payload/ConvertToClientButton',
+        },
       },
     },
   ],
@@ -592,16 +606,40 @@ const Users: CollectionConfig = {
         return `<div>Click <a href="${process.env.NEXT_PUBLIC_SERVER_URL}/verify-email?token=${token}">here</a> to verify your email.</div>`
       },
     },
+    forgotPassword: {
+      generateEmailHTML: (args) => {
+        // This custom template is handled by our API endpoint
+        // But PayloadCMS requires a function here for the built-in endpoint
+        const token = args?.token || ''
+        const user = args?.user || { name: 'User' }
+        const resetUrl = `${process.env.NEXT_PUBLIC_SERVER_URL}/reset-password?token=${token}`
+        return `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2>Password Reset Request</h2>
+            <p>Hello ${user.name},</p>
+            <p>We received a request to reset your password. Click the link below to choose a new password:</p>
+            <p><a href="${resetUrl}" style="color: #67e8f9;">Reset Password</a></p>
+            <p>This link will expire in 1 hour.</p>
+            <p>If you didn't request this, please ignore this email.</p>
+            <p>Thanks,<br/>ORCACLUB Team</p>
+          </div>
+        `
+      },
+    },
   },
   admin: {
     useAsTitle: 'email',
-    defaultColumns: ['name', 'email'],
+    defaultColumns: ['name', 'email', 'twoFactorVerified'],
   },
   access: {
     read: () => true,
     create: () => true,
     update: () => true,
     delete: () => true,
+  },
+  hooks: {
+    afterChange: [sendTwoFactorEmailHook],
+    beforeLogin: [beforeLoginHook],
   },
   fields: [
     {
@@ -632,6 +670,59 @@ const Users: CollectionConfig = {
         description: 'User workspace identifier',
       },
     },
+    // 2FA fields (account verification)
+    {
+      name: 'twoFactorCode',
+      type: 'text',
+      admin: {
+        description: '6-digit 2FA verification code (account setup)',
+        position: 'sidebar',
+        readOnly: true,
+      },
+    },
+    {
+      name: 'twoFactorExpiry',
+      type: 'date',
+      admin: {
+        description: 'Expiry time for 2FA code (account setup)',
+        position: 'sidebar',
+        readOnly: true,
+        date: {
+          pickerAppearance: 'dayAndTime',
+        },
+      },
+    },
+    {
+      name: 'twoFactorVerified',
+      type: 'checkbox',
+      defaultValue: true, // Auto-verify all users (first user gets immediate access)
+      admin: {
+        description: 'Whether user has verified their account',
+        position: 'sidebar',
+      },
+    },
+    // Login 2FA fields
+    {
+      name: 'loginTwoFactorCode',
+      type: 'text',
+      admin: {
+        description: '6-digit login verification code',
+        position: 'sidebar',
+        readOnly: true,
+      },
+    },
+    {
+      name: 'loginTwoFactorExpiry',
+      type: 'date',
+      admin: {
+        description: 'Expiry time for login code',
+        position: 'sidebar',
+        readOnly: true,
+        date: {
+          pickerAppearance: 'dayAndTime',
+        },
+      },
+    },
   ],
 }
 
@@ -642,7 +733,7 @@ export default buildConfig({
   editor: lexicalEditor(),
 
   // Define and configure your collections in this array
-  collections: [Media, Clients, Leads, Categories, Tags, Posts, Users],
+  collections: [Media, Clients, Leads, Categories, Tags, Posts, Users, ClientAccounts, Orders],
 
   // Your Payload secret - should be a complex and secure string, unguessable
   secret: process.env.PAYLOAD_SECRET || 'your-secret-here',
@@ -690,6 +781,12 @@ export default buildConfig({
         order: {
           Component: '@/components/payload/order-creation/OrderCreationView#OrderCreationView',
           path: '/order',
+        },
+        login: {
+          Component: '@/components/payload/CustomLogin',
+        },
+        account: {
+          Component: '@/components/payload/CustomAccount',
         },
       },
     },

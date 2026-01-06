@@ -74,12 +74,18 @@ export interface Config {
     tags: Tag;
     posts: Post;
     users: User;
+    'client-accounts': ClientAccount;
+    orders: Order;
     'payload-jobs': PayloadJob;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
     'payload-migrations': PayloadMigration;
   };
-  collectionsJoins: {};
+  collectionsJoins: {
+    'client-accounts': {
+      orders: 'orders';
+    };
+  };
   collectionsSelect: {
     media: MediaSelect<false> | MediaSelect<true>;
     clients: ClientsSelect<false> | ClientsSelect<true>;
@@ -88,6 +94,8 @@ export interface Config {
     tags: TagsSelect<false> | TagsSelect<true>;
     posts: PostsSelect<false> | PostsSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
+    'client-accounts': ClientAccountsSelect<false> | ClientAccountsSelect<true>;
+    orders: OrdersSelect<false> | OrdersSelect<true>;
     'payload-jobs': PayloadJobsSelect<false> | PayloadJobsSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -389,6 +397,26 @@ export interface User {
    * User workspace identifier
    */
   workspace?: string | null;
+  /**
+   * 6-digit 2FA verification code (account setup)
+   */
+  twoFactorCode?: string | null;
+  /**
+   * Expiry time for 2FA code (account setup)
+   */
+  twoFactorExpiry?: string | null;
+  /**
+   * Whether user has verified their account
+   */
+  twoFactorVerified?: boolean | null;
+  /**
+   * 6-digit login verification code
+   */
+  loginTwoFactorCode?: string | null;
+  /**
+   * Expiry time for login code
+   */
+  loginTwoFactorExpiry?: string | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -408,6 +436,168 @@ export interface User {
       }[]
     | null;
   password?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "client-accounts".
+ */
+export interface ClientAccount {
+  id: string;
+  /**
+   * Client full name
+   */
+  name: string;
+  /**
+   * Client email address
+   */
+  email: string;
+  /**
+   * Shopify customer GID (e.g., gid://shopify/Customer/123)
+   */
+  shopifyCustomerId?: string | null;
+  /**
+   * Stripe customer ID (e.g., cus_xxxxx) - auto-created on first Stripe order
+   */
+  stripeCustomerId?: string | null;
+  /**
+   * Outstanding balance from PENDING orders (what client owes) - auto-updated
+   */
+  accountBalance?: number | null;
+  /**
+   * Total number of ALL orders (all statuses) - auto-calculated
+   */
+  totalOrders?: number | null;
+  /**
+   * User responsible for this client account
+   */
+  assignedTo?: (string | null) | User;
+  /**
+   * Orders linked to this client account
+   */
+  orders?: {
+    docs?: (string | Order)[];
+    hasNextPage?: boolean;
+    totalDocs?: number;
+  };
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "orders".
+ */
+export interface Order {
+  id: string;
+  /**
+   * Order number from Shopify or Stripe (e.g., #1001)
+   */
+  orderNumber: string;
+  /**
+   * Current order status
+   */
+  status: 'pending' | 'paid' | 'cancelled';
+  /**
+   * Type of order (Shopify or Stripe)
+   */
+  orderType: 'shopify' | 'stripe';
+  /**
+   * Client account for this order
+   */
+  clientAccount: string | ClientAccount;
+  /**
+   * Order total amount (USD)
+   */
+  amount: number;
+  /**
+   * Client balance after this order (audit trail)
+   */
+  balanceSnapshot?: number | null;
+  /**
+   * Shopify draft order GID
+   */
+  shopifyDraftOrderId?: string | null;
+  /**
+   * Shopify invoice payment URL
+   */
+  shopifyInvoiceUrl?: string | null;
+  /**
+   * Stripe Invoice ID
+   */
+  stripeInvoiceId?: string | null;
+  /**
+   * Stripe hosted invoice URL (sent to customer)
+   */
+  stripeInvoiceUrl?: string | null;
+  /**
+   * Stripe Customer ID
+   */
+  stripeCustomerId?: string | null;
+  /**
+   * Stripe Payment Intent ID (after payment)
+   */
+  stripePaymentIntentId?: string | null;
+  /**
+   * Order line items
+   */
+  lineItems?:
+    | {
+        /**
+         * Product or service name
+         */
+        title: string;
+        /**
+         * Quantity ordered
+         */
+        quantity: number;
+        /**
+         * Price per unit (USD)
+         */
+        price: number;
+        /**
+         * Recurring subscription item?
+         */
+        isRecurring?: boolean | null;
+        /**
+         * Billing interval
+         */
+        recurringInterval?: ('month' | 'year') | null;
+        /**
+         * Shopify product variant ID (if applicable)
+         */
+        shopifyVariantId?: string | null;
+        /**
+         * Stripe Price ID (for subscriptions)
+         */
+        stripePriceId?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Invoice email history (audit trail of all sent invoices)
+   */
+  invoices?:
+    | {
+        /**
+         * When the invoice was sent
+         */
+        sentAt: string;
+        /**
+         * Email address invoice was sent to
+         */
+        sentTo: string;
+        /**
+         * User who sent the invoice
+         */
+        sentBy?: (string | null) | User;
+        /**
+         * Invoice send status
+         */
+        status: 'sent' | 'failed';
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -535,6 +725,14 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'users';
         value: string | User;
+      } | null)
+    | ({
+        relationTo: 'client-accounts';
+        value: string | ClientAccount;
+      } | null)
+    | ({
+        relationTo: 'orders';
+        value: string | Order;
       } | null)
     | ({
         relationTo: 'payload-jobs';
@@ -717,6 +915,11 @@ export interface UsersSelect<T extends boolean = true> {
   name?: T;
   role?: T;
   workspace?: T;
+  twoFactorCode?: T;
+  twoFactorExpiry?: T;
+  twoFactorVerified?: T;
+  loginTwoFactorCode?: T;
+  loginTwoFactorExpiry?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -735,6 +938,63 @@ export interface UsersSelect<T extends boolean = true> {
         createdAt?: T;
         expiresAt?: T;
       };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "client-accounts_select".
+ */
+export interface ClientAccountsSelect<T extends boolean = true> {
+  name?: T;
+  email?: T;
+  shopifyCustomerId?: T;
+  stripeCustomerId?: T;
+  accountBalance?: T;
+  totalOrders?: T;
+  assignedTo?: T;
+  orders?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "orders_select".
+ */
+export interface OrdersSelect<T extends boolean = true> {
+  orderNumber?: T;
+  status?: T;
+  orderType?: T;
+  clientAccount?: T;
+  amount?: T;
+  balanceSnapshot?: T;
+  shopifyDraftOrderId?: T;
+  shopifyInvoiceUrl?: T;
+  stripeInvoiceId?: T;
+  stripeInvoiceUrl?: T;
+  stripeCustomerId?: T;
+  stripePaymentIntentId?: T;
+  lineItems?:
+    | T
+    | {
+        title?: T;
+        quantity?: T;
+        price?: T;
+        isRecurring?: T;
+        recurringInterval?: T;
+        shopifyVariantId?: T;
+        stripePriceId?: T;
+        id?: T;
+      };
+  invoices?:
+    | T
+    | {
+        sentAt?: T;
+        sentTo?: T;
+        sentBy?: T;
+        status?: T;
+        id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

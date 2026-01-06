@@ -1,46 +1,28 @@
-import { shopifyClient } from './client'
-import crypto from 'crypto'
+/**
+ * Shopify Customer Utilities
+ * Create and manage customers via Shopify Admin API
+ */
+
+import { shopifyAdminRequest } from './admin-client'
 
 /**
- * Parse a full name into first and last name
+ * GraphQL mutation to create a customer
  */
-function parseName(fullName: string): { firstName: string; lastName: string } {
-  const trimmed = fullName.trim()
-  const parts = trimmed.split(/\s+/)
-
-  if (parts.length === 1) {
-    return { firstName: parts[0], lastName: '' }
-  }
-
-  // First word is firstName, everything else is lastName
-  const firstName = parts[0]
-  const lastName = parts.slice(1).join(' ')
-
-  return { firstName, lastName }
-}
-
-/**
- * Generate a secure random password
- */
-function generateSecurePassword(): string {
-  return crypto.randomBytes(16).toString('hex')
-}
-
-/**
- * GraphQL mutation for creating a customer
- */
-const CREATE_CUSTOMER_MUTATION = `
-  mutation createCustomerAccount($input: CustomerCreateInput!) {
+const CUSTOMER_CREATE_MUTATION = `
+  mutation customerCreate($input: CustomerInput!) {
     customerCreate(input: $input) {
       customer {
         id
         email
+        phone
         firstName
         lastName
-        phone
+        createdAt
+        updatedAt
+        verifiedEmail
+        state
       }
-      customerUserErrors {
-        code
+      userErrors {
         field
         message
       }
@@ -48,124 +30,141 @@ const CREATE_CUSTOMER_MUTATION = `
   }
 `
 
-export interface CreateCustomerInput {
-  name: string
+/**
+ * Input for creating a Shopify customer
+ */
+export interface CreateShopifyCustomerInput {
   email: string
+  firstName?: string
+  lastName?: string
+  name?: string // Alternative to firstName/lastName - will be split automatically
   phone?: string
-  acceptsMarketing?: boolean
-}
-
-export interface CreateCustomerResult {
-  success: boolean
-  customerId: string | null
-  generatedPassword: string | null
-  error?: string
-  isDuplicate?: boolean
+  acceptsMarketing?: boolean // For marketing consent
 }
 
 /**
- * Create a Shopify customer via Storefront API
+ * Result of customer creation
+ */
+export interface CreateShopifyCustomerResult {
+  success: boolean
+  customerId: string | null // Shopify GID: "gid://shopify/Customer/123"
+  customer: any | null
+  error?: string
+  isDuplicate?: boolean // True if customer already exists
+  userErrors?: Array<{ field: string[]; message: string }>
+}
+
+/**
+ * Create a customer in Shopify
+ * Returns the customer object with Shopify GID for use in draft orders
  */
 export async function createShopifyCustomer(
-  input: CreateCustomerInput
-): Promise<CreateCustomerResult> {
+  input: CreateShopifyCustomerInput
+): Promise<CreateShopifyCustomerResult> {
   try {
-    const { firstName, lastName } = parseName(input.name)
-    const password = generateSecurePassword()
+    console.log('[Shopify Customers] Creating customer for:', input.email)
 
-    console.log(`[Shopify] Creating customer: ${input.email}`)
+    // Build the GraphQL input
+    const graphqlInput: any = {
+      email: input.email,
+    }
 
-    const response = await shopifyClient.request(CREATE_CUSTOMER_MUTATION, {
-      variables: {
-        input: {
-          email: input.email,
-          password,
-          firstName,
-          lastName,
-          phone: input.phone || undefined,
-          acceptsMarketing: input.acceptsMarketing ?? true,
-        },
-      },
-    })
-
-    const data = response.data as any
-
-    // Check for user errors
-    if (data?.customerCreate?.customerUserErrors?.length > 0) {
-      const errors = data.customerCreate.customerUserErrors
-      const firstError = errors[0]
-
-      // Check if customer already exists
-      if (
-        firstError.code === 'CUSTOMER_ALREADY_EXISTS' ||
-        firstError.message?.toLowerCase().includes('already exists')
-      ) {
-        console.log(`[Shopify] Customer already exists: ${input.email}`)
-        return {
-          success: false,
-          customerId: null,
-          generatedPassword: null,
-          error: 'Customer already exists in Shopify',
-          isDuplicate: true,
-        }
+    // Handle name splitting if provided as full name
+    if (input.name && !input.firstName && !input.lastName) {
+      const nameParts = input.name.trim().split(' ')
+      if (nameParts.length > 1) {
+        graphqlInput.firstName = nameParts[0]
+        graphqlInput.lastName = nameParts.slice(1).join(' ')
+      } else {
+        graphqlInput.firstName = input.name
+      }
+    } else {
+      // Add optional fields
+      if (input.firstName) {
+        graphqlInput.firstName = input.firstName
       }
 
-      // Other errors
-      console.error('[Shopify] Customer creation failed:', errors)
+      if (input.lastName) {
+        graphqlInput.lastName = input.lastName
+      }
+    }
+
+    if (input.phone) {
+      graphqlInput.phone = input.phone
+    }
+
+    if (input.acceptsMarketing !== undefined) {
+      graphqlInput.acceptsMarketing = input.acceptsMarketing
+    }
+
+    const response = await shopifyAdminRequest(CUSTOMER_CREATE_MUTATION, {
+      input: graphqlInput,
+    })
+
+    // Check for user errors
+    const userErrors = response.data?.customerCreate?.userErrors || []
+    if (userErrors.length > 0) {
+      console.error('[Shopify Customers] User errors:', userErrors)
+
+      // Check if error indicates duplicate customer (email already exists)
+      const isDuplicateError = userErrors.some((err: { field?: string[]; message: string }) =>
+        err.message.toLowerCase().includes('taken') ||
+        err.message.toLowerCase().includes('already exists') ||
+        err.field?.includes('email')
+      )
+
       return {
         success: false,
         customerId: null,
-        generatedPassword: null,
-        error: firstError.message || 'Unknown error creating customer',
+        customer: null,
+        error: userErrors[0].message,
+        isDuplicate: isDuplicateError,
+        userErrors,
       }
     }
 
-    // Success
-    const customer = data?.customerCreate?.customer
-    if (customer?.id) {
-      console.log(`[Shopify] Customer created successfully: ${customer.id}`)
+    // Check if customer was created
+    const customer = response.data?.customerCreate?.customer
+    if (!customer) {
+      console.error('[Shopify Customers] No customer in response')
       return {
-        success: true,
-        customerId: customer.id,
-        generatedPassword: password,
+        success: false,
+        customerId: null,
+        customer: null,
+        error: 'No customer returned from API',
       }
     }
 
-    // Unexpected response
-    console.error('[Shopify] Unexpected response:', data)
+    console.log('[Shopify Customers] Customer created successfully:', customer.id)
+    console.log('[Shopify Customers] Email:', customer.email)
+
     return {
-      success: false,
-      customerId: null,
-      generatedPassword: null,
-      error: 'Unexpected response from Shopify API',
+      success: true,
+      customerId: customer.id,
+      customer: {
+        id: customer.id,
+        email: customer.email,
+        firstName: customer.firstName,
+        lastName: customer.lastName,
+        phone: customer.phone,
+        createdAt: customer.createdAt,
+        updatedAt: customer.updatedAt,
+        verifiedEmail: customer.verifiedEmail,
+        state: customer.state,
+      },
     }
   } catch (error) {
-    console.error('[Shopify] Customer creation error:', error)
+    console.error('[Shopify Customers] Creation error:', error)
     return {
       success: false,
       customerId: null,
-      generatedPassword: null,
+      customer: null,
       error: error instanceof Error ? error.message : 'Unknown error',
     }
   }
 }
 
-/**
- * Handle customer creation with graceful error handling
- * This is a non-blocking wrapper that logs errors but doesn't throw
- */
-export async function createCustomerSafely(
-  input: CreateCustomerInput
-): Promise<CreateCustomerResult> {
-  try {
-    return await createShopifyCustomer(input)
-  } catch (error) {
-    console.error('[Shopify] Safe customer creation caught error:', error)
-    return {
-      success: false,
-      customerId: null,
-      generatedPassword: null,
-      error: 'Failed to create customer - caught exception',
-    }
-  }
-}
+console.log('[Shopify Customers] Customer module loaded')
+
+// Alias for backward compatibility
+export const createCustomerSafely = createShopifyCustomer

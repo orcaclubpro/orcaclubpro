@@ -7,6 +7,10 @@ import CustomerSelector from './CustomerSelector'
 import ProductSearch, { LineItem } from './ProductSearch'
 import OrderSummary from './OrderSummary'
 import CartSidebar from './CartSidebar'
+import OrderTypeSidebar, { OrderType } from './OrderTypeSidebar'
+import StripeProductForm, { StripeLineItem } from './StripeProductForm'
+import StripeCartSidebar from './StripeCartSidebar'
+import StripeOrderSummary from './StripeOrderSummary'
 
 interface Lead {
   id: string
@@ -19,9 +23,11 @@ interface Lead {
 }
 
 export default function OrderCreationClient() {
+  const [orderType, setOrderType] = useState<OrderType>('shopify')
   const [step, setStep] = useState(1)
   const [selectedCustomer, setSelectedCustomer] = useState<Lead | null>(null)
   const [lineItems, setLineItems] = useState<LineItem[]>([])
+  const [stripeLineItems, setStripeLineItems] = useState<StripeLineItem[]>([])
 
   function handleAddToCart(item: LineItem) {
     setLineItems((prev) => {
@@ -57,26 +63,71 @@ export default function OrderCreationClient() {
     setLineItems((prev) => prev.filter((_, i) => i !== index))
   }
 
+  function handleAddStripeItem(item: StripeLineItem) {
+    setStripeLineItems((prev) => [...prev, item])
+  }
+
+  function handleUpdateStripeQuantity(index: number, quantity: number) {
+    setStripeLineItems((prev) =>
+      prev.map((item, i) => (i === index ? { ...item, quantity } : item))
+    )
+  }
+
+  function handleRemoveStripeItem(index: number) {
+    setStripeLineItems((prev) => prev.filter((_, i) => i !== index))
+  }
+
   async function handleCreateOrder(orderData: any) {
     try {
-      const response = await fetch('/api/shopify/draft-orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderData),
-      })
+      // Determine which API to call based on order type
+      if (orderType === 'shopify') {
+        const response = await fetch('/api/shopify/draft-orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(orderData),
+        })
 
-      const data = await response.json()
+        const data = await response.json()
 
-      if (!response.ok) {
-        return {
-          success: false,
-          error: data.error || 'Failed to create order',
+        if (!response.ok) {
+          return {
+            success: false,
+            error: data.error || 'Failed to create order',
+          }
         }
-      }
 
-      return {
-        success: true,
-        draftOrder: data.draftOrder,
+        return {
+          success: true,
+          draftOrder: data.draftOrder,
+        }
+      } else {
+        // Stripe payment link creation
+        const response = await fetch('/api/stripe/payment-links', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            customerEmail: selectedCustomer?.email,
+            customerName: selectedCustomer?.name,
+            lineItems: stripeLineItems,
+          }),
+        })
+
+        const data = await response.json()
+
+        if (!response.ok) {
+          return {
+            success: false,
+            error: data.error || 'Failed to create payment link',
+          }
+        }
+
+        return {
+          success: true,
+          paymentLink: data.paymentLink,
+          paymentLinkId: data.paymentLinkId,
+          orderNumber: data.orderNumber,
+          totalAmount: data.totalAmount,
+        }
       }
     } catch (error) {
       console.error('[Order Creation] Error:', error)
@@ -92,7 +143,11 @@ export default function OrderCreationClient() {
   }
 
   function canProceedToStep3() {
-    return lineItems.length > 0
+    if (orderType === 'shopify') {
+      return lineItems.length > 0
+    } else {
+      return stripeLineItems.length > 0
+    }
   }
 
   return (
@@ -113,7 +168,9 @@ export default function OrderCreationClient() {
                 Create Order
               </h1>
               <p className="text-sm text-gray-400 mt-1">
-                Create draft orders for customers via Shopify Admin API
+                {orderType === 'shopify'
+                  ? 'Create draft orders for customers via Shopify Admin API'
+                  : 'Create custom payment links with Stripe'}
               </p>
             </div>
           </div>
@@ -163,33 +220,43 @@ export default function OrderCreationClient() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Step 1: Select Customer - No sidebar */}
+        {/* Step 1: Select Customer & Order Type - WITH sidebar */}
         {step === 1 && (
-          <div className="bg-gray-800 rounded-lg shadow-sm border border-gray-700 p-6">
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-xl font-semibold text-gray-100 mb-2">
-                  Step 1: Select Customer
-                </h2>
-                <p className="text-gray-400">
-                  Choose a customer from your leads who has a Shopify account
-                </p>
-              </div>
+          <div className="flex gap-6">
+            {/* Left: Order Type Sidebar */}
+            <OrderTypeSidebar selectedType={orderType} onSelectType={setOrderType} />
 
-              <CustomerSelector
-                onSelect={setSelectedCustomer}
-                selectedCustomer={selectedCustomer}
-              />
+            {/* Right: Customer Selection */}
+            <div className="flex-1 min-w-0">
+              <div className="bg-gray-800 rounded-lg shadow-sm border border-gray-700 p-6">
+                <div className="space-y-6">
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-100 mb-2">
+                      Step 1: Select Customer
+                    </h2>
+                    <p className="text-gray-400">
+                      {orderType === 'shopify'
+                        ? 'Choose a customer from your leads who has a Shopify account'
+                        : 'Choose a customer to send the Stripe payment link to'}
+                    </p>
+                  </div>
 
-              <div className="flex justify-end pt-4">
-                <button
-                  onClick={() => setStep(2)}
-                  disabled={!canProceedToStep2()}
-                  className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors font-medium"
-                >
-                  Continue to Products
-                  <ArrowRight className="w-5 h-5" />
-                </button>
+                  <CustomerSelector
+                    onSelect={setSelectedCustomer}
+                    selectedCustomer={selectedCustomer}
+                  />
+
+                  <div className="flex justify-end pt-4">
+                    <button
+                      onClick={() => setStep(2)}
+                      disabled={!canProceedToStep2()}
+                      className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors font-medium"
+                    >
+                      Continue to Products
+                      <ArrowRight className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -205,20 +272,28 @@ export default function OrderCreationClient() {
                   <div className="flex items-center justify-between">
                     <div>
                       <h2 className="text-xl font-semibold text-gray-100 mb-2">
-                        Step 2: Add Products & Services
+                        Step 2: Add {orderType === 'shopify' ? 'Products & Services' : 'Payment Items'}
                       </h2>
                       <p className="text-gray-400">
-                        Add Shopify products or create custom service line items
+                        {orderType === 'shopify'
+                          ? 'Add Shopify products or create custom service line items'
+                          : 'Configure custom products or services for Stripe payment'}
                       </p>
                     </div>
                     {/* Show cart count badge on mobile only (when sidebar is hidden) */}
                     <div className="lg:hidden bg-blue-900/30 border border-blue-500/50 rounded-lg px-4 py-2">
                       <p className="text-sm text-gray-400">Cart Items:</p>
-                      <p className="text-2xl font-bold text-blue-400">{lineItems.length}</p>
+                      <p className="text-2xl font-bold text-blue-400">
+                        {orderType === 'shopify' ? lineItems.length : stripeLineItems.length}
+                      </p>
                     </div>
                   </div>
 
-                  <ProductSearch onAddToCart={handleAddToCart} />
+                  {orderType === 'shopify' ? (
+                    <ProductSearch onAddToCart={handleAddToCart} />
+                  ) : (
+                    <StripeProductForm onAddToCart={handleAddStripeItem} />
+                  )}
 
                   <div className="flex justify-between pt-4 border-t border-gray-700">
                     <button
@@ -243,12 +318,21 @@ export default function OrderCreationClient() {
             </div>
 
             {/* Right: Cart Sidebar (outside card, hidden on mobile) */}
-            <CartSidebar
-              lineItems={lineItems}
-              onUpdateQuantity={handleUpdateQuantity}
-              onRemoveItem={handleRemoveItem}
-              onProceedToReview={() => setStep(3)}
-            />
+            {orderType === 'shopify' ? (
+              <CartSidebar
+                lineItems={lineItems}
+                onUpdateQuantity={handleUpdateQuantity}
+                onRemoveItem={handleRemoveItem}
+                onProceedToReview={() => setStep(3)}
+              />
+            ) : (
+              <StripeCartSidebar
+                lineItems={stripeLineItems}
+                onUpdateQuantity={handleUpdateStripeQuantity}
+                onRemoveItem={handleRemoveStripeItem}
+                onProceedToReview={() => setStep(3)}
+              />
+            )}
           </div>
         )}
 
@@ -258,10 +342,12 @@ export default function OrderCreationClient() {
             <div className="space-y-6">
               <div>
                 <h2 className="text-xl font-semibold text-gray-100 mb-2">
-                  Step 3: Review & Submit Order
+                  Step 3: Review & {orderType === 'shopify' ? 'Submit Order' : 'Create Payment Link'}
                 </h2>
                 <p className="text-gray-400">
-                  Review order details and create the draft order in Shopify
+                  {orderType === 'shopify'
+                    ? 'Review order details and create the draft order in Shopify'
+                    : 'Review payment items and generate a Stripe payment link'}
                 </p>
               </div>
 
@@ -273,13 +359,23 @@ export default function OrderCreationClient() {
                 </div>
               )}
 
-              <OrderSummary
-                customer={selectedCustomer}
-                lineItems={lineItems}
-                onUpdateQuantity={handleUpdateQuantity}
-                onRemoveItem={handleRemoveItem}
-                onCreateOrder={handleCreateOrder}
-              />
+              {orderType === 'shopify' ? (
+                <OrderSummary
+                  customer={selectedCustomer}
+                  lineItems={lineItems}
+                  onUpdateQuantity={handleUpdateQuantity}
+                  onRemoveItem={handleRemoveItem}
+                  onCreateOrder={handleCreateOrder}
+                />
+              ) : (
+                <StripeOrderSummary
+                  customer={selectedCustomer}
+                  lineItems={stripeLineItems}
+                  onUpdateQuantity={handleUpdateStripeQuantity}
+                  onRemoveItem={handleRemoveStripeItem}
+                  onCreateOrder={handleCreateOrder}
+                />
+              )}
 
               <div className="flex justify-start pt-4 border-t border-gray-700">
                 <button

@@ -630,6 +630,420 @@ const MyCollection: CollectionConfig = {
 
 ---
 
+## 🔐 Authentication & 2FA Architecture
+
+ORCACLUB implements a **modular two-factor authentication (2FA) system** that enforces email verification on every PayloadCMS admin login. This system is designed for security, maintainability, and seamless integration with PayloadCMS's built-in authentication.
+
+### System Overview
+
+The 2FA system consists of **three modular components** that work together:
+
+1. **Login 2FA Utilities** - Reusable functions for code generation, validation, and email sending
+2. **Custom API Endpoints** - REST endpoints for requesting and verifying login codes
+3. **PayloadCMS Integration** - Hooks and custom login view that enforce 2FA on every login
+
+### Architecture Diagram
+
+```
+User Login Flow:
+┌─────────────────────────────────────────────────────────────────┐
+│  1. User visits /admin                                          │
+│     └─→ Custom Login View (CustomLogin.tsx)                     │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  2. User enters email + password                                │
+│     └─→ POST /api/auth/request-login-code                       │
+│         ├─→ Validates credentials via Payload.login()           │
+│         ├─→ Generates 6-digit code (loginTwoFactor.ts)          │
+│         ├─→ Stores code in user.loginTwoFactorCode             │
+│         └─→ Sends email with code (sendLoginCodeEmail)         │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  3. User receives email and enters 6-digit code                 │
+│     └─→ POST /api/auth/verify-login-code                        │
+│         ├─→ Verifies code matches (verifyLoginCode)             │
+│         ├─→ Creates session with bypass flag                    │
+│         ├─→ beforeLogin hook checks bypass flag                 │
+│         ├─→ Sets payload-token HTTP-only cookie                 │
+│         └─→ Returns success + redirects to /admin               │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  4. User authenticated and redirected to admin dashboard        │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Component Breakdown
+
+#### 1. Login 2FA Utilities
+
+**Location:** `src/lib/payload/utils/loginTwoFactor.ts`
+
+**Purpose:** Provides reusable functions for 2FA operations, decoupled from PayloadCMS hooks.
+
+**Functions:**
+
+```typescript
+// Generate random 6-digit code
+generateLoginCode(): string
+
+// Get expiry time (10 minutes from now)
+getLoginCodeExpiry(): Date
+
+// Generate branded HTML email template
+generateLoginCodeEmailHTML(code: string, userName: string): string
+
+// Generate plain text email
+generateLoginCodeEmailText(code: string, userName: string): string
+
+// Send login code email via PayloadCMS email adapter
+sendLoginCodeEmail(payload: Payload, email: string, name: string, code: string): Promise<void>
+
+// Verify login code matches and is not expired
+verifyLoginCode(payload: Payload, email: string, code: string): Promise<{
+  success: boolean
+  message: string
+  userId?: string
+}>
+```
+
+**Design Principles:**
+
+- **Modularity** - Each function has a single responsibility
+- **Reusability** - Can be used in any context (API routes, hooks, etc.)
+- **Type Safety** - Full TypeScript support with proper typing
+- **Error Handling** - Comprehensive error logging via Payload logger
+
+#### 2. Custom API Endpoints
+
+**Request Login Code:** `src/app/api/auth/request-login-code/route.ts`
+
+```typescript
+POST /api/auth/request-login-code
+Body: { email: string, password: string }
+
+Flow:
+1. Validate email + password format
+2. Authenticate credentials via payload.login() (validates password)
+3. Check if user.twoFactorVerified is true (account-level 2FA)
+4. Generate 6-digit code and expiry
+5. Update user.loginTwoFactorCode and loginTwoFactorExpiry
+6. Send branded email with code
+7. Return success message
+
+Response:
+{
+  success: true,
+  message: "Login code sent to your email",
+  email: "user@example.com"
+}
+```
+
+**Verify Login Code:** `src/app/api/auth/verify-login-code/route.ts`
+
+```typescript
+POST /api/auth/verify-login-code
+Body: { email: string, password: string, code: string }
+
+Flow:
+1. Validate email + password + code format
+2. Verify code matches user.loginTwoFactorCode (using verifyLoginCode)
+3. Check code has not expired
+4. Create authenticated session via payload.login() with bypass flag
+5. Set HTTP-only cookie (payload-token)
+6. Clear loginTwoFactorCode from user record
+7. Return success + user data + token
+
+Response:
+{
+  success: true,
+  message: "Login successful!",
+  user: { id, email, name, role },
+  token: "...",
+  exp: 1234567890
+}
+```
+
+**Key Design Points:**
+
+- **Password Re-validation** - The password is validated again during verify-login-code to prevent session hijacking
+- **Context Flag** - Uses `bypassLoginTwoFactor` flag in request context to signal beforeLogin hook
+- **HTTP-Only Cookie** - Session token stored securely, inaccessible to JavaScript
+- **Code Cleanup** - Login code is cleared after successful verification
+
+#### 3. PayloadCMS Integration
+
+**beforeLogin Hook:** `src/lib/payload/hooks/beforeLogin.ts`
+
+```typescript
+Purpose: Enforces 2FA on EVERY admin login by blocking direct logins
+
+Flow:
+1. Check if req.context.bypassLoginTwoFactor === true
+2. If true, allow login (coming from verified 2FA flow)
+3. If false, check user.twoFactorVerified (account-level verification)
+4. If not verified, throw error requiring account verification
+5. Otherwise, throw error requiring 2FA login code
+
+Integration:
+// In payload.config.ts Users collection
+hooks: {
+  beforeLogin: [beforeLoginHook]
+}
+```
+
+**Custom Login View:** `src/components/payload/CustomLogin.tsx`
+
+```typescript
+Purpose: Replace PayloadCMS default login UI with 2FA flow
+
+Features:
+- Two-step login form (credentials → code)
+- Real-time code validation (6 digits only)
+- Resend code functionality
+- ORCACLUB branded styling
+- Error handling and user feedback
+- Automatic redirect to /admin on success
+
+Integration:
+// In payload.config.ts admin configuration
+admin: {
+  components: {
+    views: {
+      login: {
+        Component: '@/components/payload/CustomLogin'
+      }
+    }
+  }
+}
+```
+
+### Database Schema
+
+**Users Collection Fields:**
+
+```typescript
+// Account-level 2FA (for new user verification)
+twoFactorCode: string | null          // 6-digit code for account setup
+twoFactorExpiry: Date | null          // Expiry time for account code
+twoFactorVerified: boolean            // Whether account is verified
+
+// Login-level 2FA (for every login)
+loginTwoFactorCode: string | null     // 6-digit code for login
+loginTwoFactorExpiry: Date | null     // Expiry time for login code (10 minutes)
+```
+
+**Field Separation:**
+
+- **Account 2FA** - Used once during user registration/setup
+- **Login 2FA** - Used on every admin login
+
+### Security Features
+
+1. **Code Expiry** - All codes expire after 10 minutes
+2. **Password Re-validation** - Password checked again during code verification
+3. **HTTP-Only Cookies** - Session tokens inaccessible to client-side JavaScript
+4. **Code Cleanup** - Login codes cleared after successful verification
+5. **Bypass Flag** - Context-based flag prevents direct login bypass
+6. **Account Verification** - Users must verify account before first login
+7. **Rate Limiting** - Email sending throttled via Nodemailer
+
+### Email Configuration
+
+**SMTP Setup (via Nodemailer):**
+
+```typescript
+// In payload.config.ts
+email: nodemailerAdapter({
+  defaultFromAddress: process.env.EMAIL_FROM || 'chance@orcaclub.pro',
+  defaultFromName: process.env.EMAIL_FROM_NAME || 'ORCACLUB',
+  transportOptions: {
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: parseInt(process.env.SMTP_PORT || '587'),
+    secure: false, // Use TLS
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  },
+})
+```
+
+**Required Environment Variables:**
+
+```bash
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-app-specific-password
+EMAIL_FROM=noreply@orcaclub.pro
+EMAIL_FROM_NAME=ORCACLUB
+```
+
+### Maintenance Guidelines
+
+#### Adding New 2FA Features
+
+**To add a new 2FA endpoint:**
+
+1. Create utility functions in `src/lib/payload/utils/loginTwoFactor.ts`
+2. Create API endpoint in `src/app/api/auth/[feature]/route.ts`
+3. Use existing utilities for consistency
+4. Follow error handling patterns
+5. Update this documentation
+
+**Example - Adding SMS 2FA:**
+
+```typescript
+// 1. Add utility function
+export async function sendLoginCodeSMS(phone: string, code: string) {
+  // Implementation
+}
+
+// 2. Create API endpoint
+// src/app/api/auth/request-sms-code/route.ts
+export async function POST(request: Request) {
+  const { phone, password } = await request.json()
+  // Validate credentials
+  const code = generateLoginCode()
+  await sendLoginCodeSMS(phone, code)
+  // ...
+}
+
+// 3. Update Users collection with smsCode field
+```
+
+#### Testing the 2FA Flow
+
+**Manual Testing Steps:**
+
+1. Visit `http://localhost:3000/admin`
+2. Enter valid email + password
+3. Click "Continue"
+4. Check email for 6-digit code
+5. Enter code in login form
+6. Click "Login"
+7. Verify redirect to `/admin`
+
+**Testing Edge Cases:**
+
+- Invalid email/password → Should show error
+- Expired code → Should require new code
+- Invalid code → Should show error message
+- Resend code → Should send new email
+- Unverified account → Should block login
+
+**Test with Curl:**
+
+```bash
+# Step 1: Request login code
+curl -X POST http://localhost:3000/api/auth/request-login-code \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"password123"}'
+
+# Step 2: Verify code
+curl -X POST http://localhost:3000/api/auth/verify-login-code \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"password123","code":"123456"}' \
+  -c cookies.txt
+
+# Step 3: Access admin (should work with cookie)
+curl http://localhost:3000/admin -b cookies.txt
+```
+
+#### Troubleshooting Common Issues
+
+**Issue: Email not sending**
+
+- Check SMTP credentials in `.env.local`
+- Verify Gmail App Password (not regular password)
+- Check Payload logs: `payload.logger.error`
+- Test SMTP connection independently
+
+**Issue: Login code not working**
+
+- Check code expiry (10 minutes)
+- Verify user.loginTwoFactorCode matches input
+- Check user.twoFactorVerified is true
+- Review beforeLogin hook logs
+
+**Issue: Bypass flag not working**
+
+- Verify context flag: `req.context.bypassLoginTwoFactor`
+- Check verify-login-code endpoint sets flag correctly
+- Review beforeLogin hook logic
+
+**Issue: Session not persisting**
+
+- Check cookie name: `payload-token`
+- Verify cookie settings (httpOnly, secure, sameSite)
+- Check cookie domain/path
+- Review browser console for cookie errors
+
+### Performance Considerations
+
+**Code Generation:**
+
+- Uses `Math.random()` for simplicity (not cryptographically secure)
+- For production, consider `crypto.randomBytes()` for higher security
+
+**Email Sending:**
+
+- Async/await pattern prevents blocking
+- Nodemailer queues emails automatically
+- Consider rate limiting for abuse prevention
+
+**Database Updates:**
+
+- Minimal writes (only code + expiry fields)
+- Code cleanup happens after verification
+- No N+1 query issues
+
+### Security Best Practices
+
+1. **Never log codes** - Codes should never appear in logs (only user emails)
+2. **Use HTTPS in production** - Secure flag on cookies requires HTTPS
+3. **Rotate SMTP credentials** - Change passwords regularly
+4. **Monitor failed attempts** - Track repeated failures for abuse detection
+5. **Consider rate limiting** - Prevent brute force attacks on codes
+6. **Use strong passwords** - PayloadCMS password validation enforces this
+7. **Regular security audits** - Review auth flow periodically
+
+### Future Enhancements
+
+**Potential Improvements:**
+
+1. **SMS 2FA** - Add Twilio integration for SMS codes
+2. **Authenticator App** - TOTP support (Google Authenticator, Authy)
+3. **Backup Codes** - One-time recovery codes for lost access
+4. **Session Management** - Admin view of active sessions
+5. **Device Fingerprinting** - Remember trusted devices
+6. **Audit Logging** - Track all authentication events
+7. **IP Whitelisting** - Restrict admin access to specific IPs
+8. **WebAuthn** - Biometric authentication support
+
+### References
+
+**PayloadCMS Documentation:**
+
+- [Authentication Overview](https://payloadcms.com/docs/authentication/overview)
+- [beforeLogin Hook](https://payloadcms.com/docs/hooks/collections#beforelogin)
+- [Custom Views](https://payloadcms.com/docs/admin/custom-views)
+- [Email Configuration](https://payloadcms.com/docs/email/overview)
+
+**Related Files:**
+
+- `src/lib/payload/utils/loginTwoFactor.ts` - Utility functions
+- `src/app/api/auth/request-login-code/route.ts` - Request code endpoint
+- `src/app/api/auth/verify-login-code/route.ts` - Verify code endpoint
+- `src/lib/payload/hooks/beforeLogin.ts` - PayloadCMS hook
+- `src/components/payload/CustomLogin.tsx` - Custom login UI
+- `src/lib/payload/payload.config.ts` - PayloadCMS configuration
+
+---
+
 ## 📱 Mobile & Responsive Design
 
 ### Breakpoint Strategy
