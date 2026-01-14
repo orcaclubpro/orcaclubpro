@@ -4,45 +4,113 @@ import * as React from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
-import { Menu, X, ChevronDown, ArrowRight, Clock } from "lucide-react"
+import { Menu, X, ChevronDown, ArrowRight, Clock, Code2, Palette, Server, Search, BarChart3, Zap, Plug, Rocket, ShoppingBag, Target } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const navigation = [
-  { name: "Pricing", href: "/project" },
+  { name: "Packages", href: "/packages" },
   { name: "Contact", href: "/contact" },
 ]
 
-const featuredSolutions = [
+// Services organized by category
+const services = [
   {
-    name: "Fast Website Launch",
+    name: "Web Design",
+    description: "Modern, responsive websites",
+    href: "/services/web-design",
+    icon: Palette,
+  },
+  {
+    name: "CMS Development",
+    description: "Headless CMS & Payload",
+    href: "/services/cms-development",
+    icon: Code2,
+  },
+  {
+    name: "Hosting & Infrastructure",
+    description: "Managed hosting included",
+    href: "/services/hosting-infrastructure",
+    icon: Server,
+  },
+  {
+    name: "Technical SEO",
+    description: "Schema, speed & structure",
+    href: "/services/technical-seo",
+    icon: Search,
+  },
+  {
+    name: "Custom Development",
+    description: "Portals, dashboards, SaaS",
+    href: "/services/custom-development",
+    icon: Rocket,
+  },
+  {
+    name: "E-commerce",
+    description: "Online stores & Shopify",
+    href: "/services/ecommerce",
+    icon: ShoppingBag,
+  },
+]
+
+// Integration services
+const integrations = [
+  {
+    name: "API Integrations",
+    description: "CRM, Shopify, custom APIs",
+    href: "/services/api-integrations",
+    icon: Plug,
+  },
+  {
+    name: "Analytics & Tracking",
+    description: "GA4, GTM, dashboards",
+    href: "/services/analytics-tracking",
+    icon: BarChart3,
+  },
+  {
+    name: "Marketing Integration",
+    description: "Google Ads, Meta, LinkedIn",
+    href: "/services/marketing-integration",
+    icon: Target,
+  },
+  {
+    name: "Automation & Workflows",
+    description: "Business process automation",
+    href: "/services/automation-workflows",
+    icon: Zap,
+  },
+]
+
+// Package tiers
+const packages = [
+  {
+    name: "Launch",
     description: "Professional website in 3-5 days",
     timeline: "3-5 days",
-    tier: "Launch Tier",
     price: "$1K-3K",
-    href: "/solutions/fast-website-launch"
+    href: "/packages/launch"
   },
   {
-    name: "Shopify Headless Commerce",
-    description: "Custom ecommerce with modern frontend",
-    timeline: "14-21 days",
-    tier: "Enterprise Tier",
-    price: "$6K-30K",
-    href: "/solutions/headless-shopify-commerce"
-  },
-  {
-    name: "Business Automation",
-    description: "Workflow integration & API connections",
+    name: "Scale",
+    description: "Website + integrations & analytics",
     timeline: "7-10 days",
-    tier: "Scale Tier",
     price: "$3K-5K",
-    href: "/solutions/business-automation"
+    href: "/packages/scale",
+    popular: true
+  },
+  {
+    name: "Enterprise",
+    description: "Custom solutions & Shopify",
+    timeline: "14-21 days",
+    price: "$6K-30K",
+    href: "/packages/enterprise"
   }
 ]
 
 const quickLinks = [
-  { name: "View Packages", href: "/project" },
+  { name: "All Packages", href: "/packages" },
   { name: "Our Work", href: "/portfolio" },
-  { name: "About", href: "/about" }
+  { name: "About", href: "/about" },
+  { name: "Meet the Founder", href: "/founder" },
 ]
 
 export function Header() {
@@ -115,80 +183,126 @@ export function Header() {
                 >
                   <div className="max-w-7xl mx-auto px-6 py-8">
                     <div className="grid grid-cols-12 gap-8">
-                      {/* LEFT: Featured Solutions (60%) */}
-                      <div className="col-span-7 space-y-4">
+                      {/* LEFT: Services (40%) */}
+                      <div className="col-span-4">
                         <div className="mb-4">
                           <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-1">
-                            Featured Solutions
+                            Services
                           </h3>
                           <p className="text-xs text-gray-500">
-                            Start with a specific problem
+                            What we build
                           </p>
                         </div>
+                        <div className="space-y-1">
+                          {services.map((service) => (
+                            <Link
+                              key={service.name}
+                              href={service.href}
+                              className="group flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors"
+                              onClick={() => setDropdownOpen(false)}
+                            >
+                              <service.icon className="h-4 w-4 text-cyan-400" />
+                              <div>
+                                <h4 className="text-sm font-medium text-white group-hover:text-cyan-400 transition-colors">
+                                  {service.name}
+                                </h4>
+                                <p className="text-xs text-gray-500">{service.description}</p>
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
 
-                        {/* Solution Cards */}
-                        {featuredSolutions.map((solution) => (
-                          <Link
-                            key={solution.name}
-                            href={solution.href}
-                            className="group block p-4 rounded-lg bg-slate-900/40 border border-white/5 hover:border-cyan-400/30 hover:bg-slate-900/60 transition-all duration-300"
-                            onClick={() => setDropdownOpen(false)}
-                          >
-                            <h4 className="text-base font-semibold text-white group-hover:text-cyan-400 transition-colors mb-1">
-                              {solution.name}
-                            </h4>
-                            <p className="text-sm text-gray-400 mb-2">
-                              {solution.description}
-                            </p>
-                            <div className="flex items-center gap-3 text-xs text-gray-500">
-                              <span className="flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                {solution.timeline}
-                              </span>
-                              <span>•</span>
-                              <span>{solution.tier}</span>
-                              <span>•</span>
-                              <span className="text-cyan-400 font-medium">{solution.price}</span>
-                            </div>
-                          </Link>
-                        ))}
+                      {/* MIDDLE: Integrations (30%) */}
+                      <div className="col-span-4">
+                        <div className="mb-4">
+                          <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-1">
+                            Integrations
+                          </h3>
+                          <p className="text-xs text-gray-500">
+                            Connect your tools
+                          </p>
+                        </div>
+                        <div className="space-y-1">
+                          {integrations.map((integration) => (
+                            <Link
+                              key={integration.name}
+                              href={integration.href}
+                              className="group flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors"
+                              onClick={() => setDropdownOpen(false)}
+                            >
+                              <integration.icon className="h-4 w-4 text-cyan-400" />
+                              <div>
+                                <h4 className="text-sm font-medium text-white group-hover:text-cyan-400 transition-colors">
+                                  {integration.name}
+                                </h4>
+                                <p className="text-xs text-gray-500">{integration.description}</p>
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
 
-                        {/* Browse All Solutions Link */}
+                        {/* Browse All Services */}
                         <Link
-                          href="/solutions"
-                          className="inline-flex items-center gap-2 text-sm font-medium text-cyan-400 hover:text-cyan-300 transition-colors mt-2"
+                          href="/services"
+                          className="inline-flex items-center gap-2 text-sm font-medium text-cyan-400 hover:text-cyan-300 transition-colors mt-4"
                           onClick={() => setDropdownOpen(false)}
                         >
-                          Browse All Solutions
+                          All Services
                           <ArrowRight className="h-4 w-4" />
                         </Link>
                       </div>
 
-                      {/* RIGHT: Quick Links (40%) */}
-                      <div className="col-span-5">
+                      {/* RIGHT: Packages & Quick Links (30%) */}
+                      <div className="col-span-4">
                         <div className="mb-4">
                           <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-1">
-                            Quick Navigation
+                            Packages
                           </h3>
                           <p className="text-xs text-gray-500">
-                            Jump to key pages
+                            Transparent pricing
                           </p>
                         </div>
-
-                        <div className="space-y-2">
-                          {quickLinks.map((link) => (
+                        <div className="space-y-2 mb-6">
+                          {packages.map((pkg) => (
                             <Link
-                              key={link.name}
-                              href={link.href}
-                              className="group flex items-center justify-between p-3 rounded-lg hover:bg-white/5 transition-colors"
+                              key={pkg.name}
+                              href={pkg.href}
+                              className="group block p-3 rounded-lg bg-slate-900/40 border border-white/5 hover:border-cyan-400/30 hover:bg-slate-900/60 transition-all duration-300"
                               onClick={() => setDropdownOpen(false)}
                             >
-                              <span className="text-sm font-medium text-gray-300 group-hover:text-white transition-colors">
-                                {link.name}
-                              </span>
-                              <ArrowRight className="h-4 w-4 text-gray-500 group-hover:text-cyan-400 transition-colors" />
+                              <div className="flex items-center justify-between mb-1">
+                                <h4 className="text-sm font-semibold text-white group-hover:text-cyan-400 transition-colors">
+                                  {pkg.name}
+                                  {pkg.popular && <span className="ml-2 text-xs text-cyan-400">Popular</span>}
+                                </h4>
+                                <span className="text-xs text-gray-400">{pkg.price}</span>
+                              </div>
+                              <div className="flex items-center gap-2 text-xs text-gray-500">
+                                <Clock className="h-3 w-3" />
+                                {pkg.timeline}
+                              </div>
                             </Link>
                           ))}
+                        </div>
+
+                        {/* Quick Links */}
+                        <div className="border-t border-white/10 pt-4">
+                          <div className="space-y-1">
+                            {quickLinks.map((link) => (
+                              <Link
+                                key={link.name}
+                                href={link.href}
+                                className="group flex items-center justify-between p-2 rounded-lg hover:bg-white/5 transition-colors"
+                                onClick={() => setDropdownOpen(false)}
+                              >
+                                <span className="text-sm font-medium text-gray-300 group-hover:text-white transition-colors">
+                                  {link.name}
+                                </span>
+                                <ArrowRight className="h-4 w-4 text-gray-500 group-hover:text-cyan-400 transition-colors" />
+                              </Link>
+                            ))}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -254,43 +368,87 @@ export function Header() {
                 <span className="text-xs text-gray-400 font-light ml-2 group-hover:text-gray-300 transition-colors">est 2025</span>
               </Link>
 
-              {/* Mobile: Stack featured solutions first, then quick links */}
+              {/* Mobile: Services, Integrations, Packages, Quick Links */}
               <div className="space-y-6">
-                {/* Featured Solutions */}
+                {/* Services */}
                 <div>
                   <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3 px-3">
-                    Featured Solutions
+                    Services
                   </h3>
-                  <div className="space-y-3">
-                    {featuredSolutions.map((solution) => (
+                  <div className="space-y-1">
+                    {services.map((service) => (
                       <Link
-                        key={solution.name}
-                        href={solution.href}
-                        className="block p-4 rounded-lg bg-slate-900/40 border border-white/5 hover:border-cyan-400/30"
+                        key={service.name}
+                        href={service.href}
+                        className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-white/5 transition-colors"
                         onClick={() => setMobileMenuOpen(false)}
                       >
-                        <h4 className="text-base font-semibold text-white mb-1">
-                          {solution.name}
-                        </h4>
-                        <p className="text-sm text-gray-400 mb-2">
-                          {solution.description}
-                        </p>
-                        <div className="flex items-center gap-2 text-xs text-gray-500">
-                          <span>{solution.timeline}</span>
-                          <span>•</span>
-                          <span>{solution.tier}</span>
-                          <span>•</span>
-                          <span className="text-cyan-400">{solution.price}</span>
+                        <service.icon className="h-4 w-4 text-cyan-400" />
+                        <div>
+                          <span className="text-sm font-medium text-white">{service.name}</span>
+                          <p className="text-xs text-gray-500">{service.description}</p>
                         </div>
                       </Link>
                     ))}
-                    <Link
-                      href="/solutions"
-                      className="block text-center py-2 text-sm font-medium text-cyan-400"
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      Browse All Solutions →
-                    </Link>
+                  </div>
+                </div>
+
+                {/* Integrations */}
+                <div className="border-t border-white/10 pt-4">
+                  <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3 px-3">
+                    Integrations
+                  </h3>
+                  <div className="space-y-1">
+                    {integrations.map((integration) => (
+                      <Link
+                        key={integration.name}
+                        href={integration.href}
+                        className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-white/5 transition-colors"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <integration.icon className="h-4 w-4 text-cyan-400" />
+                        <div>
+                          <span className="text-sm font-medium text-white">{integration.name}</span>
+                          <p className="text-xs text-gray-500">{integration.description}</p>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                  <Link
+                    href="/services"
+                    className="block text-center py-2 text-sm font-medium text-cyan-400 mt-2"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    All Services →
+                  </Link>
+                </div>
+
+                {/* Packages */}
+                <div className="border-t border-white/10 pt-4">
+                  <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3 px-3">
+                    Packages
+                  </h3>
+                  <div className="space-y-2">
+                    {packages.map((pkg) => (
+                      <Link
+                        key={pkg.name}
+                        href={pkg.href}
+                        className="block p-3 rounded-lg bg-slate-900/40 border border-white/5 hover:border-cyan-400/30"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <h4 className="text-sm font-semibold text-white">
+                            {pkg.name}
+                            {pkg.popular && <span className="ml-2 text-xs text-cyan-400">Popular</span>}
+                          </h4>
+                          <span className="text-xs text-gray-400">{pkg.price}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                          <Clock className="h-3 w-3" />
+                          {pkg.timeline}
+                        </div>
+                      </Link>
+                    ))}
                   </div>
                 </div>
 

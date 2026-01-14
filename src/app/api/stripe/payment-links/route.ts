@@ -86,9 +86,12 @@ export async function POST(request: NextRequest) {
     })
 
     let clientAccountId = clientAccount.docs[0]?.id
+    let stripeCustomerId: string
 
-    // If no client account exists, create one
+    // If no client account exists, create one (hook will create Stripe customer)
     if (!clientAccountId) {
+      console.log('[Stripe Invoice] Creating new client account for:', customerEmail)
+
       const newClient = await payload.create({
         collection: 'client-accounts',
         data: {
@@ -98,10 +101,106 @@ export async function POST(request: NextRequest) {
       })
 
       clientAccountId = newClient.id
-      console.log('[Stripe Invoice] Created new client account:', clientAccountId)
+      stripeCustomerId = newClient.stripeCustomerId as string
+
+      console.log('[Stripe Invoice] Created client account:', clientAccountId)
+      console.log('[Stripe Invoice] Stripe customer ID from hook:', stripeCustomerId)
+    } else {
+      // Client account exists, get or create Stripe customer
+      stripeCustomerId = clientAccount.docs[0]?.stripeCustomerId as string
+
+      console.log('[Stripe Invoice] Found existing client account:', clientAccountId)
+      console.log('[Stripe Invoice] Stripe customer ID:', stripeCustomerId)
     }
 
-    // 2. Generate order number
+    // 2. Verify Stripe customer exists (following same pattern as hook)
+    if (stripeCustomerId) {
+      try {
+        await stripe.customers.retrieve(stripeCustomerId)
+        console.log('[Stripe Invoice] Stripe customer verified:', stripeCustomerId)
+      } catch (error: any) {
+        if (
+          error.type === 'StripeInvalidRequestError' ||
+          error.statusCode === 404 ||
+          error.statusCode === 400
+        ) {
+          console.warn(
+            '[Stripe Invoice] Stripe customer invalid or not found in Stripe, will search/create new:',
+            stripeCustomerId
+          )
+          console.warn('[Stripe Invoice] Error details:', error.message)
+
+          // Clear invalid ID from database (same as hook)
+          await payload.update({
+            collection: 'client-accounts',
+            id: clientAccountId,
+            data: {
+              stripeCustomerId: null, // Clear invalid ID
+            },
+          })
+
+          stripeCustomerId = '' // Clear for search/create flow
+          console.log('[Stripe Invoice] Cleared invalid Stripe customer ID from client account')
+        } else {
+          throw error
+        }
+      }
+    }
+
+    // 3. If no valid Stripe customer, search for existing or create new
+    if (!stripeCustomerId) {
+      console.log('[Stripe Invoice] Searching for existing Stripe customer:', customerEmail)
+
+      const existingCustomers = await stripe.customers.list({
+        email: customerEmail,
+        limit: 1,
+      })
+
+      if (existingCustomers.data.length > 0) {
+        // Found existing customer in Stripe
+        stripeCustomerId = existingCustomers.data[0].id
+        console.log('[Stripe Invoice] Found existing Stripe customer:', stripeCustomerId)
+
+        // Update client account with Stripe customer ID
+        await payload.update({
+          collection: 'client-accounts',
+          id: clientAccountId,
+          data: {
+            stripeCustomerId,
+          },
+        })
+        console.log('[Stripe Invoice] Updated client account with Stripe ID')
+      } else {
+        // Create new Stripe customer
+        console.log('[Stripe Invoice] Creating new Stripe customer for:', customerEmail)
+
+        const newCustomer = await stripe.customers.create({
+          email: customerEmail,
+          name: customerName || customerEmail.split('@')[0],
+          metadata: {
+            orcaclub_client_id: clientAccountId,
+            created_via: 'orcaclub_admin',
+            source: 'payment_links_api',
+            created_at: new Date().toISOString(),
+          },
+        })
+
+        stripeCustomerId = newCustomer.id
+        console.log('[Stripe Invoice] Created new Stripe customer:', stripeCustomerId)
+
+        // Update client account with Stripe customer ID
+        await payload.update({
+          collection: 'client-accounts',
+          id: clientAccountId,
+          data: {
+            stripeCustomerId,
+          },
+        })
+        console.log('[Stripe Invoice] Updated client account with new Stripe ID')
+      }
+    }
+
+    // 4. Generate order number
     const orderCount = await payload.count({
       collection: 'orders',
       where: {
@@ -110,60 +209,18 @@ export async function POST(request: NextRequest) {
     })
 
     const orderNumber = `STRIPE-${String(orderCount.totalDocs + 1).padStart(4, '0')}`
+    console.log('[Stripe Invoice] Generated order number:', orderNumber)
 
-    // 3. Get Stripe customer ID from client account
-    let stripeCustomerId = clientAccount.docs[0]?.stripeCustomerId
-
+    // Final safety check: Ensure we have a valid Stripe customer ID
     if (!stripeCustomerId) {
-      console.warn('[Stripe Invoice] No Stripe customer ID found in client account')
-      console.warn('[Stripe Invoice] This should have been created by the beforeChange hook')
-
-      // Fallback: search for existing customer or create new one
-      const existingCustomers = await stripe.customers.list({
-        email: customerEmail,
-        limit: 1,
-      })
-
-      if (existingCustomers.data.length > 0) {
-        stripeCustomerId = existingCustomers.data[0].id
-        console.log('[Stripe Invoice] Found existing customer (fallback):', stripeCustomerId)
-
-        // Update client account with Stripe customer ID
-        await payload.update({
-          collection: 'client-accounts',
-          id: clientAccountId,
-          data: {
-            stripeCustomerId,
-          },
-        })
-      } else {
-        // Create new Stripe customer (fallback)
-        const customer = await stripe.customers.create({
-          email: customerEmail,
-          name: customerName || customerEmail.split('@')[0],
-          metadata: {
-            orcaclub_client_id: clientAccountId,
-            created_via: 'orcaclub_admin',
-            source: 'invoice_api_fallback',
-          },
-        })
-        stripeCustomerId = customer.id
-        console.log('[Stripe Invoice] Created new customer (fallback):', stripeCustomerId)
-
-        // Update client account with Stripe customer ID
-        await payload.update({
-          collection: 'client-accounts',
-          id: clientAccountId,
-          data: {
-            stripeCustomerId,
-          },
-        })
-      }
-    } else {
-      console.log('[Stripe Invoice] Using existing Stripe customer from client account:', stripeCustomerId)
+      throw new Error(
+        'Failed to get or create Stripe customer. Cannot create invoice without valid customer ID.'
+      )
     }
 
-    // 4. Create invoice items for each line item
+    console.log('[Stripe Invoice] Final customer ID check passed:', stripeCustomerId)
+
+    // 5. Create invoice items for each line item
     for (const item of lineItems) {
       await stripe.invoiceItems.create({
         customer: stripeCustomerId,
@@ -178,7 +235,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // 5. Create invoice
+    // 6. Create invoice
     const invoice = await stripe.invoices.create({
       customer: stripeCustomerId,
       collection_method: 'send_invoice', // Creates hosted invoice page
@@ -192,13 +249,13 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // 6. Finalize invoice to make it payable
+    // 7. Finalize invoice to make it payable
     const finalizedInvoice = await stripe.invoices.finalizeInvoice(invoice.id)
 
     console.log('[Stripe Invoice] Invoice created and finalized:', finalizedInvoice.id)
     console.log('[Stripe Invoice] Hosted URL:', finalizedInvoice.hosted_invoice_url)
 
-    // 7. Create order record in PayloadCMS
+    // 8. Create order record in PayloadCMS
     const order = await payload.create({
       collection: 'orders',
       data: {
@@ -221,7 +278,7 @@ export async function POST(request: NextRequest) {
 
     console.log('[Stripe Invoice] Created order record:', order.id, orderNumber)
 
-    // 8. Update invoice metadata with PayloadCMS order ID
+    // 9. Update invoice metadata with PayloadCMS order ID
     await stripe.invoices.update(finalizedInvoice.id, {
       metadata: {
         order_number: orderNumber,

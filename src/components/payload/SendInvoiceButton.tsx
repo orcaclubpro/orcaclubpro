@@ -33,6 +33,15 @@ export default function SendInvoiceButton() {
       return
     }
 
+    // Check if invoice was already sent
+    if (docData?.invoices && docData.invoices.length > 0) {
+      const lastSent = new Date(docData.invoices[docData.invoices.length - 1].sentAt).toLocaleString()
+      const confirmed = window.confirm(
+        `An invoice was already sent ${docData.invoices.length} time(s).\nLast sent: ${lastSent}\n\nSend again?`
+      )
+      if (!confirmed) return
+    }
+
     try {
       setLoading(true)
       setError(null)
@@ -97,25 +106,46 @@ export default function SendInvoiceButton() {
       </p>
 
       {docData && (
-        <div
-          style={{
-            marginBottom: '12px',
-            padding: '12px',
-            background: '#111827',
-            borderRadius: '6px',
-            border: '1px solid #374151',
-          }}
-        >
-          <p style={{ margin: '0 0 4px 0', fontSize: '12px', color: '#6b7280' }}>
-            Email will be sent to:
-          </p>
-          <p style={{ margin: '0', fontSize: '14px', color: '#67e8f9', fontWeight: '500' }}>
-            {clientEmail}
-          </p>
-          <p style={{ margin: '8px 0 0 0', fontSize: '12px', color: '#6b7280' }}>
-            Order Type: <span style={{ color: '#d1d5db' }}>{orderType}</span>
-          </p>
-        </div>
+        <>
+          <div
+            style={{
+              marginBottom: '12px',
+              padding: '12px',
+              background: '#111827',
+              borderRadius: '6px',
+              border: '1px solid #374151',
+            }}
+          >
+            <p style={{ margin: '0 0 4px 0', fontSize: '12px', color: '#6b7280' }}>
+              Email will be sent to:
+            </p>
+            <p style={{ margin: '0', fontSize: '14px', color: '#67e8f9', fontWeight: '500' }}>
+              {clientEmail}
+            </p>
+            <p style={{ margin: '8px 0 0 0', fontSize: '12px', color: '#6b7280' }}>
+              Order Type: <span style={{ color: '#d1d5db' }}>{orderType}</span>
+            </p>
+          </div>
+
+          {docData.invoices && docData.invoices.length > 0 && (
+            <div
+              style={{
+                marginBottom: '12px',
+                padding: '12px',
+                background: '#fef3c7',
+                borderRadius: '6px',
+                border: '1px solid #fbbf24',
+              }}
+            >
+              <p style={{ margin: '0', fontSize: '13px', color: '#92400e', fontWeight: '500' }}>
+                ⚠️ Invoice already sent {docData.invoices.length} time(s)
+              </p>
+              <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#78350f' }}>
+                Last sent: {new Date(docData.invoices[docData.invoices.length - 1].sentAt).toLocaleString()}
+              </p>
+            </div>
+          )}
+        </>
       )}
 
       <button

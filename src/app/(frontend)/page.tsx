@@ -10,14 +10,17 @@ import { getPayload } from "payload"
 import config from "@payload-config"
 
 export const metadata: Metadata = {
-  title: 'ORCACLUB | Comprehensive Website Development and Automation',
-  description: 'Technical operations studio specializing in custom integrations, workflow automation, and full stack development. Fixed-price packages ($1K-30K) with 3-21 day delivery for businesses needing scalable technical solutions.',
+  title: 'ORCACLUB | DEVELOPMENT AGENCY',
+  description: 'Professional web development company offering custom web development, website design services, and full-stack solutions. Our web design agency delivers fixed-price packages with 3-21 day turnaround for businesses seeking scalable web development services.',
   keywords: [
-    'techops studio',
-    'technical operations',
+    'web development services',
+    'web development company',
+    'web design agency',
+    'website design services',
+    'custom web development',
+    'full stack development',
     'custom integrations',
     'workflow automation',
-    'full stack development',
     'website development',
     'business automation',
     'custom software development',
@@ -27,19 +30,21 @@ export const metadata: Metadata = {
     'headless cms',
     'next.js development',
     'react development',
-    'development consultancy'
+    'development consultancy',
+    'professional web design',
+    'ecommerce development'
   ],
   openGraph: {
-    title: 'ORCACLUB | Comprehensive Website Development and Automation',
-    description: 'Technical operations studio specializing in custom integrations, workflow automation, and full stack development. Fixed-price packages with fast delivery.',
+    title: 'ORCACLUB | DEVELOPMENT AGENCY',
+    description: 'Professional web development company specializing in custom web development and website design services. Fixed-price packages with fast 3-21 day delivery from an experienced web design agency.',
     url: 'https://orcaclub.pro',
     siteName: 'ORCACLUB',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'ORCACLUB | Comprehensive Website Development and Automation',
-    description: 'Technical operations studio for custom integrations, workflow automation, and full stack development. Fast delivery, transparent pricing.',
+    title: 'ORCACLUB | DEVELOPMENT AGENCY',
+    description: 'Web development services and custom web design from a professional web development company. Fast delivery, transparent pricing, and scalable solutions.',
   },
   alternates: {
     canonical: 'https://orcaclub.pro',
@@ -118,20 +123,20 @@ export default async function HomePage() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
               <Link
-                href="/project"
+                href="/contact"
                 className="inline-flex items-center gap-4 px-12 py-6 bg-gradient-to-r from-blue-600/20 to-cyan-500/20 border border-cyan-400/30 rounded-full text-lg font-light text-cyan-400 hover:bg-gradient-to-r hover:from-blue-600/30 hover:to-cyan-500/30 transition-all duration-500 magnetic interactive"
               >
-                View Project Tiers <ArrowRight size={20} />
+                Start Your Project <ArrowRight size={20} />
               </Link>
               <Link
-                href="/contact"
+                href="/project"
                 className="inline-flex items-center gap-2 px-12 py-6 bg-white/5 border border-white/10 rounded-full text-lg font-light text-white hover:bg-white/10 hover:border-white/20 transition-all duration-500 magnetic interactive"
               >
-                Free Consultation
+                View Project Tiers
               </Link>
             </div>
             <p className="text-xs text-gray-600 font-light">
-              3-21 Day Delivery • Fixed Pricing • $1K-30K
+              3-21 Day Delivery • Fixed Pricing • Direct Developer Access
             </p>
           </ScrollReveal>
         </div>
