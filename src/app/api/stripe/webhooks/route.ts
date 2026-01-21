@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
         eventId: event.id,
         eventType: event.type,
         status: 'processing',
-        processingStartedAt: new Date().toISOString(),
+        processingStartedAt: new Date(),
         payload: event as any,
       },
     })
@@ -156,6 +156,7 @@ export async function POST(request: NextRequest) {
 
         console.log('[Stripe Webhook] Invoice paid:', invoice.id)
         console.log('[Stripe Webhook] Invoice metadata:', invoice.metadata)
+        console.log('[Stripe Webhook] Invoice status:', invoice.status, 'Amount:', invoice.amount_paid)
 
         // Get order ID from invoice metadata
         const orcaclubOrderId = invoice.metadata?.orcaclub_order_id
@@ -172,7 +173,7 @@ export async function POST(request: NextRequest) {
               data: {
                 status: 'failed',
                 errorMessage: 'No orcaclub_order_id in invoice metadata',
-                processingCompletedAt: new Date().toISOString(),
+                processingCompletedAt: new Date(),
               },
             })
           })
@@ -180,6 +181,34 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({
             received: true,
             warning: 'No order ID in metadata',
+          })
+        }
+
+        // Validate invoice is actually paid (not just marked as paid with $0)
+        if (invoice.status !== 'paid' || invoice.amount_paid === 0) {
+          console.warn('[Stripe Webhook] Invoice not fully paid:', {
+            status: invoice.status,
+            amountPaid: invoice.amount_paid,
+            amountDue: invoice.amount_due
+          })
+
+          await retryOnTransientError(async () => {
+            return await payload.update({
+              collection: 'webhook-events',
+              id: webhookEventId,
+              data: {
+                status: 'processed',
+                errorMessage: `Invoice status: ${invoice.status}, amount paid: ${invoice.amount_paid}`,
+                processingCompletedAt: new Date(),
+              },
+            })
+          })
+
+          return NextResponse.json({
+            received: true,
+            warning: 'Invoice not fully paid',
+            status: invoice.status,
+            amountPaid: invoice.amount_paid
           })
         }
 
@@ -191,6 +220,7 @@ export async function POST(request: NextRequest) {
             id: orcaclubOrderId,
             data: {
               status: 'paid',
+              stripePaymentIntentId: invoice.payment_intent as string || undefined,
             },
           })
         })
@@ -238,7 +268,7 @@ export async function POST(request: NextRequest) {
               data: {
                 status: 'processed',
                 errorMessage: 'No orcaclub_order_id in invoice metadata',
-                processingCompletedAt: new Date().toISOString(),
+                processingCompletedAt: new Date(),
               },
             })
           })
@@ -288,7 +318,7 @@ export async function POST(request: NextRequest) {
               id: webhookEventId,
               data: {
                 status: 'processed',
-                processingCompletedAt: new Date().toISOString(),
+                processingCompletedAt: new Date(),
               },
             })
           })
