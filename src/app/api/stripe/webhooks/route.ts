@@ -13,6 +13,45 @@ import { getPayload } from 'payload'
 import configPromise from '@payload-config'
 import Stripe from 'stripe'
 
+/**
+ * Retry helper for transient MongoDB errors (write conflicts)
+ * Webhooks can trigger concurrent updates causing write conflicts
+ * @see https://www.mongodb.com/docs/manual/core/retryable-writes/
+ */
+async function retryOnTransientError<T>(
+  fn: () => Promise<T>,
+  maxRetries = 3
+): Promise<T> {
+  let lastError: any
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn()
+    } catch (error: any) {
+      lastError = error
+
+      // Check if it's a transient write conflict that can be retried
+      const isTransient =
+        error?.message?.includes('Write conflict') ||
+        error?.code === 112 || // WriteConflict error code
+        error?.codeName === 'WriteConflict' ||
+        error?.errorLabels?.includes('TransientTransactionError')
+
+      if (!isTransient || attempt === maxRetries) {
+        throw error // Not retryable or max retries reached
+      }
+
+      console.log(`[Stripe Webhook] Write conflict detected, retrying (${attempt}/${maxRetries})`)
+
+      // Exponential backoff: 100ms, 200ms, 400ms
+      const delay = 100 * Math.pow(2, attempt - 1)
+      await new Promise(resolve => setTimeout(resolve, delay))
+    }
+  }
+
+  throw lastError
+}
+
 export async function POST(request: NextRequest) {
   const stripe = getStripe()
   const payload = await getPayload({ config: configPromise })
@@ -125,15 +164,17 @@ export async function POST(request: NextRequest) {
         if (!orcaclubOrderId) {
           console.warn('[Stripe Webhook] No orcaclub_order_id in invoice metadata')
 
-          // Mark event as failed
-          await payload.update({
-            collection: 'webhook-events',
-            id: webhookEventId,
-            data: {
-              status: 'failed',
-              errorMessage: 'No orcaclub_order_id in invoice metadata',
-              processingCompletedAt: new Date().toISOString(),
-            },
+          // Mark event as failed (with retry logic)
+          await retryOnTransientError(async () => {
+            return await payload.update({
+              collection: 'webhook-events',
+              id: webhookEventId,
+              data: {
+                status: 'failed',
+                errorMessage: 'No orcaclub_order_id in invoice metadata',
+                processingCompletedAt: new Date().toISOString(),
+              },
+            })
           })
 
           return NextResponse.json({
@@ -142,28 +183,32 @@ export async function POST(request: NextRequest) {
           })
         }
 
-        // Update order status to 'paid'
+        // Update order status to 'paid' with retry logic for write conflicts
         // Note: Balance will automatically recalculate via updateClientBalance hook
-        const updatedOrder = await payload.update({
-          collection: 'orders',
-          id: orcaclubOrderId,
-          data: {
-            status: 'paid',
-          },
+        const updatedOrder = await retryOnTransientError(async () => {
+          return await payload.update({
+            collection: 'orders',
+            id: orcaclubOrderId,
+            data: {
+              status: 'paid',
+            },
+          })
         })
 
         console.log('[Stripe Webhook] Order marked as paid:', orderNumber, orcaclubOrderId)
 
-        // ✅ MARK EVENT AS PROCESSED
-        await payload.update({
-          collection: 'webhook-events',
-          id: webhookEventId,
-          data: {
-            status: 'processed',
-            orderId: orcaclubOrderId,
-            stripeInvoiceId: invoice.id,
-            processingCompletedAt: new Date().toISOString(),
-          },
+        // ✅ MARK EVENT AS PROCESSED (with retry logic)
+        await retryOnTransientError(async () => {
+          return await payload.update({
+            collection: 'webhook-events',
+            id: webhookEventId,
+            data: {
+              status: 'processed',
+              orderId: orcaclubOrderId,
+              stripeInvoiceId: invoice.id,
+              processingCompletedAt: new Date().toISOString(),
+            },
+          })
         })
 
         console.log('[Stripe Webhook] Event marked as processed:', event.id)
@@ -186,14 +231,16 @@ export async function POST(request: NextRequest) {
         if (!orcaclubOrderId) {
           console.warn('[Stripe Webhook] No orcaclub_order_id in invoice metadata')
 
-          await payload.update({
-            collection: 'webhook-events',
-            id: webhookEventId,
-            data: {
-              status: 'processed',
-              errorMessage: 'No orcaclub_order_id in invoice metadata',
-              processingCompletedAt: new Date().toISOString(),
-            },
+          await retryOnTransientError(async () => {
+            return await payload.update({
+              collection: 'webhook-events',
+              id: webhookEventId,
+              data: {
+                status: 'processed',
+                errorMessage: 'No orcaclub_order_id in invoice metadata',
+                processingCompletedAt: new Date().toISOString(),
+              },
+            })
           })
 
           return NextResponse.json({
@@ -205,16 +252,18 @@ export async function POST(request: NextRequest) {
         // Log payment failure (status remains 'pending')
         console.warn('[Stripe Webhook] Payment failed for order:', orcaclubOrderId)
 
-        // Mark event as processed
-        await payload.update({
-          collection: 'webhook-events',
-          id: webhookEventId,
-          data: {
-            status: 'processed',
-            orderId: orcaclubOrderId,
-            stripeInvoiceId: invoice.id,
-            processingCompletedAt: new Date().toISOString(),
-          },
+        // Mark event as processed (with retry logic)
+        await retryOnTransientError(async () => {
+          return await payload.update({
+            collection: 'webhook-events',
+            id: webhookEventId,
+            data: {
+              status: 'processed',
+              orderId: orcaclubOrderId,
+              stripeInvoiceId: invoice.id,
+              processingCompletedAt: new Date().toISOString(),
+            },
+          })
         })
 
         return NextResponse.json({
@@ -233,38 +282,44 @@ export async function POST(request: NextRequest) {
         const orcaclubOrderId = invoice.metadata?.orcaclub_order_id
 
         if (!orcaclubOrderId) {
-          await payload.update({
-            collection: 'webhook-events',
-            id: webhookEventId,
-            data: {
-              status: 'processed',
-              processingCompletedAt: new Date().toISOString(),
-            },
+          await retryOnTransientError(async () => {
+            return await payload.update({
+              collection: 'webhook-events',
+              id: webhookEventId,
+              data: {
+                status: 'processed',
+                processingCompletedAt: new Date().toISOString(),
+              },
+            })
           })
           return NextResponse.json({ received: true })
         }
 
-        // Update order status to 'cancelled'
-        await payload.update({
-          collection: 'orders',
-          id: orcaclubOrderId,
-          data: {
-            status: 'cancelled',
-          },
+        // Update order status to 'cancelled' (with retry logic)
+        await retryOnTransientError(async () => {
+          return await payload.update({
+            collection: 'orders',
+            id: orcaclubOrderId,
+            data: {
+              status: 'cancelled',
+            },
+          })
         })
 
         console.log('[Stripe Webhook] Order marked as cancelled:', orcaclubOrderId)
 
-        // Mark event as processed
-        await payload.update({
-          collection: 'webhook-events',
-          id: webhookEventId,
-          data: {
-            status: 'processed',
-            orderId: orcaclubOrderId,
-            stripeInvoiceId: invoice.id,
-            processingCompletedAt: new Date().toISOString(),
-          },
+        // Mark event as processed (with retry logic)
+        await retryOnTransientError(async () => {
+          return await payload.update({
+            collection: 'webhook-events',
+            id: webhookEventId,
+            data: {
+              status: 'processed',
+              orderId: orcaclubOrderId,
+              stripeInvoiceId: invoice.id,
+              processingCompletedAt: new Date().toISOString(),
+            },
+          })
         })
 
         return NextResponse.json({
@@ -278,13 +333,15 @@ export async function POST(request: NextRequest) {
         // Unhandled event type - mark as processed but do nothing
         console.log('[Stripe Webhook] Unhandled event type:', event.type)
 
-        await payload.update({
-          collection: 'webhook-events',
-          id: webhookEventId,
-          data: {
-            status: 'processed',
-            processingCompletedAt: new Date().toISOString(),
-          },
+        await retryOnTransientError(async () => {
+          return await payload.update({
+            collection: 'webhook-events',
+            id: webhookEventId,
+            data: {
+              status: 'processed',
+              processingCompletedAt: new Date().toISOString(),
+            },
+          })
         })
 
         return NextResponse.json({ received: true })
@@ -293,16 +350,18 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('[Stripe Webhook] Error processing event:', error)
 
-    // ✅ MARK EVENT AS FAILED
+    // ✅ MARK EVENT AS FAILED (with retry logic)
     try {
-      await payload.update({
-        collection: 'webhook-events',
-        id: webhookEventId,
-        data: {
-          status: 'failed',
-          errorMessage: error instanceof Error ? error.message : 'Unknown error',
-          processingCompletedAt: new Date().toISOString(),
-        },
+      await retryOnTransientError(async () => {
+        return await payload.update({
+          collection: 'webhook-events',
+          id: webhookEventId,
+          data: {
+            status: 'failed',
+            errorMessage: error instanceof Error ? error.message : 'Unknown error',
+            processingCompletedAt: new Date().toISOString(),
+          },
+        })
       })
     } catch (updateError) {
       console.error('[Stripe Webhook] Failed to mark event as failed:', updateError)
