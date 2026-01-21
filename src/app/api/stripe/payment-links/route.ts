@@ -224,42 +224,7 @@ export async function POST(request: NextRequest) {
 
     console.log('[Stripe Invoice] Final customer ID check passed:', stripeCustomerId)
 
-    // 5. Create invoice items for each line item
-    for (const item of lineItems) {
-      await stripe.invoiceItems.create({
-        customer: stripeCustomerId,
-        amount: Math.round(item.unitPrice * item.quantity * 100), // Convert to cents
-        currency: 'usd',
-        description: item.title,
-        metadata: {
-          order_number: orderNumber,
-          quantity: item.quantity.toString(),
-          unit_price: item.unitPrice.toString(),
-        },
-      })
-    }
-
-    // 6. Create invoice
-    const invoice = await stripe.invoices.create({
-      customer: stripeCustomerId,
-      collection_method: 'send_invoice', // Creates hosted invoice page
-      days_until_due: 30,
-      auto_advance: true, // Auto-finalize the invoice
-      description: `Order ${orderNumber}`,
-      metadata: {
-        order_number: orderNumber,
-        orcaclub_order_id: '', // Will be updated after order creation
-        created_via: 'orcaclub_admin',
-      },
-    })
-
-    // 7. Finalize invoice to make it payable
-    const finalizedInvoice = await stripe.invoices.finalizeInvoice(invoice.id)
-
-    console.log('[Stripe Invoice] Invoice created and finalized:', finalizedInvoice.id)
-    console.log('[Stripe Invoice] Hosted URL:', finalizedInvoice.hosted_invoice_url)
-
-    // 8. Create order record in PayloadCMS
+    // 5. Create order record in PayloadCMS FIRST (so we have the order ID)
     const order = await payload.create({
       collection: 'orders',
       data: {
@@ -267,8 +232,6 @@ export async function POST(request: NextRequest) {
         clientAccount: clientAccountId,
         amount: totalAmount,
         status: 'pending', // Will be updated to 'paid' via webhook
-        stripeInvoiceId: finalizedInvoice.id,
-        stripeInvoiceUrl: finalizedInvoice.hosted_invoice_url || '',
         stripeCustomerId,
         project: project || undefined, // Optional project name
         lineItems: lineItems.map((item: any) => ({
@@ -282,14 +245,53 @@ export async function POST(request: NextRequest) {
 
     console.log('[Stripe Invoice] Created order record:', order.id, orderNumber)
 
-    // 9. Update invoice metadata with PayloadCMS order ID
-    await stripe.invoices.update(finalizedInvoice.id, {
+    // 6. Create invoice items for each line item
+    for (const item of lineItems) {
+      await stripe.invoiceItems.create({
+        customer: stripeCustomerId,
+        amount: Math.round(item.unitPrice * item.quantity * 100), // Convert to cents
+        currency: 'usd',
+        description: item.title,
+        metadata: {
+          order_number: orderNumber,
+          orcaclub_order_id: order.id, // Include order ID
+          quantity: item.quantity.toString(),
+          unit_price: item.unitPrice.toString(),
+        },
+      })
+    }
+
+    // 7. Create invoice WITH order ID in metadata from the start
+    const invoice = await stripe.invoices.create({
+      customer: stripeCustomerId,
+      collection_method: 'send_invoice', // Creates hosted invoice page
+      days_until_due: 30,
+      auto_advance: true, // Auto-finalize the invoice
+      description: `Order ${orderNumber}`,
       metadata: {
         order_number: orderNumber,
-        orcaclub_order_id: order.id,
+        orcaclub_order_id: order.id, // ✅ Order ID is set from the beginning
         created_via: 'orcaclub_admin',
       },
     })
+
+    // 8. Finalize invoice to make it payable
+    const finalizedInvoice = await stripe.invoices.finalizeInvoice(invoice.id)
+
+    console.log('[Stripe Invoice] Invoice created and finalized:', finalizedInvoice.id)
+    console.log('[Stripe Invoice] Hosted URL:', finalizedInvoice.hosted_invoice_url)
+
+    // 9. Update order with Stripe invoice details
+    await payload.update({
+      collection: 'orders',
+      id: order.id,
+      data: {
+        stripeInvoiceId: finalizedInvoice.id,
+        stripeInvoiceUrl: finalizedInvoice.hosted_invoice_url || '',
+      },
+    })
+
+    console.log('[Stripe Invoice] Updated order with invoice details')
 
     return NextResponse.json({
       success: true,
