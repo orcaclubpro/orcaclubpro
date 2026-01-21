@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
         eventId: event.id,
         eventType: event.type,
         status: 'processing',
-        processingStartedAt: new Date(),
+        processingStartedAt: new Date().toISOString(),
         payload: event as any,
       },
     })
@@ -173,7 +173,7 @@ export async function POST(request: NextRequest) {
               data: {
                 status: 'failed',
                 errorMessage: 'No orcaclub_order_id in invoice metadata',
-                processingCompletedAt: new Date(),
+                processingCompletedAt: new Date().toISOString(),
               },
             })
           })
@@ -199,7 +199,7 @@ export async function POST(request: NextRequest) {
               data: {
                 status: 'processed',
                 errorMessage: `Invoice status: ${invoice.status}, amount paid: ${invoice.amount_paid}`,
-                processingCompletedAt: new Date(),
+                processingCompletedAt: new Date().toISOString(),
               },
             })
           })
@@ -220,7 +220,6 @@ export async function POST(request: NextRequest) {
             id: orcaclubOrderId,
             data: {
               status: 'paid',
-              stripePaymentIntentId: invoice.payment_intent as string || undefined,
             },
           })
         })
@@ -268,7 +267,7 @@ export async function POST(request: NextRequest) {
               data: {
                 status: 'processed',
                 errorMessage: 'No orcaclub_order_id in invoice metadata',
-                processingCompletedAt: new Date(),
+                processingCompletedAt: new Date().toISOString(),
               },
             })
           })
@@ -318,7 +317,7 @@ export async function POST(request: NextRequest) {
               id: webhookEventId,
               data: {
                 status: 'processed',
-                processingCompletedAt: new Date(),
+                processingCompletedAt: new Date().toISOString(),
               },
             })
           })
