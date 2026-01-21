@@ -63,8 +63,11 @@ export async function POST(request: Request) {
       },
     })
 
-    // Send new verification email
-    await sendTwoFactorEmail(payload, user.email, user.name, code)
+    // Send new verification email - construct name from firstName/lastName for client users
+    const displayName = user.role === 'client' && user.firstName && user.lastName
+      ? `${user.firstName} ${user.lastName}`
+      : user.name || 'User'
+    await sendTwoFactorEmail(payload, user.email, displayName, code)
 
     payload.logger.info(`[2FA API] Resent verification code to ${user.email}`)
 

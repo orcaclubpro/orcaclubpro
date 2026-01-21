@@ -5,7 +5,7 @@ const Orders: CollectionConfig = {
   slug: 'orders',
   admin: {
     useAsTitle: 'orderNumber',
-    defaultColumns: ['orderNumber', 'orderType', 'clientAccount', 'amount', 'status', 'createdAt'],
+    defaultColumns: ['orderNumber', 'clientAccount', 'amount', 'status', 'createdAt'],
     group: 'Clients',
   },
   hooks: {
@@ -30,7 +30,7 @@ const Orders: CollectionConfig = {
           unique: true,
           index: true,
           admin: {
-            description: 'Order number from Shopify or Stripe (e.g., #1001)',
+            description: 'Order number from Stripe (e.g., #1001)',
             width: '50%',
           },
         },
@@ -53,24 +53,7 @@ const Orders: CollectionConfig = {
       ],
     },
 
-    // ORDER TYPE (Sidebar)
-    {
-      name: 'orderType',
-      type: 'select',
-      options: [
-        { label: 'Shopify Order', value: 'shopify' },
-        { label: 'Stripe Payment', value: 'stripe' },
-      ],
-      defaultValue: 'shopify',
-      required: true,
-      index: true,
-      admin: {
-        description: 'Type of order (Shopify or Stripe)',
-        position: 'sidebar',
-      },
-    },
-
-    // ROW 2: Client Account + Amount (side by side)
+    // ROW 2: Client Account + Project + Amount (side by side)
     {
       type: 'row',
       fields: [
@@ -82,7 +65,16 @@ const Orders: CollectionConfig = {
           index: true,
           admin: {
             description: 'Client account for this order',
-            width: '60%',
+            width: '30%',
+          },
+        },
+        {
+          name: 'project',
+          type: 'text',
+          admin: {
+            description: 'Project name from client account (optional)',
+            width: '40%',
+            placeholder: 'Select from client projects',
           },
         },
         {
@@ -92,7 +84,7 @@ const Orders: CollectionConfig = {
           min: 0,
           admin: {
             description: 'Order total amount (USD)',
-            width: '40%',
+            width: '30%',
           },
         },
       ],
@@ -109,33 +101,6 @@ const Orders: CollectionConfig = {
       },
     },
 
-    // SHOPIFY INTEGRATION
-    {
-      name: 'shopifyDraftOrderId',
-      type: 'text',
-      unique: true,
-      index: true,
-      admin: {
-        description: 'Shopify draft order GID',
-        position: 'sidebar',
-        condition: (data) => data.orderType === 'shopify',
-      },
-    },
-    {
-      name: 'shopifyInvoiceUrl',
-      type: 'text',
-      admin: {
-        description: 'Shopify invoice payment URL',
-        position: 'sidebar',
-        condition: (data) => data.orderType === 'shopify',
-        style: {
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-        },
-      },
-    },
-
     // STRIPE INTEGRATION
     {
       name: 'stripeInvoiceId',
@@ -145,7 +110,6 @@ const Orders: CollectionConfig = {
       admin: {
         description: 'Stripe Invoice ID',
         position: 'sidebar',
-        condition: (data) => data.orderType === 'stripe',
       },
     },
     {
@@ -154,7 +118,6 @@ const Orders: CollectionConfig = {
       admin: {
         description: 'Stripe hosted invoice URL (sent to customer)',
         position: 'sidebar',
-        condition: (data) => data.orderType === 'stripe',
         style: {
           overflow: 'hidden',
           textOverflow: 'ellipsis',
@@ -169,7 +132,6 @@ const Orders: CollectionConfig = {
       admin: {
         description: 'Stripe Customer ID',
         position: 'sidebar',
-        condition: (data) => data.orderType === 'stripe',
       },
     },
     {
@@ -178,7 +140,6 @@ const Orders: CollectionConfig = {
       admin: {
         description: 'Stripe Payment Intent ID (after payment)',
         position: 'sidebar',
-        condition: (data) => data.orderType === 'stripe',
       },
     },
 
@@ -259,13 +220,6 @@ const Orders: CollectionConfig = {
         },
 
         // Technical IDs (collapsed by default)
-        {
-          name: 'shopifyVariantId',
-          type: 'text',
-          admin: {
-            description: 'Shopify product variant ID (if applicable)',
-          },
-        },
         {
           name: 'stripePriceId',
           type: 'text',

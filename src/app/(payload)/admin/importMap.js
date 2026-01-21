@@ -27,7 +27,6 @@ import { default as default_6f14b747d7d9d385f91171711bbf7132 } from '@/component
 import { default as default_e34c28bdc97e3fecf976b23b26d64cc9 } from '@/components/payload/Logo'
 import { default as default_424fafc23df3d6f7806ff182c0aec46d } from '@/components/payload/actions/CreateOrderButton'
 import { default as default_be7cf7eb3883beb9807d8789bb1dd363 } from '@/components/payload/BeforeLogin'
-import { PayloadStyleProvider as PayloadStyleProvider_5746887db5b0045b885553d2c4e365cb } from '@/components/payload/PayloadStyleProvider'
 import { OrderCreationView as OrderCreationView_71b52cdd9543c07c1874ea3e119617ee } from '@/components/payload/order-creation/OrderCreationView'
 import { default as default_7b22a19c71d70ad4ab3a5821bd557da0 } from '@/components/payload/CustomLogin'
 import { default as default_2b7937fe8a1db97f7a2ed004951e793e } from '@/components/payload/CustomAccount'
@@ -62,7 +61,6 @@ export const importMap = {
   "@/components/payload/Logo#default": default_e34c28bdc97e3fecf976b23b26d64cc9,
   "@/components/payload/actions/CreateOrderButton#default": default_424fafc23df3d6f7806ff182c0aec46d,
   "@/components/payload/BeforeLogin#default": default_be7cf7eb3883beb9807d8789bb1dd363,
-  "@/components/payload/PayloadStyleProvider#PayloadStyleProvider": PayloadStyleProvider_5746887db5b0045b885553d2c4e365cb,
   "@/components/payload/order-creation/OrderCreationView#OrderCreationView": OrderCreationView_71b52cdd9543c07c1874ea3e119617ee,
   "@/components/payload/CustomLogin#default": default_7b22a19c71d70ad4ab3a5821bd557da0,
   "@/components/payload/CustomAccount#default": default_2b7937fe8a1db97f7a2ed004951e793e

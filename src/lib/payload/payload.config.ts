@@ -10,8 +10,11 @@ import { revalidatePath } from 'next/cache'
 import { revalidateHomepage, revalidateHomepageOnDelete, createMultiPathRevalidate, createMultiPathRevalidateOnDelete } from './hooks/revalidate'
 import { sendTwoFactorEmailHook } from './hooks/sendTwoFactorEmail'
 import { beforeLoginHook } from './hooks/beforeLogin'
+import { createClientAccountHook } from './hooks/createClientAccount'
+import { syncUserToClientAccount } from './hooks/syncUserToClientAccount'
 import ClientAccounts from './collections/ClientAccounts'
 import Orders from './collections/Orders'
+import { WebhookEvents } from './collections/WebhookEvents'
 
 // Helper function to format strings as URL-friendly slugs
 const formatSlug = (val: string): string =>
@@ -601,11 +604,8 @@ const Posts: CollectionConfig = {
 const Users: CollectionConfig = {
   slug: 'users',
   auth: {
-    verify: {
-      generateEmailHTML: ({ token }) => {
-        return `<div>Click <a href="${process.env.NEXT_PUBLIC_SERVER_URL}/verify-email?token=${token}">here</a> to verify your email.</div>`
-      },
-    },
+    // Email verification disabled - we use custom 2FA for admin users, clients don't need verification
+    // verify: false, (commented out - this is the default)
     forgotPassword: {
       generateEmailHTML: (args) => {
         // This custom template is handled by our API endpoint
@@ -638,14 +638,29 @@ const Users: CollectionConfig = {
     delete: () => true,
   },
   hooks: {
-    afterChange: [sendTwoFactorEmailHook],
+    beforeChange: [createClientAccountHook], // Must run BEFORE afterChange
+    afterChange: [sendTwoFactorEmailHook, syncUserToClientAccount],
     beforeLogin: [beforeLoginHook],
   },
   fields: [
     {
       name: 'name',
       type: 'text',
-      required: true,
+      admin: {
+        condition: (data) => data.role !== 'client',
+        description: 'User full name (not used for client role)',
+      },
+      hooks: {
+        beforeValidate: [
+          ({ value, data }) => {
+            // Make required for non-client roles only
+            if (data?.role !== 'client' && !value) {
+              throw new Error('Name is required for admin and user roles')
+            }
+            return value
+          },
+        ],
+      },
     },
     {
       name: 'role',
@@ -661,20 +676,147 @@ const Users: CollectionConfig = {
           label: 'User',
           value: 'user',
         },
+        {
+          label: 'Client',
+          value: 'client',
+        },
       ]
+    },
+    // Client-specific fields (shown only for client role)
+    {
+      name: 'firstName',
+      type: 'text',
+      admin: {
+        condition: (data) => data.role === 'client',
+        description: 'Client first name',
+      },
+      hooks: {
+        beforeValidate: [
+          ({ value, data }) => {
+            // Make required for client role only
+            if (data?.role === 'client' && !value) {
+              throw new Error('First name is required for client users')
+            }
+            return value
+          },
+        ],
+      },
+    },
+    {
+      name: 'lastName',
+      type: 'text',
+      admin: {
+        condition: (data) => data.role === 'client',
+        description: 'Client last name',
+      },
+      hooks: {
+        beforeValidate: [
+          ({ value, data }) => {
+            // Make required for client role only
+            if (data?.role === 'client' && !value) {
+              throw new Error('Last name is required for client users')
+            }
+            return value
+          },
+        ],
+      },
+    },
+    {
+      name: 'company',
+      type: 'text',
+      admin: {
+        condition: (data) => data.role === 'client',
+        description: 'Client company name',
+      },
+    },
+    {
+      name: 'username',
+      type: 'text',
+      unique: true,
+      index: true,
+      admin: {
+        condition: (data) => data.role === 'client',
+        description: 'Unique username for client dashboard (auto-generated from first and last name)',
+        readOnly: true,
+        position: 'sidebar',
+      },
+      hooks: {
+        beforeValidate: [
+          async ({ value, data, req, operation }) => {
+            // Only auto-generate for client role
+            if (data?.role !== 'client') return value
+
+            // If username already exists and we're not changing names, keep it
+            if (value && operation === 'update') return value
+
+            // Generate username from firstName + lastName
+            const firstName = data?.firstName || ''
+            const lastName = data?.lastName || ''
+
+            if (!firstName || !lastName) return value
+
+            // Create base username (lowercase, no spaces)
+            const baseUsername = `${firstName}${lastName}`.toLowerCase().replace(/[^a-z0-9]/g, '')
+
+            // Check if username exists
+            let username = baseUsername
+            let counter = 1
+            let isUnique = false
+
+            while (!isUnique) {
+              const existing = await req.payload.find({
+                collection: 'users',
+                where: {
+                  username: { equals: username },
+                },
+                limit: 1,
+              })
+
+              if (existing.docs.length === 0) {
+                isUnique = true
+              } else {
+                // If we're updating and found our own username, that's fine
+                if (operation === 'update' && existing.docs[0].id === data?.id) {
+                  isUnique = true
+                } else {
+                  // Add number suffix and try again
+                  username = `${baseUsername}${counter}`
+                  counter++
+                }
+              }
+            }
+
+            return username
+          },
+        ],
+      },
+    },
+    {
+      name: 'clientAccount',
+      type: 'relationship',
+      relationTo: 'client-accounts',
+      hasMany: false,
+      admin: {
+        condition: (data) => data.role === 'client',
+        description: 'Linked client account (auto-created on user creation)',
+        readOnly: true,
+        position: 'sidebar',
+      },
     },
     {
       name: 'workspace',
       type: 'text',
       admin: {
         description: 'User workspace identifier',
+        condition: (data) => data.role !== 'client',
       },
     },
-    // 2FA fields (account verification)
+    // 2FA fields (account verification) - hidden for client role
     {
       name: 'twoFactorCode',
       type: 'text',
       admin: {
+        condition: (data) => data.role !== 'client',
         description: '6-digit 2FA verification code (account setup)',
         position: 'sidebar',
         readOnly: true,
@@ -684,6 +826,7 @@ const Users: CollectionConfig = {
       name: 'twoFactorExpiry',
       type: 'date',
       admin: {
+        condition: (data) => data.role !== 'client',
         description: 'Expiry time for 2FA code (account setup)',
         position: 'sidebar',
         readOnly: true,
@@ -697,15 +840,17 @@ const Users: CollectionConfig = {
       type: 'checkbox',
       defaultValue: true, // Auto-verify all users (first user gets immediate access)
       admin: {
+        condition: (data) => data.role !== 'client',
         description: 'Whether user has verified their account',
         position: 'sidebar',
       },
     },
-    // Login 2FA fields
+    // Login 2FA fields - hidden for client role
     {
       name: 'loginTwoFactorCode',
       type: 'text',
       admin: {
+        condition: (data) => data.role !== 'client',
         description: '6-digit login verification code',
         position: 'sidebar',
         readOnly: true,
@@ -715,6 +860,7 @@ const Users: CollectionConfig = {
       name: 'loginTwoFactorExpiry',
       type: 'date',
       admin: {
+        condition: (data) => data.role !== 'client',
         description: 'Expiry time for login code',
         position: 'sidebar',
         readOnly: true,
@@ -733,7 +879,7 @@ export default buildConfig({
   editor: lexicalEditor(),
 
   // Define and configure your collections in this array
-  collections: [Media, Clients, Leads, Categories, Tags, Posts, Users, ClientAccounts, Orders],
+  collections: [Media, Clients, Leads, Categories, Tags, Posts, Users, ClientAccounts, Orders, WebhookEvents],
 
   // Your Payload secret - should be a complex and secure string, unguessable
   secret: process.env.PAYLOAD_SECRET || 'your-secret-here',
@@ -772,8 +918,6 @@ export default buildConfig({
       },
       // Custom login page elements
       beforeLogin: ['@/components/payload/BeforeLogin'],
-      // Custom CSS provider for ORCACLUB theme
-      providers: ['@/components/payload/PayloadStyleProvider#PayloadStyleProvider'],
       // Custom admin actions (floating action button)
       actions: ['@/components/payload/actions/CreateOrderButton'],
       // Custom views

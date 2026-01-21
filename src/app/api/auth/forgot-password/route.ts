@@ -78,8 +78,11 @@ export async function POST(request: Request) {
     const baseUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000'
     const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`
 
-    // Send password reset email
-    await sendPasswordResetEmail(payload, user.email, user.name, resetUrl)
+    // Send password reset email - construct name from firstName/lastName for client users
+    const displayName = user.role === 'client' && user.firstName && user.lastName
+      ? `${user.firstName} ${user.lastName}`
+      : user.name || 'User'
+    await sendPasswordResetEmail(payload, user.email, displayName, resetUrl)
 
     payload.logger.info(`[Password Reset] Reset token generated for ${user.email}`)
 

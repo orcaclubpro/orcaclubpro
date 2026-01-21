@@ -156,6 +156,7 @@ export interface CreateDraftOrderInput {
   appliedDiscount?: DraftOrderDiscount
   taxExempt?: boolean // Whether order is tax exempt
   useCustomerDefaultAddress?: boolean // Use customer's default shipping address
+  project?: string // Optional project name for the order
 }
 
 /**

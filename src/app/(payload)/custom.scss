@@ -1,6 +1,463 @@
-/* 
- * Custom styles for Payload CMS admin panel
- * This file is imported by the Payload admin layout
+/**
+ * ORCACLUB Payload CMS Admin Theme
+ * Clean, minimal customization using Payload's CSS variable system
+ * Intelligence Cyan (#67e8f9) primary accent
  */
 
-// You can add your custom styles here 
+@layer payload-default {
+  /* ========================================
+   * CSS VARIABLE OVERRIDES - ORCACLUB THEME
+   * Using Payload's built-in theming system
+   * ======================================== */
+
+  :root {
+    /* Core Backgrounds & Elevation */
+    --theme-bg: #000000;
+    --theme-elevation-50: #0a0a0a;
+    --theme-elevation-100: #111111;
+    --theme-elevation-150: #151515;
+    --theme-elevation-200: #1a1a1a;
+    --theme-elevation-250: #1f1f1f;
+    --theme-elevation-300: #242424;
+    --theme-elevation-400: #2a2a2a;
+    --theme-elevation-500: #0a0a0a;
+    --theme-elevation-600: #333333;
+    --theme-elevation-700: #4a4a4a;
+    --theme-elevation-800: #666666;
+    --theme-elevation-900: #888888;
+    --theme-elevation-1000: #aaaaaa;
+
+    /* ORCACLUB Intelligence Cyan Accent */
+    --theme-success-50: #67e8f9;
+    --theme-success-100: #67e8f9;
+    --theme-success-150: #67e8f9;
+    --theme-success-200: #67e8f9;
+    --theme-success-250: #67e8f9;
+    --theme-success-300: #67e8f9;
+    --theme-success-350: #67e8f9;
+    --theme-success-400: #67e8f9;
+    --theme-success-450: #67e8f9;
+    --theme-success-500: #67e8f9;
+    --theme-success-550: #3b82f6;
+    --theme-success-600: #3b82f6;
+    --theme-success-650: #3b82f6;
+    --theme-success-700: #1e40af;
+    --theme-success-750: #1e40af;
+
+    /* Text & Typography */
+    --theme-text: #ffffff;
+    --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu',
+      sans-serif;
+    --font-mono: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+
+    /* Borders */
+    --theme-elevation-stroke: rgba(103, 232, 249, 0.08);
+    --theme-border-color: rgba(103, 232, 249, 0.08);
+
+    /* Inputs */
+    --theme-input-bg: rgba(10, 10, 10, 0.8);
+    --theme-input-border: rgba(103, 232, 249, 0.15);
+
+    /* Sizing & Spacing */
+    --base: 16px;
+    --gutter-h: 24px;
+    --border-radius-s: 6px;
+    --border-radius-m: 8px;
+    --border-radius-l: 12px;
+
+    /* Font Sizes */
+    --font-size-xs: 12px;
+    --font-size-sm: 14px;
+    --font-size-base: 15px;
+    --font-size-md: 16px;
+    --font-size-lg: 18px;
+    --font-size-xl: 20px;
+    --font-size-2xl: 24px;
+    --font-size-3xl: 32px;
+  }
+
+  /* ========================================
+   * GLOBAL STYLES
+   * ======================================== */
+
+  body {
+    background-color: var(--theme-bg);
+    font-size: var(--font-size-base);
+  }
+
+  /* ========================================
+   * MINIMAL BORDERS
+   * ======================================== */
+
+  .render-fields,
+  .field-type,
+  .row,
+  .gutter,
+  .collapsible,
+  .blocks-field,
+  .array-field {
+    border: none;
+  }
+
+  /* ========================================
+   * NAVIGATION
+   * ======================================== */
+
+  .nav,
+  .nav__wrap {
+    background-color: rgba(10, 10, 10, 0.95);
+    border-right: 1px solid rgba(103, 232, 249, 0.08);
+  }
+
+  .nav-group__toggle,
+  .nav__link {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: var(--font-size-md);
+    padding: 12px 24px;
+    border-radius: var(--border-radius-m);
+    margin: 2px 12px;
+    transition: all 0.2s ease;
+    border: none;
+  }
+
+  .nav-group__toggle:hover,
+  .nav__link:hover {
+    color: #67e8f9;
+    background-color: rgba(103, 232, 249, 0.08);
+  }
+
+  .nav__link--active {
+    color: #67e8f9;
+    background-color: rgba(103, 232, 249, 0.12);
+    font-weight: 500;
+    border-left: 3px solid #67e8f9;
+  }
+
+  /* ========================================
+   * BUTTONS
+   * ======================================== */
+
+  button,
+  .btn,
+  [class*='btn--'] {
+    font-size: var(--font-size-md);
+    padding: 12px 24px;
+    border-radius: var(--border-radius-m);
+    font-weight: 500;
+    transition: all 0.2s ease;
+  }
+
+  button[type='submit'],
+  .btn--style-primary,
+  .form-submit button {
+    background: linear-gradient(135deg, rgba(103, 232, 249, 0.15), rgba(59, 130, 246, 0.15));
+    border: 1px solid rgba(103, 232, 249, 0.3);
+    color: #67e8f9;
+  }
+
+  button[type='submit']:hover,
+  .btn--style-primary:hover {
+    background: linear-gradient(135deg, rgba(103, 232, 249, 0.25), rgba(59, 130, 246, 0.25));
+    border-color: rgba(103, 232, 249, 0.5);
+    transform: translateY(-1px);
+  }
+
+  /* ========================================
+   * INPUT FIELDS
+   * ======================================== */
+
+  input[type='text'],
+  input[type='email'],
+  input[type='password'],
+  input[type='number'],
+  input[type='search'],
+  input[type='url'],
+  textarea,
+  select {
+    background-color: rgba(10, 10, 10, 0.9);
+    border: 1px solid rgba(103, 232, 249, 0.15);
+    color: #ffffff;
+    border-radius: var(--border-radius-m);
+    font-size: var(--font-size-md);
+    padding: 14px 16px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: rgba(255, 255, 255, 0.3);
+  }
+
+  input:focus,
+  textarea:focus,
+  select:focus {
+    border-color: rgba(103, 232, 249, 0.4);
+    box-shadow: 0 0 0 3px rgba(103, 232, 249, 0.1);
+    outline: none;
+  }
+
+  /* ========================================
+   * TABLES
+   * ======================================== */
+
+  .table thead th {
+    background-color: rgba(10, 10, 10, 0.8);
+    border-bottom: 1px solid rgba(103, 232, 249, 0.15);
+    font-size: var(--font-size-md);
+    font-weight: 600;
+    padding: 16px 20px;
+  }
+
+  .table tbody td {
+    border-bottom: 1px solid rgba(103, 232, 249, 0.05);
+    padding: 16px 20px;
+    font-size: var(--font-size-base);
+  }
+
+  .table tbody tr:hover {
+    background-color: rgba(103, 232, 249, 0.04);
+  }
+
+  /* ========================================
+   * HEADER
+   * ======================================== */
+
+  .app-header,
+  .step-nav,
+  .template-default__header {
+    background-color: rgba(10, 10, 10, 0.98);
+    border-bottom: 1px solid rgba(103, 232, 249, 0.08);
+    backdrop-filter: blur(16px);
+  }
+
+  /* ========================================
+   * TYPOGRAPHY
+   * ======================================== */
+
+  h1 {
+    font-size: var(--font-size-3xl);
+    font-weight: 700;
+    color: #ffffff;
+  }
+
+  h2 {
+    font-size: var(--font-size-2xl);
+    font-weight: 600;
+    color: #ffffff;
+  }
+
+  h3 {
+    font-size: var(--font-size-xl);
+    font-weight: 600;
+    color: #ffffff;
+  }
+
+  /* ========================================
+   * LINKS
+   * ======================================== */
+
+  a {
+    color: #67e8f9;
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+
+  a:hover {
+    color: #3b82f6;
+  }
+
+  /* ========================================
+   * TOOLTIPS & POPUPS
+   * ======================================== */
+
+  .tooltip,
+  .popup,
+  .popup-button-list {
+    background-color: rgba(10, 10, 10, 0.98);
+    border: 1px solid rgba(103, 232, 249, 0.2);
+    border-radius: var(--border-radius-m);
+    backdrop-filter: blur(24px);
+  }
+
+  /* ========================================
+   * STATUS PILLS
+   * ======================================== */
+
+  .pill,
+  .pill--style-success {
+    background-color: rgba(103, 232, 249, 0.15);
+    color: #67e8f9;
+    border: 1px solid rgba(103, 232, 249, 0.3);
+    border-radius: 6px;
+    font-size: var(--font-size-sm);
+  }
+
+  /* ========================================
+   * SCROLLBAR
+   * ======================================== */
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: rgba(10, 10, 10, 0.5);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(to bottom, rgba(103, 232, 249, 0.4), rgba(59, 130, 246, 0.4));
+    border-radius: 5px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(to bottom, rgba(103, 232, 249, 0.6), rgba(59, 130, 246, 0.6));
+  }
+
+  /* ========================================
+   * MODALS & DRAWERS
+   * ======================================== */
+
+  .modal,
+  .drawer,
+  .drawer__content {
+    background-color: rgba(10, 10, 10, 0.98);
+    border: 1px solid rgba(103, 232, 249, 0.15);
+    border-radius: var(--border-radius-l);
+  }
+
+  .modal__overlay,
+  .drawer__overlay {
+    background-color: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(8px);
+  }
+
+  /* ========================================
+   * RICH TEXT EDITOR
+   * ======================================== */
+
+  .rich-text-editor,
+  .lexical-editor {
+    background-color: rgba(10, 10, 10, 0.9);
+    border: 1px solid rgba(103, 232, 249, 0.15);
+    border-radius: var(--border-radius-m);
+    color: #ffffff;
+    font-size: var(--font-size-base);
+  }
+
+  /* ========================================
+   * FILE UPLOAD
+   * ======================================== */
+
+  .upload,
+  .file-field {
+    background-color: rgba(10, 10, 10, 0.6);
+    border: 2px dashed rgba(103, 232, 249, 0.2);
+    border-radius: var(--border-radius-l);
+    transition: all 0.3s ease;
+  }
+
+  .upload:hover,
+  .file-field:hover {
+    border-color: rgba(103, 232, 249, 0.4);
+    background-color: rgba(103, 232, 249, 0.04);
+  }
+
+  /* ========================================
+   * REACT-SELECT COMPONENTS
+   * ======================================== */
+
+  .react-select__control,
+  .select__control {
+    background-color: rgba(10, 10, 10, 0.9);
+    border: 1px solid rgba(103, 232, 249, 0.15);
+    border-radius: var(--border-radius-m);
+    min-height: 48px;
+  }
+
+  .react-select__control:hover {
+    border-color: rgba(103, 232, 249, 0.25);
+  }
+
+  .react-select__control--is-focused {
+    border-color: rgba(103, 232, 249, 0.4);
+    box-shadow: 0 0 0 3px rgba(103, 232, 249, 0.1);
+  }
+
+  .react-select__menu {
+    background-color: rgba(10, 10, 10, 0.98);
+    border: 1px solid rgba(103, 232, 249, 0.2);
+    border-radius: var(--border-radius-m);
+    backdrop-filter: blur(8px);
+  }
+
+  .react-select__option:hover,
+  .react-select__option--is-focused {
+    background-color: rgba(103, 232, 249, 0.08);
+    color: #67e8f9;
+  }
+
+  .react-select__option--is-selected {
+    background-color: rgba(103, 232, 249, 0.15);
+    color: #67e8f9;
+  }
+
+  /* ========================================
+   * SIDEBAR PUBLISH BUTTON FIX
+   * ======================================== */
+
+  .edit-view__sidebar {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  .render-fields--sidebar {
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  .doc-controls {
+    position: sticky;
+    bottom: 0;
+    margin-top: auto;
+    padding: 1.5rem 1rem;
+    background: linear-gradient(to top, rgba(0, 0, 0, 1) 80%, rgba(0, 0, 0, 0.95));
+    backdrop-filter: blur(16px);
+    border-top: 1px solid rgba(103, 232, 249, 0.1);
+  }
+
+  /* ========================================
+   * FIELD LABELS & DESCRIPTIONS
+   * ======================================== */
+
+  .field-label,
+  label {
+    color: rgba(255, 255, 255, 0.95);
+    font-size: var(--font-size-base);
+    font-weight: 500;
+  }
+
+  .field-description,
+  .description {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: var(--font-size-sm);
+    line-height: 1.5;
+  }
+
+  /* ========================================
+   * FOCUS STATES - Accessibility
+   * ======================================== */
+
+  button:focus-visible,
+  a:focus-visible {
+    outline: 2px solid rgba(103, 232, 249, 0.3);
+    outline-offset: 2px;
+  }
+
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: none;
+  }
+}

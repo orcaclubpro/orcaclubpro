@@ -1,6 +1,7 @@
 import type { CollectionConfig } from 'payload'
 import { createShopifyCustomerHook } from '../hooks/createShopifyCustomer'
 import { createStripeCustomerHook } from '../hooks/createStripeCustomer'
+import { syncClientAccountToUser } from '../hooks/syncClientAccountToUser'
 
 const ClientAccounts: CollectionConfig = {
   slug: 'client-accounts',
@@ -11,12 +12,53 @@ const ClientAccounts: CollectionConfig = {
   },
   hooks: {
     beforeChange: [createShopifyCustomerHook, createStripeCustomerHook],
+    afterChange: [syncClientAccountToUser],
   },
   access: {
-    read: () => true,
-    create: () => true,
-    update: () => true,
-    delete: () => true,
+    read: ({ req: { user } }) => {
+      // Public/unauthenticated cannot read
+      if (!user) return false
+
+      // Admins can read all
+      if (user.role === 'admin') return true
+
+      // Client users can only read their own account
+      if (user.role === 'client' && user.clientAccount) {
+        return {
+          id: { equals: user.clientAccount },
+        }
+      }
+
+      // Regular users can read all
+      return true
+    },
+    create: ({ req: { user } }) => {
+      // Only authenticated users can create
+      if (!user) return false
+      // Clients cannot create new accounts manually
+      if (user.role === 'client') return false
+      return true
+    },
+    update: ({ req: { user } }) => {
+      if (!user) return false
+
+      // Admins can update all
+      if (user.role === 'admin') return true
+
+      // Client users can only update their own account
+      if (user.role === 'client' && user.clientAccount) {
+        return {
+          id: { equals: user.clientAccount },
+        }
+      }
+
+      // Regular users can update all
+      return true
+    },
+    delete: ({ req: { user } }) => {
+      // Only admins can delete
+      return user?.role === 'admin'
+    },
   },
   fields: [
     {
@@ -43,6 +85,29 @@ const ClientAccounts: CollectionConfig = {
               index: true,
               admin: {
                 description: 'Client email address',
+              },
+            },
+            {
+              name: 'firstName',
+              type: 'text',
+              required: true,
+              admin: {
+                description: 'Client first name',
+              },
+            },
+            {
+              name: 'lastName',
+              type: 'text',
+              required: true,
+              admin: {
+                description: 'Client last name',
+              },
+            },
+            {
+              name: 'company',
+              type: 'text',
+              admin: {
+                description: 'Client company name',
               },
             },
 
@@ -133,8 +198,94 @@ const ClientAccounts: CollectionConfig = {
               admin: {
                 allowCreate: false,
                 description: 'Orders linked to this client account',
-                defaultColumns: ['orderNumber', 'orderType', 'amount', 'status', 'createdAt'],
+                defaultColumns: ['orderNumber', 'amount', 'status', 'createdAt'],
               },
+            },
+          ],
+        },
+        {
+          label: 'Projects',
+          description: 'Manage projects for this client',
+          fields: [
+            {
+              name: 'projects',
+              type: 'array',
+              label: {
+                singular: 'Project',
+                plural: 'Projects',
+              },
+              admin: {
+                initCollapsed: true,
+                description: 'Client projects with linked orders',
+              },
+              fields: [
+                {
+                  type: 'row',
+                  fields: [
+                    {
+                      name: 'name',
+                      type: 'text',
+                      required: true,
+                      admin: {
+                        description: 'Project name',
+                        width: '60%',
+                      },
+                    },
+                    {
+                      name: 'status',
+                      type: 'select',
+                      required: true,
+                      defaultValue: 'active',
+                      options: [
+                        { label: 'Active', value: 'active' },
+                        { label: 'On Hold', value: 'on-hold' },
+                        { label: 'Completed', value: 'completed' },
+                        { label: 'Cancelled', value: 'cancelled' },
+                      ],
+                      admin: {
+                        description: 'Project status',
+                        width: '40%',
+                      },
+                    },
+                  ],
+                },
+                {
+                  name: 'description',
+                  type: 'textarea',
+                  admin: {
+                    description: 'Project description and notes',
+                  },
+                },
+                {
+                  type: 'row',
+                  fields: [
+                    {
+                      name: 'startDate',
+                      type: 'date',
+                      admin: {
+                        description: 'Project start date',
+                        width: '50%',
+                      },
+                    },
+                    {
+                      name: 'endDate',
+                      type: 'date',
+                      admin: {
+                        description: 'Project end date',
+                        width: '50%',
+                      },
+                    },
+                  ],
+                },
+                {
+                  name: 'budget',
+                  type: 'number',
+                  min: 0,
+                  admin: {
+                    description: 'Project budget (USD)',
+                  },
+                },
+              ],
             },
           ],
         },

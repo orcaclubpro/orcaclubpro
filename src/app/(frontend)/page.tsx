@@ -10,7 +10,7 @@ import { getPayload } from "payload"
 import config from "@payload-config"
 
 export const metadata: Metadata = {
-  title: 'ORCACLUB | DEVELOPMENT AGENCY',
+  title: 'ORCACLUB',
   description: 'Professional web development company offering custom web development, website design services, and full-stack solutions. Our web design agency delivers fixed-price packages with 3-21 day turnaround for businesses seeking scalable web development services.',
   keywords: [
     'web development services',
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
     'ecommerce development'
   ],
   openGraph: {
-    title: 'ORCACLUB | DEVELOPMENT AGENCY',
+    title: 'ORCACLUB',
     description: 'Professional web development company specializing in custom web development and website design services. Fixed-price packages with fast 3-21 day delivery from an experienced web design agency.',
     url: 'https://orcaclub.pro',
     siteName: 'ORCACLUB',
@@ -43,7 +43,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'ORCACLUB | DEVELOPMENT AGENCY',
+    title: 'ORCACLUB',
     description: 'Web development services and custom web design from a professional web development company. Fast delivery, transparent pricing, and scalable solutions.',
   },
   alternates: {

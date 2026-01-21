@@ -79,7 +79,6 @@ export default function SendInvoiceButton() {
   // Show order info
   const orderNumber = docData?.orderNumber || 'Loading...'
   const clientEmail = docData?.clientAccount?.email || 'No email'
-  const orderType = docData?.orderType || 'unknown'
 
   return (
     <div
@@ -121,9 +120,6 @@ export default function SendInvoiceButton() {
             </p>
             <p style={{ margin: '0', fontSize: '14px', color: '#67e8f9', fontWeight: '500' }}>
               {clientEmail}
-            </p>
-            <p style={{ margin: '8px 0 0 0', fontSize: '12px', color: '#6b7280' }}>
-              Order Type: <span style={{ color: '#d1d5db' }}>{orderType}</span>
             </p>
           </div>
 

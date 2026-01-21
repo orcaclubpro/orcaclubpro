@@ -7,6 +7,7 @@ You are an expert Payload CMS developer working on ORCACLUB, a Technical Operati
 - **Runtime**: Bun (primary), Node.js (fallback)
 - **Package Manager**: Bun (use `bun` instead of npm/yarn/pnpm)
 - **Database**: MongoDB Atlas (via mongoose adapter)
+- **Editor Config**: Import map generation after component changes
 - **Common Commands**:
   - `bun run bun:dev` - Start development server (fastest)
   - `bun run dev` - Standard dev server
@@ -22,7 +23,7 @@ You are an expert Payload CMS developer working on ORCACLUB, a Technical Operati
 3. **Type Generation**: Run `bun run payload:generate` after schema changes
 4. **Transaction Safety**: Always pass `req` to nested operations in hooks
 5. **Access Control**: Understand Local API bypasses access control by default
-6. **Context Flags**: Use context flags to prevent infinite hook loops
+6. **Access Control**: Ensure roles exist when modifying collections or globals with access controls
 
 ### Code Validation
 
@@ -32,6 +33,9 @@ bun run tsc --noEmit
 
 # Generate types after schema changes
 bun run payload:generate
+
+# Generate import maps after creating or modifying components
+bun run payload generate:importmap
 ```
 
 ## Project Structure
@@ -246,6 +250,92 @@ export const adminOrSelf: Access = ({ req: { user } }) => {
 }
 ```
 
+## Fields
+
+### Common Field Patterns
+
+```typescript
+// Auto-generate slugs
+import { slugField } from 'payload'
+slugField({ fieldToUse: 'title' })
+
+// Relationship with filtering
+{
+  name: 'category',
+  type: 'relationship',
+  relationTo: 'categories',
+  filterOptions: { active: { equals: true } },
+}
+
+// Conditional field
+{
+  name: 'featuredImage',
+  type: 'upload',
+  relationTo: 'media',
+  admin: {
+    condition: (data) => data.featured === true,
+  },
+}
+
+// Virtual field (computed)
+{
+  name: 'fullName',
+  type: 'text',
+  virtual: true,
+  hooks: {
+    afterRead: [({ siblingData }) => `${siblingData.firstName} ${siblingData.lastName}`],
+  },
+}
+
+// Read-only calculated field
+{
+  name: 'accountBalance',
+  type: 'number',
+  access: {
+    read: ({ req: { user } }) => Boolean(user),
+    update: () => false, // Never directly updated (calculated via hooks)
+  },
+  admin: {
+    readOnly: true,
+  },
+}
+```
+
+### Field Type Guards
+
+```typescript
+import {
+  fieldAffectsData,
+  fieldHasSubFields,
+  fieldIsArrayType,
+  fieldIsBlockType,
+  fieldSupportsMany,
+  fieldHasMaxDepth,
+} from 'payload'
+
+function processField(field: Field) {
+  // Check if field stores data
+  if (fieldAffectsData(field)) {
+    console.log(field.name) // Safe to access
+  }
+
+  // Check if field has nested fields
+  if (fieldHasSubFields(field)) {
+    field.fields.forEach(processField) // Safe to access
+  }
+
+  // Check field type
+  if (fieldIsArrayType(field)) {
+    console.log(field.minRows, field.maxRows)
+  }
+
+  // Check capabilities
+  if (fieldSupportsMany(field) && field.hasMany) {
+    console.log('Multiple values supported')
+  }
+}
+```
+
 ## Collections
 
 ### Current Collections (9 total)
@@ -392,7 +482,196 @@ export const createStripeCustomerHook: CollectionBeforeChangeHook = async ({
 4. **Use retry logic** for transient errors (network, database locks)
 5. **Keep hooks focused** - one responsibility per hook
 
+## Queries
+
+### Local API
+
+```typescript
+// Find with complex query
+const orders = await payload.find({
+  collection: 'orders',
+  where: {
+    and: [
+      { status: { equals: 'pending' } },
+      { 'clientAccount.email': { contains: 'example.com' } },
+    ],
+  },
+  depth: 2, // Populate relationships
+  limit: 10,
+  sort: '-createdAt',
+  select: {
+    orderNumber: true,
+    amount: true,
+    clientAccount: true,
+  },
+})
+
+// Find by ID
+const order = await payload.findByID({
+  collection: 'orders',
+  id: '123',
+  depth: 2,
+})
+
+// Create
+const newOrder = await payload.create({
+  collection: 'orders',
+  data: {
+    orderNumber: 'ORD-001',
+    status: 'pending',
+    amount: 5000,
+  },
+})
+
+// Update
+await payload.update({
+  collection: 'orders',
+  id: '123',
+  data: { status: 'paid' },
+})
+
+// Delete
+await payload.delete({
+  collection: 'orders',
+  id: '123',
+})
+```
+
+### Query Operators
+
+```typescript
+// Equals
+{ status: { equals: 'published' } }
+
+// Not equals
+{ status: { not_equals: 'draft' } }
+
+// Greater than / less than
+{ amount: { greater_than: 1000 } }
+{ age: { less_than_equal: 65 } }
+
+// Contains (case-insensitive)
+{ email: { contains: '@example.com' } }
+
+// Like (all words present)
+{ description: { like: 'payload cms' } }
+
+// In array
+{ status: { in: ['pending', 'processing'] } }
+
+// Exists
+{ stripeCustomerId: { exists: true } }
+
+// Near (geospatial)
+{ location: { near: [-122.4194, 37.7749, 10000] } }
+```
+
+### AND/OR Logic
+
+```typescript
+{
+  or: [
+    { status: { equals: 'published' } },
+    { author: { equals: user.id } },
+  ],
+}
+
+{
+  and: [
+    { status: { equals: 'pending' } },
+    { amount: { greater_than: 0 } },
+  ],
+}
+```
+
+### Getting Payload Instance
+
+```typescript
+// In API routes (Next.js)
+import { getPayload } from 'payload'
+import config from '@payload-config'
+
+export async function GET() {
+  const payload = await getPayload({ config })
+
+  const orders = await payload.find({
+    collection: 'orders',
+  })
+
+  return Response.json(orders)
+}
+
+// In Server Components
+import { getPayload } from 'payload'
+import config from '@payload-config'
+
+export default async function OrdersPage() {
+  const payload = await getPayload({ config })
+  const { docs } = await payload.find({ collection: 'orders' })
+
+  return <div>{docs.map(order => <h1 key={order.id}>{order.orderNumber}</h1>)}</div>
+}
+```
+
 ## Components
+
+The Admin Panel can be extensively customized using React Components. Custom Components can be Server Components (default) or Client Components.
+
+### Defining Components
+
+Components are defined using **file paths** (not direct imports) in your config:
+
+**Component Path Rules:**
+
+- Paths are relative to project root or `config.admin.importMap.baseDir`
+- Named exports: use `#ExportName` suffix or `exportName` property
+- Default exports: no suffix needed
+- File extensions can be omitted
+
+```typescript
+import { buildConfig } from 'payload'
+
+export default buildConfig({
+  admin: {
+    components: {
+      // Logo and branding
+      graphics: {
+        Logo: '/components/payload/Logo',
+        Icon: '/components/payload/Icon',
+      },
+
+      // Navigation
+      Nav: '/components/payload/CustomNav',
+      beforeNavLinks: ['/components/payload/CustomNavItem'],
+      afterNavLinks: ['/components/payload/NavFooter'],
+
+      // Header
+      header: ['/components/payload/AnnouncementBanner'],
+      actions: ['/components/payload/ClearCache'],
+
+      // Dashboard
+      beforeDashboard: ['/components/payload/WelcomeMessage'],
+      afterDashboard: ['/components/payload/Analytics'],
+
+      // Auth
+      beforeLogin: ['/components/payload/SSOButtons'],
+      logout: { Button: '/components/payload/LogoutButton' },
+
+      // Views
+      views: {
+        dashboard: { Component: '/components/payload/CustomDashboard' },
+      },
+    },
+  },
+})
+```
+
+### Component Types
+
+1. **Root Components** - Global Admin Panel (logo, nav, header)
+2. **Collection Components** - Collection-specific (edit view, list view)
+3. **Global Components** - Global document views
+4. **Field Components** - Custom field UI and cells
 
 ### Server vs Client Components
 
@@ -400,13 +679,10 @@ export const createStripeCustomerHook: CollectionBeforeChangeHook = async ({
 
 ```tsx
 // Server Component (default) - components/payload/OrderStats.tsx
-import { getPayload } from 'payload'
-import config from '@payload-config'
+import type { Payload } from 'payload'
 
-async function OrderStats() {
-  const payload = await getPayload({ config })
+async function OrderStats({ payload }: { payload: Payload }) {
   const { totalDocs } = await payload.count({ collection: 'orders' })
-
   return <div>{totalDocs} orders</div>
 }
 
@@ -419,16 +695,18 @@ export default OrderStats
 // Client Component - components/payload/SendInvoiceButton.tsx
 'use client'
 import { useState } from 'react'
-import { useDocumentInfo } from '@payloadcms/ui'
+import { useDocumentInfo, useAuth } from '@payloadcms/ui'
 
 export function SendInvoiceButton() {
   const [loading, setLoading] = useState(false)
   const { id } = useDocumentInfo()
+  const { user } = useAuth()
 
   const handleSend = async () => {
     setLoading(true)
     await fetch(`/api/invoices/send`, {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ orderId: id }),
     })
     setLoading(false)
@@ -439,6 +717,70 @@ export function SendInvoiceButton() {
       {loading ? 'Sending...' : 'Send Invoice'}
     </button>
   )
+}
+```
+
+### Collection/Global Components
+
+```typescript
+export const Orders: CollectionConfig = {
+  slug: 'orders',
+  admin: {
+    components: {
+      // Edit view
+      edit: {
+        PreviewButton: '/components/payload/OrderPreview',
+        SaveButton: '/components/payload/CustomSave',
+        SaveDraftButton: '/components/payload/SaveDraft',
+        PublishButton: '/components/payload/Publish',
+      },
+
+      // List view
+      list: {
+        Header: '/components/payload/OrdersListHeader',
+        beforeList: ['/components/payload/BulkActions'],
+        afterList: ['/components/payload/ListFooter'],
+      },
+    },
+  },
+}
+```
+
+### Field Components
+
+```typescript
+{
+  name: 'status',
+  type: 'select',
+  options: ['draft', 'pending', 'paid', 'cancelled'],
+  admin: {
+    components: {
+      // Edit view field
+      Field: '/components/payload/StatusField',
+      // List view cell
+      Cell: '/components/payload/StatusCell',
+      // Field label
+      Label: '/components/payload/StatusLabel',
+      // Field description
+      Description: '/components/payload/StatusDescription',
+      // Error message
+      Error: '/components/payload/StatusError',
+    },
+  },
+}
+```
+
+**UI Field** (presentational only, no data):
+
+```typescript
+{
+  name: 'sendInvoiceButton',
+  type: 'ui',
+  admin: {
+    components: {
+      Field: '/components/payload/SendInvoiceButton',
+    },
+  },
 }
 ```
 
@@ -467,11 +809,16 @@ import {
   useField,          // Field value and setter
   useForm,           // Form state
   useFormFields,     // Multiple field values (optimized)
+  useLocale,         // Current locale
+  useTranslation,    // i18n translations
+  usePayload,        // Local API methods
 } from '@payloadcms/ui'
 
 export function MyComponent() {
   const { user } = useAuth()
   const { id, collection } = useDocumentInfo()
+  const locale = useLocale()
+  const { t } = useTranslation()
 
   // ❌ BAD: Re-renders on every form change
   const { fields } = useForm()
@@ -481,6 +828,227 @@ export function MyComponent() {
 
   return <div>Document {id} in {collection}</div>
 }
+```
+
+### Performance Best Practices
+
+1. **Import correctly:**
+
+   - Admin Panel: `import { Button } from '@payloadcms/ui'`
+   - Frontend: `import { Button } from '@payloadcms/ui/elements/Button'`
+
+2. **Optimize re-renders:**
+
+   ```tsx
+   // ❌ BAD: Re-renders on every form change
+   const { fields } = useForm()
+
+   // ✅ GOOD: Only re-renders when specific field changes
+   const value = useFormFields(([fields]) => fields[path])
+   ```
+
+3. **Prefer Server Components** - Only use Client Components when you need:
+
+   - State (useState, useReducer)
+   - Effects (useEffect)
+   - Event handlers (onClick, onChange)
+   - Browser APIs (localStorage, window)
+
+4. **Minimize serialized props** - Server Components serialize props sent to client
+
+### Styling Components
+
+```tsx
+import './styles.scss'
+
+export function MyComponent() {
+  return <div className="my-component">Content</div>
+}
+```
+
+```scss
+// Use Payload's CSS variables
+.my-component {
+  background-color: var(--theme-elevation-500);
+  color: var(--theme-text);
+  padding: var(--base);
+  border-radius: var(--border-radius-m);
+}
+
+// Import Payload's SCSS library
+@import '~@payloadcms/ui/scss';
+
+.my-component {
+  @include mid-break {
+    background-color: var(--theme-elevation-900);
+  }
+}
+```
+
+### Type Safety
+
+```tsx
+import type {
+  TextFieldServerComponent,
+  TextFieldClientComponent,
+  TextFieldCellComponent,
+  SelectFieldServerComponent,
+  // ... etc
+} from 'payload'
+
+export const MyField: TextFieldClientComponent = (props) => {
+  // Fully typed props
+}
+```
+
+### Import Map
+
+Payload auto-generates `app/(payload)/admin/importMap.js` to resolve component paths.
+
+**Regenerate manually:**
+
+```bash
+bun run payload generate:importmap
+```
+
+**Set custom location:**
+
+```typescript
+export default buildConfig({
+  admin: {
+    importMap: {
+      baseDir: path.resolve(dirname, 'src'),
+      importMapFile: path.resolve(dirname, 'app', 'custom-import-map.js'),
+    },
+  },
+})
+```
+
+## Custom Endpoints
+
+```typescript
+import type { Endpoint } from 'payload'
+import { APIError } from 'payload'
+
+// Always check authentication
+export const protectedEndpoint: Endpoint = {
+  path: '/protected',
+  method: 'get',
+  handler: async (req) => {
+    if (!req.user) {
+      throw new APIError('Unauthorized', 401)
+    }
+
+    // Use req.payload for database operations
+    const data = await req.payload.find({
+      collection: 'orders',
+      where: { clientAccount: { equals: req.user.id } },
+    })
+
+    return Response.json(data)
+  },
+}
+
+// Route parameters
+export const trackingEndpoint: Endpoint = {
+  path: '/:id/tracking',
+  method: 'get',
+  handler: async (req) => {
+    const { id } = req.routeParams
+
+    const tracking = await getTrackingInfo(id)
+
+    if (!tracking) {
+      return Response.json({ error: 'not found' }, { status: 404 })
+    }
+
+    return Response.json(tracking)
+  },
+}
+```
+
+## Drafts & Versions
+
+```typescript
+export const Posts: CollectionConfig = {
+  slug: 'posts',
+  versions: {
+    drafts: {
+      autosave: true,
+      schedulePublish: true,
+      validate: false, // Don't validate drafts
+    },
+    maxPerDoc: 100,
+  },
+  access: {
+    read: ({ req: { user } }) => {
+      // Public sees only published
+      if (!user) return { _status: { equals: 'published' } }
+      // Authenticated sees all
+      return true
+    },
+  },
+}
+
+// Create draft
+await payload.create({
+  collection: 'posts',
+  data: { title: 'Draft Page' },
+  draft: true, // Skips required field validation
+})
+
+// Read with drafts
+const post = await payload.findByID({
+  collection: 'posts',
+  id: '123',
+  draft: true, // Returns draft if available
+})
+```
+
+## Plugins
+
+### Using Plugins
+
+```typescript
+import { seoPlugin } from '@payloadcms/plugin-seo'
+import { redirectsPlugin } from '@payloadcms/plugin-redirects'
+
+export default buildConfig({
+  plugins: [
+    seoPlugin({
+      collections: ['posts', 'pages'],
+    }),
+    redirectsPlugin({
+      collections: ['pages'],
+    }),
+  ],
+})
+```
+
+### Creating Plugins
+
+```typescript
+import type { Config, Plugin } from 'payload'
+
+interface MyPluginConfig {
+  collections?: string[]
+  enabled?: boolean
+}
+
+export const myPlugin =
+  (options: MyPluginConfig): Plugin =>
+  (config: Config): Config => ({
+    ...config,
+    collections: config.collections?.map((collection) => {
+      if (options.collections?.includes(collection.slug)) {
+        return {
+          ...collection,
+          fields: [...collection.fields, { name: 'pluginField', type: 'text' }],
+        }
+      }
+      return collection
+    }),
+  })
 ```
 
 ## Integrations
@@ -614,6 +1182,52 @@ export const beforeLoginHook: CollectionBeforeLoginHook = async ({ req, user }) 
 }
 ```
 
+## Best Practices
+
+### Security
+
+1. Always set `overrideAccess: false` when passing `user` to Local API
+2. Field-level access only returns boolean (no query constraints)
+3. Default to restrictive access, gradually add permissions
+4. Never trust client-provided data
+5. Use `saveToJWT: true` for roles to avoid database lookups
+6. Always verify webhook signatures (Stripe, Shopify)
+
+### Performance
+
+1. Index frequently queried fields (`index: true`, `unique: true`)
+2. Use `select` to limit returned fields
+3. Set `maxDepth` on relationships to prevent over-fetching
+4. Use query constraints over async operations in access control
+5. Cache expensive operations in `req.context`
+6. Use Server Components when possible (reduce client bundle)
+
+### Data Integrity
+
+1. Always pass `req` to nested operations in hooks
+2. Use context flags to prevent infinite hook loops
+3. Enable transactions for MongoDB (requires replica set) and Postgres
+4. Use `beforeValidate` for data formatting
+5. Use `beforeChange` for business logic
+6. Use `afterChange` for side effects (emails, webhooks)
+
+### Type Safety
+
+1. Run `bun run payload:generate` after schema changes
+2. Import types from generated `payload-types.ts`
+3. Type your user object: `import type { User } from '@/types/payload-types'`
+4. Use `as const` for field options
+5. Use field type guards for runtime type checking
+
+### Organization
+
+1. Keep collections in separate files
+2. Extract access control to `src/lib/payload/access/` directory
+3. Extract hooks to `src/lib/payload/hooks/` directory
+4. Use reusable field factories for common patterns
+5. Document complex access control with comments
+6. Use TypeScript path aliases (`@/components`, `@/lib`, etc.)
+
 ## Common Gotchas
 
 1. **Local API Default**: Access control bypassed unless `overrideAccess: false`
@@ -624,8 +1238,11 @@ export const beforeLoginHook: CollectionBeforeLoginHook = async ({ req, user }) 
 6. **Draft Status**: `_status` field auto-injected when drafts enabled
 7. **Type Generation**: Types not updated until `bun run payload:generate` runs
 8. **MongoDB Transactions**: Require replica set configuration
-9. **Context Flags**: Must check AND set context flags to prevent loops
-10. **Webhook Secrets**: Always verify signatures on incoming webhooks
+9. **SQLite Transactions**: Disabled by default, enable with `transactionOptions: {}`
+10. **Point Fields**: Not supported in SQLite
+11. **Context Flags**: Must check AND set context flags to prevent loops
+12. **Webhook Secrets**: Always verify signatures on incoming webhooks
+13. **Import Map**: Regenerate after adding/modifying component paths
 
 ## TypeScript Configuration
 
@@ -778,9 +1395,32 @@ The `/project` page is the main conversion hub with all tier information.
 3. **Client Management**: Lead → ClientAccount (with Stripe/Shopify sync)
 4. **Orders**: Order created → Balance calculated → Invoice sent
 
+## Additional Context Files
+
+For deeper exploration of specific topics, refer to the context files in the orca-web template located in `.cursor/rules/`:
+
+### Available Context Files
+
+1. **`payload-overview.md`** - High-level architecture and core concepts
+2. **`security-critical.md`** - Critical security patterns (⚠️ IMPORTANT)
+3. **`collections.md`** - Collection configurations
+4. **`fields.md`** - Field types and patterns
+5. **`field-type-guards.md`** - TypeScript field type utilities
+6. **`access-control.md`** - Permission patterns
+7. **`access-control-advanced.md`** - Complex access patterns
+8. **`hooks.md`** - Lifecycle hooks
+9. **`queries.md`** - Database operations
+10. **`endpoints.md`** - Custom API endpoints
+11. **`adapters.md`** - Database and storage adapters
+12. **`plugin-development.md`** - Creating plugins
+13. **`components.md`** - Custom Components
+
 ## Resources
 
 - **Payload Docs**: https://payloadcms.com/docs
 - **Payload LLM Context**: https://payloadcms.com/llms-full.txt
 - **Payload GitHub**: https://github.com/payloadcms/payload
+- **Payload Examples**: https://github.com/payloadcms/payload/tree/main/examples
+- **Payload Templates**: https://github.com/payloadcms/payload/tree/main/templates
 - **Project Admin**: http://localhost:3000/admin
+- **Project API**: http://localhost:3000/api

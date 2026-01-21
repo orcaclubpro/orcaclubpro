@@ -50,6 +50,65 @@ export async function POST(request: NextRequest) {
 
   console.log('[Stripe Webhook] Received event:', event.type, event.id)
 
+  // ✅ IDEMPOTENCY CHECK: Has this event already been processed?
+  const existingEvent = await payload.find({
+    collection: 'webhook-events',
+    where: {
+      eventId: { equals: event.id },
+    },
+    limit: 1,
+  })
+
+  if (existingEvent.docs.length > 0) {
+    const status = existingEvent.docs[0].status
+
+    if (status === 'processed') {
+      console.log(`[Stripe Webhook] Event ${event.id} already processed, skipping`)
+      return NextResponse.json({
+        received: true,
+        skipped: true,
+        reason: 'already_processed',
+      })
+    }
+
+    if (status === 'processing') {
+      console.log(`[Stripe Webhook] Event ${event.id} currently being processed, skipping`)
+      return NextResponse.json({
+        received: true,
+        skipped: true,
+        reason: 'currently_processing',
+      })
+    }
+  }
+
+  // ✅ CREATE WEBHOOK EVENT RECORD (idempotency lock)
+  let webhookEventId: string
+  try {
+    const webhookEvent = await payload.create({
+      collection: 'webhook-events',
+      data: {
+        eventId: event.id,
+        eventType: event.type,
+        status: 'processing',
+        processingStartedAt: new Date().toISOString(),
+        payload: event as any,
+      },
+    })
+    webhookEventId = webhookEvent.id
+    console.log('[Stripe Webhook] Created webhook event record:', webhookEventId)
+  } catch (createError: any) {
+    // If creation fails due to unique constraint, event is already being processed
+    if (createError.code === 11000 || createError.message?.includes('duplicate')) {
+      console.log(`[Stripe Webhook] Event ${event.id} creation conflict, already processing`)
+      return NextResponse.json({
+        received: true,
+        skipped: true,
+        reason: 'concurrent_processing',
+      })
+    }
+    throw createError
+  }
+
   // Handle different event types
   try {
     switch (event.type) {
@@ -65,6 +124,18 @@ export async function POST(request: NextRequest) {
 
         if (!orcaclubOrderId) {
           console.warn('[Stripe Webhook] No orcaclub_order_id in invoice metadata')
+
+          // Mark event as failed
+          await payload.update({
+            collection: 'webhook-events',
+            id: webhookEventId,
+            data: {
+              status: 'failed',
+              errorMessage: 'No orcaclub_order_id in invoice metadata',
+              processingCompletedAt: new Date().toISOString(),
+            },
+          })
+
           return NextResponse.json({
             received: true,
             warning: 'No order ID in metadata',
@@ -72,8 +143,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Update order status to 'paid'
-        // Note: We're not storing the charge/payment_intent ID here since the Invoice type
-        // doesn't expose it in the TypeScript definitions. The invoice ID is sufficient.
+        // Note: Balance will automatically recalculate via updateClientBalance hook
         const updatedOrder = await payload.update({
           collection: 'orders',
           id: orcaclubOrderId,
@@ -83,6 +153,20 @@ export async function POST(request: NextRequest) {
         })
 
         console.log('[Stripe Webhook] Order marked as paid:', orderNumber, orcaclubOrderId)
+
+        // ✅ MARK EVENT AS PROCESSED
+        await payload.update({
+          collection: 'webhook-events',
+          id: webhookEventId,
+          data: {
+            status: 'processed',
+            orderId: orcaclubOrderId,
+            stripeInvoiceId: invoice.id,
+            processingCompletedAt: new Date().toISOString(),
+          },
+        })
+
+        console.log('[Stripe Webhook] Event marked as processed:', event.id)
 
         return NextResponse.json({
           received: true,
@@ -101,6 +185,17 @@ export async function POST(request: NextRequest) {
 
         if (!orcaclubOrderId) {
           console.warn('[Stripe Webhook] No orcaclub_order_id in invoice metadata')
+
+          await payload.update({
+            collection: 'webhook-events',
+            id: webhookEventId,
+            data: {
+              status: 'processed',
+              errorMessage: 'No orcaclub_order_id in invoice metadata',
+              processingCompletedAt: new Date().toISOString(),
+            },
+          })
+
           return NextResponse.json({
             received: true,
             warning: 'No order ID in metadata',
@@ -109,6 +204,18 @@ export async function POST(request: NextRequest) {
 
         // Log payment failure (status remains 'pending')
         console.warn('[Stripe Webhook] Payment failed for order:', orcaclubOrderId)
+
+        // Mark event as processed
+        await payload.update({
+          collection: 'webhook-events',
+          id: webhookEventId,
+          data: {
+            status: 'processed',
+            orderId: orcaclubOrderId,
+            stripeInvoiceId: invoice.id,
+            processingCompletedAt: new Date().toISOString(),
+          },
+        })
 
         return NextResponse.json({
           received: true,
@@ -126,6 +233,14 @@ export async function POST(request: NextRequest) {
         const orcaclubOrderId = invoice.metadata?.orcaclub_order_id
 
         if (!orcaclubOrderId) {
+          await payload.update({
+            collection: 'webhook-events',
+            id: webhookEventId,
+            data: {
+              status: 'processed',
+              processingCompletedAt: new Date().toISOString(),
+            },
+          })
           return NextResponse.json({ received: true })
         }
 
@@ -140,6 +255,18 @@ export async function POST(request: NextRequest) {
 
         console.log('[Stripe Webhook] Order marked as cancelled:', orcaclubOrderId)
 
+        // Mark event as processed
+        await payload.update({
+          collection: 'webhook-events',
+          id: webhookEventId,
+          data: {
+            status: 'processed',
+            orderId: orcaclubOrderId,
+            stripeInvoiceId: invoice.id,
+            processingCompletedAt: new Date().toISOString(),
+          },
+        })
+
         return NextResponse.json({
           received: true,
           orderId: orcaclubOrderId,
@@ -148,13 +275,39 @@ export async function POST(request: NextRequest) {
       }
 
       default: {
-        // Unhandled event type
+        // Unhandled event type - mark as processed but do nothing
         console.log('[Stripe Webhook] Unhandled event type:', event.type)
+
+        await payload.update({
+          collection: 'webhook-events',
+          id: webhookEventId,
+          data: {
+            status: 'processed',
+            processingCompletedAt: new Date().toISOString(),
+          },
+        })
+
         return NextResponse.json({ received: true })
       }
     }
   } catch (error) {
     console.error('[Stripe Webhook] Error processing event:', error)
+
+    // ✅ MARK EVENT AS FAILED
+    try {
+      await payload.update({
+        collection: 'webhook-events',
+        id: webhookEventId,
+        data: {
+          status: 'failed',
+          errorMessage: error instanceof Error ? error.message : 'Unknown error',
+          processingCompletedAt: new Date().toISOString(),
+        },
+      })
+    } catch (updateError) {
+      console.error('[Stripe Webhook] Failed to mark event as failed:', updateError)
+    }
+
     return NextResponse.json(
       {
         error: 'Error processing webhook event',

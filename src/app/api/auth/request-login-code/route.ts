@@ -72,8 +72,11 @@ export async function POST(request: Request) {
         },
       })
 
-      // Send login code email
-      await sendLoginCodeEmail(payload, user.email, user.name, loginCode)
+      // Send login code email - construct name from firstName/lastName for client users
+      const displayName = user.role === 'client' && user.firstName && user.lastName
+        ? `${user.firstName} ${user.lastName}`
+        : user.name || 'User'
+      await sendLoginCodeEmail(payload, user.email, displayName, loginCode)
 
       payload.logger.info(`[Login 2FA] Login code generated for ${user.email}`)
 

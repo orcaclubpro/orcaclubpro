@@ -76,6 +76,7 @@ export interface Config {
     users: User;
     'client-accounts': ClientAccount;
     orders: Order;
+    'webhook-events': WebhookEvent;
     'payload-jobs': PayloadJob;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -96,6 +97,7 @@ export interface Config {
     users: UsersSelect<false> | UsersSelect<true>;
     'client-accounts': ClientAccountsSelect<false> | ClientAccountsSelect<true>;
     orders: OrdersSelect<false> | OrdersSelect<true>;
+    'webhook-events': WebhookEventsSelect<false> | WebhookEventsSelect<true>;
     'payload-jobs': PayloadJobsSelect<false> | PayloadJobsSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -391,8 +393,31 @@ export interface Post {
  */
 export interface User {
   id: string;
-  name: string;
-  role: 'admin' | 'user';
+  /**
+   * User full name (not used for client role)
+   */
+  name?: string | null;
+  role: 'admin' | 'user' | 'client';
+  /**
+   * Client first name
+   */
+  firstName?: string | null;
+  /**
+   * Client last name
+   */
+  lastName?: string | null;
+  /**
+   * Client company name
+   */
+  company?: string | null;
+  /**
+   * Unique username for client dashboard (auto-generated from first and last name)
+   */
+  username?: string | null;
+  /**
+   * Linked client account (auto-created on user creation)
+   */
+  clientAccount?: (string | null) | ClientAccount;
   /**
    * User workspace identifier
    */
@@ -424,8 +449,6 @@ export interface User {
   resetPasswordExpiration?: string | null;
   salt?: string | null;
   hash?: string | null;
-  _verified?: boolean | null;
-  _verificationToken?: string | null;
   loginAttempts?: number | null;
   lockUntil?: string | null;
   sessions?:
@@ -451,6 +474,18 @@ export interface ClientAccount {
    * Client email address
    */
   email: string;
+  /**
+   * Client first name
+   */
+  firstName: string;
+  /**
+   * Client last name
+   */
+  lastName: string;
+  /**
+   * Client company name
+   */
+  company?: string | null;
   /**
    * Shopify customer GID (e.g., gid://shopify/Customer/123)
    */
@@ -479,6 +514,38 @@ export interface ClientAccount {
     hasNextPage?: boolean;
     totalDocs?: number;
   };
+  /**
+   * Client projects with linked orders
+   */
+  projects?:
+    | {
+        /**
+         * Project name
+         */
+        name: string;
+        /**
+         * Project status
+         */
+        status: 'active' | 'on-hold' | 'completed' | 'cancelled';
+        /**
+         * Project description and notes
+         */
+        description?: string | null;
+        /**
+         * Project start date
+         */
+        startDate?: string | null;
+        /**
+         * Project end date
+         */
+        endDate?: string | null;
+        /**
+         * Project budget (USD)
+         */
+        budget?: number | null;
+        id?: string | null;
+      }[]
+    | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -489,7 +556,7 @@ export interface ClientAccount {
 export interface Order {
   id: string;
   /**
-   * Order number from Shopify or Stripe (e.g., #1001)
+   * Order number from Stripe (e.g., #1001)
    */
   orderNumber: string;
   /**
@@ -497,13 +564,13 @@ export interface Order {
    */
   status: 'pending' | 'paid' | 'cancelled';
   /**
-   * Type of order (Shopify or Stripe)
-   */
-  orderType: 'shopify' | 'stripe';
-  /**
    * Client account for this order
    */
   clientAccount: string | ClientAccount;
+  /**
+   * Project name from client account (optional)
+   */
+  project?: string | null;
   /**
    * Order total amount (USD)
    */
@@ -512,14 +579,6 @@ export interface Order {
    * Client balance after this order (audit trail)
    */
   balanceSnapshot?: number | null;
-  /**
-   * Shopify draft order GID
-   */
-  shopifyDraftOrderId?: string | null;
-  /**
-   * Shopify invoice payment URL
-   */
-  shopifyInvoiceUrl?: string | null;
   /**
    * Stripe Invoice ID
    */
@@ -562,10 +621,6 @@ export interface Order {
          */
         recurringInterval?: ('month' | 'year') | null;
         /**
-         * Shopify product variant ID (if applicable)
-         */
-        shopifyVariantId?: string | null;
-        /**
          * Stripe Price ID (for subscriptions)
          */
         stripePriceId?: string | null;
@@ -596,6 +651,52 @@ export interface Order {
         id?: string | null;
       }[]
     | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Tracks processed Stripe webhook events
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "webhook-events".
+ */
+export interface WebhookEvent {
+  id: string;
+  /**
+   * Stripe event ID (e.g., evt_xxx)
+   */
+  eventId: string;
+  /**
+   * Type of Stripe event (e.g., invoice.paid)
+   */
+  eventType: string;
+  status: 'processing' | 'processed' | 'failed';
+  /**
+   * PayloadCMS Order ID if applicable
+   */
+  orderId?: string | null;
+  /**
+   * Stripe Invoice ID
+   */
+  stripeInvoiceId?: string | null;
+  /**
+   * Full event payload from Stripe
+   */
+  payload?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
+   * Error message if processing failed
+   */
+  errorMessage?: string | null;
+  processingStartedAt?: string | null;
+  processingCompletedAt?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -733,6 +834,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'orders';
         value: string | Order;
+      } | null)
+    | ({
+        relationTo: 'webhook-events';
+        value: string | WebhookEvent;
       } | null)
     | ({
         relationTo: 'payload-jobs';
@@ -914,6 +1019,11 @@ export interface PostsSelect<T extends boolean = true> {
 export interface UsersSelect<T extends boolean = true> {
   name?: T;
   role?: T;
+  firstName?: T;
+  lastName?: T;
+  company?: T;
+  username?: T;
+  clientAccount?: T;
   workspace?: T;
   twoFactorCode?: T;
   twoFactorExpiry?: T;
@@ -927,8 +1037,6 @@ export interface UsersSelect<T extends boolean = true> {
   resetPasswordExpiration?: T;
   salt?: T;
   hash?: T;
-  _verified?: T;
-  _verificationToken?: T;
   loginAttempts?: T;
   lockUntil?: T;
   sessions?:
@@ -946,12 +1054,26 @@ export interface UsersSelect<T extends boolean = true> {
 export interface ClientAccountsSelect<T extends boolean = true> {
   name?: T;
   email?: T;
+  firstName?: T;
+  lastName?: T;
+  company?: T;
   shopifyCustomerId?: T;
   stripeCustomerId?: T;
   accountBalance?: T;
   totalOrders?: T;
   assignedTo?: T;
   orders?: T;
+  projects?:
+    | T
+    | {
+        name?: T;
+        status?: T;
+        description?: T;
+        startDate?: T;
+        endDate?: T;
+        budget?: T;
+        id?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
 }
@@ -962,12 +1084,10 @@ export interface ClientAccountsSelect<T extends boolean = true> {
 export interface OrdersSelect<T extends boolean = true> {
   orderNumber?: T;
   status?: T;
-  orderType?: T;
   clientAccount?: T;
+  project?: T;
   amount?: T;
   balanceSnapshot?: T;
-  shopifyDraftOrderId?: T;
-  shopifyInvoiceUrl?: T;
   stripeInvoiceId?: T;
   stripeInvoiceUrl?: T;
   stripeCustomerId?: T;
@@ -980,7 +1100,6 @@ export interface OrdersSelect<T extends boolean = true> {
         price?: T;
         isRecurring?: T;
         recurringInterval?: T;
-        shopifyVariantId?: T;
         stripePriceId?: T;
         id?: T;
       };
@@ -993,6 +1112,23 @@ export interface OrdersSelect<T extends boolean = true> {
         status?: T;
         id?: T;
       };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "webhook-events_select".
+ */
+export interface WebhookEventsSelect<T extends boolean = true> {
+  eventId?: T;
+  eventType?: T;
+  status?: T;
+  orderId?: T;
+  stripeInvoiceId?: T;
+  payload?: T;
+  errorMessage?: T;
+  processingStartedAt?: T;
+  processingCompletedAt?: T;
   updatedAt?: T;
   createdAt?: T;
 }

@@ -13,6 +13,7 @@ import configPromise from '@payload-config'
  * {
  *   customerEmail: string
  *   customerName?: string
+ *   project?: string (optional - project name for the order)
  *   lineItems: Array<{
  *     title: string
  *     description?: string
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
     const stripe = getStripe()
     const body = await request.json()
 
-    const { customerEmail, customerName, lineItems } = body
+    const { customerEmail, customerName, lineItems, project } = body
 
     // Validation
     if (!customerEmail || !lineItems || lineItems.length === 0) {
@@ -92,10 +93,18 @@ export async function POST(request: NextRequest) {
     if (!clientAccountId) {
       console.log('[Stripe Invoice] Creating new client account for:', customerEmail)
 
+      // Split name into first and last name
+      const fullName = customerName || customerEmail.split('@')[0]
+      const nameParts = fullName.split(/[\s.]+/)
+      const firstName = nameParts[0] || fullName
+      const lastName = nameParts.slice(1).join(' ') || 'Client'
+
       const newClient = await payload.create({
         collection: 'client-accounts',
         data: {
-          name: customerName || customerEmail.split('@')[0],
+          name: `${firstName} ${lastName}`,
+          firstName,
+          lastName,
           email: customerEmail,
         },
       })
@@ -116,34 +125,32 @@ export async function POST(request: NextRequest) {
     // 2. Verify Stripe customer exists (following same pattern as hook)
     if (stripeCustomerId) {
       try {
-        await stripe.customers.retrieve(stripeCustomerId)
+        const customer = await stripe.customers.retrieve(stripeCustomerId)
+
+        // Check if customer is deleted
+        if (customer.deleted) {
+          throw new Error('Customer is deleted')
+        }
+
         console.log('[Stripe Invoice] Stripe customer verified:', stripeCustomerId)
       } catch (error: any) {
-        if (
-          error.type === 'StripeInvalidRequestError' ||
-          error.statusCode === 404 ||
-          error.statusCode === 400
-        ) {
-          console.warn(
-            '[Stripe Invoice] Stripe customer invalid or not found in Stripe, will search/create new:',
-            stripeCustomerId
-          )
-          console.warn('[Stripe Invoice] Error details:', error.message)
+        console.warn(
+          '[Stripe Invoice] Stripe customer invalid or not found in Stripe, will search/create new:',
+          stripeCustomerId
+        )
+        console.warn('[Stripe Invoice] Error details:', error.message || error)
 
-          // Clear invalid ID from database (same as hook)
-          await payload.update({
-            collection: 'client-accounts',
-            id: clientAccountId,
-            data: {
-              stripeCustomerId: null, // Clear invalid ID
-            },
-          })
+        // Clear invalid ID from database (same as hook)
+        await payload.update({
+          collection: 'client-accounts',
+          id: clientAccountId,
+          data: {
+            stripeCustomerId: null, // Clear invalid ID
+          },
+        })
 
-          stripeCustomerId = '' // Clear for search/create flow
-          console.log('[Stripe Invoice] Cleared invalid Stripe customer ID from client account')
-        } else {
-          throw error
-        }
+        stripeCustomerId = '' // Clear for search/create flow
+        console.log('[Stripe Invoice] Cleared invalid Stripe customer ID from client account')
       }
     }
 
@@ -203,12 +210,9 @@ export async function POST(request: NextRequest) {
     // 4. Generate order number
     const orderCount = await payload.count({
       collection: 'orders',
-      where: {
-        orderType: { equals: 'stripe' },
-      },
     })
 
-    const orderNumber = `STRIPE-${String(orderCount.totalDocs + 1).padStart(4, '0')}`
+    const orderNumber = `INV-${String(orderCount.totalDocs + 1).padStart(4, '0')}`
     console.log('[Stripe Invoice] Generated order number:', orderNumber)
 
     // Final safety check: Ensure we have a valid Stripe customer ID
@@ -260,13 +264,13 @@ export async function POST(request: NextRequest) {
       collection: 'orders',
       data: {
         orderNumber,
-        orderType: 'stripe',
         clientAccount: clientAccountId,
         amount: totalAmount,
         status: 'pending', // Will be updated to 'paid' via webhook
         stripeInvoiceId: finalizedInvoice.id,
         stripeInvoiceUrl: finalizedInvoice.hosted_invoice_url || '',
         stripeCustomerId,
+        project: project || undefined, // Optional project name
         lineItems: lineItems.map((item: any) => ({
           title: item.title,
           quantity: item.quantity,

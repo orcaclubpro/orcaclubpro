@@ -1,6 +1,6 @@
 /**
  * Generic Invoice Email Template
- * Generates a clean, branded HTML email for any order type (Shopify/Stripe/Manual)
+ * Generates a clean, branded HTML email for Stripe invoices
  * Follows ORCACLUB email template patterns with dark theme and gradient branding
  */
 
@@ -16,13 +16,11 @@ interface OrderLineItem {
 
 interface GenericInvoiceEmailData {
   orderNumber: string
-  orderType: 'shopify' | 'stripe'
   customerName?: string
   customerEmail: string
   lineItems: OrderLineItem[]
   totalAmount: number
-  // Optional payment URLs based on order type
-  shopifyInvoiceUrl?: string
+  // Optional Stripe payment URL
   stripeInvoiceUrl?: string
 }
 
@@ -33,17 +31,9 @@ export function generateGenericInvoiceEmail(order: GenericInvoiceEmailData): str
   // Calculate subtotal from line items
   const subtotal = order.lineItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
 
-  // Determine payment URL and CTA text based on order type
-  let paymentUrl = '#'
-  let ctaText = 'View Order Details'
-
-  if (order.orderType === 'shopify' && order.shopifyInvoiceUrl) {
-    paymentUrl = order.shopifyInvoiceUrl
-    ctaText = 'View Invoice & Pay'
-  } else if (order.orderType === 'stripe' && order.stripeInvoiceUrl) {
-    paymentUrl = order.stripeInvoiceUrl
-    ctaText = 'View Invoice & Pay'
-  }
+  // Determine payment URL and CTA text
+  const paymentUrl = order.stripeInvoiceUrl || '#'
+  const ctaText = order.stripeInvoiceUrl ? 'View Invoice & Pay' : 'View Order Details'
 
   const lineItemsHtml = order.lineItems
     .map(
@@ -200,13 +190,8 @@ export function generateGenericInvoiceEmailText(order: GenericInvoiceEmailData):
     })
     .join('\n\n')
 
-  // Determine payment URL based on order type
-  let paymentUrl = ''
-  if (order.orderType === 'shopify' && order.shopifyInvoiceUrl) {
-    paymentUrl = order.shopifyInvoiceUrl
-  } else if (order.orderType === 'stripe' && order.stripeInvoiceUrl) {
-    paymentUrl = order.stripeInvoiceUrl
-  }
+  // Get payment URL
+  const paymentUrl = order.stripeInvoiceUrl || ''
 
   return `
 ORCACLUB - Invoice for Order #${order.orderNumber}
@@ -267,7 +252,6 @@ export async function sendGenericInvoiceEmail(
     // Prepare email data
     const emailData: GenericInvoiceEmailData = {
       orderNumber: order.orderNumber,
-      orderType: order.orderType as 'shopify' | 'stripe',
       customerName: clientAccount.name,
       customerEmail: clientAccount.email,
       lineItems: (order.lineItems || []).map(item => ({
@@ -278,7 +262,6 @@ export async function sendGenericInvoiceEmail(
         recurringInterval: item.recurringInterval || undefined,
       })),
       totalAmount: order.amount,
-      shopifyInvoiceUrl: order.shopifyInvoiceUrl || undefined,
       stripeInvoiceUrl: order.stripeInvoiceUrl || undefined,
     }
 
