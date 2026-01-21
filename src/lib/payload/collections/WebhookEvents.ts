@@ -28,7 +28,6 @@ export const WebhookEvents: CollectionConfig = {
       unique: true,
       index: true,
       admin: {
-        readOnly: true,
         description: 'Stripe event ID (e.g., evt_xxx)',
       },
     },
@@ -72,7 +71,6 @@ export const WebhookEvents: CollectionConfig = {
       name: 'payload',
       type: 'json',
       admin: {
-        readOnly: true,
         description: 'Full event payload from Stripe',
       },
     },

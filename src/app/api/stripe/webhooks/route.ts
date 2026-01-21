@@ -20,7 +20,7 @@ import Stripe from 'stripe'
  */
 async function retryOnTransientError<T>(
   fn: () => Promise<T>,
-  maxRetries = 3
+  maxRetries = 5
 ): Promise<T> {
   let lastError: any
 
@@ -43,8 +43,8 @@ async function retryOnTransientError<T>(
 
       console.log(`[Stripe Webhook] Write conflict detected, retrying (${attempt}/${maxRetries})`)
 
-      // Exponential backoff: 100ms, 200ms, 400ms
-      const delay = 100 * Math.pow(2, attempt - 1)
+      // Exponential backoff: 200ms, 400ms, 800ms, 1600ms, 3200ms
+      const delay = 200 * Math.pow(2, attempt - 1)
       await new Promise(resolve => setTimeout(resolve, delay))
     }
   }

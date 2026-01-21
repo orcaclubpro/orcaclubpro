@@ -14,10 +14,21 @@ interface CalendarEvent {
 export class GoogleCalendarService {
   private calendar: calendar_v3.Calendar | null = null
   private calendarId: string
+  private initialized: boolean = false
 
   constructor() {
     this.calendarId = process.env.GOOGLE_CALENDAR_ID || 'primary'
-    this.initializeCalendar()
+    // Don't initialize immediately - wait for first use
+  }
+
+  /**
+   * Ensure calendar is initialized (lazy initialization)
+   */
+  private ensureInitialized() {
+    if (!this.initialized) {
+      this.initializeCalendar()
+      this.initialized = true
+    }
   }
 
   private initializeCalendar() {
@@ -26,12 +37,26 @@ export class GoogleCalendarService {
       const credentials = process.env.GOOGLE_SERVICE_ACCOUNT_KEY
       const delegatedUser = process.env.GOOGLE_DELEGATED_USER_EMAIL
 
-      if (!credentials) {
+      if (!credentials || credentials.trim() === '') {
         console.warn('Google Calendar: No service account credentials found. Calendar integration disabled.')
         return
       }
 
-      const parsedCredentials = JSON.parse(credentials)
+      // Validate JSON before parsing
+      let parsedCredentials
+      try {
+        parsedCredentials = JSON.parse(credentials)
+      } catch (parseError) {
+        console.error('Google Calendar: Invalid JSON in GOOGLE_SERVICE_ACCOUNT_KEY:', parseError instanceof Error ? parseError.message : 'Unknown error')
+        console.error('First 100 characters of GOOGLE_SERVICE_ACCOUNT_KEY:', credentials.substring(0, 100))
+        return
+      }
+
+      // Validate required fields
+      if (!parsedCredentials.type || !parsedCredentials.private_key || !parsedCredentials.client_email) {
+        console.error('Google Calendar: GOOGLE_SERVICE_ACCOUNT_KEY is missing required fields (type, private_key, client_email)')
+        return
+      }
 
       // Create auth client with service account
       const auth = new google.auth.GoogleAuth({
@@ -57,6 +82,8 @@ export class GoogleCalendarService {
    * Create a calendar event
    */
   async createEvent(eventData: CalendarEvent): Promise<string | null> {
+    this.ensureInitialized()
+
     if (!this.calendar) {
       console.warn('Google Calendar not initialized. Skipping event creation.')
       return null
@@ -119,6 +146,8 @@ export class GoogleCalendarService {
     startDateTime: string,
     endDateTime: string
   ): Promise<boolean> {
+    this.ensureInitialized()
+
     if (!this.calendar) {
       return true // If calendar not initialized, assume available
     }
@@ -147,6 +176,8 @@ export class GoogleCalendarService {
     startDateTime: string,
     endDateTime: string
   ): Promise<{ start: string; end: string }[]> {
+    this.ensureInitialized()
+
     if (!this.calendar) {
       console.warn('Google Calendar not initialized. Returning empty busy periods.')
       return []
@@ -187,6 +218,8 @@ export class GoogleCalendarService {
     businessHoursEnd: number = 17,
     timeZone: string = 'America/Los_Angeles'
   ): Promise<{ start: string; end: string; label: string }[]> {
+    this.ensureInitialized()
+
     if (!this.calendar) {
       console.warn('Google Calendar not initialized. Returning empty slots.')
       return []
@@ -289,6 +322,8 @@ export class GoogleCalendarService {
    * Get upcoming events
    */
   async getUpcomingEvents(maxResults: number = 10): Promise<calendar_v3.Schema$Event[]> {
+    this.ensureInitialized()
+
     if (!this.calendar) {
       return []
     }
@@ -316,6 +351,8 @@ export class GoogleCalendarService {
     eventId: string,
     updates: Partial<CalendarEvent>
   ): Promise<boolean> {
+    this.ensureInitialized()
+
     if (!this.calendar) {
       return false
     }
@@ -357,6 +394,8 @@ export class GoogleCalendarService {
    * Delete an event
    */
   async deleteEvent(eventId: string): Promise<boolean> {
+    this.ensureInitialized()
+
     if (!this.calendar) {
       return false
     }

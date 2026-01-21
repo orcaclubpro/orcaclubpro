@@ -12,7 +12,7 @@ import type { CollectionAfterChangeHook, CollectionAfterDeleteHook } from 'paylo
  */
 async function retryOnTransientError<T>(
   fn: () => Promise<T>,
-  maxRetries = 3
+  maxRetries = 5
 ): Promise<T> {
   let lastError: any
 
@@ -25,14 +25,16 @@ async function retryOnTransientError<T>(
       // Check if it's a transient write conflict that can be retried
       const isTransient =
         error?.message?.includes('Write conflict') ||
+        error?.code === 112 || // WriteConflict error code
+        error?.codeName === 'WriteConflict' ||
         error?.errorLabels?.includes('TransientTransactionError')
 
       if (!isTransient || attempt === maxRetries) {
         throw error // Not retryable or max retries reached
       }
 
-      // Exponential backoff: 100ms, 200ms, 400ms
-      const delay = 100 * Math.pow(2, attempt - 1)
+      // Exponential backoff: 200ms, 400ms, 800ms, 1600ms, 3200ms
+      const delay = 200 * Math.pow(2, attempt - 1)
       await new Promise(resolve => setTimeout(resolve, delay))
     }
   }
