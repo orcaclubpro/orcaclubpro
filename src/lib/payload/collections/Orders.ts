@@ -9,6 +9,37 @@ const Orders: CollectionConfig = {
     group: 'Clients',
   },
   hooks: {
+    beforeValidate: [
+      async ({ data, operation }) => {
+        // Validate line items exist and amount > 0
+        if (!data) return data
+
+        if (operation === 'create' || operation === 'update') {
+          if (!data.lineItems || data.lineItems.length === 0) {
+            throw new Error('Orders must have at least one line item')
+          }
+
+          if (data.amount !== undefined && data.amount <= 0) {
+            throw new Error('Order amount must be greater than $0')
+          }
+
+          // Calculate expected amount from line items
+          const calculatedAmount = data.lineItems.reduce(
+            (sum: number, item: any) => sum + (item.price || 0) * (item.quantity || 1),
+            0
+          )
+
+          // Warn if amount doesn't match line items (allow small rounding differences)
+          if (data.amount !== undefined && Math.abs(data.amount - calculatedAmount) > 0.01) {
+            console.warn(
+              `[Order Validation] Amount mismatch: expected ${calculatedAmount}, got ${data.amount}`
+            )
+          }
+        }
+
+        return data
+      },
+    ],
     afterChange: [updateClientBalance],
     afterDelete: [revertClientBalance],
   },
@@ -81,7 +112,7 @@ const Orders: CollectionConfig = {
           name: 'amount',
           type: 'number',
           required: true,
-          min: 0,
+          min: 0.01, // ✅ Prevent $0 orders (minimum 1 cent)
           admin: {
             description: 'Order total amount (USD)',
             width: '30%',
@@ -147,9 +178,15 @@ const Orders: CollectionConfig = {
     {
       name: 'lineItems',
       type: 'array',
+      minRows: 1, // ✅ Require at least one line item
+      required: true, // ✅ Field must be present
       admin: {
         description: 'Order line items',
         initCollapsed: false,
+      },
+      labels: {
+        singular: 'Line Item',
+        plural: 'Line Items',
       },
       fields: [
         // Product/Service Title (full width)

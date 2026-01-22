@@ -246,8 +246,10 @@ export async function POST(request: NextRequest) {
     console.log('[Stripe Invoice] Created order record:', order.id, orderNumber)
 
     // 6. Create invoice items for each line item
+    console.log('[Stripe Invoice] Creating invoice items for', lineItems.length, 'line items')
+
     for (const item of lineItems) {
-      await stripe.invoiceItems.create({
+      const invoiceItem = await stripe.invoiceItems.create({
         customer: stripeCustomerId,
         amount: Math.round(item.unitPrice * item.quantity * 100), // Convert to cents
         currency: 'usd',
@@ -259,29 +261,44 @@ export async function POST(request: NextRequest) {
           unit_price: item.unitPrice.toString(),
         },
       })
+      console.log('[Stripe Invoice] Created invoice item:', invoiceItem.id, '-', item.title, `$${item.unitPrice} x ${item.quantity}`)
     }
 
-    // 7. Create invoice WITH order ID in metadata from the start
+    console.log('[Stripe Invoice] All invoice items created successfully')
+
+    // 7. Create invoice (draft) WITH order ID in metadata from the start
     const invoice = await stripe.invoices.create({
       customer: stripeCustomerId,
       collection_method: 'send_invoice', // Creates hosted invoice page
       days_until_due: 30,
-      auto_advance: true, // Auto-finalize the invoice
+      auto_advance: false, // ✅ Don't auto-finalize - we'll do it manually
       description: `Order ${orderNumber}`,
       metadata: {
         order_number: orderNumber,
-        orcaclub_order_id: order.id, // ✅ Order ID is set from the beginning
+        orcaclub_order_id: order.id,
         created_via: 'orcaclub_admin',
       },
     })
 
-    // 8. Finalize invoice to make it payable
+    console.log('[Stripe Invoice] Draft invoice created:', invoice.id)
+    console.log('[Stripe Invoice] Invoice has', invoice.lines?.data?.length || 0, 'line items')
+
+    // 8. Verify invoice has line items before finalizing
+    if (!invoice.lines?.data || invoice.lines.data.length === 0) {
+      throw new Error(
+        `Invoice ${invoice.id} has no line items! Created ${lineItems.length} invoice items but they weren't attached.`
+      )
+    }
+
+    // 9. Finalize invoice to make it payable
     const finalizedInvoice = await stripe.invoices.finalizeInvoice(invoice.id)
 
-    console.log('[Stripe Invoice] Invoice created and finalized:', finalizedInvoice.id)
+    console.log('[Stripe Invoice] Invoice finalized:', finalizedInvoice.id)
+    console.log('[Stripe Invoice] Final invoice has', finalizedInvoice.lines?.data?.length || 0, 'line items')
+    console.log('[Stripe Invoice] Total amount:', finalizedInvoice.total / 100, 'USD')
     console.log('[Stripe Invoice] Hosted URL:', finalizedInvoice.hosted_invoice_url)
 
-    // 9. Update order with Stripe invoice details
+    // 10. Update order with Stripe invoice details
     await payload.update({
       collection: 'orders',
       id: order.id,
