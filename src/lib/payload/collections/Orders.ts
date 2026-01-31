@@ -271,6 +271,10 @@ const Orders: CollectionConfig = {
     {
       name: 'invoices',
       type: 'array',
+      labels: {
+        singular: 'Invoice',
+        plural: 'Invoices',
+      },
       admin: {
         description: 'Invoice email history (audit trail of all sent invoices)',
         initCollapsed: true,

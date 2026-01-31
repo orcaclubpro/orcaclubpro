@@ -598,35 +598,33 @@ export interface Order {
   /**
    * Order line items
    */
-  lineItems?:
-    | {
-        /**
-         * Product or service name
-         */
-        title: string;
-        /**
-         * Quantity ordered
-         */
-        quantity: number;
-        /**
-         * Price per unit (USD)
-         */
-        price: number;
-        /**
-         * Recurring subscription item?
-         */
-        isRecurring?: boolean | null;
-        /**
-         * Billing interval
-         */
-        recurringInterval?: ('month' | 'year') | null;
-        /**
-         * Stripe Price ID (for subscriptions)
-         */
-        stripePriceId?: string | null;
-        id?: string | null;
-      }[]
-    | null;
+  lineItems: {
+    /**
+     * Product or service name
+     */
+    title: string;
+    /**
+     * Quantity ordered
+     */
+    quantity: number;
+    /**
+     * Price per unit (USD)
+     */
+    price: number;
+    /**
+     * Recurring subscription item?
+     */
+    isRecurring?: boolean | null;
+    /**
+     * Billing interval
+     */
+    recurringInterval?: ('month' | 'year') | null;
+    /**
+     * Stripe Price ID (for subscriptions)
+     */
+    stripePriceId?: string | null;
+    id?: string | null;
+  }[];
   /**
    * Invoice email history (audit trail of all sent invoices)
    */

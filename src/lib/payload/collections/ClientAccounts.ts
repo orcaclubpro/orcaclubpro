@@ -210,7 +210,7 @@ const ClientAccounts: CollectionConfig = {
             {
               name: 'projects',
               type: 'array',
-              label: {
+              labels: {
                 singular: 'Project',
                 plural: 'Projects',
               },
