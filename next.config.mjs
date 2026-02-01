@@ -2,6 +2,9 @@ import { withPayload } from '@payloadcms/next/withPayload';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Disable source maps in production to reduce memory usage
+  productionBrowserSourceMaps: false,
+
   // Turbopack configuration (stable in Next.js 15)
   turbopack: {
     // Configure turbopack options if needed
@@ -17,7 +20,9 @@ const nextConfig = {
       '@radix-ui/react-avatar',
       '@radix-ui/react-dialog',
       '@radix-ui/react-dropdown-menu'
-    ]
+    ],
+    // Enable webpack memory optimizations
+    webpackMemoryOptimizations: true
   },
   
   // Webpack configuration for bun compatibility

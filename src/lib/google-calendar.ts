@@ -1,5 +1,4 @@
-import { google } from 'googleapis'
-import type { calendar_v3 } from 'googleapis'
+import { calendar_v3, calendar, auth } from '@googleapis/calendar'
 
 interface CalendarEvent {
   summary: string
@@ -59,7 +58,7 @@ export class GoogleCalendarService {
       }
 
       // Create auth client with service account
-      const auth = new google.auth.GoogleAuth({
+      const googleAuth = new auth.GoogleAuth({
         credentials: parsedCredentials,
         scopes: ['https://www.googleapis.com/auth/calendar'],
         // Use domain-wide delegation to impersonate a user (required for sending invites)
@@ -69,7 +68,7 @@ export class GoogleCalendarService {
       })
 
       // Initialize calendar client
-      this.calendar = google.calendar({ version: 'v3', auth })
+      this.calendar = calendar({ version: 'v3', auth: googleAuth })
 
       console.log('Google Calendar service initialized successfully' + (delegatedUser ? ` (impersonating ${delegatedUser})` : ''))
     } catch (error) {

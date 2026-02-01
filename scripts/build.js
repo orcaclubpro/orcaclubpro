@@ -61,28 +61,23 @@ function validateEnvironment() {
     }
   }
 
-  // Check for database file in production
-  if (config.isProduction && !existsSync('payload.db')) {
-    log.warning('No payload.db found - migrations will create it');
-  }
-
   log.success('Environment validation complete');
 }
 
 async function validateDependencies() {
   log.step('Validating dependencies...');
-  
+
   try {
     const packageJson = JSON.parse(await Bun.file('package.json').text());
     const requiredDeps = [
       'next',
       'payload',
       '@payloadcms/next',
-      '@payloadcms/db-sqlite'
+      '@payloadcms/db-mongodb'
     ];
 
     const allDeps = { ...packageJson.dependencies, ...packageJson.devDependencies };
-    
+
     for (const dep of requiredDeps) {
       if (!allDeps[dep]) {
         log.error(`Required dependency missing: ${dep}`);

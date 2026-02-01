@@ -5,7 +5,7 @@
  * Usage: bun run scripts/list-calendars.ts
  */
 
-import { google } from 'googleapis'
+import { calendar, auth } from '@googleapis/calendar'
 
 async function listCalendars() {
   try {
@@ -21,7 +21,7 @@ async function listCalendars() {
     const parsedCredentials = JSON.parse(credentials)
 
     // Create auth client
-    const auth = new google.auth.GoogleAuth({
+    const googleAuth = new auth.GoogleAuth({
       credentials: parsedCredentials,
       scopes: ['https://www.googleapis.com/auth/calendar'],
       clientOptions: delegatedUser ? {
@@ -30,12 +30,12 @@ async function listCalendars() {
     })
 
     // Initialize calendar client
-    const calendar = google.calendar({ version: 'v3', auth })
+    const calendarClient = calendar({ version: 'v3', auth: googleAuth })
 
     console.log('📅 Fetching calendars...\n')
 
     // List all calendars
-    const response = await calendar.calendarList.list()
+    const response = await calendarClient.calendarList.list()
     const calendars = response.data.items || []
 
     if (calendars.length === 0) {
