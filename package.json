@@ -33,7 +33,6 @@
   "dependencies": {
     "@googleapis/calendar": "^10.0.0",
     "@hookform/resolvers": "^5.2.2",
-    "google-auth-library": "^9.15.0",
     "@libsql/darwin-arm64": "^0.5.22",
     "@payloadcms/db-mongodb": "3.44.0",
     "@payloadcms/email-nodemailer": "3.44.0",
@@ -56,8 +55,10 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "framer-motion": "^12.23.26",
+    "google-auth-library": "^9.15.0",
     "graphql": "^16.12.0",
     "lucide-react": "^0.511.0",
+    "motion": "^12.34.0",
     "next": "15.3.6",
     "payload": "3.44.0",
     "react": "^19.2.1",
