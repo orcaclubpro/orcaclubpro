@@ -5,6 +5,7 @@ import config from '@payload-config'
 import { AccountOverview } from '@/components/dashboard/AccountOverview'
 import { OrdersList } from '@/components/dashboard/OrdersList'
 import { ProjectsList } from '@/components/dashboard/ProjectsList'
+import { ClientAccountsGrid } from '@/components/dashboard/ClientAccountsGrid'
 import {
   Mail,
   HelpCircle,
@@ -35,12 +36,150 @@ export default async function DashboardPage({
   const { username } = await params
   const user = await getCurrentUser()
 
-  if (!user || user.role !== 'client' || user.username !== username) {
+  // Allow admin, user, and client roles to access their own dashboard
+  if (!user || user.username !== username) {
+    redirect('/login')
+  }
+
+  // Ensure user has a username
+  if (!user.username) {
     redirect('/login')
   }
 
   const payload = await getPayload({ config })
 
+  // ROLE-BASED DATA FETCHING
+  if (user.role === 'admin' || user.role === 'user') {
+    // Admin/User: Fetch assigned client accounts
+    const { docs: clientAccounts } = await payload.find({
+      collection: 'client-accounts',
+      where:
+        user.role === 'admin'
+          ? {}
+          : { assignedTo: { contains: user.id } },
+      depth: 2,
+      limit: 100,
+    })
+
+    const clientAccountIds = clientAccounts.map((ca: any) => ca.id)
+
+    // Fetch all orders from assigned accounts
+    const { docs: allOrders } = await payload.find({
+      collection: 'orders',
+      where: clientAccountIds.length > 0 ? { clientAccount: { in: clientAccountIds } } : { id: { equals: 'none' } },
+      sort: '-createdAt',
+      limit: 100,
+    })
+
+    // Fetch all projects from assigned accounts
+    const { docs: allProjects } = await payload.find({
+      collection: 'projects',
+      where:
+        user.role === 'admin'
+          ? {}
+          : { assignedTo: { contains: user.id } },
+      depth: 2,
+      limit: 50,
+    })
+
+    // Fetch assigned tasks
+    const { docs: allTasks } = await payload.find({
+      collection: 'tasks',
+      where:
+        user.role === 'admin'
+          ? {}
+          : { assignedTo: { equals: user.id } },
+      depth: 2,
+      limit: 50,
+    })
+
+    // Calculate aggregate metrics
+    const totalRevenue = allOrders
+      .filter((o: any) => o.status === 'paid')
+      .reduce((sum, o: any) => sum + (o.amount || 0), 0)
+
+    const pendingBalance = allOrders
+      .filter((o: any) => o.status === 'pending')
+      .reduce((sum, o: any) => sum + (o.amount || 0), 0)
+
+    const activeProjects = allProjects.filter(
+      (p: any) => p.status === 'in-progress' || p.status === 'pending'
+    ).length
+
+    const pendingTasks = allTasks.filter((t: any) => t.status === 'pending').length
+
+    const formatCurrency = (amount: number) => {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+      }).format(amount)
+    }
+
+    // Render admin/user view with aggregate metrics
+    return (
+      <div className="max-w-7xl mx-auto space-y-12 pb-16">
+        {/* Welcome Section */}
+        <div className="relative overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-md p-8 md:p-12 fluid-enter">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-intelligence-cyan/[0.06] rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/[0.04] rounded-full blur-3xl" />
+
+          <div className="relative z-10">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-8">
+              <div className="space-y-6">
+                <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-white/[0.05] border border-white/[0.08]">
+                  <div className="size-1.5 rounded-full bg-intelligence-cyan shadow-[0_0_8px_rgba(103,232,249,0.6)]" />
+                  <p className="text-intelligence-cyan text-sm font-medium">
+                    {user.role === 'admin' ? 'Admin Dashboard' : 'Team Dashboard'}
+                  </p>
+                </div>
+
+                <h1 className="text-4xl md:text-5xl font-semibold text-white leading-tight tracking-tight">
+                  {user.firstName}{' '}
+                  <span className="gradient-text">{user.lastName}</span>
+                </h1>
+
+                <p className="text-gray-400 text-base max-w-2xl leading-relaxed">
+                  {user.role === 'admin'
+                    ? 'Manage all client accounts, projects, and tasks across the platform.'
+                    : `Managing ${clientAccounts.length} client account${clientAccounts.length !== 1 ? 's' : ''} and ${activeProjects} active project${activeProjects !== 1 ? 's' : ''}.`}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Aggregate Metrics */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="relative overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-md p-6">
+            <h3 className="text-sm text-gray-400 mb-2">Total Revenue</h3>
+            <p className="text-3xl font-bold text-green-400">{formatCurrency(totalRevenue)}</p>
+          </div>
+          <div className="relative overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-md p-6">
+            <h3 className="text-sm text-gray-400 mb-2">Pending Balance</h3>
+            <p className="text-3xl font-bold text-yellow-400">{formatCurrency(pendingBalance)}</p>
+          </div>
+          <div className="relative overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-md p-6">
+            <h3 className="text-sm text-gray-400 mb-2">Active Projects</h3>
+            <p className="text-3xl font-bold text-blue-400">{activeProjects}</p>
+          </div>
+          <div className="relative overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-md p-6">
+            <h3 className="text-sm text-gray-400 mb-2">Pending Tasks</h3>
+            <p className="text-3xl font-bold text-intelligence-cyan">{pendingTasks}</p>
+          </div>
+        </div>
+
+        {/* Client Accounts Grid */}
+        <div className="relative overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-md p-6">
+          <h2 className="text-2xl font-semibold text-white mb-6">
+            {user.role === 'admin' ? 'All Client Accounts' : 'Assigned Client Accounts'}
+          </h2>
+          <ClientAccountsGrid accounts={clientAccounts} />
+        </div>
+      </div>
+    )
+  }
+
+  // CLIENT ROLE: Original logic
   // Fetch client account with orders
   const clientAccount = user.clientAccount
     ? await payload.findByID({

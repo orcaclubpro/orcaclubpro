@@ -100,10 +100,20 @@ const Orders: CollectionConfig = {
           },
         },
         {
+          name: 'projectRef',
+          type: 'relationship',
+          relationTo: 'projects',
+          index: true,
+          admin: {
+            description: 'Link to project (new relationship field)',
+            width: '40%',
+          },
+        },
+        {
           name: 'project',
           type: 'text',
           admin: {
-            description: 'Project name from client account (optional)',
+            description: 'Project name (DEPRECATED - use projectRef, will be removed after migration)',
             width: '40%',
             placeholder: 'Select from client projects',
           },

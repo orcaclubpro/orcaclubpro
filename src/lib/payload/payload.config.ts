@@ -15,6 +15,11 @@ import { syncUserToClientAccount } from './hooks/syncUserToClientAccount'
 import ClientAccounts from './collections/ClientAccounts'
 import Orders from './collections/Orders'
 import { WebhookEvents } from './collections/WebhookEvents'
+import { Clients } from './collections/Clients'
+import Projects from './collections/Projects'
+import { Tasks } from './collections/Tasks'
+import Sprints from './collections/Sprints'
+import Files from './collections/Files'
 
 // Helper function to format strings as URL-friendly slugs
 const formatSlug = (val: string): string =>
@@ -67,63 +72,6 @@ const Media: CollectionConfig = {
       required: true,
       admin: {
         description: 'Alt text for accessibility',
-      },
-    },
-  ],
-}
-
-// Clients collection - for client logos/brands
-const Clients: CollectionConfig = {
-  slug: 'clients',
-  admin: {
-    useAsTitle: 'name',
-    defaultColumns: ['name', 'logo', 'displayOrder'],
-    group: 'Content',
-  },
-  access: {
-    read: () => true,
-    create: () => true,
-    update: () => true,
-    delete: () => true,
-  },
-  hooks: {
-    afterChange: [revalidateHomepage],
-    afterDelete: [revalidateHomepageOnDelete],
-  },
-  fields: [
-    {
-      name: 'name',
-      type: 'text',
-      required: true,
-      admin: {
-        description: 'Client/Brand name',
-      },
-    },
-    {
-      name: 'logo',
-      type: 'upload',
-      relationTo: 'media' as any,
-      required: true,
-      filterOptions: {
-        mimeType: { contains: 'image' },
-      },
-      admin: {
-        description: 'Client logo image',
-      },
-    },
-    {
-      name: 'website',
-      type: 'text',
-      admin: {
-        description: 'Optional client website URL',
-      },
-    },
-    {
-      name: 'displayOrder',
-      type: 'number',
-      defaultValue: 0,
-      admin: {
-        description: 'Order in which to display (lower numbers first)',
       },
     },
   ],
@@ -735,58 +683,90 @@ const Users: CollectionConfig = {
       unique: true,
       index: true,
       admin: {
-        condition: (data) => data.role === 'client',
-        description: 'Unique username for client dashboard (auto-generated from first and last name)',
+        condition: () => true,
+        description: 'Unique username for dashboard access (auto-generated)',
         readOnly: true,
         position: 'sidebar',
       },
       hooks: {
         beforeValidate: [
           async ({ value, data, req, operation }) => {
-            // Only auto-generate for client role
-            if (data?.role !== 'client') return value
-
-            // If username already exists and we're not changing names, keep it
+            // If username already exists and we're not changing relevant fields, keep it
             if (value && operation === 'update') return value
 
-            // Generate username from firstName + lastName
-            const firstName = data?.firstName || ''
-            const lastName = data?.lastName || ''
+            // Generate username based on role
+            if (data?.role === 'client') {
+              // Generate from firstName + lastName
+              const firstName = data?.firstName || ''
+              const lastName = data?.lastName || ''
 
-            if (!firstName || !lastName) return value
+              if (!firstName || !lastName) return value
 
-            // Create base username (lowercase, no spaces)
-            const baseUsername = `${firstName}${lastName}`.toLowerCase().replace(/[^a-z0-9]/g, '')
+              // Create base username (lowercase, no spaces)
+              const baseUsername = `${firstName}${lastName}`.toLowerCase().replace(/[^a-z0-9]/g, '')
 
-            // Check if username exists
-            let username = baseUsername
-            let counter = 1
-            let isUnique = false
+              // Check if username exists
+              let username = baseUsername
+              let counter = 1
+              let isUnique = false
 
-            while (!isUnique) {
-              const existing = await req.payload.find({
-                collection: 'users',
-                where: {
-                  username: { equals: username },
-                },
-                limit: 1,
-              })
+              while (!isUnique) {
+                const existing = await req.payload.find({
+                  collection: 'users',
+                  where: {
+                    username: { equals: username },
+                  },
+                  limit: 1,
+                })
 
-              if (existing.docs.length === 0) {
-                isUnique = true
-              } else {
-                // If we're updating and found our own username, that's fine
-                if (operation === 'update' && existing.docs[0].id === data?.id) {
+                if (existing.docs.length === 0) {
                   isUnique = true
                 } else {
-                  // Add number suffix and try again
-                  username = `${baseUsername}${counter}`
-                  counter++
+                  // If we're updating and found our own username, that's fine
+                  if (operation === 'update' && existing.docs[0].id === data?.id) {
+                    isUnique = true
+                  } else {
+                    // Add number suffix and try again
+                    username = `${baseUsername}${counter}`
+                    counter++
                 }
               }
             }
 
-            return username
+              return username
+            } else if (data?.role === 'admin' || data?.role === 'user') {
+              // Generate from name field (e.g., "John Doe" -> "johndoe")
+              const name = data?.name || ''
+              if (!name) return value // Skip if no name
+
+              let baseUsername = name
+                .toLowerCase()
+                .replace(/[^a-z0-9]/g, '')
+
+              // Ensure uniqueness
+              let username = baseUsername
+              let counter = 1
+
+              while (true) {
+                const existing = await req.payload.find({
+                  collection: 'users',
+                  where: { username: { equals: username } },
+                  limit: 1,
+                })
+
+                if (existing.docs.length === 0) break
+
+                // If we're updating and found our own username, that's fine
+                if (operation === 'update' && existing.docs[0].id === data?.id) break
+
+                username = `${baseUsername}${counter}`
+                counter++
+              }
+
+              return username
+            }
+
+            return value
           },
         ],
       },
@@ -879,7 +859,7 @@ export default buildConfig({
   editor: lexicalEditor(),
 
   // Define and configure your collections in this array
-  collections: [Media, Clients, Leads, Categories, Tags, Posts, Users, ClientAccounts, Orders, WebhookEvents],
+  collections: [Media, Clients, Leads, Categories, Tags, Posts, Users, ClientAccounts, Orders, WebhookEvents, Projects, Tasks, Sprints, Files],
 
   // Your Payload secret - should be a complex and secure string, unguessable
   secret: process.env.PAYLOAD_SECRET || 'your-secret-here',

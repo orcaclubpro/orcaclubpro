@@ -162,28 +162,30 @@ const ClientAccounts: CollectionConfig = {
               name: 'assignedTo',
               type: 'relationship',
               relationTo: 'users',
+              hasMany: true,
               admin: {
-                description: 'User responsible for this client account',
+                description: 'Users responsible for this client account (team members)',
                 position: 'sidebar',
               },
               hooks: {
                 beforeValidate: [
                   async ({ value, req }) => {
                     // If no value provided, find chance@orcaclub.pro
-                    if (!value) {
+                    if (!value || (Array.isArray(value) && value.length === 0)) {
                       const defaultUser = await req.payload.find({
                         collection: 'users',
                         where: { email: { equals: 'chance@orcaclub.pro' } },
                         limit: 1,
                       })
 
-                      return defaultUser.docs[0]?.id || null
+                      return defaultUser.docs[0]?.id ? [defaultUser.docs[0].id] : []
                     }
                     return value
                   },
                 ],
               },
             },
+
           ],
         },
         {
@@ -208,6 +210,17 @@ const ClientAccounts: CollectionConfig = {
           description: 'Manage projects for this client',
           fields: [
             {
+              name: 'projectsJoin',
+              type: 'join',
+              collection: 'projects',
+              on: 'client',
+              admin: {
+                allowCreate: false,
+                description: 'Projects linked to this client account',
+                defaultColumns: ['name', 'status', 'startDate', 'projectedEndDate', 'budgetAmount'],
+              },
+            },
+            {
               name: 'projects',
               type: 'array',
               labels: {
@@ -216,7 +229,8 @@ const ClientAccounts: CollectionConfig = {
               },
               admin: {
                 initCollapsed: true,
-                description: 'Client projects with linked orders',
+                readOnly: true,
+                description: '⚠️ DEPRECATED - Use Projects collection. This data will be migrated.',
               },
               fields: [
                 {

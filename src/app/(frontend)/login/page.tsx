@@ -11,13 +11,13 @@ export default async function LoginPage() {
   // Check if user is already logged in
   const user = await getCurrentUser()
 
-  if (user && user.role === 'client' && user.username) {
-    // Redirect to their dashboard
+  // If user is already logged in with a username, redirect to their dashboard
+  if (user && user.username) {
     redirect(`/u/${user.username}`)
   }
 
-  if (user && user.role !== 'client') {
-    // Admin users should use the admin panel
+  // If admin/user is logged in without a username, redirect to admin panel
+  if (user && (user.role === 'admin' || user.role === 'user')) {
     redirect('/admin')
   }
 

@@ -16,14 +16,18 @@ export default async function DashboardLayout({
     redirect('/login')
   }
 
-  // Verify user is a client
-  if (user.role !== 'client') {
-    redirect('/admin')
-  }
-
-  // Verify username matches
+  // Verify username matches (all roles need matching username)
   if (user.username !== username) {
-    redirect(`/u/${user.username}`)
+    // If user has a different username, redirect to their own dashboard
+    if (user.username) {
+      redirect(`/u/${user.username}`)
+    }
+    // If user has no username, redirect based on role
+    if (user.role === 'admin' || user.role === 'user') {
+      redirect('/admin')
+    }
+    // Client without username shouldn't happen, but redirect to login
+    redirect('/login')
   }
 
   return <>{children}</>

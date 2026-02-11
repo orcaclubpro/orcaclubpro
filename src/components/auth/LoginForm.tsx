@@ -61,13 +61,34 @@ export function LoginForm() {
     try {
       const result = await loginAction({ email, password })
 
-      if (result.success && result.username) {
+      if (result.success) {
+        // Check if user has username for dashboard access
+        if (!result.username) {
+          // Admin/User without username should use admin panel
+          if (result.role === 'admin' || result.role === 'user') {
+            setSuccess(true)
+            setTimeout(() => {
+              router.push('/admin')
+              router.refresh()
+            }, 500)
+            return
+          }
+
+          // This shouldn't happen for clients (blocked in loginAction)
+          setError('Your account does not have a username set. Please contact support.')
+          setLoading(false)
+          return
+        }
+
         // Show success state
         setSuccess(true)
 
+        // Redirect to user dashboard
+        const redirectPath = `/u/${result.username}`
+
         // Wait for animation before redirect
         setTimeout(() => {
-          router.push(`/u/${result.username}`)
+          router.push(redirectPath)
           router.refresh()
         }, 1000)
       } else {

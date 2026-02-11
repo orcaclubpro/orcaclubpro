@@ -77,6 +77,10 @@ export interface Config {
     'client-accounts': ClientAccount;
     orders: Order;
     'webhook-events': WebhookEvent;
+    projects: Project;
+    tasks: Task;
+    sprints: Sprint;
+    files: File;
     'payload-jobs': PayloadJob;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -85,6 +89,7 @@ export interface Config {
   collectionsJoins: {
     'client-accounts': {
       orders: 'orders';
+      projectsJoin: 'projects';
     };
   };
   collectionsSelect: {
@@ -98,6 +103,10 @@ export interface Config {
     'client-accounts': ClientAccountsSelect<false> | ClientAccountsSelect<true>;
     orders: OrdersSelect<false> | OrdersSelect<true>;
     'webhook-events': WebhookEventsSelect<false> | WebhookEventsSelect<true>;
+    projects: ProjectsSelect<false> | ProjectsSelect<true>;
+    tasks: TasksSelect<false> | TasksSelect<true>;
+    sprints: SprintsSelect<false> | SprintsSelect<true>;
+    files: FilesSelect<false> | FilesSelect<true>;
     'payload-jobs': PayloadJobsSelect<false> | PayloadJobsSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -190,27 +199,33 @@ export interface Media {
   };
 }
 /**
+ * Client logos and brands for homepage portfolio display
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "clients".
  */
 export interface Client {
   id: string;
   /**
-   * Client/Brand name
+   * Client or brand name
    */
   name: string;
   /**
-   * Client logo image
+   * Client logo image (preferably transparent PNG)
    */
   logo: string | Media;
   /**
-   * Optional client website URL
+   * Client website URL (optional)
    */
   website?: string | null;
   /**
-   * Order in which to display (lower numbers first)
+   * Order in which to display on homepage (lower numbers appear first)
    */
-  displayOrder?: number | null;
+  displayOrder: number;
+  /**
+   * Feature this client prominently on the homepage
+   */
+  featured?: boolean | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -411,7 +426,7 @@ export interface User {
    */
   company?: string | null;
   /**
-   * Unique username for client dashboard (auto-generated from first and last name)
+   * Unique username for dashboard access (auto-generated)
    */
   username?: string | null;
   /**
@@ -503,9 +518,9 @@ export interface ClientAccount {
    */
   totalOrders?: number | null;
   /**
-   * User responsible for this client account
+   * Users responsible for this client account (team members)
    */
-  assignedTo?: (string | null) | User;
+  assignedTo?: (string | User)[] | null;
   /**
    * Orders linked to this client account
    */
@@ -515,7 +530,15 @@ export interface ClientAccount {
     totalDocs?: number;
   };
   /**
-   * Client projects with linked orders
+   * Projects linked to this client account
+   */
+  projectsJoin?: {
+    docs?: (string | Project)[];
+    hasNextPage?: boolean;
+    totalDocs?: number;
+  };
+  /**
+   * ⚠️ DEPRECATED - Use Projects collection. This data will be migrated.
    */
   projects?:
     | {
@@ -568,7 +591,11 @@ export interface Order {
    */
   clientAccount: string | ClientAccount;
   /**
-   * Project name from client account (optional)
+   * Link to project (new relationship field)
+   */
+  projectRef?: (string | null) | Project;
+  /**
+   * Project name (DEPRECATED - use projectRef, will be removed after migration)
    */
   project?: string | null;
   /**
@@ -653,6 +680,81 @@ export interface Order {
   createdAt: string;
 }
 /**
+ * Manage projects with clients, timelines, and milestones
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "projects".
+ */
+export interface Project {
+  id: string;
+  /**
+   * Project name
+   */
+  name: string;
+  /**
+   * Current project status
+   */
+  status: 'pending' | 'in-progress' | 'on-hold' | 'completed' | 'cancelled';
+  /**
+   * Detailed project description and objectives
+   */
+  description?: string | null;
+  /**
+   * Client account for this project
+   */
+  client: string | ClientAccount;
+  /**
+   * Team members assigned to this project
+   */
+  assignedTo?: (string | User)[] | null;
+  /**
+   * Project start date
+   */
+  startDate?: string | null;
+  /**
+   * Expected completion date
+   */
+  projectedEndDate?: string | null;
+  /**
+   * Actual completion date (when status = completed)
+   */
+  actualEndDate?: string | null;
+  /**
+   * Project milestones and key deliverables
+   */
+  milestones?:
+    | {
+        /**
+         * Milestone title
+         */
+        title: string;
+        /**
+         * Milestone target date
+         */
+        date: string;
+        /**
+         * Mark as complete
+         */
+        completed?: boolean | null;
+        /**
+         * Milestone details and deliverables
+         */
+        description?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Total project budget
+   */
+  budgetAmount?: number | null;
+  /**
+   * Budget currency
+   */
+  currency?: ('USD' | 'EUR' | 'GBP') | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * Tracks processed Stripe webhook events
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -695,6 +797,169 @@ export interface WebhookEvent {
   errorMessage?: string | null;
   processingStartedAt?: string | null;
   processingCompletedAt?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Manage tasks within projects with status, priority, and time tracking
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "tasks".
+ */
+export interface Task {
+  id: string;
+  /**
+   * Task title or summary
+   */
+  title: string;
+  /**
+   * Detailed task description with formatting
+   */
+  description?: {
+    root: {
+      type: string;
+      children: {
+        type: string;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * Current task status
+   */
+  status: 'pending' | 'in-progress' | 'completed' | 'cancelled';
+  /**
+   * Task priority level
+   */
+  priority?: ('low' | 'medium' | 'high' | 'urgent') | null;
+  /**
+   * Project this task belongs to
+   */
+  project: string | Project;
+  /**
+   * User assigned to this task
+   */
+  assignedTo: string | User;
+  /**
+   * Optional: Sprint this task is part of
+   */
+  sprint?: (string | null) | Sprint;
+  /**
+   * When this task is due
+   */
+  dueDate?: string | null;
+  /**
+   * When this task was completed (auto-set)
+   */
+  completedAt?: string | null;
+  /**
+   * Estimated hours to complete
+   */
+  estimatedHours?: number | null;
+  /**
+   * Actual hours spent on task
+   */
+  actualHours?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Manage project sprints with tasks and timeframes
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "sprints".
+ */
+export interface Sprint {
+  id: string;
+  /**
+   * Sprint name (e.g., "Sprint 1", "Q1 2026")
+   */
+  name: string;
+  /**
+   * Sprint description and objectives
+   */
+  description?: string | null;
+  /**
+   * Project this sprint belongs to
+   */
+  project: string | Project;
+  /**
+   * Current sprint status
+   */
+  status: 'pending' | 'in-progress' | 'delayed' | 'finished';
+  /**
+   * Sprint start date
+   */
+  startDate: string;
+  /**
+   * Sprint end date
+   */
+  endDate: string;
+  /**
+   * What should be accomplished in this sprint
+   */
+  goalDescription?: string | null;
+  /**
+   * Tasks included in this sprint
+   */
+  tasks?: (string | Task)[] | null;
+  /**
+   * Number of completed tasks (auto-calculated)
+   */
+  completedTasksCount?: number | null;
+  /**
+   * Total number of tasks (auto-calculated)
+   */
+  totalTasksCount?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Manage documents and files linked to projects and sprints
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "files".
+ */
+export interface File {
+  id: string;
+  /**
+   * File or document name (auto-populated from filename if not provided)
+   */
+  name: string;
+  /**
+   * Type of file
+   */
+  fileType?: ('document' | 'image' | 'spreadsheet' | 'presentation' | 'pdf' | 'other') | null;
+  /**
+   * Description of the file contents or purpose
+   */
+  description?: string | null;
+  /**
+   * Upload a file or document
+   */
+  file: string | Media;
+  /**
+   * Project this file belongs to (optional)
+   */
+  project?: (string | null) | Project;
+  /**
+   * Sprint this file is a deliverable for (optional)
+   */
+  sprint?: (string | null) | Sprint;
+  /**
+   * Version number (e.g., "1.0", "2.1")
+   */
+  version?: string | null;
+  /**
+   * Tags for organization (e.g., "contract", "design", "invoice")
+   */
+  tags?: string[] | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -838,6 +1103,22 @@ export interface PayloadLockedDocument {
         value: string | WebhookEvent;
       } | null)
     | ({
+        relationTo: 'projects';
+        value: string | Project;
+      } | null)
+    | ({
+        relationTo: 'tasks';
+        value: string | Task;
+      } | null)
+    | ({
+        relationTo: 'sprints';
+        value: string | Sprint;
+      } | null)
+    | ({
+        relationTo: 'files';
+        value: string | File;
+      } | null)
+    | ({
         relationTo: 'payload-jobs';
         value: string | PayloadJob;
       } | null);
@@ -944,6 +1225,7 @@ export interface ClientsSelect<T extends boolean = true> {
   logo?: T;
   website?: T;
   displayOrder?: T;
+  featured?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -1061,6 +1343,7 @@ export interface ClientAccountsSelect<T extends boolean = true> {
   totalOrders?: T;
   assignedTo?: T;
   orders?: T;
+  projectsJoin?: T;
   projects?:
     | T
     | {
@@ -1083,6 +1366,7 @@ export interface OrdersSelect<T extends boolean = true> {
   orderNumber?: T;
   status?: T;
   clientAccount?: T;
+  projectRef?: T;
   project?: T;
   amount?: T;
   balanceSnapshot?: T;
@@ -1127,6 +1411,86 @@ export interface WebhookEventsSelect<T extends boolean = true> {
   errorMessage?: T;
   processingStartedAt?: T;
   processingCompletedAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "projects_select".
+ */
+export interface ProjectsSelect<T extends boolean = true> {
+  name?: T;
+  status?: T;
+  description?: T;
+  client?: T;
+  assignedTo?: T;
+  startDate?: T;
+  projectedEndDate?: T;
+  actualEndDate?: T;
+  milestones?:
+    | T
+    | {
+        title?: T;
+        date?: T;
+        completed?: T;
+        description?: T;
+        id?: T;
+      };
+  budgetAmount?: T;
+  currency?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "tasks_select".
+ */
+export interface TasksSelect<T extends boolean = true> {
+  title?: T;
+  description?: T;
+  status?: T;
+  priority?: T;
+  project?: T;
+  assignedTo?: T;
+  sprint?: T;
+  dueDate?: T;
+  completedAt?: T;
+  estimatedHours?: T;
+  actualHours?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "sprints_select".
+ */
+export interface SprintsSelect<T extends boolean = true> {
+  name?: T;
+  description?: T;
+  project?: T;
+  status?: T;
+  startDate?: T;
+  endDate?: T;
+  goalDescription?: T;
+  tasks?: T;
+  completedTasksCount?: T;
+  totalTasksCount?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "files_select".
+ */
+export interface FilesSelect<T extends boolean = true> {
+  name?: T;
+  fileType?: T;
+  description?: T;
+  file?: T;
+  project?: T;
+  sprint?: T;
+  version?: T;
+  tags?: T;
   updatedAt?: T;
   createdAt?: T;
 }

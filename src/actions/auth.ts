@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation'
 import { getPayload } from 'payload'
 
 /**
- * Client login action - authenticates client users and redirects to their dashboard
+ * Login action - authenticates users and returns their role and username
  */
 export async function loginAction({
   email,
@@ -24,23 +24,20 @@ export async function loginAction({
       password,
     })
 
-    // Verify this is a client user
-    if (result.user?.role !== 'client') {
-      // Logout the non-client user
+    const role = result.user?.role
+    const username = result.user?.username
+
+    // Client users MUST have a username to access dashboard
+    if (role === 'client' && !username) {
       await logout({ config })
-      throw new Error('Only client users can login here. Admins and staff should use the admin panel at /admin.')
+      throw new Error('Your account does not have a username. Please contact support.')
     }
 
-    // Get the username for redirect
-    const username = result.user.username
-
-    if (!username) {
-      throw new Error('Client account does not have a username. Please contact support.')
-    }
-
+    // Admin/User roles can login even without username (will use admin panel or their username)
     return {
       success: true,
       username,
+      role,
     }
   } catch (error) {
     return {
