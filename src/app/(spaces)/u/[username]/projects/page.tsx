@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/actions/auth'
 import { getPayload } from 'payload'
 import config from '@payload-config'
 import { ProjectsList } from '@/components/dashboard/ProjectsList'
+import { CreateProjectModal } from '@/components/dashboard/CreateProjectModal'
 import { FolderKanban, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -66,6 +67,9 @@ export default async function ProjectsPage({
                   : 'Track progress of your assigned projects'}
               </p>
             </div>
+
+            {/* Create Project Button */}
+            <CreateProjectModal />
           </div>
         </div>
 

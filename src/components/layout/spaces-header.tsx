@@ -29,6 +29,7 @@ export function SpacesHeader({ user }: SpacesHeaderProps) {
   const navItems = [
     { name: "Dashboard", href: `/u/${username}`, matchPath: `/u/${username}` },
     { name: "Projects", href: `/u/${username}/projects`, matchPath: `/u/${username}/projects` },
+    { name: "Clients", href: `/u/${username}/clients`, matchPath: `/u/${username}/clients` },
     { name: "Tasks", href: `/u/${username}/tasks`, matchPath: `/u/${username}/tasks` },
     { name: "Orders", href: `/u/${username}/orders`, matchPath: `/u/${username}/orders` },
   ]

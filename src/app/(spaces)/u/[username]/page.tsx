@@ -12,9 +12,16 @@ import {
   FileText,
   ExternalLink,
   Activity,
+  DollarSign,
+  Calendar,
+  CheckCircle,
+  Clock,
+  XCircle,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { ActivityTimeline, type ActivityEvent } from '@/components/dashboard/visualizations/ActivityTimeline'
+import type { Order } from '@/types/payload-types'
 
 export async function generateMetadata({
   params,
@@ -93,6 +100,15 @@ export default async function DashboardPage({
       limit: 50,
     })
 
+    // Fetch recent orders for activity section (with populated relationships)
+    const { docs: recentOrders } = await payload.find({
+      collection: 'orders',
+      where: clientAccountIds.length > 0 ? { clientAccount: { in: clientAccountIds } } : { id: { equals: 'none' } },
+      depth: 2,
+      sort: '-createdAt',
+      limit: 10,
+    })
+
     // Calculate aggregate metrics
     const totalRevenue = allOrders
       .filter((o: any) => o.status === 'paid')
@@ -113,6 +129,32 @@ export default async function DashboardPage({
         style: 'currency',
         currency: 'USD',
       }).format(amount)
+    }
+
+    const formatDate = (dateString: string) => {
+      return new Intl.DateTimeFormat('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      }).format(new Date(dateString))
+    }
+
+    const getStatusBadge = (status: 'pending' | 'paid' | 'cancelled') => {
+      const variants = {
+        pending: { variant: 'outline' as const, icon: Clock, className: 'border-yellow-500/30 text-yellow-400 bg-yellow-500/10' },
+        paid: { variant: 'outline' as const, icon: CheckCircle, className: 'border-green-500/30 text-green-400 bg-green-500/10' },
+        cancelled: { variant: 'outline' as const, icon: XCircle, className: 'border-red-500/30 text-red-400 bg-red-500/10' },
+      }
+      const config = variants[status]
+      const Icon = config.icon
+      return (
+        <Badge variant={config.variant} className={config.className}>
+          <Icon className="size-3" />
+          {status.charAt(0).toUpperCase() + status.slice(1)}
+        </Badge>
+      )
     }
 
     // Render admin/user view with aggregate metrics
@@ -167,6 +209,81 @@ export default async function DashboardPage({
             <p className="text-3xl font-bold text-intelligence-cyan">{pendingTasks}</p>
           </div>
         </div>
+
+        {/* Recent Activity Section */}
+        {recentOrders.length > 0 && (
+          <div className="relative overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-md p-6">
+            <div className="absolute top-0 left-0 w-48 h-48 bg-intelligence-cyan/[0.04] rounded-full blur-3xl" />
+
+            <div className="relative z-10">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2.5 rounded-lg bg-white/[0.04] border border-white/[0.08]">
+                  <Activity className="size-5 text-intelligence-cyan" />
+                </div>
+                <h2 className="text-2xl font-semibold text-white">Recent Activity</h2>
+              </div>
+
+              <div className="space-y-3">
+                {recentOrders.map((order: any) => {
+                  const clientAccount = typeof order.clientAccount === 'object' ? order.clientAccount : null
+                  const project = typeof order.projectRef === 'object' ? order.projectRef : null
+
+                  return (
+                    <div
+                      key={order.id}
+                      className="relative overflow-hidden rounded-lg border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-4 hover:bg-white/[0.04] transition-all duration-200"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-2">
+                            <DollarSign className="size-4 text-intelligence-cyan shrink-0" />
+                            <h3 className="text-white font-medium truncate">
+                              {order.orderNumber}
+                            </h3>
+                            {getStatusBadge(order.status)}
+                          </div>
+
+                          <div className="space-y-1 text-sm">
+                            {clientAccount && (
+                              <p className="text-gray-400 truncate">
+                                <span className="text-gray-500">Client:</span>{' '}
+                                <span className="text-gray-300">{clientAccount.name}</span>
+                              </p>
+                            )}
+                            {project && (
+                              <p className="text-gray-400 truncate">
+                                <span className="text-gray-500">Project:</span>{' '}
+                                <span className="text-gray-300">{project.name}</span>
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col sm:items-end gap-1 shrink-0">
+                          <p className="text-xl font-bold text-intelligence-cyan">
+                            {formatCurrency(order.amount || 0)}
+                          </p>
+                          <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                            <Calendar className="size-3" />
+                            {formatDate(order.createdAt)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {recentOrders.length === 10 && (
+                <div className="mt-6 text-center">
+                  <p className="text-sm text-gray-500">
+                    Showing 10 most recent orders
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Client Accounts Grid */}
         <div className="relative overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-md p-6">

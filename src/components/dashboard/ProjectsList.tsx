@@ -1,5 +1,7 @@
 'use client'
 
+import { usePathname } from 'next/navigation'
+import Link from 'next/link'
 import {
   Calendar,
   Clock,
@@ -16,6 +18,9 @@ import { ProgressRing } from './visualizations/ProgressRing'
 import { MetricBadge } from './visualizations/MetricBadge'
 
 export function ProjectsList({ projects }: { projects: any[] }) {
+  const pathname = usePathname()
+  // Extract username from pathname: /u/[username]/...
+  const username = pathname?.split('/')[2] || ''
   const getStatusConfig = (status: string) => {
     switch (status) {
       case 'active':
@@ -137,9 +142,10 @@ export function ProjectsList({ projects }: { projects: any[] }) {
           const daysRemaining = getDaysRemaining(project.endDate)
 
           return (
-            <div
+            <Link
               key={index}
-              className="group relative overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-md p-6 hover:border-white/[0.12] hover:bg-white/[0.05] transition-all duration-500 hover:scale-[1.01] fluid-enter"
+              href={`/u/${username}/projects/${project.id}`}
+              className="block group relative overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-md p-6 hover:border-white/[0.12] hover:bg-white/[0.05] transition-all duration-500 hover:scale-[1.01] fluid-enter cursor-pointer"
               style={{ animationDelay: `${index * 100}ms` }}
             >
               {/* Subtle glow orb */}
@@ -275,7 +281,7 @@ export function ProjectsList({ projects }: { projects: any[] }) {
                   )}
                 </div>
               </div>
-            </div>
+            </Link>
           )
         })}
       </div>
