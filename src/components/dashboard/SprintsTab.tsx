@@ -21,6 +21,7 @@ interface SprintsTabProps {
   sprints: Sprint[]
   tasks: Task[]
   projectId: string
+  readOnly?: boolean
 }
 
 const sprintStatusConfig = {
@@ -48,7 +49,7 @@ function getSprintTasks(sprint: Sprint, tasks: Task[]): Task[] {
   })
 }
 
-export function SprintsTab({ sprints, tasks, projectId }: SprintsTabProps) {
+export function SprintsTab({ sprints, tasks, projectId, readOnly }: SprintsTabProps) {
   const router = useRouter()
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [expandedSprints, setExpandedSprints] = useState<Set<string>>(new Set())
@@ -80,14 +81,16 @@ export function SprintsTab({ sprints, tasks, projectId }: SprintsTabProps) {
             </p>
           )}
         </div>
-        <Button
-          size="sm"
-          onClick={() => setIsSheetOpen(true)}
-          className="bg-intelligence-cyan text-black hover:bg-intelligence-cyan/90 font-medium"
-        >
-          <Plus className="size-3.5 mr-1.5" />
-          New Sprint
-        </Button>
+        {!readOnly && (
+          <Button
+            size="sm"
+            onClick={() => setIsSheetOpen(true)}
+            className="bg-intelligence-cyan text-black hover:bg-intelligence-cyan/90 font-medium"
+          >
+            <Plus className="size-3.5 mr-1.5" />
+            New Sprint
+          </Button>
+        )}
       </div>
 
       {/* Sprint List */}
@@ -226,29 +229,35 @@ export function SprintsTab({ sprints, tasks, projectId }: SprintsTabProps) {
           </div>
           <h3 className="text-base font-semibold text-white mb-1.5">No sprints yet</h3>
           <p className="text-sm text-gray-500 max-w-xs mx-auto mb-5">
-            Organize work into sprints to track progress and keep the team focused.
+            {readOnly
+              ? 'No sprints have been created for this project yet.'
+              : 'Organize work into sprints to track progress and keep the team focused.'}
           </p>
-          <Button
-            size="sm"
-            onClick={() => setIsSheetOpen(true)}
-            className="bg-intelligence-cyan text-black hover:bg-intelligence-cyan/90 font-medium"
-          >
-            <Plus className="size-3.5 mr-1.5" />
-            New Sprint
-          </Button>
+          {!readOnly && (
+            <Button
+              size="sm"
+              onClick={() => setIsSheetOpen(true)}
+              className="bg-intelligence-cyan text-black hover:bg-intelligence-cyan/90 font-medium"
+            >
+              <Plus className="size-3.5 mr-1.5" />
+              New Sprint
+            </Button>
+          )}
         </div>
       )}
 
-      {/* Create Sprint Sheet */}
-      <CreateSprintSheet
-        projectId={projectId}
-        open={isSheetOpen}
-        onOpenChange={setIsSheetOpen}
-        onSuccess={() => {
-          setIsSheetOpen(false)
-          router.refresh()
-        }}
-      />
+      {/* Create Sprint Sheet — hidden in readOnly mode */}
+      {!readOnly && (
+        <CreateSprintSheet
+          projectId={projectId}
+          open={isSheetOpen}
+          onOpenChange={setIsSheetOpen}
+          onSuccess={() => {
+            setIsSheetOpen(false)
+            router.refresh()
+          }}
+        />
+      )}
     </div>
   )
 }

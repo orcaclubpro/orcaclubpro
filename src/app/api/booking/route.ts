@@ -11,7 +11,7 @@ const resend = new Resend(process.env.RESEND_API_KEY)
 
 // Admin email to receive notifications
 const ADMIN_EMAIL = "chance@orcaclub.pro"
-const FROM_EMAIL = `"ORCACLUB" <${process.env.EMAIL_FROM || "chance@orcaclub.pro"}>`
+const FROM_EMAIL = `"ORCACLUB" <${process.env.EMAIL_FROM || "carbon@orcaclub.pro"}>`
 
 interface BookingFormData {
   name: string

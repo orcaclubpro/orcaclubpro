@@ -42,9 +42,10 @@ import type { Task, Sprint } from '@/types/payload-types'
 
 interface DashboardTaskManagerProps {
   username: string
+  userRole?: string | null
 }
 
-export function DashboardTaskManager({ username }: DashboardTaskManagerProps) {
+export function DashboardTaskManager({ username, userRole }: DashboardTaskManagerProps) {
   const router = useRouter()
   const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
@@ -230,6 +231,9 @@ export function DashboardTaskManager({ username }: DashboardTaskManagerProps) {
     await updateTaskStatus({ taskId, status: newStatus })
     router.refresh()
   }
+
+  // Don't show for clients — they cannot create tasks or sprints
+  if (userRole === 'client') return null
 
   // Only show on project pages
   if (!currentProjectId) return null

@@ -51,9 +51,13 @@ function getTimeOfDay(): 'morning' | 'afternoon' | 'evening' {
 interface DashboardGreetingProps {
   firstName?: string | null
   subtitle?: string
+  size?: 'default' | 'large'
 }
 
-export function DashboardGreeting({ firstName, subtitle }: DashboardGreetingProps) {
+export function DashboardGreeting({ firstName, subtitle, size = 'default' }: DashboardGreetingProps) {
+  const headingClass = size === 'large'
+    ? 'text-5xl lg:text-6xl font-extralight text-white tracking-tight'
+    : 'text-3xl font-extralight text-white tracking-tight'
   const [mounted, setMounted] = useState(false)
   const [visible, setVisible] = useState(false)
   const [transitioning, setTransitioning] = useState(false)
@@ -96,7 +100,7 @@ export function DashboardGreeting({ firstName, subtitle }: DashboardGreetingProp
     // SSR fallback — static, no flash
     return (
       <div>
-        <h1 className="text-3xl font-extralight text-white tracking-tight">
+        <h1 className={headingClass}>
           Good{' '}
           <span className="gradient-text">
             {timeOfDay.charAt(0).toUpperCase() + timeOfDay.slice(1)}
@@ -117,7 +121,7 @@ export function DashboardGreeting({ firstName, subtitle }: DashboardGreetingProp
           transform: visible ? 'translateY(0)' : 'translateY(-8px)',
         }}
       >
-        <h1 className="text-3xl font-extralight text-white tracking-tight">
+        <h1 className={headingClass}>
           <span>{greeting.first} </span>
           <span className="gradient-text">{greeting.second}</span>
           {firstName ? `, ${firstName}` : ''}

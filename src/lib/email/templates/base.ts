@@ -1,6 +1,12 @@
 /**
  * Base email template wrapper
- * Provides consistent ORCACLUB branding and structure
+ * Provides consistent ORCACLUB dark branding and structure.
+ *
+ * All styles are fully inlined — no <style> blocks — for maximum email client
+ * compatibility (Gmail strips class-based styles entirely).
+ *
+ * The `content` parameter must contain <tr> elements; they are injected
+ * directly into the inner <tbody> of the card body table.
  */
 
 interface BaseTemplateProps {
@@ -8,34 +14,61 @@ interface BaseTemplateProps {
 }
 
 export function baseEmailTemplate({ content }: BaseTemplateProps): string {
-  return `
-<!DOCTYPE html>
-<html>
+  return `<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&display=swap" rel="stylesheet">
 </head>
-<body style="margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; background-color: #ffffff;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
-    <tr>
-      <td align="center" style="padding: 40px 20px;">
-        <table role="presentation" width="100%" style="max-width: 560px;" cellspacing="0" cellpadding="0" border="0">
+<body style="margin:0;padding:0;background-color:#000000;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
 
-          <!-- Header -->
+  <!-- Outer wrapper -->
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+    <tr>
+      <td style="padding:48px 20px;">
+
+        <!-- Card -->
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="max-width:520px;width:100%;background-color:#080808;border:1px solid #111111;">
+
+          <!-- Header: wordmark -->
           <tr>
-            <td style="padding: 0 0 32px 0;">
-              <h1 style="margin: 0; font-size: 20px; font-weight: 700; color: #000000; letter-spacing: 0.5px;">ORCACLUB</h1>
-              <p style="margin: 4px 0 0 0; font-size: 12px; color: #737373; letter-spacing: 0.5px;">EST 2025</p>
+            <td style="padding:32px 40px 24px 40px;border-bottom:1px solid #0f0f0f;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                  <td>
+                    <span style="font-family:'Cinzel Decorative',Georgia,serif;font-size:13px;font-weight:700;color:#333333;">ORCA</span><span style="font-family:'Cinzel Decorative',Georgia,serif;font-size:13px;font-weight:700;color:#67e8f9;">CLUB</span>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
 
-          ${content}
-
-          <!-- Signature -->
+          <!-- Body: injected content rows -->
           <tr>
-            <td style="padding: 32px 0 0 0; border-top: 1px solid #e5e5e5;">
-              <p style="margin: 0 0 4px 0; font-size: 14px; font-weight: 600; color: #000000;">ORCACLUB</p>
-              <p style="margin: 0; font-size: 13px; color: #737373;">orcaclub.pro</p>
+            <td style="padding:40px 40px 0 40px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tbody>
+                  ${content}
+                </tbody>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer bar -->
+          <tr>
+            <td style="padding:18px 40px;border-top:1px solid #0a0a0a;background-color:#050505;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                  <td>
+                    <span style="font-family:'Cinzel Decorative',Georgia,serif;font-size:10px;font-weight:700;color:#1f1f1f;">ORCA</span><span style="font-family:'Cinzel Decorative',Georgia,serif;font-size:10px;font-weight:700;color:#1a3a3e;">CLUB</span>
+                  </td>
+                  <td align="right">
+                    <a href="https://orcaclub.pro" style="font-size:10px;color:#1f1f1f;text-decoration:none;font-weight:300;letter-spacing:0.02em;">orcaclub.pro</a>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
 
@@ -43,9 +76,9 @@ export function baseEmailTemplate({ content }: BaseTemplateProps): string {
       </td>
     </tr>
   </table>
+
 </body>
-</html>
-  `.trim()
+</html>`.trim()
 }
 
 /**
@@ -57,7 +90,6 @@ interface BaseTextTemplateProps {
 
 export function baseTextTemplate({ content }: BaseTextTemplateProps): string {
   return `ORCACLUB
-EST 2025
 
 ${content}
 

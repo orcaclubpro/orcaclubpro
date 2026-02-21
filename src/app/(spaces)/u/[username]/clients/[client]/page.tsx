@@ -86,7 +86,7 @@ export default async function ClientDetailPage({
   }
 
   // Fetch data
-  const [{ docs: orders }, { docs: projects }] = await Promise.all([
+  const [{ docs: orders }, { docs: projects }, { docs: clientUsers }] = await Promise.all([
     payload.find({
       collection: 'orders',
       where: { clientAccount: { equals: clientId } },
@@ -100,6 +100,13 @@ export default async function ClientDetailPage({
       depth: 1,
       sort: '-createdAt',
       limit: 100,
+    }),
+    payload.find({
+      collection: 'users',
+      where: { clientAccount: { equals: clientId }, role: { equals: 'client' } },
+      depth: 0,
+      sort: 'firstName',
+      limit: 50,
     }),
   ])
 
@@ -140,6 +147,11 @@ export default async function ClientDetailPage({
     projectsCount: projects.length,
     stripeCustomerId: clientAccount.stripeCustomerId,
     teamMembers,
+    clientUsers: clientUsers.map((u) => ({
+      id: u.id,
+      name: `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim() || u.email,
+      email: u.email,
+    })),
     username,
   }
 
@@ -204,7 +216,7 @@ export default async function ClientDetailPage({
                 <h2 className="text-base font-semibold text-white">Projects</h2>
                 <span className="text-xs text-gray-600 tabular-nums">{projects.length}</span>
               </div>
-              <CreateProjectModal clientId={clientId} />
+              <CreateProjectModal clientId={clientId} clientName={clientAccount.name} />
             </div>
 
             {projects.length > 0 ? (
@@ -223,7 +235,7 @@ export default async function ClientDetailPage({
               <EmptyState
                 title="No projects yet"
                 description="Create your first project to start tracking work."
-                action={<CreateProjectModal clientId={clientId} />}
+                action={<CreateProjectModal clientId={clientId} clientName={clientAccount.name} />}
               />
             )}
           </section>

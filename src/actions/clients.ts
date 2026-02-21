@@ -174,6 +174,28 @@ export async function deleteClientAccount({ id }: { id: string }) {
       }
     }
 
+    // Clear clientAccount reference on any linked users before deleting
+    const { docs: linkedUsers } = await payload.find({
+      collection: 'users',
+      where: { clientAccount: { equals: id } },
+      limit: 10,
+      depth: 0,
+    })
+
+    if (linkedUsers.length > 0) {
+      await Promise.all(
+        linkedUsers.map((u) =>
+          payload.update({
+            collection: 'users',
+            id: u.id,
+            data: { clientAccount: null },
+            context: { skipClientAccountSync: true, skipNameValidation: true },
+            overrideAccess: true,
+          })
+        )
+      )
+    }
+
     // Remove from Payload
     await payload.delete({ collection: 'client-accounts', id })
 
@@ -232,8 +254,68 @@ export async function updateClientAccount({
 }
 
 /**
- * Creates a role:'client' User for the given email if one doesn't exist,
- * then sends a welcome email with a 7-day account setup link.
+ * Invite a user to a specific ClientAccount.
+ * Creates (or updates) a role:'client' User, links them to the given clientAccountId,
+ * and sends them a setup email. For use from the dashboard team management UI.
+ */
+export async function inviteClientUser({
+  clientAccountId,
+  email,
+  firstName,
+  lastName,
+}: {
+  clientAccountId: string
+  email: string
+  firstName: string
+  lastName: string
+}) {
+  try {
+    const user = await getCurrentUser()
+    if (!user) return { success: false, error: 'Unauthorized' }
+    if (user.role === 'client') return { success: false, error: 'Clients cannot invite users' }
+
+    const payload = await getPayload({ config })
+
+    const emailSent = await createClientUserAndSendWelcome({
+      payload,
+      email,
+      firstName,
+      lastName,
+    })
+
+    // Ensure the user is explicitly linked to this client account (in case the
+    // auto-link by email pointed to a different account)
+    const { docs: linkedUsers } = await payload.find({
+      collection: 'users',
+      where: { email: { equals: email } },
+      limit: 1,
+      depth: 0,
+    })
+    if (linkedUsers.length > 0 && linkedUsers[0].role === 'client') {
+      await payload.update({
+        collection: 'users',
+        id: linkedUsers[0].id,
+        data: { clientAccount: clientAccountId },
+        context: { skipClientAccountSync: true, skipNameValidation: true },
+        overrideAccess: true,
+      })
+    }
+
+    if (user.username) revalidatePath(`/u/${user.username}/clients`)
+
+    return { success: true, emailSent }
+  } catch (error) {
+    console.error('[inviteClientUser]', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to invite user',
+    }
+  }
+}
+
+/**
+ * Creates or updates a role:'client' User for the given email, ensures their
+ * clientAccount reference is set, then sends a welcome/setup email.
  * Returns true if the email was sent, false otherwise.
  * Non-blocking: email failure is caught and logged, never thrown.
  */
@@ -252,6 +334,16 @@ async function createClientUserAndSendWelcome({
 }): Promise<boolean> {
   payload.logger.info(`[Welcome] Checking for existing user: ${email}`)
 
+  // Resolve the ClientAccount ID for this email — needed to (re-)link the User
+  const { docs: accountDocs } = await payload.find({
+    collection: 'client-accounts',
+    where: { email: { equals: email } },
+    limit: 1,
+    depth: 0,
+    overrideAccess: true,
+  })
+  const clientAccountId = accountDocs[0]?.id ? String(accountDocs[0].id) : undefined
+
   const { docs: existingUsers } = await payload.find({
     collection: 'users',
     where: { email: { equals: email } },
@@ -265,7 +357,7 @@ async function createClientUserAndSendWelcome({
     const existingUser = existingUsers[0]
     userId = String(existingUser.id)
 
-    // Don't send a client welcome email to admin/staff accounts
+    // Don't touch admin/staff accounts
     if (existingUser.role !== 'client') {
       payload.logger.warn(
         `[Welcome] User ${email} exists with role '${existingUser.role}' — skipping welcome email`
@@ -273,7 +365,24 @@ async function createClientUserAndSendWelcome({
       return false
     }
 
-    payload.logger.info(`[Welcome] Client user already exists (id: ${userId}) — will still send setup email`)
+    // Update profile fields and re-link to ClientAccount in case the reference
+    // was lost (e.g. the ClientAccount was deleted and re-created)
+    await payload.update({
+      collection: 'users',
+      id: userId,
+      data: {
+        firstName,
+        lastName,
+        ...(company ? { company } : {}),
+        ...(clientAccountId ? { clientAccount: clientAccountId } : {}),
+      },
+      context: { skipClientAccountSync: true, skipNameValidation: true },
+      overrideAccess: true,
+    })
+
+    payload.logger.info(
+      `[Welcome] Client user updated (id: ${userId})${clientAccountId ? `, linked to account ${clientAccountId}` : ''}`
+    )
   } else {
     payload.logger.info(`[Welcome] No existing user — creating client user for ${email}`)
 
@@ -310,7 +419,7 @@ async function createClientUserAndSendWelcome({
 
   payload.logger.info(`[Welcome] Token generated — sending welcome email to ${email}`)
 
-  const baseUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000'
+  const baseUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'https://orcaclub.pro'
   const setupUrl = `${baseUrl}/reset-password?token=${setupToken}`
   const { subject, html, text } = clientWelcome({ name: firstName, setupUrl })
 

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, ArrowRight, ArrowLeft, Check, Loader2, Calendar, DollarSign, Layers } from 'lucide-react'
+import { Plus, ArrowRight, ArrowLeft, Check, Loader2, Calendar, DollarSign, Layers, User, ChevronDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -13,6 +13,11 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { createProject } from '@/actions/projects'
+
+export interface ClientOption {
+  id: string
+  name: string
+}
 
 type Step = 1 | 2 | 3
 
@@ -33,13 +38,22 @@ const STEPS = [
 
 const CURRENCY_SYMBOLS: Record<string, string> = { USD: '$', EUR: '€', GBP: '£' }
 
-export function CreateProjectModal({ clientId }: { clientId?: string } = {}) {
+export function CreateProjectModal({
+  clientId,
+  clientName,
+  clients,
+}: {
+  clientId?: string
+  clientName?: string
+  clients?: ClientOption[]
+} = {}) {
   const router = useRouter()
-  const [open, setOpen]       = useState(false)
-  const [step, setStep]       = useState<Step>(1)
-  const [loading, setLoading] = useState(false)
-  const [error, setError]     = useState<string | null>(null)
-  const [created, setCreated] = useState<string | null>(null) // project name on success
+  const [open, setOpen]                   = useState(false)
+  const [step, setStep]                   = useState<Step>(1)
+  const [loading, setLoading]             = useState(false)
+  const [error, setError]                 = useState<string | null>(null)
+  const [created, setCreated]             = useState<string | null>(null)
+  const [selectedClientId, setSelectedClientId] = useState<string>(clientId ?? '')
 
   const [form, setForm] = useState<FormState>({
     name: '',
@@ -58,6 +72,7 @@ export function CreateProjectModal({ clientId }: { clientId?: string } = {}) {
     setStep(1)
     setError(null)
     setCreated(null)
+    setSelectedClientId(clientId ?? '')
     setForm({ name: '', description: '', startDate: '', projectedEndDate: '', budget: '', currency: 'USD' })
   }
 
@@ -74,9 +89,11 @@ export function CreateProjectModal({ clientId }: { clientId?: string } = {}) {
     const result = await createProject({
       name: form.name.trim(),
       description: form.description.trim() || undefined,
-      clientId,
+      clientId: selectedClientId || undefined,
       startDate: form.startDate || undefined,
       projectedEndDate: form.projectedEndDate || undefined,
+      budget: form.budget ? Number(form.budget) : undefined,
+      currency: form.currency,
     })
 
     setLoading(false)
@@ -196,6 +213,34 @@ export function CreateProjectModal({ clientId }: { clientId?: string } = {}) {
                       <p className="text-xs uppercase tracking-widest text-gray-600 font-semibold mb-1">Step 1</p>
                       <h3 className="text-xl font-bold text-white">What are we building?</h3>
                     </div>
+                    {clientId ? (
+                      /* Pre-selected client (e.g. from client detail page) */
+                      <div className="flex items-center gap-2 rounded-lg border border-[#67e8f9]/[0.15] bg-[#67e8f9]/[0.06] px-3 py-2">
+                        <User className="size-3.5 text-[#67e8f9]/70 shrink-0" />
+                        <span className="text-xs text-gray-400">Client:</span>
+                        <span className="text-xs font-medium text-[#67e8f9]">{clientName ?? 'Selected'}</span>
+                      </div>
+                    ) : clients && clients.length > 0 ? (
+                      /* Client selector (e.g. from projects page) */
+                      <div className="space-y-1.5">
+                        <Label className="text-gray-400 text-sm">
+                          Client <span className="text-gray-700 text-xs font-normal">(optional)</span>
+                        </Label>
+                        <div className="relative">
+                          <select
+                            value={selectedClientId}
+                            onChange={(e) => setSelectedClientId(e.target.value)}
+                            className="w-full appearance-none bg-white/[0.04] border border-white/[0.08] text-white rounded-md h-11 px-3 pr-8 text-sm focus:outline-none focus:ring-1 focus:ring-[#67e8f9]/30"
+                          >
+                            <option value="" className="bg-[#111] text-gray-400">No client</option>
+                            {clients.map((c) => (
+                              <option key={c.id} value={c.id} className="bg-[#111] text-white">{c.name}</option>
+                            ))}
+                          </select>
+                          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 size-4 text-gray-600 pointer-events-none" />
+                        </div>
+                      </div>
+                    ) : null}
                     <div className="space-y-4">
                       <div className="space-y-1.5">
                         <Label className="text-gray-400 text-sm">Project name <span className="text-[#67e8f9]">*</span></Label>

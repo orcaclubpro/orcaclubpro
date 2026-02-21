@@ -79,7 +79,7 @@ export async function POST(request: Request) {
         ? `${user.firstName} ${user.lastName}`
         : user.name || 'there'
 
-    const baseUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000'
+    const baseUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'https://orcaclub.pro'
     const resetUrl = `${baseUrl}/reset-password?token=${token}`
 
     await sendPasswordResetEmail(payload, user.email, displayName, resetUrl)

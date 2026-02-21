@@ -183,6 +183,16 @@ const Orders: CollectionConfig = {
         position: 'sidebar',
       },
     },
+    {
+      name: 'dueDate',
+      type: 'date',
+      index: true,
+      admin: {
+        description: 'Payment due date (from Stripe invoice or manually set)',
+        position: 'sidebar',
+        date: { pickerAppearance: 'dayOnly' },
+      },
+    },
 
     // LINE ITEMS (Nested array for order details)
     {

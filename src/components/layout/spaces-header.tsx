@@ -15,6 +15,7 @@ interface SpacesHeaderProps {
     firstName?: string | null
     lastName?: string | null
     username?: string | null
+    role?: string | null
   } | null
 }
 
@@ -28,12 +29,19 @@ export function SpacesHeader({ user }: SpacesHeaderProps) {
 
   const username = user?.username
 
-  const navItems = [
-    { name: "Dashboard", href: `/u/${username}`, matchPath: `/u/${username}` },
-    { name: "Projects", href: `/u/${username}/projects`, matchPath: `/u/${username}/projects` },
-    { name: "Clients", href: `/u/${username}/clients`, matchPath: `/u/${username}/clients` },
-    { name: "Tasks", href: `/u/${username}/tasks`, matchPath: `/u/${username}/tasks` },
-  ]
+  const isClient = user?.role === 'client'
+
+  const navItems = isClient
+    ? [
+        { name: "Portfolio", href: `/u/${username}`, matchPath: `/u/${username}` },
+        { name: "Projects", href: `/u/${username}/projects`, matchPath: `/u/${username}/projects` },
+      ]
+    : [
+        { name: "Portfolio", href: `/u/${username}`, matchPath: `/u/${username}` },
+        { name: "Projects", href: `/u/${username}/projects`, matchPath: `/u/${username}/projects` },
+        { name: "Clients", href: `/u/${username}/clients`, matchPath: `/u/${username}/clients` },
+        { name: "Tasks", href: `/u/${username}/tasks`, matchPath: `/u/${username}/tasks` },
+      ]
 
   const isActive = (matchPath: string) => {
     // Exact match for dashboard, startsWith for others
@@ -47,19 +55,11 @@ export function SpacesHeader({ user }: SpacesHeaderProps) {
     <header className="fixed top-0 left-0 right-0 z-50 bg-white/[0.02] backdrop-blur-md border-b border-white/[0.06]">
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-8" aria-label="Global">
         {/* LEFT: Logo + SPACES Branding */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-baseline gap-1.5">
           <Link href="/" className="focus:outline-none focus-visible:ring-1 focus-visible:ring-intelligence-cyan/50 rounded-lg transition-all duration-300">
             <span className={`${gothic.className} text-xl text-white`}>ORCACLUB</span>
           </Link>
-          <div className="hidden sm:block h-4 w-px bg-white/[0.08]" />
-          <div className="hidden sm:block">
-            <Link
-              href={username ? `/u/${username}` : '/'}
-              className="text-lg font-semibold gradient-text tracking-wide focus:outline-none focus-visible:ring-1 focus-visible:ring-intelligence-cyan/50 rounded"
-            >
-              SPACES
-            </Link>
-          </div>
+          <span className="hidden sm:inline text-[11px] font-semibold gradient-text tracking-widest">SPACES</span>
         </div>
 
         {/* CENTER: Navigation Tabs (Desktop) */}

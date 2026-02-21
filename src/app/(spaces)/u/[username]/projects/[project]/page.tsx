@@ -41,7 +41,6 @@ export default async function ProjectDetailPage({
   const user = await getCurrentUser()
 
   if (!user || user.username !== username) redirect('/login')
-  if (user.role === 'client') redirect(`/u/${username}`)
 
   const payload = await getPayload({ config })
 
@@ -52,8 +51,28 @@ export default async function ProjectDetailPage({
     notFound()
   }
 
-  // Access check for non-admin users
-  if (user.role !== 'admin') {
+  const isClient = user.role === 'client'
+
+  // ── Client access check ─────────────────────────────────────────────────
+  // Clients can only view projects belonging to their client account
+  if (isClient) {
+    const clientAccountId =
+      typeof user.clientAccount === 'string'
+        ? user.clientAccount
+        : (user.clientAccount as any)?.id
+
+    const projectClientId =
+      typeof project.client === 'string'
+        ? project.client
+        : (project.client as any)?.id
+
+    if (!clientAccountId || projectClientId !== clientAccountId) {
+      redirect(`/u/${username}`)
+    }
+  }
+
+  // ── Staff access check ──────────────────────────────────────────────────
+  if (user.role !== 'admin' && !isClient) {
     const assignedUserIds = Array.isArray(project.assignedTo)
       ? project.assignedTo.map((u) => (typeof u === 'string' ? u : u.id))
       : []
@@ -92,6 +111,26 @@ export default async function ProjectDetailPage({
     }),
   ])
 
+  // For clients: fetch all their projects for sidebar navigation
+  let clientProjects: Project[] = []
+  if (isClient && user.clientAccount) {
+    const clientAccountId =
+      typeof user.clientAccount === 'string'
+        ? user.clientAccount
+        : (user.clientAccount as any)?.id
+
+    if (clientAccountId) {
+      const { docs } = await payload.find({
+        collection: 'projects',
+        where: { client: { equals: clientAccountId } },
+        depth: 0,
+        sort: '-createdAt',
+        limit: 50,
+      })
+      clientProjects = docs as Project[]
+    }
+  }
+
   const activeTab = tab === 'sprints' ? 'sprints' : 'tasks'
   const basePath = `/u/${username}/projects/${projectId}`
 
@@ -104,6 +143,8 @@ export default async function ProjectDetailPage({
           project={project}
           tasks={tasks as Task[]}
           username={username}
+          readOnly={isClient}
+          clientProjects={isClient ? clientProjects : undefined}
         />
       </aside>
 
@@ -133,12 +174,14 @@ export default async function ProjectDetailPage({
               sprints={sprints as Sprint[]}
               tasks={tasks as Task[]}
               projectId={projectId}
+              readOnly={isClient}
             />
           ) : (
             <TasksTab
               tasks={tasks as Task[]}
               sprints={sprints as Sprint[]}
               projectId={projectId}
+              readOnly={isClient}
             />
           )}
         </div>

@@ -2,10 +2,11 @@ import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/actions/auth'
 import { getPayload } from 'payload'
 import config from '@payload-config'
-import { ProjectsList } from '@/components/dashboard/ProjectsList'
+import { ProjectsCarousel } from '@/components/dashboard/ProjectsCarousel'
+import { ProjectsSidebar } from '@/components/dashboard/ProjectsSidebar'
 import { CreateProjectModal } from '@/components/dashboard/CreateProjectModal'
-import { FolderKanban, Mail, Plus } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import type { SerializedProject, SerializedSprint } from '@/components/dashboard/ProjectsCarousel'
+import type { ClientOption } from '@/components/dashboard/CreateProjectModal'
 
 export async function generateMetadata({
   params,
@@ -16,6 +17,41 @@ export async function generateMetadata({
   return {
     title: `Projects - ${username} - ORCACLUB Spaces`,
     description: 'View and manage your projects',
+  }
+}
+
+function serializeProject(p: any, sprints: SerializedSprint[] = []): SerializedProject {
+  return {
+    id: p.id,
+    name: p.name ?? '',
+    status: p.status ?? 'active',
+    description: p.description ?? null,
+    startDate: p.startDate ?? null,
+    endDate: p.endDate ?? null,
+    budget: p.budget ?? null,
+    updatedAt: p.updatedAt ?? new Date().toISOString(),
+    milestones: (p.milestones ?? []).map((m: any) => ({
+      id: m.id ?? '',
+      title: m.title ?? '',
+      completed: m.completed ?? false,
+    })),
+    sprints,
+  }
+}
+
+function serializeSprint(s: any): SerializedSprint {
+  const projectId = typeof s.project === 'string' ? s.project : s.project?.id ?? ''
+  return {
+    id: s.id,
+    name: s.name ?? '',
+    status: s.status ?? 'pending',
+    startDate: s.startDate ?? new Date().toISOString(),
+    endDate: s.endDate ?? new Date().toISOString(),
+    description: s.description ?? null,
+    goalDescription: s.goalDescription ?? null,
+    completedTasksCount: s.completedTasksCount ?? 0,
+    totalTasksCount: s.totalTasksCount ?? 0,
+    projectId,
   }
 }
 
@@ -39,119 +75,144 @@ export default async function ProjectsPage({
       collection: 'projects',
       where: user.role === 'admin' ? {} : { assignedTo: { contains: user.id } },
       depth: 2,
-      sort: '-createdAt',
+      sort: '-updatedAt',
       limit: 100,
     })
 
+    // Fetch all sprints for these projects in one query
+    const projectIds = projects.map(p => p.id)
+    const sprintsByProject: Record<string, SerializedSprint[]> = {}
+
+    if (projectIds.length > 0) {
+      const { docs: sprints } = await payload.find({
+        collection: 'sprints',
+        where: { project: { in: projectIds } },
+        depth: 0,
+        sort: 'startDate',
+        limit: 500,
+      })
+      for (const s of sprints) {
+        const pid = typeof s.project === 'string' ? s.project : (s.project as any)?.id ?? ''
+        if (!sprintsByProject[pid]) sprintsByProject[pid] = []
+        sprintsByProject[pid].push(serializeSprint(s))
+      }
+    }
+
+    const serialized = projects.map(p => serializeProject(p, sprintsByProject[p.id] ?? []))
+
+    // Fetch client accounts for the project create selector
+    const { docs: clientAccounts } = await payload.find({
+      collection: 'client-accounts',
+      depth: 0,
+      sort: 'name',
+      limit: 200,
+    })
+    const clientOptions: ClientOption[] = clientAccounts.map(c => ({ id: c.id, name: c.name }))
+
     return (
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 pt-10 pb-16 space-y-8">
-        {/* Page Header */}
-        <div className="flex items-end justify-between">
-          <div>
-            <p className="text-xs font-medium text-gray-600 uppercase tracking-widest mb-3">
-              {user.role === 'admin' ? 'Admin' : 'Dashboard'}
-            </p>
-            <h1 className="text-3xl font-semibold text-white tracking-tight">Projects</h1>
-            <p className="text-sm text-gray-500 mt-1.5">
-              {user.role === 'admin'
-                ? `${projects.length} total project${projects.length !== 1 ? 's' : ''}`
-                : `${projects.length} assigned project${projects.length !== 1 ? 's' : ''}`}
-            </p>
+      <>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 sm:pt-12 pb-20 space-y-8">
+          {/* Page header */}
+          <div className="flex items-end justify-between">
+            <div>
+              <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest mb-2">
+                {user.role === 'admin' ? 'Admin' : 'Dashboard'}
+              </p>
+              <h1 className="text-2xl sm:text-3xl font-semibold text-white tracking-tight">
+                Projects
+              </h1>
+              <p className="text-sm text-gray-600 mt-1">
+                {serialized.length} project{serialized.length !== 1 ? 's' : ''}
+                {' '}· sorted by latest activity
+              </p>
+            </div>
+            <CreateProjectModal clients={clientOptions} />
           </div>
-          <CreateProjectModal />
+
+          {/* Carousel */}
+          <ProjectsCarousel projects={serialized} username={username} />
         </div>
 
-        {/* Projects List */}
-        {projects.length > 0 ? (
-          <ProjectsList projects={projects} />
-        ) : (
-          <div className="rounded-xl border border-white/[0.08] bg-[#1c1c1c] p-12 text-center">
-            <p className="text-sm font-semibold text-white mb-2">No Projects Yet</p>
-            <p className="text-xs text-gray-500">
-              {user.role === 'admin'
-                ? 'No projects have been created yet.'
-                : 'You are not assigned to any projects at the moment.'}
-            </p>
-          </div>
-        )}
-      </div>
+        {/* Floating sidebar — all projects list */}
+        <ProjectsSidebar
+          projects={serialized}
+          username={username}
+          canCreate={true}
+        />
+      </>
     )
   }
 
   // ─── CLIENT VIEW ──────────────────────────────────────────────────────────
 
-  const clientAccount = user.clientAccount
-    ? await payload.findByID({
+  let clientAccount = null
+  if (user.clientAccount) {
+    try {
+      clientAccount = await payload.findByID({
         collection: 'client-accounts',
-        id: typeof user.clientAccount === 'string' ? user.clientAccount : user.clientAccount.id,
+        id: typeof user.clientAccount === 'string'
+          ? user.clientAccount
+          : (user.clientAccount as any).id,
         depth: 2,
       })
-    : null
+    } catch {
+      // ClientAccount was deleted but User still has a stale reference — treat as no account
+    }
+  }
 
   if (!clientAccount) {
     return (
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 pt-10 pb-16 flex items-center justify-center min-h-[60vh]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-16 flex items-center justify-center min-h-[60vh]">
         <div className="text-center max-w-sm">
           <p className="text-sm font-semibold text-white mb-2">Account Not Found</p>
           <p className="text-xs text-gray-500 mb-6">
             Your client account could not be found. Please contact support.
           </p>
-          <Button asChild size="sm" className="bg-intelligence-cyan text-black hover:bg-intelligence-cyan/90 font-medium text-xs">
-            <a href="/contact">Contact Support</a>
-          </Button>
+          <a
+            href="/contact"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-intelligence-cyan text-black text-xs font-medium hover:bg-intelligence-cyan/90 transition-colors"
+          >
+            Contact Support
+          </a>
         </div>
       </div>
     )
   }
 
-  const projects = clientAccount.projects || []
+  const rawProjects = clientAccount.projects || []
+  const serialized = rawProjects
+    .filter((p: any) => p && typeof p === 'object' && p.id)
+    .map((p: any) => serializeProject(p, []))
+    .sort((a: SerializedProject, b: SerializedProject) =>
+      new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+    )
 
   return (
-    <div className="max-w-7xl mx-auto px-6 lg:px-8 pt-10 pb-16 space-y-8">
-      {/* Page Header */}
-      <div className="flex items-end justify-between">
+    <>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 sm:pt-12 pb-20 space-y-8">
+        {/* Page header */}
         <div>
-          <p className="text-xs font-medium text-gray-600 uppercase tracking-widest mb-3">
+          <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest mb-2">
             Client Dashboard
           </p>
-          <h1 className="text-3xl font-semibold text-white tracking-tight">Your Projects</h1>
-          <p className="text-sm text-gray-500 mt-1.5">
-            {projects.length} project{projects.length !== 1 ? 's' : ''}
+          <h1 className="text-2xl sm:text-3xl font-semibold text-white tracking-tight">
+            Your Projects
+          </h1>
+          <p className="text-sm text-gray-600 mt-1">
+            {serialized.length} project{serialized.length !== 1 ? 's' : ''}
           </p>
         </div>
-        <Button
-          asChild
-          size="sm"
-          className="bg-intelligence-cyan text-black hover:bg-intelligence-cyan/90 font-medium text-xs"
-        >
-          <a href="/contact" className="gap-1.5">
-            <Plus className="size-3.5" />
-            New Project
-          </a>
-        </Button>
+
+        {/* Carousel */}
+        <ProjectsCarousel projects={serialized} username={username} />
       </div>
 
-      {/* Projects List */}
-      {projects.length > 0 ? (
-        <ProjectsList projects={projects} />
-      ) : (
-        <div className="rounded-xl border border-white/[0.08] bg-[#1c1c1c] p-12 text-center">
-          <p className="text-sm font-semibold text-white mb-2">No Projects Yet</p>
-          <p className="text-xs text-gray-500 mb-6 leading-relaxed">
-            You don't have any projects yet. Reach out to get started.
-          </p>
-          <Button
-            asChild
-            size="sm"
-            className="bg-intelligence-cyan text-black hover:bg-intelligence-cyan/90 font-medium text-xs"
-          >
-            <a href="/contact" className="gap-1.5">
-              <Mail className="size-3.5" />
-              Start a Project
-            </a>
-          </Button>
-        </div>
-      )}
-    </div>
+      {/* Floating sidebar — browse all projects */}
+      <ProjectsSidebar
+        projects={serialized}
+        username={username}
+        canCreate={false}
+      />
+    </>
   )
 }

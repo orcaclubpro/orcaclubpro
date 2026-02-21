@@ -34,7 +34,7 @@ export default async function DashboardLayout({
   return (
     <>
       {children}
-      <DashboardTaskManager username={username} />
+      <DashboardTaskManager username={username} userRole={user.role} />
     </>
   )
 }

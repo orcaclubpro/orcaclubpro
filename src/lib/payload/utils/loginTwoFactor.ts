@@ -22,117 +22,123 @@ export function getLoginCodeExpiry(): Date {
 }
 
 /**
- * Generate minimal branded HTML email template for login 2FA
+ * Generate minimal branded HTML email template for login 2FA.
+ *
+ * All styles are fully inlined — no <style> blocks — for maximum email client
+ * compatibility (Gmail strips class-based styles entirely).
  */
 export function generateLoginCodeEmailHTML(code: string, userName: string): string {
-  return `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Your Login Code - ORCACLUB</title>
-        <style>
-          body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            line-height: 1.6;
-            color: #e5e5e5;
-            background-color: #000000;
-            margin: 0;
-            padding: 0;
-          }
-          .container {
-            max-width: 500px;
-            margin: 40px auto;
-            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
-            border-radius: 12px;
-            border: 1px solid #67e8f9;
-            overflow: hidden;
-          }
-          .header {
-            background: linear-gradient(90deg, #67e8f9, #3b82f6);
-            padding: 24px;
-            text-align: center;
-          }
-          .brand {
-            font-size: 24px;
-            font-weight: bold;
-            color: #ffffff;
-            margin: 0;
-          }
-          .content {
-            padding: 32px 24px;
-          }
-          .greeting {
-            font-size: 16px;
-            margin-bottom: 16px;
-            color: #ffffff;
-          }
-          .code-container {
-            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
-            border: 2px solid #67e8f9;
-            border-radius: 8px;
-            padding: 24px;
-            text-align: center;
-            margin: 24px 0;
-          }
-          .code {
-            font-size: 36px;
-            font-weight: bold;
-            letter-spacing: 6px;
-            color: #67e8f9;
-            font-family: 'Courier New', monospace;
-            text-shadow: 0 0 10px rgba(103, 232, 249, 0.5);
-          }
-          .message {
-            font-size: 14px;
-            line-height: 1.6;
-            margin: 16px 0;
-            color: #d1d5db;
-          }
-          .footer {
-            background: #0a0a0a;
-            padding: 20px;
-            text-align: center;
-            color: #9ca3af;
-            font-size: 12px;
-            border-top: 1px solid #374151;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1 class="brand">ORCACLUB</h1>
-          </div>
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Login Code — ORCACLUB</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&display=swap" rel="stylesheet">
+</head>
+<body style="margin:0;padding:0;background-color:#000000;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
 
-          <div class="content">
-            <p class="greeting">Hello ${userName},</p>
+  <!-- Outer wrapper -->
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+    <tr>
+      <td style="padding:48px 20px;">
 
-            <p class="message">
-              Your login verification code is:
-            </p>
+        <!-- Card -->
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="max-width:520px;width:100%;background-color:#080808;border:1px solid #111111;">
 
-            <div class="code-container">
-              <div class="code">${code}</div>
-            </div>
+          <!-- Header: wordmark -->
+          <tr>
+            <td style="padding:32px 40px 24px 40px;border-bottom:1px solid #0f0f0f;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                  <td>
+                    <span style="font-family:'Cinzel Decorative',Georgia,serif;font-size:13px;font-weight:700;color:#333333;">ORCA</span><span style="font-family:'Cinzel Decorative',Georgia,serif;font-size:13px;font-weight:700;color:#67e8f9;">CLUB</span>
+                  </td>
+                  <td align="right">
+                    <span style="font-size:10px;letter-spacing:0.4em;color:#1f1f1f;text-transform:uppercase;font-weight:300;">Secure Login</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
 
-            <p class="message">
-              This code will expire in <strong>10 minutes</strong>.
-            </p>
+          <!-- Body -->
+          <tr>
+            <td style="padding:40px 40px 0 40px;">
 
-            <p class="message">
-              If you didn't attempt to log in, please ignore this email.
-            </p>
-          </div>
+              <!-- Eyebrow label -->
+              <p style="margin:0 0 14px 0;font-size:10px;letter-spacing:0.35em;text-transform:uppercase;color:#3a3a3a;font-weight:400;">Login Verification</p>
 
-          <div class="footer">
-            <p style="margin: 0;">ORCACLUB est 2025</p>
-          </div>
-        </div>
-      </body>
-    </html>
-  `
+              <!-- Heading -->
+              <p style="margin:0;font-size:22px;font-weight:200;color:#ffffff;letter-spacing:0.01em;line-height:1.3;">Your login code.</p>
+
+              <!-- Cyan accent hairline -->
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin-top:18px;">
+                <tr>
+                  <td style="width:24px;height:1px;line-height:1px;font-size:1px;background-color:#2a6068;">&nbsp;</td>
+                </tr>
+              </table>
+
+              <!-- Greeting -->
+              <p style="margin:32px 0 0 0;font-size:13px;color:#555555;line-height:1.7;font-weight:300;">Hello ${userName},</p>
+
+              <!-- Body copy -->
+              <p style="margin:12px 0 0 0;font-size:13px;color:#555555;line-height:1.8;font-weight:300;">Use the code below to complete your login. It expires in <span style="color:#888888;">10 minutes</span>.</p>
+
+            </td>
+          </tr>
+
+          <!-- Code box -->
+          <tr>
+            <td style="padding:32px 40px 0 40px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                  <td style="background-color:#111111;border:1px solid #67e8f9;padding:24px 40px;text-align:center;">
+                    <p style="margin:0;font-size:36px;font-weight:700;letter-spacing:8px;color:#67e8f9;font-family:'Courier New',monospace;">${code}</p>
+                    <p style="margin:8px 0 0 0;font-size:10px;letter-spacing:0.35em;text-transform:uppercase;color:#3a3a3a;">Login Code</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Security note -->
+          <tr>
+            <td style="padding:28px 40px 40px 40px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                  <td style="border-top:1px solid #0f0f0f;padding-top:24px;">
+                    <p style="margin:0;font-size:11px;color:#2e2e2e;line-height:1.7;font-weight:300;">If you didn't attempt to log in, you can safely ignore this email. Your account remains secure.</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer bar -->
+          <tr>
+            <td style="padding:18px 40px;border-top:1px solid #0a0a0a;background-color:#050505;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                  <td>
+                    <span style="font-family:'Cinzel Decorative',Georgia,serif;font-size:10px;font-weight:700;color:#1f1f1f;">ORCA</span><span style="font-family:'Cinzel Decorative',Georgia,serif;font-size:10px;font-weight:700;color:#1a3a3e;">CLUB</span>
+                  </td>
+                  <td align="right">
+                    <a href="https://orcaclub.pro" style="font-size:10px;color:#1f1f1f;text-decoration:none;font-weight:300;letter-spacing:0.02em;">orcaclub.pro</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>`
 }
 
 /**
@@ -165,7 +171,7 @@ export async function sendLoginCodeEmail(
   try {
     await payload.sendEmail({
       to: email,
-      from: process.env.EMAIL_FROM || 'chance@orcaclub.pro',
+      from: process.env.EMAIL_FROM || 'carbon@orcaclub.pro',
       subject: `${code} - Your ORCACLUB login code`,
       html: generateLoginCodeEmailHTML(code, name),
       text: generateLoginCodeEmailText(code, name),

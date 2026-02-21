@@ -82,6 +82,7 @@ interface TasksTabProps {
   tasks: Task[]
   sprints: Sprint[]
   projectId: string
+  readOnly?: boolean
 }
 
 type ViewMode = 'status' | 'sprint'
@@ -93,9 +94,10 @@ interface TaskRowProps {
   task: Task
   updating: boolean
   onCycleStatus: (task: Task) => void
+  readOnly?: boolean
 }
 
-function TaskRow({ task, updating, onCycleStatus }: TaskRowProps) {
+function TaskRow({ task, updating, onCycleStatus, readOnly }: TaskRowProps) {
   const priority = (task.priority ?? 'medium') as Priority
   const pCfg = priorityConfig[priority]
   const overdue = isOverdue(task.dueDate) && task.status !== 'completed'
@@ -104,15 +106,21 @@ function TaskRow({ task, updating, onCycleStatus }: TaskRowProps) {
     <div
       className={`flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/[0.05] transition-colors ${updating ? 'opacity-50 pointer-events-none' : ''}`}
     >
-      {/* Status dot — click to cycle */}
-      <button
-        type="button"
-        onClick={() => onCycleStatus(task)}
-        title={`Status: ${statusLabel[task.status]} — click to advance`}
-        className="shrink-0 flex items-center justify-center size-5 rounded-full hover:scale-110 transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-intelligence-cyan/50"
-      >
-        <span className={`size-1.5 rounded-full ${statusDot[task.status]}`} />
-      </button>
+      {/* Status dot — click to cycle (disabled in readOnly) */}
+      {readOnly ? (
+        <span className="shrink-0 flex items-center justify-center size-5">
+          <span className={`size-1.5 rounded-full ${statusDot[task.status]}`} />
+        </span>
+      ) : (
+        <button
+          type="button"
+          onClick={() => onCycleStatus(task)}
+          title={`Status: ${statusLabel[task.status]} — click to advance`}
+          className="shrink-0 flex items-center justify-center size-5 rounded-full hover:scale-110 transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-intelligence-cyan/50"
+        >
+          <span className={`size-1.5 rounded-full ${statusDot[task.status]}`} />
+        </button>
+      )}
 
       {/* Title */}
       <span className="flex-1 min-w-0 text-sm text-white truncate">{task.title}</span>
@@ -384,7 +392,7 @@ const STATUS_SECTIONS: { status: Task['status']; dotColor: string }[] = [
   { status: 'cancelled', dotColor: 'bg-red-400' },
 ]
 
-export function TasksTab({ tasks, sprints, projectId }: TasksTabProps) {
+export function TasksTab({ tasks, sprints, projectId, readOnly }: TasksTabProps) {
   const router = useRouter()
   const [sheetOpen, setSheetOpen] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('status')
@@ -427,6 +435,7 @@ export function TasksTab({ tasks, sprints, projectId }: TasksTabProps) {
                   task={task}
                   updating={updatingIds.has(task.id)}
                   onCycleStatus={handleCycleStatus}
+                  readOnly={readOnly}
                 />
               ))}
             </div>
@@ -482,6 +491,7 @@ export function TasksTab({ tasks, sprints, projectId }: TasksTabProps) {
                   task={task}
                   updating={updatingIds.has(task.id)}
                   onCycleStatus={handleCycleStatus}
+                  readOnly={readOnly}
                 />
               ))}
             </div>
@@ -504,6 +514,7 @@ export function TasksTab({ tasks, sprints, projectId }: TasksTabProps) {
                   task={task}
                   updating={updatingIds.has(task.id)}
                   onCycleStatus={handleCycleStatus}
+                  readOnly={readOnly}
                 />
               ))}
             </div>
@@ -521,23 +532,27 @@ export function TasksTab({ tasks, sprints, projectId }: TasksTabProps) {
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <p className="text-sm font-medium text-gray-400 mb-1">No tasks yet</p>
           <p className="text-xs text-gray-600 mb-5">
-            Create your first task to start tracking work.
+            {readOnly ? 'No tasks have been added to this project yet.' : 'Create your first task to start tracking work.'}
           </p>
-          <Button
-            onClick={() => setSheetOpen(true)}
-            className="bg-intelligence-cyan text-black hover:bg-intelligence-cyan/90 font-medium text-sm h-8 px-4"
-          >
-            <Plus className="size-3.5 mr-1.5" />
-            New Task
-          </Button>
+          {!readOnly && (
+            <Button
+              onClick={() => setSheetOpen(true)}
+              className="bg-intelligence-cyan text-black hover:bg-intelligence-cyan/90 font-medium text-sm h-8 px-4"
+            >
+              <Plus className="size-3.5 mr-1.5" />
+              New Task
+            </Button>
+          )}
         </div>
 
-        <CreateTaskSheet
-          projectId={projectId}
-          sprints={sprints}
-          open={sheetOpen}
-          onOpenChange={setSheetOpen}
-        />
+        {!readOnly && (
+          <CreateTaskSheet
+            projectId={projectId}
+            sprints={sprints}
+            open={sheetOpen}
+            onOpenChange={setSheetOpen}
+          />
+        )}
       </>
     )
   }
@@ -580,14 +595,16 @@ export function TasksTab({ tasks, sprints, projectId }: TasksTabProps) {
             </button>
           </div>
 
-          {/* New Task button */}
-          <Button
-            onClick={() => setSheetOpen(true)}
-            className="bg-intelligence-cyan text-black hover:bg-intelligence-cyan/90 font-medium text-xs h-7 px-3"
-          >
-            <Plus className="size-3 mr-1" />
-            New Task
-          </Button>
+          {/* New Task button — hidden in readOnly mode */}
+          {!readOnly && (
+            <Button
+              onClick={() => setSheetOpen(true)}
+              className="bg-intelligence-cyan text-black hover:bg-intelligence-cyan/90 font-medium text-xs h-7 px-3"
+            >
+              <Plus className="size-3 mr-1" />
+              New Task
+            </Button>
+          )}
         </div>
       </div>
 
@@ -596,12 +613,14 @@ export function TasksTab({ tasks, sprints, projectId }: TasksTabProps) {
         {viewMode === 'status' ? renderByStatus() : renderBySprint()}
       </div>
 
-      <CreateTaskSheet
-        projectId={projectId}
-        sprints={sprints}
-        open={sheetOpen}
-        onOpenChange={setSheetOpen}
-      />
+      {!readOnly && (
+        <CreateTaskSheet
+          projectId={projectId}
+          sprints={sprints}
+          open={sheetOpen}
+          onOpenChange={setSheetOpen}
+        />
+      )}
     </>
   )
 }

@@ -2,9 +2,9 @@
 
 import * as React from "react"
 import Link from "next/link"
-import Image from "next/image"
 import { usePathname } from "next/navigation"
-import { Menu, X, ChevronDown, ArrowRight, Clock, Code2, Palette, Server, Search, BarChart3, Zap, Plug, Rocket, ShoppingBag, Target } from "lucide-react"
+import { Menu, X, ChevronDown, ArrowRight, Clock, Code2, Palette, Server, Search, BarChart3, Zap, Plug, Rocket, ShoppingBag, Target, User, LogOut, LayoutDashboard } from "lucide-react"
+import { logoutAction } from "@/actions/auth"
 import { Cinzel_Decorative } from "next/font/google"
 
 const gothic = Cinzel_Decorative({ weight: "700", subsets: ["latin"] })
@@ -51,7 +51,32 @@ interface HeaderUser {
 export function Header({ user }: { user?: HeaderUser | null } = {}) {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false)
   const [dropdownOpen, setDropdownOpen] = React.useState(false)
+  const [profileOpen, setProfileOpen] = React.useState(false)
   const pathname = usePathname()
+  const dropdownCloseTimer = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const profileCloseTimer = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+
+  const openDropdown = () => {
+    clearTimeout(dropdownCloseTimer.current)
+    setDropdownOpen(true)
+  }
+  const closeDropdown = () => {
+    dropdownCloseTimer.current = setTimeout(() => setDropdownOpen(false), 150)
+  }
+
+  const openProfile = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    clearTimeout(profileCloseTimer.current)
+    clearTimeout(dropdownCloseTimer.current)
+    setDropdownOpen(false)
+    setProfileOpen(true)
+  }
+  const closeProfile = () => {
+    profileCloseTimer.current = setTimeout(() => setProfileOpen(false), 150)
+  }
+  const keepProfile = () => {
+    clearTimeout(profileCloseTimer.current)
+  }
 
   // Resolve the auth nav item based on the current user's role/username
   const dashboardHref = user?.username
@@ -92,21 +117,14 @@ export function Header({ user }: { user?: HeaderUser | null } = {}) {
     <>
       {/* Header */}
       <header
-        className="fixed top-0 left-0 right-0 z-50 bg-black/70 backdrop-blur-xl border-b border-white/10"
-        onMouseEnter={() => setDropdownOpen(true)}
-        onMouseLeave={() => setDropdownOpen(false)}
+        className="fixed top-0 left-0 right-0 z-50 bg-black/70 backdrop-blur-xl border-b border-white/10 overflow-visible"
+        onMouseEnter={openDropdown}
+        onMouseLeave={closeDropdown}
       >
         <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-8">
           {/* Logo */}
           <div className="flex flex-1">
-            <Link href="/" className="flex items-center gap-3">
-              <Image
-                src="/orcaclubpro.png"
-                alt="ORCACLUB"
-                width={40}
-                height={40}
-                className="h-10 w-10"
-              />
+            <Link href="/">
               <span className={`${gothic.className} text-xl text-white`}>
                 ORCACLUB
               </span>
@@ -114,8 +132,8 @@ export function Header({ user }: { user?: HeaderUser | null } = {}) {
           </div>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex md:gap-x-6">
-            {desktopNavigation.map((item) => (
+          <div className="hidden md:flex md:gap-x-6 items-center">
+            {desktopNavigation.slice(0, -1).map((item) => (
               <Link
                 key={item.name}
                 href={item.href}
@@ -124,6 +142,53 @@ export function Header({ user }: { user?: HeaderUser | null } = {}) {
                 {item.name}
               </Link>
             ))}
+
+            {/* Profile icon / Login */}
+            {dashboardHref ? (
+            <div
+              className="relative"
+              onMouseEnter={openProfile}
+              onMouseLeave={closeProfile}
+            >
+              <Link
+                href={authNavItem.href}
+                className="flex items-center justify-center text-gray-400 hover:text-white transition-all duration-200"
+              >
+                <User className="w-6 h-6" />
+              </Link>
+
+              {profileOpen && (
+                <div className="absolute right-0 top-full z-50" onMouseEnter={keepProfile} onMouseLeave={closeProfile}>
+                  <div className="mt-2 bg-black/95 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden min-w-[160px] shadow-xl">
+                    <Link
+                      href={authNavItem.href}
+                      className="flex items-center gap-2.5 px-4 py-3 text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-colors"
+                      onClick={() => setProfileOpen(false)}
+                    >
+                      <LayoutDashboard className="w-4 h-4 text-cyan-400/70" />
+                      {authNavItem.name}
+                    </Link>
+                    {dashboardHref && (
+                      <button
+                        onClick={() => { logoutAction(); setProfileOpen(false) }}
+                        className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-gray-400 hover:text-white hover:bg-white/5 transition-colors border-t border-white/[0.06]"
+                      >
+                        <LogOut className="w-4 h-4 text-gray-500" />
+                        Logout
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+            ) : (
+              <Link
+                href="/login"
+                className="text-sm font-medium text-gray-300 hover:text-white transition-colors"
+              >
+                Login
+              </Link>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -142,15 +207,14 @@ export function Header({ user }: { user?: HeaderUser | null } = {}) {
             </button>
           </div>
         </nav>
-      </header>
 
-      {/* Desktop Dropdown Menu */}
-      {dropdownOpen && (
-        <div
-          className="hidden md:block fixed left-0 right-0 top-[73px] bg-black/95 backdrop-blur-xl border-b border-white/10 z-40"
-          onMouseEnter={() => setDropdownOpen(true)}
-          onMouseLeave={() => setDropdownOpen(false)}
-        >
+        {/* Desktop Dropdown Menu */}
+        {dropdownOpen && (
+          <div
+            className="hidden md:block absolute left-0 right-0 top-full bg-black/95 backdrop-blur-xl border-b border-white/10"
+            onMouseEnter={openDropdown}
+            onMouseLeave={closeDropdown}
+          >
           <div className="max-w-7xl mx-auto px-6 py-8">
             <div className="grid grid-cols-12 gap-8">
               {/* Services */}
@@ -249,8 +313,9 @@ export function Header({ user }: { user?: HeaderUser | null } = {}) {
               </div>
             </div>
           </div>
-        </div>
-      )}
+          </div>
+        )}
+      </header>
 
       {/* Mobile menu overlay */}
       {mobileMenuOpen && (

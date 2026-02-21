@@ -25,15 +25,44 @@ export async function loginAction({
     })
 
     const role = result.user?.role
-    const username = result.user?.username
+    let username = result.user?.username
 
-    // Client users MUST have a username to access dashboard
+    // Client users must have a username to access /u/[username].
+    // If one was never generated (e.g. account created before the hook existed, or
+    // created without firstName/lastName), generate and persist one now.
     if (role === 'client' && !username) {
-      await logout({ config })
-      throw new Error('Your account does not have a username. Please contact support.')
+      const payload = await getPayload({ config })
+      const email = result.user?.email ?? ''
+      const emailPrefix = email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '') || 'client'
+
+      // Ensure uniqueness
+      let candidate = emailPrefix
+      let counter = 1
+      while (true) {
+        const existing = await payload.find({
+          collection: 'users',
+          where: { username: { equals: candidate } },
+          limit: 1,
+        })
+        if (existing.docs.length === 0) break
+        // It's already their own username (shouldn't happen here, but be safe)
+        if (String(existing.docs[0].id) === String(result.user?.id)) break
+        candidate = `${emailPrefix}${counter}`
+        counter++
+      }
+
+      await payload.update({
+        collection: 'users',
+        id: result.user!.id,
+        data: { username: candidate },
+        overrideAccess: true,
+        context: { skipNameValidation: true },
+      })
+
+      username = candidate
     }
 
-    // Admin/User roles can login even without username (will use admin panel or their username)
+    // Admin/User roles can login even without username (they use /admin or their username)
     return {
       success: true,
       username,
@@ -53,12 +82,12 @@ export async function loginAction({
 export async function logoutAction() {
   try {
     await logout({ config })
-    redirect('/login')
   } catch (error) {
     throw new Error(
       `Logout failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
     )
   }
+  redirect('/login')
 }
 
 /**

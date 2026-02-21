@@ -623,6 +623,10 @@ export interface Order {
    */
   stripePaymentIntentId?: string | null;
   /**
+   * Payment due date (from Stripe invoice or manually set)
+   */
+  dueDate?: string | null;
+  /**
    * Order line items
    */
   lineItems: {
@@ -1374,6 +1378,7 @@ export interface OrdersSelect<T extends boolean = true> {
   stripeInvoiceUrl?: T;
   stripeCustomerId?: T;
   stripePaymentIntentId?: T;
+  dueDate?: T;
   lineItems?:
     | T
     | {

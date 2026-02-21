@@ -34,13 +34,18 @@ export default async function OrdersPage({
   const payload = await getPayload({ config })
 
   // Fetch client account
-  const clientAccount = user.clientAccount
-    ? await payload.findByID({
+  let clientAccount = null
+  if (user.clientAccount) {
+    try {
+      clientAccount = await payload.findByID({
         collection: 'client-accounts',
-        id: typeof user.clientAccount === 'string' ? user.clientAccount : user.clientAccount.id,
+        id: typeof user.clientAccount === 'string' ? user.clientAccount : (user.clientAccount as any).id,
         depth: 1,
       })
-    : null
+    } catch {
+      // ClientAccount was deleted but User still has a stale reference — treat as no account
+    }
+  }
 
   if (!clientAccount) {
     return (

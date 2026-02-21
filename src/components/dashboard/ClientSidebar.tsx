@@ -15,13 +15,17 @@ import {
   SlidersHorizontal,
   Loader2,
   Check,
+  UserPlus,
   KeyRound,
+  Shield,
+  User,
 } from 'lucide-react'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { updateClientAccount } from '@/actions/clients'
+import { updateClientAccount, inviteClientUser } from '@/actions/clients'
 
 export interface ClientSidebarProps {
   id: string
@@ -35,7 +39,10 @@ export interface ClientSidebarProps {
   ordersCount: number
   projectsCount: number
   stripeCustomerId?: string | null
+  /** Staff (admin/user role) assigned to this account */
   teamMembers: Array<{ id: string; name: string }>
+  /** Client-role users linked to this account */
+  clientUsers?: Array<{ id: string; name: string; email: string }>
   username: string
 }
 
@@ -52,8 +59,271 @@ function fmt(n: number) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n)
 }
 
+// ── Team Modify Modal ───────────────────────────────────────────────────────────
+
+function TeamModal({
+  open,
+  onClose,
+  clientAccountId,
+  clientAccountName,
+  teamMembers,
+  clientUsers,
+}: {
+  open: boolean
+  onClose: () => void
+  clientAccountId: string
+  clientAccountName: string
+  teamMembers: Array<{ id: string; name: string }>
+  clientUsers: Array<{ id: string; name: string; email: string }>
+}) {
+  const router = useRouter()
+  const [tab, setTab] = useState<'admin' | 'clients'>('admin')
+
+  // ── Add client form ──
+  const [addForm, setAddForm] = useState({ firstName: '', lastName: '', email: '' })
+  const [addLoading, setAddLoading] = useState(false)
+  const [addError, setAddError] = useState<string | null>(null)
+  const [addSuccess, setAddSuccess] = useState<string | null>(null) // name of added person
+
+  // ── Per-client password reset ──
+  const [resetStates, setResetStates] = useState<Record<string, 'idle' | 'loading' | 'sent' | 'error'>>({})
+
+  function resetAddForm() {
+    setAddForm({ firstName: '', lastName: '', email: '' })
+    setAddError(null)
+    setAddSuccess(null)
+  }
+
+  async function handleAddClient() {
+    if (!addForm.firstName.trim() || !addForm.lastName.trim() || !addForm.email.trim()) {
+      setAddError('All fields are required')
+      return
+    }
+    setAddLoading(true)
+    setAddError(null)
+    const result = await inviteClientUser({
+      clientAccountId,
+      email: addForm.email.trim(),
+      firstName: addForm.firstName.trim(),
+      lastName: addForm.lastName.trim(),
+    })
+    setAddLoading(false)
+    if (result.success) {
+      setAddSuccess(addForm.firstName.trim())
+      router.refresh()
+    } else {
+      setAddError(result.error ?? 'Failed to add client')
+    }
+  }
+
+  async function handlePasswordReset(email: string) {
+    setResetStates((s) => ({ ...s, [email]: 'loading' }))
+    try {
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+      setResetStates((s) => ({ ...s, [email]: res.ok ? 'sent' : 'error' }))
+    } catch {
+      setResetStates((s) => ({ ...s, [email]: 'error' }))
+    }
+    setTimeout(() => setResetStates((s) => ({ ...s, [email]: 'idle' })), 3000)
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) { onClose(); resetAddForm() } }}>
+      <DialogContent className="bg-[#111] border border-white/[0.10] text-white p-0 overflow-hidden sm:max-w-[520px] gap-0">
+        <DialogTitle className="sr-only">Manage Team</DialogTitle>
+
+        {/* Header */}
+        <div className="px-7 pt-7 pb-0">
+          <p className="text-xs uppercase tracking-widest text-gray-600 font-semibold mb-1">Team</p>
+          <h3 className="text-lg font-bold text-white mb-5">
+            {clientAccountName}
+          </h3>
+
+          {/* Tabs */}
+          <div className="flex gap-1 border-b border-white/[0.06]">
+            {([
+              { key: 'admin' as const,   label: 'Admin / Staff', Icon: Shield, count: teamMembers.length  },
+              { key: 'clients' as const, label: 'Clients',       Icon: User,   count: clientUsers.length  },
+            ]).map(({ key, label, Icon, count }) => (
+              <button
+                key={key}
+                onClick={() => setTab(key)}
+                className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold border-b-2 -mb-px transition-colors ${
+                  tab === key
+                    ? 'border-[#67e8f9] text-[#67e8f9]'
+                    : 'border-transparent text-gray-600 hover:text-gray-400'
+                }`}
+              >
+                <Icon className="size-3.5" />
+                {label}
+                <span className={`text-[10px] tabular-nums px-1.5 py-0.5 rounded-full font-normal ${
+                  tab === key ? 'bg-[#67e8f9]/10 text-[#67e8f9]' : 'bg-white/[0.04] text-gray-600'
+                }`}>
+                  {count}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Tab content */}
+        <div className="px-7 py-5 min-h-[200px] max-h-[420px] overflow-y-auto">
+
+          {/* Admin / Staff tab */}
+          {tab === 'admin' && (
+            <div className="space-y-2">
+              {teamMembers.length === 0 ? (
+                <p className="text-sm text-gray-600 py-4 text-center">No staff assigned to this account.</p>
+              ) : (
+                teamMembers.map((m) => (
+                  <div key={m.id} className="flex items-center gap-3 rounded-lg bg-white/[0.02] border border-white/[0.06] px-4 py-3">
+                    <div className="size-7 rounded-lg bg-white/[0.06] flex items-center justify-center shrink-0">
+                      <Shield className="size-3.5 text-gray-500" />
+                    </div>
+                    <span className="text-sm text-gray-300 truncate">{m.name}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+
+          {/* Clients tab */}
+          {tab === 'clients' && (
+            <div className="space-y-5">
+              {/* Existing clients */}
+              <div className="space-y-2">
+                {clientUsers.length === 0 ? (
+                  <p className="text-sm text-gray-600 py-2 text-center">No client users yet.</p>
+                ) : (
+                  clientUsers.map((u) => {
+                    const rs = resetStates[u.email] ?? 'idle'
+                    return (
+                      <div key={u.id} className="flex items-center gap-3 rounded-lg bg-white/[0.02] border border-white/[0.06] px-4 py-3">
+                        <div className="size-7 rounded-lg bg-[#67e8f9]/[0.07] flex items-center justify-center shrink-0">
+                          <User className="size-3.5 text-[#67e8f9]/60" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-gray-300 truncate">{u.name}</p>
+                          <p className="text-[11px] text-gray-600 truncate">{u.email}</p>
+                        </div>
+                        <button
+                          onClick={() => handlePasswordReset(u.email)}
+                          disabled={rs === 'loading' || rs === 'sent'}
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-white/[0.08] text-[10px] text-gray-500 hover:text-white hover:border-white/[0.14] hover:bg-white/[0.04] transition-all disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                        >
+                          {rs === 'loading' ? (
+                            <Loader2 className="size-3 animate-spin" />
+                          ) : rs === 'sent' ? (
+                            <Check className="size-3 text-emerald-400" />
+                          ) : (
+                            <KeyRound className="size-3" />
+                          )}
+                          <span className={rs === 'sent' ? 'text-emerald-400' : rs === 'error' ? 'text-red-400' : ''}>
+                            {rs === 'loading' ? 'Sending' : rs === 'sent' ? 'Sent' : rs === 'error' ? 'Failed' : 'Reset'}
+                          </span>
+                        </button>
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+
+              {/* Divider */}
+              <div className="border-t border-white/[0.06]" />
+
+              {/* Add client form */}
+              {addSuccess ? (
+                <div className="flex flex-col items-center text-center gap-3 py-4">
+                  <div className="size-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                    <Check className="size-5 text-emerald-400" strokeWidth={2.5} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-white">Invite sent</p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      <span className="text-gray-300">{addSuccess}</span> will receive a setup email.
+                    </p>
+                  </div>
+                  <button
+                    onClick={resetAddForm}
+                    className="text-xs text-[#67e8f9] hover:underline mt-1"
+                  >
+                    Add another
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-[10px] uppercase tracking-widest text-gray-600 font-semibold">Add Client</p>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div className="space-y-1.5">
+                      <Label className="text-gray-500 text-xs">First name</Label>
+                      <Input
+                        value={addForm.firstName}
+                        onChange={(e) => setAddForm((f) => ({ ...f, firstName: e.target.value }))}
+                        placeholder="Jane"
+                        className="bg-white/[0.04] border-white/[0.08] text-white placeholder:text-gray-700 h-9 text-sm focus-visible:ring-[#67e8f9]/30"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-gray-500 text-xs">Last name</Label>
+                      <Input
+                        value={addForm.lastName}
+                        onChange={(e) => setAddForm((f) => ({ ...f, lastName: e.target.value }))}
+                        placeholder="Doe"
+                        className="bg-white/[0.04] border-white/[0.08] text-white placeholder:text-gray-700 h-9 text-sm focus-visible:ring-[#67e8f9]/30"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-gray-500 text-xs">Email</Label>
+                    <Input
+                      type="email"
+                      value={addForm.email}
+                      onChange={(e) => setAddForm((f) => ({ ...f, email: e.target.value }))}
+                      placeholder="jane@example.com"
+                      className="bg-white/[0.04] border-white/[0.08] text-white placeholder:text-gray-700 h-9 text-sm focus-visible:ring-[#67e8f9]/30"
+                      onKeyDown={(e) => e.key === 'Enter' && handleAddClient()}
+                    />
+                  </div>
+                  {addError && (
+                    <p className="text-xs text-red-400">{addError}</p>
+                  )}
+                  <Button
+                    onClick={handleAddClient}
+                    disabled={addLoading}
+                    className="w-full bg-[#67e8f9] hover:bg-[#67e8f9]/90 text-black font-semibold gap-2 h-9"
+                  >
+                    {addLoading ? (
+                      <><Loader2 className="size-3.5 animate-spin" /> Adding...</>
+                    ) : (
+                      <><UserPlus className="size-3.5" /> Add &amp; Send Setup Email</>
+                    )}
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-end px-7 py-4 border-t border-white/[0.06]">
+          <Button
+            variant="ghost"
+            onClick={() => { onClose(); resetAddForm() }}
+            className="text-gray-500 hover:text-white hover:bg-white/[0.05] text-sm"
+          >
+            Close
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 // ── Shared sidebar content ─────────────────────────────────────────────────────
-// Rendered inline on desktop and inside a Sheet on mobile.
 
 export function ClientSidebarContent(props: ClientSidebarProps) {
   const {
@@ -69,6 +339,7 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
     projectsCount,
     stripeCustomerId,
     teamMembers,
+    clientUsers = [],
     username,
   } = props
 
@@ -76,16 +347,15 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
   const [editing, setEditing] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [resetState, setResetState] = useState<'idle' | 'loading' | 'sent' | 'error'>('idle')
-  const [form, setForm] = useState({
-    name,
-    firstName,
-    lastName,
-    company: company ?? '',
-  })
+  const [teamModalOpen, setTeamModalOpen] = useState(false)
+  const [form, setForm] = useState({ name, firstName, lastName, company: company ?? '' })
 
   const initials = getInitials(name)
   const hasOutstanding = accountBalance > 0
+  const allUsers = [
+    ...teamMembers.map((m) => ({ ...m, type: 'staff' as const })),
+    ...clientUsers.map((u) => ({ ...u, type: 'client' as const })),
+  ]
 
   async function handleSave() {
     setLoading(true)
@@ -110,21 +380,6 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
     setForm({ name, firstName, lastName, company: company ?? '' })
     setError(null)
     setEditing(false)
-  }
-
-  async function handleSendPasswordReset() {
-    setResetState('loading')
-    try {
-      const res = await fetch('/api/auth/forgot-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      })
-      setResetState(res.ok ? 'sent' : 'error')
-    } catch {
-      setResetState('error')
-    }
-    setTimeout(() => setResetState('idle'), 3000)
   }
 
   return (
@@ -168,9 +423,7 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1">
-                <Label className="text-gray-600 text-[10px] uppercase tracking-wider font-semibold">
-                  First
-                </Label>
+                <Label className="text-gray-600 text-[10px] uppercase tracking-wider font-semibold">First</Label>
                 <Input
                   value={form.firstName}
                   onChange={(e) => {
@@ -181,9 +434,7 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-gray-600 text-[10px] uppercase tracking-wider font-semibold">
-                  Last
-                </Label>
+                <Label className="text-gray-600 text-[10px] uppercase tracking-wider font-semibold">Last</Label>
                 <Input
                   value={form.lastName}
                   onChange={(e) => {
@@ -195,9 +446,7 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
               </div>
             </div>
             <div className="space-y-1">
-              <Label className="text-gray-600 text-[10px] uppercase tracking-wider font-semibold">
-                Display Name
-              </Label>
+              <Label className="text-gray-600 text-[10px] uppercase tracking-wider font-semibold">Display Name</Label>
               <Input
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
@@ -205,9 +454,7 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-gray-600 text-[10px] uppercase tracking-wider font-semibold">
-                Company
-              </Label>
+              <Label className="text-gray-600 text-[10px] uppercase tracking-wider font-semibold">Company</Label>
               <Input
                 value={form.company}
                 onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))}
@@ -262,17 +509,15 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
         {/* Metrics 2×2 */}
         <div className="grid grid-cols-2 gap-2">
           {[
-            { label: 'Revenue',  value: fmt(totalRevenue),         Icon: TrendingUp,  amber: false          },
-            { label: 'Balance',  value: fmt(accountBalance),        Icon: DollarSign,  amber: hasOutstanding },
-            { label: 'Orders',   value: String(ordersCount),        Icon: ShoppingCart, amber: false         },
-            { label: 'Projects', value: String(projectsCount),      Icon: FolderKanban, amber: false         },
+            { label: 'Revenue',  value: fmt(totalRevenue),    Icon: TrendingUp,   amber: false          },
+            { label: 'Balance',  value: fmt(accountBalance),  Icon: DollarSign,   amber: hasOutstanding },
+            { label: 'Orders',   value: String(ordersCount),  Icon: ShoppingCart, amber: false          },
+            { label: 'Projects', value: String(projectsCount),Icon: FolderKanban, amber: false          },
           ].map(({ label, value, Icon, amber }) => (
             <div key={label} className="rounded-lg bg-[#1c1c1c] border border-white/[0.08] p-3">
               <div className="flex items-center gap-1.5 mb-1.5">
                 <Icon className="size-3 text-gray-700" />
-                <span className="text-[10px] uppercase tracking-widest text-gray-600 font-semibold">
-                  {label}
-                </span>
+                <span className="text-[10px] uppercase tracking-widest text-gray-600 font-semibold">{label}</span>
               </div>
               <p className={`text-sm font-bold font-mono tabular-nums truncate ${amber ? 'text-amber-400' : 'text-white'}`}>
                 {value}
@@ -299,48 +544,63 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
         </div>
 
         {/* Team */}
-        {teamMembers.length > 0 && (
-          <div className="space-y-2.5">
-            <p className="text-[10px] uppercase tracking-widest text-gray-600 font-semibold">Team</p>
-            <div className="space-y-2">
-              {teamMembers.map((member) => (
-                <div key={member.id} className="flex items-center gap-2 text-gray-500 text-xs">
-                  <Users className="size-3 shrink-0" />
-                  <span className="truncate">{member.name}</span>
+        <div className="space-y-2.5">
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] uppercase tracking-widest text-gray-600 font-semibold">
+              Team
+              {allUsers.length > 0 && (
+                <span className="ml-1.5 text-gray-700 font-normal">{allUsers.length}</span>
+              )}
+            </p>
+            <button
+              onClick={() => setTeamModalOpen(true)}
+              className="text-[10px] text-gray-600 hover:text-[#67e8f9] transition-colors flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-[#67e8f9]/[0.05]"
+            >
+              <Users className="size-3" />
+              Modify
+            </button>
+          </div>
+
+          {allUsers.length === 0 ? (
+            <p className="text-[11px] text-gray-700">No users associated.</p>
+          ) : (
+            <div className="space-y-1.5">
+              {allUsers.map((u) => (
+                <div key={u.id} className="flex items-center gap-2 text-xs">
+                  {u.type === 'staff' ? (
+                    <Shield className="size-3 shrink-0 text-gray-600" />
+                  ) : (
+                    <User className="size-3 shrink-0 text-[#67e8f9]/50" />
+                  )}
+                  <span className={`truncate ${u.type === 'staff' ? 'text-gray-500' : 'text-gray-400'}`}>
+                    {u.name}
+                  </span>
+                  <span className={`ml-auto text-[9px] uppercase tracking-wider font-semibold shrink-0 ${
+                    u.type === 'staff' ? 'text-gray-700' : 'text-[#67e8f9]/40'
+                  }`}>
+                    {u.type === 'staff' ? 'staff' : 'client'}
+                  </span>
                 </div>
               ))}
             </div>
-          </div>
-        )}
-
-        {/* Actions */}
-        <div className="space-y-2.5">
-          <p className="text-[10px] uppercase tracking-widest text-gray-600 font-semibold">Actions</p>
-          <button
-            onClick={handleSendPasswordReset}
-            disabled={resetState === 'loading' || resetState === 'sent'}
-            className="w-full flex items-center gap-2.5 rounded-lg border border-white/[0.08] bg-[#1c1c1c] px-3 py-2.5 text-xs text-gray-400 hover:text-white hover:bg-[#242424] hover:border-white/[0.14] transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {resetState === 'loading' ? (
-              <Loader2 className="size-3.5 shrink-0 animate-spin" />
-            ) : resetState === 'sent' ? (
-              <Check className="size-3.5 shrink-0 text-emerald-400" />
-            ) : (
-              <KeyRound className="size-3.5 shrink-0" />
-            )}
-            <span className={resetState === 'sent' ? 'text-emerald-400' : resetState === 'error' ? 'text-red-400' : ''}>
-              {resetState === 'loading' ? 'Sending...' : resetState === 'sent' ? 'Reset email sent' : resetState === 'error' ? 'Failed — try again' : 'Send password reset'}
-            </span>
-          </button>
+          )}
         </div>
       </div>
+
+      {/* Team Modify Modal */}
+      <TeamModal
+        open={teamModalOpen}
+        onClose={() => setTeamModalOpen(false)}
+        clientAccountId={id}
+        clientAccountName={name}
+        teamMembers={teamMembers}
+        clientUsers={clientUsers}
+      />
     </div>
   )
 }
 
 // ── Mobile Sheet trigger ───────────────────────────────────────────────────────
-// Renders a button that opens the sidebar content in a Sheet overlay.
-// Only used on mobile; desktop renders ClientSidebarContent inline.
 
 export function ClientSidebar(props: ClientSidebarProps) {
   return (

@@ -204,7 +204,7 @@ All integrations use singletons and are non-blocking in hooks.
 | **Stripe** | `src/lib/stripe.ts` | Singleton. API version `2025-12-15.clover`. Webhooks: `invoice.paid`, `invoice.payment_failed`, `invoice.voided`. Idempotency via `WebhookEvents` collection. |
 | **Shopify** | `src/lib/shopify/` | OAuth token cached in memory with auto-refresh. `customers.ts` does email lookup before create to prevent duplicates. |
 | **Google Calendar** | `src/lib/google-calendar.ts` | Service account with lazy init. Creates events with Google Meet links. `getAvailableSlots()` returns free 1-hour slots 9AM–5PM. |
-| **Email** | `src/lib/email/templates/` | Nodemailer via Gmail SMTP. All sends are non-blocking. |
+| **Email** | `src/lib/email/templates/` | Nodemailer via Gmail SMTP. All sends are non-blocking. See `/docs/EMAIL_TEMPLATES.md` for the full design standard — **always follow it when creating or modifying any email template**. |
 
 ## Custom Admin Components
 
@@ -340,13 +340,26 @@ ORCACLUB is a Technical Operations Development Studio. Two audiences: staff mana
 - **Background**: Black with subtle gradients
 - **Text hierarchy**: white → gray-300 → gray-400
 
+### Font system
+
+| Role | Font | Color |
+|------|------|-------|
+| ORCACLUB wordmark | `Cinzel_Decorative` (weight 700) — gothic display | `text-white` |
+| Secondary labels (SPACES, EST, etc.) | System sans-serif (default) | `gradient-text` or `text-intelligence-cyan` |
+| Body / legible text | System sans-serif (default) | `text-white` → `text-gray-300` → `text-gray-400` |
+
 ```tsx
-// Logo pattern
-<span className="font-bold text-white">ORCA</span>
-<span className="font-bold gradient-text">CLUB</span>
+// ORCACLUB wordmark — always Cinzel Decorative, always white
+import { Cinzel_Decorative } from 'next/font/google'
+const gothic = Cinzel_Decorative({ weight: '700', subsets: ['latin'] })
+
+<span className={`${gothic.className} text-white`}>ORCACLUB</span>
+
+// Secondary accent labels — regular font, gradient or cyan
+<span className="text-sm font-semibold gradient-text tracking-widest">SPACES</span>
 ```
 
-`gradient-text` is defined in `globals.css` — cyan to blue animated gradient on text.
+`gradient-text` is defined in `globals.css` — cyan to blue animated gradient on text. Never split ORCA/CLUB into separate colored spans on the wordmark — the full word is white in the gothic font.
 
 **Path aliases** — always use these, never relative imports across directories:
 
@@ -373,10 +386,29 @@ import { Button } from '@/components/ui/button'
 | MongoDB write conflict in balance hook | `updateClientBalance.ts` has exponential retry — don't remove it |
 | Package manager errors | Always use `bun`, never npm/yarn/pnpm |
 
+## Email System Rules
+
+When creating or modifying any email template, **always read `/docs/EMAIL_TEMPLATES.md` first**. It contains:
+
+- The full dark design standard (color tokens, typography, component snippets)
+- When to use `baseEmailTemplate` vs a standalone template
+- Copy-paste HTML for every reusable component (CTA, detail box, code display, warning, etc.)
+- Step-by-step guide for creating a new template and registering it in `index.ts`
+- The standard `payload.sendEmail()` sending pattern with logging
+- Email client compatibility rules (inline styles only — Gmail strips `<style>` blocks entirely)
+
+Key rules enforced by the doc:
+- Never use `<style>` blocks or CSS classes — all styles must be inline
+- Always send via `payload.sendEmail()`, never nodemailer directly
+- Always include a plain text version
+- ORCACLUB wordmark uses Cinzel Decorative font, split `#333333` ORCA / `#67e8f9` CLUB
+- `from:` fallback is always `carbon@orcaclub.pro` (note: Gmail SMTP overrides this with `SMTP_USER` — see doc for fix options)
+
 ## Resources
 
 - **Payload Docs**: https://payloadcms.com/docs
 - **Payload LLM Context**: https://payloadcms.com/llms-full.txt (use via Context7 MCP)
 - **Project Reference**: `/docs/ORCACLUB.md` — comprehensive architecture doc
+- **Email Template Standard**: `/docs/EMAIL_TEMPLATES.md` — design system for all emails
 - **Cursor Rules**: `.cursor/rules/` — deep-dive context files per topic
 - **Project Admin**: http://localhost:3000/admin

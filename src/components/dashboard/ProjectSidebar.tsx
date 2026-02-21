@@ -7,6 +7,8 @@ interface ProjectSidebarProps {
   project: Project
   tasks: Task[]
   username: string
+  readOnly?: boolean
+  clientProjects?: Project[]
 }
 
 const statusMap: Record<string, { dot: string; label: string; color: string }> = {
@@ -27,7 +29,7 @@ function fmtCurrency(amount: number | null | undefined, currency = 'USD') {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount)
 }
 
-export function ProjectSidebar({ project, tasks, username }: ProjectSidebarProps) {
+export function ProjectSidebar({ project, tasks, username, readOnly, clientProjects }: ProjectSidebarProps) {
   const status = statusMap[project.status] ?? statusMap.pending
   const clientAccount = typeof project.client === 'object' ? project.client : null
 
@@ -51,6 +53,37 @@ export function ProjectSidebar({ project, tasks, username }: ProjectSidebarProps
         <ArrowLeft className="size-3 group-hover:-translate-x-0.5 transition-transform" />
         All Projects
       </Link>
+
+      {/* ── Client project navigator ────────────────────────────────────── */}
+      {clientProjects && clientProjects.length > 0 && (
+        <div className="space-y-1">
+          <p className="text-[10px] font-medium text-gray-600 uppercase tracking-[0.08em] px-1 mb-2">
+            Your Projects
+          </p>
+          {clientProjects.map((p) => {
+            const pStatus = statusMap[p.status] ?? statusMap.pending
+            const isCurrent = p.id === project.id
+            return (
+              <Link
+                key={p.id}
+                href={`/u/${username}/projects/${p.id}`}
+                className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-colors ${
+                  isCurrent
+                    ? 'bg-white/[0.08] text-white'
+                    : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.04]'
+                }`}
+              >
+                <span className={`size-1.5 rounded-full shrink-0 ${pStatus.dot}`} />
+                <span className="truncate flex-1">{p.name}</span>
+                {isCurrent && (
+                  <span className="size-1 rounded-full bg-intelligence-cyan shrink-0" />
+                )}
+              </Link>
+            )
+          })}
+          <div className="border-t border-white/[0.06] pt-2 mt-2" />
+        </div>
+      )}
 
       {/* Project title + status */}
       <div className="space-y-2 pt-1">
@@ -87,7 +120,8 @@ export function ProjectSidebar({ project, tasks, username }: ProjectSidebarProps
 
       {/* Metadata */}
       <div className="space-y-3.5">
-        {clientAccount && (
+        {/* Client name — only shown to admins/staff, not to clients themselves */}
+        {!readOnly && clientAccount && (
           <div className="flex items-start gap-2.5">
             <Building2 className="size-3.5 text-gray-600 mt-0.5 shrink-0" />
             <div>
@@ -125,7 +159,8 @@ export function ProjectSidebar({ project, tasks, username }: ProjectSidebarProps
           </div>
         )}
 
-        {assignedUsers.length > 0 && (
+        {/* Assigned users — only shown to admins/staff */}
+        {!readOnly && assignedUsers.length > 0 && (
           <div className="flex items-start gap-2.5">
             <Users className="size-3.5 text-gray-600 mt-0.5 shrink-0" />
             <div>
@@ -136,12 +171,15 @@ export function ProjectSidebar({ project, tasks, username }: ProjectSidebarProps
         )}
       </div>
 
-      <div className="border-t border-white/[0.06]" />
-
-      {/* Edit */}
-      <div>
-        <ProjectSettingsModal project={project} tasks={tasks} />
-      </div>
+      {/* Edit button — hidden in readOnly mode */}
+      {!readOnly && (
+        <>
+          <div className="border-t border-white/[0.06]" />
+          <div>
+            <ProjectSettingsModal project={project} tasks={tasks} />
+          </div>
+        </>
+      )}
     </div>
   )
 }

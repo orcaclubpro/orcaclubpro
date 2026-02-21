@@ -6,15 +6,16 @@ import type { CollectionAfterDeleteHook } from 'payload'
  * orphaned reference which causes syncUserToClientAccount to error on every
  * subsequent save of that user.
  */
-export const clearClientAccountOnDelete: CollectionAfterDeleteHook = async ({ doc, req }) => {
+export const clearClientAccountOnDelete: CollectionAfterDeleteHook = async ({ id, doc, req }) => {
   const { payload } = req
 
   try {
     const { docs: linkedUsers } = await payload.find({
       collection: 'users',
-      where: { clientAccount: { equals: doc.id } },
+      where: { clientAccount: { equals: id } },
       limit: 100,
       depth: 0,
+      overrideAccess: true,
       req,
     })
 
@@ -27,6 +28,7 @@ export const clearClientAccountOnDelete: CollectionAfterDeleteHook = async ({ do
           id: user.id,
           data: { clientAccount: null },
           context: { skipClientAccountSync: true, skipNameValidation: true },
+          overrideAccess: true,
           req,
         })
       )

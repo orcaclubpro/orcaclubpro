@@ -12,12 +12,16 @@ export async function createProject({
   clientId,
   startDate,
   projectedEndDate,
+  budget,
+  currency,
 }: {
   name: string
   description?: string
   clientId?: string
   startDate?: string
   projectedEndDate?: string
+  budget?: number
+  currency?: string
 }) {
   try {
     const user = await getCurrentUser()
@@ -42,6 +46,10 @@ export async function createProject({
     if (clientId) projectData.client = clientId
     if (startDate) projectData.startDate = startDate
     if (projectedEndDate) projectData.projectedEndDate = projectedEndDate
+    if (budget && budget > 0) {
+      projectData.budgetAmount = budget
+      if (currency) projectData.budgetCurrency = currency
+    }
 
     const project = await payload.create({
       collection: 'projects',

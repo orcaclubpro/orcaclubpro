@@ -24,6 +24,8 @@ export function generatePasswordResetEmailHTML(resetUrl: string, userName: strin
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Reset your password — ORCACLUB</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&display=swap" rel="stylesheet">
 </head>
 <body style="margin:0;padding:0;background-color:#000000;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
 
@@ -41,7 +43,7 @@ export function generatePasswordResetEmailHTML(resetUrl: string, userName: strin
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                 <tr>
                   <td>
-                    <span style="font-size:11px;font-weight:300;letter-spacing:0.4em;color:#333333;text-transform:uppercase;">ORCA</span><span style="font-size:11px;font-weight:300;letter-spacing:0.4em;color:#67e8f9;text-transform:uppercase;">CLUB</span>
+                    <span style="font-family:'Cinzel Decorative',Georgia,serif;font-size:13px;font-weight:700;color:#333333;">ORCA</span><span style="font-family:'Cinzel Decorative',Georgia,serif;font-size:13px;font-weight:700;color:#67e8f9;">CLUB</span>
                   </td>
                   <td align="right">
                     <span style="font-size:10px;letter-spacing:0.4em;color:#1f1f1f;text-transform:uppercase;font-weight:300;">Client Portal</span>
@@ -117,7 +119,7 @@ export function generatePasswordResetEmailHTML(resetUrl: string, userName: strin
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                 <tr>
                   <td>
-                    <span style="font-size:10px;color:#1f1f1f;font-weight:300;letter-spacing:0.35em;text-transform:uppercase;">ORCA</span><span style="font-size:10px;color:#1a3a3e;font-weight:300;letter-spacing:0.35em;text-transform:uppercase;">CLUB</span>
+                    <span style="font-family:'Cinzel Decorative',Georgia,serif;font-size:10px;font-weight:700;color:#1f1f1f;">ORCA</span><span style="font-family:'Cinzel Decorative',Georgia,serif;font-size:10px;font-weight:700;color:#1a3a3e;">CLUB</span>
                   </td>
                   <td align="right">
                     <a href="https://orcaclub.pro" style="font-size:10px;color:#1f1f1f;text-decoration:none;font-weight:300;letter-spacing:0.02em;">orcaclub.pro</a>
@@ -178,7 +180,7 @@ export async function sendPasswordResetEmail(
   try {
     await payload.sendEmail({
       to: email,
-      from: process.env.EMAIL_FROM || 'chance@orcaclub.pro',
+      from: process.env.EMAIL_FROM || 'carbon@orcaclub.pro',
       subject: 'Reset your ORCACLUB password',
       html: generatePasswordResetEmailHTML(resetUrl, name),
       text: generatePasswordResetEmailText(resetUrl, name),

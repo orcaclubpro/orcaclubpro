@@ -560,7 +560,8 @@ const Users: CollectionConfig = {
         // But PayloadCMS requires a function here for the built-in endpoint
         const token = args?.token || ''
         const user = args?.user || { name: 'User' }
-        const resetUrl = `${process.env.NEXT_PUBLIC_SERVER_URL}/reset-password?token=${token}`
+        const baseUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'https://orcaclub.pro'
+        const resetUrl = `${baseUrl}/reset-password?token=${token}`
         return `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2>Password Reset Request</h2>
@@ -700,14 +701,18 @@ const Users: CollectionConfig = {
 
             // Generate username based on role
             if (data?.role === 'client') {
-              // Generate from firstName + lastName
+              // Generate from firstName + lastName, falling back to email prefix
               const firstName = data?.firstName || ''
               const lastName = data?.lastName || ''
 
-              if (!firstName || !lastName) return value
-
-              // Create base username (lowercase, no spaces)
-              const baseUsername = `${firstName}${lastName}`.toLowerCase().replace(/[^a-z0-9]/g, '')
+              let baseUsername: string
+              if (firstName && lastName) {
+                baseUsername = `${firstName}${lastName}`.toLowerCase().replace(/[^a-z0-9]/g, '')
+              } else if (data?.email) {
+                baseUsername = (data.email as string).split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '') || 'client'
+              } else {
+                return value
+              }
 
               // Check if username exists
               let username = baseUsername
@@ -872,8 +877,43 @@ export default buildConfig({
     url: process.env.DATABASE_URI || 'mongodb+srv://chance:ara9YRAkRe7blAqF@orcapod.f5yp3f7.mongodb.net/orcapod',
   }),
   // Email configuration using Gmail SMTP via nodemailer
+  //
+  // GMAIL FROM-ADDRESS OVERRIDE — WHY emails come from chance@orcaclub.pro
+  // -----------------------------------------------------------------------
+  // Gmail's SMTP server enforces a security policy that IGNORES the From header
+  // set by the sending application and rewrites it to the authenticated SMTP
+  // user's address. This means even though `defaultFromAddress` is set to
+  // carbon@orcaclub.pro and individual sendEmail() calls pass `from:
+  // carbon@orcaclub.pro`, Gmail will silently replace the From header with
+  // chance@orcaclub.pro (the SMTP_USER) before delivering the message.
+  //
+  // This is intentional behavior on Google's part to prevent address spoofing.
+  // The `defaultFromAddress` / `from` field still appears in the raw MIME
+  // headers that Payload constructs, but Gmail overwrites it at the transport
+  // layer during the SMTP AUTH handshake.
+  //
+  // FIX OPTIONS (choose one):
+  //   1. GMAIL ALIAS — In Google Workspace / Gmail settings, add
+  //      carbon@orcaclub.pro as a "Send mail as" alias for the
+  //      chance@orcaclub.pro account. Gmail will then allow that From address
+  //      to pass through. Requires domain verification via DNS or SMTP.
+  //
+  //   2. CHANGE SMTP_USER — Authenticate as carbon@orcaclub.pro directly.
+  //      Update SMTP_USER=carbon@orcaclub.pro and SMTP_PASS to that account's
+  //      app password. The From address will then match automatically.
+  //
+  //   3. SWITCH PROVIDERS — Use a transactional email service (Resend,
+  //      SendGrid, Postmark) that does not rewrite From headers. These services
+  //      authenticate via API key instead of SMTP user credentials and honor
+  //      any From address that passes DKIM/SPF checks for the sending domain.
+  //      Payload supports @payloadcms/email-resend out of the box.
+  //
+  // Until one of the above is implemented, all outbound emails will display
+  // chance@orcaclub.pro as the sender regardless of what `defaultFromAddress`
+  // or the per-send `from` field is set to.
+  // -----------------------------------------------------------------------
   email: nodemailerAdapter({
-    defaultFromAddress: process.env.EMAIL_FROM || 'chance@orcaclub.pro',
+    defaultFromAddress: process.env.EMAIL_FROM || 'carbon@orcaclub.pro',
     defaultFromName: process.env.EMAIL_FROM_NAME || 'ORCACLUB',
     transportOptions: {
       host: process.env.SMTP_HOST || 'smtp.gmail.com',

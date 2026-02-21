@@ -2,6 +2,9 @@
 
 import Link from "next/link"
 import { Linkedin, Instagram } from "lucide-react"
+import { Cinzel_Decorative } from "next/font/google"
+
+const gothic = Cinzel_Decorative({ weight: "700", subsets: ["latin"] })
 
 export function Footer() {
   return (
@@ -10,7 +13,7 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
           {/* Column 1: Brand */}
           <div className="space-y-4">
-            <h3 className="text-xl font-bold text-white tracking-tight">ORCACLUB</h3>
+            <h3 className={`${gothic.className} text-xl text-white`}>ORCACLUB</h3>
             <p className="text-gray-400 text-sm">
               Software Agency for Modern Business
             </p>

@@ -1,19 +1,14 @@
 /**
- * createClientAccount Hook - Auto-create ClientAccount for client role users
+ * createClientAccount Hook - Auto-link or create ClientAccount for client role users
  *
- * This hook runs BEFORE user creation and automatically creates a linked ClientAccount
- * when a new user with role="client" is created.
+ * Runs BEFORE user creation. Finds an existing ClientAccount by email and links
+ * the new User to it, or creates a fresh ClientAccount if none exists.
  *
- * Flow:
- * 1. Check if user role is "client" and operation is "create"
- * 2. Validate required fields (firstName, lastName, email)
- * 3. Check if ClientAccount already exists with this email
- * 4. If exists, link to existing account; otherwise create new account
- * 5. Set user.clientAccount to the account ID
- *
- * Security:
- * - Always passes `req` to maintain transaction atomicity
- * - Validates email uniqueness to prevent duplicate accounts
+ * NOTE: Nested payload calls intentionally omit `req` to avoid MongoDB session
+ * transaction-number conflicts that occur when this hook fires inside server-action
+ * contexts (where multiple synthetic requests share the same connection-pool session).
+ * The find/create operations here are lightweight and do not need to be atomic with
+ * the outer user-creation transaction.
  */
 
 import type { CollectionBeforeChangeHook } from 'payload'
@@ -37,16 +32,17 @@ export const createClientAccountHook: CollectionBeforeChangeHook = async ({
   }
 
   try {
-    // Check if ClientAccount already exists with this email
+    // Check if ClientAccount already exists with this email.
+    // Do NOT pass `req` — the synthetic req from server-action contexts can carry a
+    // stale MongoDB session transaction number, causing MongoServerError conflicts.
     const existingAccount = await payload.find({
       collection: 'client-accounts',
       where: { email: { equals: data.email } },
       limit: 1,
-      req, // Pass req for transaction safety
+      overrideAccess: true,
     })
 
     if (existingAccount.docs.length > 0) {
-      // Link to existing account
       const accountId = existingAccount.docs[0].id
       data.clientAccount = accountId
       payload.logger.info(
@@ -55,7 +51,7 @@ export const createClientAccountHook: CollectionBeforeChangeHook = async ({
       return data
     }
 
-    // Create new ClientAccount
+    // No ClientAccount found — create one. Again, no `req` to avoid session conflicts.
     const newAccount = await payload.create({
       collection: 'client-accounts',
       data: {
@@ -65,7 +61,7 @@ export const createClientAccountHook: CollectionBeforeChangeHook = async ({
         email: data.email,
         company: data.company || undefined,
       },
-      req, // CRITICAL: Maintain transaction atomicity
+      overrideAccess: true,
     })
 
     data.clientAccount = newAccount.id
@@ -75,7 +71,11 @@ export const createClientAccountHook: CollectionBeforeChangeHook = async ({
 
     return data
   } catch (error) {
-    payload.logger.error(`[Create Client Account Hook] Error: ${error}`)
-    throw new Error(`Failed to create client account: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    // Log but do not re-throw — user creation must succeed even if the hook cannot
+    // resolve the linked account. The missing link can be corrected manually.
+    payload.logger.error(
+      `[Create Client Account Hook] Could not link/create ClientAccount for ${data.email}: ${error instanceof Error ? error.message : error}`
+    )
+    return data
   }
 }
