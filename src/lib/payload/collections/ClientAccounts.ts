@@ -1,7 +1,7 @@
 import type { CollectionConfig } from 'payload'
-import { createShopifyCustomerHook } from '../hooks/createShopifyCustomer'
 import { createStripeCustomerHook } from '../hooks/createStripeCustomer'
 import { syncClientAccountToUser } from '../hooks/syncClientAccountToUser'
+import { clearClientAccountOnDelete } from '../hooks/clearClientAccountOnDelete'
 
 const ClientAccounts: CollectionConfig = {
   slug: 'client-accounts',
@@ -11,8 +11,9 @@ const ClientAccounts: CollectionConfig = {
     group: 'Clients',
   },
   hooks: {
-    beforeChange: [createShopifyCustomerHook, createStripeCustomerHook],
+    beforeChange: [createStripeCustomerHook],
     afterChange: [syncClientAccountToUser],
+    afterDelete: [clearClientAccountOnDelete],
   },
   access: {
     read: ({ req: { user } }) => {

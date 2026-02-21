@@ -600,9 +600,13 @@ const Users: CollectionConfig = {
       },
       hooks: {
         beforeValidate: [
-          ({ value, data }) => {
-            // Make required for non-client roles only
-            if (data?.role !== 'client' && !value) {
+          ({ value, data, originalDoc, req }) => {
+            // Skip validation for internal operations that don't involve the name field
+            // (e.g. setting a reset token on a user record)
+            if (req?.context?.skipNameValidation) return value
+            // Fall back to originalDoc.role when role isn't part of this update
+            const effectiveRole = data?.role ?? originalDoc?.role
+            if (effectiveRole !== 'client' && !value) {
               throw new Error('Name is required for admin and user roles')
             }
             return value

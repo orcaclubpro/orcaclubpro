@@ -113,7 +113,7 @@ export function AccountOverview({
     <div className="space-y-8">
       {/* Financial Alert - Minimal Glass */}
       {hasBalance && (
-        <div className="relative overflow-hidden rounded-xl border border-yellow-500/20 bg-white/[0.02] backdrop-blur-sm p-6 fluid-enter">
+        <div className="relative overflow-hidden rounded-xl border border-yellow-500/20 bg-[#1c1c1c] backdrop-blur-sm p-6 fluid-enter">
           <div className="absolute top-0 right-0 w-48 h-48 bg-yellow-500/[0.05] rounded-full blur-3xl" />
 
           <div className="relative z-10 flex items-start gap-4">
@@ -143,7 +143,7 @@ export function AccountOverview({
           return (
             <div
               key={index}
-              className="group relative overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-md p-6 hover:border-white/[0.12] hover:bg-white/[0.05] transition-all duration-500 hover:scale-[1.01] fluid-enter"
+              className="group relative overflow-hidden rounded-xl border border-white/[0.08] bg-[#1c1c1c] backdrop-blur-md p-6 hover:border-white/[0.14] hover:bg-[#242424] transition-all duration-500 hover:scale-[1.01] fluid-enter"
               style={{ animationDelay: `${index * 100}ms` }}
             >
               {/* Subtle glow effect */}
@@ -157,7 +157,7 @@ export function AccountOverview({
 
               <div className="relative z-10">
                 <div className="flex items-start justify-between mb-8">
-                  <div className="p-2.5 rounded-lg bg-white/[0.04] border border-white/[0.08] transition-transform duration-300 group-hover:scale-105">
+                  <div className="p-2.5 rounded-lg bg-[#1c1c1c] border border-white/[0.10] transition-transform duration-300 group-hover:scale-105">
                     <Icon className={`size-5 ${stat.color}`} />
                   </div>
                   {stat.showAlert && (
@@ -195,13 +195,13 @@ export function AccountOverview({
 
       {/* Quick Stats Summary with Order Distribution - Minimal Glass */}
       {account.totalOrders && account.totalOrders > 0 && (
-        <div className="relative overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-md p-6 fluid-enter">
+        <div className="relative overflow-hidden rounded-xl border border-white/[0.08] bg-[#1c1c1c] backdrop-blur-md p-6 fluid-enter">
           <div className="absolute bottom-0 right-0 w-64 h-64 bg-intelligence-cyan/[0.06] rounded-full blur-3xl" />
 
           <div className="relative z-10 space-y-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-lg bg-white/[0.04] border border-white/[0.08]">
+                <div className="p-2.5 rounded-lg bg-[#1c1c1c] border border-white/[0.10]">
                   <TrendingUp className="size-4 text-intelligence-cyan" />
                 </div>
                 <h3 className="font-semibold text-white text-base">Account Summary</h3>

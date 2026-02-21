@@ -45,7 +45,7 @@ export default async function OrdersPage({
   if (!clientAccount) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="max-w-md w-full rounded-xl border border-red-400/20 bg-white/[0.02] backdrop-blur-sm p-8 text-center">
+        <div className="max-w-md w-full rounded-xl border border-red-400/20 bg-[#1c1c1c] backdrop-blur-sm p-8 text-center">
           <div className="inline-flex p-5 rounded-xl bg-red-400/10 border border-red-400/20 mb-6">
             <AlertCircle className="size-10 text-red-400" />
           </div>
@@ -127,7 +127,7 @@ export default async function OrdersPage({
 
       {/* Outstanding Balance Alert */}
       {clientAccount.accountBalance && clientAccount.accountBalance > 0 && (
-        <div className="relative overflow-hidden rounded-xl border border-yellow-400/20 bg-white/[0.02] backdrop-blur-sm p-6">
+        <div className="relative overflow-hidden rounded-xl border border-yellow-400/20 bg-[#1c1c1c] backdrop-blur-sm p-6">
           <div className="absolute top-0 right-0 w-48 h-48 bg-yellow-400/[0.05] rounded-full blur-3xl" />
 
           <div className="relative z-10 flex items-start gap-4">
@@ -227,9 +227,9 @@ export default async function OrdersPage({
 
       {/* Empty State */}
       {allOrders.length === 0 && (
-        <div className="relative overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-12 text-center">
+        <div className="relative overflow-hidden rounded-xl border border-white/[0.08] bg-[#1c1c1c] backdrop-blur-sm p-12 text-center">
           <div className="relative z-10">
-            <div className="inline-flex p-5 rounded-xl bg-white/[0.03] border border-white/[0.06] mb-6">
+            <div className="inline-flex p-5 rounded-xl bg-[#1c1c1c] border border-white/[0.10] mb-6">
               <Package className="size-10 text-gray-500" />
             </div>
             <h3 className="text-xl font-semibold text-white mb-2">No Orders Yet</h3>

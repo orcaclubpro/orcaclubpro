@@ -1,41 +1,21 @@
 # ORCACLUB - Payload CMS Development Guide
 
-You are an expert Payload CMS developer working on ORCACLUB, a Technical Operations Development Studio platform. Follow these rules when developing.
+You are an expert Payload CMS developer working on ORCACLUB, a Technical Operations Development Studio platform.
 
 ## Environment
 
-- **Runtime**: Bun (primary), Node.js (fallback)
-- **Package Manager**: Bun (use `bun` instead of npm/yarn/pnpm)
-- **Database**: MongoDB Atlas (via mongoose adapter)
-- **Editor Config**: Import map generation after component changes
-- **Common Commands**:
-  - `bun run bun:dev` - Start development server (fastest)
-  - `bun run dev` - Standard dev server
-  - `bun run build` - Build for production
-  - `bun run payload:generate` - Generate Payload types
-  - `bun run payload:migrate` - Run database migrations
-  - `bun run lint` - Run linter
-
-## Core Principles
-
-1. **TypeScript-First**: Always use TypeScript with proper types from Payload
-2. **Security-Critical**: Follow all security patterns, especially access control
-3. **Type Generation**: Run `bun run payload:generate` after schema changes
-4. **Transaction Safety**: Always pass `req` to nested operations in hooks
-5. **Access Control**: Understand Local API bypasses access control by default
-6. **Access Control**: Ensure roles exist when modifying collections or globals with access controls
-
-### Code Validation
+- **Runtime**: Bun (primary) — always use `bun`, never npm/yarn/pnpm
+- **Database**: MongoDB Atlas (mongoose adapter)
+- **Framework**: Next.js 15 + Payload 3 (co-located — same process, no separate CMS service)
 
 ```bash
-# Validate TypeScript
-bun run tsc --noEmit
-
-# Generate types after schema changes
-bun run payload:generate
-
-# Generate import maps after creating or modifying components
-bun run payload generate:importmap
+bun run bun:dev                      # Start dev server (fastest)
+bun run build:production             # Production build
+bun run payload:generate             # Regenerate payload-types.ts — run after every schema change
+bun run payload generate:importmap   # Regenerate import map — run after component path changes
+bun run payload:migrate              # Run database migrations
+bun run tsc --noEmit                 # Validate TypeScript
+bun run lint
 ```
 
 ## Project Structure
@@ -43,1275 +23,221 @@ bun run payload generate:importmap
 ```
 src/
 ├── app/
-│   ├── (frontend)/              # Public website routes
-│   │   ├── project/             # Main conversion hub
-│   │   ├── solutions/           # TOFU problem-solution pages
-│   │   ├── services/            # MOFU service pages
-│   │   ├── contact/             # Lead capture
-│   │   ├── sonar/               # Blog system
-│   │   └── layout.tsx
-│   ├── (payload)/               # Payload admin routes
-│   │   ├── admin/               # CMS admin interface
-│   │   └── layout.tsx
-│   ├── (dashboard)/             # Client dashboard (future)
-│   │   └── login/u/[user]/      # User dashboard routes
-│   └── api/                     # REST API endpoints
-│       ├── auth/                # 2FA authentication endpoints
-│       ├── booking/             # Consultation booking
-│       ├── contact/             # Contact form
-│       ├── stripe/              # Stripe webhooks & APIs
-│       ├── shopify/             # Shopify integration
-│       └── invoices/            # Invoice management
+│   ├── (frontend)/       # Public website (marketing, blog, contact)
+│   │   ├── packages/     # Tier pages: launch, scale, enterprise
+│   │   ├── services/     # MOFU service pages (15+)
+│   │   ├── solutions/    # TOFU problem-solution pages
+│   │   ├── sonar/        # Blog: listing, [slug], category/[slug]
+│   │   └── contact/, about/, login/, forgot-password/, reset-password/
+│   ├── (payload)/        # Payload admin (CMS interface)
+│   ├── (spaces)/         # Client portal
+│   │   └── u/[username]/ # Dashboard: clients/, orders/, projects/[project]/, tasks/
+│   └── api/              # REST endpoints (see API Routes section)
 ├── components/
-│   ├── ui/                      # shadcn/ui components
-│   ├── layout/                  # Layout components (header, footer)
-│   ├── sections/                # Page sections
-│   └── payload/                 # Custom Payload admin components
-│       ├── CustomLogin.tsx      # 2FA login UI
-│       ├── CustomAccount.tsx    # Account management
-│       ├── SendInvoiceButton.tsx
-│       ├── ConvertToClientButton.tsx
-│       └── order-creation/      # Order creation views
+│   ├── ui/               # shadcn/ui primitives
+│   ├── layout/           # Header, footer, nav
+│   ├── sections/         # Page sections (hero, services grid, etc.)
+│   ├── dashboard/        # Client portal components
+│   └── payload/          # Custom Payload admin components (see Components section)
 ├── lib/
 │   ├── payload/
-│   │   ├── payload.config.ts    # Main Payload configuration
-│   │   ├── hooks/               # Payload hooks
-│   │   │   ├── revalidate.ts
-│   │   │   ├── beforeLogin.ts
-│   │   │   └── updateClientBalance.ts
-│   │   └── utils/               # Payload utilities
-│   │       ├── loginTwoFactor.ts
-│   │       └── passwordReset.ts
-│   ├── stripe.ts                # Stripe client
-│   ├── shopify/                 # Shopify integration
-│   ├── google-calendar.ts       # Google Calendar service
-│   └── email/                   # Email templates
-├── hooks/                       # React hooks
-├── types/
-│   └── payload-types.ts         # Generated Payload types
-└── data/                        # Static data
+│   │   ├── payload.config.ts   # Main Payload config
+│   │   ├── collections/        # One file per collection
+│   │   ├── hooks/              # Lifecycle hooks (see Hooks section)
+│   │   ├── access/index.ts     # All shared access control functions
+│   │   └── utils/              # loginTwoFactor.ts, passwordReset.ts
+│   ├── shopify/          # admin-client.ts, customers.ts, products.ts, draft-orders.ts
+│   ├── stripe.ts         # Stripe singleton client
+│   ├── google-calendar.ts
+│   └── email/templates/
+├── hooks/                # React hooks (client-side)
+├── actions/              # Next.js Server Actions
+└── types/payload-types.ts  # Auto-generated — never edit by hand
 ```
 
-## CRITICAL SECURITY PATTERNS
+## CRITICAL SECURITY RULES
 
-### 1. Local API Access Control (MOST IMPORTANT)
+### 1. Always set `overrideAccess: false` when passing a user to the Local API
+
+Without it, the user is ignored and the operation silently runs with admin privileges.
 
 ```typescript
-// ❌ SECURITY BUG: Access control bypassed
 await payload.find({
   collection: 'orders',
-  user: someUser, // Ignored! Operation runs with ADMIN privileges
-})
-
-// ✅ SECURE: Enforces user permissions
-await payload.find({
-  collection: 'orders',
-  user: someUser,
-  overrideAccess: false, // REQUIRED when passing user
-})
-
-// ✅ Administrative operation (intentional bypass)
-await payload.find({
-  collection: 'orders',
-  // No user, overrideAccess defaults to true - use for admin tasks
+  user,
+  overrideAccess: false, // REQUIRED — every query in (spaces)/ must have this
 })
 ```
 
-**Rule**: When passing `user` to Local API, ALWAYS set `overrideAccess: false`
+### 2. Always pass `req` to nested operations in hooks
 
-### 2. Transaction Safety in Hooks
+Missing `req` breaks transaction atomicity — the nested call runs in a separate transaction.
 
 ```typescript
-// ❌ DATA CORRUPTION RISK: Separate transaction
-hooks: {
-  afterChange: [
-    async ({ doc, req }) => {
-      await req.payload.update({
-        collection: 'client-accounts',
-        id: doc.clientAccount,
-        data: { lastOrderDate: new Date() },
-        // Missing req - runs in separate transaction!
-      })
-    },
-  ],
-}
+await payload.update({
+  collection: 'client-accounts',
+  id: accountId,
+  data: { accountBalance: total },
+  req, // REQUIRED
+})
+```
 
-// ✅ ATOMIC: Same transaction
-hooks: {
-  afterChange: [
-    async ({ doc, req }) => {
-      await req.payload.update({
-        collection: 'client-accounts',
-        id: doc.clientAccount,
-        data: { lastOrderDate: new Date() },
-        req, // Maintains atomicity
-      })
-    },
-  ],
+### 3. Use context flags to prevent infinite hook loops
+
+Check the flag before doing work, set it before the nested call.
+
+```typescript
+if (context?.skipBalanceUpdate) return doc
+
+await payload.update({
+  collection: 'client-accounts',
+  id: accountId,
+  data: { accountBalance: total },
+  context: { skipBalanceUpdate: true },
+  req,
+})
+```
+
+### 4. Field-level access returns boolean only
+
+No query constraints at field level — those belong at collection level.
+
+```typescript
+access: {
+  read: ({ req: { user } }) => Boolean(user),
+  update: () => false, // Never directly updated — calculated via hooks
 }
 ```
 
-**Rule**: ALWAYS pass `req` to nested operations in hooks
-
-### 3. Prevent Infinite Hook Loops
+### 5. Always verify webhook signatures
 
 ```typescript
-// ❌ INFINITE LOOP
-hooks: {
-  afterChange: [
-    async ({ doc, req }) => {
-      await req.payload.update({
-        collection: 'client-accounts',
-        id: doc.clientAccount,
-        data: { accountBalance: calculateBalance() },
-        req,
-      }) // Triggers afterChange again!
-    },
-  ],
-}
-
-// ✅ SAFE: Use context flag (pattern used in updateClientBalance.ts)
-hooks: {
-  afterChange: [
-    async ({ doc, req, context }) => {
-      if (context.skipBalanceUpdate) return
-
-      await req.payload.update({
-        collection: 'client-accounts',
-        id: doc.clientAccount,
-        data: { accountBalance: calculateBalance() },
-        context: { skipBalanceUpdate: true },
-        req,
-      })
-    },
-  ],
-}
+stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET)
 ```
 
-## Access Control Patterns
+## Collections (14 total)
 
-### Reusable Access Functions
+### Business Operations
 
-Create these in `src/lib/payload/access/` for consistency:
+| Collection | Slug | Purpose | Key Hooks |
+|-----------|------|---------|-----------|
+| Users | `users` | Admin/staff/client auth. Roles: `admin`, `user`, `client` | `beforeLogin`, `createClientAccount`, `syncUserToClientAccount` |
+| ClientAccounts | `client-accounts` | Central client record. Stripe/Shopify IDs, account balance | `createStripeCustomer`, `createShopifyCustomer`, `syncClientAccountToUser` |
+| Orders | `orders` | Financial records with line items. `pending → paid → cancelled` | `updateClientBalance` (afterChange + afterDelete) |
+| Projects | `projects` | Project management with milestones, budget, dates | — |
+| Tasks | `tasks` | Work items with status, priority, sprint, time tracking | — |
+| Sprints | `sprints` | Groups tasks per project. `completedTasksCount` is read-only | — |
+| Files | `files` | Documents attached to projects or sprints | — |
+| WebhookEvents | `webhook-events` | Stripe webhook idempotency tracker | — |
+
+### Content & Marketing
+
+| Collection | Slug | Purpose |
+|-----------|------|---------|
+| Media | `media` | File uploads with image resizing (thumbnail, card, logo) |
+| Clients | `clients` | Portfolio logos on homepage |
+| Leads | `leads` | Contact/booking submissions. Status: `new → contacted → converted → lost` |
+| Categories | `categories` | Blog taxonomy |
+| Tags | `tags` | Blog keywords |
+| Posts | `posts` | Blog content with draft/publish versioning | `revalidate` (afterChange + afterDelete) |
+
+## Access Control
+
+All access functions live in `src/lib/payload/access/index.ts`. Always import from here — never inline logic in collection configs.
 
 ```typescript
-import type { Access } from 'payload'
-
-// Anyone (public)
-export const anyone: Access = () => true
-
-// Authenticated only
-export const authenticated: Access = ({ req: { user } }) => Boolean(user)
-
-// Authenticated or published content
-export const authenticatedOrPublished: Access = ({ req: { user } }) => {
-  if (user) return true
-  return { _status: { equals: 'published' } }
-}
-
-// Admin only
-export const adminOnly: Access = ({ req: { user } }) => {
-  return user?.role === 'admin'
-}
-
-// Admin or self (for user profiles)
-export const adminOrSelf: Access = ({ req: { user } }) => {
-  if (user?.role === 'admin') return true
-  return { id: { equals: user?.id } }
-}
+anyone                    // Public, no auth required
+authenticated             // Any logged-in user (any role)
+authenticatedOrPublished  // Authenticated users OR published documents
+adminOnly                 // role === 'admin'
+adminOrUser               // role === 'admin' | 'user' (excludes clients)
+adminOrAssigned           // Admins see all; users see only assigned items
+adminOrProjectMember      // Admins see all; users see items from assigned projects
+adminOrOwnClient          // Admins see all; clients see only their own account
+adminOrSelf               // Admins see all; users see only their own user record
 ```
 
-### Current Collection Access Patterns
+**Collection access matrix:**
 
-| Collection | Create | Read | Update | Delete |
-|------------|--------|------|--------|--------|
-| **Users** | admin | authenticated | admin | admin |
-| **Media** | authenticated | anyone | authenticated | authenticated |
-| **Clients** | anyone | anyone | authenticated | authenticated |
-| **Leads** | anyone | authenticated | authenticated | authenticated |
-| **Posts** | authenticated | authenticatedOrPublished | authenticated | authenticated |
-| **ClientAccounts** | authenticated | authenticated | authenticated | admin |
-| **Orders** | authenticated | authenticated | authenticated | admin |
-
-### Field-Level Access
-
-```typescript
-// Field access ONLY returns boolean (no query constraints)
-{
-  name: 'accountBalance',
-  type: 'number',
-  access: {
-    read: ({ req: { user } }) => Boolean(user), // Only authenticated
-    update: () => false, // Never directly updated (calculated via hooks)
-  },
-  admin: {
-    readOnly: true,
-  },
-}
-```
-
-## Fields
-
-### Common Field Patterns
-
-```typescript
-// Auto-generate slugs
-import { slugField } from 'payload'
-slugField({ fieldToUse: 'title' })
-
-// Relationship with filtering
-{
-  name: 'category',
-  type: 'relationship',
-  relationTo: 'categories',
-  filterOptions: { active: { equals: true } },
-}
-
-// Conditional field
-{
-  name: 'featuredImage',
-  type: 'upload',
-  relationTo: 'media',
-  admin: {
-    condition: (data) => data.featured === true,
-  },
-}
-
-// Virtual field (computed)
-{
-  name: 'fullName',
-  type: 'text',
-  virtual: true,
-  hooks: {
-    afterRead: [({ siblingData }) => `${siblingData.firstName} ${siblingData.lastName}`],
-  },
-}
-
-// Read-only calculated field
-{
-  name: 'accountBalance',
-  type: 'number',
-  access: {
-    read: ({ req: { user } }) => Boolean(user),
-    update: () => false, // Never directly updated (calculated via hooks)
-  },
-  admin: {
-    readOnly: true,
-  },
-}
-```
-
-### Field Type Guards
-
-```typescript
-import {
-  fieldAffectsData,
-  fieldHasSubFields,
-  fieldIsArrayType,
-  fieldIsBlockType,
-  fieldSupportsMany,
-  fieldHasMaxDepth,
-} from 'payload'
-
-function processField(field: Field) {
-  // Check if field stores data
-  if (fieldAffectsData(field)) {
-    console.log(field.name) // Safe to access
-  }
-
-  // Check if field has nested fields
-  if (fieldHasSubFields(field)) {
-    field.fields.forEach(processField) // Safe to access
-  }
-
-  // Check field type
-  if (fieldIsArrayType(field)) {
-    console.log(field.minRows, field.maxRows)
-  }
-
-  // Check capabilities
-  if (fieldSupportsMany(field) && field.hasMany) {
-    console.log('Multiple values supported')
-  }
-}
-```
-
-## Collections
-
-### Current Collections (9 total)
-
-1. **Users** - Admin users with 2FA
-2. **Media** - File uploads (images)
-3. **Clients** - Client logos for homepage
-4. **Leads** - Contact/booking requests
-5. **Categories** - Blog taxonomy
-6. **Tags** - Blog keywords
-7. **Posts** - Blog content with versioning
-8. **ClientAccounts** - Client management with Stripe/Shopify sync
-9. **Orders** - Financial records with balance tracking
-
-### Collection Pattern
-
-```typescript
-import type { CollectionConfig } from 'payload'
-
-export const Orders: CollectionConfig = {
-  slug: 'orders',
-  admin: {
-    useAsTitle: 'orderNumber',
-    group: 'Clients',
-    defaultColumns: ['orderNumber', 'clientAccount', 'amount', 'status'],
-  },
-  access: {
-    create: authenticated,
-    read: authenticated,
-    update: authenticated,
-    delete: adminOnly,
-  },
-  hooks: {
-    afterChange: [updateClientBalance],
-    afterDelete: [revertClientBalance],
-  },
-  fields: [
-    { name: 'orderNumber', type: 'text', required: true, unique: true, index: true },
-    { name: 'status', type: 'select', options: ['pending', 'paid', 'cancelled'] },
-    { name: 'clientAccount', type: 'relationship', relationTo: 'client-accounts', required: true },
-    { name: 'amount', type: 'number', required: true, min: 0 },
-  ],
-}
-```
+| Collection | create | read | update | delete |
+|-----------|--------|------|--------|--------|
+| Users | adminOnly | adminOrSelf | adminOrSelf | adminOnly |
+| ClientAccounts | authenticated | adminOrOwnClient | authenticated | adminOnly |
+| Orders | authenticated | authenticated | authenticated | adminOnly |
+| Projects | adminOrUser | adminOrAssigned | adminOrAssigned | adminOnly |
+| Tasks | adminOrUser | adminOrAssigned | adminOrAssigned | adminOnly |
+| Sprints | adminOrUser | adminOrProjectMember | adminOrProjectMember | adminOnly |
+| Files | adminOrUser | adminOrProjectMember | adminOrProjectMember | adminOnly |
+| WebhookEvents | internal | adminOnly | adminOnly | adminOnly |
+| Media | authenticated | anyone | authenticated | authenticated |
+| Clients | authenticated | anyone | authenticated | authenticated |
+| Leads | anyone | authenticated | authenticated | authenticated |
+| Posts | authenticated | authenticatedOrPublished | authenticated | authenticated |
 
 ## Hooks
 
-### Hook Patterns Used in This Project
-
-#### Balance Calculation Hook (`updateClientBalance.ts`)
-
-```typescript
-// Pattern: Calculate derived data with loop prevention
-export const updateClientBalance: CollectionAfterChangeHook = async ({
-  doc,
-  req,
-  context,
-}) => {
-  // Prevent infinite loops
-  if (context.skipBalanceUpdate) return doc
-
-  const { payload } = req
-  const clientAccountId = typeof doc.clientAccount === 'string'
-    ? doc.clientAccount
-    : doc.clientAccount?.id
-
-  // Calculate balance from all pending orders
-  const { docs: pendingOrders } = await payload.find({
-    collection: 'orders',
-    where: {
-      and: [
-        { clientAccount: { equals: clientAccountId } },
-        { status: { equals: 'pending' } },
-      ],
-    },
-    req,
-  })
-
-  const totalBalance = pendingOrders.reduce((sum, order) => sum + (order.amount || 0), 0)
-
-  // Update with loop prevention flag
-  await payload.update({
-    collection: 'client-accounts',
-    id: clientAccountId,
-    data: { accountBalance: totalBalance },
-    context: { skipBalanceUpdate: true },
-    req,
-  })
-
-  return doc
-}
-```
-
-#### Revalidation Hook (`revalidate.ts`)
-
-```typescript
-// Pattern: Next.js cache revalidation on content change
-import { revalidatePath } from 'next/cache'
-
-export const revalidateHomepage: CollectionAfterChangeHook = async ({ doc }) => {
-  revalidatePath('/')
-  return doc
-}
-
-// Multi-path revalidation for blog posts
-export const createMultiPathRevalidate = (paths: string[]): CollectionAfterChangeHook => {
-  return async ({ doc }) => {
-    paths.forEach(path => revalidatePath(path))
-    return doc
-  }
-}
-```
-
-#### Customer Creation Hooks
-
-```typescript
-// Pattern: Auto-create external service records
-export const createStripeCustomerHook: CollectionBeforeChangeHook = async ({
-  data,
-  req,
-  operation,
-}) => {
-  if (operation !== 'create') return data
-  if (data.stripeCustomerId) return data // Already has one
-
-  const stripe = getStripe()
-  const customer = await stripe.customers.create({
-    email: data.email,
-    name: data.name,
-  })
-
-  return {
-    ...data,
-    stripeCustomerId: customer.id,
-  }
-}
-```
-
-### Hook Best Practices
-
-1. **Always pass `req`** to nested Payload operations
-2. **Use context flags** to prevent infinite loops
-3. **Handle errors gracefully** - log but don't fail the main operation
-4. **Use retry logic** for transient errors (network, database locks)
-5. **Keep hooks focused** - one responsibility per hook
-
-## Queries
-
-### Local API
-
-```typescript
-// Find with complex query
-const orders = await payload.find({
-  collection: 'orders',
-  where: {
-    and: [
-      { status: { equals: 'pending' } },
-      { 'clientAccount.email': { contains: 'example.com' } },
-    ],
-  },
-  depth: 2, // Populate relationships
-  limit: 10,
-  sort: '-createdAt',
-  select: {
-    orderNumber: true,
-    amount: true,
-    clientAccount: true,
-  },
-})
-
-// Find by ID
-const order = await payload.findByID({
-  collection: 'orders',
-  id: '123',
-  depth: 2,
-})
-
-// Create
-const newOrder = await payload.create({
-  collection: 'orders',
-  data: {
-    orderNumber: 'ORD-001',
-    status: 'pending',
-    amount: 5000,
-  },
-})
-
-// Update
-await payload.update({
-  collection: 'orders',
-  id: '123',
-  data: { status: 'paid' },
-})
-
-// Delete
-await payload.delete({
-  collection: 'orders',
-  id: '123',
-})
-```
-
-### Query Operators
-
-```typescript
-// Equals
-{ status: { equals: 'published' } }
-
-// Not equals
-{ status: { not_equals: 'draft' } }
-
-// Greater than / less than
-{ amount: { greater_than: 1000 } }
-{ age: { less_than_equal: 65 } }
-
-// Contains (case-insensitive)
-{ email: { contains: '@example.com' } }
-
-// Like (all words present)
-{ description: { like: 'payload cms' } }
-
-// In array
-{ status: { in: ['pending', 'processing'] } }
-
-// Exists
-{ stripeCustomerId: { exists: true } }
-
-// Near (geospatial)
-{ location: { near: [-122.4194, 37.7749, 10000] } }
-```
-
-### AND/OR Logic
-
-```typescript
-{
-  or: [
-    { status: { equals: 'published' } },
-    { author: { equals: user.id } },
-  ],
-}
-
-{
-  and: [
-    { status: { equals: 'pending' } },
-    { amount: { greater_than: 0 } },
-  ],
-}
-```
-
-### Getting Payload Instance
-
-```typescript
-// In API routes (Next.js)
-import { getPayload } from 'payload'
-import config from '@payload-config'
-
-export async function GET() {
-  const payload = await getPayload({ config })
-
-  const orders = await payload.find({
-    collection: 'orders',
-  })
-
-  return Response.json(orders)
-}
-
-// In Server Components
-import { getPayload } from 'payload'
-import config from '@payload-config'
-
-export default async function OrdersPage() {
-  const payload = await getPayload({ config })
-  const { docs } = await payload.find({ collection: 'orders' })
-
-  return <div>{docs.map(order => <h1 key={order.id}>{order.orderNumber}</h1>)}</div>
-}
-```
-
-## Components
-
-The Admin Panel can be extensively customized using React Components. Custom Components can be Server Components (default) or Client Components.
-
-### Defining Components
-
-Components are defined using **file paths** (not direct imports) in your config:
-
-**Component Path Rules:**
-
-- Paths are relative to project root or `config.admin.importMap.baseDir`
-- Named exports: use `#ExportName` suffix or `exportName` property
-- Default exports: no suffix needed
-- File extensions can be omitted
-
-```typescript
-import { buildConfig } from 'payload'
-
-export default buildConfig({
-  admin: {
-    components: {
-      // Logo and branding
-      graphics: {
-        Logo: '/components/payload/Logo',
-        Icon: '/components/payload/Icon',
-      },
-
-      // Navigation
-      Nav: '/components/payload/CustomNav',
-      beforeNavLinks: ['/components/payload/CustomNavItem'],
-      afterNavLinks: ['/components/payload/NavFooter'],
-
-      // Header
-      header: ['/components/payload/AnnouncementBanner'],
-      actions: ['/components/payload/ClearCache'],
-
-      // Dashboard
-      beforeDashboard: ['/components/payload/WelcomeMessage'],
-      afterDashboard: ['/components/payload/Analytics'],
-
-      // Auth
-      beforeLogin: ['/components/payload/SSOButtons'],
-      logout: { Button: '/components/payload/LogoutButton' },
-
-      // Views
-      views: {
-        dashboard: { Component: '/components/payload/CustomDashboard' },
-      },
-    },
-  },
-})
-```
-
-### Component Types
-
-1. **Root Components** - Global Admin Panel (logo, nav, header)
-2. **Collection Components** - Collection-specific (edit view, list view)
-3. **Global Components** - Global document views
-4. **Field Components** - Custom field UI and cells
-
-### Server vs Client Components
-
-**All components are Server Components by default** (can use Local API directly):
-
-```tsx
-// Server Component (default) - components/payload/OrderStats.tsx
-import type { Payload } from 'payload'
-
-async function OrderStats({ payload }: { payload: Payload }) {
-  const { totalDocs } = await payload.count({ collection: 'orders' })
-  return <div>{totalDocs} orders</div>
-}
-
-export default OrderStats
-```
-
-**Client Components** need the `'use client'` directive:
-
-```tsx
-// Client Component - components/payload/SendInvoiceButton.tsx
-'use client'
-import { useState } from 'react'
-import { useDocumentInfo, useAuth } from '@payloadcms/ui'
-
-export function SendInvoiceButton() {
-  const [loading, setLoading] = useState(false)
-  const { id } = useDocumentInfo()
-  const { user } = useAuth()
-
-  const handleSend = async () => {
-    setLoading(true)
-    await fetch(`/api/invoices/send`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ orderId: id }),
-    })
-    setLoading(false)
-  }
-
-  return (
-    <button onClick={handleSend} disabled={loading}>
-      {loading ? 'Sending...' : 'Send Invoice'}
-    </button>
-  )
-}
-```
-
-### Collection/Global Components
-
-```typescript
-export const Orders: CollectionConfig = {
-  slug: 'orders',
-  admin: {
-    components: {
-      // Edit view
-      edit: {
-        PreviewButton: '/components/payload/OrderPreview',
-        SaveButton: '/components/payload/CustomSave',
-        SaveDraftButton: '/components/payload/SaveDraft',
-        PublishButton: '/components/payload/Publish',
-      },
-
-      // List view
-      list: {
-        Header: '/components/payload/OrdersListHeader',
-        beforeList: ['/components/payload/BulkActions'],
-        afterList: ['/components/payload/ListFooter'],
-      },
-    },
-  },
-}
-```
-
-### Field Components
-
-```typescript
-{
-  name: 'status',
-  type: 'select',
-  options: ['draft', 'pending', 'paid', 'cancelled'],
-  admin: {
-    components: {
-      // Edit view field
-      Field: '/components/payload/StatusField',
-      // List view cell
-      Cell: '/components/payload/StatusCell',
-      // Field label
-      Label: '/components/payload/StatusLabel',
-      // Field description
-      Description: '/components/payload/StatusDescription',
-      // Error message
-      Error: '/components/payload/StatusError',
-    },
-  },
-}
-```
-
-**UI Field** (presentational only, no data):
+All hooks in `src/lib/payload/hooks/`.
+
+| File | Trigger | Purpose |
+|------|---------|---------|
+| `updateClientBalance.ts` | Orders `afterChange`, `afterDelete` | Recalculates `accountBalance` on ClientAccount by summing pending orders. Has retry logic for MongoDB write conflicts. |
+| `beforeLogin.ts` | Users `beforeLogin` | **Currently passes all users through — 2FA is disabled.** See Authentication section. |
+| `createClientAccount.ts` | Users `afterChange` | Auto-creates ClientAccount when a `role: 'client'` user is created. |
+| `createStripeCustomer.ts` | ClientAccounts `beforeChange` | Finds or creates Stripe customer. Non-blocking. |
+| `createShopifyCustomer.ts` | ClientAccounts `beforeChange` | Finds or creates Shopify customer via GraphQL. Non-blocking. |
+| `syncUserToClientAccount.ts` | Users `afterChange` | Keeps ClientAccount email/name in sync with User. |
+| `syncClientAccountToUser.ts` | ClientAccounts `afterChange` | Keeps User email/name in sync with ClientAccount. |
+| `sendTwoFactorEmail.ts` | Users `afterChange` | Sends 2FA setup email. Part of dormant 2FA system. |
+| `revalidate.ts` | Posts `afterChange`, `afterDelete` | Calls `revalidatePath` for `/`, `/sonar`, `/sonar/[slug]`. |
+
+**Hook rules:**
+1. Always pass `req` to nested Payload operations
+2. Use context flags to prevent infinite loops — check AND set
+3. External service hooks must be non-blocking — catch errors, log, never re-throw
+
+## Integrations
+
+All integrations use singletons and are non-blocking in hooks.
+
+| Integration | Files | Key Behavior |
+|------------|-------|-------------|
+| **Stripe** | `src/lib/stripe.ts` | Singleton. API version `2025-12-15.clover`. Webhooks: `invoice.paid`, `invoice.payment_failed`, `invoice.voided`. Idempotency via `WebhookEvents` collection. |
+| **Shopify** | `src/lib/shopify/` | OAuth token cached in memory with auto-refresh. `customers.ts` does email lookup before create to prevent duplicates. |
+| **Google Calendar** | `src/lib/google-calendar.ts` | Service account with lazy init. Creates events with Google Meet links. `getAvailableSlots()` returns free 1-hour slots 9AM–5PM. |
+| **Email** | `src/lib/email/templates/` | Nodemailer via Gmail SMTP. All sends are non-blocking. |
+
+## Custom Admin Components
+
+Location: `src/components/payload/`. After adding or changing a component path, run `bun run payload generate:importmap`.
+
+Components are registered in `payload.config.ts` using **file paths** (not direct imports), relative to the project root.
+
+| Component | Type | Purpose |
+|-----------|------|---------|
+| `CustomLogin.tsx` | Client | 2FA login UI — email step then code step |
+| `CustomAccount.tsx` | Client | Account management panel |
+| `Logo.tsx` | Server | Admin panel logo |
+| `Icon.tsx` | Server | Admin panel icon |
+| `BeforeLogin.tsx` | Server | Pre-login banner |
+| `SendInvoiceButton.tsx` | Client | Send invoice from Order edit view |
+| `ConvertToClientButton.tsx` | Client | Convert Lead → ClientAccount + User |
+| `CreateOrderButton.tsx` | Client | Floating action in admin nav actions |
+| `order-creation/` | Mixed | Order creation workflow (customer selector, product search, cart, invoice summary) |
+
+**UI field pattern** — presentational only, stores no data:
 
 ```typescript
 {
   name: 'sendInvoiceButton',
   type: 'ui',
-  admin: {
-    components: {
-      Field: '/components/payload/SendInvoiceButton',
-    },
-  },
+  admin: { components: { Field: '/components/payload/SendInvoiceButton' } },
 }
 ```
 
-### Custom Admin Components
-
-**Location**: `src/components/payload/`
-
-| Component | Type | Purpose |
-|-----------|------|---------|
-| `CustomLogin.tsx` | Client | 2FA login flow |
-| `CustomAccount.tsx` | Client | Account management |
-| `SendInvoiceButton.tsx` | Client | Send invoice from order |
-| `ConvertToClientButton.tsx` | Client | Convert lead to client |
-| `Logo.tsx` | Server | Admin panel logo |
-| `Icon.tsx` | Server | Admin panel icon |
-| `order-creation/*` | Mixed | Order creation workflow |
-
-### Using Payload Hooks (Client Components Only)
-
-```tsx
-'use client'
-import {
-  useAuth,           // Current user
-  useConfig,         // Payload config (client-safe)
-  useDocumentInfo,   // Document info (id, collection, etc.)
-  useField,          // Field value and setter
-  useForm,           // Form state
-  useFormFields,     // Multiple field values (optimized)
-  useLocale,         // Current locale
-  useTranslation,    // i18n translations
-  usePayload,        // Local API methods
-} from '@payloadcms/ui'
-
-export function MyComponent() {
-  const { user } = useAuth()
-  const { id, collection } = useDocumentInfo()
-  const locale = useLocale()
-  const { t } = useTranslation()
-
-  // ❌ BAD: Re-renders on every form change
-  const { fields } = useForm()
-
-  // ✅ GOOD: Only re-renders when specific field changes
-  const status = useFormFields(([fields]) => fields.status?.value)
-
-  return <div>Document {id} in {collection}</div>
-}
-```
-
-### Performance Best Practices
-
-1. **Import correctly:**
-
-   - Admin Panel: `import { Button } from '@payloadcms/ui'`
-   - Frontend: `import { Button } from '@payloadcms/ui/elements/Button'`
-
-2. **Optimize re-renders:**
-
-   ```tsx
-   // ❌ BAD: Re-renders on every form change
-   const { fields } = useForm()
-
-   // ✅ GOOD: Only re-renders when specific field changes
-   const value = useFormFields(([fields]) => fields[path])
-   ```
-
-3. **Prefer Server Components** - Only use Client Components when you need:
-
-   - State (useState, useReducer)
-   - Effects (useEffect)
-   - Event handlers (onClick, onChange)
-   - Browser APIs (localStorage, window)
-
-4. **Minimize serialized props** - Server Components serialize props sent to client
-
-### Styling Components
-
-```tsx
-import './styles.scss'
-
-export function MyComponent() {
-  return <div className="my-component">Content</div>
-}
-```
-
-```scss
-// Use Payload's CSS variables
-.my-component {
-  background-color: var(--theme-elevation-500);
-  color: var(--theme-text);
-  padding: var(--base);
-  border-radius: var(--border-radius-m);
-}
-
-// Import Payload's SCSS library
-@import '~@payloadcms/ui/scss';
-
-.my-component {
-  @include mid-break {
-    background-color: var(--theme-elevation-900);
-  }
-}
-```
-
-### Type Safety
-
-```tsx
-import type {
-  TextFieldServerComponent,
-  TextFieldClientComponent,
-  TextFieldCellComponent,
-  SelectFieldServerComponent,
-  // ... etc
-} from 'payload'
-
-export const MyField: TextFieldClientComponent = (props) => {
-  // Fully typed props
-}
-```
-
-### Import Map
-
-Payload auto-generates `app/(payload)/admin/importMap.js` to resolve component paths.
-
-**Regenerate manually:**
-
-```bash
-bun run payload generate:importmap
-```
-
-**Set custom location:**
-
-```typescript
-export default buildConfig({
-  admin: {
-    importMap: {
-      baseDir: path.resolve(dirname, 'src'),
-      importMapFile: path.resolve(dirname, 'app', 'custom-import-map.js'),
-    },
-  },
-})
-```
-
-## Custom Endpoints
-
-```typescript
-import type { Endpoint } from 'payload'
-import { APIError } from 'payload'
-
-// Always check authentication
-export const protectedEndpoint: Endpoint = {
-  path: '/protected',
-  method: 'get',
-  handler: async (req) => {
-    if (!req.user) {
-      throw new APIError('Unauthorized', 401)
-    }
-
-    // Use req.payload for database operations
-    const data = await req.payload.find({
-      collection: 'orders',
-      where: { clientAccount: { equals: req.user.id } },
-    })
-
-    return Response.json(data)
-  },
-}
-
-// Route parameters
-export const trackingEndpoint: Endpoint = {
-  path: '/:id/tracking',
-  method: 'get',
-  handler: async (req) => {
-    const { id } = req.routeParams
-
-    const tracking = await getTrackingInfo(id)
-
-    if (!tracking) {
-      return Response.json({ error: 'not found' }, { status: 404 })
-    }
-
-    return Response.json(tracking)
-  },
-}
-```
-
-## Drafts & Versions
-
-```typescript
-export const Posts: CollectionConfig = {
-  slug: 'posts',
-  versions: {
-    drafts: {
-      autosave: true,
-      schedulePublish: true,
-      validate: false, // Don't validate drafts
-    },
-    maxPerDoc: 100,
-  },
-  access: {
-    read: ({ req: { user } }) => {
-      // Public sees only published
-      if (!user) return { _status: { equals: 'published' } }
-      // Authenticated sees all
-      return true
-    },
-  },
-}
-
-// Create draft
-await payload.create({
-  collection: 'posts',
-  data: { title: 'Draft Page' },
-  draft: true, // Skips required field validation
-})
-
-// Read with drafts
-const post = await payload.findByID({
-  collection: 'posts',
-  id: '123',
-  draft: true, // Returns draft if available
-})
-```
-
-## Plugins
-
-### Using Plugins
-
-```typescript
-import { seoPlugin } from '@payloadcms/plugin-seo'
-import { redirectsPlugin } from '@payloadcms/plugin-redirects'
-
-export default buildConfig({
-  plugins: [
-    seoPlugin({
-      collections: ['posts', 'pages'],
-    }),
-    redirectsPlugin({
-      collections: ['pages'],
-    }),
-  ],
-})
-```
-
-### Creating Plugins
-
-```typescript
-import type { Config, Plugin } from 'payload'
-
-interface MyPluginConfig {
-  collections?: string[]
-  enabled?: boolean
-}
-
-export const myPlugin =
-  (options: MyPluginConfig): Plugin =>
-  (config: Config): Config => ({
-    ...config,
-    collections: config.collections?.map((collection) => {
-      if (options.collections?.includes(collection.slug)) {
-        return {
-          ...collection,
-          fields: [...collection.fields, { name: 'pluginField', type: 'text' }],
-        }
-      }
-      return collection
-    }),
-  })
-```
-
-## Integrations
-
-### Stripe Integration
-
-**File**: `src/lib/stripe.ts`
-
-```typescript
-import Stripe from 'stripe'
-
-let stripeInstance: Stripe | null = null
-
-export function getStripe(): Stripe {
-  if (!stripeInstance) {
-    stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-      apiVersion: '2025-12-15.clover',
-    })
-  }
-  return stripeInstance
-}
-
-// Webhook handler: /api/stripe/webhooks
-// Events handled: invoice.paid, invoice.payment_failed, invoice.voided
-```
-
-### Shopify Integration
-
-**Files**: `src/lib/shopify/`
-
-- `admin-client.ts` - OAuth token management, GraphQL client
-- `customers.ts` - Customer creation/lookup
-- `products.ts` - Product queries
-- `draft-orders.ts` - Draft order management
-
-```typescript
-// Pattern: Token caching with automatic refresh
-let tokenCache: { token: string; expiry: number } | null = null
-
-export async function getAdminToken(): Promise<string> {
-  if (tokenCache && Date.now() < tokenCache.expiry - 300000) {
-    return tokenCache.token
-  }
-
-  // Refresh token...
-  const response = await fetch(/* OAuth endpoint */)
-  const { access_token, expires_in } = await response.json()
-
-  tokenCache = {
-    token: access_token,
-    expiry: Date.now() + expires_in * 1000,
-  }
-
-  return tokenCache.token
-}
-```
-
-### Google Calendar Integration
-
-**File**: `src/lib/google-calendar.ts`
-
-```typescript
-// Singleton pattern for service account auth
-class GoogleCalendarService {
-  private static instance: GoogleCalendarService
-  private calendar: calendar_v3.Calendar | null = null
-
-  static getInstance(): GoogleCalendarService {
-    if (!this.instance) {
-      this.instance = new GoogleCalendarService()
-    }
-    return this.instance
-  }
-
-  async createEvent(eventData: EventInput): Promise<calendar_v3.Schema$Event> {
-    // Creates event with Google Meet link
-  }
-
-  async getAvailableSlots(date: Date): Promise<TimeSlot[]> {
-    // Returns available 1-hour slots (9 AM - 5 PM)
-  }
-}
-```
-
-## Authentication & 2FA
-
-### Overview
-
-ORCACLUB uses a custom 2FA system for admin login:
-
-1. User enters email/password → `/api/auth/request-login-code`
-2. System validates credentials, sends 6-digit code via email
-3. User enters code → `/api/auth/verify-login-code`
-4. System validates code, creates session, redirects to `/admin`
-
-### Key Files
-
-| File | Purpose |
-|------|---------|
-| `src/lib/payload/utils/loginTwoFactor.ts` | Code generation, email sending, verification |
-| `src/app/api/auth/request-login-code/route.ts` | Request 2FA code endpoint |
-| `src/app/api/auth/verify-login-code/route.ts` | Verify code and create session |
-| `src/lib/payload/hooks/beforeLogin.ts` | Blocks direct login, requires 2FA |
-| `src/components/payload/CustomLogin.tsx` | Custom login UI with 2FA flow |
-
-### User Fields for 2FA
-
-```typescript
-// Account-level 2FA (one-time verification)
-twoFactorCode: string | null
-twoFactorExpiry: Date | null
-twoFactorVerified: boolean
-
-// Login-level 2FA (every login)
-loginTwoFactorCode: string | null
-loginTwoFactorExpiry: Date | null  // 10 minutes
-```
-
-### beforeLogin Hook Pattern
-
-```typescript
-// Enforces 2FA by blocking direct logins
-export const beforeLoginHook: CollectionBeforeLoginHook = async ({ req, user }) => {
-  // Check bypass flag from verify-login-code endpoint
-  if (req.context?.bypassLoginTwoFactor === true) {
-    return user // Allow login
-  }
-
-  // Block direct login attempts
-  throw new Error('Please use the 2FA login flow')
-}
-```
-
-## Best Practices
-
-### Security
-
-1. Always set `overrideAccess: false` when passing `user` to Local API
-2. Field-level access only returns boolean (no query constraints)
-3. Default to restrictive access, gradually add permissions
-4. Never trust client-provided data
-5. Use `saveToJWT: true` for roles to avoid database lookups
-6. Always verify webhook signatures (Stripe, Shopify)
-
-### Performance
-
-1. Index frequently queried fields (`index: true`, `unique: true`)
-2. Use `select` to limit returned fields
-3. Set `maxDepth` on relationships to prevent over-fetching
-4. Use query constraints over async operations in access control
-5. Cache expensive operations in `req.context`
-6. Use Server Components when possible (reduce client bundle)
-
-### Data Integrity
-
-1. Always pass `req` to nested operations in hooks
-2. Use context flags to prevent infinite hook loops
-3. Enable transactions for MongoDB (requires replica set) and Postgres
-4. Use `beforeValidate` for data formatting
-5. Use `beforeChange` for business logic
-6. Use `afterChange` for side effects (emails, webhooks)
-
-### Type Safety
-
-1. Run `bun run payload:generate` after schema changes
-2. Import types from generated `payload-types.ts`
-3. Type your user object: `import type { User } from '@/types/payload-types'`
-4. Use `as const` for field options
-5. Use field type guards for runtime type checking
-
-### Organization
-
-1. Keep collections in separate files
-2. Extract access control to `src/lib/payload/access/` directory
-3. Extract hooks to `src/lib/payload/hooks/` directory
-4. Use reusable field factories for common patterns
-5. Document complex access control with comments
-6. Use TypeScript path aliases (`@/components`, `@/lib`, etc.)
-
-## Common Gotchas
-
-1. **Local API Default**: Access control bypassed unless `overrideAccess: false`
-2. **Transaction Safety**: Missing `req` in nested operations breaks atomicity
-3. **Hook Loops**: Operations in hooks can trigger the same hooks
-4. **Field Access**: Cannot use query constraints, only boolean
-5. **Relationship Depth**: Default depth is 2, set to 0 for IDs only
-6. **Draft Status**: `_status` field auto-injected when drafts enabled
-7. **Type Generation**: Types not updated until `bun run payload:generate` runs
-8. **MongoDB Transactions**: Require replica set configuration
-9. **SQLite Transactions**: Disabled by default, enable with `transactionOptions: {}`
-10. **Point Fields**: Not supported in SQLite
-11. **Context Flags**: Must check AND set context flags to prevent loops
-12. **Webhook Secrets**: Always verify signatures on incoming webhooks
-13. **Import Map**: Regenerate after adding/modifying component paths
-
-## TypeScript Configuration
-
-### Path Aliases
-
-```json
-{
-  "paths": {
-    "@payload-config": ["./src/lib/payload/payload.config.ts"],
-    "@/*": ["./src/*"],
-    "@/components/*": ["./src/components/*"],
-    "@/lib/*": ["./src/lib/*"],
-    "@/ui/*": ["./src/components/ui/*"],
-    "@/hooks/*": ["./src/hooks/*"],
-    "@/types/*": ["./src/types/*"]
-  }
-}
-```
-
-### Import Best Practices
-
-```typescript
-// ✅ Preferred - Use TypeScript path aliases
-import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
-import type { Order } from '@/types/payload-types'
-import config from '@payload-config'
-
-// ❌ Avoid relative imports across directories
-import Button from '../../../components/ui/button'
-```
-
-## Styling
-
-### Tailwind CSS v4
-
-```css
-/* globals.css */
-@import "tailwindcss";
-@plugin "tailwindcss-animate";
-
-@theme {
-  --font-sans: var(--font-montserrat), system-ui, sans-serif;
-  --color-intelligence-cyan: #67e8f9;
-  --radius: 0.5rem;
-}
-
-.gradient-text {
-  background: linear-gradient(45deg, #67e8f9, #3b82f6, #1e40af, #67e8f9);
-  background-size: 300% 300%;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: gradientShift 4s ease-in-out infinite;
-}
-```
-
-### Brand Colors
-
-- **Primary**: Intelligence cyan (`#67e8f9`)
-- **Background**: Black with subtle gradients
-- **Text**: White, gray-400, gray-300 hierarchy
-- **Accents**: Cyan for CTAs
-
-### ORCACLUB Logo Pattern
-
-```tsx
-<span className="font-bold text-white">ORCA</span>
-<span className="font-bold gradient-text">CLUB</span>
-```
+**Client Component hooks** — import from `@payloadcms/ui`:
+- `useAuth` — current user
+- `useDocumentInfo` — document id, collection slug
+- `useFormFields(([fields]) => fields[path])` — prefer over `useForm()` to avoid re-renders on every keystroke
 
 ## API Routes
 
@@ -1319,108 +245,138 @@ import Button from '../../../components/ui/button'
 
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
-| `/api/auth/request-login-code` | POST | Request 2FA code |
-| `/api/auth/verify-login-code` | POST | Verify code, create session |
-| `/api/auth/forgot-password` | POST | Request password reset |
+| `/api/auth/request-login-code` | POST | Generate and email a login code |
+| `/api/auth/verify-login-code` | POST | Verify code, create Payload session |
+| `/api/auth/forgot-password` | POST | Send password reset email |
 | `/api/auth/reset-password` | POST | Reset password with token |
 
 ### Business Logic
 
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
-| `/api/contact` | POST | Submit contact form, create Lead |
-| `/api/booking` | POST | Book consultation, create Calendar event |
-| `/api/booking/available-slots` | GET | Get available time slots |
-| `/api/invoices/send` | POST | Send invoice email |
-| `/api/stripe/webhooks` | POST | Handle Stripe events |
-| `/api/shopify/products` | POST | Search Shopify products |
+| `/api/contact` | POST | Save Lead → Shopify customer → confirmation emails |
+| `/api/booking` | POST | Create Lead + Google Calendar event |
+| `/api/booking/available-slots` | GET | Available time slots for a given date |
+| `/api/invoices/send` | POST | Send invoice email for an Order |
+| `/api/stripe/webhooks` | POST | Handle Stripe invoice events |
+| `/api/stripe/payment-links` | POST | Create a Stripe payment link for an Order |
+| `/api/projects/[project]/tasks` | GET, POST | List or create tasks |
+| `/api/projects/[project]/sprints` | GET, POST | List or create sprints |
+| `/api/users/[username]/projects` | GET | List projects for a user |
+| `/api/health` | GET | Health check |
+
+**Prefer Server Component queries over API routes** when inside `(spaces)/`. Server Components can call the Payload Local API directly:
+
+```typescript
+import { getPayload } from 'payload'
+import config from '@payload-config'
+import { headers } from 'next/headers'
+
+const payload = await getPayload({ config })
+const { user } = await payload.auth({ headers: await headers() })
+const { docs } = await payload.find({ collection: 'orders', user, overrideAccess: false })
+```
+
+## Authentication & 2FA
+
+The 2FA infrastructure is built but **currently disabled** — `beforeLogin.ts` passes all authenticated users through.
+
+| File | Purpose |
+|------|---------|
+| `src/lib/payload/utils/loginTwoFactor.ts` | Code generation, email sending, verification |
+| `src/app/api/auth/request-login-code/route.ts` | Request code endpoint |
+| `src/app/api/auth/verify-login-code/route.ts` | Verify code, create session |
+| `src/lib/payload/hooks/beforeLogin.ts` | Currently: allow all. To re-enable: restore `bypassLoginTwoFactor` context check. |
+| `src/components/payload/CustomLogin.tsx` | Login UI with email → code flow |
+
+User fields: `loginTwoFactorCode`, `loginTwoFactorExpiry` (10 min TTL), `twoFactorCode`, `twoFactorExpiry`, `twoFactorVerified`
 
 ## Development Workflow
 
-### Starting Development
+### After schema changes
 
 ```bash
-# Recommended (fastest)
-bun run bun:dev
-
-# Standard
-bun run dev
-
-# Access points
-# App: http://localhost:3000
-# Admin: http://localhost:3000/admin
-# Health: http://localhost:3000/api/health
+bun run payload:generate             # Always — keeps payload-types.ts current
+bun run payload generate:importmap   # Only if component paths changed
+bun run tsc --noEmit                 # Verify no TypeScript errors
 ```
 
-### After Schema Changes
+### Adding a new collection
 
-```bash
-# Generate TypeScript types
-bun run payload:generate
+1. Create `src/lib/payload/collections/[name].ts`
+2. Import access functions from `src/lib/payload/access/index.ts`
+3. Add hooks in `src/lib/payload/hooks/` following existing patterns
+4. Register in `payload.config.ts` `collections` array
+5. Run `bun run payload:generate`
+6. Add `index: true` on any field used in `where` queries
 
-# Run migrations if needed
-bun run payload:migrate
-```
+### Adding a new integration
 
-### Building for Production
-
-```bash
-bun run build:production
-```
+1. Singleton client in `src/lib/[service].ts`
+2. Operation functions in `src/lib/[service]/`
+3. Hook attachments must be non-blocking (catch, log, don't re-throw)
+4. Add idempotency tracking if webhooks are involved
 
 ## Business Context
 
-### Service Model
+ORCACLUB is a Technical Operations Development Studio. Two audiences: staff managing client work in the Payload admin, and clients viewing their own projects/orders in the `(spaces)/` portal.
 
-ORCACLUB is a Technical Operations Development Studio offering:
+**Service tiers:** Launch $1K–3K / Scale $3K–5K / Enterprise $6K–30K / Maintenance $300–1,200/mo
 
-- **Launch Tier**: $1K-3K, 3-5 days (CMS setup, hosting, responsive design)
-- **Scale Tier**: $3K-5K, 7-10 days (+ 2 integrations, analytics, automation)
-- **Enterprise Tier**: $6K-30K, 14-21 days (+ Shopify, custom APIs, admin dashboard)
-- **Monthly Maintenance**: $300-1,200/mo
-
-### Conversion Funnel
-
+**Conversion funnel:**
 ```
 /solutions/* (TOFU) → /project (BOFU) → /contact (Conversion)
 /services/* (MOFU) ↗
 ```
 
-The `/project` page is the main conversion hub with all tier information.
+**Key data flows:**
+1. Contact form → Lead → Shopify customer → confirmation emails
+2. Lead → ClientAccount + User → Stripe + Shopify sync via hooks
+3. Order created → `updateClientBalance` → invoice sent → Stripe webhook → `paid` → balance recalculated
 
-### Key Data Flows
+## Styling
 
-1. **Lead Capture**: Contact form → Lead collection → Shopify customer
-2. **Booking**: Booking form → Lead + Google Calendar event
-3. **Client Management**: Lead → ClientAccount (with Stripe/Shopify sync)
-4. **Orders**: Order created → Balance calculated → Invoice sent
+- **Brand**: Intelligence cyan `#67e8f9` for CTAs and accents
+- **Background**: Black with subtle gradients
+- **Text hierarchy**: white → gray-300 → gray-400
 
-## Additional Context Files
+```tsx
+// Logo pattern
+<span className="font-bold text-white">ORCA</span>
+<span className="font-bold gradient-text">CLUB</span>
+```
 
-For deeper exploration of specific topics, refer to the context files in the orca-web template located in `.cursor/rules/`:
+`gradient-text` is defined in `globals.css` — cyan to blue animated gradient on text.
 
-### Available Context Files
+**Path aliases** — always use these, never relative imports across directories:
 
-1. **`payload-overview.md`** - High-level architecture and core concepts
-2. **`security-critical.md`** - Critical security patterns (⚠️ IMPORTANT)
-3. **`collections.md`** - Collection configurations
-4. **`fields.md`** - Field types and patterns
-5. **`field-type-guards.md`** - TypeScript field type utilities
-6. **`access-control.md`** - Permission patterns
-7. **`access-control-advanced.md`** - Complex access patterns
-8. **`hooks.md`** - Lifecycle hooks
-9. **`queries.md`** - Database operations
-10. **`endpoints.md`** - Custom API endpoints
-11. **`adapters.md`** - Database and storage adapters
-12. **`plugin-development.md`** - Creating plugins
-13. **`components.md`** - Custom Components
+```typescript
+import config from '@payload-config'
+import type { Order } from '@/types/payload-types'
+import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
+```
+
+## Common Gotchas
+
+| Gotcha | Fix |
+|--------|-----|
+| Local API bypasses access control | Set `overrideAccess: false` when passing `user` |
+| `payload-types.ts` is stale | Run `bun run payload:generate` after schema changes |
+| Import map is stale | Run `bun run payload generate:importmap` after component path changes |
+| Hook triggers itself infinitely | Use context flags — check AND set before the nested call |
+| Nested operation in separate transaction | Add `req` to all nested Payload calls inside hooks |
+| Stripe webhook processed twice | `WebhookEvents` collection handles idempotency — always check before processing |
+| Shopify creates duplicate customer | `createCustomerSafely()` does email lookup first — use it |
+| 2FA flow appears broken | It's intentionally disabled — `beforeLogin.ts` passes all users |
+| Client can see another client's data | Missing `overrideAccess: false` in `(spaces)/` query |
+| MongoDB write conflict in balance hook | `updateClientBalance.ts` has exponential retry — don't remove it |
+| Package manager errors | Always use `bun`, never npm/yarn/pnpm |
 
 ## Resources
 
 - **Payload Docs**: https://payloadcms.com/docs
-- **Payload LLM Context**: https://payloadcms.com/llms-full.txt
-- **Payload GitHub**: https://github.com/payloadcms/payload
-- **Payload Examples**: https://github.com/payloadcms/payload/tree/main/examples
-- **Payload Templates**: https://github.com/payloadcms/payload/tree/main/templates
+- **Payload LLM Context**: https://payloadcms.com/llms-full.txt (use via Context7 MCP)
+- **Project Reference**: `/docs/ORCACLUB.md` — comprehensive architecture doc
+- **Cursor Rules**: `.cursor/rules/` — deep-dive context files per topic
 - **Project Admin**: http://localhost:3000/admin
-- **Project API**: http://localhost:3000/api

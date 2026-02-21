@@ -118,7 +118,7 @@ export function ProjectsList({ projects }: { projects: any[] }) {
       {/* Section Header with Upcoming Deadlines Badge */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-lg bg-white/[0.04] border border-white/[0.08]">
+          <div className="p-2.5 rounded-lg bg-[#1c1c1c] border border-white/[0.10]">
             <Folder className="size-5 text-intelligence-cyan" />
           </div>
           <h2 className="text-2xl font-semibold text-white">Your Projects</h2>
@@ -145,7 +145,7 @@ export function ProjectsList({ projects }: { projects: any[] }) {
             <Link
               key={index}
               href={`/u/${username}/projects/${project.id}`}
-              className="block group relative overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-md p-6 hover:border-white/[0.12] hover:bg-white/[0.05] transition-all duration-500 hover:scale-[1.01] fluid-enter cursor-pointer"
+              className="block group relative overflow-hidden rounded-xl border border-white/[0.08] bg-[#1c1c1c] backdrop-blur-md p-6 hover:border-white/[0.14] hover:bg-[#242424] transition-all duration-500 hover:scale-[1.01] fluid-enter cursor-pointer"
               style={{ animationDelay: `${index * 100}ms` }}
             >
               {/* Subtle glow orb */}
@@ -202,7 +202,7 @@ export function ProjectsList({ projects }: { projects: any[] }) {
                         {progress}%
                       </span>
                     </div>
-                    <div className="relative h-2 bg-white/[0.05] rounded-full overflow-hidden border border-white/[0.05]">
+                    <div className="relative h-2 bg-white/[0.07] rounded-full overflow-hidden border border-white/[0.06]">
                       <div
                         className={`absolute inset-y-0 left-0 rounded-full transition-all duration-1000 ${
                           project.status === 'on-hold'
@@ -219,8 +219,8 @@ export function ProjectsList({ projects }: { projects: any[] }) {
 
                 {/* Details Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  <div className="flex items-start gap-2.5 p-3 rounded-lg bg-white/[0.02] border border-white/[0.06]">
-                    <div className="p-2 rounded-md bg-white/[0.04] border border-white/[0.06]">
+                  <div className="flex items-start gap-2.5 p-3 rounded-lg bg-[#1c1c1c] border border-white/[0.08]">
+                    <div className="p-2 rounded-md bg-white/[0.05] border border-white/[0.08]">
                       <Calendar className="size-3.5 text-intelligence-cyan" />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -233,8 +233,8 @@ export function ProjectsList({ projects }: { projects: any[] }) {
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-2.5 p-3 rounded-lg bg-white/[0.02] border border-white/[0.06]">
-                    <div className="p-2 rounded-md bg-white/[0.04] border border-white/[0.06]">
+                  <div className="flex items-start gap-2.5 p-3 rounded-lg bg-[#1c1c1c] border border-white/[0.08]">
+                    <div className="p-2 rounded-md bg-white/[0.05] border border-white/[0.08]">
                       <Clock className="size-3.5 text-blue-400" />
                     </div>
                     <div className="flex-1 min-w-0">

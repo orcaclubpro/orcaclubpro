@@ -78,16 +78,16 @@ export async function OrdersList({ accountId }: { accountId: string }) {
       <div className="space-y-8">
         {/* Section Header */}
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-lg bg-white/[0.04] border border-white/[0.08]">
+          <div className="p-2.5 rounded-lg bg-[#1c1c1c] border border-white/[0.10]">
             <Receipt className="size-5 text-intelligence-cyan" />
           </div>
           <h2 className="text-2xl font-semibold text-white">Recent Orders</h2>
         </div>
 
         {/* Empty State */}
-        <div className="relative overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-12 fluid-enter">
+        <div className="relative overflow-hidden rounded-xl border border-white/[0.08] bg-[#1c1c1c] backdrop-blur-sm p-12 fluid-enter">
           <div className="relative z-10 text-center">
-            <div className="inline-flex p-5 rounded-xl bg-white/[0.03] border border-white/[0.06] mb-6">
+            <div className="inline-flex p-5 rounded-xl bg-[#1c1c1c] border border-white/[0.10] mb-6">
               <Package className="size-10 text-gray-500" />
             </div>
             <h3 className="text-xl font-semibold text-white mb-2">No Orders Yet</h3>
@@ -104,14 +104,14 @@ export async function OrdersList({ accountId }: { accountId: string }) {
     <div className="space-y-8">
       {/* Section Header */}
       <div className="flex items-center gap-3">
-        <div className="p-2.5 rounded-lg bg-white/[0.04] border border-white/[0.08]">
+        <div className="p-2.5 rounded-lg bg-[#1c1c1c] border border-white/[0.10]">
           <Receipt className="size-5 text-intelligence-cyan" />
         </div>
         <h2 className="text-2xl font-semibold text-white">Recent Orders</h2>
       </div>
 
       {/* Orders Container */}
-      <div className="relative overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-md fluid-enter">
+      <div className="relative overflow-hidden rounded-xl border border-white/[0.08] bg-[#1c1c1c] backdrop-blur-md fluid-enter">
         <div className="absolute bottom-0 right-0 w-48 h-48 bg-intelligence-cyan/[0.04] rounded-full blur-3xl" />
 
         <div className="relative z-10">
@@ -124,7 +124,7 @@ export async function OrdersList({ accountId }: { accountId: string }) {
               return (
                 <div
                   key={order.id}
-                  className="relative overflow-hidden rounded-lg border border-white/[0.08] bg-white/[0.02] p-4 hover:bg-white/[0.04] transition-all duration-300"
+                  className="relative overflow-hidden rounded-lg border border-white/[0.08] bg-[#1c1c1c] p-4 hover:bg-[#242424] transition-all duration-300"
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
                   <div className="flex items-start justify-between mb-3">
@@ -192,7 +192,7 @@ export async function OrdersList({ accountId }: { accountId: string }) {
                   return (
                     <tr
                       key={order.id}
-                      className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-all duration-300 fluid-enter"
+                      className="border-b border-white/[0.06] hover:bg-white/[0.04] transition-all duration-300 fluid-enter"
                       style={{ animationDelay: `${index * 50}ms` }}
                     >
                       <td className="py-4 px-6 text-white font-semibold text-sm">

@@ -4,225 +4,136 @@
  */
 
 import type { Payload } from 'payload'
-import crypto from 'crypto'
 
 /**
- * Generate a secure password reset token (32 bytes = 64 hex characters)
- */
-export function generateResetToken(): string {
-  return crypto.randomBytes(32).toString('hex')
-}
-
-/**
- * Get expiry time for reset token (1 hour from now)
- */
-export function getResetTokenExpiry(): Date {
-  const expiry = new Date()
-  expiry.setHours(expiry.getHours() + 1)
-  return expiry
-}
-
-/**
- * Generate branded HTML email template for password reset
+ * Generate branded HTML email template for password reset.
+ *
+ * Design language mirrors the /login page:
+ * - Black backgrounds (#000 outer, #080808 card)
+ * - Hairline borders (#111)
+ * - Cyan (#67e8f9) used only for the wordmark accent, divider, and CTA
+ * - Ultra-light typography, wide tracking labels, minimal copy
+ *
+ * All styles are inlined — no <style> block — for maximum email client
+ * compatibility (Gmail strips class-based styles entirely).
  */
 export function generatePasswordResetEmailHTML(resetUrl: string, userName: string): string {
-  return `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Reset Your Password - ORCACLUB</title>
-        <style>
-          body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            background-color: #000000;
-            margin: 0;
-            padding: 0;
-          }
-          .container {
-            max-width: 600px;
-            margin: 40px auto;
-            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
-            border-radius: 12px;
-            border: 1px solid #67e8f9;
-            overflow: hidden;
-          }
-          .header {
-            background: linear-gradient(45deg, #67e8f9, #3b82f6, #1e40af, #67e8f9);
-            background-size: 300% 300%;
-            padding: 40px 20px;
-            text-align: center;
-            color: white;
-          }
-          .brand {
-            font-size: 32px;
-            font-weight: bold;
-            margin: 0;
-          }
-          .brand-club {
-            background: linear-gradient(45deg, #67e8f9, #3b82f6);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-          }
-          .content {
-            padding: 40px 30px;
-            color: #e5e5e5;
-          }
-          .greeting {
-            font-size: 18px;
-            margin-bottom: 20px;
-            color: #ffffff;
-          }
-          .message {
-            font-size: 16px;
-            line-height: 1.8;
-            margin: 20px 0;
-            color: #d1d5db;
-          }
-          .button-container {
-            text-align: center;
-            margin: 35px 0;
-          }
-          .reset-button {
-            display: inline-block;
-            padding: 16px 40px;
-            background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
-            border: 2px solid #67e8f9;
-            border-radius: 8px;
-            color: #ffffff;
-            text-decoration: none;
-            font-size: 18px;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            box-shadow: 0 0 20px rgba(103, 232, 249, 0.3);
-            transition: all 0.3s ease;
-          }
-          .reset-button:hover {
-            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
-            box-shadow: 0 0 30px rgba(103, 232, 249, 0.5);
-          }
-          .alternative-link {
-            background: rgba(59, 130, 246, 0.1);
-            border: 1px solid #3b82f6;
-            border-radius: 6px;
-            padding: 15px;
-            margin: 25px 0;
-            word-break: break-all;
-          }
-          .alternative-link p {
-            margin: 5px 0;
-            font-size: 14px;
-            color: #9ca3af;
-          }
-          .alternative-link a {
-            color: #67e8f9;
-            text-decoration: none;
-            font-size: 13px;
-          }
-          .warning {
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid #ef4444;
-            border-radius: 6px;
-            padding: 15px;
-            margin: 20px 0;
-            font-size: 14px;
-            color: #fca5a5;
-          }
-          .info {
-            background: rgba(59, 130, 246, 0.1);
-            border: 1px solid #3b82f6;
-            border-radius: 6px;
-            padding: 15px;
-            margin: 20px 0;
-            font-size: 14px;
-            color: #93c5fd;
-          }
-          .footer {
-            background: #0a0a0a;
-            padding: 30px;
-            text-align: center;
-            color: #9ca3af;
-            font-size: 14px;
-            border-top: 1px solid #374151;
-          }
-          .footer-link {
-            color: #67e8f9;
-            text-decoration: none;
-          }
-          .tagline {
-            font-size: 12px;
-            color: #6b7280;
-            margin-top: 10px;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1 class="brand">
-              ORCA<span class="brand-club">CLUB</span>
-            </h1>
-            <p class="tagline" style="color: #a5f3fc; margin: 5px 0 0 0;">est 2025</p>
-          </div>
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reset your password — ORCACLUB</title>
+</head>
+<body style="margin:0;padding:0;background-color:#000000;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
 
-          <div class="content">
-            <p class="greeting">Hello ${userName},</p>
+  <!-- Outer wrapper -->
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+    <tr>
+      <td style="padding:48px 20px;">
 
-            <p class="message">
-              We received a request to reset your password for your <strong>ORCACLUB</strong> account. If you made this request, click the button below to choose a new password.
-            </p>
+        <!-- Card -->
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="max-width:520px;width:100%;background-color:#080808;border:1px solid #111111;">
 
-            <div class="button-container">
-              <a href="${resetUrl}" class="reset-button">Reset Password</a>
-            </div>
+          <!-- ── Header: wordmark ── -->
+          <tr>
+            <td style="padding:32px 40px 24px 40px;border-bottom:1px solid #0f0f0f;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                  <td>
+                    <span style="font-size:11px;font-weight:300;letter-spacing:0.4em;color:#333333;text-transform:uppercase;">ORCA</span><span style="font-size:11px;font-weight:300;letter-spacing:0.4em;color:#67e8f9;text-transform:uppercase;">CLUB</span>
+                  </td>
+                  <td align="right">
+                    <span style="font-size:10px;letter-spacing:0.4em;color:#1f1f1f;text-transform:uppercase;font-weight:300;">Client Portal</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
 
-            <div class="info">
-              ⏰ <strong>Expiry Notice:</strong> This password reset link will expire in <strong>1 hour</strong> for security reasons. If the link expires, you'll need to request a new one.
-            </div>
+          <!-- ── Body ── -->
+          <tr>
+            <td style="padding:40px 40px 0 40px;">
 
-            <div class="alternative-link">
-              <p><strong>Button not working?</strong> Copy and paste this link into your browser:</p>
-              <a href="${resetUrl}">${resetUrl}</a>
-            </div>
+              <!-- Label -->
+              <p style="margin:0 0 14px 0;font-size:10px;letter-spacing:0.35em;text-transform:uppercase;color:#3a3a3a;font-weight:400;">Password Reset</p>
 
-            <div class="warning">
-              ⚠️ <strong>Security Alert:</strong> If you didn't request a password reset, please ignore this email or contact us immediately at <a href="mailto:chance@orcaclub.pro" style="color: #fca5a5;">chance@orcaclub.pro</a>. Your password will remain unchanged.
-            </div>
+              <!-- Heading -->
+              <p style="margin:0;font-size:22px;font-weight:200;color:#ffffff;letter-spacing:0.01em;line-height:1.3;">Reset your password.</p>
 
-            <p class="message" style="margin-top: 30px;">
-              For your security, we recommend:
-            </p>
-            <ul style="color: #d1d5db; line-height: 1.8;">
-              <li>Using a strong, unique password</li>
-              <li>Not reusing passwords from other accounts</li>
-              <li>Enabling two-factor authentication (if available)</li>
-            </ul>
+              <!-- Cyan accent hairline -->
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin-top:18px;">
+                <tr>
+                  <td style="width:24px;height:1px;line-height:1px;font-size:1px;background-color:#2a6068;">&nbsp;</td>
+                </tr>
+              </table>
 
-            <p class="message">
-              If you need assistance, feel free to contact our team at <a href="mailto:chance@orcaclub.pro" class="footer-link">chance@orcaclub.pro</a>.
-            </p>
-          </div>
+              <!-- Greeting -->
+              <p style="margin:32px 0 0 0;font-size:13px;color:#555555;line-height:1.7;font-weight:300;">Hello ${userName},</p>
 
-          <div class="footer">
-            <p style="margin: 0 0 10px 0;">
-              <strong style="color: #ffffff;">ORCA<span style="color: #67e8f9;">CLUB</span></strong> - Technical Operations Development Studio
-            </p>
-            <p style="margin: 5px 0;">
-              <a href="https://orcaclub.pro" class="footer-link">orcaclub.pro</a>
-            </p>
-            <p style="margin: 15px 0 5px 0; font-size: 12px;">
-              © 2025 ORCACLUB. All rights reserved.
-            </p>
-          </div>
-        </div>
-      </body>
-    </html>
-  `
+              <!-- Body copy -->
+              <p style="margin:12px 0 0 0;font-size:13px;color:#555555;line-height:1.8;font-weight:300;">We received a request to reset your ORCACLUB password. Click the button below to choose a new one. This link expires in <span style="color:#888888;">1 hour</span>.</p>
+
+            </td>
+          </tr>
+
+          <!-- ── CTA Button ── -->
+          <tr>
+            <td style="padding:32px 40px 0 40px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                  <td style="background-color:#67e8f9;">
+                    <a href="${resetUrl}" style="display:inline-block;padding:13px 28px;font-size:11px;font-weight:600;color:#000000;text-decoration:none;letter-spacing:0.12em;text-transform:uppercase;">Reset Password</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- ── Fallback URL ── -->
+          <tr>
+            <td style="padding:24px 40px 0 40px;">
+              <p style="margin:0 0 6px 0;font-size:11px;color:#2e2e2e;letter-spacing:0.01em;line-height:1.5;">If the button doesn't work, paste this into your browser:</p>
+              <p style="margin:0;font-size:11px;color:#3a5a5e;word-break:break-all;line-height:1.6;"><a href="${resetUrl}" style="color:#3a5a5e;text-decoration:none;">${resetUrl}</a></p>
+            </td>
+          </tr>
+
+          <!-- ── Security note ── -->
+          <tr>
+            <td style="padding:28px 40px 40px 40px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                  <td style="border-top:1px solid #0f0f0f;padding-top:24px;">
+                    <p style="margin:0;font-size:11px;color:#2e2e2e;line-height:1.7;font-weight:300;">Didn't request this? You can safely ignore it — your password won't change. If you have concerns, contact us at <a href="mailto:chance@orcaclub.pro" style="color:#2a6068;text-decoration:none;">chance@orcaclub.pro</a>.</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- ── Footer ── -->
+          <tr>
+            <td style="padding:18px 40px;border-top:1px solid #0a0a0a;background-color:#050505;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                  <td>
+                    <span style="font-size:10px;color:#1f1f1f;font-weight:300;letter-spacing:0.35em;text-transform:uppercase;">ORCA</span><span style="font-size:10px;color:#1a3a3e;font-weight:300;letter-spacing:0.35em;text-transform:uppercase;">CLUB</span>
+                  </td>
+                  <td align="right">
+                    <a href="https://orcaclub.pro" style="font-size:10px;color:#1f1f1f;text-decoration:none;font-weight:300;letter-spacing:0.02em;">orcaclub.pro</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>`
 }
 
 /**

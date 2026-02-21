@@ -2,12 +2,13 @@ import { redirect, notFound } from 'next/navigation'
 import { getCurrentUser } from '@/actions/auth'
 import { getPayload } from 'payload'
 import config from '@payload-config'
-import { Building2, AlertCircle, ArrowLeft } from 'lucide-react'
+import { AlertCircle } from 'lucide-react'
 import Link from 'next/link'
-import { ProjectTimeline } from '@/components/dashboard/ProjectTimeline'
-import { ProjectSettingsModal } from '@/components/dashboard/ProjectSettingsModal'
-import { TasksList } from '@/components/dashboard/TasksList'
-import type { Project, Task } from '@/types/payload-types'
+import { ProjectSidebar } from '@/components/dashboard/ProjectSidebar'
+import { ProjectTabNav } from '@/components/dashboard/ProjectTabNav'
+import { SprintsTab } from '@/components/dashboard/SprintsTab'
+import { TasksTab } from '@/components/dashboard/TasksTab'
+import type { Project, Task, Sprint } from '@/types/payload-types'
 
 export async function generateMetadata({
   params,
@@ -15,73 +16,56 @@ export async function generateMetadata({
   params: Promise<{ username: string; project: string }>
 }) {
   const { project: projectId } = await params
-
   try {
     const payload = await getPayload({ config })
-    const project = await payload.findByID({
-      collection: 'projects',
-      id: projectId,
-      depth: 0,
-    })
-
+    const project = await payload.findByID({ collection: 'projects', id: projectId, depth: 0 })
     return {
       title: `${project.name} - ORCACLUB`,
-      description: project.description || `Project timeline for ${project.name}`,
+      description: project.description || `Project details for ${project.name}`,
     }
   } catch {
-    return {
-      title: 'Project Not Found - ORCACLUB',
-      description: 'Project not found',
-    }
+    return { title: 'Project - ORCACLUB', description: 'Project details' }
   }
 }
 
 export default async function ProjectDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ username: string; project: string }>
+  searchParams: Promise<{ tab?: string }>
 }) {
   const { username, project: projectId } = await params
+  const { tab } = await searchParams
+
   const user = await getCurrentUser()
 
-  // Auth check
-  if (!user || user.username !== username) {
-    redirect('/login')
-  }
-
-  // Only admin and user roles can access project details
-  if (user.role === 'client') {
-    redirect(`/u/${username}`)
-  }
+  if (!user || user.username !== username) redirect('/login')
+  if (user.role === 'client') redirect(`/u/${username}`)
 
   const payload = await getPayload({ config })
 
-  // Fetch project with relationships
   let project: Project
   try {
-    project = await payload.findByID({
-      collection: 'projects',
-      id: projectId,
-      depth: 2,
-    })
+    project = await payload.findByID({ collection: 'projects', id: projectId, depth: 2 })
   } catch {
     notFound()
   }
 
-  // Access validation: users can only see projects they are assigned to
+  // Access check for non-admin users
   if (user.role !== 'admin') {
     const assignedUserIds = Array.isArray(project.assignedTo)
       ? project.assignedTo.map((u) => (typeof u === 'string' ? u : u.id))
       : []
     if (!assignedUserIds.includes(user.id)) {
       return (
-        <div className="min-h-screen flex items-center justify-center p-4">
-          <div className="max-w-md w-full rounded-xl border border-red-400/20 bg-white/[0.02] backdrop-blur-sm p-8 text-center">
-            <div className="inline-flex p-5 rounded-xl bg-red-400/10 border border-red-400/20 mb-6">
-              <AlertCircle className="size-10 text-red-400" />
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center max-w-sm">
+            <div className="inline-flex p-4 rounded-full bg-red-500/10 border border-red-500/20 mb-5">
+              <AlertCircle className="size-7 text-red-400" />
             </div>
             <h2 className="text-xl font-semibold text-white mb-2">Access Denied</h2>
-            <p className="text-gray-400 text-sm">
+            <p className="text-sm text-gray-500">
               You do not have permission to view this project.
             </p>
           </div>
@@ -90,74 +74,74 @@ export default async function ProjectDetailPage({
     }
   }
 
-  // Fetch related tasks
-  const { docs: tasks } = await payload.find({
-    collection: 'tasks',
-    where: { project: { equals: projectId } },
-    depth: 2,
-    sort: '-createdAt',
-    limit: 200,
-  })
+  // Fetch tasks and sprints in parallel
+  const [{ docs: tasks }, { docs: sprints }] = await Promise.all([
+    payload.find({
+      collection: 'tasks',
+      where: { project: { equals: projectId } },
+      depth: 1,
+      sort: '-createdAt',
+      limit: 200,
+    }),
+    payload.find({
+      collection: 'sprints',
+      where: { project: { equals: projectId } },
+      depth: 1,
+      sort: 'startDate',
+      limit: 50,
+    }),
+  ])
 
-  // Fetch related sprints
-  const { docs: sprints } = await payload.find({
-    collection: 'sprints',
-    where: { project: { equals: projectId } },
-    depth: 1,
-    sort: '-createdAt',
-    limit: 50,
-  })
-
-  // Get client info
-  const clientAccount = typeof project.client === 'object' ? project.client : null
+  const activeTab = tab === 'sprints' ? 'sprints' : 'tasks'
+  const basePath = `/u/${username}/projects/${projectId}`
 
   return (
-    <div className="min-h-screen">
-      {/* Back Navigation */}
-      <div className="max-w-7xl mx-auto px-6 pt-8 pb-4">
-        <Link
-          href={`/u/${username}/projects`}
-          className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-intelligence-cyan transition-colors group"
-        >
-          <ArrowLeft className="size-4 group-hover:-translate-x-1 transition-transform" />
-          Back to Projects
-        </Link>
-      </div>
+    <div className="lg:flex" style={{ minHeight: 'calc(100vh - 64px)' }}>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 py-12">
-        {/* Header Section */}
-        <div className="mb-16 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/[0.03] border border-white/[0.08] mb-6">
-            {clientAccount && (
-              <>
-                <Building2 className="size-3.5 text-gray-400" />
-                <span className="text-sm text-gray-400">{clientAccount.name}</span>
-              </>
-            )}
-          </div>
+      {/* ── Left Sidebar (desktop only) ─────────────────────────────────── */}
+      <aside className="hidden lg:block w-72 xl:w-80 shrink-0 border-r border-white/[0.08] bg-[#1c1c1c]/40 sticky top-16 self-start h-[calc(100vh-64px)] overflow-y-auto">
+        <ProjectSidebar
+          project={project}
+          tasks={tasks as Task[]}
+          username={username}
+        />
+      </aside>
 
-          <h1 className="text-5xl md:text-7xl font-bold text-white mb-4 tracking-tight">
-            {project.name}
-          </h1>
+      {/* ── Main Content ────────────────────────────────────────────────── */}
+      <div className="flex-1 min-w-0 flex flex-col">
 
-          {project.description && (
-            <p className="text-lg text-gray-400 max-w-2xl mx-auto leading-relaxed">
-              {project.description}
-            </p>
-          )}
-
-          {/* Settings Button */}
-          <div className="mt-8">
-            <ProjectSettingsModal project={project} tasks={tasks} />
-          </div>
+        {/* Mobile: project name + back nav */}
+        <div className="lg:hidden px-6 py-4 border-b border-white/[0.08]">
+          <Link
+            href={`/u/${username}/projects`}
+            className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+          >
+            ← All Projects
+          </Link>
+          <h1 className="text-lg font-semibold text-white mt-2">{project.name}</h1>
         </div>
 
-        {/* Timeline */}
-        <ProjectTimeline project={project} tasks={tasks} />
+        {/* Tab Navigation */}
+        <div className="sticky top-16 z-10 bg-[#080808] border-b border-white/[0.08] px-6">
+          <ProjectTabNav activeTab={activeTab} basePath={basePath} />
+        </div>
 
-        {/* Tasks List */}
-        <TasksList tasks={tasks} projectId={project.id} />
+        {/* Tab Content */}
+        <div className="flex-1 p-6 lg:p-8">
+          {activeTab === 'sprints' ? (
+            <SprintsTab
+              sprints={sprints as Sprint[]}
+              tasks={tasks as Task[]}
+              projectId={projectId}
+            />
+          ) : (
+            <TasksTab
+              tasks={tasks as Task[]}
+              sprints={sprints as Sprint[]}
+              projectId={projectId}
+            />
+          )}
+        </div>
       </div>
     </div>
   )

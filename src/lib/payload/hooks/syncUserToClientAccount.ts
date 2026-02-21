@@ -23,6 +23,24 @@ export const syncUserToClientAccount: CollectionAfterChangeHook = async ({
 
     if (!clientAccountId) return doc
 
+    // Verify the ClientAccount exists before attempting a sync.
+    // If the linked document was deleted the user will have an orphaned reference —
+    // log a warning and skip rather than throwing a Not Found error.
+    const existing = await payload.find({
+      collection: 'client-accounts',
+      where: { id: { equals: clientAccountId } },
+      limit: 1,
+      depth: 0,
+      req,
+    })
+
+    if (existing.totalDocs === 0) {
+      req.payload.logger.warn(
+        `syncUserToClientAccount: ClientAccount ${clientAccountId} not found for user ${doc.id} — orphaned reference, skipping sync`
+      )
+      return doc
+    }
+
     // Update the ClientAccount with user data
     await payload.update({
       collection: 'client-accounts',

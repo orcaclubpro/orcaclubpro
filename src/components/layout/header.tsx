@@ -5,16 +5,13 @@ import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { Menu, X, ChevronDown, ArrowRight, Clock, Code2, Palette, Server, Search, BarChart3, Zap, Plug, Rocket, ShoppingBag, Target } from "lucide-react"
+import { Cinzel_Decorative } from "next/font/google"
+
+const gothic = Cinzel_Decorative({ weight: "700", subsets: ["latin"] })
 
 const navigation = [
   { name: "Packages", href: "/packages" },
   { name: "Contact", href: "/contact" },
-]
-
-const desktopNavigation = [
-  { name: "Packages", href: "/packages" },
-  { name: "Contact", href: "/contact" },
-  { name: "Login", href: "/login" },
 ]
 
 const services = [
@@ -46,10 +43,32 @@ const quickLinks = [
   { name: "Meet the Founder", href: "/founder" },
 ]
 
-export function Header() {
+interface HeaderUser {
+  username?: string | null
+  role?: string | null
+}
+
+export function Header({ user }: { user?: HeaderUser | null } = {}) {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false)
   const [dropdownOpen, setDropdownOpen] = React.useState(false)
   const pathname = usePathname()
+
+  // Resolve the auth nav item based on the current user's role/username
+  const dashboardHref = user?.username
+    ? `/u/${user.username}`
+    : user?.role === 'admin' || user?.role === 'user'
+      ? '/admin'
+      : null
+
+  const authNavItem = dashboardHref
+    ? { name: 'My Dashboard', href: dashboardHref }
+    : { name: 'Login', href: '/login' }
+
+  const desktopNavigation = [
+    { name: 'Packages', href: '/packages' },
+    { name: 'Contact', href: '/contact' },
+    authNavItem,
+  ]
 
   // Close mobile menu and dropdown when route changes
   React.useEffect(() => {
@@ -80,7 +99,7 @@ export function Header() {
         <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-8">
           {/* Logo */}
           <div className="flex flex-1">
-            <Link href="/" className="flex items-center gap-2">
+            <Link href="/" className="flex items-center gap-3">
               <Image
                 src="/orcaclubpro.png"
                 alt="ORCACLUB"
@@ -88,6 +107,9 @@ export function Header() {
                 height={40}
                 className="h-10 w-10"
               />
+              <span className={`${gothic.className} text-xl text-white`}>
+                ORCACLUB
+              </span>
             </Link>
           </div>
 
@@ -244,15 +266,7 @@ export function Header() {
             {/* Close button */}
             <div className="flex items-center justify-between p-6 border-b border-white/10">
               <Link href="/" onClick={() => setMobileMenuOpen(false)} className="flex items-center">
-                <Image
-                  src="/orcaclubpro.png"
-                  alt="ORCACLUB"
-                  width={32}
-                  height={32}
-                  className="h-8 w-8"
-                />
-                <span className="ml-2 text-lg font-bold text-white">ORCA</span>
-                <span className="text-lg font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">CLUB</span>
+                <span className={`${gothic.className} text-2xl text-white`}>ORCACLUB</span>
               </Link>
               <button
                 type="button"
@@ -288,11 +302,11 @@ export function Header() {
                 Start Your Project
               </Link>
               <Link
-                href="/login"
+                href={authNavItem.href}
                 className="block w-full text-center px-6 py-4 border-2 border-cyan-400/40 text-cyan-400 font-semibold rounded-lg hover:bg-cyan-400/10 hover:border-cyan-400 transition-all"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                Login
+                {authNavItem.name}
               </Link>
             </div>
           </div>

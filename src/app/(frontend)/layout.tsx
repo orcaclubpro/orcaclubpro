@@ -1,4 +1,4 @@
-import { Header } from "@/components/layout/header"
+import { HeaderServer } from "@/components/layout/header-server"
 import { Footer } from "@/components/layout/footer"
 
 export default function FrontendLayout({
@@ -8,7 +8,7 @@ export default function FrontendLayout({
 }) {
   return (
     <>
-      <Header />
+      <HeaderServer />
       <main className="pt-16">{children}</main>
       <Footer />
     </>

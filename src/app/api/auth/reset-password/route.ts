@@ -2,7 +2,9 @@
  * API Route: Confirm Password Reset
  * POST /api/auth/reset-password
  *
- * Validates reset token and updates user password
+ * Uses payload.resetPassword() which validates the token against Payload's
+ * internal hashed storage (manual payload.find() on resetPasswordToken doesn't work).
+ * resetPassword() also returns a JWT, so no separate login call is needed.
  */
 
 import { getPayload } from 'payload'
@@ -14,10 +16,8 @@ export async function POST(request: Request) {
   try {
     const payload = await getPayload({ config })
     const body = await request.json()
-
     const { token, password } = body
 
-    // Validate input
     if (!token || !password) {
       return NextResponse.json(
         { success: false, message: 'Reset token and new password are required' },
@@ -25,7 +25,7 @@ export async function POST(request: Request) {
       )
     }
 
-    // Validate password strength
+    // Validate password strength before hitting the DB
     const passwordValidation = validatePassword(password)
     if (!passwordValidation.valid) {
       return NextResponse.json(
@@ -34,54 +34,49 @@ export async function POST(request: Request) {
       )
     }
 
-    // Find user by reset token
-    const users = await payload.find({
-      collection: 'users',
-      where: {
-        resetPasswordToken: {
-          equals: token,
+    // Use Payload's built-in resetPassword — validates the hashed token and
+    // resets the password atomically. Returns { token: JWT, user }.
+    let result: { token?: string; user: Record<string, unknown> }
+    try {
+      result = await payload.resetPassword({
+        collection: 'users',
+        data: { token, password },
+        overrideAccess: true,
+      })
+    } catch {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Invalid or expired reset token. Please request a new password reset.',
         },
-      },
-      limit: 1,
-    })
-
-    if (!users.docs || users.docs.length === 0) {
-      return NextResponse.json(
-        { success: false, message: 'Invalid or expired reset token' },
         { status: 400 }
       )
     }
 
-    const user = users.docs[0]
+    const user = result.user
+    const username = (user.username as string | undefined) ?? null
 
-    // Check if token has expired
-    if (user.resetPasswordExpiration && new Date(user.resetPasswordExpiration) < new Date()) {
-      return NextResponse.json(
-        { success: false, message: 'Reset token has expired. Please request a new password reset.' },
-        { status: 400 }
-      )
-    }
+    payload.logger.info(`[Password Reset] Password successfully reset for ${user.email as string}`)
 
-    // Update user password and clear reset token
-    await payload.update({
-      collection: 'users',
-      id: user.id,
-      data: {
-        password: password,
-        resetPasswordToken: null,
-        resetPasswordExpiration: null,
-      },
-    })
-
-    payload.logger.info(`[Password Reset] Password successfully reset for ${user.email}`)
-
-    return NextResponse.json(
-      {
-        success: true,
-        message: 'Password has been reset successfully. You can now log in with your new password.',
-      },
+    const response = NextResponse.json(
+      { success: true, message: 'Password has been reset successfully.', username },
       { status: 200 }
     )
+
+    // resetPassword already returns a fresh JWT — use it to log the user in
+    if (result.token) {
+      response.cookies.set({
+        name: 'payload-token',
+        value: result.token,
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 60 * 60 * 24 * 30,
+      })
+    }
+
+    return response
   } catch (error) {
     console.error('[Password Reset API] Error resetting password:', error)
     return NextResponse.json(
@@ -91,7 +86,6 @@ export async function POST(request: Request) {
   }
 }
 
-// OPTIONS handler for CORS
 export async function OPTIONS() {
   return NextResponse.json({}, { status: 200 })
 }

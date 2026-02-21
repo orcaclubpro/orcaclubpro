@@ -36,6 +36,13 @@ import {
   type BookingConfirmationData,
 } from './booking-confirmation'
 
+import {
+  clientWelcomeHTML,
+  clientWelcomeText,
+  clientWelcomeSubject,
+  type ClientWelcomeData,
+} from './client-welcome'
+
 // Contact Confirmation (sent to customer)
 export function contactConfirmation(data: ContactConfirmationData) {
   return {
@@ -63,9 +70,19 @@ export function bookingConfirmation(data: BookingConfirmationData) {
   }
 }
 
+// Client Welcome (sent to new client when their account is created)
+export function clientWelcome(data: ClientWelcomeData) {
+  return {
+    subject: clientWelcomeSubject(),
+    html: clientWelcomeHTML(data),
+    text: clientWelcomeText(data),
+  }
+}
+
 // Export types
 export type {
   ContactConfirmationData,
   ContactAdminNotificationData,
   BookingConfirmationData,
+  ClientWelcomeData,
 }

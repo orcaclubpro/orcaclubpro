@@ -2,11 +2,13 @@
 
 import * as React from "react"
 import Link from "next/link"
-import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { LogOut, Menu, X } from "lucide-react"
 import { logoutAction } from "@/actions/auth"
 import { cn } from "@/lib/utils"
+import { Cinzel_Decorative } from "next/font/google"
+
+const gothic = Cinzel_Decorative({ weight: "700", subsets: ["latin"] })
 
 interface SpacesHeaderProps {
   user?: {
@@ -31,7 +33,6 @@ export function SpacesHeader({ user }: SpacesHeaderProps) {
     { name: "Projects", href: `/u/${username}/projects`, matchPath: `/u/${username}/projects` },
     { name: "Clients", href: `/u/${username}/clients`, matchPath: `/u/${username}/clients` },
     { name: "Tasks", href: `/u/${username}/tasks`, matchPath: `/u/${username}/tasks` },
-    { name: "Orders", href: `/u/${username}/orders`, matchPath: `/u/${username}/orders` },
   ]
 
   const isActive = (matchPath: string) => {
@@ -47,21 +48,17 @@ export function SpacesHeader({ user }: SpacesHeaderProps) {
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-8" aria-label="Global">
         {/* LEFT: Logo + SPACES Branding */}
         <div className="flex items-center gap-4">
-          <Link href="/" className="-m-1.5 p-1.5 focus:outline-none focus-visible:ring-1 focus-visible:ring-intelligence-cyan/50 rounded-lg transition-all duration-300">
-            <span className="sr-only">ORCACLUB</span>
-            <Image
-              src="/orcaclubpro.png"
-              alt="ORCACLUB"
-              width={32}
-              height={32}
-              className="h-8 w-8 opacity-90"
-            />
+          <Link href="/" className="focus:outline-none focus-visible:ring-1 focus-visible:ring-intelligence-cyan/50 rounded-lg transition-all duration-300">
+            <span className={`${gothic.className} text-xl text-white`}>ORCACLUB</span>
           </Link>
           <div className="hidden sm:block h-4 w-px bg-white/[0.08]" />
           <div className="hidden sm:block">
-            <h1 className="text-lg font-semibold gradient-text tracking-wide">
+            <Link
+              href={username ? `/u/${username}` : '/'}
+              className="text-lg font-semibold gradient-text tracking-wide focus:outline-none focus-visible:ring-1 focus-visible:ring-intelligence-cyan/50 rounded"
+            >
               SPACES
-            </h1>
+            </Link>
           </div>
         </div>
 
