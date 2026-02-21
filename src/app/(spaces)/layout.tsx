@@ -1,5 +1,6 @@
 import { SpacesHeader } from "@/components/layout/spaces-header"
 import { Footer } from "@/components/layout/footer"
+import { MobileBottomNav } from "@/components/dashboard/MobileBottomNav"
 import { getCurrentUser } from "@/actions/auth"
 
 export default async function SpacesLayout({
@@ -12,8 +13,10 @@ export default async function SpacesLayout({
   return (
     <>
       <SpacesHeader user={user} />
-      <main className="pt-16 min-h-screen bg-black">{children}</main>
+      {/* pb-24 on mobile reserves space above the floating bottom nav */}
+      <main className="pt-16 min-h-screen bg-black pb-24 md:pb-0">{children}</main>
       <Footer />
+      <MobileBottomNav role={user?.role} />
     </>
   )
 }

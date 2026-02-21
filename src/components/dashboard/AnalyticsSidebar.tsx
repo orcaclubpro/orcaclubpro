@@ -306,25 +306,30 @@ export function AnalyticsSidebar(props: BusinessPulseProps) {
         </span>
       </button>
 
-      {/* ── Mobile: FAB bottom-left ──────────────────────────────────────── */}
+      {/* ── Mobile: right-edge vertical tab (matches desktop pattern) ────── */}
       <button
         onClick={() => setOpen((o) => !o)}
-        className="md:hidden fixed bottom-8 left-4 z-40
-                   flex items-center gap-2
-                   px-4 py-2.5 rounded-full
-                   bg-[#1c1c1c] border border-white/[0.12]
-                   shadow-[0_4px_24px_rgba(0,0,0,0.5)]
-                   hover:border-intelligence-cyan/30
+        className="md:hidden fixed right-0 top-1/2 -translate-y-1/2 z-40
+                   flex flex-col items-center gap-2
+                   pl-2.5 pr-2 py-4
+                   bg-black/75 backdrop-blur-xl border border-r-0 border-white/[0.10]
+                   rounded-l-xl
+                   hover:border-intelligence-cyan/30 hover:bg-black/90
                    transition-all duration-300 active:scale-95"
         aria-label="Toggle analytics"
       >
-        <BarChart2 className="size-4 text-intelligence-cyan" />
-        <span className="text-xs font-medium text-gray-300">Analytics</span>
+        <BarChart2 className="size-3.5 text-intelligence-cyan" />
+        <span
+          className="text-[8px] font-semibold text-gray-500 uppercase tracking-[0.15em]
+                     [writing-mode:vertical-rl] rotate-180"
+        >
+          Analytics
+        </span>
       </button>
 
-      {/* ── Backdrop ────────────────────────────────────────────────────── */}
+      {/* ── Backdrop — z-[45] ensures it covers the mobile bottom nav (z-40) ── */}
       <div
-        className={`fixed inset-0 z-40 bg-black/50 backdrop-blur-[2px]
+        className={`fixed inset-0 z-[45] bg-black/50 backdrop-blur-[2px]
                     transition-opacity duration-300
                     ${open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
         onClick={() => setOpen(false)}
@@ -348,7 +353,7 @@ export function AnalyticsSidebar(props: BusinessPulseProps) {
 
       {/* ── Mobile: slide-up bottom sheet ────────────────────────────────── */}
       <div
-        className={`md:hidden fixed bottom-0 left-0 right-0 z-50
+        className={`md:hidden fixed bottom-0 left-0 right-0 z-[55]
                     flex flex-col
                     bg-[#0a0a0a] border-t border-white/[0.08] rounded-t-2xl
                     transition-transform duration-300 ease-in-out
