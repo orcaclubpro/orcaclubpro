@@ -78,7 +78,7 @@ export default async function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-black relative overflow-hidden">
+    <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: '#1a1a1a' }}>
       {/* Breadcrumb Schema */}
       <script
         type="application/ld+json"
@@ -98,10 +98,14 @@ export default async function HomePage() {
         <div className="max-w-7xl mx-auto">
           <ScrollReveal>
             <div className="text-center mb-32">
-              <h2 className="text-4xl md:text-5xl font-extralight mb-8 tracking-tight">
+              <p className="text-[10px] tracking-[0.4em] uppercase text-white/15 font-light mb-5">
+                Capabilities
+              </p>
+              <h2 className="text-4xl md:text-5xl font-extralight mb-6 tracking-tight">
                 Tailored <span className="gradient-text font-light">solutions</span> for scaling businesses
               </h2>
-              <p className="text-xl text-gray-400 max-w-3xl mx-auto font-light leading-relaxed">
+              <div className="mx-auto w-6 h-px bg-cyan-400/40 mb-8" />
+              <p className="text-lg text-gray-400 max-w-2xl mx-auto font-light leading-relaxed">
                 Fixed-price tiers, fast delivery, and modern tech. Choose Launch, Scale, or Enterprise.
               </p>
             </div>
@@ -115,28 +119,32 @@ export default async function HomePage() {
       <section className="py-40 px-8 relative z-10">
         <div className="max-w-4xl mx-auto text-center">
           <ScrollReveal>
-            <h2 className="text-4xl md:text-5xl font-extralight mb-10 tracking-tight">
+            <p className="text-[10px] tracking-[0.4em] uppercase text-white/15 font-light mb-5">
+              Get Started
+            </p>
+            <h2 className="text-4xl md:text-5xl font-extralight mb-6 tracking-tight">
               Ready to launch your <span className="gradient-text font-light">next project</span>?
             </h2>
-            <p className="text-xl text-gray-400 mb-16 font-light leading-relaxed max-w-3xl mx-auto">
+            <div className="mx-auto w-6 h-px bg-cyan-400/40 mb-8" />
+            <p className="text-lg text-gray-400 mb-16 font-light leading-relaxed max-w-2xl mx-auto">
               No opaque quotes. No lengthy sales cycles. Just transparent pricing, fast delivery, and direct developer access.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
               <Link
                 href="/contact"
-                className="inline-flex items-center gap-4 px-12 py-6 bg-gradient-to-r from-blue-600/20 to-cyan-500/20 border border-cyan-400/30 rounded-full text-lg font-light text-cyan-400 hover:bg-gradient-to-r hover:from-blue-600/30 hover:to-cyan-500/30 transition-all duration-500 magnetic interactive"
+                className="inline-flex items-center gap-4 px-12 py-5 bg-gradient-to-r from-blue-600/20 to-cyan-500/20 border border-cyan-400/30 rounded-md text-base font-light text-cyan-400 hover:from-blue-600/30 hover:to-cyan-500/30 transition-all duration-500 magnetic interactive"
               >
-                Start Your Project <ArrowRight size={20} />
+                Start Your Project <ArrowRight size={18} />
               </Link>
               <Link
                 href="/project"
-                className="inline-flex items-center gap-2 px-12 py-6 bg-white/5 border border-white/10 rounded-full text-lg font-light text-white hover:bg-white/10 hover:border-white/20 transition-all duration-500 magnetic interactive"
+                className="inline-flex items-center gap-2 px-12 py-5 bg-white/[0.03] border border-white/[0.08] rounded-md text-base font-light text-white/70 hover:bg-white/[0.06] hover:border-white/[0.14] hover:text-white transition-all duration-500 magnetic interactive"
               >
                 View Project Tiers
               </Link>
             </div>
-            <p className="text-xs text-gray-600 font-light">
-              3-21 Day Delivery • Fixed Pricing • Direct Developer Access
+            <p className="text-[10px] tracking-[0.3em] uppercase text-white/15 font-light">
+              3–21 Day Delivery · Fixed Pricing · Direct Developer Access
             </p>
           </ScrollReveal>
         </div>

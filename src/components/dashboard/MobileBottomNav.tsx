@@ -1,9 +1,9 @@
 'use client'
 
-import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { LayoutDashboard, FolderKanban, Building2, CheckSquare, Receipt } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useTabContext } from '@/app/(spaces)/TabContext'
 
 interface MobileBottomNavProps {
   role?: string | null
@@ -11,6 +11,7 @@ interface MobileBottomNavProps {
 
 export function MobileBottomNav({ role }: MobileBottomNavProps) {
   const pathname = usePathname()
+  const { activeTab, navigate } = useTabContext()
 
   // Only show on /u/[username] dashboard routes
   const match = pathname?.match(/^\/u\/([^\/]+)/)
@@ -22,20 +23,26 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
 
   const links = isClient
     ? [
-        { href: `/u/${username}`, label: 'Home', icon: LayoutDashboard, exact: true },
-        { href: `/u/${username}/projects`, label: 'Projects', icon: FolderKanban, exact: false },
-        { href: `/u/${username}/orders`, label: 'Invoices', icon: Receipt, exact: false },
+        { href: `/u/${username}`, label: 'Home', icon: LayoutDashboard, tab: 'home' },
+        { href: `/u/${username}?tab=projects`, label: 'Projects', icon: FolderKanban, tab: 'projects' },
+        { href: `/u/${username}?tab=invoices`, label: 'Invoices', icon: Receipt, tab: 'invoices' },
       ]
     : [
-        { href: `/u/${username}`, label: 'Home', icon: LayoutDashboard, exact: true },
-        { href: `/u/${username}/projects`, label: 'Projects', icon: FolderKanban, exact: false },
-        { href: `/u/${username}/clients`, label: 'Clients', icon: Building2, exact: false },
-        { href: `/u/${username}/tasks`, label: 'Tasks', icon: CheckSquare, exact: false },
+        { href: `/u/${username}`, label: 'Home', icon: LayoutDashboard, tab: 'home' },
+        { href: `/u/${username}?tab=projects`, label: 'Projects', icon: FolderKanban, tab: 'projects' },
+        { href: `/u/${username}?tab=clients`, label: 'Clients', icon: Building2, tab: 'clients' },
+        { href: `/u/${username}?tab=tasks`, label: 'Tasks', icon: CheckSquare, tab: 'tasks' },
       ]
 
-  const isActive = (href: string, exact: boolean) => {
-    if (exact) return pathname === href
-    return pathname?.startsWith(href) ?? false
+  const isActive = (tab: string) => {
+    // On a detail sub-page (e.g. /u/user/clients/123), match by pathname segment
+    if (pathname !== `/u/${username}`) {
+      if (tab === 'projects') return pathname?.startsWith(`/u/${username}/projects/`) ?? false
+      if (tab === 'clients') return pathname?.startsWith(`/u/${username}/clients/`) ?? false
+      return false
+    }
+    // On the main page, match by ?tab= param
+    return activeTab === tab
   }
 
   return (
@@ -55,14 +62,15 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
         }}
       >
         {links.map((item) => {
-          const active = isActive(item.href, item.exact)
+          const active = isActive(item.tab)
           const Icon = item.icon
           return (
-            <Link
-              key={item.href}
+            <a
+              key={item.tab}
               href={item.href}
+              onClick={(e) => { e.preventDefault(); navigate(item.tab) }}
               className={cn(
-                'relative flex flex-col items-center gap-1.5 px-5 py-2.5 rounded-xl transition-all duration-200 active:scale-95 min-w-[62px]',
+                'relative flex flex-col items-center gap-1.5 px-5 py-2.5 rounded-xl transition-all duration-200 active:scale-95 min-w-[62px] cursor-pointer',
                 active ? 'bg-white/[0.06]' : 'hover:bg-white/[0.03]',
               )}
               style={
@@ -94,7 +102,6 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
                 {item.label}
               </span>
 
-              {/* Active indicator — slim gradient line */}
               {active && (
                 <div
                   className="absolute bottom-1.5 left-1/2 -translate-x-1/2 h-px w-5 rounded-full"
@@ -104,7 +111,7 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
                   }}
                 />
               )}
-            </Link>
+            </a>
           )
         })}
       </nav>

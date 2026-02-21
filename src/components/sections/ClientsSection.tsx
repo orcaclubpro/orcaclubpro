@@ -11,16 +11,17 @@ export default function ClientsSection({ clients }: ClientsSectionProps) {
   if (clients.length === 0) return null
 
   return (
-    <section id="our-work" data-section="clients" className="py-20 px-8 border-t border-slate-800/50 relative z-10">
+    <section id="our-work" data-section="clients" className="py-20 px-8 border-t border-white/[0.04] relative z-10">
       <div className="max-w-6xl mx-auto">
         <ScrollReveal>
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-extralight mb-4 tracking-tight">
-              Our <span className="gradient-text font-light">Work</span>
-            </h2>
-            <p className="text-lg text-gray-400 max-w-3xl mx-auto font-light">
-              Check out the brands that ORCACLUB has helped create solutions for.
+            <p className="text-[10px] tracking-[0.4em] uppercase text-white/15 font-light mb-5">
+              Our Work
             </p>
+            <h2 className="text-3xl md:text-4xl font-extralight mb-5 tracking-tight">
+              Brands we&apos;ve built <span className="gradient-text font-light">solutions</span> for
+            </h2>
+            <div className="mx-auto w-6 h-px bg-cyan-400/40" />
           </div>
         </ScrollReveal>
 

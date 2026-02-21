@@ -2,19 +2,10 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Loader2 } from 'lucide-react'
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
+import { Flag, Loader2, Calendar } from 'lucide-react'
+import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { createMilestone } from '@/actions/projects'
+import { cn } from '@/lib/utils'
 
 interface CreateMilestoneSheetProps {
   projectId: string
@@ -22,165 +13,186 @@ interface CreateMilestoneSheetProps {
   onOpenChange: (open: boolean) => void
 }
 
-export function CreateMilestoneSheet({
-  projectId,
-  open,
-  onOpenChange,
-}: CreateMilestoneSheetProps) {
+function fmtFull(d: string) {
+  if (!d) return ''
+  return new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).format(new Date(d + 'T00:00:00'))
+}
+
+export function CreateMilestoneSheet({ projectId, open, onOpenChange }: CreateMilestoneSheetProps) {
   const router = useRouter()
-  const [title, setTitle] = useState('')
-  const [date, setDate] = useState('')
+  const [title, setTitle]             = useState('')
+  const [date, setDate]               = useState('')
   const [description, setDescription] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [isLoading, setIsLoading]     = useState(false)
+  const [error, setError]             = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+
+  const showPreview = !!title.trim() && !!date
+
+  const clearField = (key: string) =>
+    setFieldErrors((prev) => { const next = { ...prev }; delete next[key]; return next })
+
+  const reset = () => {
+    setTitle(''); setDate(''); setDescription('')
+    setError(null); setFieldErrors({})
+  }
+
+  const validate = () => {
+    const errs: Record<string, string> = {}
+    if (!title.trim()) errs.title = 'Milestone title is required'
+    if (!date)         errs.date  = 'Target date is required'
+    setFieldErrors(errs)
+    return Object.keys(errs).length === 0
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
-
-    // Validation
-    if (!title.trim()) {
-      setError('Milestone title is required')
-      return
-    }
-
-    if (!date) {
-      setError('Milestone date is required')
-      return
-    }
-
+    if (!validate()) return
     setIsLoading(true)
-
     const result = await createMilestone({
       projectId,
       title: title.trim(),
       date,
       description: description.trim() || undefined,
     })
-
     setIsLoading(false)
-
-    if (!result.success) {
-      setError(result.error || 'Failed to create milestone')
-      return
-    }
-
-    // Reset form
-    setTitle('')
-    setDate('')
-    setDescription('')
-    setError(null)
-
-    // Close sheet and refresh
-    onOpenChange(false)
-    router.refresh()
-  }
-
-  const handleCancel = () => {
-    // Reset form
-    setTitle('')
-    setDate('')
-    setDescription('')
-    setError(null)
-    onOpenChange(false)
+    if (!result.success) { setError(result.error || 'Failed to create milestone'); return }
+    reset(); onOpenChange(false); router.refresh()
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="bg-black/95 border-white/[0.08] backdrop-blur-xl w-full sm:max-w-md overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle className="text-2xl font-semibold text-white">
-            Add Milestone
-          </SheetTitle>
-          <SheetDescription className="text-gray-400">
-            Create a new milestone to track important project deliverables.
-          </SheetDescription>
-        </SheetHeader>
+    <Sheet open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v) }}>
+      <SheetContent className="bg-[#080808] border-white/[0.08] w-full sm:max-w-md p-0 flex flex-col gap-0 overflow-hidden">
 
-        <form onSubmit={handleSubmit} className="space-y-6 mt-6">
-          {/* Title */}
-          <div className="space-y-2">
-            <Label htmlFor="title" className="text-sm font-medium text-gray-300">
-              Milestone Title <span className="text-red-400">*</span>
-            </Label>
-            <Input
-              id="title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g., Beta Release"
-              className="bg-white/[0.03] border-white/[0.08] text-white placeholder:text-gray-500 focus:border-intelligence-cyan/50"
-              disabled={isLoading}
-              required
-            />
-          </div>
+        {/* Green top accent */}
+        <div className="h-px bg-gradient-to-r from-transparent via-green-400/50 to-transparent shrink-0" />
 
-          {/* Date */}
-          <div className="space-y-2">
-            <Label htmlFor="date" className="text-sm font-medium text-gray-300">
-              Target Date <span className="text-red-400">*</span>
-            </Label>
-            <Input
-              id="date"
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="bg-white/[0.03] border-white/[0.08] text-white focus:border-intelligence-cyan/50"
-              disabled={isLoading}
-              required
-            />
-          </div>
+        {/* Corner SVG */}
+        <div className="absolute top-0 right-0 pointer-events-none select-none" aria-hidden="true">
+          <svg width="80" height="80" viewBox="0 0 80 80" fill="none" className="opacity-[0.04]">
+            <path d="M80 0 L80 80 L0 80" stroke="white" strokeWidth="1" />
+            <path d="M80 24 L80 80 L24 80" stroke="white" strokeWidth="0.5" />
+          </svg>
+        </div>
 
-          {/* Description */}
-          <div className="space-y-2">
-            <Label htmlFor="description" className="text-sm font-medium text-gray-300">
-              Description
-            </Label>
-            <Textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Optional: Describe what this milestone represents..."
-              rows={4}
-              className="bg-white/[0.03] border-white/[0.08] text-white placeholder:text-gray-500 focus:border-intelligence-cyan/50 resize-none"
-              disabled={isLoading}
-            />
-          </div>
-
-          {/* Error Display */}
-          {error && (
-            <div className="rounded-lg border border-red-400/20 bg-red-400/10 p-3 text-sm text-red-400">
-              {error}
+        {/* Header */}
+        <div className="px-7 pt-7 pb-6 border-b border-white/[0.06] shrink-0">
+          <p className="text-[10px] tracking-[0.35em] uppercase text-white/20 font-light mb-4">New Milestone</p>
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-green-400/10 border border-green-400/20">
+              <Flag className="size-4 text-green-400" />
             </div>
-          )}
+            <div>
+              <h2 className="text-lg font-semibold text-white leading-snug">Add a Milestone</h2>
+              <p className="text-xs text-gray-500 mt-0.5">Mark an important project deliverable</p>
+            </div>
+          </div>
+          <div className="mt-5 w-6 h-px bg-green-400/40" />
+        </div>
 
-          {/* Actions */}
-          <div className="flex gap-3 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleCancel}
-              disabled={isLoading}
-              className="flex-1 bg-white/[0.03] border-white/[0.08] hover:bg-white/[0.05]"
-            >
-              Cancel
-            </Button>
-            <Button
+        {/* Scrollable form body */}
+        <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 overflow-y-auto px-7 py-6 space-y-5">
+
+            {/* Title */}
+            <div className="space-y-1.5">
+              <label className="text-xs text-gray-400 font-medium tracking-wide">Milestone Title</label>
+              <input
+                value={title}
+                onChange={(e) => { setTitle(e.target.value); clearField('title') }}
+                placeholder="e.g., Beta Launch, Design Handoff"
+                disabled={isLoading}
+                autoFocus
+                className={cn(
+                  'w-full bg-white/[0.03] border rounded-lg px-4 py-2.5 text-white placeholder:text-gray-600 text-sm outline-none transition-all duration-200',
+                  'focus:bg-white/[0.05] focus:ring-1 focus:ring-green-400/20 focus:border-green-400/35',
+                  fieldErrors.title ? 'border-red-400/50' : 'border-white/[0.08]',
+                )}
+              />
+              {fieldErrors.title && <p className="text-xs text-red-400">{fieldErrors.title}</p>}
+            </div>
+
+            {/* Date */}
+            <div className="space-y-1.5">
+              <label className="text-xs text-gray-400 font-medium tracking-wide">Target Date</label>
+              <div className="relative">
+                <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-gray-600 pointer-events-none" />
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(e) => { setDate(e.target.value); clearField('date') }}
+                  disabled={isLoading}
+                  className={cn(
+                    'w-full bg-white/[0.03] border rounded-lg pl-10 pr-4 py-2.5 text-white text-sm outline-none transition-all duration-200 [color-scheme:dark]',
+                    'focus:bg-white/[0.05] focus:border-green-400/35',
+                    fieldErrors.date ? 'border-red-400/50' : 'border-white/[0.08]',
+                  )}
+                />
+              </div>
+              {fieldErrors.date && <p className="text-xs text-red-400">{fieldErrors.date}</p>}
+            </div>
+
+            {/* Description */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs text-gray-400 font-medium tracking-wide">Description</label>
+                <span className="text-[10px] text-gray-600">Optional</span>
+              </div>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="What does reaching this milestone mean for the project?"
+                rows={3}
+                disabled={isLoading}
+                className="w-full bg-white/[0.03] border border-white/[0.08] rounded-lg px-4 py-2.5 text-white placeholder:text-gray-600 text-sm outline-none transition-all duration-200 resize-none focus:bg-white/[0.05] focus:ring-1 focus:ring-green-400/20 focus:border-green-400/35"
+              />
+            </div>
+
+            {/* Live preview */}
+            {showPreview && (
+              <div className="relative overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.02] p-4 animate-in fade-in slide-in-from-bottom-1 duration-200">
+                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-green-400/50 via-green-400/20 to-transparent" />
+                <p className="text-[10px] tracking-[0.25em] uppercase text-green-400/50 mb-3">Preview</p>
+                <div className="flex items-start gap-3">
+                  <div className="mt-1 size-3 rounded-full border-2 border-gray-500 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-white truncate">{title}</p>
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <Calendar className="size-3 text-gray-600 shrink-0" />
+                      <span className="text-xs text-gray-400">{fmtFull(date)}</span>
+                    </div>
+                    {description.trim() && (
+                      <p className="text-xs text-gray-500 mt-2 leading-relaxed border-t border-white/[0.06] pt-2">
+                        {description}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Error */}
+            {error && (
+              <div className="rounded-lg border border-red-400/20 bg-red-400/[0.06] px-4 py-3 text-sm text-red-400">
+                {error}
+              </div>
+            )}
+          </div>
+
+          {/* Sticky footer */}
+          <div className="shrink-0 px-7 pb-7 pt-4 border-t border-white/[0.06] bg-[#080808]">
+            <button
               type="submit"
               disabled={isLoading}
-              className="flex-1 bg-intelligence-cyan text-black hover:bg-intelligence-cyan/90 font-medium shadow-lg shadow-intelligence-cyan/10"
+              className="w-full bg-white/[0.06] border border-green-400/20 text-white font-semibold py-3 rounded-xl hover:bg-white/[0.08] hover:border-green-400/35 active:scale-[0.99] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
             >
               {isLoading ? (
-                <>
-                  <Loader2 className="size-4 mr-2 animate-spin" />
-                  Adding...
-                </>
+                <><Loader2 className="size-4 animate-spin" />Adding milestone...</>
               ) : (
-                <>
-                  <Plus className="size-4 mr-2" />
-                  Add Milestone
-                </>
+                <><Flag className="size-4 text-green-400" />Add Milestone</>
               )}
-            </Button>
+            </button>
           </div>
         </form>
       </SheetContent>

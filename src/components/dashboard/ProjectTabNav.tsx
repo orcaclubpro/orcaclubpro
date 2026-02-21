@@ -7,6 +7,7 @@ interface ProjectTabNavProps {
 }
 
 const tabs = [
+  { key: 'home', label: 'Home' },
   { key: 'tasks', label: 'Tasks' },
   { key: 'sprints', label: 'Sprints' },
 ]

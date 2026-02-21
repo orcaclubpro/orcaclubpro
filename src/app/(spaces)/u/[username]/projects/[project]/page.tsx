@@ -5,7 +5,9 @@ import config from '@payload-config'
 import { AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 import { ProjectSidebar } from '@/components/dashboard/ProjectSidebar'
+import { CollapsibleSidebar } from '@/components/dashboard/CollapsibleSidebar'
 import { ProjectTabNav } from '@/components/dashboard/ProjectTabNav'
+import { HomeTab } from '@/components/dashboard/HomeTab'
 import { SprintsTab } from '@/components/dashboard/SprintsTab'
 import { TasksTab } from '@/components/dashboard/TasksTab'
 import type { Project, Task, Sprint } from '@/types/payload-types'
@@ -131,14 +133,14 @@ export default async function ProjectDetailPage({
     }
   }
 
-  const activeTab = tab === 'sprints' ? 'sprints' : 'tasks'
+  const activeTab = tab === 'tasks' ? 'tasks' : tab === 'sprints' ? 'sprints' : 'home'
   const basePath = `/u/${username}/projects/${projectId}`
 
   return (
     <div className="lg:flex" style={{ minHeight: 'calc(100vh - 64px)' }}>
 
       {/* ── Left Sidebar (desktop only) ─────────────────────────────────── */}
-      <aside className="hidden lg:block w-72 xl:w-80 shrink-0 border-r border-white/[0.08] bg-[#1c1c1c]/40 sticky top-16 self-start h-[calc(100vh-64px)] overflow-y-auto">
+      <CollapsibleSidebar>
         <ProjectSidebar
           project={project}
           tasks={tasks as Task[]}
@@ -146,7 +148,7 @@ export default async function ProjectDetailPage({
           readOnly={isClient}
           clientProjects={isClient ? clientProjects : undefined}
         />
-      </aside>
+      </CollapsibleSidebar>
 
       {/* ── Main Content ────────────────────────────────────────────────── */}
       <div className="flex-1 min-w-0 flex flex-col">
@@ -169,7 +171,14 @@ export default async function ProjectDetailPage({
 
         {/* Tab Content */}
         <div className="flex-1 p-6 lg:p-8">
-          {activeTab === 'sprints' ? (
+          {activeTab === 'home' ? (
+            <HomeTab
+              project={project}
+              sprints={sprints as Sprint[]}
+              tasks={tasks as Task[]}
+              readOnly={isClient}
+            />
+          ) : activeTab === 'sprints' ? (
             <SprintsTab
               sprints={sprints as Sprint[]}
               tasks={tasks as Task[]}

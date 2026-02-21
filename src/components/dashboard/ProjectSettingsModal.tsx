@@ -2,22 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import {
-  Settings,
-  Save,
-  Loader2,
-  CheckCircle,
-  X,
-  Calendar,
-  DollarSign,
-  Users,
-  Building2,
-  ListTodo,
-} from 'lucide-react'
+import { Settings, Save, Loader2, CheckCircle, X, Building2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
@@ -29,14 +17,81 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { Badge } from '@/components/ui/badge'
 import { updateProject } from '@/actions/projects'
-import { formatDate } from '@/lib/utils/dateUtils'
 import type { Project, Task } from '@/types/payload-types'
+import { cn } from '@/lib/utils'
+import { Cinzel_Decorative } from 'next/font/google'
+
+const gothic = Cinzel_Decorative({ weight: '700', subsets: ['latin'] })
+
+type StatusType = 'pending' | 'in-progress' | 'on-hold' | 'completed' | 'cancelled'
+type CurrencyType = 'USD' | 'EUR' | 'GBP'
+
+const STATUS_OPTIONS: {
+  value: StatusType
+  label: string
+  color: string
+  bg: string
+  ring: string
+  dotColor: string
+}[] = [
+  {
+    value: 'pending',
+    label: 'Pending',
+    color: 'text-yellow-400',
+    bg: 'bg-yellow-400/10',
+    ring: 'ring-yellow-400/25',
+    dotColor: 'bg-yellow-400',
+  },
+  {
+    value: 'in-progress',
+    label: 'In Progress',
+    color: 'text-blue-400',
+    bg: 'bg-blue-400/10',
+    ring: 'ring-blue-400/25',
+    dotColor: 'bg-blue-400',
+  },
+  {
+    value: 'on-hold',
+    label: 'On Hold',
+    color: 'text-orange-400',
+    bg: 'bg-orange-400/10',
+    ring: 'ring-orange-400/25',
+    dotColor: 'bg-orange-400',
+  },
+  {
+    value: 'completed',
+    label: 'Completed',
+    color: 'text-green-400',
+    bg: 'bg-green-400/10',
+    ring: 'ring-green-400/25',
+    dotColor: 'bg-green-400',
+  },
+  {
+    value: 'cancelled',
+    label: 'Cancelled',
+    color: 'text-red-400',
+    bg: 'bg-red-400/10',
+    ring: 'ring-red-400/25',
+    dotColor: 'bg-red-400',
+  },
+]
+
+const CURRENCY_SYMBOLS: Record<CurrencyType, string> = {
+  USD: '$',
+  EUR: '€',
+  GBP: '£',
+}
+
+// Payload stores dates as ISO strings ("2024-01-15T00:00:00.000Z").
+// <input type="date"> requires "YYYY-MM-DD" — strip the time portion.
+function toDateInput(iso: string | null | undefined): string {
+  if (!iso) return ''
+  return iso.split('T')[0]
+}
 
 interface ProjectSettingsModalProps {
   project: Project
@@ -50,14 +105,12 @@ export function ProjectSettingsModal({ project, tasks }: ProjectSettingsModalPro
   // Form state
   const [name, setName] = useState(project.name)
   const [description, setDescription] = useState(project.description || '')
-  const [status, setStatus] = useState<
-    'pending' | 'in-progress' | 'on-hold' | 'completed' | 'cancelled'
-  >(project.status)
-  const [startDate, setStartDate] = useState(project.startDate || '')
-  const [projectedEndDate, setProjectedEndDate] = useState(project.projectedEndDate || '')
-  const [actualEndDate, setActualEndDate] = useState(project.actualEndDate || '')
+  const [status, setStatus] = useState<StatusType>(project.status)
+  const [startDate, setStartDate] = useState(toDateInput(project.startDate))
+  const [projectedEndDate, setProjectedEndDate] = useState(toDateInput(project.projectedEndDate))
+  const [actualEndDate, setActualEndDate] = useState(toDateInput(project.actualEndDate))
   const [budgetAmount, setBudgetAmount] = useState(project.budgetAmount?.toString() || '')
-  const [currency, setCurrency] = useState<'USD' | 'EUR' | 'GBP'>(project.currency || 'USD')
+  const [currency, setCurrency] = useState<CurrencyType>(project.currency || 'USD')
 
   // UI state
   const [isLoading, setIsLoading] = useState(false)
@@ -70,9 +123,9 @@ export function ProjectSettingsModal({ project, tasks }: ProjectSettingsModalPro
       setName(project.name)
       setDescription(project.description || '')
       setStatus(project.status)
-      setStartDate(project.startDate || '')
-      setProjectedEndDate(project.projectedEndDate || '')
-      setActualEndDate(project.actualEndDate || '')
+      setStartDate(toDateInput(project.startDate))
+      setProjectedEndDate(toDateInput(project.projectedEndDate))
+      setActualEndDate(toDateInput(project.actualEndDate))
       setBudgetAmount(project.budgetAmount?.toString() || '')
       setCurrency(project.currency || 'USD')
       setError(null)
@@ -96,13 +149,11 @@ export function ProjectSettingsModal({ project, tasks }: ProjectSettingsModalPro
     setError(null)
     setSuccessMessage(null)
 
-    // Validation
     if (!name.trim()) {
       setError('Project name is required')
       return
     }
 
-    // Date validation
     if (startDate && projectedEndDate) {
       const start = new Date(startDate)
       const end = new Date(projectedEndDate)
@@ -112,7 +163,6 @@ export function ProjectSettingsModal({ project, tasks }: ProjectSettingsModalPro
       }
     }
 
-    // Budget validation
     if (budgetAmount && parseFloat(budgetAmount) < 0) {
       setError('Budget must be a positive number')
       return
@@ -145,24 +195,12 @@ export function ProjectSettingsModal({ project, tasks }: ProjectSettingsModalPro
     router.refresh()
   }
 
-  const getStatusConfig = (s: string) => {
-    const configs = {
-      pending: { color: 'text-yellow-400', bg: 'bg-yellow-400/10', label: 'Pending' },
-      'in-progress': { color: 'text-blue-400', bg: 'bg-blue-400/10', label: 'In Progress' },
-      'on-hold': { color: 'text-orange-400', bg: 'bg-orange-400/10', label: 'On Hold' },
-      completed: { color: 'text-green-400', bg: 'bg-green-400/10', label: 'Completed' },
-      cancelled: { color: 'text-red-400', bg: 'bg-red-400/10', label: 'Cancelled' },
-    }
-    return configs[s as keyof typeof configs] || configs.pending
-  }
-
-  const statusConfig = getStatusConfig(status)
   const clientAccount = typeof project.client === 'object' ? project.client : null
-
-  // Task stats
   const completedTasks = tasks.filter((t) => t.status === 'completed').length
   const inProgressTasks = tasks.filter((t) => t.status === 'in-progress').length
   const pendingTasks = tasks.filter((t) => t.status === 'pending').length
+  const totalTasks = tasks.length
+  const currencySymbol = CURRENCY_SYMBOLS[currency]
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -177,287 +215,359 @@ export function ProjectSettingsModal({ project, tasks }: ProjectSettingsModalPro
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="bg-black/95 border-white/[0.08] backdrop-blur-xl max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-white flex items-center gap-3">
-            <Settings className="size-6 text-intelligence-cyan" />
-            Project Settings
-          </DialogTitle>
-          <DialogDescription className="text-gray-400">
-            Update project details, timeline, and configuration
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="bg-black border-white/[0.06] max-w-5xl p-0 overflow-hidden h-[85vh]">
+        <div className="flex h-full min-h-0">
 
-        <form onSubmit={handleSubmit} className="space-y-8 pt-4">
-          {/* Quick Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div className="relative overflow-hidden rounded-lg border border-white/[0.08] bg-white/[0.02] p-3">
-              <div className="flex items-center gap-2 mb-1">
-                <ListTodo className="size-3.5 text-intelligence-cyan" />
-                <p className="text-xs text-gray-500 uppercase tracking-wider font-medium">
-                  Total Tasks
-                </p>
-              </div>
-              <p className="text-2xl font-bold text-white">{tasks.length}</p>
+          {/* ── LEFT PANEL ── atmospheric, informational */}
+          <div className="relative hidden lg:flex w-[38%] flex-col bg-black overflow-hidden border-r border-white/[0.05]">
+
+            {/* Orbital geometry */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
+              <svg
+                width="420"
+                height="420"
+                viewBox="0 0 420 420"
+                fill="none"
+                aria-hidden="true"
+                className="opacity-[0.035]"
+              >
+                <circle cx="210" cy="210" r="209" stroke="white" strokeWidth="1" />
+                <circle cx="210" cy="210" r="158" stroke="white" strokeWidth="0.5" />
+                <circle cx="210" cy="210" r="95" stroke="white" strokeWidth="0.5" />
+                <line x1="210" y1="0" x2="210" y2="420" stroke="white" strokeWidth="0.5" />
+                <line x1="0" y1="210" x2="420" y2="210" stroke="white" strokeWidth="0.5" />
+                <circle cx="210" cy="210" r="3" stroke="white" strokeWidth="0.5" fill="none" />
+                <line x1="210" y1="1" x2="210" y2="18" stroke="white" strokeWidth="1" />
+                <line x1="210" y1="402" x2="210" y2="419" stroke="white" strokeWidth="1" />
+                <line x1="1" y1="210" x2="18" y2="210" stroke="white" strokeWidth="1" />
+                <line x1="402" y1="210" x2="419" y2="210" stroke="white" strokeWidth="1" />
+              </svg>
             </div>
 
-            <div className="relative overflow-hidden rounded-lg border border-white/[0.08] bg-white/[0.02] p-3">
-              <div className="flex items-center gap-2 mb-1">
-                <CheckCircle className="size-3.5 text-green-400" />
-                <p className="text-xs text-gray-500 uppercase tracking-wider font-medium">
-                  Completed
-                </p>
-              </div>
-              <p className="text-2xl font-bold text-green-400">{completedTasks}</p>
+            {/* Cyan top accent line */}
+            <div className="h-px w-full bg-gradient-to-r from-transparent via-cyan-400/25 to-transparent flex-shrink-0" />
+
+            {/* Project identity */}
+            <div className="relative z-10 flex-1 flex flex-col justify-center px-10">
+              <p className="text-[10px] tracking-[0.4em] uppercase text-white/20 font-light mb-4">
+                Project
+              </p>
+              <h3 className={`${gothic.className} text-xl text-white leading-tight mb-2 line-clamp-2`}>
+                {project.name}
+              </h3>
+              <div className="mt-3 w-6 h-px bg-cyan-400/30 mb-10" />
+
+              {/* Task distribution */}
+              {totalTasks > 0 ? (
+                <div className="space-y-6">
+                  {/* Stacked progress bar */}
+                  <div className="h-px w-full bg-white/[0.05] rounded-full overflow-hidden flex">
+                    {completedTasks > 0 && (
+                      <div
+                        className="h-full bg-green-400/50 transition-all duration-700"
+                        style={{ width: `${(completedTasks / totalTasks) * 100}%` }}
+                      />
+                    )}
+                    {inProgressTasks > 0 && (
+                      <div
+                        className="h-full bg-blue-400/50 transition-all duration-700"
+                        style={{ width: `${(inProgressTasks / totalTasks) * 100}%` }}
+                      />
+                    )}
+                    {pendingTasks > 0 && (
+                      <div
+                        className="h-full bg-yellow-400/35 transition-all duration-700"
+                        style={{ width: `${(pendingTasks / totalTasks) * 100}%` }}
+                      />
+                    )}
+                  </div>
+
+                  {/* Stat rows */}
+                  <div className="space-y-3.5">
+                    {[
+                      { label: 'Total Tasks', value: totalTasks, color: 'text-white/50' },
+                      { label: 'Completed', value: completedTasks, color: 'text-green-400/60' },
+                      { label: 'In Progress', value: inProgressTasks, color: 'text-blue-400/60' },
+                      { label: 'Pending', value: pendingTasks, color: 'text-yellow-400/60' },
+                    ].map(({ label, value, color }) => (
+                      <div key={label} className="flex items-center justify-between">
+                        <span className="text-[10px] tracking-[0.25em] uppercase text-white/20 font-light">
+                          {label}
+                        </span>
+                        <span className={cn('text-sm font-semibold tabular-nums', color)}>
+                          {value}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[11px] text-white/15 tracking-wide">No tasks assigned yet</p>
+              )}
             </div>
 
-            <div className="relative overflow-hidden rounded-lg border border-white/[0.08] bg-white/[0.02] p-3">
-              <div className="flex items-center gap-2 mb-1">
-                <Calendar className="size-3.5 text-blue-400" />
-                <p className="text-xs text-gray-500 uppercase tracking-wider font-medium">
-                  In Progress
+            {/* Client info — pinned to bottom */}
+            {clientAccount && (
+              <div className="relative z-10 px-10 pb-10 pt-6 border-t border-white/[0.04]">
+                <p className="text-[10px] tracking-[0.4em] uppercase text-white/20 font-light mb-3">
+                  Client
                 </p>
+                <div className="flex items-center gap-3">
+                  <div className="w-7 h-7 rounded-full bg-intelligence-cyan/8 border border-intelligence-cyan/15 flex items-center justify-center flex-shrink-0">
+                    <Building2 className="size-3 text-intelligence-cyan/50" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-white/60 truncate">{clientAccount.name}</p>
+                    <p className="text-[11px] text-white/25 truncate">{clientAccount.email}</p>
+                  </div>
+                </div>
               </div>
-              <p className="text-2xl font-bold text-blue-400">{inProgressTasks}</p>
-            </div>
+            )}
 
-            <div className="relative overflow-hidden rounded-lg border border-white/[0.08] bg-white/[0.02] p-3">
-              <div className="flex items-center gap-2 mb-1">
-                <Calendar className="size-3.5 text-yellow-400" />
-                <p className="text-xs text-gray-500 uppercase tracking-wider font-medium">
-                  Pending
-                </p>
-              </div>
-              <p className="text-2xl font-bold text-yellow-400">{pendingTasks}</p>
+            {/* Corner geometry */}
+            <div
+              className="absolute bottom-0 right-0 pointer-events-none select-none"
+              aria-hidden="true"
+            >
+              <svg width="72" height="72" viewBox="0 0 72 72" fill="none" className="opacity-[0.06]">
+                <path d="M72 0 L72 72 L0 72" stroke="white" strokeWidth="1" />
+                <path d="M72 22 L72 72 L22 72" stroke="white" strokeWidth="0.5" />
+              </svg>
             </div>
           </div>
 
-          {/* Client Info (Read-only) */}
-          {clientAccount && (
-            <div className="relative overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.02] p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-intelligence-cyan/10 border border-intelligence-cyan/20">
-                  <Building2 className="size-4 text-intelligence-cyan" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-xs text-gray-500 uppercase tracking-wider font-medium mb-1">
-                    Client Account
-                  </p>
-                  <p className="text-sm font-semibold text-white">{clientAccount.name}</p>
-                  <p className="text-xs text-gray-400">{clientAccount.email}</p>
-                </div>
-                <Badge variant="outline" className="bg-white/[0.03] border-white/[0.08] text-gray-300">
-                  Read Only
-                </Badge>
-              </div>
-            </div>
-          )}
+          {/* ── RIGHT PANEL ── form, functional, monastic */}
+          <div className="flex-1 bg-[#080808] flex flex-col min-h-0 overflow-hidden">
 
-          {/* Form Fields */}
-          <div className="space-y-6">
-            {/* Project Name */}
-            <div className="space-y-2">
-              <Label htmlFor="name" className="text-sm font-medium text-gray-300">
-                Project Name <span className="text-red-400">*</span>
-              </Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="bg-white/[0.03] border-white/[0.08] text-white focus:border-intelligence-cyan/50"
-                disabled={isLoading}
-                required
-              />
+            {/* Header */}
+            <div className="px-10 pt-10 pb-6 border-b border-white/[0.05] flex-shrink-0">
+              <p className="text-[10px] tracking-[0.4em] uppercase text-white/25 font-light mb-4">
+                Configuration
+              </p>
+              <DialogTitle className={`${gothic.className} text-2xl text-white`}>
+                Settings
+              </DialogTitle>
+              <DialogDescription className="sr-only">
+                Update project details, timeline, and budget configuration
+              </DialogDescription>
+              <div className="mt-4 w-6 h-px bg-cyan-400/40" />
             </div>
 
-            {/* Description */}
-            <div className="space-y-2">
-              <Label htmlFor="description" className="text-sm font-medium text-gray-300">
-                Description
-              </Label>
-              <Textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={3}
-                className="bg-white/[0.03] border-white/[0.08] text-white placeholder:text-gray-500 focus:border-intelligence-cyan/50 resize-none"
-                disabled={isLoading}
-              />
-            </div>
+            {/* Scrollable form body */}
+            <form
+              id="project-settings-form"
+              onSubmit={handleSubmit}
+              className="flex-1 overflow-y-auto px-10 py-8 space-y-9"
+            >
+              {/* ── Identity ── */}
+              <section className="space-y-5">
+                <p className="text-[10px] tracking-[0.4em] uppercase text-white/20 font-light">
+                  Identity
+                </p>
 
-            {/* Two-column grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Status */}
-              <div className="space-y-2">
-                <Label htmlFor="status" className="text-sm font-medium text-gray-300">
-                  Status
-                </Label>
-                <Select
-                  value={status}
-                  onValueChange={(value) =>
-                    setStatus(
-                      value as 'pending' | 'in-progress' | 'on-hold' | 'completed' | 'cancelled'
-                    )
-                  }
-                  disabled={isLoading}
-                >
-                  <SelectTrigger className="bg-white/[0.03] border-white/[0.08] text-white focus:border-intelligence-cyan/50">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-black/95 border-white/[0.08] backdrop-blur-xl">
-                    <SelectItem value="pending">
-                      <span className="text-yellow-400">● Pending</span>
-                    </SelectItem>
-                    <SelectItem value="in-progress">
-                      <span className="text-blue-400">● In Progress</span>
-                    </SelectItem>
-                    <SelectItem value="on-hold">
-                      <span className="text-orange-400">● On Hold</span>
-                    </SelectItem>
-                    <SelectItem value="completed">
-                      <span className="text-green-400">● Completed</span>
-                    </SelectItem>
-                    <SelectItem value="cancelled">
-                      <span className="text-red-400">● Cancelled</span>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Start Date */}
-              <div className="space-y-2">
-                <Label htmlFor="startDate" className="text-sm font-medium text-gray-300">
-                  Start Date
-                </Label>
-                <Input
-                  id="startDate"
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="bg-white/[0.03] border-white/[0.08] text-white focus:border-intelligence-cyan/50"
-                  disabled={isLoading}
-                />
-              </div>
-
-              {/* Projected End Date */}
-              <div className="space-y-2">
-                <Label htmlFor="projectedEndDate" className="text-sm font-medium text-gray-300">
-                  Projected End Date
-                </Label>
-                <Input
-                  id="projectedEndDate"
-                  type="date"
-                  value={projectedEndDate}
-                  onChange={(e) => setProjectedEndDate(e.target.value)}
-                  className="bg-white/[0.03] border-white/[0.08] text-white focus:border-intelligence-cyan/50"
-                  disabled={isLoading}
-                />
-              </div>
-
-              {/* Actual End Date (conditional) */}
-              {status === 'completed' && (
-                <div className="space-y-2">
-                  <Label htmlFor="actualEndDate" className="text-sm font-medium text-gray-300">
-                    Actual End Date
-                  </Label>
+                <div className="space-y-1.5">
+                  <label htmlFor="proj-name" className="text-[11px] text-white/35 tracking-wide">
+                    Project Name <span className="text-red-400/60">*</span>
+                  </label>
                   <Input
-                    id="actualEndDate"
-                    type="date"
-                    value={actualEndDate}
-                    onChange={(e) => setActualEndDate(e.target.value)}
-                    className="bg-white/[0.03] border-white/[0.08] text-white focus:border-intelligence-cyan/50"
+                    id="proj-name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="bg-white/[0.03] border-white/[0.06] text-white focus:border-cyan-400/30 focus-visible:ring-0 placeholder:text-white/20"
+                    disabled={isLoading}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label htmlFor="proj-description" className="text-[11px] text-white/35 tracking-wide">
+                    Description
+                  </label>
+                  <Textarea
+                    id="proj-description"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    rows={3}
+                    placeholder="Brief project description…"
+                    className="bg-white/[0.03] border-white/[0.06] text-white placeholder:text-white/15 focus:border-cyan-400/30 focus-visible:ring-0 resize-none"
                     disabled={isLoading}
                   />
                 </div>
+              </section>
+
+              {/* ── Status ── */}
+              <section className="space-y-4">
+                <p className="text-[10px] tracking-[0.4em] uppercase text-white/20 font-light">
+                  Status
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {STATUS_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setStatus(option.value)}
+                      disabled={isLoading}
+                      className={cn(
+                        'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 cursor-pointer',
+                        status === option.value
+                          ? cn(option.bg, option.color, 'ring-1', option.ring)
+                          : 'bg-white/[0.03] text-white/30 hover:bg-white/[0.06] hover:text-white/55 border border-white/[0.06]'
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          'w-1.5 h-1.5 rounded-full transition-colors duration-200',
+                          status === option.value ? option.dotColor : 'bg-white/20'
+                        )}
+                      />
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </section>
+
+              {/* ── Timeline ── */}
+              <section className="space-y-4">
+                <p className="text-[10px] tracking-[0.4em] uppercase text-white/20 font-light">
+                  Timeline
+                </p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label htmlFor="proj-start" className="text-[11px] text-white/35 tracking-wide">
+                      Start Date
+                    </label>
+                    <Input
+                      id="proj-start"
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="bg-white/[0.03] border-white/[0.06] text-white focus:border-cyan-400/30 focus-visible:ring-0 [color-scheme:dark]"
+                      disabled={isLoading}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label htmlFor="proj-end" className="text-[11px] text-white/35 tracking-wide">
+                      Target End
+                    </label>
+                    <Input
+                      id="proj-end"
+                      type="date"
+                      value={projectedEndDate}
+                      onChange={(e) => setProjectedEndDate(e.target.value)}
+                      className="bg-white/[0.03] border-white/[0.06] text-white focus:border-cyan-400/30 focus-visible:ring-0 [color-scheme:dark]"
+                      disabled={isLoading}
+                    />
+                  </div>
+                  {status === 'completed' && (
+                    <div className="space-y-1.5 col-span-2">
+                      <label
+                        htmlFor="proj-actual-end"
+                        className="text-[11px] text-white/35 tracking-wide"
+                      >
+                        Actual End Date
+                      </label>
+                      <Input
+                        id="proj-actual-end"
+                        type="date"
+                        value={actualEndDate}
+                        onChange={(e) => setActualEndDate(e.target.value)}
+                        className="bg-white/[0.03] border-white/[0.06] text-white focus:border-cyan-400/30 focus-visible:ring-0 [color-scheme:dark]"
+                        disabled={isLoading}
+                      />
+                    </div>
+                  )}
+                </div>
+              </section>
+
+              {/* ── Budget ── */}
+              <section className="space-y-4">
+                <p className="text-[10px] tracking-[0.4em] uppercase text-white/20 font-light">
+                  Budget
+                </p>
+                <div className="flex gap-3">
+                  <div className="flex-1 relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-sm font-medium pointer-events-none select-none">
+                      {currencySymbol}
+                    </span>
+                    <Input
+                      id="proj-budget"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={budgetAmount}
+                      onChange={(e) => setBudgetAmount(e.target.value)}
+                      placeholder="0.00"
+                      className="bg-white/[0.03] border-white/[0.06] text-white pl-7 placeholder:text-white/15 focus:border-cyan-400/30 focus-visible:ring-0"
+                      disabled={isLoading}
+                    />
+                  </div>
+                  <Select
+                    value={currency}
+                    onValueChange={(value) => setCurrency(value as CurrencyType)}
+                    disabled={isLoading}
+                  >
+                    <SelectTrigger className="w-24 bg-white/[0.03] border-white/[0.06] text-white/60 focus:border-cyan-400/30 focus:ring-0">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#0c0c0c] border-white/[0.08]">
+                      <SelectItem value="USD">USD</SelectItem>
+                      <SelectItem value="EUR">EUR</SelectItem>
+                      <SelectItem value="GBP">GBP</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </section>
+            </form>
+
+            {/* ── Footer ── fixed, non-scrolling */}
+            <div className="px-10 pb-8 pt-5 border-t border-white/[0.05] flex-shrink-0 space-y-4">
+
+              {/* Feedback messages */}
+              {successMessage && (
+                <div className="flex items-center gap-2 text-xs text-green-400/80 animate-in fade-in slide-in-from-bottom-1 duration-200">
+                  <CheckCircle className="size-3.5 shrink-0" />
+                  {successMessage}
+                </div>
+              )}
+              {error && (
+                <p className="text-xs text-red-400/75 animate-in fade-in slide-in-from-bottom-1 duration-200">
+                  {error}
+                </p>
               )}
 
-              {/* Budget Amount */}
-              <div className="space-y-2">
-                <Label htmlFor="budgetAmount" className="text-sm font-medium text-gray-300">
-                  Budget Amount
-                </Label>
-                <Input
-                  id="budgetAmount"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={budgetAmount}
-                  onChange={(e) => setBudgetAmount(e.target.value)}
-                  placeholder="0.00"
-                  className="bg-white/[0.03] border-white/[0.08] text-white placeholder:text-gray-500 focus:border-intelligence-cyan/50"
+              <div className="flex gap-3">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setOpen(false)}
                   disabled={isLoading}
-                />
-              </div>
-
-              {/* Currency */}
-              <div className="space-y-2">
-                <Label htmlFor="currency" className="text-sm font-medium text-gray-300">
-                  Currency
-                </Label>
-                <Select
-                  value={currency}
-                  onValueChange={(value) => setCurrency(value as 'USD' | 'EUR' | 'GBP')}
-                  disabled={isLoading}
+                  className="flex-1 text-white/35 hover:text-white/55 hover:bg-white/[0.04] border border-white/[0.06] transition-all duration-200"
                 >
-                  <SelectTrigger className="bg-white/[0.03] border-white/[0.08] text-white focus:border-intelligence-cyan/50">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-black/95 border-white/[0.08] backdrop-blur-xl">
-                    <SelectItem value="USD">USD ($)</SelectItem>
-                    <SelectItem value="EUR">EUR (€)</SelectItem>
-                    <SelectItem value="GBP">GBP (£)</SelectItem>
-                  </SelectContent>
-                </Select>
+                  <X className="size-3.5 mr-2" />
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  form="project-settings-form"
+                  disabled={isLoading}
+                  className="flex-1 bg-intelligence-cyan text-black hover:bg-intelligence-cyan/90 font-medium shadow-lg shadow-intelligence-cyan/10 transition-all duration-200"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="size-3.5 mr-2 animate-spin" />
+                      Saving…
+                    </>
+                  ) : (
+                    <>
+                      <Save className="size-3.5 mr-2" />
+                      Save Changes
+                    </>
+                  )}
+                </Button>
               </div>
             </div>
           </div>
-
-          {/* Success Message */}
-          {successMessage && (
-            <div className="rounded-lg border border-green-400/20 bg-green-400/10 p-3 text-sm text-green-400 flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
-              <CheckCircle className="size-4 shrink-0" />
-              {successMessage}
-            </div>
-          )}
-
-          {/* Error Display */}
-          {error && (
-            <div className="rounded-lg border border-red-400/20 bg-red-400/10 p-3 text-sm text-red-400 animate-in fade-in slide-in-from-top-2">
-              {error}
-            </div>
-          )}
-
-          {/* Actions */}
-          <div className="flex gap-3 pt-4 border-t border-white/[0.08]">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setOpen(false)}
-              disabled={isLoading}
-              className="flex-1 bg-white/[0.03] border-white/[0.08] hover:bg-white/[0.05]"
-            >
-              <X className="size-4 mr-2" />
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={isLoading}
-              className="flex-1 bg-intelligence-cyan text-black hover:bg-intelligence-cyan/90 font-medium shadow-lg shadow-intelligence-cyan/10"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="size-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="size-4 mr-2" />
-                  Save Changes
-                </>
-              )}
-            </Button>
-          </div>
-        </form>
+        </div>
       </DialogContent>
     </Dialog>
   )

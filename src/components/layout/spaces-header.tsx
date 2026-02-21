@@ -6,6 +6,7 @@ import { LogOut } from "lucide-react"
 import { logoutAction } from "@/actions/auth"
 import { cn } from "@/lib/utils"
 import { Cinzel_Decorative } from "next/font/google"
+import { useTabContext } from "@/app/(spaces)/TabContext"
 
 const gothic = Cinzel_Decorative({ weight: "700", subsets: ["latin"] })
 
@@ -20,6 +21,7 @@ interface SpacesHeaderProps {
 
 export function SpacesHeader({ user }: SpacesHeaderProps) {
   const pathname = usePathname()
+  const { activeTab, navigate } = useTabContext()
 
   const handleLogout = async () => {
     await logoutAction()
@@ -30,21 +32,26 @@ export function SpacesHeader({ user }: SpacesHeaderProps) {
 
   const navItems = isClient
     ? [
-        { name: "Portfolio", href: `/u/${username}`, matchPath: `/u/${username}` },
-        { name: "Projects", href: `/u/${username}/projects`, matchPath: `/u/${username}/projects` },
+        { name: "Portfolio", href: `/u/${username}`, tab: 'home' },
+        { name: "Projects", href: `/u/${username}?tab=projects`, tab: 'projects' },
       ]
     : [
-        { name: "Portfolio", href: `/u/${username}`, matchPath: `/u/${username}` },
-        { name: "Projects", href: `/u/${username}/projects`, matchPath: `/u/${username}/projects` },
-        { name: "Clients", href: `/u/${username}/clients`, matchPath: `/u/${username}/clients` },
-        { name: "Tasks", href: `/u/${username}/tasks`, matchPath: `/u/${username}/tasks` },
+        { name: "Portfolio", href: `/u/${username}`, tab: 'home' },
+        { name: "Projects", href: `/u/${username}?tab=projects`, tab: 'projects' },
+        { name: "Clients", href: `/u/${username}?tab=clients`, tab: 'clients' },
+        { name: "Tasks", href: `/u/${username}?tab=tasks`, tab: 'tasks' },
       ]
 
-  const isActive = (matchPath: string) => {
-    if (matchPath === `/u/${username}`) {
-      return pathname === matchPath
+  const isActive = (tab: string) => {
+    // On a detail sub-page, match by pathname segment
+    if (pathname !== `/u/${username}`) {
+      if (tab === 'home') return false
+      if (tab === 'projects') return pathname?.startsWith(`/u/${username}/projects/`) ?? false
+      if (tab === 'clients') return pathname?.startsWith(`/u/${username}/clients/`) ?? false
+      return false
     }
-    return pathname?.startsWith(matchPath)
+    // On the main page, match by shared tab context
+    return activeTab === tab
   }
 
   return (
@@ -62,26 +69,27 @@ export function SpacesHeader({ user }: SpacesHeaderProps) {
           <span className="hidden sm:inline text-[11px] font-semibold gradient-text tracking-widest">SPACES</span>
         </div>
 
-        {/* CENTER: Navigation Tabs — desktop only (mobile handled by MobileBottomNav) */}
+        {/* CENTER: Navigation Tabs — desktop only */}
         {user && username && (
           <div className="hidden md:flex items-center gap-2">
             {navItems.map((item) => (
-              <Link
-                key={item.name}
+              <a
+                key={item.tab}
                 href={item.href}
+                onClick={(e) => { e.preventDefault(); navigate(item.tab) }}
                 className={cn(
-                  "relative px-5 py-2 text-sm font-medium transition-all duration-300",
+                  "relative px-5 py-2 text-sm font-medium transition-all duration-300 cursor-pointer",
                   "focus:outline-none focus-visible:ring-1 focus-visible:ring-intelligence-cyan/50 rounded-lg",
-                  isActive(item.matchPath)
+                  isActive(item.tab)
                     ? "text-white"
                     : "text-gray-400 hover:text-gray-200"
                 )}
               >
                 {item.name}
-                {isActive(item.matchPath) && (
+                {isActive(item.tab) && (
                   <span className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-intelligence-cyan to-transparent" />
                 )}
-              </Link>
+              </a>
             ))}
           </div>
         )}
@@ -106,7 +114,7 @@ export function SpacesHeader({ user }: SpacesHeaderProps) {
           </button>
         </div>
 
-        {/* Mobile: compact user pill + logout — navigation is handled by MobileBottomNav */}
+        {/* Mobile: compact user pill + logout */}
         <div className="flex md:hidden items-center gap-2">
           {user && (
             <>
