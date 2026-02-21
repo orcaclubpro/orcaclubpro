@@ -78,7 +78,7 @@ export default async function HomePage() {
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: '#1a1a1a' }}>
+    <div className="min-h-screen bg-black relative overflow-hidden">
       {/* Breadcrumb Schema */}
       <script
         type="application/ld+json"
