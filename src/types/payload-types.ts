@@ -637,6 +637,10 @@ export interface Order {
      */
     title: string;
     /**
+     * Line item description shown on the invoice
+     */
+    description?: string | null;
+    /**
      * Quantity ordered
      */
     quantity: number;
@@ -1445,6 +1449,7 @@ export interface OrdersSelect<T extends boolean = true> {
     | T
     | {
         title?: T;
+        description?: T;
         quantity?: T;
         price?: T;
         isRecurring?: T;

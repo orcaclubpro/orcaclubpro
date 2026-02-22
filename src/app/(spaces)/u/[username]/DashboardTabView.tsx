@@ -9,13 +9,14 @@ import { ProjectsClientView } from './_views/ProjectsClientView'
 import { TasksView } from './_views/TasksView'
 import { OrdersView } from './_views/OrdersView'
 import { PackagesClientView } from './_views/PackagesClientView'
+import { PackagesAdminView } from './_views/PackagesAdminView'
 import { useTabContext } from '../../TabContext'
 import type { SerializedProject } from '@/components/dashboard/ProjectsCarousel'
 import type { ClientOption } from '@/components/dashboard/CreateProjectModal'
 
 // ── Tab order must match MobileBottomNav visual order ─────────────────────────
 
-const ADMIN_TABS = ['home', 'projects', 'clients', 'tasks'] as const
+const ADMIN_TABS = ['home', 'projects', 'clients', 'tasks', 'packages'] as const
 const CLIENT_TABS = ['home', 'projects', 'invoices', 'packages'] as const
 type AdminTab = (typeof ADMIN_TABS)[number]
 type ClientTab = (typeof CLIENT_TABS)[number]
@@ -32,6 +33,7 @@ export interface AdminDataBundle {
   allOrders: any[]
   allProjects: any[]
   allTasks: any[]
+  allPackages: any[]
   completedTasksCount: number
   completedSprintsCount: number
   serializedProjects: SerializedProject[]
@@ -293,6 +295,8 @@ export function DashboardTabView({
           )
         case 'tasks':
           return <TasksView tasks={d.allTasks} />
+        case 'packages':
+          return <PackagesAdminView allPackages={d.allPackages} username={username} />
         default:
           return (
             <AdminHomeView

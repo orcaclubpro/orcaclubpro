@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Loader2, Package } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
 import { getPackageTemplates, assignPackageToClient } from '@/actions/packages'
 
 interface Template {
@@ -31,12 +32,25 @@ export function AssignPackageModal({ clientId }: AssignPackageModalProps) {
   const [error, setError] = useState<string | null>(null)
   const [templates, setTemplates] = useState<Template[]>([])
   const [selectedId, setSelectedId] = useState<string>('')
+  const [proposalName, setProposalName] = useState<string>('')
+
+  const selectedTemplate = templates.find((t) => t.id === selectedId)
+
+  // Sync proposal name when template selection changes
+  useEffect(() => {
+    if (selectedTemplate) {
+      setProposalName(selectedTemplate.name)
+    } else {
+      setProposalName('')
+    }
+  }, [selectedId, selectedTemplate])
 
   const handleOpen = async () => {
     setOpen(true)
     setLoading(true)
     setError(null)
     setSelectedId('')
+    setProposalName('')
     try {
       const result = await getPackageTemplates()
       if (result.success) {
@@ -59,6 +73,7 @@ export function AssignPackageModal({ clientId }: AssignPackageModalProps) {
       const result = await assignPackageToClient({
         packageId: selectedId,
         clientAccountId: clientId,
+        proposalName: proposalName.trim() || undefined,
       })
       if (result.success) {
         setOpen(false)
@@ -72,8 +87,6 @@ export function AssignPackageModal({ clientId }: AssignPackageModalProps) {
       setSubmitting(false)
     }
   }
-
-  const selectedTemplate = templates.find((t) => t.id === selectedId)
 
   return (
     <>
@@ -91,7 +104,7 @@ export function AssignPackageModal({ clientId }: AssignPackageModalProps) {
         <DialogContent className="sm:max-w-md bg-[#111] border border-white/[0.12] text-white p-0 overflow-hidden">
           <div className="px-6 pt-6 pb-4 border-b border-white/[0.08]">
             <DialogTitle className="text-base font-semibold text-white">Assign Package</DialogTitle>
-            <p className="text-xs text-gray-500 mt-1">Select a package to assign to this client.</p>
+            <p className="text-xs text-gray-500 mt-1">Select a package and optionally rename this proposal.</p>
           </div>
 
           <div className="px-6 py-5 space-y-4">
@@ -108,32 +121,51 @@ export function AssignPackageModal({ clientId }: AssignPackageModalProps) {
                 <p className="text-xs text-gray-600">Create a package in the admin panel first.</p>
               </div>
             ) : (
-              <div className="space-y-2">
-                <Label className="text-xs text-gray-400">Select package</Label>
-                <div className="space-y-1.5 max-h-64 overflow-y-auto">
-                  {templates.map((t) => {
-                    const lineCount = t.lineItems?.length ?? 0
-                    return (
-                      <button
-                        key={t.id}
-                        type="button"
-                        onClick={() => setSelectedId(t.id)}
-                        className={`w-full text-left px-4 py-3 rounded-lg border transition-all duration-150 ${
-                          selectedId === t.id
-                            ? 'border-intelligence-cyan/50 bg-intelligence-cyan/[0.06] text-white'
-                            : 'border-white/[0.08] bg-white/[0.02] text-gray-300 hover:bg-white/[0.05] hover:border-white/[0.15]'
-                        }`}
-                      >
-                        <div className="font-medium text-sm">{t.name}</div>
-                        {t.description && (
-                          <div className="text-xs text-gray-500 mt-0.5 truncate">{t.description}</div>
-                        )}
-                        <div className="text-[10px] text-gray-600 mt-1">{lineCount} line {lineCount === 1 ? 'item' : 'items'}</div>
-                      </button>
-                    )
-                  })}
+              <>
+                {/* Template picker */}
+                <div className="space-y-2">
+                  <Label className="text-xs text-gray-400">Select package</Label>
+                  <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                    {templates.map((t) => {
+                      const lineCount = t.lineItems?.length ?? 0
+                      return (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => setSelectedId(t.id)}
+                          className={`w-full text-left px-4 py-3 rounded-lg border transition-all duration-150 ${
+                            selectedId === t.id
+                              ? 'border-intelligence-cyan/50 bg-intelligence-cyan/[0.06] text-white'
+                              : 'border-white/[0.08] bg-white/[0.02] text-gray-300 hover:bg-white/[0.05] hover:border-white/[0.15]'
+                          }`}
+                        >
+                          <div className="font-medium text-sm">{t.name}</div>
+                          {t.description && (
+                            <div className="text-xs text-gray-500 mt-0.5 truncate">{t.description}</div>
+                          )}
+                          <div className="text-[10px] text-gray-600 mt-1">{lineCount} line {lineCount === 1 ? 'item' : 'items'}</div>
+                        </button>
+                      )
+                    })}
+                  </div>
                 </div>
-              </div>
+
+                {/* Proposal name — shown once a template is picked */}
+                {selectedId && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-gray-400">Proposal name</Label>
+                    <Input
+                      value={proposalName}
+                      onChange={e => setProposalName(e.target.value)}
+                      placeholder="Enter a name for this proposal…"
+                      className="bg-white/[0.04] border-white/[0.1] text-white placeholder:text-gray-600 focus-visible:ring-0 focus-visible:border-[#67e8f9]/40 h-9 text-sm"
+                    />
+                    <p className="text-[10px] text-gray-700">
+                      Defaults to the template name. Rename to personalise for this client.
+                    </p>
+                  </div>
+                )}
+              </>
             )}
 
             {error && (

@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
+import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import type { Range } from './PortfolioTimeline'
 
 // ── Range → lookback window ────────────────────────────────────────────────────
@@ -48,6 +49,66 @@ function Arc({ value, total, startFrac, color, glow }: ArcProps) {
   )
 }
 
+// ── Period delta helpers ───────────────────────────────────────────────────────
+
+interface DeltaResult {
+  pct: number | null  // null = no previous data
+  isNew: boolean      // current > 0 but no previous
+  isUp: boolean
+}
+
+function calcDelta(current: number, prev: number): DeltaResult {
+  if (current === 0 && prev === 0) return { pct: null, isNew: false, isUp: false }
+  if (prev === 0) return { pct: null, isNew: true, isUp: true }
+  const pct = Math.round(((current - prev) / prev) * 100)
+  return { pct, isNew: false, isUp: pct >= 0 }
+}
+
+function DeltaBadge({ current, prev }: { current: number; prev: number }) {
+  const { pct, isNew, isUp } = calcDelta(current, prev)
+
+  if (isNew && current > 0) {
+    return (
+      <span className="text-[9px] font-semibold tracking-wide" style={{ color: '#67e8f9' }}>
+        new
+      </span>
+    )
+  }
+  if (pct === null) return null
+
+  const Icon = pct === 0 ? Minus : isUp ? TrendingUp : TrendingDown
+  const color = pct === 0
+    ? 'rgba(255,255,255,0.25)'
+    : isUp
+      ? '#4ade80'
+      : '#f87171'
+
+  return (
+    <span className="flex items-center gap-0.5" style={{ color }}>
+      <Icon style={{ width: 9, height: 9 }} />
+      <span className="text-[9px] font-semibold tabular-nums">
+        {pct === 0 ? '—' : `${isUp ? '+' : ''}${pct}%`}
+      </span>
+    </span>
+  )
+}
+
+// ── pp delta for collection rate ──────────────────────────────────────────────
+function RateDelta({ current, prev }: { current: number; prev: number }) {
+  if (prev === 0 && current === 0) return null
+  const pp = current - prev
+  if (pp === 0) return null
+  const up = pp > 0
+  return (
+    <span
+      className="text-[9px] font-semibold tabular-nums"
+      style={{ color: up ? '#4ade80' : '#f87171' }}
+    >
+      {up ? '+' : ''}{pp}pp
+    </span>
+  )
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function RevenueChart({
@@ -57,30 +118,40 @@ export function RevenueChart({
   allOrders: any[]
   range: Range
 }) {
-  const d = useMemo(() => {
-    const since = Date.now() - RANGE_DAYS[range] * 86_400_000
-    const inRange = allOrders.filter((o: any) => new Date(o.createdAt ?? 0).getTime() > since)
+  const { cur, prev } = useMemo(() => {
+    const days  = RANGE_DAYS[range]
+    const now   = Date.now()
+    const since     = now - days * 86_400_000
+    const prevSince = since - days * 86_400_000
 
-    const paid       = inRange.filter((o: any) => o.status === 'paid')
-    const pending    = inRange.filter((o: any) => o.status === 'pending')
-    const cancelled  = inRange.filter((o: any) => o.status === 'cancelled')
-
-    const paidAmt      = paid.reduce((s: number, o: any) => s + (o.amount || 0), 0)
-    const pendingAmt   = pending.reduce((s: number, o: any) => s + (o.amount || 0), 0)
-    const cancelledAmt = cancelled.reduce((s: number, o: any) => s + (o.amount || 0), 0)
-    const total        = paidAmt + pendingAmt + cancelledAmt
-
-    return {
-      paidAmt, pendingAmt, cancelledAmt, total,
-      paidCt:     paid.length,
-      pendingCt:  pending.length,
-      cancelledCt: cancelled.length,
-      collectRate: total > 0 ? Math.round((paidAmt / total) * 100) : 0,
+    function calc(orders: any[]) {
+      const paid       = orders.filter((o: any) => o.status === 'paid')
+      const pending    = orders.filter((o: any) => o.status === 'pending')
+      const cancelled  = orders.filter((o: any) => o.status === 'cancelled')
+      const paidAmt      = paid.reduce((s: number, o: any) => s + (o.amount || 0), 0)
+      const pendingAmt   = pending.reduce((s: number, o: any) => s + (o.amount || 0), 0)
+      const cancelledAmt = cancelled.reduce((s: number, o: any) => s + (o.amount || 0), 0)
+      const total        = paidAmt + pendingAmt + cancelledAmt
+      return {
+        paidAmt, pendingAmt, cancelledAmt, total,
+        paidCt:     paid.length,
+        pendingCt:  pending.length,
+        cancelledCt: cancelled.length,
+        collectRate: total > 0 ? Math.round((paidAmt / total) * 100) : 0,
+      }
     }
+
+    const cur  = calc(allOrders.filter((o: any) => new Date(o.createdAt ?? 0).getTime() > since))
+    const prev = calc(allOrders.filter((o: any) => {
+      const t = new Date(o.createdAt ?? 0).getTime()
+      return t > prevSince && t <= since
+    }))
+
+    return { cur, prev }
   }, [allOrders, range])
 
-  const paidFrac     = d.total > 0 ? d.paidAmt     / d.total : 0
-  const pendingFrac  = d.total > 0 ? d.pendingAmt   / d.total : 0
+  const paidFrac    = cur.total > 0 ? cur.paidAmt    / cur.total : 0
+  const pendingFrac = cur.total > 0 ? cur.pendingAmt / cur.total : 0
 
   return (
     <div className="rounded-xl border border-white/[0.10] bg-[#0a0a0a] overflow-hidden">
@@ -104,8 +175,7 @@ export function RevenueChart({
               strokeWidth={SW}
             />
 
-            {d.total === 0 ? (
-              /* Empty state — gradient blue full ring */
+            {cur.total === 0 ? (
               <circle
                 cx={CX} cy={CY} r={R}
                 fill="none"
@@ -115,40 +185,26 @@ export function RevenueChart({
               />
             ) : (
               <>
-                {/* Collected — cyan */}
-                <Arc
-                  value={d.paidAmt} total={d.total}
-                  startFrac={0}
-                  color="#67e8f9"
-                  glow="rgba(103,232,249,0.4)"
-                />
-                {/* Pending — amber */}
-                <Arc
-                  value={d.pendingAmt} total={d.total}
-                  startFrac={paidFrac}
-                  color="#fbbf24"
-                  glow="rgba(251,191,36,0.3)"
-                />
-                {/* Cancelled — muted red */}
-                <Arc
-                  value={d.cancelledAmt} total={d.total}
-                  startFrac={paidFrac + pendingFrac}
-                  color="rgba(248,113,113,0.45)"
-                />
+                <Arc value={cur.paidAmt}    total={cur.total} startFrac={0}                     color="#67e8f9" glow="rgba(103,232,249,0.4)" />
+                <Arc value={cur.pendingAmt} total={cur.total} startFrac={paidFrac}              color="#fbbf24" glow="rgba(251,191,36,0.3)" />
+                <Arc value={cur.cancelledAmt} total={cur.total} startFrac={paidFrac + pendingFrac} color="rgba(248,113,113,0.45)" />
               </>
             )}
           </svg>
 
           {/* Center label */}
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-            {d.total > 0 ? (
+            {cur.total > 0 ? (
               <>
                 <p className="text-[28px] font-black tabular-nums leading-none" style={{ color: '#67e8f9' }}>
-                  {d.collectRate}%
+                  {cur.collectRate}%
                 </p>
-                <p className="text-[9px] uppercase tracking-[0.2em] text-white/30 mt-1.5">
+                <p className="text-[9px] uppercase tracking-[0.2em] text-white/30 mt-1">
                   collected
                 </p>
+                <div className="mt-1.5">
+                  <RateDelta current={cur.collectRate} prev={prev.collectRate} />
+                </div>
               </>
             ) : (
               <p className="text-[10px] uppercase tracking-wider text-white/30">No data</p>
@@ -174,14 +230,19 @@ export function RevenueChart({
                 />
                 <div>
                   <p className="text-[12px] font-medium text-white/70 leading-none">Collected</p>
-                  {d.paidCt > 0 && (
-                    <p className="text-[10px] text-white/25 mt-0.5">{d.paidCt} order{d.paidCt !== 1 ? 's' : ''}</p>
+                  {cur.paidCt > 0 && (
+                    <p className="text-[10px] text-white/25 mt-0.5">{cur.paidCt} order{cur.paidCt !== 1 ? 's' : ''}</p>
                   )}
                 </div>
               </div>
-              <p className="text-[14px] font-bold tabular-nums shrink-0" style={{ color: '#67e8f9' }}>
-                {fmt(d.paidAmt)}
-              </p>
+              <div className="text-right shrink-0">
+                <p className="text-[14px] font-bold tabular-nums leading-none" style={{ color: '#67e8f9' }}>
+                  {fmt(cur.paidAmt)}
+                </p>
+                <div className="flex justify-end mt-0.5">
+                  <DeltaBadge current={cur.paidAmt} prev={prev.paidAmt} />
+                </div>
+              </div>
             </div>
 
             {/* Pending */}
@@ -193,38 +254,60 @@ export function RevenueChart({
                 />
                 <div>
                   <p className="text-[12px] font-medium text-white/70 leading-none">Pending</p>
-                  {d.pendingCt > 0 && (
-                    <p className="text-[10px] text-white/25 mt-0.5">{d.pendingCt} order{d.pendingCt !== 1 ? 's' : ''}</p>
+                  {cur.pendingCt > 0 && (
+                    <p className="text-[10px] text-white/25 mt-0.5">{cur.pendingCt} order{cur.pendingCt !== 1 ? 's' : ''}</p>
                   )}
                 </div>
               </div>
-              <p className="text-[14px] font-bold text-amber-400 tabular-nums shrink-0">
-                {fmt(d.pendingAmt)}
-              </p>
+              <div className="text-right shrink-0">
+                <p className="text-[14px] font-bold text-amber-400 tabular-nums leading-none">
+                  {fmt(cur.pendingAmt)}
+                </p>
+                <div className="flex justify-end mt-0.5">
+                  <DeltaBadge current={cur.pendingAmt} prev={prev.pendingAmt} />
+                </div>
+              </div>
             </div>
 
             {/* Cancelled — only show if non-zero */}
-            {d.cancelledAmt > 0 && (
+            {cur.cancelledAmt > 0 && (
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <div className="size-3 rounded-full shrink-0" style={{ background: 'rgba(248,113,113,0.45)' }} />
                   <div>
                     <p className="text-[12px] font-medium text-white/40 leading-none">Cancelled</p>
-                    {d.cancelledCt > 0 && (
-                      <p className="text-[10px] text-white/20 mt-0.5">{d.cancelledCt} order{d.cancelledCt !== 1 ? 's' : ''}</p>
+                    {cur.cancelledCt > 0 && (
+                      <p className="text-[10px] text-white/20 mt-0.5">{cur.cancelledCt} order{cur.cancelledCt !== 1 ? 's' : ''}</p>
                     )}
                   </div>
                 </div>
-                <p className="text-[14px] font-medium text-red-400/50 tabular-nums shrink-0">
-                  {fmt(d.cancelledAmt)}
-                </p>
+                <div className="text-right shrink-0">
+                  <p className="text-[14px] font-medium text-red-400/50 tabular-nums leading-none">
+                    {fmt(cur.cancelledAmt)}
+                  </p>
+                  <div className="flex justify-end mt-0.5">
+                    <DeltaBadge current={cur.cancelledAmt} prev={prev.cancelledAmt} />
+                  </div>
+                </div>
               </div>
             )}
 
-            {/* Total */}
+            {/* Pipeline total */}
             <div className="pt-3.5 border-t border-white/[0.07] flex items-center justify-between gap-4">
-              <p className="text-[10px] uppercase tracking-[0.2em] text-white/30">Pipeline</p>
-              <p className="text-[18px] font-black text-white tabular-nums">{fmt(d.total)}</p>
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.2em] text-white/30 leading-none">Pipeline</p>
+                {prev.total > 0 && (
+                  <p className="text-[9px] text-white/20 mt-0.5">
+                    prev. {fmt(prev.total)}
+                  </p>
+                )}
+              </div>
+              <div className="text-right">
+                <p className="text-[18px] font-black text-white tabular-nums leading-none">{fmt(cur.total)}</p>
+                <div className="flex justify-end mt-0.5">
+                  <DeltaBadge current={cur.total} prev={prev.total} />
+                </div>
+              </div>
             </div>
 
           </div>

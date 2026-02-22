@@ -368,7 +368,7 @@ export function ClientPortfolioTimeline({
                       <div className="size-2 rounded-full shrink-0" style={{ background: color.hex, boxShadow: `0 0 6px ${rgba(color, 0.55)}` }} />
                       {/* Client name — link to clients tab */}
                       <a
-                        href={`/u/${username}?tab=clients`}
+                        href={`/u/${username}/clients/${group.id}`}
                         className="text-[11px] font-semibold truncate flex-1 min-w-0 hover:opacity-80 transition-opacity"
                         style={{ color: color.hex }}
                         title={group.name}

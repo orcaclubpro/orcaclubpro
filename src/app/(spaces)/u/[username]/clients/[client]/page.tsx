@@ -10,14 +10,23 @@ import {
   Calendar,
   Package,
   ChevronRight,
+  TrendingUp,
+  DollarSign,
+  ShoppingCart,
+  FolderKanban,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
-import type { ClientAccount, Order, Project, User as UserType } from '@/types/payload-types'
+import type { ClientAccount, Project, User as UserType } from '@/types/payload-types'
 import { CreateProjectModal } from '@/components/dashboard/CreateProjectModal'
 import { ClientSidebar, ClientSidebarContent } from '@/components/dashboard/ClientSidebar'
+import { CollapsibleSidebar } from '@/components/dashboard/CollapsibleSidebar'
 import { ClientTabNav } from '@/components/dashboard/ClientTabNav'
 import { ClientPackagesTab } from '@/components/dashboard/ClientPackagesTab'
+import { ClientOrdersTab } from '@/components/dashboard/ClientOrdersTab'
+import { ClientSettingsCard } from '@/components/dashboard/ClientSettingsCard'
+import { ClientPortfolioTimeline } from '@/components/dashboard/ClientPortfolioTimeline'
+import type { SerializedProject, SerializedSprint } from '@/components/dashboard/ProjectsCarousel'
 
 export async function generateMetadata({
   params,
@@ -52,9 +61,11 @@ export default async function ClientDetailPage({
   const { tab: rawTab } = await searchParams
   const validTabs = ['overview', 'projects', 'orders', 'packages'] as const
   type ClientTab = (typeof validTabs)[number]
-  const activeTab: ClientTab = (validTabs as readonly string[]).includes(rawTab ?? '') ? (rawTab as ClientTab) : 'overview'
-  const user = await getCurrentUser()
+  const activeTab: ClientTab = (validTabs as readonly string[]).includes(rawTab ?? '')
+    ? (rawTab as ClientTab)
+    : 'overview'
 
+  const user = await getCurrentUser()
   if (!user || user.username !== username) redirect('/login')
   if (user.role === 'client') redirect(`/u/${username}`)
 
@@ -93,7 +104,7 @@ export default async function ClientDetailPage({
     }
   }
 
-  // Fetch data
+  // Fetch orders, projects, users, packages
   const [{ docs: orders }, { docs: projects }, { docs: clientUsers }, packagesResult] = await Promise.all([
     payload.find({
       collection: 'orders',
@@ -131,9 +142,64 @@ export default async function ClientDetailPage({
   ])
   const packages = packagesResult.docs
 
+  // Fetch sprints for all client projects (for timeline)
+  const projectIds = projects.map((p) => p.id)
+  const { docs: allSprints } = projectIds.length > 0
+    ? await payload.find({
+        collection: 'sprints',
+        where: { project: { in: projectIds } },
+        depth: 0,
+        sort: 'startDate',
+        limit: 500,
+      })
+    : { docs: [] }
+
+  // Group sprints by projectId
+  const sprintsByProject = new Map<string, SerializedSprint[]>()
+  for (const sprint of allSprints) {
+    const projectId =
+      typeof sprint.project === 'string' ? sprint.project : (sprint.project as any)?.id
+    if (!projectId) continue
+    const existing = sprintsByProject.get(projectId) ?? []
+    existing.push({
+      id: sprint.id,
+      name: sprint.name ?? '',
+      status: (sprint.status ?? 'pending') as SerializedSprint['status'],
+      startDate: sprint.startDate ?? new Date().toISOString(),
+      endDate: sprint.endDate ?? new Date().toISOString(),
+      description: sprint.description ?? null,
+      goalDescription: sprint.goalDescription ?? null,
+      completedTasksCount: sprint.completedTasksCount ?? 0,
+      totalTasksCount: sprint.totalTasksCount ?? 0,
+      projectId,
+    })
+    sprintsByProject.set(projectId, existing)
+  }
+
+  // Serialize projects for timeline
+  const serializedProjects: SerializedProject[] = projects.map((p) => ({
+    id: p.id,
+    name: p.name ?? '',
+    status: p.status ?? 'pending',
+    description: p.description ?? null,
+    startDate: p.startDate ?? null,
+    endDate: p.projectedEndDate ?? null,
+    budget: p.budgetAmount ?? null,
+    currency: p.currency ?? 'USD',
+    updatedAt: p.updatedAt ?? new Date().toISOString(),
+    client: { id: clientId, name: clientAccount.name },
+    milestones: (p.milestones ?? []).map((m: any) => ({
+      id: m.id ?? '',
+      title: m.title ?? '',
+      date: m.date ?? null,
+      description: m.description ?? null,
+      completed: m.completed ?? false,
+    })),
+    sprints: sprintsByProject.get(p.id) ?? [],
+  }))
+
   const pendingOrders   = orders.filter((o) => o.status === 'pending')
   const paidOrders      = orders.filter((o) => o.status === 'paid')
-  const cancelledOrders = orders.filter((o) => o.status === 'cancelled')
   const totalRevenue    = paidOrders.reduce((s, o) => s + (o.amount || 0), 0)
 
   const fmt = (n: number) =>
@@ -141,9 +207,7 @@ export default async function ClientDetailPage({
 
   const fmtDate = (d: string | Date) =>
     new Intl.DateTimeFormat('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
+      month: 'short', day: 'numeric', year: 'numeric',
     }).format(new Date(d))
 
   const teamMembers = Array.isArray(clientAccount.assignedTo)
@@ -177,31 +241,17 @@ export default async function ClientDetailPage({
   }
 
   return (
-    // Full-width flex row — no max-w constraint so it fills the viewport
-    <div className="flex min-h-[calc(100vh-64px)]">
+    <div className="lg:flex" style={{ minHeight: 'calc(100vh - 64px)' }}>
 
-      {/* ── Desktop sidebar — sticky, scrolls independently ── */}
-      <aside className="hidden lg:flex flex-col w-72 xl:w-80 shrink-0 border-r border-white/[0.08] bg-[#1c1c1c]/40">
-        <div className="sticky top-16 h-[calc(100vh-64px)] overflow-hidden flex flex-col">
-          <ClientSidebarContent {...sidebarProps} />
-        </div>
-      </aside>
+      {/* ── Left Sidebar (desktop only, auto-minimized) ─────────────────────── */}
+      <CollapsibleSidebar>
+        <ClientSidebarContent {...sidebarProps} />
+      </CollapsibleSidebar>
 
-      {/* ── Main content ── */}
+      {/* ── Main Content ────────────────────────────────────────────────────── */}
       <div className="flex-1 min-w-0 flex flex-col">
 
-        {/* Mobile top bar */}
-        <div className="lg:hidden flex items-center justify-between gap-3 px-4 pt-6 pb-4 border-b border-white/[0.08]">
-          <div className="min-w-0">
-            <h1 className="text-xl font-bold text-white truncate">{clientAccount.name}</h1>
-            {clientAccount.company && (
-              <p className="text-xs text-gray-500 mt-0.5">{clientAccount.company}</p>
-            )}
-          </div>
-          <ClientSidebar {...sidebarProps} />
-        </div>
-
-        {/* ── Sticky tab nav ── */}
+        {/* ── Sticky tab nav ──────────────────────────────────────────────── */}
         <div className="sticky top-16 z-10 bg-[#080808] border-b border-white/[0.08] px-6 lg:px-10">
           <ClientTabNav
             activeTab={activeTab}
@@ -209,25 +259,29 @@ export default async function ClientDetailPage({
           />
         </div>
 
-        {/* ── Scrollable content area ── */}
-        <div className="flex-1 px-6 lg:px-10 py-8 space-y-10">
+        {/* ── Tab Content ─────────────────────────────────────────────────── */}
+        <div className="flex-1 px-6 lg:px-10 py-8 space-y-8">
 
-          {/* Desktop page heading — shown on all tabs */}
-          <div className="hidden lg:block">
-            <h1 className="text-2xl font-bold text-white tracking-tight">
-              {clientAccount.name}
-            </h1>
-            <div className="flex items-center gap-3 mt-1 flex-wrap">
-              {clientAccount.company && (
-                <span className="text-sm text-gray-500">{clientAccount.company}</span>
-              )}
-              <span className="text-sm text-gray-700">{clientAccount.email}</span>
-            </div>
-          </div>
-
-          {/* ── Overview tab ── */}
+          {/* ─── Overview tab ─────────────────────────────────────────────── */}
           {activeTab === 'overview' && (
             <>
+              {/* Client identity + settings card */}
+              <ClientSettingsCard
+                id={clientId}
+                name={clientAccount.name}
+                firstName={clientAccount.firstName ?? ''}
+                lastName={clientAccount.lastName ?? ''}
+                email={clientAccount.email}
+                company={clientAccount.company}
+                stripeCustomerId={clientAccount.stripeCustomerId}
+                teamMembers={teamMembers}
+                clientUsers={clientUsers.map((u) => ({
+                  id: u.id,
+                  name: `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim() || u.email,
+                  email: u.email,
+                }))}
+              />
+
               {/* Outstanding balance banner */}
               {(clientAccount.accountBalance ?? 0) > 0 && (
                 <div className="flex items-center gap-3 rounded-lg border border-amber-400/[0.18] bg-amber-400/[0.04] px-4 py-3">
@@ -238,28 +292,76 @@ export default async function ClientDetailPage({
                   <span className="text-gray-700 text-xs">
                     · {pendingOrders.length} pending {pendingOrders.length === 1 ? 'order' : 'orders'}
                   </span>
+                  <Link
+                    href={`/u/${username}/clients/${clientId}?tab=orders`}
+                    className="ml-auto text-xs text-amber-600 hover:text-amber-400 transition-colors"
+                  >
+                    View orders →
+                  </Link>
                 </div>
               )}
 
               {/* Stats grid */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 {[
-                  { label: 'Total Revenue', value: fmt(totalRevenue), sub: `${paidOrders.length} paid orders` },
-                  { label: 'Outstanding', value: fmt(clientAccount.accountBalance ?? 0), sub: `${pendingOrders.length} pending` },
-                  { label: 'Projects', value: String(projects.length), sub: 'total projects' },
-                  { label: 'Orders', value: String(orders.length), sub: 'all time' },
+                  {
+                    label: 'Total Revenue',
+                    value: fmt(totalRevenue),
+                    sub: `${paidOrders.length} paid`,
+                    icon: TrendingUp,
+                    color: 'text-emerald-400',
+                  },
+                  {
+                    label: 'Outstanding',
+                    value: fmt(clientAccount.accountBalance ?? 0),
+                    sub: `${pendingOrders.length} pending`,
+                    icon: DollarSign,
+                    color: (clientAccount.accountBalance ?? 0) > 0 ? 'text-amber-400' : 'text-gray-600',
+                  },
+                  {
+                    label: 'Projects',
+                    value: String(projects.length),
+                    sub: 'all time',
+                    icon: FolderKanban,
+                    color: 'text-blue-400',
+                  },
+                  {
+                    label: 'Orders',
+                    value: String(orders.length),
+                    sub: 'all time',
+                    icon: ShoppingCart,
+                    color: 'text-[#67e8f9]',
+                  },
                 ].map((stat) => (
-                  <div key={stat.label} className="rounded-xl border border-white/[0.08] bg-[#1c1c1c] px-5 py-4">
-                    <p className="text-[10px] text-gray-600 uppercase tracking-widest font-semibold mb-1">{stat.label}</p>
+                  <div
+                    key={stat.label}
+                    className="rounded-xl border border-white/[0.08] bg-[#1c1c1c] px-5 py-4"
+                  >
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <stat.icon className={`size-3 ${stat.color}`} />
+                      <p className="text-[10px] text-gray-600 uppercase tracking-widest font-semibold">
+                        {stat.label}
+                      </p>
+                    </div>
                     <p className="text-xl font-bold text-white tabular-nums font-mono">{stat.value}</p>
                     <p className="text-[11px] text-gray-600 mt-0.5">{stat.sub}</p>
                   </div>
                 ))}
               </div>
+
+              {/* Client portfolio timeline */}
+              {serializedProjects.length > 0 && (
+                <ClientPortfolioTimeline
+                  clientAccounts={[{ id: clientId, name: clientAccount.name }]}
+                  serializedProjects={serializedProjects}
+                  allOrders={orders as any[]}
+                  username={username}
+                />
+              )}
             </>
           )}
 
-          {/* ── Projects tab ── */}
+          {/* ─── Projects tab ─────────────────────────────────────────────── */}
           {activeTab === 'projects' && (
             <section className="space-y-4">
               <div className="flex items-baseline justify-between gap-4">
@@ -292,48 +394,30 @@ export default async function ClientDetailPage({
             </section>
           )}
 
-          {/* ── Orders tab ── */}
+          {/* ─── Orders tab ───────────────────────────────────────────────── */}
           {activeTab === 'orders' && (
             <section className="space-y-4">
-              <div className="flex items-baseline gap-3">
-                <h2 className="text-base font-semibold text-white">Orders</h2>
-                <span className="text-xs text-gray-600 tabular-nums">{orders.length}</span>
-              </div>
-
-              {orders.length > 0 ? (
-                <div className="rounded-xl border border-white/[0.08] bg-[#1c1c1c] overflow-hidden divide-y divide-white/[0.06]">
-                  {[
-                    { label: 'Pending',   items: pendingOrders,          icon: Clock,        color: 'text-amber-400'  },
-                    { label: 'Paid',      items: paidOrders.slice(0, 5), icon: CheckCircle,  color: 'text-emerald-400' },
-                    { label: 'Cancelled', items: cancelledOrders,        icon: XCircle,      color: 'text-red-400'    },
-                  ]
-                    .filter((g) => g.items.length > 0)
-                    .map((group) => (
-                      <div key={group.label}>
-                        <div className="flex items-center gap-2 px-5 py-2.5 bg-white/[0.04]">
-                          <group.icon className={`size-3 ${group.color}`} />
-                          <span className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest">
-                            {group.label} · {group.items.length}
-                          </span>
-                        </div>
-                        {group.items.map((order) => (
-                          <OrderRow key={order.id} order={order} fmt={fmt} fmtDate={fmtDate} />
-                        ))}
-                      </div>
-                    ))}
-                  {paidOrders.length > 5 && (
-                    <div className="px-5 py-3 text-center text-xs text-gray-700">
-                      Showing 5 of {paidOrders.length} paid orders
-                    </div>
-                  )}
+              <div className="flex items-baseline justify-between gap-4">
+                <div className="flex items-baseline gap-3">
+                  <h2 className="text-base font-semibold text-white">Orders</h2>
+                  <span className="text-xs text-gray-600 tabular-nums">{orders.length}</span>
                 </div>
-              ) : (
-                <EmptyState title="No orders yet" description="This client has no orders on record." />
-              )}
+                {orders.length > 0 && (
+                  <div className="flex items-center gap-4 text-xs">
+                    <span className="text-emerald-400 font-mono">{fmt(totalRevenue)} paid</span>
+                    {(clientAccount.accountBalance ?? 0) > 0 && (
+                      <span className="text-amber-400 font-mono">
+                        {fmt(clientAccount.accountBalance ?? 0)} due
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+              <ClientOrdersTab orders={orders as any} role={user.role as 'admin' | 'user' | 'client'} />
             </section>
           )}
 
-          {/* ── Packages tab ── */}
+          {/* ─── Packages tab ─────────────────────────────────────────────── */}
           {activeTab === 'packages' && (
             <ClientPackagesTab
               packages={packages as any}
@@ -344,49 +428,6 @@ export default async function ClientDetailPage({
 
         </div>
       </div>
-    </div>
-  )
-}
-
-// ── Order row ──────────────────────────────────────────────────────────────────
-
-function OrderRow({
-  order,
-  fmt,
-  fmtDate,
-}: {
-  order: Order
-  fmt: (n: number) => string
-  fmtDate: (d: string | Date) => string
-}) {
-  const cfg = {
-    paid:      { color: 'text-emerald-400', bg: 'bg-emerald-400/10', border: 'border-emerald-400/20', label: 'Paid'      },
-    pending:   { color: 'text-amber-400',   bg: 'bg-amber-400/10',   border: 'border-amber-400/20',   label: 'Pending'   },
-    cancelled: { color: 'text-red-400',     bg: 'bg-red-400/10',     border: 'border-red-400/20',     label: 'Cancelled' },
-  }[order.status] ?? {
-    color: 'text-gray-400', bg: 'bg-gray-400/10', border: 'border-gray-400/20', label: order.status,
-  }
-
-  return (
-    <div className="flex items-center gap-4 px-5 py-4 hover:bg-white/[0.04] transition-colors">
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-          <span className="text-sm font-semibold text-white font-mono">{order.orderNumber}</span>
-          <Badge
-            variant="outline"
-            className={`${cfg.color} ${cfg.bg} border ${cfg.border} text-[10px] px-1.5 py-0`}
-          >
-            {cfg.label}
-          </Badge>
-        </div>
-        <div className="flex items-center gap-1 text-xs text-gray-700">
-          <Calendar className="size-3" />
-          {fmtDate(order.createdAt)}
-        </div>
-      </div>
-      <span className="font-mono font-bold text-white text-sm tabular-nums shrink-0">
-        {fmt(order.amount || 0)}
-      </span>
     </div>
   )
 }

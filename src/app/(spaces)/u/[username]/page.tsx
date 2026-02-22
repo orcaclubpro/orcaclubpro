@@ -94,7 +94,7 @@ export default async function DashboardPage({
   // ── Admin / user ─────────────────────────────────────────────────────────────
 
   if (user.role === 'admin' || user.role === 'user') {
-    const [{ docs: clientAccounts }, { docs: allOrders }, { docs: allProjects }, { docs: allTasks }] =
+    const [{ docs: clientAccounts }, { docs: allOrders }, { docs: allProjects }, { docs: allTasks }, { docs: allPackages }] =
       await Promise.all([
         payload.find({
           collection: 'client-accounts',
@@ -122,6 +122,12 @@ export default async function DashboardPage({
           sort: '-dueDate',
           limit: 100,
         }),
+        payload.find({
+          collection: 'packages',
+          depth: 1,
+          sort: '-createdAt',
+          limit: 200,
+        }).catch(() => ({ docs: [] })),
       ])
 
     const projectIds = allProjects.map((p: any) => p.id)
@@ -185,6 +191,7 @@ export default async function DashboardPage({
           serializedProjects: allProjects.map((p: any) =>
             serializeProject(p, sprintsByProject[p.id] ?? [])
           ),
+          allPackages,
           clientOptions: clientAccounts.map((c: any) => ({ id: c.id, name: c.name })),
         }}
       />

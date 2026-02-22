@@ -1,15 +1,16 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
   FileText, ArrowRight, ChevronDown, ChevronUp,
   X, Check, Loader2, Trash2, Copy, CheckCheck, Sparkles,
+  Receipt, ExternalLink, CheckCircle2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { AssignPackageModal } from './AssignPackageModal'
-import { getProposalWithTemplate, updatePackage, deleteProposal } from '@/actions/packages'
+import { getProposalWithTemplate, updatePackage, deleteProposal, createOrderFromPackage } from '@/actions/packages'
 
 interface LineItem {
   name: string
@@ -55,55 +56,122 @@ function computeTotals(lineItems: LineItem[] = []) {
   return { oneTime, monthly, annual }
 }
 
-function OptionCard({ item, selected, onToggle }: { item: LineItem; selected: boolean; onToggle: () => void }) {
+function OptionCard({
+  item,
+  selected,
+  onToggle,
+  onDescriptionChange,
+  onQuantityChange,
+}: {
+  item: LineItem
+  selected: boolean
+  onToggle: () => void
+  onDescriptionChange?: (desc: string) => void
+  onQuantityChange?: (qty: number) => void
+}) {
   const qty = item.quantity ?? 1
-  const total = (item.price ?? 0) * qty
+  const unitPrice = item.price ?? 0
+  const total = unitPrice * qty
   return (
-    <button
-      type="button"
-      onClick={onToggle}
-      className={cn(
-        'w-full flex flex-col gap-2.5 p-4 rounded-xl border text-left transition-all duration-150',
-        selected
-          ? 'bg-[#67e8f9]/[0.04] border-[#67e8f9]/25 hover:bg-[#67e8f9]/[0.07]'
-          : 'border-white/[0.06] hover:border-white/[0.14] hover:bg-white/[0.02]',
-      )}
-    >
-      <div className="flex items-start gap-3">
-        <div className={cn(
-          'mt-0.5 size-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all',
-          selected ? 'bg-[#67e8f9]/20 border-[#67e8f9]/60' : 'border-white/[0.22]',
-        )}>
-          {selected && <Check className="size-3 text-[#67e8f9]" />}
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className={cn('text-sm font-semibold leading-snug', selected ? 'text-white' : 'text-gray-400')}>
-            {item.name}
-          </p>
-          {item.description && (
-            <p className="text-[11px] text-gray-500 mt-0.5 leading-relaxed line-clamp-2">{item.description}</p>
-          )}
-        </div>
-      </div>
-      <div className="flex items-center justify-between pl-8">
-        {item.isRecurring && (
-          <span className={cn(
-            'text-[10px] rounded-full px-1.5 py-0.5 uppercase tracking-wide font-medium',
-            selected
-              ? 'text-[#67e8f9]/80 bg-[#67e8f9]/10 border border-[#67e8f9]/20'
-              : 'text-gray-500 bg-white/[0.04] border border-white/[0.08]',
+    <div className={cn(
+      'w-full flex flex-col rounded-xl border text-left transition-all duration-150',
+      selected
+        ? 'bg-[#67e8f9]/[0.04] border-[#67e8f9]/25'
+        : 'border-white/[0.06] hover:border-white/[0.14] hover:bg-white/[0.02]',
+    )}>
+      {/* Toggle row — clicking here selects/deselects */}
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex flex-col gap-2.5 p-4 text-left w-full"
+      >
+        <div className="flex items-start gap-3">
+          <div className={cn(
+            'mt-0.5 size-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all',
+            selected ? 'bg-[#67e8f9]/20 border-[#67e8f9]/60' : 'border-white/[0.22]',
           )}>
-            {item.recurringInterval === 'year' ? 'Annual' : 'Monthly'}
-          </span>
-        )}
-        <span className={cn('ml-auto text-sm font-bold font-mono tabular-nums', selected ? 'text-white' : 'text-gray-500')}>
-          {fmt(total)}
+            {selected && <Check className="size-3 text-[#67e8f9]" />}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className={cn('text-sm font-semibold leading-snug', selected ? 'text-white' : 'text-gray-400')}>
+              {item.name}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center justify-between pl-8">
           {item.isRecurring && (
-            <span className="text-xs font-normal text-gray-500 font-sans">/{item.recurringInterval === 'year' ? 'yr' : 'mo'}</span>
+            <span className={cn(
+              'text-[10px] rounded-full px-1.5 py-0.5 uppercase tracking-wide font-medium',
+              selected
+                ? 'text-[#67e8f9]/80 bg-[#67e8f9]/10 border border-[#67e8f9]/20'
+                : 'text-gray-500 bg-white/[0.04] border border-white/[0.08]',
+            )}>
+              {item.recurringInterval === 'year' ? 'Annual' : 'Monthly'}
+            </span>
           )}
-        </span>
-      </div>
-    </button>
+          <span className={cn('ml-auto text-sm font-bold font-mono tabular-nums', selected ? 'text-white' : 'text-gray-500')}>
+            {fmt(total)}
+            {item.isRecurring && (
+              <span className="text-xs font-normal text-gray-500 font-sans">/{item.recurringInterval === 'year' ? 'yr' : 'mo'}</span>
+            )}
+          </span>
+        </div>
+      </button>
+
+      {/* Quantity + description — only when selected, clicks don't bubble to toggle */}
+      {selected && (onQuantityChange || onDescriptionChange) && (
+        <div className="px-4 pb-4 pt-0" onClick={e => e.stopPropagation()}>
+          <div className="h-px bg-white/[0.06] mb-3" />
+          <div className="flex flex-col gap-2">
+            {onQuantityChange && (
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-gray-600 uppercase tracking-widest font-medium">Quantity</span>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => onQuantityChange(Math.max(1, qty - 1))}
+                    className="size-6 flex items-center justify-center rounded-md text-gray-500 hover:text-white hover:bg-white/[0.08] transition-colors text-sm leading-none"
+                  >
+                    −
+                  </button>
+                  <input
+                    type="number"
+                    min={1}
+                    value={qty}
+                    onChange={e => {
+                      const v = parseInt(e.target.value, 10)
+                      if (!isNaN(v) && v >= 1) onQuantityChange(v)
+                    }}
+                    className="w-10 text-center text-xs bg-white/[0.06] border border-white/[0.10] rounded-md text-white py-1 focus:outline-none focus:border-[#67e8f9]/40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => onQuantityChange(qty + 1)}
+                    className="size-6 flex items-center justify-center rounded-md text-gray-500 hover:text-white hover:bg-white/[0.08] transition-colors text-sm leading-none"
+                  >
+                    +
+                  </button>
+                  {qty > 1 && (
+                    <span className="text-[10px] text-gray-600 ml-1 tabular-nums">
+                      × {fmt(unitPrice)} ea
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+            {onDescriptionChange && (
+              <textarea
+                value={item.description ?? ''}
+                onChange={e => onDescriptionChange(e.target.value)}
+                placeholder="Add a description… (shown on invoice)"
+                rows={2}
+                className="w-full px-3 py-2 text-xs bg-white/[0.04] border border-white/[0.08] rounded-lg text-gray-300 placeholder:text-gray-700 focus:outline-none focus:border-[#67e8f9]/30 resize-none leading-relaxed transition-colors"
+              />
+            )}
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -118,6 +186,42 @@ export function ClientPackagesTab({ packages, clientId, username }: ClientPackag
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [deletingId, setDeletingId]           = useState<string | null>(null)
   const [copied, setCopied]                   = useState(false)
+  const [invoicingId, setInvoicingId]         = useState<string | null>(null)
+  const [invoiceConfirmId, setInvoiceConfirmId] = useState<string | null>(null)
+  const [invoiceResults, setInvoiceResults]   = useState<Record<string, { url: string } | { error: string }>>({})
+  const [daysUntilDue, setDaysUntilDue]       = useState<Record<string, number>>({})
+
+  const getDays = (pkgId: string) => daysUntilDue[pkgId] ?? 30
+
+  const handleCreateInvoice = async (pkg: PackageDoc) => {
+    setInvoiceConfirmId(null)
+    setInvoicingId(pkg.id)
+
+    // Save current editItems to DB first so createOrderFromPackage reads correct data
+    const saveResult = await updatePackage({
+      packageId: pkg.id,
+      name: pkg.name,
+      description: pkg.description ?? undefined,
+      coverMessage: pkg.coverMessage ?? undefined,
+      notes: pkg.notes ?? undefined,
+      lineItems: editItems.map(item => ({ ...item, description: item.description ?? undefined })),
+    })
+
+    if (!saveResult.success) {
+      setInvoicingId(null)
+      setInvoiceResults(prev => ({ ...prev, [pkg.id]: { error: saveResult.error ?? 'Failed to save package before invoicing' } }))
+      return
+    }
+
+    const result = await createOrderFromPackage(pkg.id, getDays(pkg.id))
+    setInvoicingId(null)
+    if (result.success && result.invoiceUrl) {
+      setInvoiceResults(prev => ({ ...prev, [pkg.id]: { url: result.invoiceUrl as string } }))
+      window.open(result.invoiceUrl, '_blank')
+    } else {
+      setInvoiceResults(prev => ({ ...prev, [pkg.id]: { error: result.error ?? 'Failed to create invoice' } }))
+    }
+  }
 
   const handleRowClick = useCallback(async (pkg: PackageDoc) => {
     if (expandedId === pkg.id) { setExpandedId(null); return }
@@ -144,6 +248,14 @@ export function ClientPackagesTab({ packages, clientId, username }: ClientPackag
 
   const removeExtra = (idx: number) => setEditItems(prev => prev.filter((_, i) => i !== idx))
 
+  const updateItemDescription = (name: string, desc: string) => {
+    setEditItems(prev => prev.map(ei => ei.name === name ? { ...ei, description: desc } : ei))
+  }
+
+  const updateItemQuantity = (name: string, qty: number) => {
+    setEditItems(prev => prev.map(ei => ei.name === name ? { ...ei, quantity: qty } : ei))
+  }
+
   const handleSave = async (pkg: PackageDoc) => {
     setSaving(true)
     setSaveError(null)
@@ -157,7 +269,6 @@ export function ClientPackagesTab({ packages, clientId, username }: ClientPackag
     })
     setSaving(false)
     if (!result.success) { setSaveError(result.error ?? 'Failed to save'); return }
-    router.push(`/u/${username}/packages/${pkg.id}/print`)
   }
 
   const handleDelete = async (pkgId: string) => {
@@ -287,7 +398,7 @@ export function ClientPackagesTab({ packages, clientId, username }: ClientPackag
                     <div className="px-7 py-6 space-y-6" style={{ background: 'rgba(0,0,0,0.25)' }}>
 
                       {/* Share row */}
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <button
                           onClick={() => handleCopy(pkg.id)}
                           className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-400 border border-white/[0.08] rounded-lg hover:text-white hover:border-white/[0.18] transition-all"
@@ -303,6 +414,73 @@ export function ClientPackagesTab({ packages, clientId, username }: ClientPackag
                           View Package
                           <ArrowRight className="size-3" />
                         </Link>
+
+                        {/* Create Invoice */}
+                        {(() => {
+                          const result = invoiceResults[pkg.id]
+                          if (result && 'url' in result) {
+                            return (
+                              <a
+                                href={result.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-emerald-400 border border-emerald-500/30 bg-emerald-500/[0.06] rounded-lg hover:bg-emerald-500/10 transition-all"
+                              >
+                                <CheckCircle2 className="size-3.5" />
+                                Invoice created
+                                <ExternalLink className="size-3" />
+                              </a>
+                            )
+                          }
+                          if (invoiceConfirmId === pkg.id) {
+                            return (
+                              <div className="flex items-center gap-2">
+                                <select
+                                  value={getDays(pkg.id)}
+                                  onChange={e => setDaysUntilDue(prev => ({ ...prev, [pkg.id]: Number(e.target.value) }))}
+                                  className="appearance-none pl-2 pr-6 py-1.5 text-xs bg-white/[0.05] border border-white/[0.12] rounded-lg text-white focus:outline-none focus:border-[#67e8f9]/40 cursor-pointer"
+                                  style={{ backgroundImage: 'none' }}
+                                >
+                                  <option value={7}>Due in 7 days</option>
+                                  <option value={14}>Due in 14 days</option>
+                                  <option value={30}>Due in 30 days</option>
+                                  <option value={60}>Due in 60 days</option>
+                                  <option value={90}>Due in 90 days</option>
+                                </select>
+                                <button
+                                  onClick={() => setInvoiceConfirmId(null)}
+                                  className="text-xs text-gray-600 hover:text-gray-400 transition-colors px-1"
+                                >
+                                  ✕
+                                </button>
+                                <button
+                                  onClick={() => handleCreateInvoice(pkg)}
+                                  className="px-3 py-1.5 text-xs font-semibold bg-[#67e8f9]/[0.1] border border-[#67e8f9]/30 text-[#67e8f9] rounded-lg hover:bg-[#67e8f9]/[0.18] transition-all"
+                                >
+                                  Confirm
+                                </button>
+                              </div>
+                            )
+                          }
+                          return (
+                            <div className="flex flex-col items-start gap-1">
+                              <button
+                                onClick={() => setInvoiceConfirmId(pkg.id)}
+                                disabled={invoicingId === pkg.id || !editItems.length}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[#67e8f9] border border-[#67e8f9]/25 bg-[#67e8f9]/[0.04] rounded-lg hover:bg-[#67e8f9]/[0.1] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                              >
+                                {invoicingId === pkg.id
+                                  ? <Loader2 className="size-3.5 animate-spin" />
+                                  : <Receipt className="size-3.5" />
+                                }
+                                {invoicingId === pkg.id ? 'Creating…' : 'Create Invoice'}
+                              </button>
+                              {result && 'error' in result && (
+                                <p className="text-[10px] text-red-400 max-w-[180px] leading-snug">{result.error}</p>
+                              )}
+                            </div>
+                          )
+                        })()}
                       </div>
 
                       {/* Options checklist */}
@@ -319,14 +497,24 @@ export function ClientPackagesTab({ packages, clientId, username }: ClientPackag
                                 Select services to include
                               </p>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                {templateItems.map((item, i) => (
-                                  <OptionCard
-                                    key={i}
-                                    item={item}
-                                    selected={editItems.some(ei => ei.name === item.name)}
-                                    onToggle={() => toggleItem(item)}
-                                  />
-                                ))}
+                                {templateItems.map((item, i) => {
+                                  const editItem = editItems.find(ei => ei.name === item.name)
+                                  const isSelected = !!editItem
+                                  // Show user-edited qty/description if selected, otherwise template's
+                                  const displayItem = editItem
+                                    ? { ...item, description: editItem.description, quantity: editItem.quantity }
+                                    : item
+                                  return (
+                                    <OptionCard
+                                      key={i}
+                                      item={displayItem}
+                                      selected={isSelected}
+                                      onToggle={() => toggleItem(item)}
+                                      onQuantityChange={isSelected ? (qty) => updateItemQuantity(item.name, qty) : undefined}
+                                      onDescriptionChange={isSelected ? (desc) => updateItemDescription(item.name, desc) : undefined}
+                                    />
+                                  )
+                                })}
                               </div>
                             </div>
                           )}
@@ -413,7 +601,7 @@ export function ClientPackagesTab({ packages, clientId, username }: ClientPackag
                             className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold bg-[#67e8f9]/[0.1] border border-[#67e8f9]/30 text-[#67e8f9] rounded-lg hover:bg-[#67e8f9]/[0.18] disabled:opacity-50 transition-colors"
                           >
                             {saving && <Loader2 className="size-3 animate-spin" />}
-                            Save & View
+                            Save
                           </button>
                         </div>
                       </div>

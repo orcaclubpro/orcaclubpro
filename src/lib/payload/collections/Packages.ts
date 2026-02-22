@@ -7,6 +7,7 @@ const Packages: CollectionConfig = {
     useAsTitle: 'name',
     group: 'Clients',
     defaultColumns: ['name', 'type', 'clientAccount', 'status', 'createdAt'],
+    listSearchableFields: ['name', 'description'],
   },
   access: {
     create: adminOrUser,

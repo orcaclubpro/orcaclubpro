@@ -57,9 +57,11 @@ export async function createPackage({
 export async function assignPackageToClient({
   packageId,
   clientAccountId,
+  proposalName,
 }: {
   packageId: string
   clientAccountId: string
+  proposalName?: string
 }) {
   try {
     const user = await getCurrentUser()
@@ -81,7 +83,7 @@ export async function assignPackageToClient({
     const proposal = await payload.create({
       collection: 'packages',
       data: {
-        name: template.name,
+        name: proposalName?.trim() || template.name,
         description: template.description,
         coverMessage: template.coverMessage,
         notes: template.notes,
@@ -260,7 +262,7 @@ export async function getPackageTemplates() {
   }
 }
 
-export async function createOrderFromPackage(packageId: string) {
+export async function createOrderFromPackage(packageId: string, daysUntilDue: number = 30) {
   try {
     const user = await getCurrentUser()
     if (!user || user.role === 'client') return { success: false, error: 'Unauthorized' }
@@ -305,7 +307,8 @@ export async function createOrderFromPackage(packageId: string) {
       0
     )
 
-    // Create Payload order first
+    // 1. Create Payload order first so we have an order ID for Stripe metadata.
+    //    Webhook uses orcaclub_order_id to mark it paid when client pays.
     const order = await payload.create({
       collection: 'orders',
       data: {
@@ -316,6 +319,7 @@ export async function createOrderFromPackage(packageId: string) {
         stripeCustomerId,
         lineItems: lineItems.map((item: any) => ({
           title: item.name,
+          description: item.description ?? undefined,
           quantity: item.quantity ?? 1,
           price: item.price ?? 0,
           isRecurring: item.isRecurring ?? false,
@@ -323,22 +327,12 @@ export async function createOrderFromPackage(packageId: string) {
       } as any,
     })
 
-    // Create Stripe invoice items
-    for (const item of lineItems) {
-      await stripe.invoiceItems.create({
-        customer: stripeCustomerId,
-        amount: Math.round((item.price ?? 0) * (item.quantity ?? 1) * 100),
-        currency: 'usd',
-        description: item.name,
-        metadata: { order_number: orderNumber, orcaclub_order_id: order.id },
-      })
-    }
-
-    // Create draft invoice
+    // 2. Create draft Stripe invoice with order ID in metadata so the webhook
+    //    can find and update the order when payment is received.
     const invoice = await stripe.invoices.create({
       customer: stripeCustomerId,
       collection_method: 'send_invoice',
-      days_until_due: 30,
+      days_until_due: daysUntilDue,
       auto_advance: false,
       description: `Order ${orderNumber} — ${pkg.name}`,
       metadata: {
@@ -348,14 +342,32 @@ export async function createOrderFromPackage(packageId: string) {
       },
     })
 
-    if (!invoice.lines?.data || invoice.lines.data.length === 0) {
-      throw new Error('Invoice was created but has no line items')
+    // 3. Attach each line item directly to this invoice via `invoice: invoice.id`.
+    //    Attaching explicitly avoids "pending item" issues where items float and
+    //    get picked up by an unrelated invoice on the same customer.
+    for (const item of lineItems) {
+      const qty = item.quantity ?? 1
+      const totalCents = Math.round((item.price ?? 0) * qty * 100)
+      const descParts = [
+        item.name,
+        qty > 1 ? `${qty} × $${item.price}` : null,
+        item.description || null,
+      ].filter(Boolean)
+      await stripe.invoiceItems.create({
+        customer: stripeCustomerId,
+        invoice: invoice.id,
+        amount: totalCents,
+        currency: 'usd',
+        description: descParts.join(' — '),
+        metadata: { order_number: orderNumber, orcaclub_order_id: order.id },
+      })
     }
 
-    // Finalize → hosted_invoice_url
+    // 4. Finalize → locks the invoice, calculates total from attached items,
+    //    generates hosted_invoice_url for client payment.
     const finalized = await stripe.invoices.finalizeInvoice(invoice.id)
 
-    // Update order with Stripe invoice details
+    // 5. Update Payload order with Stripe invoice details.
     await payload.update({
       collection: 'orders',
       id: order.id,

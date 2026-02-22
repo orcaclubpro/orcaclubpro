@@ -1,6 +1,7 @@
 import { EnhancedOrderCard } from '@/components/dashboard/EnhancedOrderCard'
 import { Receipt, AlertCircle, CheckCircle, Clock, Package } from 'lucide-react'
 import { MetricBadge } from '@/components/dashboard/visualizations/MetricBadge'
+import { BillingPortalButton } from '@/components/dashboard/BillingPortalButton'
 import type { Order } from '@/types/payload-types'
 
 interface OrdersViewProps {
@@ -30,6 +31,15 @@ export function OrdersView({ allOrders, clientAccount }: OrdersViewProps) {
             Manage your orders, view invoices, and make payments
           </p>
         </div>
+
+        {clientAccount?.id && clientAccount?.stripeCustomerId && (
+          <div className="ml-[76px]">
+            <BillingPortalButton
+              clientAccountId={clientAccount.id}
+              label="Manage Billing &amp; Payment Methods"
+            />
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-3">
           <MetricBadge
@@ -67,10 +77,16 @@ export function OrdersView({ allOrders, clientAccount }: OrdersViewProps) {
               <p className="text-3xl font-bold text-yellow-400 mb-2">
                 {formatCurrency(clientAccount.accountBalance)}
               </p>
-              <p className="text-sm text-gray-400 leading-relaxed">
+              <p className="text-sm text-gray-400 leading-relaxed mb-4">
                 You have {pendingOrders.length} pending {pendingOrders.length === 1 ? 'order' : 'orders'}.
-                Click "Pay Now" on any pending order below to complete payment via Stripe.
+                Pay individual invoices below, or open the billing portal to pay your balance, set up a bank account, or schedule payments.
               </p>
+              {clientAccount?.id && clientAccount?.stripeCustomerId && (
+                <BillingPortalButton
+                  clientAccountId={clientAccount.id}
+                  label="Pay Balance &amp; Manage Billing"
+                />
+              )}
             </div>
           </div>
         </div>

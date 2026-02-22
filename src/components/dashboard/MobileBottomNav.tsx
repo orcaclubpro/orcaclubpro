@@ -79,6 +79,7 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
               href={item.href}
               onClick={(e) => {
                 e.preventDefault()
+                window.scrollTo({ top: 0, behavior: 'instant' })
                 if (isSubPage) {
                   router.push(item.href)
                 } else {

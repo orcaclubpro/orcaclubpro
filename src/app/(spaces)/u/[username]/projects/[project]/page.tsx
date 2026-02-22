@@ -3,7 +3,6 @@ import { getCurrentUser } from '@/actions/auth'
 import { getPayload } from 'payload'
 import config from '@payload-config'
 import { AlertCircle } from 'lucide-react'
-import Link from 'next/link'
 import { ProjectSidebar } from '@/components/dashboard/ProjectSidebar'
 import { CollapsibleSidebar } from '@/components/dashboard/CollapsibleSidebar'
 import { ProjectTabNav } from '@/components/dashboard/ProjectTabNav'
@@ -158,17 +157,6 @@ export default async function ProjectDetailPage({
 
       {/* ── Main Content ────────────────────────────────────────────────── */}
       <div className="flex-1 min-w-0 flex flex-col">
-
-        {/* Mobile: project name + back nav */}
-        <div className="lg:hidden px-6 py-4 border-b border-white/[0.08]">
-          <Link
-            href={`/u/${username}/projects`}
-            className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
-          >
-            ← All Projects
-          </Link>
-          <h1 className="text-lg font-semibold text-white mt-2">{project.name}</h1>
-        </div>
 
         {/* Tab Navigation */}
         <div className="sticky top-16 z-10 bg-[#080808] border-b border-white/[0.08] px-6">

@@ -219,6 +219,15 @@ const Orders: CollectionConfig = {
           },
         },
 
+        // Description (optional, shown on invoice)
+        {
+          name: 'description',
+          type: 'textarea',
+          admin: {
+            description: 'Line item description shown on the invoice',
+          },
+        },
+
         // Row: Quantity + Price (side by side)
         {
           type: 'row',

@@ -2,10 +2,20 @@
 
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { Users, FolderOpen, ArrowRight, Building2, AlertCircle, CheckCircle } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import {
+  Users, FolderOpen, ArrowRight, Building2, AlertCircle, CheckCircle,
+  Settings, Save, Loader2, Trash2, AlertTriangle, X, CheckCircle2,
+} from 'lucide-react'
+import {
+  Dialog, DialogContent, DialogTitle, DialogDescription,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { NewClientModal } from '@/components/dashboard/NewClientModal'
 import { PortfolioTimeline } from '@/components/dashboard/PortfolioTimeline'
+import { deleteClientAccount, updateClientAccount } from '@/actions/clients'
 import type { SerializedProject } from '@/components/dashboard/ProjectsCarousel'
 
 interface ClientsViewProps {
@@ -96,6 +106,243 @@ function ClientNavRow({
   )
 }
 
+// ─── Client edit modal ─────────────────────────────────────────────────────────
+
+function ClientEditModal({
+  client,
+  open,
+  onOpenChange,
+  onDeleted,
+}: {
+  client: any
+  open: boolean
+  onOpenChange: (v: boolean) => void
+  onDeleted: () => void
+}) {
+  const router = useRouter()
+
+  // Edit form state
+  const [name, setName]           = useState(client.name ?? '')
+  const [firstName, setFirstName] = useState(client.firstName ?? '')
+  const [lastName, setLastName]   = useState(client.lastName ?? '')
+  const [company, setCompany]     = useState(client.company ?? '')
+  const [isSaving, setIsSaving]   = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [saved, setSaved]         = useState(false)
+
+  // Delete zone state
+  const [showDelete, setShowDelete]     = useState(false)
+  const [deleteInput, setDeleteInput]   = useState('')
+  const [isDeleting, setIsDeleting]     = useState(false)
+  const [deleteError, setDeleteError]   = useState<string | null>(null)
+
+  // Reset on open
+  useEffect(() => {
+    if (open) {
+      setName(client.name ?? '')
+      setFirstName(client.firstName ?? '')
+      setLastName(client.lastName ?? '')
+      setCompany(client.company ?? '')
+      setSaveError(null)
+      setSaved(false)
+      setShowDelete(false)
+      setDeleteInput('')
+      setDeleteError(null)
+    }
+  }, [open, client])
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!name.trim()) { setSaveError('Name is required'); return }
+    setIsSaving(true)
+    setSaveError(null)
+    const result = await updateClientAccount({
+      id: client.id,
+      name: name.trim(),
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      company: company.trim() || undefined,
+    })
+    setIsSaving(false)
+    if (!result.success) { setSaveError(result.error ?? 'Failed to save'); return }
+    setSaved(true)
+    setTimeout(() => { onOpenChange(false); router.refresh() }, 1000)
+  }
+
+  const handleDelete = async () => {
+    if (deleteInput !== client.name) return
+    setIsDeleting(true)
+    setDeleteError(null)
+    const result = await deleteClientAccount({ id: client.id })
+    setIsDeleting(false)
+    if (!result.success) { setDeleteError(result.error ?? 'Failed to delete'); return }
+    onOpenChange(false)
+    onDeleted()
+    router.refresh()
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="bg-black border-white/[0.06] max-w-lg p-0 overflow-hidden">
+
+        {/* Header */}
+        <div className="px-8 pt-8 pb-6 border-b border-white/[0.05]">
+          <p className="text-[10px] tracking-[0.4em] uppercase text-white/25 font-light mb-2">
+            Client Settings
+          </p>
+          <DialogTitle className="text-xl font-bold text-white leading-tight line-clamp-1">
+            {client.name}
+          </DialogTitle>
+          <DialogDescription className="sr-only">Edit client account settings</DialogDescription>
+          <div className="mt-3 w-6 h-px bg-cyan-400/40" />
+        </div>
+
+        {/* Form */}
+        <form id="client-edit-form" onSubmit={handleSave} className="px-8 py-7 space-y-5 max-h-[55vh] overflow-y-auto">
+
+          {/* Identity */}
+          <section className="space-y-4">
+            <p className="text-[10px] tracking-[0.4em] uppercase text-white/20 font-light">Identity</p>
+            <div className="space-y-1.5">
+              <label className="text-[11px] text-white/35 tracking-wide">Display Name <span className="text-red-400/60">*</span></label>
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="bg-white/[0.03] border-white/[0.06] text-white focus:border-cyan-400/30 focus-visible:ring-0"
+                disabled={isSaving}
+                required
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-[11px] text-white/35 tracking-wide">First Name</label>
+                <Input
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  className="bg-white/[0.03] border-white/[0.06] text-white focus:border-cyan-400/30 focus-visible:ring-0"
+                  disabled={isSaving}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[11px] text-white/35 tracking-wide">Last Name</label>
+                <Input
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  className="bg-white/[0.03] border-white/[0.06] text-white focus:border-cyan-400/30 focus-visible:ring-0"
+                  disabled={isSaving}
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[11px] text-white/35 tracking-wide">Company</label>
+              <Input
+                value={company}
+                onChange={(e) => setCompany(e.target.value)}
+                placeholder="Optional"
+                className="bg-white/[0.03] border-white/[0.06] text-white placeholder:text-white/15 focus:border-cyan-400/30 focus-visible:ring-0"
+                disabled={isSaving}
+              />
+            </div>
+          </section>
+
+          {/* Danger Zone */}
+          <section className="space-y-3 border-t border-red-500/10 pt-5">
+            <p className="text-[10px] tracking-[0.4em] uppercase text-red-400/40 font-light flex items-center gap-2">
+              <AlertTriangle className="size-3" />
+              Danger Zone
+            </p>
+            {!showDelete ? (
+              <button
+                type="button"
+                onClick={() => setShowDelete(true)}
+                disabled={isSaving}
+                className="flex items-center gap-2 text-xs text-red-400/50 hover:text-red-400/80 bg-red-500/5 hover:bg-red-500/10 border border-red-500/10 hover:border-red-500/25 rounded-lg px-4 py-2.5 transition-all duration-150"
+              >
+                <Trash2 className="size-3.5" />
+                Delete Client Account
+              </button>
+            ) : (
+              <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-5 space-y-4 animate-in fade-in slide-in-from-bottom-1 duration-200">
+                <div className="space-y-1">
+                  <p className="text-xs text-red-400/80 font-medium">This is permanent and cannot be undone.</p>
+                  <p className="text-[11px] text-white/30">
+                    Type <span className="font-mono text-white/50">{client.name}</span> to confirm.
+                  </p>
+                </div>
+                <Input
+                  value={deleteInput}
+                  onChange={(e) => setDeleteInput(e.target.value)}
+                  placeholder={client.name}
+                  className="bg-white/[0.03] border-red-500/20 text-white placeholder:text-white/15 focus:border-red-400/40 focus-visible:ring-0 font-mono text-sm"
+                  disabled={isDeleting}
+                />
+                {deleteError && <p className="text-xs text-red-400/75">{deleteError}</p>}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setShowDelete(false); setDeleteInput(''); setDeleteError(null) }}
+                    disabled={isDeleting}
+                    className="flex-1 text-xs text-white/30 hover:text-white/50 bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] rounded-lg px-3 py-2 transition-all duration-150"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDelete}
+                    disabled={deleteInput !== client.name || isDeleting}
+                    className="flex-1 flex items-center justify-center gap-2 text-xs font-semibold text-red-400 bg-red-500/10 hover:bg-red-500/20 border border-red-500/25 rounded-lg px-3 py-2 transition-all duration-150 disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    {isDeleting
+                      ? <><Loader2 className="size-3.5 animate-spin" />Deleting…</>
+                      : <><Trash2 className="size-3.5" />Confirm Delete</>
+                    }
+                  </button>
+                </div>
+              </div>
+            )}
+          </section>
+        </form>
+
+        {/* Footer */}
+        <div className="px-8 pb-7 pt-5 border-t border-white/[0.05] space-y-3">
+          {saveError && (
+            <p className="text-xs text-red-400/75 animate-in fade-in duration-200">{saveError}</p>
+          )}
+          {saved && (
+            <div className="flex items-center gap-2 text-xs text-green-400/80 animate-in fade-in duration-200">
+              <CheckCircle2 className="size-3.5 shrink-0" />
+              Saved successfully
+            </div>
+          )}
+          <div className="flex gap-3">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => onOpenChange(false)}
+              disabled={isSaving}
+              className="flex-1 text-white/35 hover:text-white/55 hover:bg-white/[0.04] border border-white/[0.06] transition-all duration-150"
+            >
+              <X className="size-3.5 mr-2" />
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              form="client-edit-form"
+              disabled={isSaving}
+              className="flex-1 bg-intelligence-cyan text-black hover:bg-intelligence-cyan/90 font-medium shadow-lg shadow-intelligence-cyan/10"
+            >
+              {isSaving
+                ? <><Loader2 className="size-3.5 mr-2 animate-spin" />Saving…</>
+                : <><Save className="size-3.5 mr-2" />Save Changes</>
+              }
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 // ─── Right panel: empty state ──────────────────────────────────────────────────
 
 function EmptyState({ canCreate, username }: { canCreate: boolean; username: string }) {
@@ -125,14 +372,19 @@ function ClientDetail({
   username,
   clientProjects,
   clientOrders,
+  userRole,
+  onDeleted,
 }: {
   client: any
   username: string
   clientProjects: SerializedProject[]
   clientOrders: any[]
+  userRole: string
+  onDeleted: () => void
 }) {
   const balance = client.accountBalance ?? 0
   const hasBalance = balance > 0
+  const [editOpen, setEditOpen] = useState(false)
 
   return (
     <div className="flex flex-col h-full">
@@ -157,6 +409,16 @@ function ClientDetail({
         </div>
 
         <div className="px-12 py-10 space-y-10 relative z-10">
+
+          {/* Edit modal */}
+          {userRole !== 'client' && (
+            <ClientEditModal
+              client={client}
+              open={editOpen}
+              onOpenChange={setEditOpen}
+              onDeleted={onDeleted}
+            />
+          )}
 
           {/* ── Header ── */}
           <div
@@ -193,14 +455,29 @@ function ClientDetail({
                 )}
               </div>
 
-              {/* Open profile */}
-              <Link
-                href={`/u/${username}/clients/${client.id}`}
-                className="flex items-center gap-2 text-xs font-bold bg-intelligence-cyan hover:bg-intelligence-cyan/90 active:scale-[0.98] text-black rounded-lg px-4 py-2.5 transition-all duration-150 group shadow-[0_0_20px_rgba(103,232,249,0.2)]"
-              >
-                Open Profile
-                <ArrowRight className="size-3.5 group-hover:translate-x-0.5 transition-transform duration-150" />
-              </Link>
+              {/* Right actions */}
+              <div className="flex items-center gap-2 shrink-0">
+                {/* Edit cog — staff only */}
+                {userRole !== 'client' && (
+                  <button
+                    type="button"
+                    onClick={() => setEditOpen(true)}
+                    className="flex items-center gap-1.5 text-xs text-white/45 hover:text-white/75 bg-white/[0.03] hover:bg-white/[0.07] border border-white/[0.07] hover:border-white/[0.18] rounded-lg px-3.5 py-2.5 transition-all duration-150"
+                  >
+                    <Settings className="size-3.5" />
+                    Edit
+                  </button>
+                )}
+
+                {/* Open profile */}
+                <Link
+                  href={`/u/${username}/clients/${client.id}`}
+                  className="flex items-center gap-2 text-xs font-bold bg-intelligence-cyan hover:bg-intelligence-cyan/90 active:scale-[0.98] text-black rounded-lg px-4 py-2.5 transition-all duration-150 group shadow-[0_0_20px_rgba(103,232,249,0.2)]"
+                >
+                  Open Profile
+                  <ArrowRight className="size-3.5 group-hover:translate-x-0.5 transition-transform duration-150" />
+                </Link>
+              </div>
             </div>
 
             {/* Large name */}
@@ -455,6 +732,8 @@ export function ClientsView({
                 username={username}
                 clientProjects={clientProjects}
                 clientOrders={clientOrders}
+                userRole={userRole}
+                onDeleted={() => setSelectedId(clientAccounts.find(c => c.id !== selectedId)?.id ?? '')}
               />
             </div>
           ) : (
