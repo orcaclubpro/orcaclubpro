@@ -205,23 +205,15 @@ export default function ContactPage() {
           </svg>
         </div>
 
-        {/* Top-left wordmark */}
-        <div className="relative z-10 px-12 pt-10">
-          <Link href="/">
-            <span className="text-[11px] font-light tracking-[0.4em] uppercase text-white/60">
-              ORCACLUB
-            </span>
-          </Link>
-        </div>
-
         {/* Center content */}
         <div className="relative z-10 flex-1 flex items-center justify-center">
           <div className="text-center px-12">
             <p className="text-[10px] tracking-[0.45em] uppercase text-white/50 font-light mb-6">
               Technical Operations Studio
             </p>
-            <h2 className="text-2xl font-extralight text-white tracking-wide mb-8">
-              Start a conversation.
+            <h2 className="text-5xl font-bold tracking-tight mb-8 leading-tight">
+              <span className="text-white">Start a </span>
+              <span className="gradient-text">Conversation</span>
             </h2>
             <div className="w-6 h-px bg-cyan-400/40 mx-auto mb-10" />
             <div className="space-y-3">
@@ -262,15 +254,26 @@ export default function ContactPage() {
       {/* ── RIGHT PANEL ── functional, scrollable */}
       <div className="flex-1 bg-[#080808] flex flex-col overflow-hidden relative">
 
-        {/* Mobile-only logo */}
-        <div className="lg:hidden px-10 pt-10 pb-0 text-center flex-shrink-0">
-          <h1 className="text-3xl font-bold tracking-tight">
-            <span className="text-white">ORCA</span>
-            <span className="gradient-text">CLUB</span>
+        {/* Mobile-only header */}
+        <div className="lg:hidden px-10 pt-10 pb-6 text-center flex-shrink-0 border-b border-white/[0.06]">
+          <h1 className="text-4xl font-bold tracking-tight leading-tight mb-5">
+            <span className="text-white">Start a </span>
+            <span className="gradient-text">Conversation</span>
           </h1>
-          <p className="text-[11px] text-white/25 tracking-[0.3em] uppercase mt-2 font-light">
-            Start a Conversation
-          </p>
+          <div className="flex flex-col items-center gap-2">
+            <div className="flex items-center justify-center gap-2">
+              <Mail className="w-3 h-3 text-white/40" />
+              <p className="text-[11px] tracking-[0.2em] text-white/60 font-light">chance@orcaclub.pro</p>
+            </div>
+            <div className="flex items-center justify-center gap-2">
+              <MapPin className="w-3 h-3 text-white/40" />
+              <p className="text-[11px] tracking-[0.2em] text-white/60 font-light">California 714</p>
+            </div>
+            <div className="flex items-center justify-center gap-2">
+              <Phone className="w-3 h-3 text-white/40" />
+              <p className="text-[11px] tracking-[0.2em] text-white/60 font-light">By appointment</p>
+            </div>
+          </div>
         </div>
 
         {/* Scrollable form area */}

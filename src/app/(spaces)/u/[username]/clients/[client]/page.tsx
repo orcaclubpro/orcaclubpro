@@ -16,6 +16,8 @@ import Link from 'next/link'
 import type { ClientAccount, Order, Project, User as UserType } from '@/types/payload-types'
 import { CreateProjectModal } from '@/components/dashboard/CreateProjectModal'
 import { ClientSidebar, ClientSidebarContent } from '@/components/dashboard/ClientSidebar'
+import { ClientTabNav } from '@/components/dashboard/ClientTabNav'
+import { ClientPackagesTab } from '@/components/dashboard/ClientPackagesTab'
 
 export async function generateMetadata({
   params,
@@ -41,10 +43,16 @@ export async function generateMetadata({
 
 export default async function ClientDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ username: string; client: string }>
+  searchParams: Promise<{ tab?: string }>
 }) {
   const { username, client: clientId } = await params
+  const { tab: rawTab } = await searchParams
+  const validTabs = ['overview', 'projects', 'orders', 'packages'] as const
+  type ClientTab = (typeof validTabs)[number]
+  const activeTab: ClientTab = (validTabs as readonly string[]).includes(rawTab ?? '') ? (rawTab as ClientTab) : 'overview'
   const user = await getCurrentUser()
 
   if (!user || user.username !== username) redirect('/login')
@@ -86,7 +94,7 @@ export default async function ClientDetailPage({
   }
 
   // Fetch data
-  const [{ docs: orders }, { docs: projects }, { docs: clientUsers }] = await Promise.all([
+  const [{ docs: orders }, { docs: projects }, { docs: clientUsers }, packagesResult] = await Promise.all([
     payload.find({
       collection: 'orders',
       where: { clientAccount: { equals: clientId } },
@@ -108,7 +116,20 @@ export default async function ClientDetailPage({
       sort: 'firstName',
       limit: 50,
     }),
+    payload.find({
+      collection: 'packages',
+      where: {
+        and: [
+          { clientAccount: { equals: clientId } } as any,
+          { type: { equals: 'proposal' } } as any,
+        ],
+      },
+      depth: 0,
+      sort: '-createdAt',
+      limit: 100,
+    }).catch(() => ({ docs: [] })),
   ])
+  const packages = packagesResult.docs
 
   const pendingOrders   = orders.filter((o) => o.status === 'pending')
   const paidOrders      = orders.filter((o) => o.status === 'paid')
@@ -180,10 +201,18 @@ export default async function ClientDetailPage({
           <ClientSidebar {...sidebarProps} />
         </div>
 
+        {/* ── Sticky tab nav ── */}
+        <div className="sticky top-16 z-10 bg-[#080808] border-b border-white/[0.08] px-6 lg:px-10">
+          <ClientTabNav
+            activeTab={activeTab}
+            basePath={`/u/${username}/clients/${clientId}`}
+          />
+        </div>
+
         {/* ── Scrollable content area ── */}
         <div className="flex-1 px-6 lg:px-10 py-8 space-y-10">
 
-          {/* Desktop page heading */}
+          {/* Desktop page heading — shown on all tabs */}
           <div className="hidden lg:block">
             <h1 className="text-2xl font-bold text-white tracking-tight">
               {clientAccount.name}
@@ -196,88 +225,123 @@ export default async function ClientDetailPage({
             </div>
           </div>
 
-          {/* Outstanding balance banner */}
-          {(clientAccount.accountBalance ?? 0) > 0 && (
-            <div className="flex items-center gap-3 rounded-lg border border-amber-400/[0.18] bg-amber-400/[0.04] px-4 py-3">
-              <AlertCircle className="size-3.5 text-amber-400 shrink-0" />
-              <p className="text-sm text-amber-400 font-medium">
-                {fmt(clientAccount.accountBalance ?? 0)} outstanding
-              </p>
-              <span className="text-gray-700 text-xs">
-                · {pendingOrders.length} pending {pendingOrders.length === 1 ? 'order' : 'orders'}
-              </span>
-            </div>
-          )}
+          {/* ── Overview tab ── */}
+          {activeTab === 'overview' && (
+            <>
+              {/* Outstanding balance banner */}
+              {(clientAccount.accountBalance ?? 0) > 0 && (
+                <div className="flex items-center gap-3 rounded-lg border border-amber-400/[0.18] bg-amber-400/[0.04] px-4 py-3">
+                  <AlertCircle className="size-3.5 text-amber-400 shrink-0" />
+                  <p className="text-sm text-amber-400 font-medium">
+                    {fmt(clientAccount.accountBalance ?? 0)} outstanding
+                  </p>
+                  <span className="text-gray-700 text-xs">
+                    · {pendingOrders.length} pending {pendingOrders.length === 1 ? 'order' : 'orders'}
+                  </span>
+                </div>
+              )}
 
-          {/* ── Projects ── */}
-          <section className="space-y-4">
-            <div className="flex items-baseline justify-between gap-4">
-              <div className="flex items-baseline gap-3">
-                <h2 className="text-base font-semibold text-white">Projects</h2>
-                <span className="text-xs text-gray-600 tabular-nums">{projects.length}</span>
-              </div>
-              <CreateProjectModal clientId={clientId} clientName={clientAccount.name} />
-            </div>
-
-            {projects.length > 0 ? (
-              <div className="rounded-xl border border-white/[0.08] bg-[#1c1c1c] overflow-hidden divide-y divide-white/[0.06]">
-                {projects.map((project) => (
-                  <ProjectRow
-                    key={project.id}
-                    project={project}
-                    username={username}
-                    fmtDate={fmtDate}
-                    fmt={fmt}
-                  />
+              {/* Stats grid */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                {[
+                  { label: 'Total Revenue', value: fmt(totalRevenue), sub: `${paidOrders.length} paid orders` },
+                  { label: 'Outstanding', value: fmt(clientAccount.accountBalance ?? 0), sub: `${pendingOrders.length} pending` },
+                  { label: 'Projects', value: String(projects.length), sub: 'total projects' },
+                  { label: 'Orders', value: String(orders.length), sub: 'all time' },
+                ].map((stat) => (
+                  <div key={stat.label} className="rounded-xl border border-white/[0.08] bg-[#1c1c1c] px-5 py-4">
+                    <p className="text-[10px] text-gray-600 uppercase tracking-widest font-semibold mb-1">{stat.label}</p>
+                    <p className="text-xl font-bold text-white tabular-nums font-mono">{stat.value}</p>
+                    <p className="text-[11px] text-gray-600 mt-0.5">{stat.sub}</p>
+                  </div>
                 ))}
               </div>
-            ) : (
-              <EmptyState
-                title="No projects yet"
-                description="Create your first project to start tracking work."
-                action={<CreateProjectModal clientId={clientId} clientName={clientAccount.name} />}
-              />
-            )}
-          </section>
+            </>
+          )}
 
-          {/* ── Orders ── */}
-          <section className="space-y-4">
-            <div className="flex items-baseline gap-3">
-              <h2 className="text-base font-semibold text-white">Orders</h2>
-              <span className="text-xs text-gray-600 tabular-nums">{orders.length}</span>
-            </div>
-
-            {orders.length > 0 ? (
-              <div className="rounded-xl border border-white/[0.08] bg-[#1c1c1c] overflow-hidden divide-y divide-white/[0.06]">
-                {[
-                  { label: 'Pending',   items: pendingOrders,          icon: Clock,        color: 'text-amber-400'  },
-                  { label: 'Paid',      items: paidOrders.slice(0, 5), icon: CheckCircle,  color: 'text-emerald-400' },
-                  { label: 'Cancelled', items: cancelledOrders,        icon: XCircle,      color: 'text-red-400'    },
-                ]
-                  .filter((g) => g.items.length > 0)
-                  .map((group) => (
-                    <div key={group.label}>
-                      <div className="flex items-center gap-2 px-5 py-2.5 bg-white/[0.04]">
-                        <group.icon className={`size-3 ${group.color}`} />
-                        <span className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest">
-                          {group.label} · {group.items.length}
-                        </span>
-                      </div>
-                      {group.items.map((order) => (
-                        <OrderRow key={order.id} order={order} fmt={fmt} fmtDate={fmtDate} />
-                      ))}
-                    </div>
-                  ))}
-                {paidOrders.length > 5 && (
-                  <div className="px-5 py-3 text-center text-xs text-gray-700">
-                    Showing 5 of {paidOrders.length} paid orders
-                  </div>
-                )}
+          {/* ── Projects tab ── */}
+          {activeTab === 'projects' && (
+            <section className="space-y-4">
+              <div className="flex items-baseline justify-between gap-4">
+                <div className="flex items-baseline gap-3">
+                  <h2 className="text-base font-semibold text-white">Projects</h2>
+                  <span className="text-xs text-gray-600 tabular-nums">{projects.length}</span>
+                </div>
+                <CreateProjectModal clientId={clientId} clientName={clientAccount.name} />
               </div>
-            ) : (
-              <EmptyState title="No orders yet" description="This client has no orders on record." />
-            )}
-          </section>
+
+              {projects.length > 0 ? (
+                <div className="rounded-xl border border-white/[0.08] bg-[#1c1c1c] overflow-hidden divide-y divide-white/[0.06]">
+                  {projects.map((project) => (
+                    <ProjectRow
+                      key={project.id}
+                      project={project}
+                      username={username}
+                      fmtDate={fmtDate}
+                      fmt={fmt}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <EmptyState
+                  title="No projects yet"
+                  description="Create your first project to start tracking work."
+                  action={<CreateProjectModal clientId={clientId} clientName={clientAccount.name} />}
+                />
+              )}
+            </section>
+          )}
+
+          {/* ── Orders tab ── */}
+          {activeTab === 'orders' && (
+            <section className="space-y-4">
+              <div className="flex items-baseline gap-3">
+                <h2 className="text-base font-semibold text-white">Orders</h2>
+                <span className="text-xs text-gray-600 tabular-nums">{orders.length}</span>
+              </div>
+
+              {orders.length > 0 ? (
+                <div className="rounded-xl border border-white/[0.08] bg-[#1c1c1c] overflow-hidden divide-y divide-white/[0.06]">
+                  {[
+                    { label: 'Pending',   items: pendingOrders,          icon: Clock,        color: 'text-amber-400'  },
+                    { label: 'Paid',      items: paidOrders.slice(0, 5), icon: CheckCircle,  color: 'text-emerald-400' },
+                    { label: 'Cancelled', items: cancelledOrders,        icon: XCircle,      color: 'text-red-400'    },
+                  ]
+                    .filter((g) => g.items.length > 0)
+                    .map((group) => (
+                      <div key={group.label}>
+                        <div className="flex items-center gap-2 px-5 py-2.5 bg-white/[0.04]">
+                          <group.icon className={`size-3 ${group.color}`} />
+                          <span className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest">
+                            {group.label} · {group.items.length}
+                          </span>
+                        </div>
+                        {group.items.map((order) => (
+                          <OrderRow key={order.id} order={order} fmt={fmt} fmtDate={fmtDate} />
+                        ))}
+                      </div>
+                    ))}
+                  {paidOrders.length > 5 && (
+                    <div className="px-5 py-3 text-center text-xs text-gray-700">
+                      Showing 5 of {paidOrders.length} paid orders
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <EmptyState title="No orders yet" description="This client has no orders on record." />
+              )}
+            </section>
+          )}
+
+          {/* ── Packages tab ── */}
+          {activeTab === 'packages' && (
+            <ClientPackagesTab
+              packages={packages as any}
+              clientId={clientId}
+              username={username}
+            />
+          )}
+
         </div>
       </div>
     </div>

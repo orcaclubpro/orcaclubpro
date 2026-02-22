@@ -1,15 +1,16 @@
-import Link from 'next/link'
+'use client'
+
+import { useState } from 'react'
 import { DashboardGreeting } from '@/components/dashboard/DashboardGreeting'
 import { AnalyticsSidebar } from '@/components/dashboard/AnalyticsSidebar'
-import { HeroTabCard } from '@/components/dashboard/HeroTabCard'
-import type { HeroRevenueData, HeroProjectData } from '@/components/dashboard/HeroTabCard'
-import {
-  Receipt,
-  FolderOpen,
-  CheckSquare,
-  DollarSign,
-  ArrowRight,
-} from 'lucide-react'
+import { PortfolioTimeline } from '@/components/dashboard/PortfolioTimeline'
+import { ClientPortfolioTimeline } from '@/components/dashboard/ClientPortfolioTimeline'
+import type { SerializedProject } from '@/components/dashboard/ProjectsCarousel'
+import type { Range } from '@/components/dashboard/PortfolioTimeline'
+import { RANGE_CFG } from '@/components/dashboard/PortfolioTimeline'
+import { cn } from '@/lib/utils'
+import { RevenueChart } from '@/components/dashboard/RevenueChart'
+import { Receipt } from 'lucide-react'
 
 interface AdminHomeViewProps {
   user: { firstName?: string | null; role: string }
@@ -21,6 +22,7 @@ interface AdminHomeViewProps {
   completedTasksCount: number
   completedSprintsCount: number
   timeframe: '7d' | '30d' | '90d'
+  serializedProjects: SerializedProject[]
 }
 
 const formatCurrency = (amount: number) =>
@@ -36,48 +38,15 @@ export function AdminHomeView({
   completedTasksCount,
   completedSprintsCount,
   timeframe,
+  serializedProjects,
 }: AdminHomeViewProps) {
-  const windowDays = timeframe === '90d' ? 90 : timeframe === '30d' ? 30 : 7
+  const [range, setRange] = useState<Range>('week')
+
   const now = Date.now()
-  const windowMs = windowDays * 24 * 60 * 60 * 1000
-  const windowStart = now - windowMs
-  const prevWindowStart = windowStart - windowMs
-
-  const windowOrders = allOrders.filter(
-    (o: any) => new Date(o.createdAt).getTime() > windowStart
-  )
-  const prevWindowOrders = allOrders.filter((o: any) => {
-    const t = new Date(o.createdAt).getTime()
-    return t > prevWindowStart && t <= windowStart
-  })
-
-  const windowRevenue = windowOrders
-    .filter((o: any) => o.status === 'paid')
-    .reduce((sum: number, o: any) => sum + (o.amount || 0), 0)
-
-  const prevWindowRevenue = prevWindowOrders
-    .filter((o: any) => o.status === 'paid')
-    .reduce((sum: number, o: any) => sum + (o.amount || 0), 0)
-
-  const windowChange =
-    prevWindowRevenue > 0
-      ? ((windowRevenue - prevWindowRevenue) / prevWindowRevenue) * 100
-      : windowRevenue > 0
-        ? 100
-        : 0
-
-  const windowOrderCount = windowOrders.length
-  const windowPendingCount = windowOrders.filter((o: any) => o.status === 'pending').length
-
-  const pendingBalance = allOrders
-    .filter((o: any) => o.status === 'pending')
-    .reduce((sum: number, o: any) => sum + (o.amount || 0), 0)
 
   const activeProjects = allProjects.filter(
     (p: any) => p.status === 'in-progress' || p.status === 'pending'
   ).length
-
-  const pendingTasks = allTasks.filter((t: any) => t.status === 'pending').length
 
   const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000
   const orders30d = allOrders.filter(
@@ -120,10 +89,6 @@ export function AdminHomeView({
     activeProjects: projectStatus.active,
   }
 
-  const windowStartLabel = new Date(windowStart).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  const timeframeLabel = timeframe === '90d' ? '90 Days' : timeframe === '30d' ? '30 Days' : '7 Days'
-  const compLabel = timeframe === '7d' ? 'vs last week' : `vs prior ${timeframeLabel.toLowerCase()}`
-
   const projectedOrders = allOrders
     .filter((o: any) => o.status === 'pending')
     .sort((a: any, b: any) => {
@@ -133,45 +98,16 @@ export function AdminHomeView({
     })
   const projectedTotal = projectedOrders.reduce((s: number, o: any) => s + (o.amount || 0), 0)
 
-  const projectHealth: HeroProjectData = {
-    total: allProjects.length,
-    active: allProjects.filter((p: any) => p.status === 'in-progress').length,
-    pending: allProjects.filter((p: any) => p.status === 'pending').length,
-    completed: allProjects.filter((p: any) => p.status === 'completed').length,
-    onHold: allProjects.filter((p: any) => p.status === 'on-hold').length,
-    cancelled: allProjects.filter((p: any) => p.status === 'cancelled').length,
-    totalMilestones: allProjects.reduce((s: number, p: any) => s + (p.milestones?.length || 0), 0),
-    completedMilestones: allProjects.reduce(
-      (s: number, p: any) => s + ((p.milestones ?? []).filter((m: any) => m.completed).length),
-      0
-    ),
-    tasksCompleted: completedTasksCount,
-    sprintsCompleted: completedSprintsCount,
-  }
-
-  const heroRevenue: HeroRevenueData = {
-    windowRevenue,
-    windowChange,
-    windowOrderCount,
-    windowPendingCount,
-    windowStartLabel,
-    timeframe,
-    timeframeLabel,
-    compLabel,
-    username,
-    activeProjects,
-  }
-
   return (
     <>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12 pb-20 space-y-6 sm:space-y-10">
 
-        {/* ── HERO: Greeting + This Week Revenue ──────────────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
+        {/* ── GREETING + REVENUE CHART ─────────────────────────────────────── */}
+        <div className="flex flex-col lg:flex-row lg:items-center gap-6 sm:gap-8 py-6 sm:py-8">
 
-          {/* Left: Greeting */}
-          <div className="flex flex-col justify-center py-6 sm:py-8 lg:py-14">
-            <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-[0.25em] mb-5 sm:mb-7">
+          {/* Left: greeting */}
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-[0.25em] mb-5">
               {user.role === 'admin' ? 'Admin' : 'Workspace'} · ORCACLUB Spaces
             </p>
             <DashboardGreeting
@@ -185,73 +121,11 @@ export function AdminHomeView({
             />
           </div>
 
-          {/* Right: Hero Tab Card (Revenue / Projects) */}
-          <HeroTabCard revenue={heroRevenue} projects={projectHealth} />
-        </div>
-
-        {/* ── QUICK STATS ─────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-3 gap-3 sm:gap-4">
-
-          <Link
-            href={`/u/${username}?tab=projects`}
-            className="group relative overflow-hidden rounded-xl border border-white/[0.07]
-                       bg-gradient-to-b from-[#141414] to-[#0e0e0e]
-                       p-4 sm:p-6
-                       hover:border-white/[0.14] hover:bg-[#161616]
-                       transition-all duration-300"
-          >
-            <div className="absolute top-0 right-0 w-24 h-24 bg-blue-400/[0.07] blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-            <div className="flex items-start justify-between mb-3 sm:mb-5">
-              <div className="p-1.5 sm:p-2 rounded-lg bg-blue-400/10 border border-blue-400/20">
-                <FolderOpen className="size-3.5 sm:size-4 text-blue-400" />
-              </div>
-              <ArrowRight className="size-3 sm:size-3.5 text-gray-700 group-hover:text-gray-400 transition-colors duration-200 mt-0.5" />
-            </div>
-            <p className="text-[9px] sm:text-[10px] font-semibold text-gray-500 uppercase tracking-wider leading-tight">Active Projects</p>
-            <p className="text-2xl sm:text-4xl font-bold text-white mt-1 sm:mt-1.5 tracking-tight tabular-nums">{activeProjects}</p>
-            <p className="text-[10px] sm:text-xs text-gray-600 mt-1 hidden sm:block">In progress or pending</p>
-          </Link>
-
-          <Link
-            href={`/u/${username}?tab=tasks`}
-            className="group relative overflow-hidden rounded-xl border border-white/[0.07]
-                       bg-gradient-to-b from-[#141414] to-[#0e0e0e]
-                       p-4 sm:p-6
-                       hover:border-white/[0.14] hover:bg-[#161616]
-                       transition-all duration-300"
-          >
-            <div className="absolute top-0 right-0 w-24 h-24 bg-purple-400/[0.07] blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-            <div className="flex items-start justify-between mb-3 sm:mb-5">
-              <div className="p-1.5 sm:p-2 rounded-lg bg-purple-400/10 border border-purple-400/20">
-                <CheckSquare className="size-3.5 sm:size-4 text-purple-400" />
-              </div>
-              <ArrowRight className="size-3 sm:size-3.5 text-gray-700 group-hover:text-gray-400 transition-colors duration-200 mt-0.5" />
-            </div>
-            <p className="text-[9px] sm:text-[10px] font-semibold text-gray-500 uppercase tracking-wider leading-tight">Open Tasks</p>
-            <p className="text-2xl sm:text-4xl font-bold text-white mt-1 sm:mt-1.5 tracking-tight tabular-nums">{pendingTasks}</p>
-            <p className="text-[10px] sm:text-xs text-gray-600 mt-1 hidden sm:block">Pending</p>
-          </Link>
-
-          <div className="relative overflow-hidden rounded-xl border border-white/[0.07]
-                          bg-gradient-to-b from-[#141414] to-[#0e0e0e]
-                          p-4 sm:p-6">
-            {pendingBalance > 0 && (
-              <div className="absolute top-0 right-0 w-24 h-24 bg-amber-400/[0.06] blur-2xl pointer-events-none" />
-            )}
-            <div className="flex items-start justify-between mb-3 sm:mb-5">
-              <div className={`p-1.5 sm:p-2 rounded-lg border ${pendingBalance > 0 ? 'bg-amber-400/10 border-amber-400/20' : 'bg-emerald-400/10 border-emerald-400/20'}`}>
-                <DollarSign className={`size-3.5 sm:size-4 ${pendingBalance > 0 ? 'text-amber-400' : 'text-emerald-400'}`} />
-              </div>
-              {pendingBalance > 0 && (
-                <span className="inline-block size-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.5)] mt-0.5" />
-              )}
-            </div>
-            <p className="text-[9px] sm:text-[10px] font-semibold text-gray-500 uppercase tracking-wider leading-tight">Pending</p>
-            <p className={`text-xl sm:text-4xl font-bold mt-1 sm:mt-1.5 tracking-tight tabular-nums ${pendingBalance > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
-              {pendingBalance > 0 ? formatCurrency(pendingBalance) : '—'}
-            </p>
-            <p className="text-[10px] sm:text-xs text-gray-600 mt-1 hidden sm:block">{pendingBalance > 0 ? 'Outstanding' : 'All clear'}</p>
+          {/* Right: revenue donut — reacts to the timeline range picker */}
+          <div className="w-full lg:w-auto lg:shrink-0" style={{ maxWidth: 420 }}>
+            <RevenueChart allOrders={allOrders} range={range} />
           </div>
+
         </div>
 
         {/* ── PROJECTED REVENUE ───────────────────────────────────────────── */}
@@ -347,6 +221,55 @@ export function AdminHomeView({
                 </p>
               </div>
             )}
+          </div>
+        )}
+
+        {/* ── TIMELINES ─────────────────────────────────────────────────────── */}
+        {(serializedProjects.length > 0 || clientAccounts.length > 0) && (
+          <div className="space-y-8">
+
+            {/* ── Shared header: title + range picker ───────────────────────── */}
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-semibold text-white/40 uppercase tracking-[0.3em]">
+                Timelines
+              </p>
+              <div className="flex items-center p-1 bg-white/[0.04] rounded-lg border border-white/[0.08]">
+                {(['week', 'month', 'year'] as Range[]).map((r) => (
+                  <button
+                    key={r}
+                    onClick={() => setRange(r)}
+                    className={cn(
+                      'px-4 py-1.5 rounded-md text-[11px] font-medium transition-all duration-150',
+                      range === r ? 'bg-white/[0.12] text-white shadow-sm' : 'text-white/40 hover:text-white/65',
+                    )}
+                  >
+                    {RANGE_CFG[r].label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {serializedProjects.length > 0 && (
+              <PortfolioTimeline
+                projects={serializedProjects}
+                allOrders={allOrders}
+                username={username}
+                externalRange={range}
+                onRangeChange={setRange}
+              />
+            )}
+
+            {clientAccounts.length > 0 && (
+              <ClientPortfolioTimeline
+                clientAccounts={clientAccounts}
+                serializedProjects={serializedProjects}
+                allOrders={allOrders}
+                username={username}
+                externalRange={range}
+                onRangeChange={setRange}
+              />
+            )}
+
           </div>
         )}
 

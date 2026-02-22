@@ -20,6 +20,7 @@ import Projects from './collections/Projects'
 import { Tasks } from './collections/Tasks'
 import Sprints from './collections/Sprints'
 import Files from './collections/Files'
+import Packages from './collections/Packages'
 
 // Helper function to format strings as URL-friendly slugs
 const formatSlug = (val: string): string =>
@@ -868,7 +869,7 @@ export default buildConfig({
   editor: lexicalEditor(),
 
   // Define and configure your collections in this array
-  collections: [Media, Clients, Leads, Categories, Tags, Posts, Users, ClientAccounts, Orders, WebhookEvents, Projects, Tasks, Sprints, Files],
+  collections: [Media, Clients, Leads, Categories, Tags, Posts, Users, ClientAccounts, Orders, Packages, WebhookEvents, Projects, Tasks, Sprints, Files],
 
   // Your Payload secret - should be a complex and secure string, unguessable
   secret: process.env.PAYLOAD_SECRET || 'your-secret-here',

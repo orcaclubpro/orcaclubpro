@@ -15,7 +15,7 @@ export default async function SpacesLayout({
     <TabProvider>
       <SpacesHeader user={user} />
       {/* pb-24 on mobile reserves space above the floating bottom nav */}
-      <main className="pt-16 min-h-screen bg-black pb-24 md:pb-0">{children}</main>
+      <main className="pt-16 min-h-screen bg-black pb-28">{children}</main>
       <Footer />
       <MobileBottomNav role={user?.role} />
     </TabProvider>

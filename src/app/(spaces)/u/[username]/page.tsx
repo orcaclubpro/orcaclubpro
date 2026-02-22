@@ -10,19 +10,28 @@ import { DashboardTabView } from './DashboardTabView'
 // ── Serialization helpers ─────────────────────────────────────────────────────
 
 function serializeProject(p: any, sprints: SerializedSprint[] = []): SerializedProject {
+  const clientRaw = p.client
+  const client =
+    clientRaw && typeof clientRaw === 'object'
+      ? { id: clientRaw.id ?? '', name: clientRaw.name ?? '' }
+      : null
+
   return {
     id: p.id,
     name: p.name ?? '',
     status: p.status ?? 'active',
     description: p.description ?? null,
     startDate: p.startDate ?? null,
-    endDate: p.endDate ?? null,
-    budget: p.budget ?? null,
+    endDate: p.projectedEndDate ?? null,
+    budget: p.budgetAmount ?? null,
     currency: p.currency ?? 'USD',
     updatedAt: p.updatedAt ?? new Date().toISOString(),
+    client,
     milestones: (p.milestones ?? []).map((m: any) => ({
       id: m.id ?? '',
       title: m.title ?? '',
+      date: m.date ?? null,
+      description: m.description ?? null,
       completed: m.completed ?? false,
     })),
     sprints,
@@ -221,7 +230,7 @@ export default async function DashboardPage({
     )
   }
 
-  const [{ docs: clientProjects }, { docs: orders }] = await Promise.all([
+  const [{ docs: clientProjects }, { docs: orders }, clientPackagesResult] = await Promise.all([
     payload.find({
       collection: 'projects',
       where: { client: { equals: clientAccount.id } },
@@ -235,7 +244,20 @@ export default async function DashboardPage({
       sort: '-createdAt',
       limit: 100,
     }),
+    payload.find({
+      collection: 'packages',
+      where: {
+        and: [
+          { clientAccount: { equals: clientAccount.id } } as any,
+          { type: { equals: 'proposal' } } as any,
+        ],
+      },
+      depth: 0,
+      sort: '-createdAt',
+      limit: 20,
+    }).catch(() => ({ docs: [] })),
   ])
+  const clientPackages = clientPackagesResult.docs
 
   const clientProjectIds = clientProjects.map((p: any) => p.id)
   let clientSprints: any[] = []
@@ -260,6 +282,7 @@ export default async function DashboardPage({
         clientProjects,
         orders,
         clientSprints,
+        clientPackages,
         serializedClientProjects: clientProjects
           .map((p: any) => serializeProject(p, []))
           .sort((a: SerializedProject, b: SerializedProject) =>

@@ -1,12 +1,9 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
 import { LogOut } from "lucide-react"
 import { logoutAction } from "@/actions/auth"
-import { cn } from "@/lib/utils"
 import { Cinzel_Decorative } from "next/font/google"
-import { useTabContext } from "@/app/(spaces)/TabContext"
 
 const gothic = Cinzel_Decorative({ weight: "700", subsets: ["latin"] })
 
@@ -20,45 +17,15 @@ interface SpacesHeaderProps {
 }
 
 export function SpacesHeader({ user }: SpacesHeaderProps) {
-  const pathname = usePathname()
-  const { activeTab, navigate } = useTabContext()
-
   const handleLogout = async () => {
     await logoutAction()
-  }
-
-  const username = user?.username
-  const isClient = user?.role === 'client'
-
-  const navItems = isClient
-    ? [
-        { name: "Portfolio", href: `/u/${username}`, tab: 'home' },
-        { name: "Projects", href: `/u/${username}?tab=projects`, tab: 'projects' },
-      ]
-    : [
-        { name: "Portfolio", href: `/u/${username}`, tab: 'home' },
-        { name: "Projects", href: `/u/${username}?tab=projects`, tab: 'projects' },
-        { name: "Clients", href: `/u/${username}?tab=clients`, tab: 'clients' },
-        { name: "Tasks", href: `/u/${username}?tab=tasks`, tab: 'tasks' },
-      ]
-
-  const isActive = (tab: string) => {
-    // On a detail sub-page, match by pathname segment
-    if (pathname !== `/u/${username}`) {
-      if (tab === 'home') return false
-      if (tab === 'projects') return pathname?.startsWith(`/u/${username}/projects/`) ?? false
-      if (tab === 'clients') return pathname?.startsWith(`/u/${username}/clients/`) ?? false
-      return false
-    }
-    // On the main page, match by shared tab context
-    return activeTab === tab
   }
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-white/[0.02] backdrop-blur-md border-b border-white/[0.06]">
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-8" aria-label="Global">
 
-        {/* LEFT: Logo + SPACES Branding */}
+        {/* Logo + SPACES Branding */}
         <div className="flex items-baseline gap-1.5">
           <Link
             href="/"
@@ -69,71 +36,25 @@ export function SpacesHeader({ user }: SpacesHeaderProps) {
           <span className="hidden sm:inline text-[11px] font-semibold gradient-text tracking-widest">SPACES</span>
         </div>
 
-        {/* CENTER: Navigation Tabs — desktop only */}
-        {user && username && (
-          <div className="hidden md:flex items-center gap-2">
-            {navItems.map((item) => (
-              <a
-                key={item.tab}
-                href={item.href}
-                onClick={(e) => { e.preventDefault(); navigate(item.tab) }}
-                className={cn(
-                  "relative px-5 py-2 text-sm font-medium transition-all duration-300 cursor-pointer",
-                  "focus:outline-none focus-visible:ring-1 focus-visible:ring-intelligence-cyan/50 rounded-lg",
-                  isActive(item.tab)
-                    ? "text-white"
-                    : "text-gray-400 hover:text-gray-200"
-                )}
-              >
-                {item.name}
-                {isActive(item.tab) && (
-                  <span className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-intelligence-cyan to-transparent" />
-                )}
-              </a>
-            ))}
-          </div>
-        )}
-
-        {/* RIGHT: Desktop user info + logout */}
-        <div className="hidden md:flex items-center gap-3">
-          {user && (
-            <div className="flex items-center gap-2.5 px-4 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+        {/* User info + logout */}
+        {user && (
+          <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.06]">
               <div className="h-1.5 w-1.5 rounded-full bg-intelligence-cyan shadow-[0_0_8px_rgba(103,232,249,0.6)]" />
               <span className="text-sm font-medium text-gray-300">
                 {user.firstName} {user.lastName}
               </span>
             </div>
-          )}
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-gray-400 hover:text-gray-200 hover:bg-white/[0.03] transition-all duration-300 focus:outline-none focus-visible:ring-1 focus-visible:ring-intelligence-cyan/50"
-            aria-label="Logout"
-          >
-            <LogOut className="h-4 w-4" />
-            <span>Logout</span>
-          </button>
-        </div>
-
-        {/* Mobile: compact user pill + logout */}
-        <div className="flex md:hidden items-center gap-2">
-          {user && (
-            <>
-              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.05]">
-                <div className="h-1.5 w-1.5 rounded-full bg-intelligence-cyan/80 shadow-[0_0_5px_rgba(103,232,249,0.5)]" />
-                <span className="text-[11px] font-medium text-gray-400 max-w-[72px] truncate">
-                  {user.firstName}
-                </span>
-              </div>
-              <button
-                onClick={handleLogout}
-                className="p-2 rounded-lg text-gray-500 hover:text-gray-300 hover:bg-white/[0.04] transition-all duration-200"
-                aria-label="Logout"
-              >
-                <LogOut className="h-4 w-4" />
-              </button>
-            </>
-          )}
-        </div>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-400 hover:text-gray-200 hover:bg-white/[0.03] transition-all duration-300 focus:outline-none focus-visible:ring-1 focus-visible:ring-intelligence-cyan/50"
+              aria-label="Logout"
+            >
+              <LogOut className="h-4 w-4" />
+              <span className="hidden sm:inline">Logout</span>
+            </button>
+          </div>
+        )}
 
       </nav>
     </header>

@@ -10,6 +10,7 @@ import { ProjectTabNav } from '@/components/dashboard/ProjectTabNav'
 import { HomeTab } from '@/components/dashboard/HomeTab'
 import { SprintsTab } from '@/components/dashboard/SprintsTab'
 import { TasksTab } from '@/components/dashboard/TasksTab'
+import { ProjectSideActions } from '@/components/dashboard/ProjectSideActions'
 import type { Project, Task, Sprint } from '@/types/payload-types'
 
 export async function generateMetadata({
@@ -139,6 +140,11 @@ export default async function ProjectDetailPage({
   return (
     <div className="lg:flex" style={{ minHeight: 'calc(100vh - 64px)' }}>
 
+      {/* ── Right side quick-actions (staff only) ───────────────────────── */}
+      {!isClient && (
+        <ProjectSideActions project={project} tasks={tasks as Task[]} username={username} />
+      )}
+
       {/* ── Left Sidebar (desktop only) ─────────────────────────────────── */}
       <CollapsibleSidebar>
         <ProjectSidebar
@@ -177,6 +183,7 @@ export default async function ProjectDetailPage({
               sprints={sprints as Sprint[]}
               tasks={tasks as Task[]}
               readOnly={isClient}
+              username={username}
             />
           ) : activeTab === 'sprints' ? (
             <SprintsTab

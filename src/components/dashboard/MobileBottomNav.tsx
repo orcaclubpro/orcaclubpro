@@ -1,7 +1,8 @@
 'use client'
 
-import { usePathname } from 'next/navigation'
-import { LayoutDashboard, FolderKanban, Building2, CheckSquare, Receipt } from 'lucide-react'
+import { usePathname, useRouter } from 'next/navigation'
+import { LayoutDashboard, FolderKanban, Building2, CheckSquare, Receipt, Package, ChevronLeft } from 'lucide-react'
+
 import { cn } from '@/lib/utils'
 import { useTabContext } from '@/app/(spaces)/TabContext'
 
@@ -11,6 +12,7 @@ interface MobileBottomNavProps {
 
 export function MobileBottomNav({ role }: MobileBottomNavProps) {
   const pathname = usePathname()
+  const router = useRouter()
   const { activeTab, navigate } = useTabContext()
 
   // Only show on /u/[username] dashboard routes
@@ -19,17 +21,24 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
 
   if (!username) return null
 
+  // Are we on a sub-page (project/client detail) rather than the main dashboard?
+  const isSubPage = pathname !== `/u/${username}`
+  const onProjectPage = pathname?.startsWith(`/u/${username}/projects/`) ?? false
+  const onClientPage  = pathname?.startsWith(`/u/${username}/clients/`)  ?? false
+  const onDetailPage  = onProjectPage || onClientPage
+
   const isClient = role === 'client'
 
   const links = isClient
     ? [
         { href: `/u/${username}`, label: 'Home', icon: LayoutDashboard, tab: 'home' },
-        { href: `/u/${username}?tab=projects`, label: 'Projects', icon: FolderKanban, tab: 'projects' },
+        { href: `/u/${username}?tab=projects`, label: 'Plan', icon: FolderKanban, tab: 'projects' },
         { href: `/u/${username}?tab=invoices`, label: 'Invoices', icon: Receipt, tab: 'invoices' },
+        { href: `/u/${username}?tab=packages`, label: 'Packages', icon: Package, tab: 'packages' },
       ]
     : [
         { href: `/u/${username}`, label: 'Home', icon: LayoutDashboard, tab: 'home' },
-        { href: `/u/${username}?tab=projects`, label: 'Projects', icon: FolderKanban, tab: 'projects' },
+        { href: `/u/${username}?tab=projects`, label: 'Plan', icon: FolderKanban, tab: 'projects' },
         { href: `/u/${username}?tab=clients`, label: 'Clients', icon: Building2, tab: 'clients' },
         { href: `/u/${username}?tab=tasks`, label: 'Tasks', icon: CheckSquare, tab: 'tasks' },
       ]
@@ -47,7 +56,7 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
 
   return (
     <div
-      className="md:hidden fixed bottom-0 left-0 right-0 z-40 flex justify-center pointer-events-none"
+      className="fixed bottom-0 left-0 right-0 z-40 flex justify-center pointer-events-none"
       style={{ paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom))' }}
     >
       <nav
@@ -68,52 +77,51 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
             <a
               key={item.tab}
               href={item.href}
-              onClick={(e) => { e.preventDefault(); navigate(item.tab) }}
+              onClick={(e) => {
+                e.preventDefault()
+                if (isSubPage) {
+                  router.push(item.href)
+                } else {
+                  navigate(item.tab)
+                }
+              }}
               className={cn(
                 'relative flex flex-col items-center gap-1.5 px-5 py-2.5 rounded-xl transition-all duration-200 active:scale-95 min-w-[62px] cursor-pointer',
                 active ? 'bg-white/[0.06]' : 'hover:bg-white/[0.03]',
               )}
-              style={
-                active
-                  ? {
-                      boxShadow:
-                        'inset 0 1px 0 rgba(255,255,255,0.05), inset 0 0 20px rgba(103,232,249,0.02)',
-                    }
-                  : undefined
-              }
+              style={active ? { boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05), inset 0 0 20px rgba(103,232,249,0.02)' } : undefined}
             >
               <Icon
-                className={cn(
-                  'size-5 transition-all duration-200',
-                  active ? 'text-cyan-400' : 'text-gray-500',
-                )}
-                style={
-                  active
-                    ? { filter: 'drop-shadow(0 0 6px rgba(103, 232, 249, 0.45))' }
-                    : undefined
-                }
+                className={cn('size-5 transition-all duration-200', active ? 'text-cyan-400' : 'text-gray-500')}
+                style={active ? { filter: 'drop-shadow(0 0 6px rgba(103, 232, 249, 0.45))' } : undefined}
               />
-              <span
-                className={cn(
-                  'text-[9px] font-semibold uppercase tracking-widest transition-colors duration-200 leading-none',
-                  active ? 'text-gray-300' : 'text-gray-600',
-                )}
-              >
+              <span className={cn('text-[9px] font-semibold uppercase tracking-widest transition-colors duration-200 leading-none', active ? 'text-gray-300' : 'text-gray-600')}>
                 {item.label}
               </span>
-
               {active && (
-                <div
-                  className="absolute bottom-1.5 left-1/2 -translate-x-1/2 h-px w-5 rounded-full"
-                  style={{
-                    background:
-                      'linear-gradient(to right, transparent, rgba(103,232,249,0.55), transparent)',
-                  }}
-                />
+                <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 h-px w-5 rounded-full"
+                  style={{ background: 'linear-gradient(to right, transparent, rgba(103,232,249,0.55), transparent)' }} />
               )}
             </a>
           )
         })}
+
+        {/* Back circle — shows on project or client detail pages */}
+        {onDetailPage && (
+          <>
+            <div className="w-px h-6 bg-white/[0.08] mx-1 self-center" />
+            <button
+              onClick={() => {
+                if (onProjectPage) router.push(`/u/${username}?tab=projects`)
+                else if (onClientPage) router.push(`/u/${username}?tab=clients`)
+              }}
+              className="flex flex-col items-center justify-center size-11 rounded-full bg-white/[0.05] border border-white/[0.10] hover:border-intelligence-cyan/30 hover:bg-intelligence-cyan/[0.08] active:scale-95 transition-all duration-200"
+              aria-label="Go back"
+            >
+              <ChevronLeft className="size-4 text-gray-400" />
+            </button>
+          </>
+        )}
       </nav>
     </div>
   )

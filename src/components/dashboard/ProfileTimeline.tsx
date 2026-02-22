@@ -1,58 +1,31 @@
 'use client'
 
 import { useState, useMemo, useRef, useEffect } from 'react'
-import { CheckCircle2, Circle, Calendar, Flag, Zap, Pencil, ArrowRight, Building2, Settings } from 'lucide-react'
+import { CheckCircle2, Circle, Calendar, ArrowRight, Flag } from 'lucide-react'
 import Image from 'next/image'
-import Link from 'next/link'
-import type { Project, Sprint, Task } from '@/types/payload-types'
-import { formatDate, getDaysUntil } from '@/lib/utils/dateUtils'
+import type { SerializedProject } from './ProjectsCarousel'
+import { formatDate } from '@/lib/utils/dateUtils'
 import { cn } from '@/lib/utils'
-import { CreateMilestoneSheet } from './CreateMilestoneSheet'
-import { CreateSprintSheet } from './CreateSprintSheet'
-import { MilestoneEditSheet } from './MilestoneEditSheet'
-import { ProjectSettingsModal } from './ProjectSettingsModal'
 
 // ── Timeline layout constants (px from top of inner track div) ──────────────
-const LABEL_Y    = 2    // milestone title label top
-const ICON_Y     = 62   // milestone icon top
-const ICON_SIZE  = 20   // icon w/h
-const STEM_TOP   = ICON_Y + ICON_SIZE   // = 82
-const TRACK_Y    = 120  // progress bar top
-const TRACK_H    = 3
+const LABEL_Y   = 2
+const ICON_Y    = 62
+const ICON_SIZE = 20
+const STEM_TOP  = ICON_Y + ICON_SIZE   // = 82
+const TRACK_Y   = 120
+const TRACK_H   = 3
 const SPRINT_TOP = TRACK_Y + TRACK_H + 4  // = 127
 const SPRINT_H   = 52
 const TICK_Y     = SPRINT_TOP + SPRINT_H + 10  // = 189
 const INNER_H    = TICK_Y + 28                  // = 217
 
-// px per day (governs how wide the timeline is)
 const PX_PER_DAY = 10
 
-interface HomeTabProps {
-  project: Project
-  sprints: Sprint[]
-  tasks: Task[]
-  readOnly?: boolean
-  username?: string
-}
-
-interface EditState {
-  index: number
-  milestone: { title: string; date: string; description?: string | null; completed?: boolean | null }
-}
-
-const PROJECT_STATUS = {
-  pending:       { label: 'Planned',   dot: 'bg-gray-500',          text: 'text-gray-400'          },
-  'in-progress': { label: 'Active',    dot: 'bg-intelligence-cyan', text: 'text-intelligence-cyan' },
-  'on-hold':     { label: 'On Hold',   dot: 'bg-orange-400',        text: 'text-orange-400'        },
-  completed:     { label: 'Completed', dot: 'bg-green-400',         text: 'text-green-400'         },
-  cancelled:     { label: 'Cancelled', dot: 'bg-red-400',           text: 'text-red-400'           },
-} as const
-
 const SPRINT_CFG = {
-  pending:       { label: 'Planned',  dot: 'bg-gray-500',          bg: 'bg-white/[0.03]',            border: 'border-white/[0.08]',              text: 'text-gray-500'          },
-  'in-progress': { label: 'Active',   dot: 'bg-intelligence-cyan', bg: 'bg-intelligence-cyan/[0.07]', border: 'border-intelligence-cyan/[0.18]',  text: 'text-intelligence-cyan' },
-  delayed:       { label: 'Delayed',  dot: 'bg-orange-400',        bg: 'bg-orange-400/[0.07]',        border: 'border-orange-400/[0.18]',         text: 'text-orange-400'        },
-  finished:      { label: 'Finished', dot: 'bg-green-400',         bg: 'bg-green-400/[0.06]',         border: 'border-green-400/[0.15]',          text: 'text-green-400'         },
+  pending:       { label: 'Planned',  dot: 'bg-gray-500',          bg: 'bg-white/[0.03]',             border: 'border-white/[0.08]',             text: 'text-gray-500'          },
+  'in-progress': { label: 'Active',   dot: 'bg-intelligence-cyan', bg: 'bg-intelligence-cyan/[0.07]', border: 'border-intelligence-cyan/[0.18]', text: 'text-intelligence-cyan' },
+  delayed:       { label: 'Delayed',  dot: 'bg-orange-400',        bg: 'bg-orange-400/[0.07]',        border: 'border-orange-400/[0.18]',        text: 'text-orange-400'        },
+  finished:      { label: 'Finished', dot: 'bg-green-400',         bg: 'bg-green-400/[0.06]',         border: 'border-green-400/[0.15]',         text: 'text-green-400'         },
 } as const
 
 function getSprintCfg(s: string | null | undefined) {
@@ -63,53 +36,58 @@ function fmtMonth(d: Date) {
   return d.toLocaleDateString('en-US', { month: 'short', ...(d.getMonth() === 0 ? { year: '2-digit' } : {}) })
 }
 
-export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTabProps) {
-  // Extract client — populated at depth:2, may be string (id only) or full object
-  const clientRaw = project.client
-  const client = clientRaw && typeof clientRaw !== 'string'
-    ? { id: (clientRaw as any).id as string, name: (clientRaw as any).name as string }
-    : null
+export function ProfileTimeline({ project }: { project: SerializedProject }) {
   const scrollRef = useRef<HTMLDivElement>(null)
+  const [hoveredMilestone, setHoveredMilestone] = useState<number | null>(null)
+  const [hoveredSprint, setHoveredSprint]       = useState<string | null>(null)
+  const [clickedSprint, setClickedSprint]       = useState<string | null>(null)
 
-  const [settingsOpen, setSettingsOpen]             = useState(false)
-  const [milestoneSheetOpen, setMilestoneSheetOpen] = useState(false)
-  const [sprintSheetOpen, setSprintSheetOpen]       = useState(false)
-  const [editState, setEditState]                   = useState<EditState | null>(null)
-  const [hoveredMilestone, setHoveredMilestone]     = useState<number | null>(null)
-  const [hoveredSprint, setHoveredSprint]           = useState<string | null>(null)
-  const [clickedSprint, setClickedSprint]           = useState<string | null>(null)
+  const sprints = project.sprints
 
-  const statusCfg = PROJECT_STATUS[(project.status as keyof typeof PROJECT_STATUS)] ?? PROJECT_STATUS.pending
-  const daysLeft  = getDaysUntil(project.projectedEndDate)
-
-  const milestones = useMemo(
-    () => [...(project.milestones || [])].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
+  // Milestones with a date — used on the timeline canvas
+  const datedMilestones = useMemo(
+    () =>
+      [...(project.milestones || [])]
+        .filter((m) => m.date)
+        .sort((a, b) => new Date(a.date!).getTime() - new Date(b.date!).getTime()),
     [project.milestones],
   )
-  const nextMilestoneIdx = milestones.findIndex((m) => !m.completed)
 
-  // ── Timeline math ──────────────────────────────────────────────────────────
-  // No projected end date = ongoing project
-  const isOngoing = !project.projectedEndDate
+  // All milestones sorted — used in the list below
+  const allMilestones = useMemo(
+    () =>
+      [...(project.milestones || [])].sort((a, b) => {
+        if (!a.date && !b.date) return 0
+        if (!a.date) return 1
+        if (!b.date) return -1
+        return new Date(a.date).getTime() - new Date(b.date).getTime()
+      }),
+    [project.milestones],
+  )
+
+  const nextMilestoneIdx = allMilestones.findIndex((m) => !m.completed)
+
+  // ── Timeline math ─────────────────────────────────────────────────────────
+  // `endDate` here maps to Payload's `projectedEndDate` (renamed at serialization time)
+  const isOngoing   = !project.endDate
   const hasTimeline = !!project.startDate || isOngoing
 
   const tlStart = hasTimeline
     ? (project.startDate ? new Date(project.startDate).getTime() : Date.now())
     : 0
 
-  // For ongoing: extend only to cover future sprints/milestones + a small 14d buffer.
-  // This keeps today near the right edge so the filled history is prominent.
   const tlEnd = (() => {
     if (!hasTimeline) return 0
-    if (!isOngoing)   return new Date(project.projectedEndDate!).getTime()
-    let end = Date.now() // today is the minimum
+    if (!isOngoing)   return new Date(project.endDate!).getTime()
+    // Ongoing: extend to cover furthest sprint/milestone + 14d buffer
+    let end = Date.now()
     sprints.forEach((s) => { if (s.endDate) end = Math.max(end, new Date(s.endDate).getTime()) })
-    ;(project.milestones || []).forEach((m) => { if (m.date) end = Math.max(end, new Date(m.date).getTime()) })
-    return end + 14 * 86_400_000 // 14d breathing room beyond the furthest item
+    project.milestones.forEach((m) => { if (m.date) end = Math.max(end, new Date(m.date).getTime()) })
+    return end + 14 * 86_400_000
   })()
 
-  const tlDur   = tlEnd - tlStart
-  const totalDays = Math.round(tlDur / 86_400_000)
+  const tlDur        = tlEnd - tlStart
+  const totalDays    = Math.round(tlDur / 86_400_000)
   const timelineWidth = Math.max(960, totalDays * PX_PER_DAY)
 
   const toPx = (date: string | null | undefined) => {
@@ -164,92 +142,20 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
   }, [sprints, hasTimeline]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className="space-y-8 fluid-enter">
+    <div className="space-y-8">
 
-      {/* ── Project header ────────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-2 flex-1 min-w-0">
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <div className={cn('size-2 rounded-full', statusCfg.dot)} />
-            <span className={cn('text-sm font-medium', statusCfg.text)}>{statusCfg.label}</span>
-            {isOngoing && (
-              <>
-                <span className="text-gray-700">·</span>
-                <span className="text-[10px] tracking-[0.2em] uppercase font-medium text-intelligence-cyan/60 border border-intelligence-cyan/20 px-2 py-0.5 rounded-full">
-                  Ongoing
-                </span>
-              </>
-            )}
-            {daysLeft !== null && !isOngoing && (
-              <>
-                <span className="text-gray-700">·</span>
-                <span className={cn('text-sm', daysLeft < 0 ? 'text-red-400' : daysLeft < 14 ? 'text-orange-400' : 'text-gray-400')}>
-                  {daysLeft < 0 ? `${Math.abs(daysLeft)}d overdue` : `${daysLeft} days remaining`}
-                </span>
-              </>
-            )}
-
-            {/* Client chip — staff only */}
-            {!readOnly && client && username && (
-              <>
-                <span className="text-gray-700">·</span>
-                <Link
-                  href={`/u/${username}/clients/${client.id}`}
-                  className="flex items-center gap-1.5 text-xs bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] hover:border-white/[0.18] rounded-full px-3 py-1 transition-all duration-150 group"
-                >
-                  <Building2 className="size-3 text-cyan-400/50 group-hover:text-cyan-400 transition-colors shrink-0" />
-                  <span className="text-white/55 group-hover:text-white/85 font-medium transition-colors">
-                    {client.name}
-                  </span>
-                </Link>
-              </>
-            )}
-          </div>
-          <h1 className="text-6xl font-bold tracking-tight gradient-text leading-none">{project.name}</h1>
-          {project.description && (
-            <p className="text-gray-400 max-w-2xl leading-relaxed">{project.description}</p>
-          )}
-        </div>
-
-        {/* Edit button — staff only */}
-        {!readOnly && (
-          <button
-            type="button"
-            onClick={() => setSettingsOpen(true)}
-            className="shrink-0 flex items-center gap-1.5 text-xs text-white/45 hover:text-white/75 bg-white/[0.03] hover:bg-white/[0.07] border border-white/[0.07] hover:border-white/[0.18] rounded-lg px-3.5 py-2.5 transition-all duration-150 mt-1"
-          >
-            <Settings className="size-3.5" />
-            Edit
-          </button>
-        )}
-      </div>
-
-      {/* Project settings modal — staff only */}
-      {!readOnly && (
-        <ProjectSettingsModal
-          project={project}
-          tasks={tasks}
-          open={settingsOpen}
-          onOpenChange={setSettingsOpen}
-          username={username}
-        />
-      )}
-
-      <div className="h-px bg-white/[0.06]" />
-
-      {/* ── Timeline label ────────────────────────────────────────────────── */}
-      <p className="text-xs tracking-[0.3em] uppercase text-gray-600 font-medium">Timeline</p>
-
-      {/* ── No dates state ────────────────────────────────────────────────── */}
+      {/* ── No timeline state ──────────────────────────────────────────────── */}
       {!hasTimeline ? (
-        <div className="flex flex-col items-center justify-center py-24 rounded-xl border border-white/[0.06] bg-white/[0.02] text-center">
-          <Calendar className="size-10 text-gray-700 mb-4" />
-          <p className="text-white font-semibold">No timeline configured</p>
-          <p className="text-sm text-gray-500 mt-1 max-w-xs">Set a start and projected end date, or mark the project as ongoing.</p>
+        <div className="flex flex-col items-center justify-center py-16 rounded-xl border border-white/[0.06] bg-white/[0.02] text-center">
+          <Calendar className="size-8 text-gray-700 mb-4" />
+          <p className="text-sm text-white/50 font-semibold">No timeline configured</p>
+          <p className="text-xs text-gray-600 mt-1 max-w-xs">
+            Set a start and projected end date on this project to see the full timeline.
+          </p>
         </div>
       ) : (
 
-        /* ── Scrollable timeline card ─────────────────────────────────────── */
+        /* ── Scrollable timeline card ────────────────────────────────────── */
         <div className="relative rounded-xl border border-white/[0.08] bg-[#080808] overflow-hidden">
 
           {/* Ambient glow */}
@@ -268,10 +174,14 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
             <div className="flex items-center gap-3">
               <p className="text-[10px] tracking-[0.3em] uppercase text-gray-600 font-medium">Project Track</p>
               {sprintBands.length > 0 && (
-                <span className="text-[10px] text-gray-700">{sprintBands.length} sprint{sprintBands.length > 1 ? 's' : ''}</span>
+                <span className="text-[10px] text-gray-700">
+                  {sprintBands.length} sprint{sprintBands.length > 1 ? 's' : ''}
+                </span>
               )}
-              {milestones.length > 0 && (
-                <span className="text-[10px] text-gray-700">{milestones.length} milestone{milestones.length > 1 ? 's' : ''}</span>
+              {datedMilestones.length > 0 && (
+                <span className="text-[10px] text-gray-700">
+                  {datedMilestones.length} milestone{datedMilestones.length > 1 ? 's' : ''}
+                </span>
               )}
             </div>
             {todayPx > 0 && todayPx < timelineWidth && (
@@ -290,9 +200,7 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
 
           {/* Scroll wrapper with edge fade */}
           <div className="relative">
-            {/* Left fade */}
             <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-[#080808] to-transparent z-30 pointer-events-none" />
-            {/* Right fade */}
             <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-[#080808] to-transparent z-30 pointer-events-none" />
 
             <div
@@ -332,6 +240,7 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
                         className="absolute inset-0 m-auto object-contain pointer-events-none"
                         aria-hidden="true"
                       />
+
                       {/* Sprint name + status dot */}
                       {sprint.widthPx > 54 && (
                         <div className="absolute top-2 left-2.5 right-2 flex items-center gap-1.5">
@@ -343,17 +252,15 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
                         </div>
                       )}
 
-                      {/* Tooltip — outside overflow-hidden so it can float above */}
+                      {/* Tooltip */}
                       {showInfo && (
                         <div
                           className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2.5 z-50 pointer-events-none"
                           style={{ minWidth: 210, maxWidth: 280 }}
                         >
                           <div className="animate-in fade-in slide-in-from-bottom-1 duration-150 bg-[#0c0c0c] border border-white/[0.12] rounded-xl overflow-hidden shadow-2xl text-left">
-                            {/* Colored top accent */}
                             <div className={cn('h-0.5 w-full', sprint.cfg.dot)} />
                             <div className="px-4 py-3 space-y-1.5">
-                              {/* Name + status badge */}
                               <div className="flex items-center justify-between gap-2">
                                 <p className="text-sm font-semibold text-white leading-snug truncate">{sprint.name}</p>
                                 <span className={cn(
@@ -363,17 +270,14 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
                                   {sprint.cfg.label}
                                 </span>
                               </div>
-                              {/* Date range */}
                               <p className="text-xs text-gray-500">
                                 {formatDate(sprint.startDate)} → {formatDate(sprint.endDate)}
                               </p>
-                              {/* Goal / description */}
                               {(sprint.goalDescription || sprint.description) && (
                                 <p className="text-xs text-gray-400 leading-relaxed border-t border-white/[0.06] pt-2 mt-1">
                                   {sprint.goalDescription || sprint.description}
                                 </p>
                               )}
-                              {/* Task progress */}
                               {(sprint.totalTasksCount ?? 0) > 0 && (
                                 <div className="flex items-center gap-2 border-t border-white/[0.06] pt-2 mt-1">
                                   <div className="flex-1 h-1 rounded-full bg-white/[0.08]">
@@ -397,7 +301,6 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
 
                 {/* ── Track bar ─────────────────────────────────────────────── */}
                 <div className="absolute left-0 right-0" style={{ top: TRACK_Y, height: TRACK_H }}>
-                  {/* Background: solid for fixed projects, dashed "open future" for ongoing */}
                   {isOngoing ? (
                     <div
                       className="absolute inset-0 rounded-full"
@@ -408,7 +311,6 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
                   ) : (
                     <div className="absolute inset-0 bg-white/[0.07] rounded-full" />
                   )}
-                  {/* History fill: start → today */}
                   <div
                     className="absolute inset-y-0 left-0 bg-gradient-to-r from-intelligence-cyan to-blue-500 rounded-full timeline-progress"
                     style={{ width: `${(todayPx / timelineWidth) * 100}%` }}
@@ -421,17 +323,14 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
                     className="absolute pointer-events-none z-20"
                     style={{ left: todayPx, top: 0, height: INNER_H, transform: 'translateX(-50%)' }}
                   >
-                    {/* Vertical line */}
                     <div
                       className="absolute left-1/2 -translate-x-1/2 w-px"
                       style={{ top: LABEL_Y, height: INNER_H - LABEL_Y, background: 'linear-gradient(to bottom, rgba(103,232,249,0.4), rgba(103,232,249,0.1), transparent)' }}
                     />
-                    {/* "TODAY" label */}
                     <p className="absolute left-1/2 -translate-x-1/2 text-[8px] tracking-[0.2em] uppercase text-intelligence-cyan/50 font-medium whitespace-nowrap"
                       style={{ top: LABEL_Y }}>
                       Today
                     </p>
-                    {/* Glowing dot on track */}
                     <div className="absolute left-1/2 z-30" style={{ top: TRACK_Y - 4, transform: 'translateX(-50%)' }}>
                       <div className="relative flex items-center justify-center">
                         <div className="absolute size-5 rounded-full bg-intelligence-cyan/20 animate-pulse" />
@@ -442,9 +341,10 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
                 )}
 
                 {/* ── Milestone markers ─────────────────────────────────────── */}
-                {milestones.map((m, i) => {
+                {datedMilestones.map((m, i) => {
                   const px     = toPx(m.date)
-                  const isNext = i === nextMilestoneIdx
+                  const allIdx = allMilestones.findIndex((am) => am.id === m.id)
+                  const isNext = allIdx === nextMilestoneIdx
                   const isHov  = hoveredMilestone === i
 
                   return (
@@ -469,23 +369,14 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
                         <p className="text-[8px] text-gray-700 mt-0.5">{formatDate(m.date)}</p>
                       </div>
 
-                      {/* Upper whisker (label → icon) */}
+                      {/* Upper whisker */}
                       <div
                         className="absolute left-1/2 -translate-x-1/2 w-px opacity-30"
                         style={{ top: LABEL_Y + 24, height: ICON_Y - (LABEL_Y + 24), background: 'rgba(255,255,255,0.08)' }}
                       />
 
-                      {/* Icon — click to edit */}
-                      <button
-                        onClick={() => !readOnly && setEditState({ index: i, milestone: m })}
-                        className={cn(
-                          'absolute left-1/2 -translate-x-1/2 transition-all duration-200',
-                          !readOnly && 'hover:scale-110 active:scale-95 cursor-pointer',
-                          readOnly && 'cursor-default',
-                        )}
-                        style={{ top: ICON_Y }}
-                        title={readOnly ? m.title : `${m.title} — click to edit`}
-                      >
+                      {/* Icon */}
+                      <div className="absolute left-1/2 -translate-x-1/2" style={{ top: ICON_Y }}>
                         {m.completed ? (
                           <CheckCircle2
                             className="text-green-400"
@@ -500,15 +391,15 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
                           </div>
                         ) : (
                           <Circle
-                            className="text-gray-700 group-hover:text-gray-500 transition-colors"
+                            className="text-gray-700"
                             style={{ width: ICON_SIZE, height: ICON_SIZE }}
                           />
                         )}
-                      </button>
+                      </div>
 
                       {/* Stem (icon → track) */}
                       <div
-                        className={cn('absolute left-1/2 -translate-x-1/2 w-px')}
+                        className="absolute left-1/2 -translate-x-1/2 w-px"
                         style={{
                           top: STEM_TOP,
                           height: TRACK_Y - STEM_TOP,
@@ -519,19 +410,6 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
                               : 'linear-gradient(to bottom, rgba(255,255,255,0.1), rgba(255,255,255,0.02))',
                         }}
                       />
-
-                      {/* Edit hover overlay (staff only) */}
-                      {isHov && !readOnly && (
-                        <div
-                          className="absolute left-1/2 -translate-x-1/2 animate-in fade-in duration-150 z-50"
-                          style={{ top: ICON_Y - 34 }}
-                        >
-                          <div className="bg-black/95 border border-white/[0.12] rounded-lg px-2.5 py-1.5 flex items-center gap-1.5 shadow-xl whitespace-nowrap">
-                            <Pencil className="size-3 text-gray-400" />
-                            <span className="text-[10px] text-gray-400">Edit</span>
-                          </div>
-                        </div>
-                      )}
                     </div>
                   )
                 })}
@@ -555,7 +433,7 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
                   {project.startDate ? formatDate(project.startDate) : 'Today'}
                 </div>
                 <div className="absolute text-[9px] text-gray-700 pointer-events-none text-right" style={{ right: 0, top: TICK_Y + 16 }}>
-                  {isOngoing ? '∞ Rolling' : formatDate(project.projectedEndDate)}
+                  {isOngoing ? '∞ Rolling' : formatDate(project.endDate)}
                 </div>
 
               </div>
@@ -572,7 +450,7 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
               <div className="size-2 rounded-full bg-intelligence-cyan shadow-[0_0_4px_rgba(103,232,249,0.6)]" />
               <span className="text-[10px] text-gray-600">Today</span>
             </div>
-            {milestones.length > 0 && (
+            {datedMilestones.length > 0 && (
               <>
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="size-3 text-green-400" />
@@ -590,22 +468,19 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
                 <span className="text-[10px] text-gray-600">Sprint</span>
               </div>
             )}
-            {milestones.length > 0 && !readOnly && (
-              <span className="text-[10px] text-gray-700 ml-auto hidden sm:block">Click milestone to edit</span>
-            )}
           </div>
 
         </div>
       )}
 
       {/* ── Milestone list ────────────────────────────────────────────────── */}
-      {milestones.length > 0 && (
+      {allMilestones.length > 0 && (
         <div className="space-y-1">
           <p className="text-[10px] tracking-[0.3em] uppercase text-gray-600 font-medium mb-5">Milestones</p>
           <div className="space-y-0">
-            {milestones.map((m, i) => {
+            {allMilestones.map((m, i) => {
               const isNext = i === nextMilestoneIdx
-              const isLast = i === milestones.length - 1
+              const isLast = i === allMilestones.length - 1
 
               return (
                 <div key={m.id || i} className="flex gap-4">
@@ -647,21 +522,11 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
                           <p className="text-[10px] tracking-[0.2em] uppercase text-intelligence-cyan/50 mt-1.5">Next up</p>
                         )}
                       </div>
-
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className={cn('text-xs tabular-nums', m.completed ? 'text-gray-700' : isNext ? 'text-intelligence-cyan/70' : 'text-gray-600')}>
+                      {m.date && (
+                        <span className={cn('text-xs tabular-nums shrink-0', m.completed ? 'text-gray-700' : isNext ? 'text-intelligence-cyan/70' : 'text-gray-600')}>
                           {formatDate(m.date)}
                         </span>
-                        {!readOnly && (
-                          <button
-                            onClick={() => setEditState({ index: i, milestone: m })}
-                            className="p-1 rounded-md text-gray-700 hover:text-gray-300 hover:bg-white/[0.05] transition-colors"
-                            title="Edit milestone"
-                          >
-                            <Pencil className="size-3" />
-                          </button>
-                        )}
-                      </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -671,41 +536,16 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
         </div>
       )}
 
-      {/* Empty milestone prompt */}
-      {milestones.length === 0 && !readOnly && hasTimeline && (
-        <button
-          onClick={() => setMilestoneSheetOpen(true)}
-          className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-400 transition-colors group"
-        >
-          <div className="size-5 rounded-full border border-dashed border-white/[0.12] group-hover:border-white/20 transition-colors flex items-center justify-center">
-            <Flag className="size-2.5 text-gray-700 group-hover:text-gray-500" />
+      {/* No milestones prompt */}
+      {allMilestones.length === 0 && hasTimeline && (
+        <div className="flex items-center gap-2 text-sm text-gray-700">
+          <div className="size-5 rounded-full border border-dashed border-white/[0.12] flex items-center justify-center shrink-0">
+            <Flag className="size-2.5" />
           </div>
-          Add a milestone to track project progress
-        </button>
+          No milestones added yet
+        </div>
       )}
 
-      {/* ── Sheets ───────────────────────────────────────────────────────── */}
-      {!readOnly && (
-        <>
-          <CreateMilestoneSheet
-            projectId={project.id}
-            open={milestoneSheetOpen}
-            onOpenChange={setMilestoneSheetOpen}
-          />
-          <CreateSprintSheet
-            projectId={project.id}
-            open={sprintSheetOpen}
-            onOpenChange={setSprintSheetOpen}
-          />
-          <MilestoneEditSheet
-            projectId={project.id}
-            milestoneIndex={editState?.index ?? null}
-            milestone={editState?.milestone ?? null}
-            open={editState !== null}
-            onOpenChange={(open) => { if (!open) setEditState(null) }}
-          />
-        </>
-      )}
     </div>
   )
 }

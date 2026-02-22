@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Settings, Save, Loader2, CheckCircle, X, Building2 } from 'lucide-react'
+import { Settings, Save, Loader2, CheckCircle, X, Building2, Trash2, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -20,7 +20,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { updateProject } from '@/actions/projects'
+import { updateProject, deleteProject } from '@/actions/projects'
 import type { Project, Task } from '@/types/payload-types'
 import { cn } from '@/lib/utils'
 import { Cinzel_Decorative } from 'next/font/google'
@@ -96,11 +96,20 @@ function toDateInput(iso: string | null | undefined): string {
 interface ProjectSettingsModalProps {
   project: Project
   tasks: Task[]
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+  username?: string
 }
 
-export function ProjectSettingsModal({ project, tasks }: ProjectSettingsModalProps) {
+export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onOpenChange, username }: ProjectSettingsModalProps) {
   const router = useRouter()
-  const [open, setOpen] = useState(false)
+  const [internalOpen, setInternalOpen] = useState(false)
+  const isControlled = controlledOpen !== undefined
+  const open = isControlled ? controlledOpen! : internalOpen
+  const setOpen = (v: boolean) => {
+    if (!isControlled) setInternalOpen(v)
+    onOpenChange?.(v)
+  }
 
   // Form state
   const [name, setName] = useState(project.name)
@@ -117,6 +126,12 @@ export function ProjectSettingsModal({ project, tasks }: ProjectSettingsModalPro
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
+  // Delete zone state
+  const [showDeleteZone, setShowDeleteZone] = useState(false)
+  const [deleteInput, setDeleteInput] = useState('')
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+
   // Reset form when modal opens
   useEffect(() => {
     if (open) {
@@ -130,6 +145,9 @@ export function ProjectSettingsModal({ project, tasks }: ProjectSettingsModalPro
       setCurrency(project.currency || 'USD')
       setError(null)
       setSuccessMessage(null)
+      setShowDeleteZone(false)
+      setDeleteInput('')
+      setDeleteError(null)
     }
   }, [open, project])
 
@@ -195,6 +213,21 @@ export function ProjectSettingsModal({ project, tasks }: ProjectSettingsModalPro
     router.refresh()
   }
 
+  const handleDelete = async () => {
+    if (deleteInput !== project.name) return
+    setIsDeleting(true)
+    setDeleteError(null)
+    const result = await deleteProject({ projectId: project.id })
+    setIsDeleting(false)
+    if (!result.success) {
+      setDeleteError(result.error ?? 'Failed to delete project')
+      return
+    }
+    setOpen(false)
+    router.push(username ? `/u/${username}/projects` : '/')
+    router.refresh()
+  }
+
   const clientAccount = typeof project.client === 'object' ? project.client : null
   const completedTasks = tasks.filter((t) => t.status === 'completed').length
   const inProgressTasks = tasks.filter((t) => t.status === 'in-progress').length
@@ -204,16 +237,18 @@ export function ProjectSettingsModal({ project, tasks }: ProjectSettingsModalPro
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button
-          variant="outline"
-          size="lg"
-          className="group bg-white/[0.03] border-white/[0.08] hover:bg-white/[0.05] hover:border-intelligence-cyan/30 transition-all duration-300"
-        >
-          <Settings className="size-4 mr-2 group-hover:rotate-90 transition-transform duration-300" />
-          Project Settings
-        </Button>
-      </DialogTrigger>
+      {!isControlled && (
+        <DialogTrigger asChild>
+          <Button
+            variant="outline"
+            size="lg"
+            className="group bg-white/[0.03] border-white/[0.08] hover:bg-white/[0.05] hover:border-intelligence-cyan/30 transition-all duration-300"
+          >
+            <Settings className="size-4 mr-2 group-hover:rotate-90 transition-transform duration-300" />
+            Project Settings
+          </Button>
+        </DialogTrigger>
+      )}
 
       <DialogContent className="bg-black border-white/[0.06] max-w-5xl p-0 overflow-hidden h-[85vh]">
         <div className="flex h-full min-h-0">
@@ -252,7 +287,7 @@ export function ProjectSettingsModal({ project, tasks }: ProjectSettingsModalPro
               <p className="text-[10px] tracking-[0.4em] uppercase text-white/20 font-light mb-4">
                 Project
               </p>
-              <h3 className={`${gothic.className} text-xl text-white leading-tight mb-2 line-clamp-2`}>
+              <h3 className="text-2xl font-bold gradient-text leading-tight mb-2 line-clamp-2">
                 {project.name}
               </h3>
               <div className="mt-3 w-6 h-px bg-cyan-400/30 mb-10" />
@@ -516,6 +551,67 @@ export function ProjectSettingsModal({ project, tasks }: ProjectSettingsModalPro
                     </SelectContent>
                   </Select>
                 </div>
+              </section>
+
+              {/* ── Danger Zone ── */}
+              <section className="space-y-3 border-t border-red-500/10 pt-6">
+                <p className="text-[10px] tracking-[0.4em] uppercase text-red-400/40 font-light flex items-center gap-2">
+                  <AlertTriangle className="size-3" />
+                  Danger Zone
+                </p>
+
+                {!showDeleteZone ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteZone(true)}
+                    disabled={isLoading}
+                    className="flex items-center gap-2 text-xs text-red-400/50 hover:text-red-400/80 bg-red-500/5 hover:bg-red-500/10 border border-red-500/10 hover:border-red-500/25 rounded-lg px-4 py-2.5 transition-all duration-150"
+                  >
+                    <Trash2 className="size-3.5" />
+                    Delete Project
+                  </button>
+                ) : (
+                  <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-5 space-y-4 animate-in fade-in slide-in-from-bottom-1 duration-200">
+                    <div className="space-y-1">
+                      <p className="text-xs text-red-400/80 font-medium">This action is irreversible.</p>
+                      <p className="text-[11px] text-white/30">
+                        Type <span className="font-mono text-white/50">{project.name}</span> to confirm.
+                      </p>
+                    </div>
+                    <Input
+                      value={deleteInput}
+                      onChange={(e) => setDeleteInput(e.target.value)}
+                      placeholder={project.name}
+                      className="bg-white/[0.03] border-red-500/20 text-white placeholder:text-white/15 focus:border-red-400/40 focus-visible:ring-0 font-mono text-sm"
+                      disabled={isDeleting}
+                    />
+                    {deleteError && (
+                      <p className="text-xs text-red-400/75">{deleteError}</p>
+                    )}
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => { setShowDeleteZone(false); setDeleteInput(''); setDeleteError(null) }}
+                        disabled={isDeleting}
+                        className="flex-1 text-xs text-white/30 hover:text-white/50 bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] rounded-lg px-3 py-2 transition-all duration-150"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleDelete}
+                        disabled={deleteInput !== project.name || isDeleting}
+                        className="flex-1 flex items-center justify-center gap-2 text-xs font-semibold text-red-400 bg-red-500/10 hover:bg-red-500/20 border border-red-500/25 rounded-lg px-3 py-2 transition-all duration-150 disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        {isDeleting ? (
+                          <><Loader2 className="size-3.5 animate-spin" />Deleting…</>
+                        ) : (
+                          <><Trash2 className="size-3.5" />Confirm Delete</>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </section>
             </form>
 

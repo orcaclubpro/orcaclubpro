@@ -76,6 +76,7 @@ export interface Config {
     users: User;
     'client-accounts': ClientAccount;
     orders: Order;
+    packages: Package;
     'webhook-events': WebhookEvent;
     projects: Project;
     tasks: Task;
@@ -102,6 +103,7 @@ export interface Config {
     users: UsersSelect<false> | UsersSelect<true>;
     'client-accounts': ClientAccountsSelect<false> | ClientAccountsSelect<true>;
     orders: OrdersSelect<false> | OrdersSelect<true>;
+    packages: PackagesSelect<false> | PackagesSelect<true>;
     'webhook-events': WebhookEventsSelect<false> | WebhookEventsSelect<true>;
     projects: ProjectsSelect<false> | ProjectsSelect<true>;
     tasks: TasksSelect<false> | TasksSelect<true>;
@@ -759,6 +761,62 @@ export interface Project {
   createdAt: string;
 }
 /**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "packages".
+ */
+export interface Package {
+  id: string;
+  name: string;
+  description?: string | null;
+  /**
+   * Shown above line items in the proposal PDF
+   */
+  coverMessage?: string | null;
+  /**
+   * Internal / contextual notes (also shown in PDF)
+   */
+  notes?: string | null;
+  /**
+   * Template: reusable library item. Proposal: frozen snapshot assigned to a client.
+   */
+  type: 'template' | 'proposal';
+  status: 'draft' | 'sent' | 'accepted' | 'archived';
+  /**
+   * Client this proposal is assigned to (proposals only)
+   */
+  clientAccount?: (string | null) | ClientAccount;
+  /**
+   * Template this proposal was created from
+   */
+  sourcePackage?: (string | null) | Package;
+  lineItems?:
+    | {
+        name: string;
+        description?: string | null;
+        /**
+         * Price per unit (USD)
+         */
+        price: number;
+        quantity?: number | null;
+        /**
+         * Recurring subscription item?
+         */
+        isRecurring?: boolean | null;
+        /**
+         * Billing interval
+         */
+        recurringInterval?: ('month' | 'year') | null;
+        /**
+         * Stripe Price ID (optional)
+         */
+        stripePriceId?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * Tracks processed Stripe webhook events
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1103,6 +1161,10 @@ export interface PayloadLockedDocument {
         value: string | Order;
       } | null)
     | ({
+        relationTo: 'packages';
+        value: string | Package;
+      } | null)
+    | ({
         relationTo: 'webhook-events';
         value: string | WebhookEvent;
       } | null)
@@ -1397,6 +1459,34 @@ export interface OrdersSelect<T extends boolean = true> {
         sentTo?: T;
         sentBy?: T;
         status?: T;
+        id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "packages_select".
+ */
+export interface PackagesSelect<T extends boolean = true> {
+  name?: T;
+  description?: T;
+  coverMessage?: T;
+  notes?: T;
+  type?: T;
+  status?: T;
+  clientAccount?: T;
+  sourcePackage?: T;
+  lineItems?:
+    | T
+    | {
+        name?: T;
+        description?: T;
+        price?: T;
+        quantity?: T;
+        isRecurring?: T;
+        recurringInterval?: T;
+        stripePriceId?: T;
         id?: T;
       };
   updatedAt?: T;

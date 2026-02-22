@@ -192,7 +192,7 @@ export function FloatingTaskManager({ project, tasks, sprints }: FloatingTaskMan
       {/* Floating Action Button - Higher z-index */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`fixed bottom-8 right-8 z-[100] size-16 rounded-full bg-intelligence-cyan text-black shadow-2xl shadow-intelligence-cyan/30 hover:scale-110 active:scale-95 transition-all duration-300 flex items-center justify-center group ${
+        className={`fixed bottom-28 right-4 md:bottom-8 md:right-8 z-[100] size-16 rounded-full bg-intelligence-cyan text-black shadow-2xl shadow-intelligence-cyan/30 hover:scale-110 active:scale-95 transition-all duration-300 flex items-center justify-center group ${
           isOpen ? 'rotate-45' : ''
         }`}
       >

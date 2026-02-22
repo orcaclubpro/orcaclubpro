@@ -121,6 +121,8 @@
 
 html {
   scroll-behavior: smooth;
+  /* Always show scrollbar to prevent layout shift when modals/dialogs open */
+  overflow-y: scroll;
 }
 
 body {
@@ -267,6 +269,32 @@ body {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* ── Tab page slide animations ─────────────────────────────────────────────── */
+
+/* Enter from the right (forward navigation) */
+@keyframes tabSlideInFromRight {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+/* Enter from the left (backward navigation) */
+@keyframes tabSlideInFromLeft {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(0); }
+}
+
+/* Exit to the left — supports starting from a mid-drag position via --tab-slide-from */
+@keyframes tabSlideOutLeft {
+  from { transform: translateX(var(--tab-slide-from, 0px)); }
+  to   { transform: translateX(-100%); }
+}
+
+/* Exit to the right — same */
+@keyframes tabSlideOutRight {
+  from { transform: translateX(var(--tab-slide-from, 0px)); }
+  to   { transform: translateX(100%); }
 }
 
 /* Animation utility classes */

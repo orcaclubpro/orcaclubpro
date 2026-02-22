@@ -1,19 +1,25 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import type { LucideIcon } from 'lucide-react'
 import {
   ArrowRight,
   FolderOpen,
-  Calendar,
   DollarSign,
   CheckCircle2,
   Zap,
   AlertTriangle,
+  Building2,
+  Flag,
+  Clock,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { CreateProjectModal } from './CreateProjectModal'
 import type { ClientOption } from './CreateProjectModal'
+import { ProjectCarouselEditModal } from './ProjectCarouselEditModal'
+import { ProfileTimeline } from './ProfileTimeline'
 
 // ─── Exported types ────────────────────────────────────────────────────────────
 
@@ -40,7 +46,8 @@ export type SerializedProject = {
   budget: number | null
   currency: string
   updatedAt: string
-  milestones: Array<{ id: string; title: string; completed: boolean }>
+  client: { id: string; name: string } | null
+  milestones: Array<{ id: string; title: string; date: string | null; description: string | null; completed: boolean }>
   sprints: SerializedSprint[]
 }
 
@@ -124,20 +131,36 @@ function sortProjects(projects: SerializedProject[]): SerializedProject[] {
   })
 }
 
-// ─── Pending milestone ring SVG ────────────────────────────────────────────────
+// ─── Stat card ─────────────────────────────────────────────────────────────────
 
-function MilestoneRing({ className }: { className?: string }) {
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  accent,
+}: {
+  icon: LucideIcon
+  label: string
+  value: string
+  accent?: boolean
+}) {
   return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 14 14"
-      fill="none"
-      className={className}
-      aria-hidden="true"
+    <div
+      className={cn(
+        'rounded-2xl px-5 py-4 border',
+        accent
+          ? 'bg-cyan-400/5 border-cyan-400/15'
+          : 'bg-white/[0.025] border-white/[0.06]',
+      )}
     >
-      <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1" />
-    </svg>
+      <p className="text-[10px] uppercase tracking-[0.3em] text-white/30 flex items-center gap-1.5 mb-2.5">
+        <Icon className="size-3" />
+        {label}
+      </p>
+      <p className={cn('text-base font-semibold', accent ? 'text-cyan-300/80' : 'text-white/75')}>
+        {value}
+      </p>
+    </div>
   )
 }
 
@@ -148,92 +171,119 @@ function ProjectNavRow({
   isSelected,
   onSelect,
   animationDelay,
+  username,
+  canNavigateToClient,
 }: {
   project: SerializedProject
   isSelected: boolean
   onSelect: () => void
   animationDelay: number
+  username: string
+  canNavigateToClient: boolean
 }) {
+  const router = useRouter()
   const cfg = getStatus(project.status)
   const activeSprint = getActiveSprint(project.sprints)
   const overdue = isOverdue(project)
 
-  // Determine sub-label content
-  const subLabel = activeSprint ? (
-    <span className="text-cyan-400/70">↳ {activeSprint.name}</span>
-  ) : overdue ? (
-    <span className="text-amber-400/75">overdue</span>
-  ) : (
-    <span>{relTime(project.updatedAt)}</span>
-  )
-
   return (
-    <button
-      type="button"
+    // div instead of button so we can nest a <Link> for the client name
+    <div
+      role="button"
+      tabIndex={0}
       data-project-id={project.id}
       onClick={onSelect}
+      onDoubleClick={() => router.push(`/u/${username}/projects/${project.id}`)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect() }
+      }}
       className={cn(
-        'w-full flex items-center gap-3 px-5 py-3.5 text-left transition-all duration-150 border-l-2 group',
+        'w-full flex items-start gap-3 px-5 py-3.5 text-left transition-all duration-150 border-l-2 group cursor-pointer select-none',
         'animate-in fade-in slide-in-from-left-1 duration-300',
         isSelected
-          ? 'border-l-cyan-400/60 bg-white/[0.035]'
+          ? 'border-l-cyan-400/60 bg-white/[0.04]'
           : 'border-l-transparent hover:bg-white/[0.02] hover:border-l-white/[0.08]',
       )}
       style={{ animationDelay: `${animationDelay}ms` }}
     >
-      {/* Status dot — amber pulsing if overdue */}
+      {/* Status dot */}
       {overdue ? (
-        <span className="size-1.5 rounded-full bg-amber-400 shrink-0 mt-px animate-pulse" />
+        <span className="size-2 rounded-full bg-amber-400 shrink-0 mt-1.5 animate-pulse" />
       ) : (
-        <span className={cn('size-1.5 rounded-full shrink-0 mt-px', cfg.dot)} />
+        <span className={cn('size-2 rounded-full shrink-0 mt-1.5', cfg.dot)} />
       )}
 
-      {/* Name + sprint */}
+      {/* Text */}
       <div className="flex-1 min-w-0">
         <p
           className={cn(
-            'text-sm font-medium truncate transition-all duration-150 gradient-text',
-            isSelected ? 'opacity-100' : 'opacity-40 group-hover:opacity-70',
+            'text-sm font-semibold truncate transition-colors duration-150',
+            isSelected ? 'text-white' : 'text-white/60 group-hover:text-white/85',
           )}
         >
           {project.name}
         </p>
-        <p className="text-[10px] text-white/45 mt-0.5 truncate tabular-nums">
-          {subLabel}
-        </p>
+
+        {/* Sub-row: client · context */}
+        <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
+          {project.client && (
+            <>
+              {canNavigateToClient ? (
+                <Link
+                  href={`/u/${username}/clients/${project.client.id}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-[10px] text-white/40 truncate max-w-[90px] hover:text-cyan-400/70 transition-colors"
+                >
+                  {project.client.name}
+                </Link>
+              ) : (
+                <span className="text-[10px] text-white/40 truncate max-w-[90px]">
+                  {project.client.name}
+                </span>
+              )}
+              <span className="text-white/20 text-[10px] shrink-0">·</span>
+            </>
+          )}
+          <span
+            className={cn(
+              'text-[10px] shrink-0 truncate',
+              activeSprint
+                ? 'text-cyan-400/60'
+                : overdue
+                  ? 'text-amber-400/80'
+                  : 'text-white/35',
+            )}
+          >
+            {activeSprint
+              ? `↳ ${activeSprint.name}`
+              : overdue
+                ? 'overdue'
+                : relTime(project.updatedAt)}
+          </span>
+        </div>
       </div>
 
       {/* Sprint count */}
       {project.sprints.length > 0 && (
-        <span className="text-[9px] text-white/15 shrink-0 tabular-nums">
+        <span className="text-[9px] text-white/20 shrink-0 tabular-nums mt-1">
           {project.sprints.length}sp
         </span>
       )}
-    </button>
+    </div>
   )
 }
 
 // ─── Right panel: empty state ──────────────────────────────────────────────────
 
-function EmptyState({
-  canCreate,
-  clients,
-}: {
-  canCreate: boolean
-  clients: ClientOption[]
-}) {
+function EmptyState({ canCreate, clients }: { canCreate: boolean; clients: ClientOption[] }) {
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-12 text-center">
       <div className="relative mb-8">
         <div className="absolute inset-0 bg-cyan-400/5 rounded-full blur-3xl scale-150" />
         <FolderOpen className="size-12 text-white/10 relative z-10" />
       </div>
-      <p className="text-[10px] tracking-[0.4em] uppercase text-white/20 font-light mb-3">
-        No Projects
-      </p>
-      <p className="text-sm text-white/25 mb-8 leading-relaxed">
-        Projects will appear here once created.
-      </p>
+      <p className="text-[10px] tracking-[0.4em] uppercase text-white/20 font-light mb-3">No Projects</p>
+      <p className="text-sm text-white/25 mb-8 leading-relaxed">Projects will appear here once created.</p>
       {canCreate && (
         <div className="[&>button]:px-5 [&>button]:py-2.5">
           <CreateProjectModal clients={clients} />
@@ -248,9 +298,13 @@ function EmptyState({
 function ProjectDetail({
   project,
   username,
+  showClientLink,
+  canEdit,
 }: {
   project: SerializedProject
   username: string
+  showClientLink: boolean
+  canEdit: boolean
 }) {
   const cfg = getStatus(project.status)
   const activeSprint = getActiveSprint(project.sprints)
@@ -258,30 +312,29 @@ function ProjectDetail({
   const upcomingSprints = otherSprints.filter((s) => s.status === 'pending')
   const finishedSprints = otherSprints.filter((s) => s.status === 'finished')
   const overdue = isOverdue(project)
-
+  const completedMilestones = project.milestones.filter((m) => m.completed).length
   const budget = fmtCurrency(project.budget, project.currency)
-  const dateRange =
-    project.startDate && project.endDate
-      ? `${fmtShort(project.startDate)} → ${fmtShort(project.endDate)}`
-      : project.startDate
-        ? `From ${fmtShort(project.startDate)}`
-        : null
 
   const sprintProgress =
     activeSprint && activeSprint.totalTasksCount > 0
       ? Math.round((activeSprint.completedTasksCount / activeSprint.totalTasksCount) * 100)
       : 0
 
-  const visibleMilestones = project.milestones.slice(0, 5)
-  const hiddenMilestoneCount = project.milestones.length - visibleMilestones.length
+  // Build stat cards
+  const stats: Array<{ icon: LucideIcon; label: string; value: string; accent?: boolean }> = []
+  if (budget) stats.push({ icon: DollarSign, label: 'Budget', value: budget, accent: true })
+  if (project.sprints.length > 0)
+    stats.push({ icon: Zap, label: 'Sprints', value: `${project.sprints.length} sprint${project.sprints.length !== 1 ? 's' : ''}` })
+  if (project.milestones.length > 0)
+    stats.push({ icon: Flag, label: 'Milestones', value: `${completedMilestones} / ${project.milestones.length} done` })
 
   return (
     <div className="flex flex-col h-full">
 
-      {/* Scrollable content — orbital geometry is a fixed background of this container */}
+      {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto min-h-0 relative">
 
-        {/* Orbital geometry — background of the scroll container, not overlapping content */}
+        {/* Orbital geometry */}
         <div
           className="sticky top-0 pointer-events-none select-none"
           aria-hidden="true"
@@ -299,66 +352,99 @@ function ProjectDetail({
           </div>
         </div>
 
-        <div className="px-9 py-8 space-y-7 relative z-10">
+        <div className="px-12 py-10 space-y-10 relative z-10">
 
-          {/* Status + name */}
+          {/* ── Header ── */}
           <div
             className="animate-in fade-in slide-in-from-bottom-2 duration-300"
             style={{ animationDelay: '0ms' }}
           >
-            <div className="flex items-center gap-2 mb-4">
-              {overdue ? (
-                <>
-                  <AlertTriangle className="size-3 text-amber-400/70 shrink-0" />
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.35em] text-amber-400/80">
-                    Overdue
-                  </span>
-                </>
-              ) : (
-                <>
-                  <span className={cn('size-1.5 rounded-full', cfg.dot)} />
-                  <span className={cn('text-[10px] font-semibold uppercase tracking-[0.35em]', cfg.color)}>
-                    {cfg.label}
-                  </span>
-                </>
-              )}
+            {/* Top bar: status · client chip · workspace button */}
+            <div className="flex items-center justify-between gap-4 mb-7">
+              <div className="flex items-center gap-4">
+                {/* Status */}
+                <div className="flex items-center gap-2">
+                  {overdue ? (
+                    <>
+                      <AlertTriangle className="size-3.5 text-amber-400/80 shrink-0" />
+                      <span className="text-xs font-semibold uppercase tracking-[0.35em] text-amber-400/90">
+                        Overdue
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span className={cn('size-2 rounded-full', cfg.dot)} />
+                      <span className={cn('text-xs font-semibold uppercase tracking-[0.35em]', cfg.color)}>
+                        {cfg.label}
+                      </span>
+                    </>
+                  )}
+                </div>
+
+                {/* Client chip — links directly to the client profile */}
+                {showClientLink && project.client && (
+                  <Link
+                    href={`/u/${username}/clients/${project.client.id}`}
+                    className="flex items-center gap-2 text-xs bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] hover:border-white/[0.18] rounded-full px-3.5 py-1.5 transition-all duration-150 group shrink-0"
+                  >
+                    <Building2 className="size-3.5 text-cyan-400/50 group-hover:text-cyan-400 transition-colors shrink-0" />
+                    <span className="text-white/55 group-hover:text-white/85 font-medium transition-colors">
+                      {project.client.name}
+                    </span>
+                  </Link>
+                )}
+              </div>
+
+              {/* Right actions */}
+              <div className="flex items-center gap-2 shrink-0">
+                {canEdit && <ProjectCarouselEditModal project={project} />}
+                <Link
+                  href={`/u/${username}/projects/${project.id}`}
+                  className="flex items-center gap-2 text-xs font-bold bg-intelligence-cyan hover:bg-intelligence-cyan/90 active:scale-[0.98] text-black rounded-lg px-4 py-2.5 transition-all duration-150 group shadow-[0_0_20px_rgba(103,232,249,0.2)]"
+                >
+                  Open Workspace
+                  <ArrowRight className="size-3.5 group-hover:translate-x-0.5 transition-transform duration-150" />
+                </Link>
+              </div>
             </div>
-            <h2 className="text-3xl font-bold gradient-text leading-tight mb-2">
+
+            {/* Project name — huge */}
+            <h2 className="text-6xl xl:text-7xl font-bold gradient-text leading-none mb-4">
               {project.name}
             </h2>
-            <div className="w-6 h-px bg-cyan-400/40 mb-3" />
+            <div className="w-10 h-px bg-cyan-400/40 mb-5" />
+
+            {/* Description */}
             {project.description && (
-              <p className="text-sm text-white/40 leading-relaxed">
+              <p className="text-base text-white/50 leading-relaxed max-w-2xl">
                 {project.description}
               </p>
             )}
           </div>
 
-          {/* Meta: dates + budget only — compact */}
-          {(dateRange || budget) && (
+          {/* ── Timeline ── */}
+          <div
+            className="animate-in fade-in slide-in-from-bottom-2 duration-300"
+            style={{ animationDelay: '60ms' }}
+          >
+            <p className="text-[11px] tracking-[0.4em] uppercase text-white/25 font-light mb-5">
+              Timeline
+            </p>
+            <ProfileTimeline project={project} />
+          </div>
+
+          {/* ── Stats grid ── */}
+          {stats.length > 0 && (
             <div
-              className="flex flex-wrap gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300"
+              className={cn(
+                'grid gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300',
+                stats.length <= 2 ? 'grid-cols-2' : 'grid-cols-2 xl:grid-cols-4',
+              )}
               style={{ animationDelay: '75ms' }}
             >
-              {dateRange && (
-                <div
-                  className={cn(
-                    'flex items-center gap-1.5 text-[11px] bg-white/[0.03] border rounded-lg px-2.5 py-1.5',
-                    overdue
-                      ? 'text-amber-400/60 border-amber-400/20'
-                      : 'text-white/35 border-white/[0.06]',
-                  )}
-                >
-                  <Calendar className="size-3 shrink-0 opacity-60" />
-                  {dateRange}
-                </div>
-              )}
-              {budget && (
-                <div className="flex items-center gap-1.5 text-[11px] text-white/35 bg-white/[0.03] border border-white/[0.06] rounded-lg px-2.5 py-1.5">
-                  <DollarSign className="size-3 shrink-0 text-white/20" />
-                  {budget}
-                </div>
-              )}
+              {stats.map((s) => (
+                <StatCard key={s.label} {...s} />
+              ))}
             </div>
           )}
 
@@ -368,42 +454,42 @@ function ProjectDetail({
             style={{ animationDelay: '150ms' }}
           >
             {activeSprint ? (
-              <div className="space-y-2.5">
-                <p className="text-[10px] tracking-[0.4em] uppercase text-white/20 font-light flex items-center gap-2">
-                  <Zap className="size-3 text-cyan-400/40" />
+              <div className="space-y-3">
+                <p className="text-[11px] tracking-[0.4em] uppercase text-white/25 font-light flex items-center gap-2">
+                  <Zap className="size-3.5 text-cyan-400/40" />
                   Current Sprint
                 </p>
-                <div className="rounded-xl border border-cyan-400/12 bg-gradient-to-b from-cyan-950/15 to-transparent p-5 space-y-4">
+                <div className="rounded-2xl border border-cyan-400/12 bg-gradient-to-b from-cyan-950/15 to-transparent p-6 space-y-5">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-white mb-1">{activeSprint.name}</p>
-                      <p className="text-[10px] text-white/30">
+                      <p className="text-base font-semibold text-white mb-1.5">{activeSprint.name}</p>
+                      <p className="text-xs text-white/35">
                         {fmtShort(activeSprint.startDate)} → {fmtShort(activeSprint.endDate)}
                       </p>
                     </div>
                     <span
                       className={cn(
-                        'flex items-center gap-1 text-[10px] font-medium px-2 py-1 rounded-full border shrink-0',
+                        'flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border shrink-0',
                         SPRINT_STATUS[activeSprint.status].bg,
                         SPRINT_STATUS[activeSprint.status].color,
                       )}
                     >
-                      <span className={cn('size-1 rounded-full', SPRINT_STATUS[activeSprint.status].dot)} />
+                      <span className={cn('size-1.5 rounded-full', SPRINT_STATUS[activeSprint.status].dot)} />
                       {SPRINT_STATUS[activeSprint.status].label}
                     </span>
                   </div>
 
                   {activeSprint.totalTasksCount > 0 ? (
-                    <div className="space-y-1.5">
+                    <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-white/25 tabular-nums">
+                        <span className="text-xs text-white/30 tabular-nums">
                           {activeSprint.completedTasksCount} of {activeSprint.totalTasksCount} tasks done
                         </span>
-                        <span className="text-[10px] text-white/25 tabular-nums font-medium">
+                        <span className="text-xs text-white/30 tabular-nums font-medium">
                           {sprintProgress}%
                         </span>
                       </div>
-                      <div className="h-1.5 w-full bg-white/[0.05] rounded-full overflow-hidden">
+                      <div className="h-2 w-full bg-white/[0.05] rounded-full overflow-hidden">
                         <div
                           className="h-full bg-cyan-400/55 rounded-full transition-all duration-700"
                           style={{ width: `${sprintProgress}%` }}
@@ -411,101 +497,49 @@ function ProjectDetail({
                       </div>
                     </div>
                   ) : (
-                    <p className="text-[10px] text-white/20">No tasks assigned yet</p>
+                    <p className="text-xs text-white/25">No tasks assigned yet</p>
                   )}
 
                   {activeSprint.goalDescription && (
-                    <p className="text-xs text-white/30 leading-relaxed border-t border-white/[0.05] pt-3">
+                    <p className="text-sm text-white/35 leading-relaxed border-t border-white/[0.05] pt-4">
                       {activeSprint.goalDescription}
                     </p>
                   )}
                 </div>
 
-                {/* Other sprints context */}
                 {otherSprints.length > 0 && (
-                  <div className="flex items-center gap-3 pl-1 text-[10px] text-white/20">
-                    {upcomingSprints.length > 0 && (
-                      <span>{upcomingSprints.length} upcoming</span>
-                    )}
+                  <div className="flex items-center gap-3 pl-1 text-xs text-white/25">
+                    {upcomingSprints.length > 0 && <span>{upcomingSprints.length} upcoming</span>}
                     {upcomingSprints.length > 0 && finishedSprints.length > 0 && (
-                      <span className="text-white/25">·</span>
+                      <span className="text-white/20">·</span>
                     )}
-                    {finishedSprints.length > 0 && (
-                      <span>{finishedSprints.length} finished</span>
-                    )}
+                    {finishedSprints.length > 0 && <span>{finishedSprints.length} finished</span>}
                   </div>
                 )}
               </div>
             ) : project.sprints.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-white/[0.07] px-5 py-6 text-center">
-                <p className="text-xs text-white/20">No sprints yet — all work is on the project page.</p>
+              <div className="rounded-2xl border border-dashed border-white/[0.07] px-6 py-8 text-center">
+                <p className="text-sm text-white/20">No sprints yet — all work is on the project page.</p>
               </div>
             ) : (
-              /* All sprints finished */
-              <div className="rounded-xl border border-green-400/12 bg-green-400/5 px-5 py-4 flex items-center gap-3">
-                <CheckCircle2 className="size-4 text-green-400/50 shrink-0" />
-                <p className="text-xs text-green-400/60">
+              <div className="rounded-2xl border border-green-400/12 bg-green-400/5 px-6 py-5 flex items-center gap-3">
+                <CheckCircle2 className="size-5 text-green-400/50 shrink-0" />
+                <p className="text-sm text-green-400/60">
                   All {project.sprints.length} sprint{project.sprints.length !== 1 ? 's' : ''} complete
                 </p>
               </div>
             )}
           </div>
 
-          {/* ── Milestones ── */}
-          {project.milestones.length > 0 && (
-            <div
-              className="space-y-2.5 animate-in fade-in slide-in-from-bottom-2 duration-300"
-              style={{ animationDelay: '225ms' }}
-            >
-              <p className="text-[10px] tracking-[0.4em] uppercase text-white/20 font-light">
-                Milestones
-              </p>
-              <div className="space-y-1">
-                {visibleMilestones.map((m) => (
-                  <div key={m.id} className="flex items-center gap-2.5 py-1">
-                    {m.completed ? (
-                      <CheckCircle2 className="size-3.5 text-green-400/50 shrink-0" />
-                    ) : (
-                      <MilestoneRing className="size-3.5 text-white/15 shrink-0" />
-                    )}
-                    <span
-                      className={cn(
-                        'text-xs leading-relaxed truncate',
-                        m.completed ? 'text-white/25 line-through' : 'text-white/55',
-                      )}
-                    >
-                      {m.title}
-                    </span>
-                  </div>
-                ))}
-                {hiddenMilestoneCount > 0 && (
-                  <p className="text-[10px] text-white/20 pl-6">
-                    + {hiddenMilestoneCount} more
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
 
-          {/* Last updated — with separator */}
-          <div className="border-t border-white/[0.05] pt-3">
-            <p className="text-[9px] text-white/20 tabular-nums tracking-wide uppercase font-light">
-              <span className="text-white/15 mr-1.5">Updated</span>
-              {relTime(project.updatedAt)}
+          {/* Last updated */}
+          <div className="border-t border-white/[0.05] pt-4">
+            <p className="text-xs text-white/25 tabular-nums tracking-wide uppercase font-light flex items-center gap-1.5">
+              <Clock className="size-3" />
+              Updated {relTime(project.updatedAt)}
             </p>
           </div>
         </div>
-      </div>
-
-      {/* Pinned footer */}
-      <div className="shrink-0 px-9 pb-7 pt-4 border-t border-white/[0.05]">
-        <Link
-          href={`/u/${username}/projects/${project.id}`}
-          className="flex items-center justify-between w-full px-5 py-3 rounded-xl border border-white/[0.08] hover:border-intelligence-cyan/30 bg-white/[0.03] hover:bg-intelligence-cyan/5 text-white/55 hover:text-white text-sm font-medium transition-all duration-200 group"
-        >
-          <span>Open project workspace</span>
-          <ArrowRight className="size-3.5 group-hover:translate-x-0.5 transition-transform duration-150" />
-        </Link>
       </div>
     </div>
   )
@@ -551,6 +585,12 @@ function MobileProjectCard({
               <span className={cn('text-[9px] font-semibold uppercase tracking-widest', overdue ? 'text-amber-400/80' : cfg.color)}>
                 {overdue ? 'Overdue' : cfg.label}
               </span>
+              {project.client && (
+                <>
+                  <span className="text-white/20 text-[9px]">·</span>
+                  <span className="text-[9px] text-white/40 truncate">{project.client.name}</span>
+                </>
+              )}
             </div>
             <p className="text-base font-semibold text-white">{project.name}</p>
             {project.description && (
@@ -581,7 +621,7 @@ function MobileProjectCard({
           </div>
         )}
 
-        <div className="flex items-center justify-between text-[10px] text-white/20">
+        <div className="flex items-center justify-between text-[10px] text-white/25">
           <div className="flex items-center gap-3">
             {project.sprints.length > 0 && (
               <span>{project.sprints.length} sprint{project.sprints.length !== 1 ? 's' : ''}</span>
@@ -621,7 +661,7 @@ export function ProjectsCarousel({
     (p) => p.status === 'active' || p.status === 'in-progress',
   ).length
 
-  // Arrow-key navigation — only when not focused inside an input/dialog
+  // Arrow-key navigation
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement
@@ -641,7 +681,7 @@ export function ProjectsCarousel({
     return () => window.removeEventListener('keydown', handler)
   }, [sorted])
 
-  // Scroll selected nav item into view (keyboard nav + initial render)
+  // Scroll selected item into view
   useEffect(() => {
     const el = listRef.current?.querySelector(`[data-project-id="${selectedId}"]`)
     el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
@@ -667,7 +707,7 @@ export function ProjectsCarousel({
           </div>
 
           {/* Summary counts */}
-          <div className="px-5 pb-3 shrink-0 flex items-center gap-3 text-[10px] text-white/20">
+          <div className="px-5 pb-3 shrink-0 flex items-center gap-3 text-[10px] text-white/30">
             {activeCount > 0 && (
               <span className="flex items-center gap-1.5">
                 <span className="size-1 rounded-full bg-cyan-400/60" />
@@ -691,6 +731,8 @@ export function ProjectsCarousel({
                   isSelected={p.id === selectedId}
                   onSelect={() => setSelectedId(p.id)}
                   animationDelay={Math.min(i * 50, 400)}
+                  username={username}
+                  canNavigateToClient={canCreate}
                 />
               ))
             )}
@@ -715,12 +757,11 @@ export function ProjectsCarousel({
           <div className="h-px w-full bg-gradient-to-r from-transparent via-cyan-400/12 to-transparent shrink-0" />
 
           {selected ? (
-            // key causes remount on project change: resets scroll + triggers fade-in
             <div
               key={selected.id}
               className="flex-1 flex flex-col min-h-0 animate-in fade-in duration-150"
             >
-              <ProjectDetail project={selected} username={username} />
+              <ProjectDetail project={selected} username={username} showClientLink={canCreate} canEdit={canCreate} />
             </div>
           ) : (
             <EmptyState canCreate={canCreate} clients={clients} />
@@ -730,19 +771,12 @@ export function ProjectsCarousel({
 
       {/* ── MOBILE: stacked list ───────────────────────────────────────────── */}
       <div className="lg:hidden px-4 pt-6 pb-28 space-y-4">
-        <div className="flex items-end justify-between mb-6">
-          <div>
-            <p className="text-[10px] tracking-[0.4em] uppercase text-white/25 font-light mb-2">
-              {canCreate ? 'Workspace' : 'Client Dashboard'}
-            </p>
-            <h1 className="text-2xl font-bold text-white uppercase tracking-wide">Projects</h1>
-            <div className="mt-3 w-5 h-px bg-cyan-400/35" />
-          </div>
-          {canCreate && (
-            <div className="shrink-0">
-              <CreateProjectModal clients={clients} />
-            </div>
-          )}
+        <div className="mb-6">
+          <p className="text-[10px] tracking-[0.4em] uppercase text-white/25 font-light mb-2">
+            {canCreate ? 'Workspace' : 'Client Dashboard'}
+          </p>
+          <h1 className="text-2xl font-bold text-white uppercase tracking-wide">Projects</h1>
+          <div className="mt-3 w-5 h-px bg-cyan-400/35" />
         </div>
 
         {sorted.length === 0 ? (
@@ -764,6 +798,12 @@ export function ProjectsCarousel({
               animationDelay={Math.min(i * 60, 360)}
             />
           ))
+        )}
+
+        {canCreate && sorted.length > 0 && (
+          <div className="pt-2 [&>button]:w-full">
+            <CreateProjectModal clients={clients} />
+          </div>
         )}
       </div>
     </>

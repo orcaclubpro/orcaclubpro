@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import { ArrowLeft, Building2, Calendar, DollarSign, Users } from 'lucide-react'
-import { ProjectSettingsModal } from './ProjectSettingsModal'
 import type { Project, Task } from '@/types/payload-types'
 
 interface ProjectSidebarProps {
@@ -171,15 +170,6 @@ export function ProjectSidebar({ project, tasks, username, readOnly, clientProje
         )}
       </div>
 
-      {/* Edit button — hidden in readOnly mode */}
-      {!readOnly && (
-        <>
-          <div className="border-t border-white/[0.06]" />
-          <div>
-            <ProjectSettingsModal project={project} tasks={tasks} />
-          </div>
-        </>
-      )}
     </div>
   )
 }
