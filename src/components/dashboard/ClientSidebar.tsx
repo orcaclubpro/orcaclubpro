@@ -21,8 +21,8 @@ import {
   User,
   Pencil,
   X,
+  ChevronDown,
 } from 'lucide-react'
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -495,7 +495,7 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
     <div className="flex flex-col h-full">
 
       {/* ── Nav ── */}
-      <div className="px-6 pt-6 pb-4 border-b border-white/[0.06]">
+      <div className="px-5 pt-4 pb-3 border-b border-white/[0.06] shrink-0">
         <Link
           href={`/u/${username}/clients`}
           className="text-[11px] text-gray-600 hover:text-gray-400 transition-colors"
@@ -504,245 +504,261 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
         </Link>
       </div>
 
-      {/* ── All clients quick-switch navigator ─────────────────────────── */}
+      {/* ── All clients hover-expand accordion ── */}
       {allClients && allClients.length > 0 && (
-        <div className="px-3 py-3 border-b border-white/[0.06] space-y-0.5">
-          <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest px-1 mb-2">
-            Clients
-          </p>
-          {allClients.map((c) => {
-            const isCurrent = c.id === id
-            const initials = getInitials(c.name)
-            return (
-              <Link
-                key={c.id}
-                href={`/u/${username}/clients/${c.id}`}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                  isCurrent
-                    ? 'bg-white/[0.08] text-white'
-                    : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'
-                }`}
-              >
-                <div className="size-6 rounded-md bg-cyan-400/[0.08] border border-cyan-400/[0.12] flex items-center justify-center shrink-0">
-                  <span className="text-[9px] font-bold text-cyan-300">{initials}</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="truncate leading-tight">{c.name}</p>
-                  {c.company && (
-                    <p className="text-[10px] text-gray-600 truncate leading-tight">{c.company}</p>
-                  )}
-                </div>
-                {isCurrent && (
-                  <span className="size-1.5 rounded-full bg-intelligence-cyan shrink-0" />
-                )}
-              </Link>
-            )
-          })}
+        <div className="group border-b border-white/[0.06] shrink-0">
+          {/* Compact header — always visible */}
+          <div className="px-4 py-2.5 flex items-center gap-2 cursor-default select-none">
+            <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest flex-1">Clients</p>
+            <span className="text-[10px] tabular-nums text-gray-700 bg-white/[0.03] border border-white/[0.06] px-1.5 py-0.5 rounded-md">
+              {allClients.length}
+            </span>
+            <ChevronDown className="size-3 text-gray-700 transition-transform duration-200 group-hover:rotate-180" />
+          </div>
+          {/* Expandable list */}
+          <div className="max-h-0 overflow-hidden group-hover:max-h-[320px] transition-[max-height] duration-300 ease-in-out">
+            <div className="px-3 pb-3 space-y-0.5">
+              {allClients.map((c) => {
+                const isCurrent = c.id === id
+                const cInitials = getInitials(c.name)
+                return (
+                  <Link
+                    key={c.id}
+                    href={`/u/${username}/clients/${c.id}`}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                      isCurrent
+                        ? 'bg-white/[0.08] text-white'
+                        : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'
+                    }`}
+                  >
+                    <div className="size-6 rounded-md bg-cyan-400/[0.08] border border-cyan-400/[0.12] flex items-center justify-center shrink-0">
+                      <span className="text-[9px] font-bold text-cyan-300">{cInitials}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="truncate leading-tight">{c.name}</p>
+                      {c.company && (
+                        <p className="text-[10px] text-gray-600 truncate leading-tight">{c.company}</p>
+                      )}
+                    </div>
+                    {isCurrent && (
+                      <span className="size-1.5 rounded-full bg-intelligence-cyan shrink-0" />
+                    )}
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
         </div>
       )}
 
-      {/* ── Identity ── */}
-      <div className="px-6 py-6 border-b border-white/[0.06]">
-        <div className="flex items-start justify-between mb-5">
-          <div className="relative">
-            <div className="size-14 rounded-2xl bg-cyan-400/[0.08] border border-cyan-400/[0.15] flex items-center justify-center">
-              <span className="text-xl font-bold text-cyan-300 tracking-tight">{initials}</span>
-            </div>
-            {stripeCustomerId && (
-              <div className="absolute -bottom-1 -right-1 size-4 rounded-full bg-emerald-500 border-2 border-zinc-950 flex items-center justify-center">
-                <Check className="size-2.5 text-black" strokeWidth={3} />
+      {/* ── Single unified scroll area ── */}
+      <div className="flex-1 overflow-y-auto">
+
+        {/* ── Identity / Edit ── */}
+        <div className="px-5 py-4 border-b border-white/[0.06]">
+          <div className="flex items-start justify-between mb-3">
+            <div className="relative">
+              <div className="size-10 rounded-xl bg-cyan-400/[0.08] border border-cyan-400/[0.15] flex items-center justify-center">
+                <span className="text-sm font-bold text-cyan-300 tracking-tight">{initials}</span>
               </div>
-            )}
-          </div>
-
-          {!editing && (
-            <button
-              onClick={() => setEditing(true)}
-              className="text-[11px] text-gray-600 hover:text-gray-300 transition-colors px-2.5 py-1 rounded-md border border-transparent hover:border-white/[0.08] hover:bg-white/[0.03]"
-            >
-              Edit
-            </button>
-          )}
-        </div>
-
-        {editing ? (
-          <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1">
-                <Label className="text-gray-600 text-[10px] uppercase tracking-wider font-semibold">First</Label>
-                <Input
-                  value={form.firstName}
-                  onChange={(e) => {
-                    const val = e.target.value
-                    setForm((f) => ({ ...f, firstName: val, name: `${val} ${f.lastName}`.trim() }))
-                  }}
-                  className="h-8 text-sm bg-white/[0.04] border-white/[0.08] text-white focus-visible:ring-[#67e8f9]/30 focus-visible:ring-1"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-gray-600 text-[10px] uppercase tracking-wider font-semibold">Last</Label>
-                <Input
-                  value={form.lastName}
-                  onChange={(e) => {
-                    const val = e.target.value
-                    setForm((f) => ({ ...f, lastName: val, name: `${f.firstName} ${val}`.trim() }))
-                  }}
-                  className="h-8 text-sm bg-white/[0.04] border-white/[0.08] text-white focus-visible:ring-[#67e8f9]/30 focus-visible:ring-1"
-                />
-              </div>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-gray-600 text-[10px] uppercase tracking-wider font-semibold">Display Name</Label>
-              <Input
-                value={form.name}
-                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                className="h-8 text-sm bg-white/[0.04] border-white/[0.08] text-white focus-visible:ring-[#67e8f9]/30 focus-visible:ring-1"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-gray-600 text-[10px] uppercase tracking-wider font-semibold">Email</Label>
-              <Input
-                type="email"
-                value={form.email}
-                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                placeholder="client@example.com"
-                className="h-8 text-sm bg-white/[0.04] border-white/[0.08] text-white placeholder:text-gray-700 focus-visible:ring-[#67e8f9]/30 focus-visible:ring-1"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-gray-600 text-[10px] uppercase tracking-wider font-semibold">Company</Label>
-              <Input
-                value={form.company}
-                onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))}
-                placeholder="Optional"
-                className="h-8 text-sm bg-white/[0.04] border-white/[0.08] text-white placeholder:text-gray-700 focus-visible:ring-[#67e8f9]/30 focus-visible:ring-1"
-              />
-            </div>
-            {error && <p className="text-xs text-red-400">{error}</p>}
-            <div className="flex gap-2 pt-1">
-              <Button
-                size="sm"
-                onClick={handleSave}
-                disabled={loading}
-                className="flex-1 bg-[#67e8f9] hover:bg-[#67e8f9]/90 text-black font-semibold text-xs h-8"
-              >
-                {loading ? <Loader2 className="size-3 animate-spin" /> : 'Save'}
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={handleCancel}
-                disabled={loading}
-                className="flex-1 text-gray-500 hover:text-white hover:bg-white/[0.05] text-xs h-8"
-              >
-                Cancel
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div>
-            <h2 className="text-base font-bold text-white leading-tight">{name}</h2>
-            {company && <p className="text-xs text-gray-500 mt-0.5">{company}</p>}
-            {email && <p className="text-xs text-gray-700 mt-1 truncate">{email}</p>}
-          </div>
-        )}
-      </div>
-
-      {/* ── Body ── */}
-      <div className="flex-1 px-6 py-6 space-y-6 overflow-y-auto">
-
-        {/* Outstanding alert */}
-        {hasOutstanding && (
-          <div className="flex items-center gap-2.5 rounded-lg border border-amber-400/[0.18] bg-amber-400/[0.04] px-3 py-2.5">
-            <AlertCircle className="size-4 text-amber-400 shrink-0" />
-            <div>
-              <p className="text-xs font-semibold text-amber-400">{fmt(accountBalance)} due</p>
-              <p className="text-[10px] text-amber-700">Outstanding balance</p>
-            </div>
-          </div>
-        )}
-
-        {/* Metrics 2×2 */}
-        <div className="grid grid-cols-2 gap-2">
-          {[
-            { label: 'Revenue',  value: fmt(totalRevenue),    Icon: TrendingUp,   amber: false          },
-            { label: 'Balance',  value: fmt(accountBalance),  Icon: DollarSign,   amber: hasOutstanding },
-            { label: 'Orders',   value: String(ordersCount),  Icon: ShoppingCart, amber: false          },
-            { label: 'Projects', value: String(projectsCount),Icon: FolderKanban, amber: false          },
-          ].map(({ label, value, Icon, amber }) => (
-            <div key={label} className="rounded-lg bg-[#1c1c1c] border border-white/[0.08] p-3">
-              <div className="flex items-center gap-1.5 mb-1.5">
-                <Icon className="size-3 text-gray-700" />
-                <span className="text-[10px] uppercase tracking-widest text-gray-600 font-semibold">{label}</span>
-              </div>
-              <p className={`text-sm font-bold font-mono tabular-nums truncate ${amber ? 'text-amber-400' : 'text-white'}`}>
-                {value}
-              </p>
-            </div>
-          ))}
-        </div>
-
-        {/* Contact */}
-        <div className="space-y-2.5">
-          <p className="text-[10px] uppercase tracking-widest text-gray-600 font-semibold">Contact</p>
-          <div className="space-y-2">
-            {email && (
-              <div className="flex items-center gap-2 text-gray-500 text-xs">
-                <Mail className="size-3 shrink-0" />
-                <span className="truncate">{email}</span>
-              </div>
-            )}
-            {company && (
-              <div className="flex items-center gap-2 text-gray-500 text-xs">
-                <Building2 className="size-3 shrink-0" />
-                <span className="truncate">{company}</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Team */}
-        <div className="space-y-2.5">
-          <div className="flex items-center justify-between">
-            <p className="text-[10px] uppercase tracking-widest text-gray-600 font-semibold">
-              Team
-              {allUsers.length > 0 && (
-                <span className="ml-1.5 text-gray-700 font-normal">{allUsers.length}</span>
-              )}
-            </p>
-            <button
-              onClick={() => setTeamModalOpen(true)}
-              className="text-[10px] text-gray-600 hover:text-[#67e8f9] transition-colors flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-[#67e8f9]/[0.05]"
-            >
-              <Users className="size-3" />
-              Modify
-            </button>
-          </div>
-
-          {allUsers.length === 0 ? (
-            <p className="text-[11px] text-gray-700">No users associated.</p>
-          ) : (
-            <div className="space-y-1.5">
-              {allUsers.map((u) => (
-                <div key={u.id} className="flex items-center gap-2 text-xs">
-                  {u.type === 'developer' ? (
-                    <Shield className="size-3 shrink-0 text-gray-600" />
-                  ) : (
-                    <User className="size-3 shrink-0 text-[#67e8f9]/50" />
-                  )}
-                  <span className={`truncate ${u.type === 'developer' ? 'text-gray-500' : 'text-gray-400'}`}>
-                    {u.name}
-                  </span>
-                  <span className={`ml-auto text-[9px] uppercase tracking-wider font-semibold shrink-0 ${
-                    u.type === 'developer' ? 'text-gray-700' : 'text-[#67e8f9]/40'
-                  }`}>
-                    {u.type === 'developer' ? (u.title ?? 'developer') : 'client'}
-                  </span>
+              {stripeCustomerId && (
+                <div className="absolute -bottom-1 -right-1 size-4 rounded-full bg-emerald-500 border-2 border-zinc-950 flex items-center justify-center">
+                  <Check className="size-2.5 text-black" strokeWidth={3} />
                 </div>
-              ))}
+              )}
+            </div>
+
+            {!editing && (
+              <button
+                onClick={() => setEditing(true)}
+                className="text-[11px] text-gray-600 hover:text-gray-300 transition-colors px-2.5 py-1 rounded-md border border-transparent hover:border-white/[0.08] hover:bg-white/[0.03]"
+              >
+                Edit
+              </button>
+            )}
+          </div>
+
+          {editing ? (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <Label className="text-gray-600 text-[10px] uppercase tracking-wider font-semibold">First</Label>
+                  <Input
+                    value={form.firstName}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      setForm((f) => ({ ...f, firstName: val, name: `${val} ${f.lastName}`.trim() }))
+                    }}
+                    className="h-8 text-sm bg-white/[0.04] border-white/[0.08] text-white focus-visible:ring-[#67e8f9]/30 focus-visible:ring-1"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-gray-600 text-[10px] uppercase tracking-wider font-semibold">Last</Label>
+                  <Input
+                    value={form.lastName}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      setForm((f) => ({ ...f, lastName: val, name: `${f.firstName} ${val}`.trim() }))
+                    }}
+                    className="h-8 text-sm bg-white/[0.04] border-white/[0.08] text-white focus-visible:ring-[#67e8f9]/30 focus-visible:ring-1"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-gray-600 text-[10px] uppercase tracking-wider font-semibold">Display Name</Label>
+                <Input
+                  value={form.name}
+                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                  className="h-8 text-sm bg-white/[0.04] border-white/[0.08] text-white focus-visible:ring-[#67e8f9]/30 focus-visible:ring-1"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-gray-600 text-[10px] uppercase tracking-wider font-semibold">Email</Label>
+                <Input
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                  placeholder="client@example.com"
+                  className="h-8 text-sm bg-white/[0.04] border-white/[0.08] text-white placeholder:text-gray-700 focus-visible:ring-[#67e8f9]/30 focus-visible:ring-1"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-gray-600 text-[10px] uppercase tracking-wider font-semibold">Company</Label>
+                <Input
+                  value={form.company}
+                  onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))}
+                  placeholder="Optional"
+                  className="h-8 text-sm bg-white/[0.04] border-white/[0.08] text-white placeholder:text-gray-700 focus-visible:ring-[#67e8f9]/30 focus-visible:ring-1"
+                />
+              </div>
+              {error && <p className="text-xs text-red-400">{error}</p>}
+              <div className="flex gap-2 pt-1">
+                <Button
+                  size="sm"
+                  onClick={handleSave}
+                  disabled={loading}
+                  className="flex-1 bg-[#67e8f9] hover:bg-[#67e8f9]/90 text-black font-semibold text-xs h-8"
+                >
+                  {loading ? <Loader2 className="size-3 animate-spin" /> : 'Save'}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleCancel}
+                  disabled={loading}
+                  className="flex-1 text-gray-500 hover:text-white hover:bg-white/[0.05] text-xs h-8"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <h2 className="text-base font-bold text-white leading-tight">{name}</h2>
+              {company && <p className="text-xs text-gray-500 mt-0.5">{company}</p>}
+              {email && <p className="text-xs text-gray-700 mt-1 truncate">{email}</p>}
             </div>
           )}
         </div>
+
+        {/* ── Overview ── */}
+        <div className="px-5 py-4 space-y-5 border-b border-white/[0.06]">
+
+          {/* Outstanding alert */}
+          {hasOutstanding && (
+            <div className="flex items-center gap-2.5 rounded-lg border border-amber-400/[0.18] bg-amber-400/[0.04] px-3 py-2.5">
+              <AlertCircle className="size-4 text-amber-400 shrink-0" />
+              <div>
+                <p className="text-xs font-semibold text-amber-400">{fmt(accountBalance)} due</p>
+                <p className="text-[10px] text-amber-700">Outstanding balance</p>
+              </div>
+            </div>
+          )}
+
+          {/* Metrics 2×2 */}
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { label: 'Revenue',  value: fmt(totalRevenue),    Icon: TrendingUp,   amber: false          },
+              { label: 'Balance',  value: fmt(accountBalance),  Icon: DollarSign,   amber: hasOutstanding },
+              { label: 'Orders',   value: String(ordersCount),  Icon: ShoppingCart, amber: false          },
+              { label: 'Projects', value: String(projectsCount),Icon: FolderKanban, amber: false          },
+            ].map(({ label, value, Icon, amber }) => (
+              <div key={label} className="rounded-lg bg-[#1c1c1c] border border-white/[0.08] p-3">
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <Icon className="size-3 text-gray-700" />
+                  <span className="text-[10px] uppercase tracking-widest text-gray-600 font-semibold">{label}</span>
+                </div>
+                <p className={`text-sm font-bold font-mono tabular-nums truncate ${amber ? 'text-amber-400' : 'text-white'}`}>
+                  {value}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          {/* Contact */}
+          <div className="space-y-2.5">
+            <p className="text-[10px] uppercase tracking-widest text-gray-600 font-semibold">Contact</p>
+            <div className="space-y-2">
+              {email && (
+                <div className="flex items-center gap-2 text-gray-500 text-xs">
+                  <Mail className="size-3 shrink-0" />
+                  <span className="truncate">{email}</span>
+                </div>
+              )}
+              {company && (
+                <div className="flex items-center gap-2 text-gray-500 text-xs">
+                  <Building2 className="size-3 shrink-0" />
+                  <span className="truncate">{company}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Team */}
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] uppercase tracking-widest text-gray-600 font-semibold">
+                Team
+                {allUsers.length > 0 && (
+                  <span className="ml-1.5 text-gray-700 font-normal">{allUsers.length}</span>
+                )}
+              </p>
+              <button
+                onClick={() => setTeamModalOpen(true)}
+                className="text-[10px] text-gray-600 hover:text-[#67e8f9] transition-colors flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-[#67e8f9]/[0.05]"
+              >
+                <Users className="size-3" />
+                Modify
+              </button>
+            </div>
+
+            {allUsers.length === 0 ? (
+              <p className="text-[11px] text-gray-700">No users associated.</p>
+            ) : (
+              <div className="space-y-1.5">
+                {allUsers.map((u) => (
+                  <div key={u.id} className="flex items-center gap-2 text-xs">
+                    {u.type === 'developer' ? (
+                      <Shield className="size-3 shrink-0 text-gray-600" />
+                    ) : (
+                      <User className="size-3 shrink-0 text-[#67e8f9]/50" />
+                    )}
+                    <span className={`truncate ${u.type === 'developer' ? 'text-gray-500' : 'text-gray-400'}`}>
+                      {u.name}
+                    </span>
+                    <span className={`ml-auto text-[9px] uppercase tracking-wider font-semibold shrink-0 ${
+                      u.type === 'developer' ? 'text-gray-700' : 'text-[#67e8f9]/40'
+                    }`}>
+                      {u.type === 'developer' ? (u.title ?? 'developer') : 'client'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+
       </div>
 
       {/* Team Modify Modal */}
@@ -758,30 +774,67 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
   )
 }
 
-// ── Mobile Sheet trigger ───────────────────────────────────────────────────────
+// ── Mobile side-tab + bottom sheet ────────────────────────────────────────────
 
 export function ClientSidebar(props: ClientSidebarProps) {
+  const [open, setOpen] = useState(false)
+
   return (
-    <Sheet>
-      <SheetTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          className="border-white/[0.1] text-gray-400 hover:text-white hover:bg-white/[0.05] hover:border-white/[0.15] gap-2 text-xs h-8"
-        >
-          <SlidersHorizontal className="size-3.5" />
-          Details
-        </Button>
-      </SheetTrigger>
-      <SheetContent
-        side="right"
-        className="bg-[#111] border-l border-white/[0.08] w-80 p-0 overflow-hidden flex flex-col"
+    <>
+      {/* Fixed right-edge vertical tab (mobile only) */}
+      <button
+        onClick={() => setOpen(true)}
+        className="lg:hidden fixed right-0 top-1/2 -translate-y-1/2 z-40
+                   flex flex-col items-center gap-2
+                   pl-2.5 pr-2 py-4
+                   bg-black/75 backdrop-blur-xl border border-r-0 border-white/[0.10]
+                   rounded-l-xl
+                   hover:border-intelligence-cyan/30 hover:bg-black/90
+                   transition-all duration-300 active:scale-95"
+        aria-label="Open client details"
       >
-        <SheetHeader className="sr-only">
-          <SheetTitle>Client Details</SheetTitle>
-        </SheetHeader>
-        <ClientSidebarContent {...props} />
-      </SheetContent>
-    </Sheet>
+        <SlidersHorizontal className="size-3.5 text-intelligence-cyan" />
+        <span className="text-[8px] font-semibold text-gray-500 uppercase tracking-[0.15em] [writing-mode:vertical-rl] rotate-180">
+          Details
+        </span>
+      </button>
+
+      {/* Backdrop */}
+      <div
+        className={`lg:hidden fixed inset-0 z-[45] bg-black/50 backdrop-blur-[2px] transition-opacity duration-300 ${
+          open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+        onClick={() => setOpen(false)}
+        aria-hidden="true"
+      />
+
+      {/* Slide-up bottom sheet */}
+      <div
+        className={`lg:hidden fixed bottom-0 left-0 right-0 z-[55] flex flex-col
+                    bg-[#111] border-t border-white/[0.08] rounded-t-2xl
+                    transition-transform duration-300 ease-in-out
+                    ${open ? 'translate-y-0' : 'translate-y-full'}`}
+        style={{ maxHeight: '82vh' }}
+      >
+        {/* Drag handle */}
+        <div className="flex justify-center pt-3 pb-1 shrink-0">
+          <div className="w-9 h-1 rounded-full bg-white/[0.12]" />
+        </div>
+        {/* Sheet header */}
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/[0.06] shrink-0">
+          <h3 className="text-sm font-semibold text-white">{props.name}</h3>
+          <button
+            onClick={() => setOpen(false)}
+            className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-gray-300 transition-all"
+            aria-label="Close"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+        <div className="overflow-y-auto flex-1" style={{ overscrollBehavior: 'contain' }}>
+          <ClientSidebarContent {...props} />
+        </div>
+      </div>
+    </>
   )
 }

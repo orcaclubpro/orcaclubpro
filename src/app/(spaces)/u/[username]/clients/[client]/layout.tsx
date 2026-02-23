@@ -138,9 +138,7 @@ export default async function ClientDetailLayout({
       </CollapsibleSidebar>
 
       <div className="flex-1 min-w-0 flex flex-col">
-        <div className="lg:hidden flex items-center justify-end px-4 py-2 border-b border-white/[0.08]">
-          <ClientSidebar {...sidebarProps} />
-        </div>
+        <ClientSidebar {...sidebarProps} />
         <PageEnterAnimation>
           {children}
         </PageEnterAnimation>
