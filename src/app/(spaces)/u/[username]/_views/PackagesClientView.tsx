@@ -200,7 +200,10 @@ function PackageModal({
               <div className="space-y-1.5">
                 {lineItems.map((item, i) => {
                   const qty = item.quantity ?? 1
-                  const itemTotal = (item.adjustedPrice ?? item.price ?? 0) * qty
+                  const basePrice = item.price ?? 0
+                  const adjustedTotal = (item.adjustedPrice ?? basePrice) * qty
+                  const baseTotal = basePrice * qty
+                  const hasDiscount = item.adjustedPrice != null && item.adjustedPrice !== basePrice
                   return (
                     <div
                       key={i}
@@ -212,12 +215,19 @@ function PackageModal({
                       <div className="flex-1 min-w-0">
                         <div className="flex items-baseline justify-between gap-2">
                           <p className="text-sm font-semibold text-white leading-snug">{item.name}</p>
-                          <span className="text-sm font-bold text-white tabular-nums font-mono shrink-0">
-                            {fmt(itemTotal)}
-                            {item.isRecurring && (
-                              <span className="text-xs font-normal text-gray-500">/{item.recurringInterval === 'year' ? 'yr' : 'mo'}</span>
+                          <div className="flex flex-col items-end gap-0.5 shrink-0">
+                            {hasDiscount && (
+                              <span className="text-xs text-gray-600 line-through tabular-nums font-mono">
+                                {fmt(baseTotal)}
+                              </span>
                             )}
-                          </span>
+                            <span className={cn('text-sm font-bold tabular-nums font-mono', hasDiscount ? 'text-[#67e8f9]' : 'text-white')}>
+                              {fmt(adjustedTotal)}
+                              {item.isRecurring && (
+                                <span className="text-xs font-normal text-gray-500">/{item.recurringInterval === 'year' ? 'yr' : 'mo'}</span>
+                              )}
+                            </span>
+                          </div>
                         </div>
                         {item.description && (
                           <p className="text-xs text-gray-600 mt-1 leading-relaxed">{item.description}</p>
@@ -252,7 +262,10 @@ function PackageModal({
               <div className="space-y-1.5">
                 {availableItems.map((item, i) => {
                   const qty = item.quantity ?? 1
-                  const itemTotal = (item.adjustedPrice ?? item.price ?? 0) * qty
+                  const basePrice = item.price ?? 0
+                  const adjustedTotal = (item.adjustedPrice ?? basePrice) * qty
+                  const baseTotal = basePrice * qty
+                  const hasDiscount = item.adjustedPrice != null && item.adjustedPrice !== basePrice
                   const requested = pkgData.requestedNames.has(item.name)
                   const isRequesting = requestingKey === `${pkg.id}:${item.name}`
                   return (
@@ -284,12 +297,19 @@ function PackageModal({
                           <p className={cn('text-sm font-semibold leading-snug', requested ? 'text-amber-200/80' : 'text-gray-400')}>
                             {item.name}
                           </p>
-                          <span className={cn('text-sm font-bold tabular-nums font-mono shrink-0', requested ? 'text-amber-200/70' : 'text-gray-600')}>
-                            {fmt(itemTotal)}
-                            {item.isRecurring && (
-                              <span className="text-xs font-normal">/{item.recurringInterval === 'year' ? 'yr' : 'mo'}</span>
+                          <div className="flex flex-col items-end gap-0.5 shrink-0">
+                            {hasDiscount && (
+                              <span className="text-xs text-gray-600 line-through tabular-nums font-mono">
+                                {fmt(baseTotal)}
+                              </span>
                             )}
-                          </span>
+                            <span className={cn('text-sm font-bold tabular-nums font-mono', hasDiscount ? 'text-[#67e8f9]' : requested ? 'text-amber-200/70' : 'text-gray-600')}>
+                              {fmt(adjustedTotal)}
+                              {item.isRecurring && (
+                                <span className="text-xs font-normal">/{item.recurringInterval === 'year' ? 'yr' : 'mo'}</span>
+                              )}
+                            </span>
+                          </div>
                         </div>
                         {item.description && (
                           <p className="text-xs text-gray-600 mt-0.5 line-clamp-2 leading-relaxed">{item.description}</p>

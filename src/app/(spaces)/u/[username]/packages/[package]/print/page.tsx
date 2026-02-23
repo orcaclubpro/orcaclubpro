@@ -178,8 +178,11 @@ export default async function PackagePrintPage({
             {/* Rows */}
             {lineItems.map((item, i) => {
               const qty = item.quantity ?? 1
-              const unitRate = item.adjustedPrice ?? item.price ?? 0
+              const baseRate = item.price ?? 0
+              const unitRate = item.adjustedPrice ?? baseRate
               const total = unitRate * qty
+              const baseTotal = baseRate * qty
+              const isDiscounted = item.adjustedPrice != null && item.adjustedPrice !== baseRate
               const isLast = i === lineItems.length - 1
               return (
                 <div
@@ -191,10 +194,23 @@ export default async function PackagePrintPage({
                     padding: '12px 12px',
                     borderBottom: isLast ? 'none' : '1px solid #f3f4f6',
                     alignItems: 'start',
+                    background: isDiscounted ? '#f0fdff' : 'transparent',
                   }}
                 >
                   <div>
-                    <p style={{ fontSize: 13, fontWeight: 600, color: '#111', lineHeight: 1.3 }}>{item.name}</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                      <p style={{ fontSize: 13, fontWeight: 600, color: '#111', lineHeight: 1.3 }}>{item.name}</p>
+                      {isDiscounted && (
+                        <span style={{
+                          fontSize: 8, fontWeight: 700, color: '#0891b2',
+                          textTransform: 'uppercase', letterSpacing: '0.12em',
+                          background: '#cffafe', padding: '2px 5px', borderRadius: 3,
+                          border: '1px solid #a5f3fc',
+                        }}>
+                          Discounted
+                        </span>
+                      )}
+                    </div>
                     {item.description && (
                       <p style={{ fontSize: 11, color: '#6b7280', marginTop: 3, lineHeight: 1.55, whiteSpace: 'pre-line' }}>{item.description}</p>
                     )}
@@ -210,13 +226,32 @@ export default async function PackagePrintPage({
                     )}
                   </div>
                   <p style={{ fontSize: 13, color: '#6b7280', textAlign: 'center', paddingTop: 1 }}>{qty}</p>
-                  <p style={{ fontSize: 13, color: '#6b7280', textAlign: 'right', paddingTop: 1, fontVariantNumeric: 'tabular-nums' }}>{fmt(unitRate)}</p>
-                  <p style={{ fontSize: 13, fontWeight: 600, color: '#111', textAlign: 'right', paddingTop: 1, fontVariantNumeric: 'tabular-nums' }}>
-                    {fmt(total)}
-                    {item.isRecurring && (
-                      <span style={{ fontSize: 10, fontWeight: 400, color: '#9ca3af' }}>/{item.recurringInterval === 'year' ? 'yr' : 'mo'}</span>
+                  {/* Rate */}
+                  <div style={{ textAlign: 'right', paddingTop: 1 }}>
+                    {isDiscounted && (
+                      <p style={{ fontSize: 11, color: '#9ca3af', textDecoration: 'line-through', fontVariantNumeric: 'tabular-nums', lineHeight: 1.3 }}>
+                        {fmt(baseRate)}
+                      </p>
                     )}
-                  </p>
+                    <p style={{ fontSize: 13, color: isDiscounted ? '#0891b2' : '#6b7280', fontVariantNumeric: 'tabular-nums', fontWeight: isDiscounted ? 600 : 400 }}>
+                      {fmt(unitRate)}
+                    </p>
+                  </div>
+                  {/* Amount */}
+                  <div style={{ textAlign: 'right', paddingTop: 1 }}>
+                    {isDiscounted && (
+                      <p style={{ fontSize: 11, color: '#9ca3af', textDecoration: 'line-through', fontVariantNumeric: 'tabular-nums', lineHeight: 1.3 }}>
+                        {fmt(baseTotal)}
+                        {item.isRecurring && <span style={{ fontSize: 9 }}>/{item.recurringInterval === 'year' ? 'yr' : 'mo'}</span>}
+                      </p>
+                    )}
+                    <p style={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: 'tabular-nums', color: isDiscounted ? '#0891b2' : '#111' }}>
+                      {fmt(total)}
+                      {item.isRecurring && (
+                        <span style={{ fontSize: 10, fontWeight: 400, color: '#9ca3af' }}>/{item.recurringInterval === 'year' ? 'yr' : 'mo'}</span>
+                      )}
+                    </p>
+                  </div>
                 </div>
               )
             })}

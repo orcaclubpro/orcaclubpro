@@ -148,6 +148,7 @@ function OptionCard({
   onToggle,
   onDescriptionChange,
   onQuantityChange,
+  onAdjustedPriceChange,
 }: {
   item: LineItem
   selected: boolean
@@ -155,10 +156,14 @@ function OptionCard({
   onToggle: () => void
   onDescriptionChange?: (desc: string) => void
   onQuantityChange?: (qty: number) => void
+  onAdjustedPriceChange?: (price: number | null) => void
 }) {
   const qty = item.quantity ?? 1
-  const unitPrice = item.adjustedPrice ?? item.price ?? 0
+  const basePrice = item.price ?? 0
+  const unitPrice = item.adjustedPrice ?? basePrice
   const total = unitPrice * qty
+  const baseTotal = basePrice * qty
+  const hasDiscount = item.adjustedPrice != null && item.adjustedPrice !== basePrice
   return (
     <div className={cn(
       'w-full flex flex-col rounded-xl border text-left transition-all duration-150',
@@ -196,19 +201,67 @@ function OptionCard({
               {item.recurringInterval === 'year' ? 'Annual' : 'Monthly'}
             </span>
           )}
-          <span className={cn('ml-auto text-sm font-bold font-mono tabular-nums', selected ? 'text-white' : 'text-gray-500')}>
-            {fmt(total)}
-            {item.isRecurring && (
-              <span className="text-xs font-normal text-gray-500 font-sans">/{item.recurringInterval === 'year' ? 'yr' : 'mo'}</span>
+          <div className="ml-auto flex flex-col items-end gap-0.5">
+            {hasDiscount && (
+              <span className="text-[11px] font-mono tabular-nums text-gray-600 line-through leading-none">
+                {fmt(baseTotal)}
+                {item.isRecurring && (
+                  <span className="font-sans">/{item.recurringInterval === 'year' ? 'yr' : 'mo'}</span>
+                )}
+              </span>
             )}
-          </span>
+            <span className={cn(
+              'text-sm font-bold font-mono tabular-nums leading-none',
+              hasDiscount ? 'text-[#67e8f9]' : selected ? 'text-white' : 'text-gray-500'
+            )}>
+              {fmt(total)}
+              {item.isRecurring && (
+                <span className="text-xs font-normal text-gray-500 font-sans">/{item.recurringInterval === 'year' ? 'yr' : 'mo'}</span>
+              )}
+            </span>
+          </div>
         </div>
       </button>
 
-      {selected && (onQuantityChange || onDescriptionChange) && (
+      {selected && (onQuantityChange || onDescriptionChange || onAdjustedPriceChange) && (
         <div className="px-4 pb-4 pt-0" onClick={e => e.stopPropagation()}>
           <div className="h-px bg-white/[0.06] mb-3" />
           <div className="flex flex-col gap-2">
+            {onAdjustedPriceChange && (
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-gray-600 uppercase tracking-widest font-medium">Adjusted Price</span>
+                <div className="flex items-center gap-1.5">
+                  <div className={cn(
+                    'flex items-center gap-1 border rounded-md px-2 h-7 transition-colors',
+                    item.adjustedPrice != null ? 'border-[#67e8f9]/30 bg-[#67e8f9]/[0.05]' : 'border-white/[0.10] bg-white/[0.04]'
+                  )}>
+                    <span className={cn('text-[10px] shrink-0', item.adjustedPrice != null ? 'text-[#67e8f9]/70' : 'text-gray-500')}>$</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={item.adjustedPrice ?? ''}
+                      onChange={e => {
+                        const v = e.target.value
+                        onAdjustedPriceChange(v === '' ? null : parseFloat(v))
+                      }}
+                      placeholder={String(item.price ?? 0)}
+                      className="w-20 text-xs bg-transparent text-white focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                  </div>
+                  {item.adjustedPrice != null && (
+                    <button
+                      type="button"
+                      onClick={() => onAdjustedPriceChange(null)}
+                      className="size-5 flex items-center justify-center text-gray-600 hover:text-gray-300 transition-colors"
+                      title="Reset to base price"
+                    >
+                      <X className="size-3" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
             {onQuantityChange && (
               <div className="flex items-center justify-between">
                 <span className="text-[10px] text-gray-600 uppercase tracking-widest font-medium">Quantity</span>
@@ -358,6 +411,9 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
 
   const updateItemQuantity = (name: string, qty: number) =>
     setEditItems(prev => prev.map(ei => ei.name === name ? { ...ei, quantity: qty } : ei))
+
+  const updateItemAdjustedPrice = (name: string, price: number | null) =>
+    setEditItems(prev => prev.map(ei => ei.name === name ? { ...ei, adjustedPrice: price } : ei))
 
   const handleSave = async (pkg: PackageDoc) => {
     setSaving(true)
@@ -709,7 +765,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                                   const editItem = editItems.find(ei => ei.name === item.name)
                                   const isSelected = !!editItem
                                   const displayItem = editItem
-                                    ? { ...item, description: editItem.description, quantity: editItem.quantity }
+                                    ? { ...item, description: editItem.description, quantity: editItem.quantity, adjustedPrice: editItem.adjustedPrice }
                                     : item
                                   return (
                                     <OptionCard
@@ -720,6 +776,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                                       onToggle={() => toggleItem(item)}
                                       onQuantityChange={isSelected ? (qty) => updateItemQuantity(item.name, qty) : undefined}
                                       onDescriptionChange={isSelected ? (desc) => updateItemDescription(item.name, desc) : undefined}
+                                      onAdjustedPriceChange={isSelected ? (price) => updateItemAdjustedPrice(item.name, price) : undefined}
                                     />
                                   )
                                 })}

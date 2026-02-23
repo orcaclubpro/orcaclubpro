@@ -43,6 +43,7 @@ interface LocalLineItem {
   name: string
   description: string
   price: string
+  adjustedPrice: string
   quantity: string
   isRecurring: boolean
   recurringInterval: 'month' | 'year'
@@ -59,6 +60,7 @@ interface PkgTemplate {
     name: string
     description?: string | null
     price: number
+    adjustedPrice?: number | null
     quantity?: number
     isRecurring?: boolean
     recurringInterval?: 'month' | 'year'
@@ -92,6 +94,7 @@ const newLineItem = (): LocalLineItem => ({
   name: '',
   description: '',
   price: '',
+  adjustedPrice: '',
   quantity: '1',
   isRecurring: false,
   recurringInterval: 'month',
@@ -117,7 +120,9 @@ function pkgTotals(lineItems: PkgTemplate['lineItems'] = []) {
 function localItemTotals(items: LocalLineItem[]) {
   let oneTime = 0, monthly = 0, annual = 0
   for (const item of items) {
-    const price = Number(item.price) || 0
+    const basePrice = Number(item.price) || 0
+    const adj = item.adjustedPrice !== '' ? Number(item.adjustedPrice) : null
+    const price = adj ?? basePrice
     const qty = Math.max(1, Number(item.quantity) || 1)
     const total = price * qty
     if (item.isRecurring) {
@@ -204,6 +209,7 @@ export function DashboardTaskManager({ username, userRole }: DashboardTaskManage
             name: item.name,
             description: item.description ?? '',
             price: String(item.price ?? ''),
+            adjustedPrice: item.adjustedPrice != null ? String(item.adjustedPrice) : '',
             quantity: String(item.quantity ?? 1),
             isRecurring: item.isRecurring ?? false,
             recurringInterval: item.recurringInterval ?? 'month',
@@ -245,6 +251,7 @@ export function DashboardTaskManager({ username, userRole }: DashboardTaskManage
       name: item.name.trim(),
       description: item.description.trim() || undefined,
       price: Number(item.price),
+      adjustedPrice: item.adjustedPrice !== '' ? Number(item.adjustedPrice) : undefined,
       quantity: Math.max(1, Number(item.quantity) || 1),
       isRecurring: item.isRecurring,
       recurringInterval: item.isRecurring ? item.recurringInterval : undefined,
@@ -660,7 +667,9 @@ export function DashboardTaskManager({ username, userRole }: DashboardTaskManage
                       </p>
                       <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] divide-y divide-white/[0.05] overflow-hidden">
                         {pkgLineItems.map((item) => {
-                          const price = Number(item.price) || 0
+                          const basePrice = Number(item.price) || 0
+                          const adj = item.adjustedPrice !== '' ? Number(item.adjustedPrice) : null
+                          const displayPrice = adj ?? basePrice
                           const qty = Math.max(1, Number(item.quantity) || 1)
                           return (
                             <div key={item._key} className="flex items-center justify-between px-4 py-2.5">
@@ -673,9 +682,14 @@ export function DashboardTaskManager({ username, userRole }: DashboardTaskManage
                                 )}
                               </div>
                               <div className="text-right shrink-0">
-                                <p className="text-sm font-mono text-white">{fmtPrice(price * qty)}</p>
+                                <div className="flex items-baseline gap-1.5 justify-end">
+                                  {adj !== null && adj !== basePrice && (
+                                    <span className="text-[10px] font-mono text-gray-600 line-through">{fmtPrice(basePrice * qty)}</span>
+                                  )}
+                                  <p className={cn('text-sm font-mono', adj !== null ? 'text-[#67e8f9]' : 'text-white')}>{fmtPrice(displayPrice * qty)}</p>
+                                </div>
                                 {qty > 1 && (
-                                  <p className="text-[10px] text-gray-600">×{qty} @ {fmtPrice(price)}</p>
+                                  <p className="text-[10px] text-gray-600">×{qty} @ {fmtPrice(displayPrice)}</p>
                                 )}
                               </div>
                             </div>
@@ -945,6 +959,37 @@ function LineItemRow({
             className="flex-1 bg-transparent text-white text-sm outline-none min-w-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
           />
         </div>
+      </div>
+
+      {/* Adjusted Price — optional display override */}
+      <div className="flex items-center gap-2">
+        <div className={cn(
+          'flex items-center gap-1 flex-1 border rounded-md px-2 h-7 transition-colors',
+          item.adjustedPrice !== '' ? 'border-[#67e8f9]/30 bg-[#67e8f9]/[0.04]' : 'border-white/[0.06] bg-white/[0.02]'
+        )}>
+          <span className={cn('text-[10px] shrink-0 font-medium', item.adjustedPrice !== '' ? 'text-[#67e8f9]/70' : 'text-gray-600')}>
+            Adj $
+          </span>
+          <input
+            type="number"
+            value={item.adjustedPrice}
+            onChange={(e) => onUpdate('adjustedPrice', e.target.value)}
+            placeholder="price override (optional)"
+            min="0"
+            step="0.01"
+            className="flex-1 bg-transparent text-white text-xs outline-none min-w-0 placeholder:text-gray-700 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          />
+        </div>
+        {item.adjustedPrice !== '' && (
+          <button
+            type="button"
+            onClick={() => onUpdate('adjustedPrice', '')}
+            className="text-gray-600 hover:text-gray-300 transition-colors shrink-0"
+            title="Clear adjusted price"
+          >
+            <X className="size-3" />
+          </button>
+        )}
       </div>
 
       {/* Recurring */}
