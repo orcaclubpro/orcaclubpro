@@ -49,7 +49,8 @@ export default async function PackagePrintPage({
   const { username, package: packageId } = await params
   const user = await getCurrentUser()
 
-  if (!user || user.username !== username) redirect('/login')
+  if (!user) redirect(`/login?callbackUrl=/u/${username}/packages/${packageId}/print`)
+  if (user.username !== username && user.role === 'client') redirect(`/u/${user.username}`)
 
   const payload = await getPayload({ config })
 

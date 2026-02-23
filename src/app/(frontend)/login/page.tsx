@@ -18,17 +18,16 @@ export default async function LoginPage({
 }: {
   searchParams: Promise<{ callbackUrl?: string }>
 }) {
-  const user = await getCurrentUser()
+  const [user, { callbackUrl }] = await Promise.all([getCurrentUser(), searchParams])
 
   if (user && user.username) {
-    redirect(`/u/${user.username}`)
+    const dest = callbackUrl && callbackUrl.startsWith('/') ? callbackUrl : `/u/${user.username}`
+    redirect(dest)
   }
 
   if (user && (user.role === 'admin' || user.role === 'user')) {
     redirect('/admin')
   }
-
-  const { callbackUrl } = await searchParams
 
   return (
     <div className="flex h-screen overflow-hidden bg-black pt-16">
