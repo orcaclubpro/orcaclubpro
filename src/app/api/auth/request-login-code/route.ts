@@ -89,7 +89,20 @@ export async function POST(request: Request) {
         { status: 200 }
       )
     } catch (authError: any) {
-      // Invalid credentials
+      // Detect account lockout separately so the UI can offer an unlock link
+      const isLocked = authError?.message?.toLowerCase().includes('lock')
+      if (isLocked) {
+        payload.logger.info(`[Login 2FA] Locked account login attempt for ${email}`)
+        return NextResponse.json(
+          {
+            success: false,
+            locked: true,
+            message: 'Your account has been locked due to too many failed login attempts.',
+          },
+          { status: 423 }
+        )
+      }
+
       payload.logger.info(`[Login 2FA] Failed login attempt for ${email}`)
       return NextResponse.json(
         { success: false, message: 'Invalid email or password' },

@@ -24,9 +24,13 @@ import { CollapsibleSidebar } from '@/components/dashboard/CollapsibleSidebar'
 import { ClientTabNav } from '@/components/dashboard/ClientTabNav'
 import { ClientPackagesTab } from '@/components/dashboard/ClientPackagesTab'
 import { ClientOrdersTab } from '@/components/dashboard/ClientOrdersTab'
+import { SwipeTabRouter } from '@/components/dashboard/SwipeTabRouter'
+import { ScheduledPaymentsSection } from '@/components/dashboard/ScheduledPaymentsSection'
 import { ClientSettingsCard } from '@/components/dashboard/ClientSettingsCard'
 import { ClientPortfolioTimeline } from '@/components/dashboard/ClientPortfolioTimeline'
+import { SetHeaderTitle } from '@/components/layout/SetHeaderTitle'
 import type { SerializedProject, SerializedSprint } from '@/components/dashboard/ProjectsCarousel'
+import { ProjectRowActions } from '@/components/dashboard/ProjectRowActions'
 
 export async function generateMetadata({
   params,
@@ -142,6 +146,18 @@ export default async function ClientDetailPage({
   ])
   const packages = packagesResult.docs
 
+  // Build packageOrderMap from existing orders (no extra DB query needed)
+  const packageOrderMap: Record<string, any[]> = {}
+  for (const o of orders) {
+    const pkgId = typeof (o as any).packageRef === 'string'
+      ? (o as any).packageRef
+      : ((o as any).packageRef as any)?.id
+    if (pkgId) {
+      if (!packageOrderMap[pkgId]) packageOrderMap[pkgId] = []
+      packageOrderMap[pkgId].push(o)
+    }
+  }
+
   // Fetch sprints for all client projects (for timeline)
   const projectIds = projects.map((p) => p.id)
   const { docs: allSprints } = projectIds.length > 0
@@ -215,7 +231,8 @@ export default async function ClientDetailPage({
         .filter((u): u is UserType => typeof u !== 'string')
         .map((u) => ({
           id: u.id,
-          name: `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim() || u.email,
+          name: (u.name || `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim() || u.email) ?? '',
+          title: u.title ?? null,
         }))
     : []
 
@@ -242,6 +259,7 @@ export default async function ClientDetailPage({
 
   return (
     <div className="lg:flex" style={{ minHeight: 'calc(100vh - 64px)' }}>
+      <SetHeaderTitle title={clientAccount.name} />
 
       {/* ── Left Sidebar (desktop only, auto-minimized) ─────────────────────── */}
       <CollapsibleSidebar>
@@ -259,6 +277,12 @@ export default async function ClientDetailPage({
           />
         </div>
 
+        <SwipeTabRouter
+          tabs={validTabs}
+          activeTab={activeTab}
+          basePath={`/u/${username}/clients/${clientId}`}
+        />
+
         {/* ── Tab Content ─────────────────────────────────────────────────── */}
         <div className="flex-1 px-6 lg:px-10 py-8 space-y-8">
 
@@ -273,6 +297,8 @@ export default async function ClientDetailPage({
                 lastName={clientAccount.lastName ?? ''}
                 email={clientAccount.email}
                 company={clientAccount.company}
+                phone={(clientAccount as any).phone ?? null}
+                address={(clientAccount as any).address ?? null}
                 stripeCustomerId={clientAccount.stripeCustomerId}
                 teamMembers={teamMembers}
                 clientUsers={clientUsers.map((u) => ({
@@ -396,7 +422,7 @@ export default async function ClientDetailPage({
 
           {/* ─── Orders tab ───────────────────────────────────────────────── */}
           {activeTab === 'orders' && (
-            <section className="space-y-4">
+            <section className="space-y-6">
               <div className="flex items-baseline justify-between gap-4">
                 <div className="flex items-baseline gap-3">
                   <h2 className="text-base font-semibold text-white">Orders</h2>
@@ -413,6 +439,7 @@ export default async function ClientDetailPage({
                   </div>
                 )}
               </div>
+              <ScheduledPaymentsSection packages={packages as any} username={username} />
               <ClientOrdersTab orders={orders as any} role={user.role as 'admin' | 'user' | 'client'} />
             </section>
           )}
@@ -423,6 +450,8 @@ export default async function ClientDetailPage({
               packages={packages as any}
               clientId={clientId}
               username={username}
+              projects={projects.map((p: any) => ({ id: p.id, name: p.name, status: p.status }))}
+              packageOrders={packageOrderMap}
             />
           )}
 
@@ -465,10 +494,11 @@ function ProjectRow({
   const totalMilestones     = project.milestones?.length ?? 0
 
   return (
-    <Link
-      href={`/u/${username}/projects/${project.id}`}
-      className="group flex items-center gap-4 px-5 py-4 hover:bg-white/[0.05] transition-colors relative"
-    >
+    <div className="relative flex items-center group hover:bg-white/[0.05] transition-colors">
+      <Link
+        href={`/u/${username}/projects/${project.id}`}
+        className="flex-1 flex items-center gap-4 px-5 py-4 min-w-0"
+      >
       <div className="absolute left-0 top-0 h-full w-[2px] bg-[#67e8f9] opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
 
       <div className={`size-8 rounded-lg ${cfg.bg} border ${cfg.border} flex items-center justify-center shrink-0`}>
@@ -511,6 +541,10 @@ function ProjectRow({
 
       <ChevronRight className="size-4 text-gray-700 group-hover:text-[#67e8f9] group-hover:translate-x-0.5 transition-all duration-150 shrink-0" />
     </Link>
+    <div className="pr-3 shrink-0">
+      <ProjectRowActions project={project} username={username} />
+    </div>
+  </div>
   )
 }
 

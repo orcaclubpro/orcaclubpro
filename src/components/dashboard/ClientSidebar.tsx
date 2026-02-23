@@ -19,28 +19,30 @@ import {
   KeyRound,
   Shield,
   User,
+  Pencil,
+  X,
 } from 'lucide-react'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { updateClientAccount, inviteClientUser } from '@/actions/clients'
+import { updateClientAccount, inviteClientUser, updateClientUserEmail } from '@/actions/clients'
 
 export interface ClientSidebarProps {
   id: string
   name: string
   firstName: string
   lastName: string
-  email: string
+  email?: string | null
   company?: string | null
   accountBalance: number
   totalRevenue: number
   ordersCount: number
   projectsCount: number
   stripeCustomerId?: string | null
-  /** Staff (admin/user role) assigned to this account */
-  teamMembers: Array<{ id: string; name: string }>
+  /** Developer (admin/user role) assigned to this account */
+  teamMembers: Array<{ id: string; name: string; title?: string | null }>
   /** Client-role users linked to this account */
   clientUsers?: Array<{ id: string; name: string; email: string }>
   username: string
@@ -73,7 +75,7 @@ function TeamModal({
   onClose: () => void
   clientAccountId: string
   clientAccountName: string
-  teamMembers: Array<{ id: string; name: string }>
+  teamMembers: Array<{ id: string; name: string; title?: string | null }>
   clientUsers: Array<{ id: string; name: string; email: string }>
 }) {
   const router = useRouter()
@@ -87,6 +89,29 @@ function TeamModal({
 
   // ── Per-client password reset ──
   const [resetStates, setResetStates] = useState<Record<string, 'idle' | 'loading' | 'sent' | 'error'>>({})
+
+  // ── Per-client email editing ──
+  const [emailEditing, setEmailEditing] = useState<{ id: string; value: string } | null>(null)
+  const [emailSaving, setEmailSaving] = useState(false)
+  const [emailError, setEmailError] = useState<string | null>(null)
+
+  async function handleSaveEmail() {
+    if (!emailEditing) return
+    if (!emailEditing.value.trim()) {
+      setEmailError('Email is required')
+      return
+    }
+    setEmailSaving(true)
+    setEmailError(null)
+    const result = await updateClientUserEmail({ userId: emailEditing.id, email: emailEditing.value.trim() })
+    setEmailSaving(false)
+    if (result.success) {
+      setEmailEditing(null)
+      router.refresh()
+    } else {
+      setEmailError(result.error ?? 'Failed to update email')
+    }
+  }
 
   function resetAddForm() {
     setAddForm({ firstName: '', lastName: '', email: '' })
@@ -146,7 +171,7 @@ function TeamModal({
           {/* Tabs */}
           <div className="flex gap-1 border-b border-white/[0.06]">
             {([
-              { key: 'admin' as const,   label: 'Admin / Staff', Icon: Shield, count: teamMembers.length  },
+              { key: 'admin' as const,   label: 'Admin / Developer', Icon: Shield, count: teamMembers.length  },
               { key: 'clients' as const, label: 'Clients',       Icon: User,   count: clientUsers.length  },
             ]).map(({ key, label, Icon, count }) => (
               <button
@@ -177,14 +202,19 @@ function TeamModal({
           {tab === 'admin' && (
             <div className="space-y-2">
               {teamMembers.length === 0 ? (
-                <p className="text-sm text-gray-600 py-4 text-center">No staff assigned to this account.</p>
+                <p className="text-sm text-gray-600 py-4 text-center">No developers assigned to this account.</p>
               ) : (
                 teamMembers.map((m) => (
                   <div key={m.id} className="flex items-center gap-3 rounded-lg bg-white/[0.02] border border-white/[0.06] px-4 py-3">
                     <div className="size-7 rounded-lg bg-white/[0.06] flex items-center justify-center shrink-0">
                       <Shield className="size-3.5 text-gray-500" />
                     </div>
-                    <span className="text-sm text-gray-300 truncate">{m.name}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-gray-300 truncate">{m.name}</p>
+                      {m.title && (
+                        <p className="text-[11px] text-gray-600 truncate">{m.title}</p>
+                      )}
+                    </div>
                   </div>
                 ))
               )}
@@ -201,31 +231,81 @@ function TeamModal({
                 ) : (
                   clientUsers.map((u) => {
                     const rs = resetStates[u.email] ?? 'idle'
+                    const isEditing = emailEditing?.id === u.id
                     return (
-                      <div key={u.id} className="flex items-center gap-3 rounded-lg bg-white/[0.02] border border-white/[0.06] px-4 py-3">
-                        <div className="size-7 rounded-lg bg-[#67e8f9]/[0.07] flex items-center justify-center shrink-0">
-                          <User className="size-3.5 text-[#67e8f9]/60" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm text-gray-300 truncate">{u.name}</p>
-                          <p className="text-[11px] text-gray-600 truncate">{u.email}</p>
-                        </div>
-                        <button
-                          onClick={() => handlePasswordReset(u.email)}
-                          disabled={rs === 'loading' || rs === 'sent'}
-                          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-white/[0.08] text-[10px] text-gray-500 hover:text-white hover:border-white/[0.14] hover:bg-white/[0.04] transition-all disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-                        >
-                          {rs === 'loading' ? (
-                            <Loader2 className="size-3 animate-spin" />
-                          ) : rs === 'sent' ? (
-                            <Check className="size-3 text-emerald-400" />
-                          ) : (
-                            <KeyRound className="size-3" />
+                      <div key={u.id} className="rounded-lg bg-white/[0.02] border border-white/[0.06] px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="size-7 rounded-lg bg-[#67e8f9]/[0.07] flex items-center justify-center shrink-0">
+                            <User className="size-3.5 text-[#67e8f9]/60" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-gray-300 truncate">{u.name}</p>
+                            {!isEditing && (
+                              <p className="text-[11px] text-gray-600 truncate">{u.email}</p>
+                            )}
+                          </div>
+                          {!isEditing && (
+                            <>
+                              <button
+                                onClick={() => { setEmailEditing({ id: u.id, value: u.email }); setEmailError(null) }}
+                                className="flex items-center gap-1 px-2 py-1.5 rounded-md border border-white/[0.08] text-[10px] text-gray-500 hover:text-white hover:border-white/[0.14] hover:bg-white/[0.04] transition-all shrink-0"
+                              >
+                                <Pencil className="size-3" />
+                                Email
+                              </button>
+                              <button
+                                onClick={() => handlePasswordReset(u.email)}
+                                disabled={rs === 'loading' || rs === 'sent'}
+                                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-white/[0.08] text-[10px] text-gray-500 hover:text-white hover:border-white/[0.14] hover:bg-white/[0.04] transition-all disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                              >
+                                {rs === 'loading' ? (
+                                  <Loader2 className="size-3 animate-spin" />
+                                ) : rs === 'sent' ? (
+                                  <Check className="size-3 text-emerald-400" />
+                                ) : (
+                                  <KeyRound className="size-3" />
+                                )}
+                                <span className={rs === 'sent' ? 'text-emerald-400' : rs === 'error' ? 'text-red-400' : ''}>
+                                  {rs === 'loading' ? 'Sending' : rs === 'sent' ? 'Sent' : rs === 'error' ? 'Failed' : 'Reset'}
+                                </span>
+                              </button>
+                            </>
                           )}
-                          <span className={rs === 'sent' ? 'text-emerald-400' : rs === 'error' ? 'text-red-400' : ''}>
-                            {rs === 'loading' ? 'Sending' : rs === 'sent' ? 'Sent' : rs === 'error' ? 'Failed' : 'Reset'}
-                          </span>
-                        </button>
+                        </div>
+                        {isEditing && (
+                          <div className="mt-2.5 space-y-1.5">
+                            <div className="flex items-center gap-1.5">
+                              <Input
+                                type="email"
+                                value={emailEditing.value}
+                                onChange={(e) => setEmailEditing((prev) => prev ? { ...prev, value: e.target.value } : null)}
+                                autoFocus
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') handleSaveEmail()
+                                  if (e.key === 'Escape') { setEmailEditing(null); setEmailError(null) }
+                                }}
+                                className="flex-1 h-8 text-xs bg-white/[0.04] border-white/[0.08] text-white focus-visible:ring-[#67e8f9]/30 focus-visible:ring-1"
+                              />
+                              <button
+                                onClick={handleSaveEmail}
+                                disabled={emailSaving}
+                                className="flex items-center justify-center size-8 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 transition-colors shrink-0 disabled:opacity-50"
+                              >
+                                {emailSaving ? <Loader2 className="size-3 animate-spin" /> : <Check className="size-3" />}
+                              </button>
+                              <button
+                                onClick={() => { setEmailEditing(null); setEmailError(null) }}
+                                disabled={emailSaving}
+                                className="flex items-center justify-center size-8 rounded-md border border-white/[0.08] text-gray-500 hover:text-white hover:bg-white/[0.05] transition-colors shrink-0"
+                              >
+                                <X className="size-3" />
+                              </button>
+                            </div>
+                            {emailError && (
+                              <p className="text-[10px] text-red-400">{emailError}</p>
+                            )}
+                          </div>
+                        )}
                       </div>
                     )
                   })
@@ -348,12 +428,12 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [teamModalOpen, setTeamModalOpen] = useState(false)
-  const [form, setForm] = useState({ name, firstName, lastName, company: company ?? '' })
+  const [form, setForm] = useState({ name, firstName, lastName, company: company ?? '', email: email ?? '' })
 
   const initials = getInitials(name)
   const hasOutstanding = accountBalance > 0
   const allUsers = [
-    ...teamMembers.map((m) => ({ ...m, type: 'staff' as const })),
+    ...teamMembers.map((m) => ({ ...m, type: 'developer' as const })),
     ...clientUsers.map((u) => ({ ...u, type: 'client' as const })),
   ]
 
@@ -366,6 +446,7 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
       firstName: form.firstName,
       lastName: form.lastName,
       company: form.company || undefined,
+      email: form.email || undefined,
     })
     setLoading(false)
     if (result.success) {
@@ -377,7 +458,7 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
   }
 
   function handleCancel() {
-    setForm({ name, firstName, lastName, company: company ?? '' })
+    setForm({ name, firstName, lastName, company: company ?? '', email: email ?? '' })
     setError(null)
     setEditing(false)
   }
@@ -454,6 +535,16 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
               />
             </div>
             <div className="space-y-1">
+              <Label className="text-gray-600 text-[10px] uppercase tracking-wider font-semibold">Email</Label>
+              <Input
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                placeholder="client@example.com"
+                className="h-8 text-sm bg-white/[0.04] border-white/[0.08] text-white placeholder:text-gray-700 focus-visible:ring-[#67e8f9]/30 focus-visible:ring-1"
+              />
+            </div>
+            <div className="space-y-1">
               <Label className="text-gray-600 text-[10px] uppercase tracking-wider font-semibold">Company</Label>
               <Input
                 value={form.company}
@@ -487,7 +578,7 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
           <div>
             <h2 className="text-base font-bold text-white leading-tight">{name}</h2>
             {company && <p className="text-xs text-gray-500 mt-0.5">{company}</p>}
-            <p className="text-xs text-gray-700 mt-1 truncate">{email}</p>
+            {email && <p className="text-xs text-gray-700 mt-1 truncate">{email}</p>}
           </div>
         )}
       </div>
@@ -530,10 +621,12 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
         <div className="space-y-2.5">
           <p className="text-[10px] uppercase tracking-widest text-gray-600 font-semibold">Contact</p>
           <div className="space-y-2">
-            <div className="flex items-center gap-2 text-gray-500 text-xs">
-              <Mail className="size-3 shrink-0" />
-              <span className="truncate">{email}</span>
-            </div>
+            {email && (
+              <div className="flex items-center gap-2 text-gray-500 text-xs">
+                <Mail className="size-3 shrink-0" />
+                <span className="truncate">{email}</span>
+              </div>
+            )}
             {company && (
               <div className="flex items-center gap-2 text-gray-500 text-xs">
                 <Building2 className="size-3 shrink-0" />
@@ -567,18 +660,18 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
             <div className="space-y-1.5">
               {allUsers.map((u) => (
                 <div key={u.id} className="flex items-center gap-2 text-xs">
-                  {u.type === 'staff' ? (
+                  {u.type === 'developer' ? (
                     <Shield className="size-3 shrink-0 text-gray-600" />
                   ) : (
                     <User className="size-3 shrink-0 text-[#67e8f9]/50" />
                   )}
-                  <span className={`truncate ${u.type === 'staff' ? 'text-gray-500' : 'text-gray-400'}`}>
+                  <span className={`truncate ${u.type === 'developer' ? 'text-gray-500' : 'text-gray-400'}`}>
                     {u.name}
                   </span>
                   <span className={`ml-auto text-[9px] uppercase tracking-wider font-semibold shrink-0 ${
-                    u.type === 'staff' ? 'text-gray-700' : 'text-[#67e8f9]/40'
+                    u.type === 'developer' ? 'text-gray-700' : 'text-[#67e8f9]/40'
                   }`}>
-                    {u.type === 'staff' ? 'staff' : 'client'}
+                    {u.type === 'developer' ? (u.title ?? 'developer') : 'client'}
                   </span>
                 </div>
               ))}

@@ -8,8 +8,9 @@ import { CollapsibleSidebar } from '@/components/dashboard/CollapsibleSidebar'
 import { ProjectTabNav } from '@/components/dashboard/ProjectTabNav'
 import { HomeTab } from '@/components/dashboard/HomeTab'
 import { SprintsTab } from '@/components/dashboard/SprintsTab'
-import { TasksTab } from '@/components/dashboard/TasksTab'
 import { ProjectSideActions } from '@/components/dashboard/ProjectSideActions'
+import { SwipeTabRouter } from '@/components/dashboard/SwipeTabRouter'
+import { SetHeaderTitle } from '@/components/layout/SetHeaderTitle'
 import type { Project, Task, Sprint } from '@/types/payload-types'
 
 export async function generateMetadata({
@@ -133,11 +134,13 @@ export default async function ProjectDetailPage({
     }
   }
 
-  const activeTab = tab === 'tasks' ? 'tasks' : tab === 'sprints' ? 'sprints' : 'home'
+  const activeTab = tab === 'sprints' ? 'sprints' : 'home'
   const basePath = `/u/${username}/projects/${projectId}`
+  const PROJECT_TABS = ['home', 'sprints'] as const
 
   return (
     <div className="lg:flex" style={{ minHeight: 'calc(100vh - 64px)' }}>
+      <SetHeaderTitle title={project.name} />
 
       {/* ── Right side quick-actions (staff only) ───────────────────────── */}
       {!isClient && (
@@ -163,6 +166,8 @@ export default async function ProjectDetailPage({
           <ProjectTabNav activeTab={activeTab} basePath={basePath} />
         </div>
 
+        <SwipeTabRouter tabs={PROJECT_TABS} activeTab={activeTab} basePath={basePath} />
+
         {/* Tab Content */}
         <div className="flex-1 p-6 lg:p-8">
           {activeTab === 'home' ? (
@@ -173,18 +178,12 @@ export default async function ProjectDetailPage({
               readOnly={isClient}
               username={username}
             />
-          ) : activeTab === 'sprints' ? (
+          ) : (
             <SprintsTab
               sprints={sprints as Sprint[]}
               tasks={tasks as Task[]}
               projectId={projectId}
-              readOnly={isClient}
-            />
-          ) : (
-            <TasksTab
-              tasks={tasks as Task[]}
-              sprints={sprints as Sprint[]}
-              projectId={projectId}
+              username={username}
               readOnly={isClient}
             />
           )}

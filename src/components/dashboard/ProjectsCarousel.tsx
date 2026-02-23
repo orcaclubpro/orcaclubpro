@@ -331,6 +331,18 @@ function ProjectDetail({
   return (
     <div className="flex flex-col h-full">
 
+      {/* ── Action buttons — in layout flow, above scroll area ─────────── */}
+      <div className="shrink-0 flex items-center justify-end gap-3 px-8 pt-5 pb-3">
+        {canEdit && <ProjectCarouselEditModal project={project} large />}
+        <Link
+          href={`/u/${username}/projects/${project.id}`}
+          className="flex items-center gap-2.5 bg-intelligence-cyan hover:bg-intelligence-cyan/90 active:scale-[0.98] text-black font-bold rounded-full px-7 py-3 text-sm transition-all duration-200 group shadow-[0_0_28px_rgba(103,232,249,0.35)] hover:shadow-[0_0_42px_rgba(103,232,249,0.5)]"
+        >
+          Open Workspace
+          <ArrowRight className="size-4 group-hover:translate-x-0.5 transition-transform duration-200" />
+        </Link>
+      </div>
+
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto min-h-0 relative">
 
@@ -395,17 +407,7 @@ function ProjectDetail({
                 )}
               </div>
 
-              {/* Right actions */}
-              <div className="flex items-center gap-2 shrink-0">
-                {canEdit && <ProjectCarouselEditModal project={project} />}
-                <Link
-                  href={`/u/${username}/projects/${project.id}`}
-                  className="flex items-center gap-2 text-xs font-bold bg-intelligence-cyan hover:bg-intelligence-cyan/90 active:scale-[0.98] text-black rounded-lg px-4 py-2.5 transition-all duration-150 group shadow-[0_0_20px_rgba(103,232,249,0.2)]"
-                >
-                  Open Workspace
-                  <ArrowRight className="size-3.5 group-hover:translate-x-0.5 transition-transform duration-150" />
-                </Link>
-              </div>
+              <div />
             </div>
 
             {/* Project name — huge */}
@@ -541,6 +543,7 @@ function ProjectDetail({
           </div>
         </div>
       </div>
+
     </div>
   )
 }

@@ -13,13 +13,32 @@ interface LineItem {
   name: string
   description?: string | null
   price: number
+  adjustedPrice?: number | null
   quantity?: number
   isRecurring?: boolean
   recurringInterval?: 'month' | 'year'
 }
 
+interface ScheduledEntry {
+  id?: string
+  label: string
+  amount: number
+  dueDate?: string | null
+  orderId?: string | null
+}
+
 function fmt(n: number) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n)
+}
+
+/** Parse YYYY-MM-DD as a local date to avoid UTC-shift display issues. */
+function fmtScheduleDate(iso: string | null | undefined): string {
+  if (!iso) return '—'
+  const parts = iso.split('T')[0].split('-').map(Number)
+  if (parts.length !== 3 || parts.some(isNaN)) return '—'
+  const date = new Date(parts[0], parts[1] - 1, parts[2])
+  if (!isFinite(date.getTime())) return '—'
+  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(date)
 }
 
 export default async function PackagePrintPage({
@@ -51,12 +70,13 @@ export default async function PackagePrintPage({
   }
 
   const lineItems: LineItem[] = pkg.lineItems ?? []
-  const isStaff = user.role === 'admin' || user.role === 'user'
+  const paymentSchedule: ScheduledEntry[] = pkg.paymentSchedule ?? []
+  const isDeveloper = user.role === 'admin' || user.role === 'user'
 
   let oneTime = 0, monthly = 0, annual = 0
   for (const item of lineItems) {
     const qty = item.quantity ?? 1
-    const total = (item.price ?? 0) * qty
+    const total = (item.adjustedPrice ?? item.price ?? 0) * qty
     if (item.isRecurring) {
       item.recurringInterval === 'year' ? (annual += total) : (monthly += total)
     } else {
@@ -65,8 +85,11 @@ export default async function PackagePrintPage({
   }
 
   const clientAccount = pkg.clientAccount
-  const clientName = clientAccount && typeof clientAccount === 'object' ? clientAccount.name ?? '' : ''
+  const clientName    = clientAccount && typeof clientAccount === 'object' ? clientAccount.name    ?? '' : ''
   const clientCompany = clientAccount && typeof clientAccount === 'object' ? clientAccount.company ?? '' : ''
+  const clientEmail   = clientAccount && typeof clientAccount === 'object' ? (clientAccount as any).email   ?? '' : ''
+  const clientPhone   = clientAccount && typeof clientAccount === 'object' ? (clientAccount as any).phone   ?? '' : ''
+  const clientAddress = clientAccount && typeof clientAccount === 'object' ? (clientAccount as any).address ?? null : null
 
   const proposalDate = new Intl.DateTimeFormat('en-US', {
     month: 'long', day: 'numeric', year: 'numeric',
@@ -104,14 +127,27 @@ export default async function PackagePrintPage({
 
         {/* ── BILL TO / PACKAGE NAME ──────────────── */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 36 }}>
-          {(clientName || clientCompany) && (
+          {(clientName || clientCompany || clientEmail || clientPhone || clientAddress) && (
             <div>
               <p style={{ fontSize: 10, fontWeight: 600, color: '#9ca3af', letterSpacing: '0.16em', textTransform: 'uppercase', marginBottom: 6 }}>Bill To</p>
               {clientName && <p style={{ fontSize: 14, fontWeight: 700, color: '#111' }}>{clientName}</p>}
               {clientCompany && <p style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>{clientCompany}</p>}
+              {clientAddress?.line1 && <p style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>{clientAddress.line1}</p>}
+              {clientAddress?.line2 && <p style={{ fontSize: 12, color: '#6b7280', marginTop: 1 }}>{clientAddress.line2}</p>}
+              {(clientAddress?.city || clientAddress?.state || clientAddress?.zip) && (
+                <p style={{ fontSize: 12, color: '#6b7280', marginTop: 1 }}>
+                  {[clientAddress.city, clientAddress.state, clientAddress.zip].filter(Boolean).join(', ')}
+                </p>
+              )}
+              {clientPhone && <p style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>{clientPhone}</p>}
+              {clientEmail && (
+                <p style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
+                  <a href={`mailto:${clientEmail}`} style={{ color: '#6b7280', textDecoration: 'none' }}>{clientEmail}</a>
+                </p>
+              )}
             </div>
           )}
-          <div style={{ textAlign: clientName || clientCompany ? 'right' : 'left' }}>
+          <div style={{ textAlign: (clientName || clientCompany || clientEmail || clientPhone || clientAddress) ? 'right' : 'left' }}>
             <p style={{ fontSize: 20, fontWeight: 800, color: '#111', letterSpacing: '-0.02em' }}>{pkg.name}</p>
             {pkg.description && (
               <p style={{ fontSize: 12, color: '#6b7280', marginTop: 4, maxWidth: 280, lineHeight: 1.5, textAlign: clientName || clientCompany ? 'right' : 'left' }}>
@@ -142,7 +178,8 @@ export default async function PackagePrintPage({
             {/* Rows */}
             {lineItems.map((item, i) => {
               const qty = item.quantity ?? 1
-              const total = (item.price ?? 0) * qty
+              const unitRate = item.adjustedPrice ?? item.price ?? 0
+              const total = unitRate * qty
               const isLast = i === lineItems.length - 1
               return (
                 <div
@@ -173,7 +210,7 @@ export default async function PackagePrintPage({
                     )}
                   </div>
                   <p style={{ fontSize: 13, color: '#6b7280', textAlign: 'center', paddingTop: 1 }}>{qty}</p>
-                  <p style={{ fontSize: 13, color: '#6b7280', textAlign: 'right', paddingTop: 1, fontVariantNumeric: 'tabular-nums' }}>{fmt(item.price ?? 0)}</p>
+                  <p style={{ fontSize: 13, color: '#6b7280', textAlign: 'right', paddingTop: 1, fontVariantNumeric: 'tabular-nums' }}>{fmt(unitRate)}</p>
                   <p style={{ fontSize: 13, fontWeight: 600, color: '#111', textAlign: 'right', paddingTop: 1, fontVariantNumeric: 'tabular-nums' }}>
                     {fmt(total)}
                     {item.isRecurring && (
@@ -220,6 +257,87 @@ export default async function PackagePrintPage({
             </div>
           </div>
         )}
+
+        {/* ── PAYMENT SCHEDULE ─────────────────────── */}
+        {paymentSchedule.length > 0 ? (
+          <div style={{ marginBottom: 32, paddingTop: 20, borderTop: '1px solid #e5e7eb' }}>
+            <p style={{ fontSize: 10, fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 12 }}>
+              Payment Schedule
+            </p>
+
+            {/* Table header */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px 130px', gap: 8, padding: '6px 12px', background: '#f3f4f6', borderRadius: '6px 6px 0 0' }}>
+              <p style={{ fontSize: 10, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Payment</p>
+              <p style={{ fontSize: 10, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.1em', textAlign: 'right' }}>Amount</p>
+              <p style={{ fontSize: 10, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.1em', textAlign: 'right' }}>Due Date</p>
+            </div>
+
+            {paymentSchedule.map((entry, i) => {
+              const isLast = i === paymentSchedule.length - 1
+              const isInvoiced = !!entry.orderId
+              return (
+                <div
+                  key={entry.id ?? i}
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 110px 130px',
+                    gap: 8,
+                    padding: '10px 12px',
+                    borderBottom: isLast ? 'none' : '1px solid #f3f4f6',
+                    alignItems: 'center',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <p style={{ fontSize: 13, fontWeight: 500, color: '#111' }}>{entry.label}</p>
+                    {isInvoiced && (
+                      <span style={{
+                        fontSize: 9, fontWeight: 600, color: '#059669',
+                        textTransform: 'uppercase', letterSpacing: '0.1em',
+                        background: '#ecfdf5', padding: '2px 6px', borderRadius: 4,
+                        border: '1px solid #a7f3d0',
+                      }}>
+                        Invoiced
+                      </span>
+                    )}
+                  </div>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: '#111', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                    {fmt(entry.amount)}
+                  </p>
+                  <p style={{ fontSize: 12, color: entry.dueDate ? '#6b7280' : '#d1d5db', textAlign: 'right' }}>
+                    {fmtScheduleDate(entry.dueDate)}
+                  </p>
+                </div>
+              )
+            })}
+
+            {/* Schedule total */}
+            <div style={{ height: 1, background: '#e5e7eb', marginTop: 2 }} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px 0', fontSize: 13 }}>
+              <span style={{ fontWeight: 700, color: '#111' }}>Total</span>
+              <span style={{ fontWeight: 800, color: '#111', fontVariantNumeric: 'tabular-nums' }}>
+                {fmt(paymentSchedule.reduce((s, e) => s + (e.amount ?? 0), 0))}
+              </span>
+            </div>
+
+            <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 10, lineHeight: 1.6 }}>
+              Each payment will be invoiced individually on or before its due date. You will receive a separate invoice link for each installment.
+            </p>
+          </div>
+        ) : oneTime > 0 ? (
+          <div style={{ marginBottom: 32, paddingTop: 20, borderTop: '1px solid #f3f4f6' }}>
+            <p style={{ fontSize: 10, fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Payment Terms</p>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 16px', background: '#f9fafb', borderRadius: 8 }}>
+              <div>
+                <p style={{ fontSize: 13, fontWeight: 600, color: '#111', marginBottom: 3 }}>
+                  Single invoice — {fmt(oneTime)}
+                </p>
+                <p style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.6 }}>
+                  A single invoice for the full amount will be issued upon project commencement. Payment is due within the timeframe specified on the invoice.
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         {/* ── NOTES ───────────────────────────────── */}
         {pkg.notes && (

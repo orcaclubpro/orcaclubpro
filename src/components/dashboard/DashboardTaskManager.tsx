@@ -1,29 +1,22 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { useRouter, usePathname } from 'next/navigation'
+import { Fragment, useState, useEffect, useCallback } from 'react'
 import {
   Plus,
-  ListTodo,
   X,
-  ChevronRight,
   ChevronLeft,
   Loader2,
-  Calendar,
-  Flag,
-  CheckCircle,
-  Circle,
   Layers,
   Package,
   Trash2,
   RefreshCw,
   UserCheck,
   Check,
+  Search,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
@@ -31,17 +24,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
-import { createTask, updateTaskStatus } from '@/actions/tasks'
-import { createSprint } from '@/actions/sprints'
 import {
   createPackage,
   updatePackage,
@@ -49,15 +31,12 @@ import {
   assignPackageToClient,
   getClientAccountsList,
 } from '@/actions/packages'
-import { getPriorityConfig, groupTasksByPriority } from '@/lib/utils/taskUtils'
-import { formatDate, isOverdue } from '@/lib/utils/dateUtils'
-import type { Task, Sprint } from '@/types/payload-types'
 import { cn } from '@/lib/utils'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
-type PanelMode = 'tasks' | 'packages'
 type PkgView = 'list' | 'create' | 'edit' | 'assign'
+type CreateStep = 1 | 2 | 3 | 4
 
 interface LocalLineItem {
   _key: string
@@ -97,6 +76,15 @@ interface DashboardTaskManagerProps {
   userRole?: string | null
 }
 
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+const STEPS: { label: string }[] = [
+  { label: 'Basics' },
+  { label: 'Services' },
+  { label: 'Messaging' },
+  { label: 'Review' },
+]
+
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 const newLineItem = (): LocalLineItem => ({
@@ -126,40 +114,25 @@ function pkgTotals(lineItems: PkgTemplate['lineItems'] = []) {
   return { oneTime, monthly, annual }
 }
 
+function localItemTotals(items: LocalLineItem[]) {
+  let oneTime = 0, monthly = 0, annual = 0
+  for (const item of items) {
+    const price = Number(item.price) || 0
+    const qty = Math.max(1, Number(item.quantity) || 1)
+    const total = price * qty
+    if (item.isRecurring) {
+      item.recurringInterval === 'year' ? (annual += total) : (monthly += total)
+    } else {
+      oneTime += total
+    }
+  }
+  return { oneTime, monthly, annual }
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function DashboardTaskManager({ username, userRole }: DashboardTaskManagerProps) {
-  const router = useRouter()
-  const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
-
-  // ── Mode ──────────────────────────────────────────────────────────────────
-  const [mode, setMode] = useState<PanelMode>('tasks')
-
-  // ── Project context ────────────────────────────────────────────────────────
-  const projectPageMatch = pathname?.match(/\/u\/[^/]+\/projects\/([^/]+)/)
-  const currentProjectId = projectPageMatch?.[1] ?? null
-
-  // ── Tasks state ───────────────────────────────────────────────────────────
-  const [tasks, setTasks] = useState<Task[]>([])
-  const [sprints, setSprints] = useState<Sprint[]>([])
-  const [selectedSprint, setSelectedSprint] = useState<string | null>(null)
-  const [showCreateForm, setShowCreateForm] = useState(false)
-  const [showSprintModal, setShowSprintModal] = useState(false)
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
-  const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium')
-  const [dueDate, setDueDate] = useState('')
-  const [taskSprint, setTaskSprint] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [sprintName, setSprintName] = useState('')
-  const [sprintDescription, setSprintDescription] = useState('')
-  const [sprintStartDate, setSprintStartDate] = useState('')
-  const [sprintEndDate, setSprintEndDate] = useState('')
-  const [sprintGoal, setSprintGoal] = useState('')
-  const [isCreatingSprint, setIsCreatingSprint] = useState(false)
-  const [sprintError, setSprintError] = useState<string | null>(null)
 
   // ── Packages state ────────────────────────────────────────────────────────
   const [pkgView, setPkgView] = useState<PkgView>('list')
@@ -173,6 +146,8 @@ export function DashboardTaskManager({ username, userRole }: DashboardTaskManage
   const [pkgLineItems, setPkgLineItems] = useState<LocalLineItem[]>([newLineItem()])
   const [pkgSaving, setPkgSaving] = useState(false)
   const [pkgError, setPkgError] = useState<string | null>(null)
+  const [pkgSearch, setPkgSearch] = useState('')
+  const [createStep, setCreateStep] = useState<CreateStep>(1)
   // Assign state
   const [assigningPkgId, setAssigningPkgId] = useState<string | null>(null)
   const [clientList, setClientList] = useState<ClientOption[]>([])
@@ -185,34 +160,6 @@ export function DashboardTaskManager({ username, userRole }: DashboardTaskManage
   // ── Access gate ───────────────────────────────────────────────────────────
   if (!userRole || userRole === 'client') return null
 
-  // ── Task data fetch ────────────────────────────────────────────────────────
-
-  useEffect(() => {
-    if (!currentProjectId) { setTasks([]); setSprints([]); return }
-    async function fetchData() {
-      try {
-        const [tasksRes, sprintsRes] = await Promise.all([
-          fetch(`/api/projects/${currentProjectId}/tasks`),
-          fetch(`/api/projects/${currentProjectId}/sprints`),
-        ])
-        if (tasksRes.ok) { const d = await tasksRes.json(); setTasks(d.tasks || []) }
-        if (sprintsRes.ok) { const d = await sprintsRes.json(); setSprints(d.sprints || []) }
-      } catch {}
-    }
-    fetchData()
-  }, [currentProjectId])
-
-  useEffect(() => {
-    setTaskSprint(selectedSprint)
-  }, [selectedSprint])
-
-  // Auto-switch to packages mode when opening outside a project
-  useEffect(() => {
-    if (isOpen && !currentProjectId && mode === 'tasks') {
-      setMode('packages')
-    }
-  }, [isOpen]) // eslint-disable-line react-hooks/exhaustive-deps
-
   // ── Package data fetch ─────────────────────────────────────────────────────
 
   const loadPackageTemplates = useCallback(async () => {
@@ -224,54 +171,10 @@ export function DashboardTaskManager({ username, userRole }: DashboardTaskManage
   }, [])
 
   useEffect(() => {
-    if (mode === 'packages' && isOpen && pkgTemplates.length === 0) {
+    if (isOpen && pkgTemplates.length === 0) {
       loadPackageTemplates()
     }
-  }, [mode, isOpen]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── Task handlers ──────────────────────────────────────────────────────────
-
-  const filteredTasks = selectedSprint
-    ? tasks.filter((t) => {
-        const sid = typeof t.sprint === 'object' ? t.sprint?.id : t.sprint
-        return sid === selectedSprint
-      })
-    : tasks
-
-  const groupedTasks = groupTasksByPriority(filteredTasks)
-
-  const handleCreateTask = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!title.trim() || !currentProjectId) { setError(!title.trim() ? 'Task title is required' : 'No project selected'); return }
-    setIsLoading(true)
-    const result = await createTask({ projectId: currentProjectId, title: title.trim(), description: description.trim() || undefined, priority, dueDate: dueDate || undefined, sprintId: taskSprint || undefined })
-    setIsLoading(false)
-    if (!result.success) { setError(result.error || 'Failed to create task'); return }
-    setTitle(''); setDescription(''); setPriority('medium'); setDueDate('')
-    if (!selectedSprint) setTaskSprint(null)
-    setError(null); setShowCreateForm(false)
-    router.refresh()
-  }
-
-  const handleCreateSprint = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!sprintName.trim()) { setSprintError('Sprint name is required'); return }
-    if (!sprintStartDate || !sprintEndDate) { setSprintError('Start and end dates are required'); return }
-    if (new Date(sprintEndDate) <= new Date(sprintStartDate)) { setSprintError('End date must be after start date'); return }
-    if (!currentProjectId) { setSprintError('No project selected'); return }
-    setIsCreatingSprint(true)
-    const result = await createSprint({ projectId: currentProjectId, name: sprintName.trim(), description: sprintDescription.trim() || undefined, startDate: sprintStartDate, endDate: sprintEndDate, goalDescription: sprintGoal.trim() || undefined })
-    setIsCreatingSprint(false)
-    if (!result.success) { setSprintError(result.error || 'Failed to create sprint'); return }
-    setSprintName(''); setSprintDescription(''); setSprintStartDate(''); setSprintEndDate(''); setSprintGoal('')
-    setSprintError(null); setShowSprintModal(false)
-    router.refresh()
-  }
-
-  const handleToggleComplete = async (taskId: string, currentStatus: string) => {
-    await updateTaskStatus({ taskId, status: currentStatus === 'completed' ? 'pending' : 'completed' })
-    router.refresh()
-  }
+  }, [isOpen]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Package handlers ───────────────────────────────────────────────────────
 
@@ -280,6 +183,7 @@ export function DashboardTaskManager({ username, userRole }: DashboardTaskManage
     setPkgName(''); setPkgDescription(''); setPkgCoverMessage(''); setPkgNotes('')
     setPkgLineItems([newLineItem()])
     setPkgError(null)
+    setCreateStep(1)
   }
 
   const handleNewPackage = () => {
@@ -307,15 +211,34 @@ export function DashboardTaskManager({ username, userRole }: DashboardTaskManage
         : [newLineItem()]
     )
     setPkgError(null)
+    setCreateStep(1)
     setPkgView('edit')
+  }
+
+  const handleNextStep = () => {
+    setPkgError(null)
+    if (createStep === 1) {
+      if (!pkgName.trim()) { setPkgError('Package name is required'); return }
+    }
+    if (createStep === 2) {
+      if (pkgLineItems.length === 0) { setPkgError('Add at least one service'); return }
+      for (const item of pkgLineItems) {
+        if (!item.name.trim()) { setPkgError('All services need a name'); return }
+        if (item.price === '' || isNaN(Number(item.price)) || Number(item.price) < 0) {
+          setPkgError('All services need a valid price')
+          return
+        }
+      }
+    }
+    setCreateStep((s) => (s + 1) as CreateStep)
   }
 
   const handleSavePkg = async () => {
     if (!pkgName.trim()) { setPkgError('Package name is required'); return }
-    if (pkgLineItems.length === 0) { setPkgError('Add at least one line item'); return }
+    if (pkgLineItems.length === 0) { setPkgError('Add at least one service'); return }
     for (const item of pkgLineItems) {
-      if (!item.name.trim()) { setPkgError('All line items need a name'); return }
-      if (item.price === '' || isNaN(Number(item.price)) || Number(item.price) < 0) { setPkgError('All line items need a valid price'); return }
+      if (!item.name.trim()) { setPkgError('All services need a name'); return }
+      if (item.price === '' || isNaN(Number(item.price)) || Number(item.price) < 0) { setPkgError('All services need a valid price'); return }
     }
 
     const lineItemsPayload = pkgLineItems.map((item) => ({
@@ -375,29 +298,34 @@ export function DashboardTaskManager({ username, userRole }: DashboardTaskManage
   const updateLineItem = (key: string, field: keyof LocalLineItem, value: any) =>
     setPkgLineItems((items) => items.map((i) => (i._key === key ? { ...i, [field]: value } : i)))
 
-  // ── Derived values for packages mode ──────────────────────────────────────
+  // ── Derived values ────────────────────────────────────────────────────────
 
   const assigningPkg = pkgTemplates.find((p) => p.id === assigningPkgId)
+
+  const filteredPkgTemplates = pkgSearch.trim()
+    ? pkgTemplates.filter((p) =>
+        p.name.toLowerCase().includes(pkgSearch.toLowerCase()) ||
+        (p.description && p.description.toLowerCase().includes(pkgSearch.toLowerCase()))
+      )
+    : pkgTemplates
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <>
-      {/* FAB — sits above the floating nav (z-40) but below sidebars (z-55 mobile) */}
+      {/* FAB */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          'fixed bottom-28 right-4 md:bottom-8 md:right-8 z-[60] size-14 md:size-16 rounded-full bg-intelligence-cyan text-black shadow-2xl shadow-intelligence-cyan/30',
+          'fixed bottom-28 right-4 md:bottom-8 md:right-8 z-[53] size-14 md:size-16 rounded-full bg-intelligence-cyan text-black shadow-2xl shadow-intelligence-cyan/30',
           'hover:scale-110 active:scale-95 transition-all duration-300 flex items-center justify-center group',
           isOpen && 'rotate-45'
         )}
       >
         {isOpen ? (
           <X className="size-7" />
-        ) : mode === 'packages' ? (
-          <Package className="size-7 group-hover:scale-110 transition-transform" />
         ) : (
-          <ListTodo className="size-7 group-hover:scale-110 transition-transform" />
+          <Package className="size-7 group-hover:scale-110 transition-transform" />
         )}
       </button>
 
@@ -410,263 +338,73 @@ export function DashboardTaskManager({ username, userRole }: DashboardTaskManage
         )}
       >
         {/* Panel Header */}
-        <div className="relative overflow-hidden border-b border-white/[0.08] p-5 pb-0 shrink-0">
+        <div className="relative overflow-hidden border-b border-white/[0.08] p-5 shrink-0">
           <div className="absolute top-0 right-0 w-48 h-48 bg-intelligence-cyan/[0.05] rounded-full blur-3xl pointer-events-none" />
-          <div className="relative z-10">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-intelligence-cyan/10 border border-intelligence-cyan/20">
-                  {mode === 'packages'
-                    ? <Package className="size-5 text-intelligence-cyan" />
-                    : <ListTodo className="size-5 text-intelligence-cyan" />
-                  }
-                </div>
-                <h2 className="text-lg font-bold text-white">
-                  {mode === 'packages' ? 'Packages' : 'Task Manager'}
-                </h2>
-              </div>
-              <button onClick={() => setIsOpen(false)} className="p-2 rounded-lg hover:bg-white/[0.05] transition-colors">
-                <X className="size-5 text-gray-400" />
-              </button>
+          <div className="relative z-10 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <h2 className="text-base font-bold gradient-text tracking-widest">PACKAGE BUILDER</h2>
+              {pkgTemplates.length > 0 && (
+                <span className="text-[10px] bg-white/[0.08] text-gray-400 rounded px-1.5 py-0.5">{pkgTemplates.length}</span>
+              )}
             </div>
-
-            {/* Mode tabs */}
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setMode('tasks')}
-                className={cn(
-                  'flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-t-lg transition-colors border-b-2',
-                  mode === 'tasks'
-                    ? 'text-white border-intelligence-cyan bg-white/[0.03]'
-                    : 'text-gray-500 border-transparent hover:text-gray-300'
-                )}
-              >
-                <ListTodo className="size-3.5" />
-                Tasks
-                {currentProjectId && tasks.length > 0 && (
-                  <span className="text-[10px] bg-white/[0.08] text-gray-400 rounded px-1">{tasks.length}</span>
-                )}
-              </button>
-              <button
-                onClick={() => {
-                  setMode('packages')
-                  if (pkgTemplates.length === 0) loadPackageTemplates()
-                }}
-                className={cn(
-                  'flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-t-lg transition-colors border-b-2',
-                  mode === 'packages'
-                    ? 'text-white border-intelligence-cyan bg-white/[0.03]'
-                    : 'text-gray-500 border-transparent hover:text-gray-300'
-                )}
-              >
-                <Package className="size-3.5" />
-                Packages
-                {pkgTemplates.length > 0 && (
-                  <span className="text-[10px] bg-white/[0.08] text-gray-400 rounded px-1">{pkgTemplates.length}</span>
-                )}
-              </button>
-            </div>
+            <button onClick={() => setIsOpen(false)} className="p-2 rounded-lg hover:bg-white/[0.05] transition-colors">
+              <X className="size-5 text-gray-400" />
+            </button>
           </div>
         </div>
 
-        {/* ── Tasks mode ── */}
-        {mode === 'tasks' && (
-          <>
-            {!currentProjectId ? (
-              <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
-                <div className="p-4 rounded-xl bg-white/[0.04] border border-white/[0.08] mb-4">
-                  <ListTodo className="size-8 text-gray-600" />
-                </div>
-                <p className="text-sm font-semibold text-white mb-1">No project selected</p>
-                <p className="text-xs text-gray-600 max-w-xs">Navigate to a project page to create and manage tasks and sprints.</p>
-              </div>
-            ) : (
-              <>
-                {/* Sprint selector + task creation header */}
-                <div className="p-5 border-b border-white/[0.06] shrink-0 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-xs text-gray-500 uppercase tracking-wider">Filter by Sprint</Label>
-                    <Dialog open={showSprintModal} onOpenChange={setShowSprintModal}>
-                      <DialogTrigger asChild>
-                        <button className="text-xs text-intelligence-cyan hover:text-intelligence-cyan/80 transition-colors flex items-center gap-1">
-                          <Plus className="size-3" />
-                          New Sprint
-                        </button>
-                      </DialogTrigger>
-                      <DialogContent className="bg-black/95 border-white/[0.08] backdrop-blur-xl max-w-md">
-                        <DialogHeader>
-                          <DialogTitle className="text-xl font-bold text-white flex items-center gap-2">
-                            <Layers className="size-5 text-intelligence-cyan" />
-                            Create Sprint
-                          </DialogTitle>
-                          <DialogDescription className="text-gray-400">Create a new sprint to organize tasks</DialogDescription>
-                        </DialogHeader>
-                        <form onSubmit={handleCreateSprint} className="space-y-4 pt-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="sprintName" className="text-sm text-gray-300">Sprint Name <span className="text-red-400">*</span></Label>
-                            <Input id="sprintName" value={sprintName} onChange={(e) => setSprintName(e.target.value)} placeholder="e.g., Sprint 1, Q1 2026" className="bg-white/[0.03] border-white/[0.08] text-white" disabled={isCreatingSprint} required />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="sprintDesc" className="text-sm text-gray-300">Description</Label>
-                            <Textarea id="sprintDesc" value={sprintDescription} onChange={(e) => setSprintDescription(e.target.value)} placeholder="Sprint objectives..." rows={2} className="bg-white/[0.03] border-white/[0.08] text-white resize-none" disabled={isCreatingSprint} />
-                          </div>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-2">
-                              <Label htmlFor="sprintStart" className="text-sm text-gray-300">Start Date <span className="text-red-400">*</span></Label>
-                              <Input id="sprintStart" type="date" value={sprintStartDate} onChange={(e) => setSprintStartDate(e.target.value)} className="bg-white/[0.03] border-white/[0.08] text-white" disabled={isCreatingSprint} required />
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="sprintEnd" className="text-sm text-gray-300">End Date <span className="text-red-400">*</span></Label>
-                              <Input id="sprintEnd" type="date" value={sprintEndDate} onChange={(e) => setSprintEndDate(e.target.value)} className="bg-white/[0.03] border-white/[0.08] text-white" disabled={isCreatingSprint} required />
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="sprintGoal" className="text-sm text-gray-300">Sprint Goal</Label>
-                            <Textarea id="sprintGoal" value={sprintGoal} onChange={(e) => setSprintGoal(e.target.value)} placeholder="What should be accomplished..." rows={2} className="bg-white/[0.03] border-white/[0.08] text-white resize-none" disabled={isCreatingSprint} />
-                          </div>
-                          {sprintError && <div className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded p-3">{sprintError}</div>}
-                          <div className="flex gap-3 pt-2">
-                            <Button type="button" variant="outline" onClick={() => setShowSprintModal(false)} disabled={isCreatingSprint} className="flex-1 bg-white/[0.03] border-white/[0.08] hover:bg-white/[0.05]">Cancel</Button>
-                            <Button type="submit" disabled={isCreatingSprint} className="flex-1 bg-intelligence-cyan text-black hover:bg-intelligence-cyan/90">
-                              {isCreatingSprint ? <><Loader2 className="size-4 mr-2 animate-spin" />Creating...</> : <><Plus className="size-4 mr-2" />Create Sprint</>}
-                            </Button>
-                          </div>
-                        </form>
-                      </DialogContent>
-                    </Dialog>
-                  </div>
+        {/* Content area */}
+        <div className="flex-1 overflow-hidden flex flex-col">
 
-                  <Select value={selectedSprint || 'all'} onValueChange={(v) => setSelectedSprint(v === 'all' ? null : v)}>
-                    <SelectTrigger className="bg-white/[0.03] border-white/[0.08] text-white">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-black/95 border-white/[0.08] backdrop-blur-xl z-[150]">
-                      <SelectItem value="all">All Tasks</SelectItem>
-                      {sprints.map((sprint) => (
-                        <SelectItem key={sprint.id} value={sprint.id}>{sprint.name} ({sprint.status})</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  {!showCreateForm && (
-                    <Button onClick={() => setShowCreateForm(true)} className="w-full bg-intelligence-cyan text-black hover:bg-intelligence-cyan/90">
-                      <Plus className="size-4 mr-2" />New Task
-                    </Button>
-                  )}
-                </div>
-
-                {/* Task scrollable area */}
-                <div className="flex-1 overflow-y-auto p-5 space-y-5">
-                  {showCreateForm && (
-                    <form onSubmit={handleCreateTask} className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-4 space-y-4">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-semibold text-white">New Task</h3>
-                        <button type="button" onClick={() => { setShowCreateForm(false); setError(null) }} className="text-gray-400 hover:text-white"><X className="size-4" /></button>
-                      </div>
-                      <div className="space-y-1">
-                        <Label htmlFor="title" className="text-xs text-gray-400">Title *</Label>
-                        <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Task title..." className="bg-white/[0.03] border-white/[0.08] text-white text-sm" disabled={isLoading} required />
-                      </div>
-                      <div className="space-y-1">
-                        <Label htmlFor="desc" className="text-xs text-gray-400">Description</Label>
-                        <Textarea id="desc" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Task details..." rows={3} className="bg-white/[0.03] border-white/[0.08] text-white text-sm resize-none" disabled={isLoading} />
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                          <Label className="text-xs text-gray-400">Priority</Label>
-                          <Select value={priority} onValueChange={(v) => setPriority(v as any)} disabled={isLoading}>
-                            <SelectTrigger className="bg-white/[0.03] border-white/[0.08] text-white text-sm"><SelectValue /></SelectTrigger>
-                            <SelectContent className="bg-black/95 border-white/[0.08] z-[150]">
-                              <SelectItem value="low">Low</SelectItem>
-                              <SelectItem value="medium">Medium</SelectItem>
-                              <SelectItem value="high">High</SelectItem>
-                              <SelectItem value="urgent">Urgent</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-1">
-                          <Label htmlFor="due" className="text-xs text-gray-400">Due Date</Label>
-                          <Input id="due" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="bg-white/[0.03] border-white/[0.08] text-white text-sm" disabled={isLoading} />
-                        </div>
-                      </div>
-                      {!selectedSprint && (
-                        <div className="space-y-1">
-                          <Label className="text-xs text-gray-400">Sprint (optional)</Label>
-                          <Select value={taskSprint || 'none'} onValueChange={(v) => setTaskSprint(v === 'none' ? null : v)} disabled={isLoading}>
-                            <SelectTrigger className="bg-white/[0.03] border-white/[0.08] text-white text-sm"><SelectValue /></SelectTrigger>
-                            <SelectContent className="bg-black/95 border-white/[0.08] z-[150]">
-                              <SelectItem value="none">No Sprint</SelectItem>
-                              {sprints.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      )}
-                      {error && <div className="text-xs text-red-400 bg-red-400/10 border border-red-400/20 rounded p-2">{error}</div>}
-                      <Button type="submit" disabled={isLoading} className="w-full bg-intelligence-cyan text-black hover:bg-intelligence-cyan/90 text-sm">
-                        {isLoading ? <><Loader2 className="size-4 mr-2 animate-spin" />Creating...</> : <><Plus className="size-4 mr-2" />Create Task</>}
-                      </Button>
-                    </form>
-                  )}
-
-                  {filteredTasks.length === 0 ? (
-                    <div className="text-center py-12 text-gray-500">
-                      <ListTodo className="size-12 mx-auto mb-4 opacity-50" />
-                      <p className="text-sm">{selectedSprint ? 'No tasks in this sprint' : 'No tasks yet'}</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-6">
-                      {groupedTasks.urgent.length > 0 && <TaskGroup title="Urgent" tasks={groupedTasks.urgent} onToggleComplete={handleToggleComplete} />}
-                      {groupedTasks.high.length > 0 && <TaskGroup title="High Priority" tasks={groupedTasks.high} onToggleComplete={handleToggleComplete} />}
-                      {groupedTasks.medium.length > 0 && <TaskGroup title="Medium Priority" tasks={groupedTasks.medium} onToggleComplete={handleToggleComplete} />}
-                      {groupedTasks.low.length > 0 && <TaskGroup title="Low Priority" tasks={groupedTasks.low} onToggleComplete={handleToggleComplete} />}
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-          </>
-        )}
-
-        {/* ── Packages mode ── */}
-        {mode === 'packages' && (
-          <div className="flex-1 overflow-y-auto">
-
-            {/* LIST view */}
-            {pkgView === 'list' && (
-              <div className="p-5 space-y-4">
+          {/* LIST view */}
+          {pkgView === 'list' && (
+            <div className="flex-1 flex flex-col overflow-hidden">
+              {/* Scrollable content */}
+              <div className="flex-1 overflow-y-auto p-5 space-y-4 pb-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Templates</span>
                     {pkgTemplates.length > 0 && <span className="text-[10px] text-gray-600 bg-white/[0.04] border border-white/[0.08] rounded px-1.5 py-0.5">{pkgTemplates.length}</span>}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button onClick={loadPackageTemplates} className="p-1.5 rounded text-gray-600 hover:text-gray-300 hover:bg-white/[0.04] transition-colors" title="Refresh">
-                      <RefreshCw className={cn('size-3.5', pkgListLoading && 'animate-spin')} />
-                    </button>
-                    <Button onClick={handleNewPackage} size="sm" className="h-8 text-xs bg-intelligence-cyan text-black hover:bg-intelligence-cyan/90 gap-1.5">
-                      <Plus className="size-3.5" />New Package
-                    </Button>
-                  </div>
+                  <button onClick={loadPackageTemplates} className="p-1.5 rounded text-gray-600 hover:text-gray-300 hover:bg-white/[0.04] transition-colors" title="Refresh">
+                    <RefreshCw className={cn('size-3.5', pkgListLoading && 'animate-spin')} />
+                  </button>
                 </div>
+
+                {pkgTemplates.length > 0 && (
+                  <div className="flex items-center gap-2 bg-white/[0.03] border border-white/[0.08] rounded-lg px-3 py-2">
+                    <Search className="size-3.5 text-gray-600 shrink-0" />
+                    <input
+                      value={pkgSearch}
+                      onChange={(e) => setPkgSearch(e.target.value)}
+                      placeholder="Search templates…"
+                      className="flex-1 bg-transparent text-sm text-white placeholder:text-gray-600 outline-none"
+                    />
+                    {pkgSearch && (
+                      <button onClick={() => setPkgSearch('')} className="text-gray-600 hover:text-gray-300 transition-colors">
+                        <X className="size-3" />
+                      </button>
+                    )}
+                  </div>
+                )}
 
                 {pkgListLoading ? (
                   <div className="flex items-center justify-center py-10">
                     <Loader2 className="size-6 text-gray-600 animate-spin" />
                   </div>
                 ) : pkgTemplates.length === 0 ? (
-                  <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] py-10 px-6 text-center space-y-3">
-                    <div className="inline-flex p-3 rounded-xl bg-white/[0.04] border border-white/[0.08]">
-                      <Package className="size-6 text-gray-600" />
-                    </div>
-                    <p className="text-sm font-semibold text-white">No package templates</p>
-                    <p className="text-xs text-gray-600 max-w-xs mx-auto">Create reusable service packages with line items that you can assign to clients as proposals.</p>
-                    <Button onClick={handleNewPackage} size="sm" className="bg-intelligence-cyan text-black hover:bg-intelligence-cyan/90 gap-1.5 mt-2">
-                      <Plus className="size-3.5" />Create First Package
-                    </Button>
+                  <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] py-10 px-6 text-center space-y-2">
+                    <p className="text-sm font-semibold text-white">No templates yet</p>
+                    <p className="text-xs text-gray-600 max-w-xs mx-auto">Build your first reusable service package below.</p>
+                  </div>
+                ) : filteredPkgTemplates.length === 0 ? (
+                  <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] py-8 px-6 text-center space-y-1">
+                    <p className="text-sm text-white/40">No templates match</p>
+                    <p className="text-xs text-gray-600">&ldquo;{pkgSearch}&rdquo;</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {pkgTemplates.map((pkg) => {
+                    {filteredPkgTemplates.map((pkg) => {
                       const { oneTime, monthly, annual } = pkgTotals(pkg.lineItems)
                       return (
                         <div key={pkg.id} className="group rounded-xl border border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.04] transition-colors overflow-hidden">
@@ -708,183 +446,425 @@ export function DashboardTaskManager({ username, userRole }: DashboardTaskManage
                   </div>
                 )}
               </div>
-            )}
 
-            {/* CREATE / EDIT view */}
-            {(pkgView === 'create' || pkgView === 'edit') && (
-              <div className="p-5 space-y-4">
-                {/* Back + title */}
-                <div className="flex items-center gap-3">
-                  <button onClick={() => { setPkgView('list'); resetPkgForm() }} className="p-1.5 rounded-lg text-gray-500 hover:text-gray-200 hover:bg-white/[0.05] transition-colors">
-                    <ChevronLeft className="size-4" />
-                  </button>
-                  <h3 className="text-sm font-semibold text-white">{pkgView === 'create' ? 'New Package Template' : 'Edit Package'}</h3>
-                </div>
-
-                {/* Name */}
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-gray-400">Name <span className="text-red-400">*</span></Label>
-                  <Input value={pkgName} onChange={(e) => setPkgName(e.target.value)} placeholder="e.g., Launch Package" className="bg-white/[0.03] border-white/[0.08] text-white text-sm" />
-                </div>
-
-                {/* Description */}
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-gray-400">Description <span className="text-gray-600">(optional)</span></Label>
-                  <Textarea value={pkgDescription} onChange={(e) => setPkgDescription(e.target.value)} placeholder="Brief overview of this package..." rows={2} className="bg-white/[0.03] border-white/[0.08] text-white text-sm resize-none" />
-                </div>
-
-                {/* Cover message */}
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-gray-400">Cover Message <span className="text-gray-600">(shown in proposal PDF)</span></Label>
-                  <Textarea value={pkgCoverMessage} onChange={(e) => setPkgCoverMessage(e.target.value)} placeholder="Introductory message to the client..." rows={3} className="bg-white/[0.03] border-white/[0.08] text-white text-sm resize-none" />
-                </div>
-
-                {/* Line Items */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-xs text-gray-400">Line Items <span className="text-red-400">*</span></Label>
-                    <span className="text-[10px] text-gray-600">{pkgLineItems.length} item{pkgLineItems.length !== 1 ? 's' : ''}</span>
-                  </div>
-
-                  <div className="space-y-2">
-                    {pkgLineItems.map((item, idx) => (
-                      <LineItemRow
-                        key={item._key}
-                        item={item}
-                        index={idx}
-                        onUpdate={(field, value) => updateLineItem(item._key, field, value)}
-                        onRemove={() => setPkgLineItems((items) => items.filter((i) => i._key !== item._key))}
-                        canRemove={pkgLineItems.length > 1}
-                      />
-                    ))}
-                  </div>
-
+              {/* Bottom CTA — Build a Package */}
+              <div className="shrink-0 px-4 pb-6 pt-3 border-t border-white/[0.05]">
+                <div className="relative group">
+                  {/* Ambient glow — blooms on hover */}
+                  <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-[#67e8f9]/25 to-[#3b82f6]/25 blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+                  {/* Soft pulse ring */}
+                  <div className="absolute inset-0 rounded-xl opacity-30 animate-pulse bg-gradient-to-r from-[#67e8f9]/20 to-[#3b82f6]/20 pointer-events-none" />
                   <button
-                    onClick={() => setPkgLineItems((items) => [...items, newLineItem()])}
-                    className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-lg border border-dashed border-white/[0.12] text-xs text-gray-500 hover:text-gray-300 hover:border-white/[0.25] hover:bg-white/[0.02] transition-all"
+                    onClick={handleNewPackage}
+                    className="relative w-full overflow-hidden rounded-xl py-4 font-semibold text-sm text-black flex items-center justify-center gap-2.5 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-[#67e8f9]/20"
+                    style={{ background: 'linear-gradient(135deg, #67e8f9 0%, #38bdf8 50%, #3b82f6 100%)' }}
                   >
-                    <Plus className="size-3.5" />
-                    Add Line Item
+                    {/* Shimmer sweep on hover */}
+                    <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/25 to-transparent pointer-events-none" />
+                    <Plus className="size-4 relative z-10 shrink-0" />
+                    <span className="relative z-10 tracking-wide uppercase text-xs font-bold">Build a Package</span>
                   </button>
-                </div>
-
-                {/* Notes */}
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-gray-400">Internal Notes <span className="text-gray-600">(optional)</span></Label>
-                  <Textarea value={pkgNotes} onChange={(e) => setPkgNotes(e.target.value)} placeholder="Internal notes about this package..." rows={2} className="bg-white/[0.03] border-white/[0.08] text-white text-sm resize-none" />
-                </div>
-
-                {pkgError && <div className="text-xs text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg p-3">{pkgError}</div>}
-
-                {/* Actions */}
-                <div className="flex gap-2 pt-1">
-                  <Button variant="ghost" onClick={() => { setPkgView('list'); resetPkgForm() }} disabled={pkgSaving} className="flex-1 text-gray-400 hover:text-gray-200 hover:bg-white/[0.04] border border-white/[0.08]">
-                    Cancel
-                  </Button>
-                  <Button onClick={handleSavePkg} disabled={pkgSaving} className="flex-1 bg-intelligence-cyan text-black hover:bg-intelligence-cyan/90 font-medium gap-1.5">
-                    {pkgSaving ? <><Loader2 className="size-3.5 animate-spin" />Saving...</> : pkgView === 'create' ? 'Create Template' : 'Save Changes'}
-                  </Button>
                 </div>
               </div>
-            )}
+            </div>
+          )}
 
-            {/* ASSIGN view */}
-            {pkgView === 'assign' && (
-              <div className="p-5 space-y-5">
+          {/* CREATE / EDIT view — step wizard */}
+          {(pkgView === 'create' || pkgView === 'edit') && (
+            <>
+              {/* Step indicator area */}
+              <div className="px-5 py-4 border-b border-white/[0.05] shrink-0 space-y-4">
                 {/* Back + title */}
                 <div className="flex items-center gap-3">
-                  <button onClick={() => { setPkgView('list'); setAssigningPkgId(null); setAssignSuccess(false) }} className="p-1.5 rounded-lg text-gray-500 hover:text-gray-200 hover:bg-white/[0.05] transition-colors">
+                  <button
+                    onClick={() => { setPkgView('list'); resetPkgForm() }}
+                    className="p-1.5 rounded-lg text-gray-500 hover:text-gray-200 hover:bg-white/[0.05] transition-colors"
+                  >
                     <ChevronLeft className="size-4" />
                   </button>
-                  <h3 className="text-sm font-semibold text-white">Assign to Client</h3>
+                  <h3 className="text-sm font-semibold text-white">
+                    {pkgView === 'create' ? 'New Package Template' : 'Edit Package'}
+                  </h3>
                 </div>
 
-                {/* Package summary card */}
-                {assigningPkg && (
-                  <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-4 space-y-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-white">{assigningPkg.name}</p>
-                        {assigningPkg.description && <p className="text-xs text-gray-600 truncate mt-0.5">{assigningPkg.description}</p>}
-                      </div>
-                      <div className="p-1.5 rounded-lg bg-intelligence-cyan/[0.08] border border-intelligence-cyan/[0.15]">
-                        <Package className="size-4 text-intelligence-cyan" />
-                      </div>
-                    </div>
-                    {(() => {
-                      const { oneTime, monthly, annual } = pkgTotals(assigningPkg.lineItems)
-                      return (
-                        <div className="flex items-center gap-3 text-xs text-gray-500 flex-wrap pt-1 border-t border-white/[0.06]">
-                          <span>{assigningPkg.lineItems?.length ?? 0} line items</span>
-                          {oneTime > 0 && <span className="font-mono text-white">{fmtPrice(oneTime)} one-time</span>}
-                          {monthly > 0 && <span className="font-mono text-intelligence-cyan">{fmtPrice(monthly)}/mo</span>}
-                          {annual > 0 && <span className="font-mono text-intelligence-cyan">{fmtPrice(annual)}/yr</span>}
-                        </div>
-                      )
-                    })()}
-                  </div>
-                )}
-
-                <p className="text-xs text-gray-500 leading-relaxed">
-                  A frozen snapshot of this template will be created as a proposal and assigned to the selected client. They&apos;ll be able to view it in their portal.
-                </p>
-
-                {/* Client selector */}
-                <div className="space-y-2">
-                  <Label className="text-xs text-gray-400">Select Client <span className="text-red-400">*</span></Label>
-                  {clientListLoading ? (
-                    <div className="flex items-center gap-2 py-3 text-gray-600 text-sm">
-                      <Loader2 className="size-4 animate-spin" />
-                      Loading clients...
-                    </div>
-                  ) : clientList.length === 0 ? (
-                    <p className="text-xs text-gray-600 py-2">No client accounts found.</p>
-                  ) : (
-                    <div className="space-y-1.5 max-h-52 overflow-y-auto">
-                      {clientList.map((client) => (
-                        <button
-                          key={client.id}
-                          type="button"
-                          onClick={() => setSelectedClientId(client.id)}
+                {/* Step indicator */}
+                <div className="flex items-start">
+                  {STEPS.map((s, i) => (
+                    <Fragment key={s.label}>
+                      <div className="flex flex-col items-center shrink-0">
+                        <div
                           className={cn(
-                            'w-full text-left px-3 py-2.5 rounded-lg border text-sm transition-all',
-                            selectedClientId === client.id
-                              ? 'border-intelligence-cyan/50 bg-intelligence-cyan/[0.06] text-white'
-                              : 'border-white/[0.08] bg-white/[0.02] text-gray-300 hover:bg-white/[0.05] hover:border-white/[0.15]'
+                            'size-7 rounded-full flex items-center justify-center text-xs font-semibold transition-all',
+                            i + 1 < createStep
+                              ? 'bg-[#67e8f9]/20 text-[#67e8f9]'
+                              : i + 1 === createStep
+                              ? 'bg-[#67e8f9]/20 text-[#67e8f9] ring-2 ring-[#67e8f9]/40'
+                              : 'bg-white/[0.06] text-gray-600'
                           )}
                         >
-                          <span className="font-medium">{client.name}</span>
-                          {client.company && <span className="text-xs text-gray-500 ml-1.5">{client.company}</span>}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                          {i + 1 < createStep ? <Check className="size-3.5" /> : i + 1}
+                        </div>
+                        <span
+                          className={cn(
+                            'text-[9px] mt-1.5 font-medium tracking-wide',
+                            i + 1 <= createStep ? 'text-[#67e8f9]' : 'text-gray-600'
+                          )}
+                        >
+                          {s.label}
+                        </span>
+                      </div>
+                      {i < STEPS.length - 1 && (
+                        <div
+                          className={cn(
+                            'flex-1 h-px mt-3.5 mx-1.5 transition-colors',
+                            i + 1 < createStep ? 'bg-[#67e8f9]/40' : 'bg-white/[0.08]'
+                          )}
+                        />
+                      )}
+                    </Fragment>
+                  ))}
                 </div>
+              </div>
 
-                {assignError && <div className="text-xs text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg p-3">{assignError}</div>}
+              {/* Step content — key causes re-mount + animation between steps */}
+              <div
+                key={createStep}
+                className="flex-1 overflow-y-auto p-5 animate-in fade-in slide-in-from-right-3 duration-200"
+              >
+                {/* Step 1 — Basics */}
+                {createStep === 1 && (
+                  <div className="space-y-6">
+                    <div className="space-y-3">
+                      <p className="text-[10px] text-gray-600 uppercase tracking-widest font-semibold">
+                        Package Name <span className="text-red-400">*</span>
+                      </p>
+                      <input
+                        autoFocus
+                        value={pkgName}
+                        onChange={(e) => setPkgName(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleNextStep()}
+                        placeholder="e.g. Launch Package"
+                        className="w-full bg-transparent text-2xl font-light text-white placeholder:text-white/[0.15] outline-none leading-snug"
+                      />
+                      <div className="h-px bg-white/[0.08]" />
+                    </div>
 
-                {assignSuccess && (
-                  <div className="flex items-center gap-2 text-sm text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 rounded-lg p-3">
-                    <Check className="size-4 shrink-0" />
-                    Proposal created successfully!
+                    <div className="space-y-2">
+                      <p className="text-[10px] text-gray-600 uppercase tracking-widest font-semibold">
+                        Description <span className="normal-case text-gray-700">(optional)</span>
+                      </p>
+                      <Textarea
+                        value={pkgDescription}
+                        onChange={(e) => setPkgDescription(e.target.value)}
+                        placeholder="Brief overview of what this package includes..."
+                        rows={4}
+                        className="bg-white/[0.03] border-white/[0.08] text-white text-sm resize-none"
+                      />
+                    </div>
+
+                    <div className="rounded-xl bg-white/[0.02] border border-white/[0.06] p-4">
+                      <p className="text-xs text-gray-600 leading-relaxed">
+                        Create a reusable template with services and pricing. You can assign it to any client as a proposal they&apos;ll see in their portal.
+                      </p>
+                    </div>
                   </div>
                 )}
 
-                <Button
-                  onClick={handleAssign}
-                  disabled={!selectedClientId || assigning || assignSuccess}
-                  className="w-full bg-intelligence-cyan text-black hover:bg-intelligence-cyan/90 font-medium gap-2"
-                >
-                  {assigning ? (
-                    <><Loader2 className="size-4 animate-spin" />Assigning...</>
-                  ) : (
-                    <><UserCheck className="size-4" />Create Proposal for Client</>
-                  )}
-                </Button>
+                {/* Step 2 — Services */}
+                {createStep === 2 && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] text-gray-600 uppercase tracking-widest font-semibold">
+                        Services <span className="text-red-400">*</span>
+                      </p>
+                      <span className="text-[10px] text-gray-600 bg-white/[0.04] border border-white/[0.06] rounded px-1.5 py-0.5">
+                        {pkgLineItems.length} item{pkgLineItems.length !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+
+                    <div className="space-y-2">
+                      {pkgLineItems.map((item, idx) => (
+                        <LineItemRow
+                          key={item._key}
+                          item={item}
+                          index={idx}
+                          onUpdate={(field, value) => updateLineItem(item._key, field, value)}
+                          onRemove={() => setPkgLineItems((items) => items.filter((i) => i._key !== item._key))}
+                          canRemove={pkgLineItems.length > 1}
+                        />
+                      ))}
+                    </div>
+
+                    <button
+                      onClick={() => setPkgLineItems((items) => [...items, newLineItem()])}
+                      className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-lg border border-dashed border-white/[0.12] text-xs text-gray-500 hover:text-gray-300 hover:border-white/[0.25] hover:bg-white/[0.02] transition-all"
+                    >
+                      <Plus className="size-3.5" />
+                      Add Service
+                    </button>
+                  </div>
+                )}
+
+                {/* Step 3 — Messaging */}
+                {createStep === 3 && (
+                  <div className="space-y-5">
+                    <p className="text-xs text-gray-600 leading-relaxed">
+                      These fields are optional — add context and polish to the proposal PDF. Skip ahead to review if not needed.
+                    </p>
+
+                    <div className="space-y-2">
+                      <p className="text-[10px] text-gray-600 uppercase tracking-widest font-semibold">
+                        Cover Message <span className="normal-case text-gray-700">(shown in proposal PDF)</span>
+                      </p>
+                      <Textarea
+                        // eslint-disable-next-line jsx-a11y/no-autofocus
+                        autoFocus
+                        value={pkgCoverMessage}
+                        onChange={(e) => setPkgCoverMessage(e.target.value)}
+                        placeholder="Introductory message to the client..."
+                        rows={5}
+                        className="bg-white/[0.03] border-white/[0.08] text-white text-sm resize-none"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <p className="text-[10px] text-gray-600 uppercase tracking-widest font-semibold">
+                        Internal Notes <span className="normal-case text-gray-700">(not visible to client)</span>
+                      </p>
+                      <Textarea
+                        value={pkgNotes}
+                        onChange={(e) => setPkgNotes(e.target.value)}
+                        placeholder="Notes about this package for internal use..."
+                        rows={3}
+                        className="bg-white/[0.03] border-white/[0.08] text-white text-sm resize-none"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 4 — Review */}
+                {createStep === 4 && (
+                  <div className="space-y-4">
+                    {/* Package name + description */}
+                    <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-4 space-y-1">
+                      <p className="text-base font-semibold text-white">{pkgName}</p>
+                      {pkgDescription && (
+                        <p className="text-xs text-gray-500 leading-relaxed">{pkgDescription}</p>
+                      )}
+                    </div>
+
+                    {/* Services list + totals */}
+                    <div className="space-y-2">
+                      <p className="text-[10px] text-gray-600 uppercase tracking-widest font-semibold">
+                        {pkgLineItems.length} service{pkgLineItems.length !== 1 ? 's' : ''}
+                      </p>
+                      <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] divide-y divide-white/[0.05] overflow-hidden">
+                        {pkgLineItems.map((item) => {
+                          const price = Number(item.price) || 0
+                          const qty = Math.max(1, Number(item.quantity) || 1)
+                          return (
+                            <div key={item._key} className="flex items-center justify-between px-4 py-2.5">
+                              <div className="min-w-0 mr-3">
+                                <p className="text-sm text-white truncate">{item.name}</p>
+                                {item.isRecurring && (
+                                  <p className="text-[10px] text-[#67e8f9]/70 mt-0.5">
+                                    {item.recurringInterval === 'year' ? 'Annual' : 'Monthly'}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="text-right shrink-0">
+                                <p className="text-sm font-mono text-white">{fmtPrice(price * qty)}</p>
+                                {qty > 1 && (
+                                  <p className="text-[10px] text-gray-600">×{qty} @ {fmtPrice(price)}</p>
+                                )}
+                              </div>
+                            </div>
+                          )
+                        })}
+                        {/* Totals row */}
+                        {(() => {
+                          const { oneTime, monthly, annual } = localItemTotals(pkgLineItems)
+                          return (
+                            <div className="px-4 py-3 bg-white/[0.02] flex items-center gap-4 flex-wrap">
+                              {oneTime > 0 && (
+                                <div className="text-xs">
+                                  <span className="text-gray-600">One-time </span>
+                                  <span className="font-mono text-white font-medium">{fmtPrice(oneTime)}</span>
+                                </div>
+                              )}
+                              {monthly > 0 && (
+                                <div className="text-xs">
+                                  <span className="text-gray-600">Monthly </span>
+                                  <span className="font-mono text-[#67e8f9] font-medium">{fmtPrice(monthly)}/mo</span>
+                                </div>
+                              )}
+                              {annual > 0 && (
+                                <div className="text-xs">
+                                  <span className="text-gray-600">Annual </span>
+                                  <span className="font-mono text-[#67e8f9] font-medium">{fmtPrice(annual)}/yr</span>
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })()}
+                      </div>
+                    </div>
+
+                    {/* Cover message snippet */}
+                    {pkgCoverMessage && (
+                      <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 space-y-1">
+                        <p className="text-[10px] text-gray-600 uppercase tracking-widest font-semibold">Cover Message</p>
+                        <p className="text-xs text-gray-400 leading-relaxed line-clamp-3">{pkgCoverMessage}</p>
+                      </div>
+                    )}
+
+                    {/* Notes snippet */}
+                    {pkgNotes && (
+                      <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 space-y-1">
+                        <p className="text-[10px] text-gray-600 uppercase tracking-widest font-semibold">Notes</p>
+                        <p className="text-xs text-gray-400 leading-relaxed line-clamp-2">{pkgNotes}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        )}
+
+              {/* Navigation footer */}
+              <div className="p-4 border-t border-white/[0.05] shrink-0 space-y-3">
+                {pkgError && (
+                  <div className="text-xs text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg p-3">
+                    {pkgError}
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    onClick={
+                      createStep === 1
+                        ? () => { setPkgView('list'); resetPkgForm() }
+                        : () => { setCreateStep((s) => (s - 1) as CreateStep); setPkgError(null) }
+                    }
+                    disabled={pkgSaving}
+                    className="flex-1 text-gray-400 hover:text-gray-200 hover:bg-white/[0.04] border border-white/[0.08]"
+                  >
+                    {createStep === 1 ? 'Cancel' : '← Back'}
+                  </Button>
+                  <Button
+                    onClick={createStep === 4 ? handleSavePkg : handleNextStep}
+                    disabled={pkgSaving}
+                    className="flex-1 bg-intelligence-cyan text-black hover:bg-intelligence-cyan/90 font-medium gap-1.5"
+                  >
+                    {createStep === 4 ? (
+                      pkgSaving
+                        ? <><Loader2 className="size-3.5 animate-spin" />Saving…</>
+                        : pkgView === 'create' ? 'Create Template' : 'Save Changes'
+                    ) : (
+                      'Next →'
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ASSIGN view */}
+          {pkgView === 'assign' && (
+            <div className="flex-1 overflow-y-auto p-5 space-y-5">
+              {/* Back + title */}
+              <div className="flex items-center gap-3">
+                <button onClick={() => { setPkgView('list'); setAssigningPkgId(null); setAssignSuccess(false) }} className="p-1.5 rounded-lg text-gray-500 hover:text-gray-200 hover:bg-white/[0.05] transition-colors">
+                  <ChevronLeft className="size-4" />
+                </button>
+                <h3 className="text-sm font-semibold text-white">Assign to Client</h3>
+              </div>
+
+              {/* Package summary card */}
+              {assigningPkg && (
+                <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-4 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-white">{assigningPkg.name}</p>
+                      {assigningPkg.description && <p className="text-xs text-gray-600 truncate mt-0.5">{assigningPkg.description}</p>}
+                    </div>
+                    <div className="p-1.5 rounded-lg bg-intelligence-cyan/[0.08] border border-intelligence-cyan/[0.15]">
+                      <Package className="size-4 text-intelligence-cyan" />
+                    </div>
+                  </div>
+                  {(() => {
+                    const { oneTime, monthly, annual } = pkgTotals(assigningPkg.lineItems)
+                    return (
+                      <div className="flex items-center gap-3 text-xs text-gray-500 flex-wrap pt-1 border-t border-white/[0.06]">
+                        <span>{assigningPkg.lineItems?.length ?? 0} line items</span>
+                        {oneTime > 0 && <span className="font-mono text-white">{fmtPrice(oneTime)} one-time</span>}
+                        {monthly > 0 && <span className="font-mono text-intelligence-cyan">{fmtPrice(monthly)}/mo</span>}
+                        {annual > 0 && <span className="font-mono text-intelligence-cyan">{fmtPrice(annual)}/yr</span>}
+                      </div>
+                    )
+                  })()}
+                </div>
+              )}
+
+              <p className="text-xs text-gray-500 leading-relaxed">
+                A frozen snapshot of this template will be created as a proposal and assigned to the selected client. They&apos;ll be able to view it in their portal.
+              </p>
+
+              {/* Client selector */}
+              <div className="space-y-2">
+                <p className="text-[10px] text-gray-600 uppercase tracking-widest font-semibold">
+                  Select Client <span className="text-red-400">*</span>
+                </p>
+                {clientListLoading ? (
+                  <div className="flex items-center gap-2 py-3 text-gray-600 text-sm">
+                    <Loader2 className="size-4 animate-spin" />
+                    Loading clients...
+                  </div>
+                ) : clientList.length === 0 ? (
+                  <p className="text-xs text-gray-600 py-2">No client accounts found.</p>
+                ) : (
+                  <div className="space-y-1.5 max-h-52 overflow-y-auto">
+                    {clientList.map((client) => (
+                      <button
+                        key={client.id}
+                        type="button"
+                        onClick={() => setSelectedClientId(client.id)}
+                        className={cn(
+                          'w-full text-left px-3 py-2.5 rounded-lg border text-sm transition-all',
+                          selectedClientId === client.id
+                            ? 'border-intelligence-cyan/50 bg-intelligence-cyan/[0.06] text-white'
+                            : 'border-white/[0.08] bg-white/[0.02] text-gray-300 hover:bg-white/[0.05] hover:border-white/[0.15]'
+                        )}
+                      >
+                        <span className="font-medium">{client.name}</span>
+                        {client.company && <span className="text-xs text-gray-500 ml-1.5">{client.company}</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {assignError && <div className="text-xs text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg p-3">{assignError}</div>}
+
+              {assignSuccess && (
+                <div className="flex items-center gap-2 text-sm text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 rounded-lg p-3">
+                  <Check className="size-4 shrink-0" />
+                  Proposal created successfully!
+                </div>
+              )}
+
+              <Button
+                onClick={handleAssign}
+                disabled={!selectedClientId || assigning || assignSuccess}
+                className="w-full bg-intelligence-cyan text-black hover:bg-intelligence-cyan/90 font-medium gap-2"
+              >
+                {assigning ? (
+                  <><Loader2 className="size-4 animate-spin" />Assigning...</>
+                ) : (
+                  <><UserCheck className="size-4" />Create Proposal for Client</>
+                )}
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Backdrop */}
@@ -895,60 +875,6 @@ export function DashboardTaskManager({ username, userRole }: DashboardTaskManage
         />
       )}
     </>
-  )
-}
-
-// ── TaskGroup ──────────────────────────────────────────────────────────────────
-
-function TaskGroup({ title, tasks, onToggleComplete }: { title: string; tasks: Task[]; onToggleComplete: (id: string, status: string) => void }) {
-  const [isExpanded, setIsExpanded] = useState(true)
-  return (
-    <div className="space-y-2">
-      <button onClick={() => setIsExpanded(!isExpanded)} className="flex items-center justify-between w-full group">
-        <div className="flex items-center gap-2">
-          <ChevronRight className={cn('size-4 text-gray-400 transition-transform', isExpanded && 'rotate-90')} />
-          <h3 className="text-sm font-semibold text-white">{title}</h3>
-          <Badge variant="outline" className="bg-white/[0.03] border-white/[0.08] text-gray-400 text-xs">{tasks.length}</Badge>
-        </div>
-      </button>
-      {isExpanded && (
-        <div className="space-y-2 ml-6">
-          {tasks.map((task) => <TaskCard key={task.id} task={task} onToggleComplete={onToggleComplete} />)}
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ── TaskCard ───────────────────────────────────────────────────────────────────
-
-function TaskCard({ task, onToggleComplete }: { task: Task; onToggleComplete: (id: string, status: string) => void }) {
-  const priorityConfig = getPriorityConfig(task.priority)
-  const isTaskOverdue = task.dueDate && isOverdue(task.dueDate) && task.status !== 'completed'
-  const isCompleted = task.status === 'completed'
-  return (
-    <div className={cn('relative overflow-hidden rounded-lg border p-3 hover:border-white/[0.12] transition-all duration-200 group', priorityConfig.border, priorityConfig.bg)}>
-      <div className="flex items-start gap-3">
-        <button onClick={() => onToggleComplete(task.id, task.status)} className="mt-0.5 shrink-0 hover:scale-110 transition-transform">
-          {isCompleted ? <CheckCircle className="size-5 text-green-400" /> : <Circle className="size-5 text-gray-500 hover:text-intelligence-cyan" />}
-        </button>
-        <div className="flex-1 min-w-0 space-y-1">
-          <h4 className={cn('text-sm font-medium', isCompleted ? 'text-gray-500 line-through' : 'text-white')}>{task.title}</h4>
-          <div className="flex items-center gap-3 text-xs text-gray-500">
-            <div className="flex items-center gap-1">
-              <Flag className={cn('size-3', priorityConfig.color)} />
-              <span className={priorityConfig.color}>{priorityConfig.label}</span>
-            </div>
-            {task.dueDate && (
-              <div className={cn('flex items-center gap-1', isTaskOverdue && 'text-red-400')}>
-                <Calendar className="size-3" />
-                {formatDate(task.dueDate)}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
   )
 }
 
@@ -974,7 +900,7 @@ function LineItemRow({
         <Input
           value={item.name}
           onChange={(e) => onUpdate('name', e.target.value)}
-          placeholder={`Item ${index + 1} name...`}
+          placeholder={`Service ${index + 1} name...`}
           className="flex-1 bg-white/[0.03] border-white/[0.08] text-white text-sm h-8"
         />
         <button
@@ -985,6 +911,15 @@ function LineItemRow({
           <Trash2 className="size-3.5" />
         </button>
       </div>
+
+      {/* Description */}
+      <textarea
+        value={item.description}
+        onChange={(e) => onUpdate('description', e.target.value)}
+        placeholder="Description (optional)…"
+        rows={2}
+        className="w-full bg-white/[0.03] border border-white/[0.08] rounded-md px-2.5 py-1.5 text-xs text-white placeholder:text-gray-600 outline-none focus:border-white/[0.18] transition-colors resize-none"
+      />
 
       {/* Price + Quantity */}
       <div className="grid grid-cols-2 gap-2">

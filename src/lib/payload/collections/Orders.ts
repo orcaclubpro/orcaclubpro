@@ -184,6 +184,39 @@ const Orders: CollectionConfig = {
       },
     },
     {
+      name: 'packageRef',
+      type: 'relationship',
+      relationTo: 'packages',
+      index: true,
+      admin: {
+        description: 'Package this invoice was created from (for deposit/installment tracking)',
+        position: 'sidebar',
+      },
+    },
+    {
+      name: 'invoiceType',
+      type: 'select',
+      options: [
+        { label: 'Full Invoice', value: 'full' },
+        { label: 'Deposit', value: 'deposit' },
+        { label: 'Installment', value: 'installment' },
+        { label: 'Balance Payment', value: 'balance' },
+      ],
+      defaultValue: 'full',
+      admin: {
+        description: 'Type of invoice (for deposit/payment plan tracking)',
+        position: 'sidebar',
+      },
+    },
+    {
+      name: 'invoiceNote',
+      type: 'text',
+      admin: {
+        description: 'Label shown on the Stripe invoice line item (e.g. "50% Deposit")',
+        position: 'sidebar',
+      },
+    },
+    {
       name: 'dueDate',
       type: 'date',
       index: true,

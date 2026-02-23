@@ -31,6 +31,7 @@ export interface OrderDoc {
   stripeInvoiceId?: string | null
   stripeInvoiceUrl?: string | null
   lineItems?: LineItem[]
+  projectRef?: { id: string; name: string } | string | null
 }
 
 function fmt(n: number) {
@@ -543,18 +544,33 @@ function OrderCard({
 
       {/* Header */}
       <div onClick={() => setExpanded(!expanded)} className="px-7 pt-6 pb-5 cursor-pointer select-none">
-        <p className="text-[10px] font-bold text-[#67e8f9]/60 uppercase tracking-[0.3em] mb-3">Invoice</p>
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2.5 mb-1.5 flex-wrap">
-              <span className="text-lg font-bold text-white font-mono">{order.orderNumber}</span>
+            {/* Primary: line item title */}
+            <div className="flex items-center gap-2.5 mb-1 flex-wrap">
+              <span className="text-base font-semibold text-white leading-snug truncate">
+                {lineItems[0]?.title ?? 'Invoice'}
+                {lineItems.length > 1 && (
+                  <span className="text-xs text-gray-600 font-normal ml-1.5">+{lineItems.length - 1} more</span>
+                )}
+              </span>
               <Badge
                 variant="outline"
-                className={`${cfg.color} ${cfg.bg} border ${cfg.border} text-[10px] px-1.5 py-0 inline-flex items-center gap-1`}
+                className={`${cfg.color} ${cfg.bg} border ${cfg.border} text-[10px] px-1.5 py-0 inline-flex items-center gap-1 shrink-0`}
               >
                 <StatusIcon className="size-2.5" />{cfg.label}
               </Badge>
             </div>
+
+            {/* Project reference */}
+            {order.projectRef && typeof order.projectRef !== 'string' && (
+              <p className="text-xs text-gray-500 mb-1 truncate">{order.projectRef.name}</p>
+            )}
+
+            {/* Order number */}
+            <p className="text-[11px] font-mono text-gray-600 mb-2">#{order.orderNumber}</p>
+
+            {/* Dates */}
             <div className="flex items-center gap-4 flex-wrap">
               <span className="flex items-center gap-1 text-xs text-gray-600">
                 <Calendar className="size-3" />{fmtDate(order.createdAt)}
@@ -562,11 +578,6 @@ function OrderCard({
               {order.dueDate && (
                 <span className={cn('flex items-center gap-1 text-xs', order.status === 'pending' ? 'text-amber-600/80' : 'text-gray-600')}>
                   <CalendarDays className="size-3" />Due {fmtDate(order.dueDate)}
-                </span>
-              )}
-              {lineItems.length > 0 && (
-                <span className="text-xs text-gray-700">
-                  {lineItems.length} {lineItems.length === 1 ? 'item' : 'items'}
                 </span>
               )}
             </div>

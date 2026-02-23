@@ -414,6 +414,10 @@ export interface User {
    * User full name (not used for client role)
    */
   name?: string | null;
+  /**
+   * Custom title shown to clients on team views (e.g. "Lead Developer", "UI Designer")
+   */
+  title?: string | null;
   role: 'admin' | 'user' | 'client';
   /**
    * Client first name
@@ -459,6 +463,10 @@ export interface User {
    * Expiry time for login code
    */
   loginTwoFactorExpiry?: string | null;
+  /**
+   * Show the welcome tips banner in the client portal. Disabled when the client dismisses it.
+   */
+  showTips?: boolean | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -490,7 +498,7 @@ export interface ClientAccount {
   /**
    * Client email address
    */
-  email: string;
+  email?: string | null;
   /**
    * Client first name
    */
@@ -503,6 +511,39 @@ export interface ClientAccount {
    * Client company name
    */
   company?: string | null;
+  /**
+   * Client phone number
+   */
+  phone?: string | null;
+  /**
+   * Client billing address
+   */
+  address?: {
+    /**
+     * Street address
+     */
+    line1?: string | null;
+    /**
+     * Suite, unit, etc. (optional)
+     */
+    line2?: string | null;
+    /**
+     * City
+     */
+    city?: string | null;
+    /**
+     * State
+     */
+    state?: string | null;
+    /**
+     * ZIP
+     */
+    zip?: string | null;
+    /**
+     * Country
+     */
+    country?: string | null;
+  };
   /**
    * Shopify customer GID (e.g., gid://shopify/Customer/123)
    */
@@ -624,6 +665,18 @@ export interface Order {
    * Stripe Payment Intent ID (after payment)
    */
   stripePaymentIntentId?: string | null;
+  /**
+   * Package this invoice was created from (for deposit/installment tracking)
+   */
+  packageRef?: (string | null) | Package;
+  /**
+   * Type of invoice (for deposit/payment plan tracking)
+   */
+  invoiceType?: ('full' | 'deposit' | 'installment' | 'balance') | null;
+  /**
+   * Label shown on the Stripe invoice line item (e.g. "50% Deposit")
+   */
+  invoiceNote?: string | null;
   /**
    * Payment due date (from Stripe invoice or manually set)
    */
@@ -793,14 +846,56 @@ export interface Package {
    * Template this proposal was created from
    */
   sourcePackage?: (string | null) | Package;
+  /**
+   * Add-on items requested by the client via their portal
+   */
+  requestedItems?:
+    | {
+        name: string;
+        requestedAt?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Planned payment schedule — entries are invoiced individually when ready
+   */
+  paymentSchedule?:
+    | {
+        /**
+         * e.g. Deposit, Installment 1, Final Payment
+         */
+        label: string;
+        /**
+         * Dollar amount for this payment
+         */
+        amount: number;
+        /**
+         * When this payment is due
+         */
+        dueDate?: string | null;
+        /**
+         * Set when invoiced — links to the Order record
+         */
+        orderId?: string | null;
+        /**
+         * When the invoice was sent
+         */
+        invoicedAt?: string | null;
+        id?: string | null;
+      }[]
+    | null;
   lineItems?:
     | {
         name: string;
         description?: string | null;
         /**
-         * Price per unit (USD)
+         * Base price per unit (USD)
          */
         price: number;
+        /**
+         * Override price shown on proposals (optional — leave blank to use base price)
+         */
+        adjustedPrice?: number | null;
         quantity?: number | null;
         /**
          * Recurring subscription item?
@@ -962,11 +1057,11 @@ export interface Sprint {
   /**
    * Sprint start date
    */
-  startDate: string;
+  startDate?: string | null;
   /**
-   * Sprint end date
+   * Sprint end date (leave blank for ongoing sprints)
    */
-  endDate: string;
+  endDate?: string | null;
   /**
    * What should be accomplished in this sprint
    */
@@ -1368,6 +1463,7 @@ export interface PostsSelect<T extends boolean = true> {
  */
 export interface UsersSelect<T extends boolean = true> {
   name?: T;
+  title?: T;
   role?: T;
   firstName?: T;
   lastName?: T;
@@ -1380,6 +1476,7 @@ export interface UsersSelect<T extends boolean = true> {
   twoFactorVerified?: T;
   loginTwoFactorCode?: T;
   loginTwoFactorExpiry?: T;
+  showTips?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -1407,6 +1504,17 @@ export interface ClientAccountsSelect<T extends boolean = true> {
   firstName?: T;
   lastName?: T;
   company?: T;
+  phone?: T;
+  address?:
+    | T
+    | {
+        line1?: T;
+        line2?: T;
+        city?: T;
+        state?: T;
+        zip?: T;
+        country?: T;
+      };
   shopifyCustomerId?: T;
   stripeCustomerId?: T;
   accountBalance?: T;
@@ -1444,6 +1552,9 @@ export interface OrdersSelect<T extends boolean = true> {
   stripeInvoiceUrl?: T;
   stripeCustomerId?: T;
   stripePaymentIntentId?: T;
+  packageRef?: T;
+  invoiceType?: T;
+  invoiceNote?: T;
   dueDate?: T;
   lineItems?:
     | T
@@ -1482,12 +1593,30 @@ export interface PackagesSelect<T extends boolean = true> {
   status?: T;
   clientAccount?: T;
   sourcePackage?: T;
+  requestedItems?:
+    | T
+    | {
+        name?: T;
+        requestedAt?: T;
+        id?: T;
+      };
+  paymentSchedule?:
+    | T
+    | {
+        label?: T;
+        amount?: T;
+        dueDate?: T;
+        orderId?: T;
+        invoicedAt?: T;
+        id?: T;
+      };
   lineItems?:
     | T
     | {
         name?: T;
         description?: T;
         price?: T;
+        adjustedPrice?: T;
         quantity?: T;
         isRecurring?: T;
         recurringInterval?: T;

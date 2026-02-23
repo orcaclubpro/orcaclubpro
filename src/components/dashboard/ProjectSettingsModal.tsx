@@ -21,9 +21,11 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { updateProject, deleteProject } from '@/actions/projects'
+import { getClientAccounts } from '@/actions/clients'
 import type { Project, Task } from '@/types/payload-types'
 import { cn } from '@/lib/utils'
 import { Cinzel_Decorative } from 'next/font/google'
+import { ClientAccountCombobox } from './ClientAccountCombobox'
 
 const gothic = Cinzel_Decorative({ weight: '700', subsets: ['latin'] })
 
@@ -121,6 +123,14 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
   const [budgetAmount, setBudgetAmount] = useState(project.budgetAmount?.toString() || '')
   const [currency, setCurrency] = useState<CurrencyType>(project.currency || 'USD')
 
+  // Client account state
+  const initialClientId = typeof project.client === 'string'
+    ? project.client
+    : (project.client as any)?.id ?? ''
+  const [clientId, setClientId] = useState(initialClientId)
+  const [clientAccounts, setClientAccounts] = useState<Array<{ id: string; name: string; email: string }>>([])
+  const [clientsLoading, setClientsLoading] = useState(false)
+
   // UI state
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -132,7 +142,7 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
   const [isDeleting, setIsDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
 
-  // Reset form when modal opens
+  // Reset form when modal opens + fetch client accounts
   useEffect(() => {
     if (open) {
       setName(project.name)
@@ -143,11 +153,23 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
       setActualEndDate(toDateInput(project.actualEndDate))
       setBudgetAmount(project.budgetAmount?.toString() || '')
       setCurrency(project.currency || 'USD')
+      setClientId(
+        typeof project.client === 'string'
+          ? project.client
+          : (project.client as any)?.id ?? ''
+      )
       setError(null)
       setSuccessMessage(null)
       setShowDeleteZone(false)
       setDeleteInput('')
       setDeleteError(null)
+
+      // Fetch client accounts for selector
+      setClientsLoading(true)
+      getClientAccounts().then((result) => {
+        if (result.success) setClientAccounts(result.accounts)
+        setClientsLoading(false)
+      })
     }
   }, [open, project])
 
@@ -199,7 +221,8 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
         actualEndDate: status === 'completed' && actualEndDate ? actualEndDate : null,
         budgetAmount: budgetAmount ? parseFloat(budgetAmount) : null,
         currency,
-      },
+        ...(clientId ? { client: clientId } : {}),
+      } as any,
     })
 
     setIsLoading(false)
@@ -228,7 +251,9 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
     router.refresh()
   }
 
-  const clientAccount = typeof project.client === 'object' ? project.client : null
+  const selectedClientAccount = clientAccounts.find((a) => a.id === clientId)
+  const clientAccount = selectedClientAccount
+    ?? (typeof project.client === 'object' ? project.client as { name: string; email?: string | null } : null)
   const completedTasks = tasks.filter((t) => t.status === 'completed').length
   const inProgressTasks = tasks.filter((t) => t.status === 'in-progress').length
   const pendingTasks = tasks.filter((t) => t.status === 'pending').length
@@ -428,6 +453,20 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
                     disabled={isLoading}
                   />
                 </div>
+              </section>
+
+              {/* ── Client Account ── */}
+              <section className="space-y-4">
+                <p className="text-[10px] tracking-[0.4em] uppercase text-white/20 font-light">
+                  Client Account
+                </p>
+                <ClientAccountCombobox
+                  accounts={clientAccounts}
+                  value={clientId}
+                  onValueChange={setClientId}
+                  loading={clientsLoading}
+                  disabled={isLoading}
+                />
               </section>
 
               {/* ── Status ── */}

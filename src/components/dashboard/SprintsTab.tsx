@@ -1,90 +1,153 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, ChevronDown, ChevronRight, Loader2, Zap } from 'lucide-react'
+import Link from 'next/link'
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet'
+  Plus, Loader2, Zap, ArrowRight, CheckCircle2,
+  MoreHorizontal, Trash2, Calendar, ChevronDown,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
-import { createSprint } from '@/actions/sprints'
+import { deleteSprint } from '@/actions/sprints'
+import { cn } from '@/lib/utils'
 import type { Sprint, Task } from '@/types/payload-types'
+import { CreateSprintModal } from './CreateSprintModal'
+
+// ─── Types & constants ────────────────────────────────────────────────────────
 
 interface SprintsTabProps {
   sprints: Sprint[]
   tasks: Task[]
   projectId: string
+  username: string
   readOnly?: boolean
 }
 
-const sprintStatusConfig = {
-  pending: { dot: 'bg-gray-500', label: 'Pending', color: 'text-gray-400' },
-  'in-progress': { dot: 'bg-intelligence-cyan', label: 'In Progress', color: 'text-intelligence-cyan' },
-  delayed: { dot: 'bg-yellow-400', label: 'Delayed', color: 'text-yellow-400' },
-  finished: { dot: 'bg-green-400', label: 'Finished', color: 'text-green-400' },
+const SPRINT_STATUS = {
+  pending:       { dot: 'bg-gray-500',          text: 'text-gray-400',          label: 'Planned',  bg: 'bg-white/[0.02]',             border: 'border-white/[0.07]'             },
+  'in-progress': { dot: 'bg-intelligence-cyan', text: 'text-intelligence-cyan', label: 'Active',   bg: 'bg-intelligence-cyan/[0.04]', border: 'border-intelligence-cyan/[0.15]' },
+  delayed:       { dot: 'bg-orange-400',        text: 'text-orange-400',        label: 'Delayed',  bg: 'bg-orange-400/[0.04]',        border: 'border-orange-400/[0.15]'        },
+  finished:      { dot: 'bg-green-400',         text: 'text-green-400',         label: 'Finished', bg: 'bg-green-400/[0.03]',         border: 'border-green-400/[0.12]'         },
 } as const
 
-const taskStatusDot = {
-  pending: 'bg-gray-500',
-  'in-progress': 'bg-blue-400',
-  completed: 'bg-green-400',
-  cancelled: 'bg-red-400',
-} as const
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const fmtDate = (d: string) =>
-  new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date(d))
+const fmtDate = (d?: string | null) =>
+  d ? new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date(d)) : null
 
-function getSprintTasks(sprint: Sprint, tasks: Task[]): Task[] {
-  return tasks.filter((task) => {
-    if (!task.sprint) return false
-    if (typeof task.sprint === 'string') return task.sprint === sprint.id
-    return task.sprint.id === sprint.id
+function getSprintTasks(sprint: Sprint, tasks: Task[]) {
+  return tasks.filter((t) => {
+    if (!t.sprint) return false
+    return typeof t.sprint === 'string' ? t.sprint === sprint.id : t.sprint.id === sprint.id
   })
 }
 
-export function SprintsTab({ sprints, tasks, projectId, readOnly }: SprintsTabProps) {
+function sortByUpdated(sprints: Sprint[]): Sprint[] {
+  return [...sprints].sort(
+    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+  )
+}
+
+// ─── Sprint 3-dot menu ────────────────────────────────────────────────────────
+
+interface SprintMenuProps {
+  sprint: Sprint
+  openMenuId: string | null
+  setOpenMenuId: (id: string | null) => void
+  onDelete: (id: string) => void
+  deletingId: string | null
+}
+
+function SprintMenu({ sprint, openMenuId, setOpenMenuId, onDelete, deletingId }: SprintMenuProps) {
+  return (
+    <div className="relative" onClick={(e) => e.stopPropagation()}>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          setOpenMenuId(openMenuId === sprint.id ? null : sprint.id)
+        }}
+        className={cn(
+          'p-1.5 rounded-lg transition-colors',
+          openMenuId === sprint.id
+            ? 'bg-white/[0.08] text-gray-300'
+            : 'text-gray-600 hover:text-gray-300 hover:bg-white/[0.06]'
+        )}
+      >
+        <MoreHorizontal className="size-3.5" />
+      </button>
+      {openMenuId === sprint.id && (
+        <div className="absolute top-full right-0 mt-1 bg-[#111] border border-white/[0.10] rounded-xl shadow-2xl z-50 overflow-hidden min-w-[150px]">
+          <button
+            type="button"
+            onClick={() => onDelete(sprint.id)}
+            disabled={deletingId === sprint.id}
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400 hover:bg-red-400/10 transition-colors disabled:opacity-50"
+          >
+            {deletingId === sprint.id
+              ? <Loader2 className="size-3.5 animate-spin" />
+              : <Trash2 className="size-3.5" />
+            }
+            Delete sprint
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── SprintsTab ───────────────────────────────────────────────────────────────
+
+export function SprintsTab({ sprints: initialSprints, tasks, projectId, username, readOnly }: SprintsTabProps) {
   const router = useRouter()
-  const [isSheetOpen, setIsSheetOpen] = useState(false)
-  const [expandedSprints, setExpandedSprints] = useState<Set<string>>(new Set())
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [sprints, setSprints] = useState(initialSprints)
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [expandedHistory, setExpandedHistory] = useState<string[]>([])
+
+  useEffect(() => {
+    if (!openMenuId) return
+    const handler = () => setOpenMenuId(null)
+    document.addEventListener('click', handler)
+    return () => document.removeEventListener('click', handler)
+  }, [openMenuId])
+
+  const handleDeleteSprint = async (sprintId: string) => {
+    setOpenMenuId(null)
+    setDeletingId(sprintId)
+    setSprints((prev) => prev.filter((s) => s.id !== sprintId))
+    const result = await deleteSprint({ sprintId })
+    setDeletingId(null)
+    if (!result.success) setSprints(initialSprints)
+    router.refresh()
+  }
+
+  const menuProps = { openMenuId, setOpenMenuId, onDelete: handleDeleteSprint, deletingId }
+
+  const sorted = sortByUpdated(sprints)
+  const carouselSprints = sorted.slice(0, 3)   // top 3 most recently updated
+  const historySprints  = sorted.slice(3, 8)   // next 5
 
   const totalTasks = tasks.length
   const completedTasks = tasks.filter((t) => t.status === 'completed').length
 
-  const toggleExpand = (sprintId: string) => {
-    setExpandedSprints((prev) => {
-      const next = new Set(prev)
-      if (next.has(sprintId)) {
-        next.delete(sprintId)
-      } else {
-        next.add(sprintId)
-      }
-      return next
-    })
-  }
-
   return (
-    <div className="space-y-5">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-4">
+    <div className="space-y-8">
+
+      {/* ── Header ──────────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold text-white">Sprints</h2>
           {totalTasks > 0 && (
-            <p className="text-xs text-gray-500 mt-0.5">
-              {completedTasks} of {totalTasks} tasks completed
-            </p>
+            <p className="text-xs text-gray-500 mt-0.5">{completedTasks} of {totalTasks} tasks completed</p>
           )}
         </div>
         {!readOnly && (
           <Button
             size="sm"
-            onClick={() => setIsSheetOpen(true)}
+            onClick={() => setIsModalOpen(true)}
             className="bg-intelligence-cyan text-black hover:bg-intelligence-cyan/90 font-medium"
           >
             <Plus className="size-3.5 mr-1.5" />
@@ -93,136 +156,9 @@ export function SprintsTab({ sprints, tasks, projectId, readOnly }: SprintsTabPr
         )}
       </div>
 
-      {/* Sprint List */}
-      {sprints.length > 0 ? (
-        <div className="space-y-3">
-          {sprints.map((sprint) => {
-            const sprintTasks = getSprintTasks(sprint, tasks)
-            const completedCount = sprintTasks.filter((t) => t.status === 'completed').length
-            const totalCount = sprintTasks.length
-            const progressPct = totalCount > 0 ? (completedCount / totalCount) * 100 : 0
-            const statusCfg = sprintStatusConfig[sprint.status] ?? sprintStatusConfig.pending
-            const isExpanded = expandedSprints.has(sprint.id)
+      {sprints.length === 0 ? (
 
-            return (
-              <div
-                key={sprint.id}
-                className="rounded-xl border border-white/[0.08] bg-[#1c1c1c] overflow-hidden"
-              >
-                {/* Sprint header row */}
-                <button
-                  type="button"
-                  onClick={() => toggleExpand(sprint.id)}
-                  className="w-full flex items-start gap-4 p-5 text-left hover:bg-white/[0.04] transition-colors"
-                >
-                  {/* Expand icon */}
-                  <span className="mt-0.5 shrink-0 text-gray-600">
-                    {isExpanded ? (
-                      <ChevronDown className="size-4" />
-                    ) : (
-                      <ChevronRight className="size-4" />
-                    )}
-                  </span>
-
-                  {/* Content */}
-                  <div className="flex-1 min-w-0 space-y-3">
-                    {/* Top row: name + status + dates */}
-                    <div className="flex flex-wrap items-center gap-3">
-                      <span className="font-semibold text-white text-sm leading-tight">
-                        {sprint.name}
-                      </span>
-
-                      {/* Status */}
-                      <span className={`flex items-center gap-1.5 text-xs ${statusCfg.color}`}>
-                        <span className={`size-1.5 rounded-full ${statusCfg.dot}`} />
-                        {statusCfg.label}
-                      </span>
-
-                      {/* Date range */}
-                      <span className="text-xs text-gray-500">
-                        {fmtDate(sprint.startDate)} &rarr; {fmtDate(sprint.endDate)}
-                      </span>
-                    </div>
-
-                    {/* Task progress */}
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-600">
-                          {completedCount}/{totalCount} tasks
-                        </span>
-                        {totalCount > 0 && (
-                          <span className="text-xs text-gray-600">
-                            {Math.round(progressPct)}%
-                          </span>
-                        )}
-                      </div>
-                      <div className="h-1 w-full rounded-full bg-white/[0.08]">
-                        <div
-                          className="h-full rounded-full bg-intelligence-cyan transition-all duration-300"
-                          style={{ width: `${progressPct}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Goal description */}
-                    {sprint.goalDescription && (
-                      <p className="text-xs text-gray-500 leading-relaxed">
-                        {sprint.goalDescription}
-                      </p>
-                    )}
-                  </div>
-                </button>
-
-                {/* Expanded task list */}
-                {isExpanded && (
-                  <div className="border-t border-white/[0.08]">
-                    {sprintTasks.length > 0 ? (
-                      <ul className="divide-y divide-white/[0.06]">
-                        {sprintTasks.map((task) => {
-                          const dotClass =
-                            taskStatusDot[task.status as keyof typeof taskStatusDot] ??
-                            taskStatusDot.pending
-                          return (
-                            <li
-                              key={task.id}
-                              className="flex items-center gap-3 px-5 py-3"
-                            >
-                              <span
-                                className={`size-1.5 rounded-full shrink-0 ${dotClass}`}
-                              />
-                              <span
-                                className={`flex-1 text-sm ${
-                                  task.status === 'completed'
-                                    ? 'text-gray-500 line-through'
-                                    : task.status === 'cancelled'
-                                      ? 'text-gray-600 line-through'
-                                      : 'text-gray-300'
-                                }`}
-                              >
-                                {task.title}
-                              </span>
-                              {task.dueDate && (
-                                <span className="text-xs text-gray-600 shrink-0">
-                                  {fmtDate(task.dueDate)}
-                                </span>
-                              )}
-                            </li>
-                          )
-                        })}
-                      </ul>
-                    ) : (
-                      <p className="px-5 py-4 text-xs text-gray-600">
-                        No tasks assigned to this sprint yet.
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      ) : (
-        /* Empty state */
+        /* ── Empty state ──────────────────────────────────────────── */
         <div className="rounded-xl border border-white/[0.08] bg-[#1c1c1c] p-12 text-center">
           <div className="inline-flex p-4 rounded-xl bg-[#1c1c1c] border border-white/[0.10] mb-5">
             <Zap className="size-8 text-gray-600" />
@@ -236,7 +172,7 @@ export function SprintsTab({ sprints, tasks, projectId, readOnly }: SprintsTabPr
           {!readOnly && (
             <Button
               size="sm"
-              onClick={() => setIsSheetOpen(true)}
+              onClick={() => setIsModalOpen(true)}
               className="bg-intelligence-cyan text-black hover:bg-intelligence-cyan/90 font-medium"
             >
               <Plus className="size-3.5 mr-1.5" />
@@ -244,16 +180,198 @@ export function SprintsTab({ sprints, tasks, projectId, readOnly }: SprintsTabPr
             </Button>
           )}
         </div>
+
+      ) : (
+        <>
+          {/* ── Recent carousel ─────────────────────────────────────── */}
+          <section>
+            <p className="text-[11px] font-semibold text-gray-600 uppercase tracking-widest mb-3">Recent</p>
+
+            <div
+              className="flex gap-4 overflow-x-auto pb-3"
+              style={{ scrollbarWidth: 'none' } as React.CSSProperties}
+            >
+              {carouselSprints.map((sprint, i) => {
+                const sprintTasks = getSprintTasks(sprint, tasks)
+                const done  = sprintTasks.filter((t) => t.status === 'completed').length
+                const total = sprintTasks.length
+                const pct   = total > 0 ? (done / total) * 100 : 0
+                const cfg   = SPRINT_STATUS[sprint.status as keyof typeof SPRINT_STATUS] ?? SPRINT_STATUS.pending
+                const startLabel = fmtDate(sprint.startDate)
+                const endLabel   = fmtDate(sprint.endDate)
+                const isFeatured = i === 0
+
+                return (
+                  <div
+                    key={sprint.id}
+                    className={cn(
+                      'shrink-0 rounded-xl border transition-all duration-200',
+                      isFeatured ? 'w-[340px] sm:w-[390px]' : 'w-[260px] sm:w-[295px]',
+                      isFeatured ? cn(cfg.bg, cfg.border) : 'bg-white/[0.01] border-white/[0.07]',
+                    )}
+                  >
+                    <div className={cn('flex flex-col h-full p-5', isFeatured ? 'gap-4' : 'gap-3')}>
+
+                      {/* Top: badges + menu */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          {isFeatured && (
+                            <span className="text-[10px] font-semibold text-intelligence-cyan bg-intelligence-cyan/[0.08] border border-intelligence-cyan/[0.18] rounded-full px-2 py-0.5 leading-none shrink-0">
+                              Latest
+                            </span>
+                          )}
+                          <span className={cn('flex items-center gap-1.5 text-xs shrink-0', cfg.text)}>
+                            <span className={cn('size-1.5 rounded-full shrink-0', cfg.dot)} />
+                            {cfg.label}
+                          </span>
+                        </div>
+                        {!readOnly && <SprintMenu sprint={sprint} {...menuProps} />}
+                      </div>
+
+                      {/* Name + goal */}
+                      <div className="min-w-0">
+                        <h4 className={cn('font-semibold text-white leading-snug truncate', isFeatured ? 'text-[15px]' : 'text-sm')}>
+                          {sprint.name}
+                        </h4>
+                        {isFeatured && sprint.goalDescription && (
+                          <p className="text-xs text-gray-500 mt-1.5 leading-relaxed line-clamp-2">
+                            {sprint.goalDescription}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Progress */}
+                      <div className="space-y-1.5 mt-auto">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-gray-600">{done}/{total} tasks</span>
+                          {total > 0 && <span className="text-gray-600">{Math.round(pct)}%</span>}
+                        </div>
+                        <div className="h-1 w-full rounded-full bg-white/[0.08]">
+                          <div
+                            className={cn('h-full rounded-full transition-all', cfg.dot)}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Footer: dates + open */}
+                      <div className="flex items-center justify-between pt-0.5">
+                        {(startLabel || endLabel) ? (
+                          <span className="text-xs text-gray-600 flex items-center gap-1 min-w-0">
+                            <Calendar className="size-3 shrink-0" />
+                            <span className="truncate">{startLabel ?? 'TBD'} → {endLabel ?? 'TBD'}</span>
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-700">No timeline</span>
+                        )}
+                        <Link
+                          href={`/u/${username}/projects/${projectId}/sprints/${sprint.id}`}
+                          className="flex items-center gap-1 text-xs text-gray-500 hover:text-white transition-colors shrink-0 ml-2"
+                        >
+                          Open <ArrowRight className="size-3" />
+                        </Link>
+                      </div>
+
+                      {/* All-done badge (featured only) */}
+                      {isFeatured && sprint.status === 'finished' && total > 0 && done === total && (
+                        <div className="flex items-center gap-1.5 pt-2 border-t border-white/[0.06]">
+                          <CheckCircle2 className="size-3.5 text-green-400" />
+                          <span className="text-xs text-green-400/70">All tasks completed</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </section>
+
+          {/* ── Sprint history ───────────────────────────────────────── */}
+          {historySprints.length > 0 && (
+            <section>
+              <p className="text-[11px] font-semibold text-gray-600 uppercase tracking-widest mb-3">History</p>
+              <div className="rounded-xl border border-white/[0.07] overflow-hidden divide-y divide-white/[0.05]">
+                {historySprints.map((sprint) => {
+                  const sprintTasks = getSprintTasks(sprint, tasks)
+                  const done  = sprintTasks.filter((t) => t.status === 'completed').length
+                  const total = sprintTasks.length
+                  const pct   = total > 0 ? Math.round((done / total) * 100) : 0
+                  const cfg   = SPRINT_STATUS[sprint.status as keyof typeof SPRINT_STATUS] ?? SPRINT_STATUS.pending
+                  const isExpanded  = expandedHistory.includes(sprint.id)
+                  const startLabel  = fmtDate(sprint.startDate)
+                  const endLabel    = fmtDate(sprint.endDate)
+
+                  return (
+                    <div key={sprint.id}>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpandedHistory((prev) =>
+                            prev.includes(sprint.id)
+                              ? prev.filter((id) => id !== sprint.id)
+                              : [...prev, sprint.id]
+                          )
+                        }
+                        className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-white/[0.02] transition-colors"
+                      >
+                        <ChevronDown
+                          className={cn(
+                            'size-3.5 text-gray-600 shrink-0 transition-transform duration-200',
+                            isExpanded && 'rotate-180'
+                          )}
+                        />
+                        <span className="flex-1 truncate text-sm font-medium text-gray-300">{sprint.name}</span>
+                        <span className={cn('flex items-center gap-1.5 text-xs shrink-0', cfg.text)}>
+                          <span className={cn('size-1.5 rounded-full', cfg.dot)} />
+                          {cfg.label}
+                        </span>
+                        {(startLabel || endLabel) && (
+                          <span className="text-xs text-gray-600 hidden sm:block shrink-0">
+                            {startLabel ?? 'TBD'} → {endLabel ?? 'TBD'}
+                          </span>
+                        )}
+                        <span className="text-xs text-gray-600 shrink-0 w-8 text-right">{pct}%</span>
+                      </button>
+
+                      {isExpanded && (
+                        <div className="px-4 pl-10 pb-4 pt-3 space-y-3 border-t border-white/[0.04] bg-white/[0.01]">
+                          {sprint.goalDescription && (
+                            <p className="text-xs text-gray-500 leading-relaxed">{sprint.goalDescription}</p>
+                          )}
+                          <div className="space-y-1.5">
+                            <div className="flex justify-between text-xs text-gray-600">
+                              <span>{done}/{total} tasks completed</span>
+                              <span>{pct}%</span>
+                            </div>
+                            <div className="h-1 w-full rounded-full bg-white/[0.08]">
+                              <div className={cn('h-full rounded-full', cfg.dot)} style={{ width: `${pct}%` }} />
+                            </div>
+                          </div>
+                          <Link
+                            href={`/u/${username}/projects/${projectId}/sprints/${sprint.id}`}
+                            className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-white transition-colors"
+                          >
+                            View sprint <ArrowRight className="size-3" />
+                          </Link>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </section>
+          )}
+        </>
       )}
 
-      {/* Create Sprint Sheet — hidden in readOnly mode */}
+      {/* ── Create Sprint Modal ──────────────────────────────────────── */}
       {!readOnly && (
-        <CreateSprintSheet
+        <CreateSprintModal
           projectId={projectId}
-          open={isSheetOpen}
-          onOpenChange={setIsSheetOpen}
+          open={isModalOpen}
+          onOpenChange={setIsModalOpen}
           onSuccess={() => {
-            setIsSheetOpen(false)
+            setIsModalOpen(false)
             router.refresh()
           }}
         />
@@ -262,196 +380,4 @@ export function SprintsTab({ sprints, tasks, projectId, readOnly }: SprintsTabPr
   )
 }
 
-interface CreateSprintSheetProps {
-  projectId: string
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onSuccess: () => void
-}
 
-function CreateSprintSheet({
-  projectId,
-  open,
-  onOpenChange,
-  onSuccess,
-}: CreateSprintSheetProps) {
-  const [name, setName] = useState('')
-  const [goalDescription, setGoalDescription] = useState('')
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const resetForm = () => {
-    setName('')
-    setGoalDescription('')
-    setStartDate('')
-    setEndDate('')
-    setError(null)
-  }
-
-  const handleOpenChange = (open: boolean) => {
-    if (!open) resetForm()
-    onOpenChange(open)
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
-
-    if (!name.trim()) {
-      setError('Sprint name is required.')
-      return
-    }
-    if (!startDate) {
-      setError('Start date is required.')
-      return
-    }
-    if (!endDate) {
-      setError('End date is required.')
-      return
-    }
-    if (new Date(endDate) < new Date(startDate)) {
-      setError('End date must be after start date.')
-      return
-    }
-
-    setIsLoading(true)
-
-    const result = await createSprint({
-      projectId,
-      name: name.trim(),
-      startDate,
-      endDate,
-      goalDescription: goalDescription.trim() || undefined,
-    })
-
-    setIsLoading(false)
-
-    if (!result.success) {
-      setError(result.error ?? 'Failed to create sprint.')
-      return
-    }
-
-    resetForm()
-    onSuccess()
-  }
-
-  return (
-    <Sheet open={open} onOpenChange={handleOpenChange}>
-      <SheetContent className="bg-black/95 border-white/[0.08] w-full sm:max-w-md overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle className="text-xl font-semibold text-white">New Sprint</SheetTitle>
-          <SheetDescription className="text-gray-400 text-sm">
-            Define a sprint to group and track a set of tasks over a fixed period.
-          </SheetDescription>
-        </SheetHeader>
-
-        <form onSubmit={handleSubmit} className="space-y-5 mt-6">
-          {/* Name */}
-          <div className="space-y-2">
-            <Label htmlFor="sprint-name" className="text-sm font-medium text-gray-300">
-              Name <span className="text-red-400">*</span>
-            </Label>
-            <Input
-              id="sprint-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g., Sprint 1 — Foundation"
-              className="bg-white/[0.03] border-white/[0.08] text-white placeholder:text-gray-600 focus:border-intelligence-cyan/50"
-              disabled={isLoading}
-              required
-            />
-          </div>
-
-          {/* Goal Description */}
-          <div className="space-y-2">
-            <Label htmlFor="sprint-goal" className="text-sm font-medium text-gray-300">
-              Goal Description
-            </Label>
-            <Textarea
-              id="sprint-goal"
-              value={goalDescription}
-              onChange={(e) => setGoalDescription(e.target.value)}
-              placeholder="What should be accomplished by the end of this sprint?"
-              rows={3}
-              className="bg-white/[0.03] border-white/[0.08] text-white placeholder:text-gray-600 focus:border-intelligence-cyan/50 resize-none"
-              disabled={isLoading}
-            />
-          </div>
-
-          {/* Date range */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="sprint-start" className="text-sm font-medium text-gray-300">
-                Start Date <span className="text-red-400">*</span>
-              </Label>
-              <Input
-                id="sprint-start"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="bg-white/[0.03] border-white/[0.08] text-white focus:border-intelligence-cyan/50"
-                disabled={isLoading}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="sprint-end" className="text-sm font-medium text-gray-300">
-                End Date <span className="text-red-400">*</span>
-              </Label>
-              <Input
-                id="sprint-end"
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="bg-white/[0.03] border-white/[0.08] text-white focus:border-intelligence-cyan/50"
-                disabled={isLoading}
-                required
-              />
-            </div>
-          </div>
-
-          {/* Error */}
-          {error && (
-            <div className="rounded-lg border border-red-400/20 bg-red-400/10 px-3 py-2.5 text-sm text-red-400">
-              {error}
-            </div>
-          )}
-
-          {/* Actions */}
-          <div className="flex gap-3 pt-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => handleOpenChange(false)}
-              disabled={isLoading}
-              className="flex-1 bg-white/[0.03] border-white/[0.08] hover:bg-white/[0.05] text-gray-300"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              size="sm"
-              disabled={isLoading}
-              className="flex-1 bg-intelligence-cyan text-black hover:bg-intelligence-cyan/90 font-medium"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="size-3.5 mr-1.5 animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                <>
-                  <Plus className="size-3.5 mr-1.5" />
-                  Create Sprint
-                </>
-              )}
-            </Button>
-          </div>
-        </form>
-      </SheetContent>
-    </Sheet>
-  )
-}

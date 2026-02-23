@@ -3,9 +3,11 @@ import { DashboardGreeting } from '@/components/dashboard/DashboardGreeting'
 import { ClientActiveProjects } from '@/components/dashboard/ClientActiveProjects'
 import { ClientInvoiceTimeline } from '@/components/dashboard/ClientInvoiceTimeline'
 import { ActivityTimeline } from '@/components/dashboard/visualizations/ActivityTimeline'
+import { BalanceCard } from '@/components/dashboard/BalanceCard'
 import { Button } from '@/components/ui/button'
 import type { ClientProjectSummary } from '@/components/dashboard/ClientActiveProjects'
 import type { ClientOrderSummary } from '@/components/dashboard/ClientInvoiceTimeline'
+import type { OrderSummary } from '@/components/dashboard/BalanceCard'
 import type { ActivityEvent } from '@/components/dashboard/visualizations/ActivityTimeline'
 import {
   Mail,
@@ -15,10 +17,12 @@ import {
   Clock,
   ArrowRight,
 } from 'lucide-react'
+import { WelcomeTipsBanner } from '@/components/dashboard/WelcomeTipsBanner'
 
 interface ClientHomeViewProps {
   user: { firstName?: string | null }
   username: string
+  showTips?: boolean
   clientAccount: any
   clientProjects: any[]
   orders: any[]
@@ -31,6 +35,7 @@ const formatCurrency = (amount: number) =>
 export function ClientHomeView({
   user,
   username,
+  showTips,
   clientAccount,
   clientProjects,
   orders,
@@ -109,13 +114,21 @@ export function ClientHomeView({
     })),
   ].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
 
-  const pendingOrdersTotal = orders
-    .filter((o: any) => o.status === 'pending')
-    .reduce((s: number, o: any) => s + (o.amount ?? 0), 0)
-  const mostRecentOrder = orders[0] as any ?? null
+  const ordersForCard: OrderSummary[] = orders.map((o: any) => ({
+    id: o.id,
+    orderNumber: o.orderNumber ?? null,
+    amount: o.amount ?? 0,
+    status: o.status ?? 'pending',
+    stripeInvoiceUrl: o.stripeInvoiceUrl ?? null,
+    createdAt: o.createdAt,
+  }))
+  const mostRecentOrder = ordersForCard[0] ?? null
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12 pb-20 space-y-10 sm:space-y-12">
+
+      {/* ── WELCOME TIPS BANNER ──────────────────────────────────────────── */}
+      {showTips && <WelcomeTipsBanner firstName={user.firstName} />}
 
       {/* ── HERO: Greeting + Account snapshot ──────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
@@ -152,59 +165,11 @@ export function ClientHomeView({
         </div>
 
         {/* Right: Account snapshot */}
-        <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-gradient-to-b from-[#141414] to-[#0e0e0e] p-6 sm:p-7">
-          {pendingOrdersTotal > 0 && (
-            <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-amber-400/[0.06] blur-3xl pointer-events-none" />
-          )}
-          <div className="relative z-10 space-y-5">
-            <div>
-              <p className="text-[9px] font-semibold uppercase tracking-[0.25em] text-gray-600 mb-1.5">
-                {pendingOrdersTotal > 0 ? 'Outstanding Balance' : 'Payment Status'}
-              </p>
-              <p className={`text-3xl sm:text-4xl font-black tabular-nums tracking-tight ${
-                pendingOrdersTotal > 0 ? 'text-amber-400' : 'text-intelligence-cyan'
-              }`}>
-                {pendingOrdersTotal > 0 ? formatCurrency(pendingOrdersTotal) : 'All clear'}
-              </p>
-              <p className="text-xs mt-1 text-gray-600">
-                {pendingOrdersTotal > 0 ? 'Pending payment' : 'No outstanding invoices'}
-              </p>
-            </div>
-
-            <div className="border-t border-white/[0.06]" />
-
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <p className="text-[9px] text-gray-600 uppercase tracking-wider font-semibold mb-1">Projects</p>
-                <p className="text-2xl font-bold text-white tabular-nums">{activeProjectCount}</p>
-                <p className="text-[10px] text-gray-600">Active</p>
-              </div>
-              <div>
-                <p className="text-[9px] text-gray-600 uppercase tracking-wider font-semibold mb-1">Invoices</p>
-                <p className="text-2xl font-bold text-white tabular-nums">{orders.length}</p>
-                <p className="text-[10px] text-gray-600">Total</p>
-              </div>
-              {mostRecentOrder && (
-                <div>
-                  <p className="text-[9px] text-gray-600 uppercase tracking-wider font-semibold mb-1">Latest</p>
-                  <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border mt-1 ${
-                    mostRecentOrder.status === 'paid'
-                      ? 'text-green-400 bg-green-400/10 border-green-400/20'
-                      : mostRecentOrder.status === 'pending'
-                        ? 'text-amber-400 bg-amber-400/10 border-amber-400/20'
-                        : 'text-red-400 bg-red-400/10 border-red-400/20'
-                  }`}>
-                    <span className={`size-1 rounded-full ${
-                      mostRecentOrder.status === 'paid' ? 'bg-green-400' :
-                      mostRecentOrder.status === 'pending' ? 'bg-amber-400' : 'bg-red-400'
-                    }`} />
-                    {mostRecentOrder.status === 'paid' ? 'Paid' : mostRecentOrder.status === 'pending' ? 'Pending' : 'Cancelled'}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <BalanceCard
+          orders={ordersForCard}
+          activeProjectCount={activeProjectCount}
+          mostRecentOrder={mostRecentOrder}
+        />
       </div>
 
       {/* ── ACTIVE PROJECTS ─────────────────────────────────────────────── */}

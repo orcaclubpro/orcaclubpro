@@ -181,7 +181,7 @@ export async function sendPasswordResetEmail(
     await payload.sendEmail({
       to: email,
       from: process.env.EMAIL_FROM || 'carbon@orcaclub.pro',
-      subject: 'Reset your ORCACLUB password',
+      subject: 'Password Reset | ORCACLUB',
       html: generatePasswordResetEmailHTML(resetUrl, name),
       text: generatePasswordResetEmailText(resetUrl, name),
     })

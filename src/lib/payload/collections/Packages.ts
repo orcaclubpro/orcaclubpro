@@ -109,6 +109,58 @@ const Packages: CollectionConfig = {
       },
     },
     {
+      name: 'requestedItems',
+      type: 'array',
+      admin: {
+        description: 'Add-on items requested by the client via their portal',
+      },
+      fields: [
+        { name: 'name', type: 'text', required: true },
+        { name: 'requestedAt', type: 'date' },
+      ],
+    },
+    {
+      name: 'paymentSchedule',
+      type: 'array',
+      admin: {
+        description: 'Planned payment schedule — entries are invoiced individually when ready',
+        initCollapsed: true,
+      },
+      labels: { singular: 'Scheduled Payment', plural: 'Scheduled Payments' },
+      fields: [
+        {
+          name: 'label',
+          type: 'text',
+          required: true,
+          admin: { description: 'e.g. Deposit, Installment 1, Final Payment' },
+        },
+        {
+          name: 'amount',
+          type: 'number',
+          required: true,
+          admin: { description: 'Dollar amount for this payment' },
+        },
+        {
+          name: 'dueDate',
+          type: 'date',
+          admin: {
+            description: 'When this payment is due',
+            date: { pickerAppearance: 'dayOnly' },
+          },
+        },
+        {
+          name: 'orderId',
+          type: 'text',
+          admin: { description: 'Set when invoiced — links to the Order record', readOnly: true },
+        },
+        {
+          name: 'invoicedAt',
+          type: 'date',
+          admin: { description: 'When the invoice was sent', readOnly: true },
+        },
+      ],
+    },
+    {
       name: 'lineItems',
       type: 'array',
       labels: {
@@ -134,8 +186,17 @@ const Packages: CollectionConfig = {
               required: true,
               min: 0,
               admin: {
-                width: '50%',
-                description: 'Price per unit (USD)',
+                width: '33%',
+                description: 'Base price per unit (USD)',
+              },
+            },
+            {
+              name: 'adjustedPrice',
+              type: 'number',
+              min: 0,
+              admin: {
+                width: '33%',
+                description: 'Override price shown on proposals (optional — leave blank to use base price)',
               },
             },
             {
@@ -144,7 +205,7 @@ const Packages: CollectionConfig = {
               defaultValue: 1,
               min: 1,
               admin: {
-                width: '50%',
+                width: '33%',
               },
             },
           ],

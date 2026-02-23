@@ -48,13 +48,16 @@ function ClientNavRow({
   isSelected,
   onSelect,
   animationDelay,
+  username,
 }: {
   client: any
   index: number
   isSelected: boolean
   onSelect: () => void
   animationDelay: number
+  username: string
 }) {
+  const router = useRouter()
   const palette = PALETTES[index % PALETTES.length]
   const balance = client.accountBalance ?? 0
   const hasBalance = balance > 0
@@ -64,6 +67,7 @@ function ClientNavRow({
       type="button"
       data-client-id={client.id}
       onClick={onSelect}
+      onDoubleClick={() => router.push(`/u/${username}/clients/${client.id}`)}
       className={cn(
         'w-full flex items-center gap-3 px-5 py-3.5 text-left transition-all duration-150 border-l-2 group',
         'animate-in fade-in slide-in-from-left-1 duration-300',
@@ -126,6 +130,7 @@ function ClientEditModal({
   const [firstName, setFirstName] = useState(client.firstName ?? '')
   const [lastName, setLastName]   = useState(client.lastName ?? '')
   const [company, setCompany]     = useState(client.company ?? '')
+  const [email, setEmail]         = useState(client.email ?? '')
   const [isSaving, setIsSaving]   = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saved, setSaved]         = useState(false)
@@ -143,6 +148,7 @@ function ClientEditModal({
       setFirstName(client.firstName ?? '')
       setLastName(client.lastName ?? '')
       setCompany(client.company ?? '')
+      setEmail(client.email ?? '')
       setSaveError(null)
       setSaved(false)
       setShowDelete(false)
@@ -162,6 +168,7 @@ function ClientEditModal({
       firstName: firstName.trim(),
       lastName: lastName.trim(),
       company: company.trim() || undefined,
+      email: email.trim() || undefined,
     })
     setIsSaving(false)
     if (!result.success) { setSaveError(result.error ?? 'Failed to save'); return }
@@ -239,6 +246,17 @@ function ClientEditModal({
                 value={company}
                 onChange={(e) => setCompany(e.target.value)}
                 placeholder="Optional"
+                className="bg-white/[0.03] border-white/[0.06] text-white placeholder:text-white/15 focus:border-cyan-400/30 focus-visible:ring-0"
+                disabled={isSaving}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[11px] text-white/35 tracking-wide">Email</label>
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="client@example.com"
                 className="bg-white/[0.03] border-white/[0.06] text-white placeholder:text-white/15 focus:border-cyan-400/30 focus-visible:ring-0"
                 disabled={isSaving}
               />
@@ -388,6 +406,28 @@ function ClientDetail({
 
   return (
     <div className="flex flex-col h-full">
+
+      {/* ── Action buttons — in layout flow, above scroll area ─────────── */}
+      <div className="shrink-0 flex items-center justify-end gap-3 px-8 pt-5 pb-3">
+        {userRole !== 'client' && (
+          <button
+            type="button"
+            onClick={() => setEditOpen(true)}
+            className="flex items-center gap-2.5 bg-[#1c1c1c] hover:bg-[#252525] border border-white/[0.14] hover:border-white/[0.24] text-white/75 hover:text-white font-semibold rounded-full px-7 py-3 text-sm transition-all duration-200"
+          >
+            <Settings className="size-4" />
+            Edit
+          </button>
+        )}
+        <Link
+          href={`/u/${username}/clients/${client.id}`}
+          className="flex items-center gap-2.5 bg-intelligence-cyan hover:bg-intelligence-cyan/90 active:scale-[0.98] text-black font-bold rounded-full px-7 py-3 text-sm transition-all duration-200 group shadow-[0_0_28px_rgba(103,232,249,0.35)] hover:shadow-[0_0_42px_rgba(103,232,249,0.5)]"
+        >
+          Open Profile
+          <ArrowRight className="size-4 group-hover:translate-x-0.5 transition-transform duration-200" />
+        </Link>
+      </div>
+
       <div className="flex-1 overflow-y-auto min-h-0 relative">
 
         {/* Orbital geometry */}
@@ -455,29 +495,7 @@ function ClientDetail({
                 )}
               </div>
 
-              {/* Right actions */}
-              <div className="flex items-center gap-2 shrink-0">
-                {/* Edit cog — staff only */}
-                {userRole !== 'client' && (
-                  <button
-                    type="button"
-                    onClick={() => setEditOpen(true)}
-                    className="flex items-center gap-1.5 text-xs text-white/45 hover:text-white/75 bg-white/[0.03] hover:bg-white/[0.07] border border-white/[0.07] hover:border-white/[0.18] rounded-lg px-3.5 py-2.5 transition-all duration-150"
-                  >
-                    <Settings className="size-3.5" />
-                    Edit
-                  </button>
-                )}
-
-                {/* Open profile */}
-                <Link
-                  href={`/u/${username}/clients/${client.id}`}
-                  className="flex items-center gap-2 text-xs font-bold bg-intelligence-cyan hover:bg-intelligence-cyan/90 active:scale-[0.98] text-black rounded-lg px-4 py-2.5 transition-all duration-150 group shadow-[0_0_20px_rgba(103,232,249,0.2)]"
-                >
-                  Open Profile
-                  <ArrowRight className="size-3.5 group-hover:translate-x-0.5 transition-transform duration-150" />
-                </Link>
-              </div>
+              <div />
             </div>
 
             {/* Large name */}
@@ -551,6 +569,7 @@ function ClientDetail({
 
         </div>
       </div>
+
     </div>
   )
 }
@@ -698,6 +717,7 @@ export function ClientsView({
                   isSelected={client.id === selectedId}
                   onSelect={() => setSelectedId(client.id)}
                   animationDelay={Math.min(i * 50, 400)}
+                  username={username}
                 />
               ))
             )}

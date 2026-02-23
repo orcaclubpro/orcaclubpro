@@ -3,9 +3,8 @@
 import Link from "next/link"
 import { LogOut } from "lucide-react"
 import { logoutAction } from "@/actions/auth"
-import { Cinzel_Decorative } from "next/font/google"
-
-const gothic = Cinzel_Decorative({ weight: "700", subsets: ["latin"] })
+import { UserSettingsModal } from "@/components/dashboard/UserSettingsModal"
+import { useHeaderTitle } from "@/app/(spaces)/HeaderTitleContext"
 
 interface SpacesHeaderProps {
   user?: {
@@ -13,6 +12,9 @@ interface SpacesHeaderProps {
     lastName?: string | null
     username?: string | null
     role?: string | null
+    name?: string | null
+    email?: string | null
+    title?: string | null
   } | null
 }
 
@@ -21,30 +23,49 @@ export function SpacesHeader({ user }: SpacesHeaderProps) {
     await logoutAction()
   }
 
+  const isDeveloper = user?.role === 'admin' || user?.role === 'user'
+  const homeHref = user?.username ? `/u/${user.username}` : '/'
+  const { title, subtitle } = useHeaderTitle()
+
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-white/[0.02] backdrop-blur-md border-b border-white/[0.06]">
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-8" aria-label="Global">
 
-        {/* Logo + SPACES Branding */}
-        <div className="flex items-baseline gap-1.5">
+        {/* Logo / breadcrumb */}
+        {title ? (
+          <div className="flex items-center gap-2 min-w-0">
+            <Link
+              href={homeHref}
+              className="text-sm font-semibold gradient-text tracking-widest shrink-0 focus:outline-none hover:opacity-80 transition-opacity"
+            >
+              SPACES
+            </Link>
+            <span className="text-gray-700 select-none shrink-0">/</span>
+            <span className={`text-sm font-semibold text-white truncate ${subtitle ? 'max-w-[120px] sm:max-w-[200px]' : 'max-w-[180px] sm:max-w-[320px]'}`}>
+              {title}
+            </span>
+            {subtitle && (
+              <>
+                <span className="text-gray-700 select-none shrink-0">/</span>
+                <span className="text-sm font-semibold text-white truncate max-w-[120px] sm:max-w-[200px]">
+                  {subtitle}
+                </span>
+              </>
+            )}
+          </div>
+        ) : (
           <Link
-            href="/"
+            href={homeHref}
             className="focus:outline-none focus-visible:ring-1 focus-visible:ring-intelligence-cyan/50 rounded-lg transition-all duration-300"
           >
-            <span className={`${gothic.className} text-xl text-white`}>ORCACLUB</span>
+            <span className="text-xl font-bold gradient-text tracking-widest">SPACES</span>
           </Link>
-          <span className="hidden sm:inline text-[11px] font-semibold gradient-text tracking-widest">SPACES</span>
-        </div>
+        )}
 
-        {/* User info + logout */}
+        {/* User info + settings + logout */}
         {user && (
           <div className="flex items-center gap-2.5">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.06]">
-              <div className="h-1.5 w-1.5 rounded-full bg-intelligence-cyan shadow-[0_0_8px_rgba(103,232,249,0.6)]" />
-              <span className="text-sm font-medium text-gray-300">
-                {user.firstName} {user.lastName}
-              </span>
-            </div>
+
             <button
               onClick={handleLogout}
               className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-400 hover:text-gray-200 hover:bg-white/[0.03] transition-all duration-300 focus:outline-none focus-visible:ring-1 focus-visible:ring-intelligence-cyan/50"
@@ -53,6 +74,14 @@ export function SpacesHeader({ user }: SpacesHeaderProps) {
               <LogOut className="h-4 w-4" />
               <span className="hidden sm:inline">Logout</span>
             </button>
+
+            {isDeveloper && user.name != null && user.email != null && (
+              <UserSettingsModal
+                name={user.name}
+                email={user.email}
+                title={user.title}
+              />
+            )}
           </div>
         )}
 

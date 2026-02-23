@@ -54,7 +54,23 @@ export async function POST(request: Request) {
     }
 
     const user = result.user
-    const username = (user.username as string | undefined) ?? null
+    let username = (user.username as string | undefined) ?? null
+
+    // resetPassword() may return a partial user — fetch the full record to
+    // guarantee we have the username needed for the post-setup redirect.
+    if (!username && user.id) {
+      try {
+        const fullUser = await payload.findByID({
+          collection: 'users',
+          id: user.id as string,
+          depth: 0,
+          overrideAccess: true,
+        })
+        username = (fullUser.username as string | undefined) ?? null
+      } catch {
+        // Non-fatal — fall back to /login redirect on the client
+      }
+    }
 
     payload.logger.info(`[Password Reset] Password successfully reset for ${user.email as string}`)
 
@@ -63,7 +79,8 @@ export async function POST(request: Request) {
       { status: 200 }
     )
 
-    // resetPassword already returns a fresh JWT — use it to log the user in
+    // resetPassword already returns a fresh JWT — set it as a session cookie
+    // so the user is immediately authenticated on the next navigation.
     if (result.token) {
       response.cookies.set({
         name: 'payload-token',

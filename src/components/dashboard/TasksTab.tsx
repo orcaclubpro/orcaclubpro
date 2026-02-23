@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Loader2 } from 'lucide-react'
+import { Plus, Loader2, Check, Zap } from 'lucide-react'
 import {
   Sheet,
   SheetContent,
@@ -24,59 +24,43 @@ import {
 import { createTask, updateTaskStatus } from '@/actions/tasks'
 import type { Task, Sprint } from '@/types/payload-types'
 
-// --- Config ---
+// ─── constants ────────────────────────────────────────────────────────────────
 
-const statusDot: Record<Task['status'], string> = {
+const STATUS_DOT: Record<Task['status'], string> = {
   pending: 'bg-gray-500',
   'in-progress': 'bg-intelligence-cyan',
   completed: 'bg-green-400',
   cancelled: 'bg-red-400',
 }
 
-const statusLabel: Record<Task['status'], string> = {
+const STATUS_LABEL: Record<Task['status'], string> = {
   pending: 'Pending',
   'in-progress': 'In Progress',
   completed: 'Completed',
   cancelled: 'Cancelled',
 }
 
-const priorityConfig = {
-  low: {
-    label: 'Low',
-    color: 'text-gray-500',
-    bg: 'bg-gray-500/10 border-gray-500/20',
-  },
-  medium: {
-    label: 'Medium',
-    color: 'text-blue-400',
-    bg: 'bg-blue-400/10 border-blue-400/20',
-  },
-  high: {
-    label: 'High',
-    color: 'text-yellow-400',
-    bg: 'bg-yellow-400/10 border-yellow-400/20',
-  },
-  urgent: {
-    label: 'Urgent',
-    color: 'text-red-400',
-    bg: 'bg-red-400/10 border-red-400/20',
-  },
+const PRIORITY_CFG = {
+  low: { label: 'L', color: 'text-gray-500', bg: 'bg-gray-500/10 border-gray-500/20' },
+  medium: { label: 'M', color: 'text-blue-400', bg: 'bg-blue-400/10 border-blue-400/20' },
+  high: { label: 'H', color: 'text-yellow-400', bg: 'bg-yellow-400/10 border-yellow-400/20' },
+  urgent: { label: 'U', color: 'text-red-400', bg: 'bg-red-400/10 border-red-400/20' },
 } satisfies Record<NonNullable<Task['priority']>, { label: string; color: string; bg: string }>
 
-const STATUS_CYCLE: Task['status'][] = ['pending', 'in-progress', 'completed']
+const SPRINT_STATUS_CFG: Record<string, { label: string; text: string; bar: string }> = {
+  pending: { label: 'Pending', text: 'text-gray-500', bar: 'bg-gray-500/40' },
+  'in-progress': { label: 'Active', text: 'text-intelligence-cyan', bar: 'bg-intelligence-cyan/60' },
+  delayed: { label: 'Delayed', text: 'text-yellow-400', bar: 'bg-yellow-400/60' },
+  finished: { label: 'Done', text: 'text-green-400', bar: 'bg-green-400/60' },
+}
 
-// --- Helpers ---
+const ACTIVE_SPRINT_STATUSES = new Set<string>(['in-progress', 'delayed'])
+const COLUMN_STATUS_ORDER: Task['status'][] = ['in-progress', 'pending', 'completed', 'cancelled']
+const UNASSIGNED = '__unassigned__'
 
-const fmtDate = (d: string) =>
-  new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date(d))
+type Priority = NonNullable<Task['priority']>
 
-const isOverdue = (d: string | null | undefined): boolean =>
-  d ? new Date(d) < new Date() : false
-
-const fmtDateRange = (start: string, end: string) =>
-  `${fmtDate(start)} – ${fmtDate(end)}`
-
-// --- Types ---
+// ─── interfaces ───────────────────────────────────────────────────────────────
 
 interface TasksTabProps {
   tasks: Task[]
@@ -85,85 +69,251 @@ interface TasksTabProps {
   readOnly?: boolean
 }
 
-type ViewMode = 'status' | 'sprint'
-type Priority = NonNullable<Task['priority']>
+// ─── helpers ──────────────────────────────────────────────────────────────────
 
-// --- Task Row ---
+const fmtDate = (d: string) =>
+  new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date(d))
 
-interface TaskRowProps {
+const isOverdue = (d: string | null | undefined): boolean =>
+  d ? new Date(d) < new Date() : false
+
+function sprintIdOf(task: Task): string | null {
+  if (!task.sprint) return null
+  return typeof task.sprint === 'string' ? task.sprint : task.sprint.id
+}
+
+function tasksForSprint(tasks: Task[], sprintId: string | null): Task[] {
+  if (sprintId === null) return tasks.filter((t) => !t.sprint)
+  return tasks.filter((t) => sprintIdOf(t) === sprintId)
+}
+
+function sortedByUpdated(sprints: Sprint[]): Sprint[] {
+  return [...sprints].sort(
+    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+  )
+}
+
+// ─── sidebar task item ────────────────────────────────────────────────────────
+
+function SidebarTask({ task }: { task: Task }) {
+  const p = (task.priority ?? 'medium') as Priority
+  const pc = PRIORITY_CFG[p]
+  const over = isOverdue(task.dueDate) && task.status !== 'completed'
+  return (
+    <div className="flex items-center gap-2 px-2 py-[5px] rounded hover:bg-white/[0.03] transition-colors">
+      <span className={`shrink-0 size-1.5 rounded-full ${STATUS_DOT[task.status]}`} />
+      <span className="flex-1 min-w-0 text-[11px] text-gray-400 truncate leading-tight">
+        {task.title}
+      </span>
+      {over && <span className="shrink-0 size-1 rounded-full bg-red-400/70" />}
+      <span className={`shrink-0 text-[9px] font-bold px-1 rounded border leading-4 ${pc.color} ${pc.bg}`}>
+        {pc.label}
+      </span>
+    </div>
+  )
+}
+
+// ─── column task card ─────────────────────────────────────────────────────────
+
+interface TaskCardProps {
   task: Task
   updating: boolean
-  onCycleStatus: (task: Task) => void
+  onToggle: (task: Task) => void
   readOnly?: boolean
 }
 
-function TaskRow({ task, updating, onCycleStatus, readOnly }: TaskRowProps) {
-  const priority = (task.priority ?? 'medium') as Priority
-  const pCfg = priorityConfig[priority]
-  const overdue = isOverdue(task.dueDate) && task.status !== 'completed'
+function TaskCard({ task, updating, onToggle, readOnly }: TaskCardProps) {
+  const p = (task.priority ?? 'medium') as Priority
+  const pc = PRIORITY_CFG[p]
+  const over = isOverdue(task.dueDate) && task.status !== 'completed'
+  const done = task.status === 'completed' || task.status === 'cancelled'
 
   return (
     <div
-      className={`flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/[0.05] transition-colors ${updating ? 'opacity-50 pointer-events-none' : ''}`}
+      className={`flex items-start gap-2.5 px-3 py-2.5 rounded-lg hover:bg-white/[0.04] transition-colors ${
+        updating ? 'opacity-50 pointer-events-none' : ''
+      } ${done ? 'opacity-55' : ''}`}
     >
-      {/* Status dot — click to cycle (disabled in readOnly) */}
       {readOnly ? (
-        <span className="shrink-0 flex items-center justify-center size-5">
-          <span className={`size-1.5 rounded-full ${statusDot[task.status]}`} />
+        <span className="shrink-0 mt-[3px] size-4 flex items-center justify-center">
+          <span className={`size-1.5 rounded-full ${STATUS_DOT[task.status]}`} />
         </span>
       ) : (
         <button
           type="button"
-          onClick={() => onCycleStatus(task)}
-          title={`Status: ${statusLabel[task.status]} — click to advance`}
-          className="shrink-0 flex items-center justify-center size-5 rounded-full hover:scale-110 transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-intelligence-cyan/50"
+          onClick={() => onToggle(task)}
+          title={done ? 'Mark pending' : 'Mark done'}
+          className={`shrink-0 mt-[3px] size-4 rounded-full border flex items-center justify-center transition-all focus:outline-none ${
+            done
+              ? 'bg-green-400/80 border-green-400/80 hover:bg-green-300/70'
+              : task.status === 'in-progress'
+              ? 'border-intelligence-cyan/50 hover:border-intelligence-cyan'
+              : 'border-white/20 hover:border-intelligence-cyan/50 hover:bg-intelligence-cyan/5'
+          }`}
         >
-          <span className={`size-1.5 rounded-full ${statusDot[task.status]}`} />
+          {done ? (
+            <Check className="size-2.5 text-black" strokeWidth={3} />
+          ) : task.status === 'in-progress' ? (
+            <span className="size-1.5 rounded-full bg-intelligence-cyan/70 animate-pulse" />
+          ) : null}
         </button>
       )}
 
-      {/* Title */}
-      <span className="flex-1 min-w-0 text-sm text-white truncate">{task.title}</span>
-
-      {/* Priority badge */}
-      <span
-        className={`shrink-0 text-xs px-1.5 py-0.5 rounded border font-medium ${pCfg.color} ${pCfg.bg}`}
-      >
-        {pCfg.label}
-      </span>
-
-      {/* Due date */}
-      {task.dueDate && (
-        <span
-          className={`shrink-0 text-xs ${overdue ? 'text-red-400' : 'text-gray-500'}`}
+      <div className="flex-1 min-w-0">
+        <p
+          className={`text-sm leading-snug ${
+            done ? 'line-through text-gray-600' : 'text-gray-200'
+          }`}
         >
-          {fmtDate(task.dueDate)}
-          {overdue && <span className="ml-1">(overdue)</span>}
-        </span>
-      )}
+          {task.title}
+        </p>
+        <div className="flex items-center gap-2 mt-1">
+          <span
+            className={`text-[10px] font-semibold px-1.5 rounded border leading-4 ${pc.color} ${pc.bg}`}
+          >
+            {pc.label}
+          </span>
+          {task.dueDate && (
+            <span className={`text-[10px] ${over ? 'text-red-400' : 'text-gray-600'}`}>
+              {fmtDate(task.dueDate)}
+              {over ? ' · overdue' : ''}
+            </span>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
 
-// --- Section Header ---
+// ─── sprint column ────────────────────────────────────────────────────────────
 
-interface SectionHeaderProps {
-  dotColor: string
+interface SprintColumnProps {
   label: string
-  count: number
+  sprints: Sprint[]
+  allTasks: Task[]
+  selectedSprintId: string | null
+  onSelect: (id: string | null) => void
+  updatingIds: Set<string>
+  onToggle: (task: Task) => void
+  readOnly?: boolean
+  bg?: string
 }
 
-function SectionHeader({ dotColor, label, count }: SectionHeaderProps) {
+function SprintColumn({
+  label,
+  sprints,
+  allTasks,
+  selectedSprintId,
+  onSelect,
+  updatingIds,
+  onToggle,
+  readOnly,
+  bg = 'bg-[#0f0f0f]',
+}: SprintColumnProps) {
+  const sprint = selectedSprintId ? sprints.find((s) => s.id === selectedSprintId) : null
+  const sCfg = sprint
+    ? (SPRINT_STATUS_CFG[sprint.status ?? 'pending'] ?? SPRINT_STATUS_CFG.pending)
+    : null
+
+  const columnTasks = tasksForSprint(allTasks, selectedSprintId)
+  const completedCount = columnTasks.filter((t) => t.status === 'completed').length
+  const progress =
+    columnTasks.length > 0 ? Math.round((completedCount / columnTasks.length) * 100) : 0
+
+  const groups = COLUMN_STATUS_ORDER.map((st) => ({
+    status: st,
+    tasks: columnTasks.filter((t) => t.status === st),
+  })).filter((g) => g.tasks.length > 0)
+
   return (
-    <div className="flex items-center gap-2 px-1 mb-1">
-      <span className={`size-1.5 rounded-full ${dotColor}`} />
-      <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">{label}</span>
-      <span className="text-xs text-gray-600">({count})</span>
+    <div className={`flex-1 flex flex-col min-w-0 ${bg}`}>
+      {/* column header */}
+      <div className="px-4 pt-4 pb-3 border-b border-white/[0.06] shrink-0">
+        <div className="flex items-center justify-between mb-2.5">
+          <span className="text-[9px] font-bold text-gray-700 uppercase tracking-[0.15em]">
+            {label}
+          </span>
+          {sCfg && (
+            <span className={`text-[10px] font-medium ${sCfg.text}`}>{sCfg.label}</span>
+          )}
+        </div>
+        <Select
+          value={selectedSprintId ?? UNASSIGNED}
+          onValueChange={(v) => onSelect(v === UNASSIGNED ? null : v)}
+        >
+          <SelectTrigger className="h-8 bg-white/[0.04] border-white/[0.08] text-white text-sm focus:border-intelligence-cyan/40">
+            <SelectValue placeholder="Select sprint" />
+          </SelectTrigger>
+          <SelectContent className="bg-[#1a1a1a] border-white/[0.08]">
+            <SelectItem value={UNASSIGNED} className="text-gray-400">
+              Unassigned tasks
+            </SelectItem>
+            {sprints.map((s) => (
+              <SelectItem key={s.id} value={s.id} className="text-white">
+                {s.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {columnTasks.length > 0 && (
+          <div className="flex items-center gap-2 mt-2.5">
+            <div className="flex-1 h-[3px] bg-white/[0.05] rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${
+                  sCfg?.bar ?? 'bg-intelligence-cyan/60'
+                }`}
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <span className="text-[10px] text-gray-600 shrink-0 tabular-nums">
+              {completedCount}/{columnTasks.length}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* tasks */}
+      <div className="flex-1 overflow-y-auto py-2">
+        {columnTasks.length === 0 ? (
+          <div className="flex items-center justify-center h-32 px-4">
+            <p className="text-xs text-gray-700 text-center">
+              {selectedSprintId === null
+                ? 'No unassigned tasks'
+                : sprint
+                ? `No tasks in ${sprint.name}`
+                : 'Select a sprint above'}
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-1 px-1">
+            {groups.map(({ status, tasks }) => (
+              <div key={status}>
+                <div className="flex items-center gap-1.5 px-3 py-1.5">
+                  <span className={`size-1 rounded-full ${STATUS_DOT[status]}`} />
+                  <span className="text-[9px] font-semibold text-gray-600 uppercase tracking-[0.12em]">
+                    {STATUS_LABEL[status]}
+                  </span>
+                  <span className="text-[9px] text-gray-700">· {tasks.length}</span>
+                </div>
+                {tasks.map((task) => (
+                  <TaskCard
+                    key={task.id}
+                    task={task}
+                    updating={updatingIds.has(task.id)}
+                    onToggle={onToggle}
+                    readOnly={readOnly}
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
 
-// --- Create Task Sheet ---
+// ─── create task sheet ────────────────────────────────────────────────────────
 
 interface CreateTaskSheetProps {
   projectId: string
@@ -182,7 +332,7 @@ function CreateTaskSheet({ projectId, sprints, open, onOpenChange }: CreateTaskS
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const resetForm = () => {
+  const reset = () => {
     setTitle('')
     setDescription('')
     setPriority('medium')
@@ -194,38 +344,21 @@ function CreateTaskSheet({ projectId, sprints, open, onOpenChange }: CreateTaskS
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
-
-    if (!title.trim()) {
-      setError('Task title is required')
-      return
-    }
-
+    if (!title.trim()) { setError('Task title is required'); return }
     setIsLoading(true)
-
     const result = await createTask({
       projectId,
       title: title.trim(),
       description: description.trim() || undefined,
       priority,
       dueDate: dueDate || undefined,
-      sprintId: sprintId || undefined,
+      sprintId: sprintId && sprintId !== 'none' ? sprintId : undefined,
     })
-
     setIsLoading(false)
-
-    if (!result.success) {
-      setError(result.error ?? 'Failed to create task')
-      return
-    }
-
-    resetForm()
+    if (!result.success) { setError(result.error ?? 'Failed to create task'); return }
+    reset()
     onOpenChange(false)
     router.refresh()
-  }
-
-  const handleCancel = () => {
-    resetForm()
-    onOpenChange(false)
   }
 
   return (
@@ -234,12 +367,11 @@ function CreateTaskSheet({ projectId, sprints, open, onOpenChange }: CreateTaskS
         <SheetHeader className="pb-0">
           <SheetTitle className="text-lg font-semibold text-white">New Task</SheetTitle>
           <SheetDescription className="text-sm text-gray-500">
-            Add a task to this project. It will be assigned to you.
+            Add a task to this project.
           </SheetDescription>
         </SheetHeader>
 
         <form onSubmit={handleSubmit} className="space-y-5 mt-6 px-4 pb-6">
-          {/* Title */}
           <div className="space-y-1.5">
             <Label htmlFor="task-title" className="text-xs font-medium text-gray-400 uppercase tracking-wider">
               Title <span className="text-red-400">*</span>
@@ -256,16 +388,11 @@ function CreateTaskSheet({ projectId, sprints, open, onOpenChange }: CreateTaskS
             />
           </div>
 
-          {/* Priority */}
           <div className="space-y-1.5">
             <Label htmlFor="task-priority" className="text-xs font-medium text-gray-400 uppercase tracking-wider">
               Priority
             </Label>
-            <Select
-              value={priority}
-              onValueChange={(v) => setPriority(v as Priority)}
-              disabled={isLoading}
-            >
+            <Select value={priority} onValueChange={(v) => setPriority(v as Priority)} disabled={isLoading}>
               <SelectTrigger
                 id="task-priority"
                 className="bg-white/[0.03] border-white/[0.08] text-white focus:border-intelligence-cyan/40 h-9 text-sm"
@@ -281,7 +408,6 @@ function CreateTaskSheet({ projectId, sprints, open, onOpenChange }: CreateTaskS
             </Select>
           </div>
 
-          {/* Due Date */}
           <div className="space-y-1.5">
             <Label htmlFor="task-due" className="text-xs font-medium text-gray-400 uppercase tracking-wider">
               Due Date
@@ -296,17 +422,12 @@ function CreateTaskSheet({ projectId, sprints, open, onOpenChange }: CreateTaskS
             />
           </div>
 
-          {/* Sprint */}
           {sprints.length > 0 && (
             <div className="space-y-1.5">
               <Label htmlFor="task-sprint" className="text-xs font-medium text-gray-400 uppercase tracking-wider">
                 Sprint
               </Label>
-              <Select
-                value={sprintId}
-                onValueChange={setSprintId}
-                disabled={isLoading}
-              >
+              <Select value={sprintId} onValueChange={setSprintId} disabled={isLoading}>
                 <SelectTrigger
                   id="task-sprint"
                   className="bg-white/[0.03] border-white/[0.08] text-white focus:border-intelligence-cyan/40 h-9 text-sm"
@@ -325,7 +446,6 @@ function CreateTaskSheet({ projectId, sprints, open, onOpenChange }: CreateTaskS
             </div>
           )}
 
-          {/* Description */}
           <div className="space-y-1.5">
             <Label htmlFor="task-desc" className="text-xs font-medium text-gray-400 uppercase tracking-wider">
               Description
@@ -341,19 +461,17 @@ function CreateTaskSheet({ projectId, sprints, open, onOpenChange }: CreateTaskS
             />
           </div>
 
-          {/* Error */}
           {error && (
             <div className="rounded-lg border border-red-400/20 bg-red-400/[0.08] px-3 py-2 text-xs text-red-400">
               {error}
             </div>
           )}
 
-          {/* Actions */}
           <div className="flex gap-2 pt-2">
             <Button
               type="button"
               variant="outline"
-              onClick={handleCancel}
+              onClick={() => { reset(); onOpenChange(false) }}
               disabled={isLoading}
               className="flex-1 bg-white/[0.02] border-white/[0.08] text-gray-300 hover:bg-white/[0.05] hover:text-white text-sm h-9"
             >
@@ -365,15 +483,9 @@ function CreateTaskSheet({ projectId, sprints, open, onOpenChange }: CreateTaskS
               className="flex-1 bg-intelligence-cyan text-black hover:bg-intelligence-cyan/90 font-medium text-sm h-9"
             >
               {isLoading ? (
-                <>
-                  <Loader2 className="size-3.5 mr-1.5 animate-spin" />
-                  Creating...
-                </>
+                <><Loader2 className="size-3.5 mr-1.5 animate-spin" />Creating...</>
               ) : (
-                <>
-                  <Plus className="size-3.5 mr-1.5" />
-                  Create Task
-                </>
+                <><Plus className="size-3.5 mr-1.5" />Create Task</>
               )}
             </Button>
           </div>
@@ -383,234 +495,153 @@ function CreateTaskSheet({ projectId, sprints, open, onOpenChange }: CreateTaskS
   )
 }
 
-// --- Main Component ---
-
-const STATUS_SECTIONS: { status: Task['status']; dotColor: string }[] = [
-  { status: 'pending', dotColor: 'bg-gray-500' },
-  { status: 'in-progress', dotColor: 'bg-intelligence-cyan' },
-  { status: 'completed', dotColor: 'bg-green-400' },
-  { status: 'cancelled', dotColor: 'bg-red-400' },
-]
+// ─── main ─────────────────────────────────────────────────────────────────────
 
 export function TasksTab({ tasks, sprints, projectId, readOnly }: TasksTabProps) {
   const router = useRouter()
   const [sheetOpen, setSheetOpen] = useState(false)
-  const [viewMode, setViewMode] = useState<ViewMode>('status')
   const [updatingIds, setUpdatingIds] = useState<Set<string>>(new Set())
 
+  const sorted = sortedByUpdated(sprints)
+  const [colAId, setColAId] = useState<string | null>(sorted[0]?.id ?? null)
+  const [colBId, setColBId] = useState<string | null>(sorted[1]?.id ?? null)
+
+  const activeSprints = sprints.filter((s) => ACTIVE_SPRINT_STATUSES.has(s.status ?? ''))
   const completedCount = tasks.filter((t) => t.status === 'completed').length
 
-  const handleCycleStatus = async (task: Task) => {
-    const currentIndex = STATUS_CYCLE.indexOf(task.status)
-    // If not in cycle (e.g. cancelled), start from beginning
-    const nextStatus = STATUS_CYCLE[(currentIndex + 1) % STATUS_CYCLE.length]
-
-    setUpdatingIds((prev) => new Set(prev).add(task.id))
-
-    await updateTaskStatus({ taskId: task.id, status: nextStatus })
-
-    setUpdatingIds((prev) => {
-      const next = new Set(prev)
-      next.delete(task.id)
-      return next
+  const handleToggle = async (task: Task) => {
+    const next: Task['status'] =
+      task.status === 'completed' || task.status === 'cancelled' ? 'pending' : 'completed'
+    setUpdatingIds((p) => new Set(p).add(task.id))
+    await updateTaskStatus({ taskId: task.id, status: next })
+    setUpdatingIds((p) => {
+      const s = new Set(p)
+      s.delete(task.id)
+      return s
     })
-
     router.refresh()
   }
 
-  // --- By Status view ---
-
-  const renderByStatus = () => (
-    <div className="space-y-6">
-      {STATUS_SECTIONS.map(({ status, dotColor }) => {
-        const group = tasks.filter((t) => t.status === status)
-        if (group.length === 0) return null
-        return (
-          <div key={status}>
-            <SectionHeader dotColor={dotColor} label={statusLabel[status]} count={group.length} />
-            <div className="space-y-0.5">
-              {group.map((task) => (
-                <TaskRow
-                  key={task.id}
-                  task={task}
-                  updating={updatingIds.has(task.id)}
-                  onCycleStatus={handleCycleStatus}
-                  readOnly={readOnly}
-                />
-              ))}
-            </div>
-          </div>
-        )
-      })}
-    </div>
-  )
-
-  // --- By Sprint view ---
-
-  const renderBySprint = () => {
-    // Build a map: sprintId -> { sprint, tasks[] }
-    const sprintMap = new Map<string, { sprint: Sprint | null; tasks: Task[] }>()
-    const unassigned: Task[] = []
-
-    for (const task of tasks) {
-      if (!task.sprint) {
-        unassigned.push(task)
-        continue
-      }
-      const sprintObj = typeof task.sprint === 'object' ? task.sprint : null
-      const sprintId = typeof task.sprint === 'string' ? task.sprint : task.sprint.id
-
-      if (!sprintMap.has(sprintId)) {
-        // Try to find full sprint data from the sprints prop
-        const fullSprint = sprints.find((s) => s.id === sprintId) ?? sprintObj
-        sprintMap.set(sprintId, { sprint: fullSprint, tasks: [] })
-      }
-      sprintMap.get(sprintId)!.tasks.push(task)
-    }
-
-    return (
-      <div className="space-y-6">
-        {Array.from(sprintMap.values()).map(({ sprint, tasks: sprintTasks }) => (
-          <div key={sprint?.id ?? 'unknown'}>
-            <div className="flex items-center gap-2 px-1 mb-1">
-              <span className="size-1.5 rounded-full bg-intelligence-cyan/60" />
-              <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">
-                {sprint?.name ?? 'Unknown Sprint'}
-              </span>
-              {sprint?.startDate && sprint?.endDate && (
-                <span className="text-xs text-gray-600">
-                  {fmtDateRange(sprint.startDate, sprint.endDate)}
-                </span>
-              )}
-              <span className="text-xs text-gray-600">({sprintTasks.length})</span>
-            </div>
-            <div className="space-y-0.5">
-              {sprintTasks.map((task) => (
-                <TaskRow
-                  key={task.id}
-                  task={task}
-                  updating={updatingIds.has(task.id)}
-                  onCycleStatus={handleCycleStatus}
-                  readOnly={readOnly}
-                />
-              ))}
-            </div>
-          </div>
-        ))}
-
-        {unassigned.length > 0 && (
-          <div>
-            <div className="flex items-center gap-2 px-1 mb-1">
-              <span className="size-1.5 rounded-full bg-gray-600" />
-              <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Unassigned
-              </span>
-              <span className="text-xs text-gray-600">({unassigned.length})</span>
-            </div>
-            <div className="space-y-0.5">
-              {unassigned.map((task) => (
-                <TaskRow
-                  key={task.id}
-                  task={task}
-                  updating={updatingIds.has(task.id)}
-                  onCycleStatus={handleCycleStatus}
-                  readOnly={readOnly}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    )
-  }
-
-  // --- Empty state ---
-
-  if (tasks.length === 0) {
-    return (
-      <>
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <p className="text-sm font-medium text-gray-400 mb-1">No tasks yet</p>
-          <p className="text-xs text-gray-600 mb-5">
-            {readOnly ? 'No tasks have been added to this project yet.' : 'Create your first task to start tracking work.'}
-          </p>
-          {!readOnly && (
-            <Button
-              onClick={() => setSheetOpen(true)}
-              className="bg-intelligence-cyan text-black hover:bg-intelligence-cyan/90 font-medium text-sm h-8 px-4"
-            >
-              <Plus className="size-3.5 mr-1.5" />
-              New Task
-            </Button>
-          )}
-        </div>
-
-        {!readOnly && (
-          <CreateTaskSheet
-            projectId={projectId}
-            sprints={sprints}
-            open={sheetOpen}
-            onOpenChange={setSheetOpen}
-          />
-        )}
-      </>
-    )
-  }
-
   return (
-    <>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-5">
-        <div className="flex items-center gap-2.5">
+    <div
+      className="flex flex-col rounded-xl border border-white/[0.06] overflow-hidden"
+      style={{ height: 'calc(100vh - 12rem)' }}
+    >
+      {/* top bar */}
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/[0.06] bg-[#0d0d0d] shrink-0">
+        <div className="flex items-center gap-3">
           <h2 className="text-sm font-semibold text-white">Tasks</h2>
-          <span className="text-xs text-gray-500">
-            {tasks.length} total · {completedCount} completed
+          <span className="text-xs text-gray-600">
+            {tasks.length} total · {completedCount} done
           </span>
         </div>
-
-        <div className="flex items-center gap-2">
-          {/* View toggle */}
-          <div className="flex items-center gap-0.5 rounded-md border border-white/[0.08] bg-[#1c1c1c] p-0.5">
-            <button
-              type="button"
-              onClick={() => setViewMode('status')}
-              className={`px-2.5 py-1 text-xs rounded transition-colors ${
-                viewMode === 'status'
-                  ? 'bg-white/[0.10] text-white'
-                  : 'text-gray-500 hover:text-gray-300'
-              }`}
-            >
-              By Status
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('sprint')}
-              className={`px-2.5 py-1 text-xs rounded transition-colors ${
-                viewMode === 'sprint'
-                  ? 'bg-white/[0.10] text-white'
-                  : 'text-gray-500 hover:text-gray-300'
-              }`}
-            >
-              By Sprint
-            </button>
-          </div>
-
-          {/* New Task button — hidden in readOnly mode */}
-          {!readOnly && (
-            <Button
-              onClick={() => setSheetOpen(true)}
-              className="bg-intelligence-cyan text-black hover:bg-intelligence-cyan/90 font-medium text-xs h-7 px-3"
-            >
-              <Plus className="size-3 mr-1" />
-              New Task
-            </Button>
-          )}
-        </div>
+        {!readOnly && (
+          <Button
+            onClick={() => setSheetOpen(true)}
+            className="bg-intelligence-cyan text-black hover:bg-intelligence-cyan/90 font-medium text-xs h-7 px-3"
+          >
+            <Plus className="size-3 mr-1" />
+            New Task
+          </Button>
+        )}
       </div>
 
-      {/* Task list */}
-      <div className="rounded-lg border border-white/[0.08] bg-[#1c1c1c] p-3">
-        {viewMode === 'status' ? renderByStatus() : renderBySprint()}
+      {/* three-panel layout */}
+      <div className="flex-1 flex divide-x divide-white/[0.06] min-h-0 overflow-hidden">
+        {/* left sidebar — active sprints overview */}
+        <aside className="w-52 shrink-0 bg-[#0c0c0c] flex flex-col">
+          <div className="flex items-center gap-2 px-3 py-2.5 border-b border-white/[0.06] shrink-0">
+            <Zap className="size-3 text-intelligence-cyan shrink-0" />
+            <span className="text-[9px] font-bold text-gray-600 uppercase tracking-[0.12em]">
+              Active Sprints
+            </span>
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            {activeSprints.length === 0 ? (
+              <div className="flex items-center justify-center h-32 px-4">
+                <p className="text-xs text-gray-700 text-center">No active sprints</p>
+              </div>
+            ) : (
+              <div className="py-2">
+                {activeSprints.map((sprint) => {
+                  const sTasks = tasksForSprint(tasks, sprint.id)
+                  const done = sTasks.filter((t) => t.status === 'completed').length
+                  const pct = sTasks.length > 0 ? Math.round((done / sTasks.length) * 100) : 0
+                  const cfg = SPRINT_STATUS_CFG[sprint.status ?? 'pending']
+                  return (
+                    <div key={sprint.id} className="mb-4">
+                      <div className="px-3 py-1.5">
+                        <div className="flex items-center justify-between gap-1 mb-1.5">
+                          <span className="text-xs font-medium text-white truncate leading-tight">
+                            {sprint.name}
+                          </span>
+                          <span className={`shrink-0 text-[9px] font-bold ${cfg.text}`}>
+                            {cfg.label}
+                          </span>
+                        </div>
+                        {sTasks.length > 0 && (
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <div className="flex-1 h-[2px] bg-white/[0.05] rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full ${cfg.bar}`}
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                            <span className="text-[9px] text-gray-700 shrink-0 tabular-nums">
+                              {pct}%
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="px-1">
+                        {sTasks.length === 0 ? (
+                          <p className="text-[10px] text-gray-700 px-2 py-1">No tasks</p>
+                        ) : (
+                          <>
+                            {sTasks.slice(0, 10).map((t) => (
+                              <SidebarTask key={t.id} task={t} />
+                            ))}
+                            {sTasks.length > 10 && (
+                              <p className="text-[10px] text-gray-700 px-2 py-1">
+                                +{sTasks.length - 10} more
+                              </p>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </aside>
+
+        {/* Sprint Column A */}
+        <SprintColumn
+          label="Sprint A"
+          sprints={sprints}
+          allTasks={tasks}
+          selectedSprintId={colAId}
+          onSelect={setColAId}
+          updatingIds={updatingIds}
+          onToggle={handleToggle}
+          readOnly={readOnly}
+          bg="bg-[#0e0e0e]"
+        />
+
+        {/* Sprint Column B */}
+        <SprintColumn
+          label="Sprint B"
+          sprints={sprints}
+          allTasks={tasks}
+          selectedSprintId={colBId}
+          onSelect={setColBId}
+          updatingIds={updatingIds}
+          onToggle={handleToggle}
+          readOnly={readOnly}
+          bg="bg-[#0f0f0f]"
+        />
       </div>
 
       {!readOnly && (
@@ -621,6 +652,6 @@ export function TasksTab({ tasks, sprints, projectId, readOnly }: TasksTabProps)
           onOpenChange={setSheetOpen}
         />
       )}
-    </>
+    </div>
   )
 }

@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { LoginForm } from '@/components/auth/LoginForm'
 import { getCurrentUser } from '@/actions/auth'
 import DynamicGreeting from '@/components/layout/dynamic-greeting'
+import { SpacesHeader } from '@/components/layout/spaces-header'
 import Link from 'next/link'
 import { Cinzel_Decorative } from 'next/font/google'
 
@@ -24,7 +25,8 @@ export default async function LoginPage() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-black">
+    <div className="flex h-screen overflow-hidden bg-black pt-16">
+      <SpacesHeader />
 
       {/* ── LEFT PANEL ── atmospheric, structural, greeting */}
       <div className="relative hidden lg:flex flex-col w-[60%] overflow-hidden bg-black">

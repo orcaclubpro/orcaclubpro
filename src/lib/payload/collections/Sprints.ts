@@ -95,7 +95,6 @@ export const Sprints: CollectionConfig = {
         {
           name: 'startDate',
           type: 'date',
-          required: true,
           admin: {
             description: 'Sprint start date',
             width: '50%',
@@ -104,16 +103,8 @@ export const Sprints: CollectionConfig = {
         {
           name: 'endDate',
           type: 'date',
-          required: true,
-          validate: (value, { data }) => {
-            const typedData = data as any
-            if (typedData.startDate && value && new Date(value) <= new Date(typedData.startDate)) {
-              return 'End date must be after start date'
-            }
-            return true
-          },
           admin: {
-            description: 'Sprint end date',
+            description: 'Sprint end date (leave blank for ongoing sprints)',
             width: '50%',
           },
         },

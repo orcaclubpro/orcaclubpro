@@ -28,7 +28,7 @@ export async function createOrUpdateClientAccount({
   company,
 }: {
   name: string
-  email: string
+  email?: string
   firstName: string
   lastName: string
   company?: string
@@ -38,8 +38,25 @@ export async function createOrUpdateClientAccount({
     if (!user) return { success: false, error: 'Unauthorized' }
     if (user.role === 'client') return { success: false, error: 'Clients cannot create accounts' }
 
-    const stripe = getStripe()
     const payload = await getPayload({ config })
+
+    // If no email provided, create account without Stripe customer or user
+    if (!email) {
+      const newAccount = await payload.create({
+        collection: 'client-accounts',
+        data: { name, firstName, lastName, ...(company ? { company } : {}) },
+      })
+      if (user.username) revalidatePath(`/u/${user.username}/clients`)
+      return {
+        success: true,
+        id: newAccount.id,
+        action: 'created' as const,
+        message: 'Client account created.',
+        emailSent: false,
+      }
+    }
+
+    const stripe = getStripe()
 
     // Step 1: Find or create Stripe customer (search-first pattern)
     const existingStripeCustomers = await stripe.customers.list({ email, limit: 1 })
@@ -221,12 +238,25 @@ export async function updateClientAccount({
   firstName,
   lastName,
   company,
+  email,
+  phone,
+  address,
 }: {
   id: string
   name: string
   firstName: string
   lastName: string
   company?: string
+  email?: string
+  phone?: string
+  address?: {
+    line1?: string
+    line2?: string
+    city?: string
+    state?: string
+    zip?: string
+    country?: string
+  }
 }) {
   try {
     const user = await getCurrentUser()
@@ -238,7 +268,15 @@ export async function updateClientAccount({
     await payload.update({
       collection: 'client-accounts',
       id,
-      data: { name, firstName, lastName, ...(company !== undefined ? { company } : {}) },
+      data: {
+        name,
+        firstName,
+        lastName,
+        ...(company !== undefined ? { company } : {}),
+        ...(email !== undefined ? { email } : {}),
+        ...(phone !== undefined ? { phone } : {}),
+        ...(address !== undefined ? { address } : {}),
+      },
     })
 
     if (user.username) revalidatePath(`/u/${user.username}/clients`)
@@ -309,6 +347,78 @@ export async function inviteClientUser({
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to invite user',
+    }
+  }
+}
+
+/**
+ * Update the email address on a specific client-role User record.
+ * The syncUserToClientAccount hook propagates the change to the linked ClientAccount.
+ * Sends a new setup email to the updated address so the client can log in.
+ */
+export async function updateClientUserEmail({
+  userId,
+  email,
+}: {
+  userId: string
+  email: string
+}) {
+  try {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return { success: false, error: 'Unauthorized' }
+    if (currentUser.role === 'client') return { success: false, error: 'Permission denied' }
+
+    const payload = await getPayload({ config })
+
+    // Fetch user first so we have firstName for the email
+    const targetUser = await payload.findByID({
+      collection: 'users',
+      id: userId,
+      depth: 0,
+      overrideAccess: true,
+    })
+
+    if (targetUser.role !== 'client') {
+      return { success: false, error: 'Can only update email on client accounts' }
+    }
+
+    await payload.update({
+      collection: 'users',
+      id: userId,
+      data: { email },
+      overrideAccess: true,
+      context: { skipClientWelcomeEmail: true },
+    })
+
+    // Non-blocking: send setup email to the new address
+    setImmediate(async () => {
+      try {
+        const baseUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'https://orcaclub.pro'
+        const setupToken = await payload.forgotPassword({
+          collection: 'users',
+          data: { email },
+          disableEmail: true,
+        })
+        const setupUrl = `${baseUrl}/setup-account?token=${setupToken}`
+        const { subject, html, text } = clientWelcome({
+          name: targetUser.firstName || 'there',
+          setupUrl,
+        })
+        await payload.sendEmail({ to: email, subject, html, text })
+        payload.logger.info(`[updateClientUserEmail] Setup email sent to new address: ${email}`)
+      } catch (err) {
+        payload.logger.error(`[updateClientUserEmail] Failed to send setup email to ${email}: ${err}`)
+      }
+    })
+
+    if (currentUser.username) revalidatePath(`/u/${currentUser.username}/clients`)
+
+    return { success: true }
+  } catch (error) {
+    console.error('[updateClientUserEmail]', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to update email',
     }
   }
 }
@@ -400,6 +510,9 @@ async function createClientUserAndSendWelcome({
         role: 'client',
         password: tempPassword,
       },
+      // Prevent sendClientWelcomeEmailHook from firing — we send the email
+      // directly below with the correct setup token and URL.
+      context: { skipClientWelcomeEmail: true, skipNameValidation: true },
     })
 
     userId = String(newUser.id)
@@ -420,7 +533,7 @@ async function createClientUserAndSendWelcome({
   payload.logger.info(`[Welcome] Token generated — sending welcome email to ${email}`)
 
   const baseUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'https://orcaclub.pro'
-  const setupUrl = `${baseUrl}/reset-password?token=${setupToken}`
+  const setupUrl = `${baseUrl}/setup-account?token=${setupToken}`
   const { subject, html, text } = clientWelcome({ name: firstName, setupUrl })
 
   try {
@@ -430,5 +543,28 @@ async function createClientUserAndSendWelcome({
   } catch (err) {
     payload.logger.error(`[Welcome] Email send failed for ${email}: ${err}`)
     return false
+  }
+}
+
+export async function getClientAccounts() {
+  try {
+    const user = await getCurrentUser()
+    if (!user || user.role === 'client') return { success: false as const, accounts: [] }
+
+    const payload = await getPayload({ config })
+    const { docs } = await payload.find({
+      collection: 'client-accounts',
+      depth: 0,
+      sort: 'name',
+      limit: 500,
+    })
+
+    return {
+      success: true as const,
+      accounts: docs.map((a) => ({ id: a.id, name: a.name, email: a.email ?? '' })),
+    }
+  } catch (error) {
+    console.error('[getClientAccounts]', error)
+    return { success: false as const, accounts: [] }
   }
 }

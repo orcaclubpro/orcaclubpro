@@ -42,6 +42,7 @@ export interface AdminDataBundle {
 
 export interface ClientDataBundle {
   firstName?: string | null
+  showTips?: boolean
   clientAccount: any
   clientProjects: any[]
   orders: any[]
@@ -268,6 +269,65 @@ export function DashboardTabView({
     }
   }, []) // stable — all mutable values accessed via refs
 
+  // ── Horizontal wheel / trackpad swipe ─────────────────────────────────────
+
+  useEffect(() => {
+    // Accumulated horizontal delta — resets when scrolling pauses
+    let accumulated = 0
+    // Prevents multiple navigations from a single sustained swipe
+    let inCooldown = false
+    let resetTimer: ReturnType<typeof setTimeout> | null = null
+    let cooldownTimer: ReturnType<typeof setTimeout> | null = null
+
+    const onWheel = (e: WheelEvent) => {
+      // Don't compete with an in-flight tab animation
+      if (animModeRef.current === 'animating' || inCooldown) return
+
+      const absX = Math.abs(e.deltaX)
+      const absY = Math.abs(e.deltaY)
+
+      // Ignore predominantly vertical scrolls (user is scrolling page content)
+      if (absY > absX * 1.2) return
+      // Ignore noise — very small horizontal deltas
+      if (absX < 3) return
+
+      accumulated += e.deltaX
+
+      // Reset the bucket if the user pauses their gesture
+      if (resetTimer) clearTimeout(resetTimer)
+      resetTimer = setTimeout(() => { accumulated = 0 }, 200)
+
+      const tabs = tabListRef.current
+      const idx  = tabs.indexOf(activeTabRef.current as AnyTab)
+
+      // Require a meaningful swipe before committing to a tab change
+      const THRESHOLD = 80
+
+      if (accumulated > THRESHOLD && idx < tabs.length - 1) {
+        // Scrolled right (trackpad fingers moved left) → next tab
+        accumulated = 0
+        inCooldown  = true
+        navigateRef.current(tabs[idx + 1])
+        if (cooldownTimer) clearTimeout(cooldownTimer)
+        cooldownTimer = setTimeout(() => { inCooldown = false }, 700)
+      } else if (accumulated < -THRESHOLD && idx > 0) {
+        // Scrolled left (trackpad fingers moved right) → previous tab
+        accumulated = 0
+        inCooldown  = true
+        navigateRef.current(tabs[idx - 1])
+        if (cooldownTimer) clearTimeout(cooldownTimer)
+        cooldownTimer = setTimeout(() => { inCooldown = false }, 700)
+      }
+    }
+
+    window.addEventListener('wheel', onWheel, { passive: true })
+    return () => {
+      window.removeEventListener('wheel', onWheel)
+      if (resetTimer)   clearTimeout(resetTimer)
+      if (cooldownTimer) clearTimeout(cooldownTimer)
+    }
+  }, []) // stable — all mutable values accessed via refs
+
   // ── View renderer ─────────────────────────────────────────────────────────
 
   const renderTab = (tab: string) => {
@@ -333,6 +393,7 @@ export function DashboardTabView({
           <ClientHomeView
             user={{ firstName: d.firstName }}
             username={username}
+            showTips={d.showTips ?? true}
             clientAccount={d.clientAccount}
             clientProjects={d.clientProjects}
             orders={d.orders}

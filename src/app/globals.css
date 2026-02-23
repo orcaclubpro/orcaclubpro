@@ -121,8 +121,16 @@
 
 html {
   scroll-behavior: smooth;
-  /* Always show scrollbar to prevent layout shift when modals/dialogs open */
+  /* Always reserve scrollbar gutter to prevent layout shift when modals open */
   overflow-y: scroll;
+  scrollbar-gutter: stable;
+}
+
+/* Radix remove-scroll injects padding-right on body when dialogs open.
+   scrollbar-gutter: stable already reserves the space, so zero it out. */
+body[data-scroll-locked] {
+  padding-right: 0 !important;
+  margin-right: 0 !important;
 }
 
 body {

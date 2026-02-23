@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Mail, Building2, Pencil, Check, Loader2,
-  Shield, User, Users,
+  Shield, User, Users, Phone, MapPin,
 } from 'lucide-react'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -12,15 +12,26 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { updateClientAccount } from '@/actions/clients'
 
+interface Address {
+  line1?: string | null
+  line2?: string | null
+  city?: string | null
+  state?: string | null
+  zip?: string | null
+  country?: string | null
+}
+
 export interface ClientSettingsCardProps {
   id: string
   name: string
   firstName: string
   lastName: string
-  email: string
+  email?: string | null
   company?: string | null
+  phone?: string | null
+  address?: Address | null
   stripeCustomerId?: string | null
-  teamMembers: Array<{ id: string; name: string }>
+  teamMembers: Array<{ id: string; name: string; title?: string | null }>
   clientUsers: Array<{ id: string; name: string; email: string }>
 }
 
@@ -33,6 +44,10 @@ function getInitials(name: string) {
     .join('')
 }
 
+function blankAddress(): Address {
+  return { line1: '', line2: '', city: '', state: '', zip: '', country: '' }
+}
+
 export function ClientSettingsCard({
   id,
   name,
@@ -40,32 +55,62 @@ export function ClientSettingsCard({
   lastName,
   email,
   company,
+  phone,
+  address,
   stripeCustomerId,
   teamMembers,
   clientUsers,
 }: ClientSettingsCardProps) {
   const router = useRouter()
   const [editOpen, setEditOpen] = useState(false)
-  const [form, setForm] = useState({ name, firstName, lastName, company: company ?? '' })
+  const [form, setForm] = useState({
+    name,
+    firstName,
+    lastName,
+    company: company ?? '',
+    email: email ?? '',
+    phone: phone ?? '',
+    address: address ? { ...blankAddress(), ...address } : blankAddress(),
+  })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const initials = getInitials(name)
   const allUsers = [
-    ...teamMembers.map((m) => ({ ...m, type: 'staff' as const })),
+    ...teamMembers.map((m) => ({ ...m, type: 'developer' as const })),
     ...clientUsers.map((u) => ({ ...u, type: 'client' as const })),
   ]
 
   function handleOpenEdit() {
-    setForm({ name, firstName, lastName, company: company ?? '' })
+    setForm({
+      name,
+      firstName,
+      lastName,
+      company: company ?? '',
+      email: email ?? '',
+      phone: phone ?? '',
+      address: address ? { ...blankAddress(), ...address } : blankAddress(),
+    })
     setError(null)
     setEditOpen(true)
   }
 
   function handleCloseEdit() {
-    setForm({ name, firstName, lastName, company: company ?? '' })
+    setForm({
+      name,
+      firstName,
+      lastName,
+      company: company ?? '',
+      email: email ?? '',
+      phone: phone ?? '',
+      address: address ? { ...blankAddress(), ...address } : blankAddress(),
+    })
     setError(null)
     setEditOpen(false)
+  }
+
+  function setAddr(field: keyof Address, value: string) {
+    setForm((f) => ({ ...f, address: { ...f.address, [field]: value } }))
   }
 
   async function handleSave() {
@@ -77,6 +122,16 @@ export function ClientSettingsCard({
       firstName: form.firstName,
       lastName: form.lastName,
       company: form.company || undefined,
+      email: form.email || undefined,
+      phone: form.phone || undefined,
+      address: {
+        line1:   form.address.line1   || undefined,
+        line2:   form.address.line2   || undefined,
+        city:    form.address.city    || undefined,
+        state:   form.address.state   || undefined,
+        zip:     form.address.zip     || undefined,
+        country: form.address.country || undefined,
+      },
     })
     setLoading(false)
     if (result.success) {
@@ -119,11 +174,28 @@ export function ClientSettingsCard({
             {company && (
               <p className="text-sm text-gray-500 mt-0.5">{company}</p>
             )}
-            <div className="flex items-center gap-1.5 mt-1 text-xs text-gray-600">
-              <Mail className="size-3 shrink-0" />
-              <span className="truncate">{email}</span>
-            </div>
-            {company && (
+            {email && (
+              <div className="flex items-center gap-1.5 mt-1 text-xs text-gray-600">
+                <Mail className="size-3 shrink-0" />
+                <span className="truncate">{email}</span>
+              </div>
+            )}
+            {phone && (
+              <div className="flex items-center gap-1.5 mt-0.5 text-xs text-gray-600">
+                <Phone className="size-3 shrink-0" />
+                <span className="truncate">{phone}</span>
+              </div>
+            )}
+            {(address?.line1 || address?.city) && (
+              <div className="flex items-start gap-1.5 mt-0.5 text-xs text-gray-600">
+                <MapPin className="size-3 shrink-0 mt-0.5" />
+                <span className="leading-snug">
+                  {address.line1 && <span>{address.line1}{address.line2 ? `, ${address.line2}` : ''}<br /></span>}
+                  {[address.city, address.state, address.zip].filter(Boolean).join(', ')}
+                </span>
+              </div>
+            )}
+            {company && !email && !phone && !address?.line1 && (
               <div className="flex items-center gap-1.5 mt-0.5 text-xs text-gray-700">
                 <Building2 className="size-3 shrink-0" />
                 <span className="truncate">{company}</span>
@@ -154,17 +226,17 @@ export function ClientSettingsCard({
                   key={u.id}
                   className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-white/[0.07] bg-white/[0.02] text-xs"
                 >
-                  {u.type === 'staff'
+                  {u.type === 'developer'
                     ? <Shield className="size-3 text-gray-600 shrink-0" />
                     : <User className="size-3 text-[#67e8f9]/50 shrink-0" />
                   }
-                  <span className={u.type === 'staff' ? 'text-gray-500' : 'text-gray-400'}>
+                  <span className={u.type === 'developer' ? 'text-gray-500' : 'text-gray-400'}>
                     {u.name}
                   </span>
                   <span className={`text-[9px] uppercase tracking-wide font-semibold ml-0.5 ${
-                    u.type === 'staff' ? 'text-gray-700' : 'text-[#67e8f9]/40'
+                    u.type === 'developer' ? 'text-gray-700' : 'text-[#67e8f9]/40'
                   }`}>
-                    {u.type}
+                    {u.type === 'developer' ? (u.title ?? 'developer') : 'client'}
                   </span>
                 </div>
               ))}
@@ -175,7 +247,7 @@ export function ClientSettingsCard({
 
       {/* ── Edit Dialog ── */}
       <Dialog open={editOpen} onOpenChange={(v) => { if (!v) handleCloseEdit(); else setEditOpen(true) }}>
-        <DialogContent className="bg-[#111] border border-white/[0.10] text-white sm:max-w-[420px] rounded-2xl">
+        <DialogContent className="bg-[#111] border border-white/[0.10] text-white sm:max-w-[480px] rounded-2xl max-h-[90vh] overflow-y-auto">
           <DialogTitle className="text-base font-semibold text-white">Edit Client Info</DialogTitle>
           <div className="space-y-3 pt-1">
             <div className="grid grid-cols-2 gap-2.5">
@@ -211,6 +283,16 @@ export function ClientSettingsCard({
               />
             </div>
             <div className="space-y-1.5">
+              <Label className="text-gray-500 text-xs uppercase tracking-wide">Email</Label>
+              <Input
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                placeholder="client@example.com"
+                className="h-9 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-gray-700 focus-visible:ring-[#67e8f9]/30 text-sm"
+              />
+            </div>
+            <div className="space-y-1.5">
               <Label className="text-gray-500 text-xs uppercase tracking-wide">Company</Label>
               <Input
                 value={form.company}
@@ -219,6 +301,60 @@ export function ClientSettingsCard({
                 className="h-9 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-gray-700 focus-visible:ring-[#67e8f9]/30 text-sm"
               />
             </div>
+            <div className="space-y-1.5">
+              <Label className="text-gray-500 text-xs uppercase tracking-wide">Phone</Label>
+              <Input
+                type="tel"
+                value={form.phone}
+                onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                placeholder="+1 555-000-0000"
+                className="h-9 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-gray-700 focus-visible:ring-[#67e8f9]/30 text-sm"
+              />
+            </div>
+
+            {/* Address */}
+            <div className="space-y-2 pt-1">
+              <p className="text-gray-500 text-xs uppercase tracking-wide font-medium">Address</p>
+              <Input
+                value={form.address.line1 ?? ''}
+                onChange={(e) => setAddr('line1', e.target.value)}
+                placeholder="Street address"
+                className="h-9 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-gray-700 focus-visible:ring-[#67e8f9]/30 text-sm"
+              />
+              <Input
+                value={form.address.line2 ?? ''}
+                onChange={(e) => setAddr('line2', e.target.value)}
+                placeholder="Suite, unit, etc. (optional)"
+                className="h-9 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-gray-700 focus-visible:ring-[#67e8f9]/30 text-sm"
+              />
+              <div className="grid grid-cols-5 gap-2">
+                <Input
+                  value={form.address.city ?? ''}
+                  onChange={(e) => setAddr('city', e.target.value)}
+                  placeholder="City"
+                  className="col-span-2 h-9 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-gray-700 focus-visible:ring-[#67e8f9]/30 text-sm"
+                />
+                <Input
+                  value={form.address.state ?? ''}
+                  onChange={(e) => setAddr('state', e.target.value)}
+                  placeholder="State"
+                  className="col-span-1 h-9 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-gray-700 focus-visible:ring-[#67e8f9]/30 text-sm"
+                />
+                <Input
+                  value={form.address.zip ?? ''}
+                  onChange={(e) => setAddr('zip', e.target.value)}
+                  placeholder="ZIP"
+                  className="col-span-2 h-9 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-gray-700 focus-visible:ring-[#67e8f9]/30 text-sm"
+                />
+              </div>
+              <Input
+                value={form.address.country ?? ''}
+                onChange={(e) => setAddr('country', e.target.value)}
+                placeholder="Country"
+                className="h-9 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-gray-700 focus-visible:ring-[#67e8f9]/30 text-sm"
+              />
+            </div>
+
             {error && (
               <p className="text-xs text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2">
                 {error}

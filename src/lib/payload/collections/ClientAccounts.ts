@@ -81,7 +81,6 @@ const ClientAccounts: CollectionConfig = {
             {
               name: 'email',
               type: 'email',
-              required: true,
               unique: true,
               index: true,
               admin: {
@@ -110,6 +109,29 @@ const ClientAccounts: CollectionConfig = {
               admin: {
                 description: 'Client company name',
               },
+            },
+            {
+              name: 'phone',
+              type: 'text',
+              admin: { description: 'Client phone number' },
+            },
+            {
+              name: 'address',
+              type: 'group',
+              admin: { description: 'Client billing address', hideGutter: true },
+              fields: [
+                { name: 'line1', type: 'text', admin: { description: 'Street address' } },
+                { name: 'line2', type: 'text', admin: { description: 'Suite, unit, etc. (optional)' } },
+                {
+                  type: 'row',
+                  fields: [
+                    { name: 'city',  type: 'text', admin: { width: '40%', description: 'City' } },
+                    { name: 'state', type: 'text', admin: { width: '30%', description: 'State' } },
+                    { name: 'zip',   type: 'text', admin: { width: '30%', description: 'ZIP' } },
+                  ],
+                },
+                { name: 'country', type: 'text', defaultValue: 'United States', admin: { description: 'Country' } },
+              ],
             },
 
             // SHOPIFY INTEGRATION

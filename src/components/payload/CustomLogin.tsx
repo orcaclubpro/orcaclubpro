@@ -19,7 +19,7 @@ import { useRouter } from 'next/navigation'
 
 export default function CustomLogin() {
   const router = useRouter()
-  const [step, setStep] = useState<'credentials' | 'code'>('credentials')
+  const [step, setStep] = useState<'credentials' | 'code' | 'locked' | 'unlock-sent'>('credentials')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [email, setEmail] = useState('')
@@ -43,6 +43,9 @@ export default function CustomLogin() {
 
       if (data.success) {
         setStep('code')
+      } else if (data.locked) {
+        setStep('locked')
+        setError('')
       } else {
         setError(data.message || 'Failed to send login code')
       }
@@ -100,6 +103,31 @@ export default function CustomLogin() {
         // Optionally show a success message
       } else {
         setError(data.message || 'Failed to resend code')
+      }
+    } catch (err) {
+      setError('An error occurred. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleRequestUnlock = async () => {
+    setError('')
+    setLoading(true)
+
+    try {
+      const response = await fetch('/api/auth/request-unlock', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        setStep('unlock-sent')
+      } else {
+        setError(data.message || 'Failed to send unlock email')
       }
     } catch (err) {
       setError('An error occurred. Please try again.')
@@ -279,7 +307,10 @@ export default function CustomLogin() {
             ORCA<span className="gradient-text">CLUB</span>
           </div>
           <div className="subtitle">
-            {step === 'credentials' ? 'Admin Login' : 'Enter Verification Code'}
+            {step === 'credentials' && 'Admin Login'}
+            {step === 'code' && 'Enter Verification Code'}
+            {step === 'locked' && 'Account Locked'}
+            {step === 'unlock-sent' && 'Check your inbox'}
           </div>
         </div>
 
@@ -370,6 +401,56 @@ export default function CustomLogin() {
               Back to Login
             </button>
           </form>
+        )}
+
+        {step === 'locked' && (
+          <div>
+            <p style={{ margin: '0 0 20px 0', fontSize: '14px', color: '#9ca3af', lineHeight: '1.6' }}>
+              Your account has been temporarily locked after too many failed login attempts.
+              We can send you an unlock link to <strong style={{ color: '#e5e5e5' }}>{email}</strong>.
+            </p>
+
+            {error && <div className="error">{error}</div>}
+
+            <button
+              type="button"
+              className="submit-button"
+              onClick={handleRequestUnlock}
+              disabled={loading}
+            >
+              {loading ? 'Sending...' : 'Send Unlock Email'}
+            </button>
+
+            <button
+              type="button"
+              className="back-button"
+              onClick={() => {
+                setStep('credentials')
+                setError('')
+              }}
+            >
+              Back to Login
+            </button>
+          </div>
+        )}
+
+        {step === 'unlock-sent' && (
+          <div>
+            <p style={{ margin: '0 0 20px 0', fontSize: '14px', color: '#9ca3af', lineHeight: '1.6' }}>
+              Unlock link sent to <strong style={{ color: '#e5e5e5' }}>{email}</strong>. Click the link in the email to unlock your account, then return here to log in.
+            </p>
+
+            <button
+              type="button"
+              className="back-button"
+              onClick={() => {
+                setStep('credentials')
+                setError('')
+              }}
+            >
+              Back to Login
+            </button>
+          </div>
         )}
       </div>
     </div>

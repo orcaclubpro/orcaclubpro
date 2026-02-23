@@ -248,6 +248,7 @@ export default async function DashboardPage({
     payload.find({
       collection: 'orders',
       where: { clientAccount: { equals: clientAccount.id } },
+      depth: 1,
       sort: '-createdAt',
       limit: 100,
     }),
@@ -285,6 +286,7 @@ export default async function DashboardPage({
       role={user.role}
       clientData={{
         firstName: user.firstName,
+        showTips: (user as any).showTips !== false,
         clientAccount,
         clientProjects,
         orders,

@@ -158,21 +158,29 @@ export async function POST(request: NextRequest) {
         console.log('[Stripe Webhook] Invoice metadata:', invoice.metadata)
         console.log('[Stripe Webhook] Invoice status:', invoice.status, 'Amount:', invoice.amount_paid)
 
-        // Get order ID from invoice metadata
-        const orcaclubOrderId = invoice.metadata?.orcaclub_order_id
+        // Resolve the order: prefer metadata (legacy orders), fall back to stripeInvoiceId lookup (new orders)
+        let resolvedOrderId: string | null = invoice.metadata?.orcaclub_order_id ?? null
         const orderNumber = invoice.metadata?.order_number
 
-        if (!orcaclubOrderId) {
-          console.warn('[Stripe Webhook] No orcaclub_order_id in invoice metadata')
+        if (!resolvedOrderId) {
+          const { docs: orderDocs } = await payload.find({
+            collection: 'orders',
+            where: { stripeInvoiceId: { equals: invoice.id } },
+            limit: 1,
+          })
+          resolvedOrderId = orderDocs[0]?.id ?? null
+        }
 
-          // Mark event as failed (with retry logic)
+        if (!resolvedOrderId) {
+          console.warn('[Stripe Webhook] No order found for invoice:', invoice.id)
+
           await retryOnTransientError(async () => {
             return await payload.update({
               collection: 'webhook-events',
               id: webhookEventId,
               data: {
                 status: 'failed',
-                errorMessage: 'No orcaclub_order_id in invoice metadata',
+                errorMessage: 'No order found for invoice (checked metadata + stripeInvoiceId)',
                 processingCompletedAt: new Date().toISOString(),
               },
             })
@@ -180,7 +188,7 @@ export async function POST(request: NextRequest) {
 
           return NextResponse.json({
             received: true,
-            warning: 'No order ID in metadata',
+            warning: 'No order found for invoice',
           })
         }
 
@@ -214,17 +222,17 @@ export async function POST(request: NextRequest) {
 
         // Update order status to 'paid' with retry logic for write conflicts
         // Note: Balance will automatically recalculate via updateClientBalance hook
-        const updatedOrder = await retryOnTransientError(async () => {
+        await retryOnTransientError(async () => {
           return await payload.update({
             collection: 'orders',
-            id: orcaclubOrderId,
+            id: resolvedOrderId!,
             data: {
               status: 'paid',
             },
           })
         })
 
-        console.log('[Stripe Webhook] Order marked as paid:', orderNumber, orcaclubOrderId)
+        console.log('[Stripe Webhook] Order marked as paid:', orderNumber, resolvedOrderId)
 
         // ✅ MARK EVENT AS PROCESSED (with retry logic)
         await retryOnTransientError(async () => {
@@ -233,7 +241,7 @@ export async function POST(request: NextRequest) {
             id: webhookEventId,
             data: {
               status: 'processed',
-              orderId: orcaclubOrderId,
+              orderId: resolvedOrderId!,
               stripeInvoiceId: invoice.id,
               processingCompletedAt: new Date().toISOString(),
             },
@@ -244,7 +252,7 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({
           received: true,
-          orderId: orcaclubOrderId,
+          orderId: resolvedOrderId,
           orderNumber,
           status: 'paid',
         })
@@ -255,10 +263,19 @@ export async function POST(request: NextRequest) {
 
         console.log('[Stripe Webhook] Invoice payment failed:', invoice.id)
 
-        const orcaclubOrderId = invoice.metadata?.orcaclub_order_id
+        let resolvedOrderId: string | null = invoice.metadata?.orcaclub_order_id ?? null
 
-        if (!orcaclubOrderId) {
-          console.warn('[Stripe Webhook] No orcaclub_order_id in invoice metadata')
+        if (!resolvedOrderId) {
+          const { docs: orderDocs } = await payload.find({
+            collection: 'orders',
+            where: { stripeInvoiceId: { equals: invoice.id } },
+            limit: 1,
+          })
+          resolvedOrderId = orderDocs[0]?.id ?? null
+        }
+
+        if (!resolvedOrderId) {
+          console.warn('[Stripe Webhook] No order found for failed invoice:', invoice.id)
 
           await retryOnTransientError(async () => {
             return await payload.update({
@@ -266,7 +283,7 @@ export async function POST(request: NextRequest) {
               id: webhookEventId,
               data: {
                 status: 'processed',
-                errorMessage: 'No orcaclub_order_id in invoice metadata',
+                errorMessage: 'No order found for invoice (checked metadata + stripeInvoiceId)',
                 processingCompletedAt: new Date().toISOString(),
               },
             })
@@ -274,12 +291,12 @@ export async function POST(request: NextRequest) {
 
           return NextResponse.json({
             received: true,
-            warning: 'No order ID in metadata',
+            warning: 'No order found for invoice',
           })
         }
 
         // Log payment failure (status remains 'pending')
-        console.warn('[Stripe Webhook] Payment failed for order:', orcaclubOrderId)
+        console.warn('[Stripe Webhook] Payment failed for order:', resolvedOrderId)
 
         // Mark event as processed (with retry logic)
         await retryOnTransientError(async () => {
@@ -288,7 +305,7 @@ export async function POST(request: NextRequest) {
             id: webhookEventId,
             data: {
               status: 'processed',
-              orderId: orcaclubOrderId,
+              orderId: resolvedOrderId!,
               stripeInvoiceId: invoice.id,
               processingCompletedAt: new Date().toISOString(),
             },
@@ -297,7 +314,7 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({
           received: true,
-          orderId: orcaclubOrderId,
+          orderId: resolvedOrderId,
           status: 'payment_failed',
         })
       }
@@ -308,9 +325,18 @@ export async function POST(request: NextRequest) {
 
         console.log('[Stripe Webhook] Invoice voided/uncollectible:', invoice.id)
 
-        const orcaclubOrderId = invoice.metadata?.orcaclub_order_id
+        let resolvedOrderId: string | null = invoice.metadata?.orcaclub_order_id ?? null
 
-        if (!orcaclubOrderId) {
+        if (!resolvedOrderId) {
+          const { docs: orderDocs } = await payload.find({
+            collection: 'orders',
+            where: { stripeInvoiceId: { equals: invoice.id } },
+            limit: 1,
+          })
+          resolvedOrderId = orderDocs[0]?.id ?? null
+        }
+
+        if (!resolvedOrderId) {
           await retryOnTransientError(async () => {
             return await payload.update({
               collection: 'webhook-events',
@@ -328,14 +354,14 @@ export async function POST(request: NextRequest) {
         await retryOnTransientError(async () => {
           return await payload.update({
             collection: 'orders',
-            id: orcaclubOrderId,
+            id: resolvedOrderId!,
             data: {
               status: 'cancelled',
             },
           })
         })
 
-        console.log('[Stripe Webhook] Order marked as cancelled:', orcaclubOrderId)
+        console.log('[Stripe Webhook] Order marked as cancelled:', resolvedOrderId)
 
         // Mark event as processed (with retry logic)
         await retryOnTransientError(async () => {
@@ -344,7 +370,7 @@ export async function POST(request: NextRequest) {
             id: webhookEventId,
             data: {
               status: 'processed',
-              orderId: orcaclubOrderId,
+              orderId: resolvedOrderId!,
               stripeInvoiceId: invoice.id,
               processingCompletedAt: new Date().toISOString(),
             },
@@ -353,7 +379,7 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({
           received: true,
-          orderId: orcaclubOrderId,
+          orderId: resolvedOrderId,
           status: 'cancelled',
         })
       }

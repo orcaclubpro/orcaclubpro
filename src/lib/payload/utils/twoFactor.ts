@@ -191,7 +191,7 @@ export async function sendTwoFactorEmail(
     await payload.sendEmail({
       to: email,
       from: process.env.EMAIL_FROM || 'carbon@orcaclub.pro',
-      subject: `${code} is your ORCACLUB verification code`,
+      subject: 'Setup your Account | ORCACLUB',
       html: generateTwoFactorEmailHTML(code, name),
       text: generateTwoFactorEmailText(code, name),
     })

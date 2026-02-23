@@ -1,12 +1,13 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Settings, Flag, Zap } from 'lucide-react'
 import type { Project, Task } from '@/types/payload-types'
 import { cn } from '@/lib/utils'
 import { ProjectSettingsModal } from './ProjectSettingsModal'
 import { CreateMilestoneSheet } from './CreateMilestoneSheet'
-import { CreateSprintSheet } from './CreateSprintSheet'
+import { CreateSprintModal } from './CreateSprintModal'
 
 interface ProjectSideActionsProps {
   project: Project
@@ -21,6 +22,7 @@ const BUTTONS = [
 ] as const
 
 export function ProjectSideActions({ project, tasks, username }: ProjectSideActionsProps) {
+  const router = useRouter()
   const [settingsOpen, setSettingsOpen]   = useState(false)
   const [milestoneOpen, setMilestoneOpen] = useState(false)
   const [sprintOpen, setSprintOpen]       = useState(false)
@@ -78,10 +80,11 @@ export function ProjectSideActions({ project, tasks, username }: ProjectSideActi
         open={milestoneOpen}
         onOpenChange={setMilestoneOpen}
       />
-      <CreateSprintSheet
+      <CreateSprintModal
         projectId={project.id}
         open={sprintOpen}
         onOpenChange={setSprintOpen}
+        onSuccess={() => { setSprintOpen(false); router.refresh() }}
       />
     </>
   )

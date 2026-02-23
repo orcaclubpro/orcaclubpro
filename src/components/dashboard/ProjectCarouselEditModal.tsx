@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Settings, Save, Loader2, CheckCircle, X } from 'lucide-react'
+import { Settings, Save, Loader2, CheckCircle, X, Trash2, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -20,9 +20,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { updateProject } from '@/actions/projects'
+import { updateProject, deleteProject } from '@/actions/projects'
+import { getClientAccounts } from '@/actions/clients'
 import type { SerializedProject } from './ProjectsCarousel'
 import { cn } from '@/lib/utils'
+import { ClientAccountCombobox } from './ClientAccountCombobox'
 
 type StatusType = 'pending' | 'in-progress' | 'on-hold' | 'completed' | 'cancelled'
 type CurrencyType = 'USD' | 'EUR' | 'GBP'
@@ -47,7 +49,7 @@ function toDateInput(iso: string | null | undefined): string {
   return iso.split('T')[0]
 }
 
-export function ProjectCarouselEditModal({ project }: { project: SerializedProject }) {
+export function ProjectCarouselEditModal({ project, large }: { project: SerializedProject; large?: boolean }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
 
@@ -59,11 +61,21 @@ export function ProjectCarouselEditModal({ project }: { project: SerializedProje
   const [budgetAmount, setBudgetAmount] = useState(project.budget?.toString() ?? '')
   const [currency, setCurrency] = useState<CurrencyType>((project.currency as CurrencyType) ?? 'USD')
 
+  // Client account
+  const [clientId, setClientId] = useState(project.client?.id ?? '')
+  const [clientAccounts, setClientAccounts] = useState<Array<{ id: string; name: string; email: string }>>([])
+  const [clientsLoading, setClientsLoading] = useState(false)
+
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
-  // Reset on open
+  const [showDeleteZone, setShowDeleteZone] = useState(false)
+  const [deleteInput, setDeleteInput] = useState('')
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+
+  // Reset on open + fetch client accounts
   useEffect(() => {
     if (open) {
       setName(project.name)
@@ -73,8 +85,18 @@ export function ProjectCarouselEditModal({ project }: { project: SerializedProje
       setProjectedEndDate(toDateInput(project.endDate))
       setBudgetAmount(project.budget?.toString() ?? '')
       setCurrency((project.currency as CurrencyType) ?? 'USD')
+      setClientId(project.client?.id ?? '')
       setError(null)
       setSuccessMessage(null)
+      setShowDeleteZone(false)
+      setDeleteInput('')
+      setDeleteError(null)
+
+      setClientsLoading(true)
+      getClientAccounts().then((result) => {
+        if (result.success) setClientAccounts(result.accounts)
+        setClientsLoading(false)
+      })
     }
   }, [open, project])
 
@@ -109,7 +131,8 @@ export function ProjectCarouselEditModal({ project }: { project: SerializedProje
         projectedEndDate: projectedEndDate || null,
         budgetAmount: budgetAmount ? parseFloat(budgetAmount) : null,
         currency,
-      },
+        ...(clientId ? { client: clientId } : {}),
+      } as any,
     })
     setIsLoading(false)
 
@@ -120,14 +143,31 @@ export function ProjectCarouselEditModal({ project }: { project: SerializedProje
     setSuccessMessage('Saved successfully')
   }
 
+  const handleDelete = async () => {
+    if (deleteInput !== project.name) return
+    setIsDeleting(true)
+    setDeleteError(null)
+    const result = await deleteProject({ projectId: project.id })
+    setIsDeleting(false)
+    if (!result.success) {
+      setDeleteError(result.error ?? 'Failed to delete project')
+      return
+    }
+    setOpen(false)
+    router.refresh()
+  }
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <button
           type="button"
-          className="flex items-center gap-1.5 text-xs text-white/45 hover:text-white/75 bg-white/[0.03] hover:bg-white/[0.07] border border-white/[0.07] hover:border-white/[0.18] rounded-lg px-3.5 py-2.5 transition-all duration-150"
+          className={large
+            ? "flex items-center gap-3 bg-[#1c1c1c] hover:bg-[#242424] border border-white/[0.14] hover:border-white/[0.24] text-white/75 hover:text-white font-semibold rounded-full px-8 py-4 text-base transition-all duration-200 shadow-xl"
+            : "flex items-center gap-1.5 text-xs text-white/45 hover:text-white/75 bg-white/[0.03] hover:bg-white/[0.07] border border-white/[0.07] hover:border-white/[0.18] rounded-lg px-3.5 py-2.5 transition-all duration-150"
+          }
         >
-          <Settings className="size-3.5" />
+          <Settings className={large ? "size-5" : "size-3.5"} />
           Edit
         </button>
       </DialogTrigger>
@@ -180,6 +220,18 @@ export function ProjectCarouselEditModal({ project }: { project: SerializedProje
                 disabled={isLoading}
               />
             </div>
+          </section>
+
+          {/* Client Account */}
+          <section className="space-y-3">
+            <p className="text-[10px] tracking-[0.4em] uppercase text-white/20 font-light">Client Account</p>
+            <ClientAccountCombobox
+              accounts={clientAccounts}
+              value={clientId}
+              onValueChange={setClientId}
+              loading={clientsLoading}
+              disabled={isLoading}
+            />
           </section>
 
           {/* Status */}
@@ -264,6 +316,66 @@ export function ProjectCarouselEditModal({ project }: { project: SerializedProje
                 </SelectContent>
               </Select>
             </div>
+          </section>
+          {/* Danger Zone */}
+          <section className="space-y-3 border-t border-red-500/10 pt-6">
+            <p className="text-[10px] tracking-[0.4em] uppercase text-red-400/40 font-light flex items-center gap-2">
+              <AlertTriangle className="size-3" />
+              Danger Zone
+            </p>
+
+            {!showDeleteZone ? (
+              <button
+                type="button"
+                onClick={() => setShowDeleteZone(true)}
+                disabled={isLoading}
+                className="flex items-center gap-2 text-xs text-red-400/50 hover:text-red-400/80 bg-red-500/5 hover:bg-red-500/10 border border-red-500/10 hover:border-red-500/25 rounded-lg px-4 py-2.5 transition-all duration-150"
+              >
+                <Trash2 className="size-3.5" />
+                Delete Project
+              </button>
+            ) : (
+              <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-5 space-y-4 animate-in fade-in slide-in-from-bottom-1 duration-200">
+                <div className="space-y-1">
+                  <p className="text-xs text-red-400/80 font-medium">This action is irreversible.</p>
+                  <p className="text-[11px] text-white/30">
+                    Type <span className="font-mono text-white/50">{project.name}</span> to confirm.
+                  </p>
+                </div>
+                <Input
+                  value={deleteInput}
+                  onChange={(e) => setDeleteInput(e.target.value)}
+                  placeholder={project.name}
+                  className="bg-white/[0.03] border-red-500/20 text-white placeholder:text-white/15 focus:border-red-400/40 focus-visible:ring-0 font-mono text-sm"
+                  disabled={isDeleting}
+                />
+                {deleteError && (
+                  <p className="text-xs text-red-400/75">{deleteError}</p>
+                )}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setShowDeleteZone(false); setDeleteInput(''); setDeleteError(null) }}
+                    disabled={isDeleting}
+                    className="flex-1 text-xs text-white/30 hover:text-white/50 bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] rounded-lg px-3 py-2 transition-all duration-150"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDelete}
+                    disabled={deleteInput !== project.name || isDeleting}
+                    className="flex-1 flex items-center justify-center gap-2 text-xs font-semibold text-red-400 bg-red-500/10 hover:bg-red-500/20 border border-red-500/25 rounded-lg px-3 py-2 transition-all duration-150 disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    {isDeleting ? (
+                      <><Loader2 className="size-3.5 animate-spin" />Deleting…</>
+                    ) : (
+                      <><Trash2 className="size-3.5" />Confirm Delete</>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
           </section>
         </form>
 

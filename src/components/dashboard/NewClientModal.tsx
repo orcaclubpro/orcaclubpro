@@ -67,7 +67,7 @@ export function NewClientModal({ username }: { username: string }) {
 
     const response = await createOrUpdateClientAccount({
       name: form.name,
-      email: form.email,
+      email: form.email || undefined,
       firstName: form.firstName,
       lastName: form.lastName,
       company: form.company || undefined,
@@ -125,7 +125,7 @@ export function NewClientModal({ username }: { username: string }) {
                   {result.action === 'updated' ? 'Account Updated' : 'Account Created'}
                 </p>
                 <p className="text-gray-400 text-sm mt-1">{result.message}</p>
-                {result.emailSent && (
+                {result.emailSent && form.email && (
                   <p className="text-xs text-gray-500 mt-1">
                     A setup email was sent to {form.email}
                   </p>
@@ -200,7 +200,7 @@ export function NewClientModal({ username }: { username: string }) {
 
               <div className="space-y-1.5">
                 <Label htmlFor="email" className="text-gray-300 text-sm">
-                  Email <span className="text-red-400">*</span>
+                  Email
                 </Label>
                 <Input
                   id="email"
@@ -208,7 +208,6 @@ export function NewClientModal({ username }: { username: string }) {
                   type="email"
                   value={form.email}
                   onChange={handleChange}
-                  required
                   placeholder="jane@example.com"
                   className="bg-white/5 border-white/10 text-white placeholder:text-gray-600 focus-visible:ring-intelligence-cyan/50"
                 />

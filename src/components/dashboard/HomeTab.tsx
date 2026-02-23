@@ -163,6 +163,18 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
     })
   }, [sprints, hasTimeline]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Current sprints: in-progress / delayed, or date range contains today
+  const currentSprints = useMemo(() => {
+    const now = Date.now()
+    return sprints.filter((s) => {
+      if (s.status === 'in-progress' || s.status === 'delayed') return true
+      if (s.startDate && s.endDate) {
+        return new Date(s.startDate).getTime() <= now && now <= new Date(s.endDate).getTime()
+      }
+      return false
+    })
+  }, [sprints])
+
   return (
     <div className="space-y-8 fluid-enter">
 
@@ -595,6 +607,112 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
             )}
           </div>
 
+        </div>
+      )}
+
+      {/* ── Active Sprints ────────────────────────────────────────────────── */}
+      {currentSprints.length > 0 && (
+        <div className="space-y-4">
+          <p className="text-[10px] tracking-[0.3em] uppercase text-gray-600 font-medium">Active Sprints</p>
+          <div className="space-y-3">
+            {currentSprints.map((sprint) => {
+              const cfg = getSprintCfg(sprint.status)
+              const sprintTasks = tasks.filter((t) => {
+                if (!t.sprint) return false
+                const sid = typeof t.sprint === 'string' ? t.sprint : (t.sprint as any).id
+                return sid === sprint.id
+              })
+              const completedCount = sprint.completedTasksCount ?? 0
+              const totalCount = sprint.totalTasksCount ?? sprintTasks.length
+              const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0
+              const daysLeft = getDaysUntil(sprint.endDate)
+
+              return (
+                <div key={sprint.id} className={cn('rounded-xl border p-5 space-y-4', cfg.bg, cfg.border)}>
+                  {/* Sprint header */}
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <div className={cn('size-1.5 rounded-full shrink-0', cfg.dot)} />
+                        <span className={cn('text-[10px] font-semibold tracking-wider uppercase', cfg.text)}>
+                          {cfg.label}
+                        </span>
+                      </div>
+                      <p className="text-base font-semibold text-white leading-snug">{sprint.name}</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-xs text-gray-500">
+                        {formatDate(sprint.startDate)} → {formatDate(sprint.endDate)}
+                      </p>
+                      {daysLeft !== null && (
+                        <p className={cn(
+                          'text-xs mt-0.5 tabular-nums',
+                          daysLeft < 0 ? 'text-red-400' : daysLeft < 7 ? 'text-orange-400' : 'text-gray-600',
+                        )}>
+                          {daysLeft < 0 ? `${Math.abs(daysLeft)}d overdue` : `${daysLeft}d left`}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Goal description */}
+                  {(sprint.goalDescription || sprint.description) && (
+                    <p className="text-sm text-gray-400 leading-relaxed -mt-1">
+                      {sprint.goalDescription || sprint.description}
+                    </p>
+                  )}
+
+                  {/* Progress bar */}
+                  {totalCount > 0 && (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-gray-600 tracking-wide">Progress</span>
+                        <span className="text-[10px] text-gray-500">{completedCount}/{totalCount} tasks</span>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-white/[0.06]">
+                        <div
+                          className={cn('h-full rounded-full transition-all duration-500', cfg.dot)}
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Task list */}
+                  {sprintTasks.length > 0 && (
+                    <div className="space-y-1.5 border-t border-white/[0.06] pt-3">
+                      {sprintTasks.slice(0, 6).map((task) => {
+                        const ts = task.status as string
+                        const dot =
+                          ts === 'completed' ? 'bg-green-400' :
+                          ts === 'in-progress' ? 'bg-blue-400' :
+                          ts === 'cancelled' ? 'bg-red-400/60' : 'bg-gray-600'
+                        return (
+                          <div key={task.id} className="flex items-center gap-2.5">
+                            <div className={cn('size-1.5 rounded-full shrink-0', dot)} />
+                            <span className={cn(
+                              'text-xs flex-1 min-w-0 truncate',
+                              ts === 'completed' ? 'text-gray-600 line-through decoration-gray-700' : 'text-gray-400',
+                            )}>
+                              {task.title}
+                            </span>
+                            {task.dueDate && (
+                              <span className="text-[10px] text-gray-700 shrink-0 tabular-nums">
+                                {formatDate(task.dueDate)}
+                              </span>
+                            )}
+                          </div>
+                        )
+                      })}
+                      {sprintTasks.length > 6 && (
+                        <p className="text-[10px] text-gray-600 pl-4">+{sprintTasks.length - 6} more</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
         </div>
       )}
 

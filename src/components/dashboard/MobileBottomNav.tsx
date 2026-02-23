@@ -1,7 +1,7 @@
 'use client'
 
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, FolderKanban, Building2, CheckSquare, Receipt, Package, ChevronLeft } from 'lucide-react'
+import { LayoutDashboard, FolderKanban, Building2, CheckSquare, Receipt, Package, ChevronLeft, Search } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { useTabContext } from '@/app/(spaces)/TabContext'
@@ -106,6 +106,23 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
             </a>
           )
         })}
+
+        {/* Search button — admin/user only */}
+        {!isClient && (
+          <>
+            <div className="w-px h-5 bg-white/[0.07] self-center mx-0.5" />
+            <button
+              onClick={() => document.dispatchEvent(new CustomEvent('orcaclub:open-search'))}
+              className="relative flex flex-col items-center gap-1.5 px-4 py-2.5 rounded-xl transition-all duration-200 active:scale-95 min-w-[52px] hover:bg-white/[0.03] cursor-pointer"
+              aria-label="Open search"
+            >
+              <Search className="size-5 text-gray-500" />
+              <span className="text-[9px] font-semibold uppercase tracking-widest text-gray-600 leading-none">
+                Search
+              </span>
+            </button>
+          </>
+        )}
 
         {/* Back circle — shows on project or client detail pages */}
         {onDetailPage && (

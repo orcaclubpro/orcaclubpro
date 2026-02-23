@@ -66,6 +66,13 @@ export function EnhancedOrderCard({ order, isPending = false }: EnhancedOrderCar
   const hasLineItems = order.lineItems && order.lineItems.length > 0
   const showPayButton = isPending && order.stripeInvoiceUrl
 
+  const primaryTitle = order.lineItems?.[0]?.title ?? 'Order'
+  const extraItems = (order.lineItems?.length ?? 0) - 1
+  const projectName =
+    order.projectRef && typeof order.projectRef !== 'string'
+      ? (order.projectRef as any).name as string
+      : null
+
   return (
     <div
       className={`group relative overflow-hidden rounded-xl border bg-white/[0.03] backdrop-blur-md transition-all duration-300 ${
@@ -82,26 +89,29 @@ export function EnhancedOrderCard({ order, isPending = false }: EnhancedOrderCar
       <div className="relative z-10 p-6">
         {/* Header */}
         <div className="flex items-start justify-between mb-4">
-          <div className="flex-1">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 rounded-lg bg-white/[0.04] border border-white/[0.06]">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-white/[0.04] border border-white/[0.06] shrink-0">
                 <Receipt className={`size-4 ${statusConfig.color}`} />
               </div>
-              <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wider font-medium">
-                  Order Number
+              <div className="min-w-0">
+                <p className="text-white font-semibold text-lg leading-tight truncate">
+                  {primaryTitle}
+                  {extraItems > 0 && (
+                    <span className="text-sm text-gray-500 font-normal ml-2">+{extraItems} more</span>
+                  )}
                 </p>
-                <p className="text-white font-semibold text-lg">{order.orderNumber}</p>
+                {projectName && (
+                  <p className="text-xs text-gray-500 mt-0.5 truncate">{projectName}</p>
+                )}
+                <p className="text-xs text-gray-600 mt-0.5">#{order.orderNumber}</p>
               </div>
             </div>
-            {order.project && (
-              <p className="text-sm text-gray-400 ml-11">Project: {order.project}</p>
-            )}
           </div>
 
           <Badge
             variant="outline"
-            className={`${statusConfig.color} ${statusConfig.bg} border ${statusConfig.border} px-3 py-1 text-xs font-medium`}
+            className={`shrink-0 ml-3 ${statusConfig.color} ${statusConfig.bg} border ${statusConfig.border} px-3 py-1 text-xs font-medium`}
           >
             {statusConfig.label}
           </Badge>

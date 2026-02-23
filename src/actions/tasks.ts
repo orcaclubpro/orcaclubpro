@@ -91,6 +91,52 @@ export async function createTask({
   }
 }
 
+export async function updateTask({
+  taskId,
+  data,
+}: {
+  taskId: string
+  data: {
+    title?: string
+    status?: 'pending' | 'in-progress' | 'completed' | 'cancelled'
+    sprint?: string | null
+    priority?: 'low' | 'medium' | 'high' | 'urgent'
+    dueDate?: string | null
+  }
+}) {
+  try {
+    const user = await getCurrentUser()
+    if (!user) return { success: false, error: 'Unauthorized' }
+
+    const payload = await getPayload({ config })
+
+    const task = await payload.findByID({ collection: 'tasks', id: taskId, depth: 1 })
+
+    if (user.role !== 'admin') {
+      const project = typeof task.project === 'object' ? task.project : null
+      if (project) {
+        const assignedUserIds = Array.isArray(project.assignedTo)
+          ? project.assignedTo.map((u) => (typeof u === 'string' ? u : u.id))
+          : []
+        if (!assignedUserIds.includes(user.id)) {
+          return { success: false, error: 'Access denied' }
+        }
+      }
+    }
+
+    const updatedTask = await payload.update({
+      collection: 'tasks',
+      id: taskId,
+      data: data as any,
+    })
+
+    return { success: true, task: updatedTask }
+  } catch (error) {
+    console.error('[updateTask]', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to update task' }
+  }
+}
+
 export async function updateTaskStatus({
   taskId,
   status,

@@ -12,6 +12,7 @@ import { sendTwoFactorEmailHook } from './hooks/sendTwoFactorEmail'
 import { beforeLoginHook } from './hooks/beforeLogin'
 import { createClientAccountHook } from './hooks/createClientAccount'
 import { syncUserToClientAccount } from './hooks/syncUserToClientAccount'
+import { sendClientWelcomeEmailHook } from './hooks/sendClientWelcomeEmail'
 import ClientAccounts from './collections/ClientAccounts'
 import Orders from './collections/Orders'
 import { WebhookEvents } from './collections/WebhookEvents'
@@ -556,6 +557,7 @@ const Users: CollectionConfig = {
     // Email verification disabled - we use custom 2FA for admin users, clients don't need verification
     // verify: false, (commented out - this is the default)
     forgotPassword: {
+      generateEmailSubject: () => 'Password Reset | ORCACLUB',
       generateEmailHTML: (args) => {
         // This custom template is handled by our API endpoint
         // But PayloadCMS requires a function here for the built-in endpoint
@@ -589,7 +591,7 @@ const Users: CollectionConfig = {
   },
   hooks: {
     beforeChange: [createClientAccountHook], // Must run BEFORE afterChange
-    afterChange: [sendTwoFactorEmailHook, syncUserToClientAccount],
+    afterChange: [sendTwoFactorEmailHook, syncUserToClientAccount, sendClientWelcomeEmailHook],
     beforeLogin: [beforeLoginHook],
   },
   fields: [
@@ -614,6 +616,14 @@ const Users: CollectionConfig = {
             return value
           },
         ],
+      },
+    },
+    {
+      name: 'title',
+      type: 'text',
+      admin: {
+        condition: (data) => data.role !== 'client',
+        description: 'Custom title shown to clients on team views (e.g. "Lead Developer", "UI Designer")',
       },
     },
     {
@@ -857,6 +867,16 @@ const Users: CollectionConfig = {
         date: {
           pickerAppearance: 'dayAndTime',
         },
+      },
+    },
+    {
+      name: 'showTips',
+      type: 'checkbox',
+      defaultValue: true,
+      admin: {
+        condition: (data) => data.role === 'client',
+        description: 'Show the welcome tips banner in the client portal. Disabled when the client dismisses it.',
+        position: 'sidebar',
       },
     },
   ],
