@@ -13,7 +13,11 @@ export const metadata = {
   description: 'Login to your ORCACLUB client dashboard',
 }
 
-export default async function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ callbackUrl?: string }>
+}) {
   const user = await getCurrentUser()
 
   if (user && user.username) {
@@ -23,6 +27,8 @@ export default async function LoginPage() {
   if (user && (user.role === 'admin' || user.role === 'user')) {
     redirect('/admin')
   }
+
+  const { callbackUrl } = await searchParams
 
   return (
     <div className="flex h-screen overflow-hidden bg-black pt-16">
@@ -95,7 +101,7 @@ export default async function LoginPage() {
           </div>
 
           {/* Login form — all functionality preserved */}
-          <LoginForm />
+          <LoginForm callbackUrl={callbackUrl} />
 
           {/* Footer */}
           <div className="mt-10 pt-6 border-t border-white/[0.06]">

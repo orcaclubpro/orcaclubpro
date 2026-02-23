@@ -27,7 +27,7 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { updateClientAccount, inviteClientUser, updateClientUserEmail } from '@/actions/clients'
+import { updateClientAccount, inviteClientUser, updateClientUserEmail, removeClientUser } from '@/actions/clients'
 
 export interface ClientSidebarProps {
   id: string
@@ -46,6 +46,8 @@ export interface ClientSidebarProps {
   /** Client-role users linked to this account */
   clientUsers?: Array<{ id: string; name: string; email: string }>
   username: string
+  /** All accessible client accounts for quick switching */
+  allClients?: Array<{ id: string; name: string; company?: string | null }>
 }
 
 function getInitials(name: string) {
@@ -86,6 +88,20 @@ function TeamModal({
   const [addLoading, setAddLoading] = useState(false)
   const [addError, setAddError] = useState<string | null>(null)
   const [addSuccess, setAddSuccess] = useState<string | null>(null) // name of added person
+
+  // ── Client user local state (for optimistic removal) ──
+  const [clientList, setClientList] = useState(clientUsers)
+  const [removingClientId, setRemovingClientId] = useState<string | null>(null)
+
+  async function handleRemoveClient(userId: string) {
+    setRemovingClientId(userId)
+    const result = await removeClientUser({ userId })
+    setRemovingClientId(null)
+    if (result.success) {
+      setClientList((c) => c.filter((u) => u.id !== userId))
+      router.refresh()
+    }
+  }
 
   // ── Per-client password reset ──
   const [resetStates, setResetStates] = useState<Record<string, 'idle' | 'loading' | 'sent' | 'error'>>({})
@@ -172,7 +188,7 @@ function TeamModal({
           <div className="flex gap-1 border-b border-white/[0.06]">
             {([
               { key: 'admin' as const,   label: 'Admin / Developer', Icon: Shield, count: teamMembers.length  },
-              { key: 'clients' as const, label: 'Clients',       Icon: User,   count: clientUsers.length  },
+              { key: 'clients' as const, label: 'Clients',       Icon: User,   count: clientList.length  },
             ]).map(({ key, label, Icon, count }) => (
               <button
                 key={key}
@@ -226,10 +242,10 @@ function TeamModal({
             <div className="space-y-5">
               {/* Existing clients */}
               <div className="space-y-2">
-                {clientUsers.length === 0 ? (
+                {clientList.length === 0 ? (
                   <p className="text-sm text-gray-600 py-2 text-center">No client users yet.</p>
                 ) : (
-                  clientUsers.map((u) => {
+                  clientList.map((u) => {
                     const rs = resetStates[u.email] ?? 'idle'
                     const isEditing = emailEditing?.id === u.id
                     return (
@@ -268,6 +284,17 @@ function TeamModal({
                                 <span className={rs === 'sent' ? 'text-emerald-400' : rs === 'error' ? 'text-red-400' : ''}>
                                   {rs === 'loading' ? 'Sending' : rs === 'sent' ? 'Sent' : rs === 'error' ? 'Failed' : 'Reset'}
                                 </span>
+                              </button>
+                              <button
+                                onClick={() => handleRemoveClient(u.id)}
+                                disabled={removingClientId === u.id}
+                                title="Remove client access"
+                                className="flex items-center justify-center size-7 rounded-md border border-white/[0.08] text-gray-600 hover:text-red-400 hover:border-red-500/20 hover:bg-red-500/[0.05] transition-all shrink-0 disabled:opacity-40"
+                              >
+                                {removingClientId === u.id
+                                  ? <Loader2 className="size-3 animate-spin" />
+                                  : <X className="size-3" />
+                                }
                               </button>
                             </>
                           )}
@@ -421,6 +448,7 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
     teamMembers,
     clientUsers = [],
     username,
+    allClients,
   } = props
 
   const router = useRouter()
@@ -475,6 +503,43 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
           ← All clients
         </Link>
       </div>
+
+      {/* ── All clients quick-switch navigator ─────────────────────────── */}
+      {allClients && allClients.length > 0 && (
+        <div className="px-3 py-3 border-b border-white/[0.06] space-y-0.5">
+          <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest px-1 mb-2">
+            Clients
+          </p>
+          {allClients.map((c) => {
+            const isCurrent = c.id === id
+            const initials = getInitials(c.name)
+            return (
+              <Link
+                key={c.id}
+                href={`/u/${username}/clients/${c.id}`}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                  isCurrent
+                    ? 'bg-white/[0.08] text-white'
+                    : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'
+                }`}
+              >
+                <div className="size-6 rounded-md bg-cyan-400/[0.08] border border-cyan-400/[0.12] flex items-center justify-center shrink-0">
+                  <span className="text-[9px] font-bold text-cyan-300">{initials}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="truncate leading-tight">{c.name}</p>
+                  {c.company && (
+                    <p className="text-[10px] text-gray-600 truncate leading-tight">{c.company}</p>
+                  )}
+                </div>
+                {isCurrent && (
+                  <span className="size-1.5 rounded-full bg-intelligence-cyan shrink-0" />
+                )}
+              </Link>
+            )
+          })}
+        </div>
+      )}
 
       {/* ── Identity ── */}
       <div className="px-6 py-6 border-b border-white/[0.06]">

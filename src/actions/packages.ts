@@ -5,6 +5,33 @@ import { getPayload } from 'payload'
 import config from '@payload-config'
 import { revalidatePath } from 'next/cache'
 import { getStripe } from '@/lib/stripe'
+import {
+  sendGenericInvoiceEmail,
+  sendPaymentScheduleEmail,
+  sendProposalEmailToAddresses,
+  generateProposalEmail,
+  generateProposalEmailText,
+} from '@/lib/payload/utils/genericInvoiceEmailTemplate'
+
+const APP_BASE = process.env.NEXT_PUBLIC_SERVER_URL ?? 'https://app.orcaclub.pro'
+
+/** Resolve the portal username for a client account — needed to build print URLs. */
+async function getClientUsername(
+  payload: Awaited<ReturnType<typeof getPayload>>,
+  clientAccountId: string,
+): Promise<string | null> {
+  try {
+    const { docs } = await payload.find({
+      collection: 'users',
+      where: { clientAccount: { equals: clientAccountId } },
+      depth: 0,
+      limit: 1,
+    })
+    return (docs[0] as any)?.username ?? null
+  } catch {
+    return null
+  }
+}
 
 /** Find the highest existing INV-NNNN number and return the next one. */
 async function nextOrderNumber(payload: Awaited<ReturnType<typeof getPayload>>): Promise<string> {
@@ -172,10 +199,13 @@ export async function updatePackage({
 
     const payload = await getPayload({ config })
 
+    const existing = await payload.findByID({ collection: 'packages', id: packageId, depth: 0 })
+    const statusReset = (existing as any)?.status === 'accepted' ? { status: 'sent' as const } : {}
+
     const pkg = await payload.update({
       collection: 'packages',
       id: packageId,
-      data: { name, description, coverMessage, notes, lineItems },
+      data: { name, description, coverMessage, notes, lineItems, ...statusReset },
     })
 
     return { success: true, package: pkg }
@@ -496,6 +526,19 @@ export async function createOrderFromPackage(
 
     revalidatePath(`/u/${user.username}/clients`)
 
+    // Non-blocking: send "New Invoice" email to client
+    ;(async () => {
+      try {
+        const clientUsername = await getClientUsername(payload, clientAccountId)
+        const proposalPrintUrl = clientUsername
+          ? `${APP_BASE}/u/${clientUsername}/packages/${packageId}/print`
+          : undefined
+        await sendGenericInvoiceEmail(payload, order.id, user.id, proposalPrintUrl)
+      } catch (e) {
+        console.error('[createOrderFromPackage] Invoice email failed:', e)
+      }
+    })()
+
     return {
       success: true,
       invoiceUrl: finalizedInvoice.hosted_invoice_url,
@@ -525,7 +568,7 @@ export async function savePaymentSchedule(
 
     const payload = await getPayload({ config })
 
-    const pkg = await payload.findByID({ collection: 'packages', id: packageId, depth: 0 })
+    const pkg = await payload.findByID({ collection: 'packages', id: packageId, depth: 1 })
     if (!pkg || pkg.type !== 'proposal') {
       return { success: false, error: 'Package proposal not found' }
     }
@@ -537,6 +580,31 @@ export async function savePaymentSchedule(
     })
 
     revalidatePath(`/u/${user.username}/clients`)
+
+    // Non-blocking: send "Payment Schedule" email to client
+    ;(async () => {
+      try {
+        const clientAccount = pkg.clientAccount as any
+        if (!clientAccount?.email) return
+        const clientAccountId = typeof clientAccount === 'string' ? clientAccount : clientAccount.id
+        const clientUsername = await getClientUsername(payload, clientAccountId)
+        const proposalPrintUrl = clientUsername
+          ? `${APP_BASE}/u/${clientUsername}/packages/${packageId}/print`
+          : undefined
+        const totalAmount = entries.reduce((s, e) => s + e.amount, 0)
+        await sendPaymentScheduleEmail(payload, {
+          customerEmail: clientAccount.email,
+          customerName: clientAccount.name ?? undefined,
+          packageName: pkg.name,
+          packageDescription: pkg.description ?? undefined,
+          entries,
+          totalAmount,
+          proposalPrintUrl,
+        })
+      } catch (e) {
+        console.error('[savePaymentSchedule] Schedule email failed:', e)
+      }
+    })()
 
     return { success: true, schedule: (updated as any).paymentSchedule ?? [] }
   } catch (error) {
@@ -689,6 +757,19 @@ export async function sendScheduledPayment(
 
     revalidatePath(`/u/${user.username}/clients`)
 
+    // Non-blocking: send "New Invoice" email to client
+    ;(async () => {
+      try {
+        const clientUsername = await getClientUsername(payload, clientAccountId)
+        const proposalPrintUrl = clientUsername
+          ? `${APP_BASE}/u/${clientUsername}/packages/${packageId}/print`
+          : undefined
+        await sendGenericInvoiceEmail(payload, order.id, user.id, proposalPrintUrl)
+      } catch (e) {
+        console.error('[sendScheduledPayment] Invoice email failed:', e)
+      }
+    })()
+
     return {
       success: true,
       invoiceUrl: finalizedInvoice.hosted_invoice_url,
@@ -826,5 +907,481 @@ export async function createPartialInvoiceFromPackage(
     }
     console.error('[createPartialInvoiceFromPackage]', error)
     return { success: false, error: error instanceof Error ? error.message : 'Failed to create partial invoice' }
+  }
+}
+
+/** Internal: create a Stripe invoice for one schedule entry, persist the order, and send an invoice email. */
+async function _sendScheduleEntryInvoice(
+  payload: Awaited<ReturnType<typeof getPayload>>,
+  stripe: ReturnType<typeof getStripe>,
+  entry: { id: string; label: string; amount: number; dueDate?: string | null },
+  packageId: string,
+  proposalName: string,
+  clientAccountId: string,
+  stripeCustomerId: string,
+  actorUserId: string,
+): Promise<{ orderId: string; invoiceUrl: string | null }> {
+  const daysUntilDue = entry.dueDate
+    ? Math.max(1, Math.round((new Date(entry.dueDate).getTime() - Date.now()) / 86400000))
+    : 30
+
+  const orderNumber = await nextOrderNumber(payload)
+  const invoiceType = entry.label.toLowerCase().includes('deposit') ? 'deposit'
+    : entry.label.toLowerCase().includes('final') ? 'balance'
+    : 'installment'
+
+  const invoice = await stripe.invoices.create({
+    customer: stripeCustomerId,
+    collection_method: 'send_invoice',
+    days_until_due: daysUntilDue,
+    auto_advance: false,
+    description: `Order ${orderNumber} — ${proposalName}`,
+    metadata: { order_number: orderNumber, orcaclub_package_id: packageId, orcaclub_invoice_type: invoiceType },
+  })
+
+  await stripe.invoiceItems.create({
+    customer: stripeCustomerId,
+    invoice: invoice.id,
+    amount: Math.round(entry.amount * 100),
+    currency: 'usd',
+    description: `${entry.label} — ${proposalName}`,
+    metadata: { order_number: orderNumber },
+  })
+
+  const finalizedInvoice = await stripe.invoices.finalizeInvoice(invoice.id)
+
+  const order = await payload.create({
+    collection: 'orders',
+    data: {
+      orderNumber,
+      clientAccount: clientAccountId,
+      packageRef: packageId,
+      invoiceType,
+      invoiceNote: entry.label,
+      amount: entry.amount,
+      status: 'pending',
+      stripeCustomerId,
+      stripeInvoiceId: finalizedInvoice.id,
+      stripeInvoiceUrl: finalizedInvoice.hosted_invoice_url || '',
+      lineItems: [{ title: entry.label, price: entry.amount, quantity: 1 }],
+    } as any,
+  })
+
+  // Non-blocking invoice email
+  ;(async () => {
+    try {
+      const clientUsername = await getClientUsername(payload, clientAccountId)
+      const proposalPrintUrl = clientUsername
+        ? `${APP_BASE}/u/${clientUsername}/packages/${packageId}/print`
+        : undefined
+      await sendGenericInvoiceEmail(payload, order.id, actorUserId, proposalPrintUrl)
+    } catch (e) {
+      console.error('[_sendScheduleEntryInvoice] Invoice email failed:', e)
+    }
+  })()
+
+  return { orderId: order.id, invoiceUrl: finalizedInvoice.hosted_invoice_url ?? null }
+}
+
+/** Saves payment schedule entries to DB without sending Stripe invoices or emails. Admin/user only. */
+export async function savePaymentScheduleOnly(
+  packageId: string,
+  entries: Array<{ label: string; amount: number; dueDate?: string }>,
+) {
+  try {
+    const user = await getCurrentUser()
+    if (!user || user.role === 'client') return { success: false, error: 'Unauthorized' }
+
+    const payload = await getPayload({ config })
+
+    const pkg = await payload.findByID({ collection: 'packages', id: packageId, depth: 0 })
+    if (!pkg || pkg.type !== 'proposal') return { success: false, error: 'Package proposal not found' }
+
+    const statusReset = (pkg as any)?.status === 'accepted' ? { status: 'sent' } : {}
+
+    await payload.update({
+      collection: 'packages',
+      id: packageId,
+      data: { paymentSchedule: entries, ...statusReset } as any,
+    })
+
+    revalidatePath(`/u/${user.username}/clients`)
+    return { success: true }
+  } catch (error) {
+    console.error('[savePaymentScheduleOnly]', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to save schedule' }
+  }
+}
+
+/** Sends Stripe invoices for all pending payment schedule entries. Admin/user only. */
+export async function pushPackageSchedule(packageId: string) {
+  try {
+    const user = await getCurrentUser()
+    if (!user || user.role === 'client') return { success: false, error: 'Unauthorized' }
+
+    const payload = await getPayload({ config })
+
+    const pkg = await payload.findByID({ collection: 'packages', id: packageId, depth: 1 })
+    if (!pkg || pkg.type !== 'proposal') return { success: false, error: 'Package proposal not found' }
+
+    const currentSchedule = ((pkg as any).paymentSchedule ?? []) as Array<{
+      id: string; label: string; amount: number; dueDate?: string | null; orderId?: string | null
+    }>
+
+    const pendingEntries = currentSchedule.filter(e => !e.orderId)
+    if (pendingEntries.length === 0) return { success: false, error: 'No pending entries to push' }
+
+    const clientAccount = pkg.clientAccount as any
+    if (!clientAccount) return { success: false, error: 'No client account associated with this proposal' }
+
+    const clientAccountId = typeof clientAccount === 'string' ? clientAccount : clientAccount.id
+    const stripeCustomerId = typeof clientAccount === 'object' ? clientAccount.stripeCustomerId : null
+
+    if (!stripeCustomerId) return { success: false, error: 'Client has no Stripe customer ID' }
+
+    const stripe = getStripe()
+    const invoiceUrls: string[] = []
+    let updatedSchedule = [...currentSchedule]
+
+    for (const entry of pendingEntries) {
+      const { orderId, invoiceUrl } = await _sendScheduleEntryInvoice(
+        payload, stripe, entry, packageId, pkg.name, clientAccountId, stripeCustomerId, user.id,
+      )
+
+      updatedSchedule = updatedSchedule.map(e =>
+        e.id === entry.id ? { ...e, orderId, invoicedAt: new Date().toISOString() } : e
+      )
+
+      await payload.update({
+        collection: 'packages',
+        id: packageId,
+        data: { paymentSchedule: updatedSchedule } as any,
+      })
+
+      if (invoiceUrl) invoiceUrls.push(invoiceUrl)
+    }
+
+    revalidatePath(`/u/${user.username}/clients`)
+    return { success: true, invoiceUrls, count: pendingEntries.length }
+  } catch (error) {
+    console.error('[pushPackageSchedule]', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to push schedule' }
+  }
+}
+
+/** Client accepts a package — pushes all pending schedule entries or creates a full invoice, then marks the package as accepted. */
+export async function acceptPackage(packageId: string) {
+  try {
+    const user = await getCurrentUser()
+    if (!user) return { success: false, error: 'Unauthorized' }
+
+    const payload = await getPayload({ config })
+
+    const proposal = await payload.findByID({ collection: 'packages', id: packageId, depth: 1 })
+    if (!proposal || proposal.type !== 'proposal') return { success: false, error: 'Package not found' }
+
+    // Verify ownership for clients
+    if (user.role === 'client') {
+      const proposalClientId = typeof proposal.clientAccount === 'string'
+        ? proposal.clientAccount
+        : (proposal.clientAccount as any)?.id
+      const userClientId = typeof user.clientAccount === 'string'
+        ? user.clientAccount
+        : (user.clientAccount as any)?.id
+      if (proposalClientId !== userClientId) return { success: false, error: 'Not authorized' }
+    }
+
+    if ((proposal as any).status === 'accepted') {
+      return { success: false, error: 'This package has already been accepted.' }
+    }
+
+    const clientAccount = proposal.clientAccount as any
+    const clientAccountId = typeof clientAccount === 'string' ? clientAccount : clientAccount?.id
+    const stripeCustomerId = typeof clientAccount === 'object' ? clientAccount?.stripeCustomerId : null
+
+    if (!stripeCustomerId) {
+      return { success: false, error: 'No payment method on file — contact your team to set up billing.' }
+    }
+
+    const schedule = ((proposal as any).paymentSchedule ?? []) as Array<{
+      id: string; label: string; amount: number; dueDate?: string | null; orderId?: string | null
+    }>
+    const pendingEntries = schedule.filter(e => !e.orderId)
+    const lineItems = (proposal.lineItems ?? []) as any[]
+
+    if (pendingEntries.length === 0 && lineItems.length === 0) {
+      return { success: false, error: 'This package has no items configured yet — contact your team.' }
+    }
+
+    const stripe = getStripe()
+    const invoiceUrls: string[] = []
+
+    if (schedule.length > 0 && pendingEntries.length > 0) {
+      // Push all pending schedule entries
+      let updatedSchedule = [...schedule]
+
+      for (const entry of pendingEntries) {
+        const { orderId, invoiceUrl } = await _sendScheduleEntryInvoice(
+          payload, stripe, entry, packageId, proposal.name, clientAccountId, stripeCustomerId, user.id,
+        )
+
+        updatedSchedule = updatedSchedule.map(e =>
+          e.id === entry.id ? { ...e, orderId, invoicedAt: new Date().toISOString() } : e
+        )
+
+        await payload.update({
+          collection: 'packages',
+          id: packageId,
+          data: { paymentSchedule: updatedSchedule } as any,
+        })
+
+        if (invoiceUrl) invoiceUrls.push(invoiceUrl)
+      }
+
+      // Send a single acceptance confirmation showing the full payment schedule
+      ;(async () => {
+        try {
+          const clientUsername = await getClientUsername(payload, clientAccountId)
+          const proposalPrintUrl = clientUsername
+            ? `${APP_BASE}/u/${clientUsername}/packages/${packageId}/print`
+            : undefined
+          const totalAmount = schedule.reduce((s, e) => s + (e.amount ?? 0), 0)
+          await sendPaymentScheduleEmail(payload, {
+            customerName: typeof clientAccount === 'object' ? (clientAccount?.name ?? undefined) : undefined,
+            customerEmail: typeof clientAccount === 'object' ? (clientAccount?.email ?? '') : '',
+            packageName: proposal.name,
+            packageDescription: (proposal as any).description ?? undefined,
+            entries: schedule.map(e => ({ label: e.label, amount: e.amount, dueDate: e.dueDate ?? null })),
+            totalAmount,
+            proposalPrintUrl,
+          })
+        } catch (e) {
+          console.error('[acceptPackage] Schedule confirmation email failed:', e)
+        }
+      })()
+    } else if (lineItems.length > 0) {
+      // No schedule — create one full invoice from all line items
+      const orderNumber = await nextOrderNumber(payload)
+      const totalAmount = lineItems.reduce((s: number, item: any) => s + (item.price ?? 0) * (item.quantity ?? 1), 0)
+
+      const invoice = await stripe.invoices.create({
+        customer: stripeCustomerId,
+        collection_method: 'send_invoice',
+        days_until_due: 30,
+        auto_advance: false,
+        description: `Order ${orderNumber} — ${proposal.name}`,
+        metadata: { order_number: orderNumber, orcaclub_package_id: packageId },
+      })
+
+      for (const item of lineItems) {
+        await stripe.invoiceItems.create({
+          customer: stripeCustomerId,
+          invoice: invoice.id,
+          amount: Math.round((item.price ?? 0) * (item.quantity ?? 1) * 100),
+          currency: 'usd',
+          description: item.name,
+          metadata: { order_number: orderNumber },
+        })
+      }
+
+      const finalizedInvoice = await stripe.invoices.finalizeInvoice(invoice.id)
+
+      const order = await payload.create({
+        collection: 'orders',
+        data: {
+          orderNumber,
+          clientAccount: clientAccountId,
+          packageRef: packageId,
+          invoiceType: 'full',
+          amount: totalAmount,
+          status: 'pending',
+          stripeCustomerId,
+          stripeInvoiceId: finalizedInvoice.id,
+          stripeInvoiceUrl: finalizedInvoice.hosted_invoice_url || '',
+          lineItems: lineItems.map((item: any) => ({
+            title: item.name,
+            description: item.description ?? undefined,
+            quantity: item.quantity ?? 1,
+            price: item.price ?? 0,
+            isRecurring: item.isRecurring ?? false,
+          })),
+        } as any,
+      })
+
+      if (finalizedInvoice.hosted_invoice_url) invoiceUrls.push(finalizedInvoice.hosted_invoice_url)
+
+      // Non-blocking invoice email
+      ;(async () => {
+        try {
+          const clientUsername = await getClientUsername(payload, clientAccountId)
+          const proposalPrintUrl = clientUsername
+            ? `${APP_BASE}/u/${clientUsername}/packages/${packageId}/print`
+            : undefined
+          await sendGenericInvoiceEmail(payload, order.id, user.id, proposalPrintUrl)
+        } catch (e) {
+          console.error('[acceptPackage] Invoice email failed:', e)
+        }
+      })()
+    }
+
+    // Mark as accepted
+    await payload.update({
+      collection: 'packages',
+      id: packageId,
+      data: { status: 'accepted' } as any,
+    })
+
+    revalidatePath(`/u/${user.username}`)
+    return { success: true, invoiceUrls }
+  } catch (error) {
+    console.error('[acceptPackage]', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to accept package' }
+  }
+}
+
+/** Client emails the package proposal to their own account email. */
+export async function emailPackageToSelf(packageId: string) {
+  try {
+    const user = await getCurrentUser()
+    if (!user || user.role !== 'client') return { success: false, error: 'Unauthorized' }
+
+    const payload = await getPayload({ config })
+
+    const proposal = await payload.findByID({ collection: 'packages', id: packageId, depth: 1 })
+    if (!proposal || proposal.type !== 'proposal') return { success: false, error: 'Package not found' }
+
+    // Verify ownership
+    const proposalClientId = typeof proposal.clientAccount === 'string'
+      ? proposal.clientAccount
+      : (proposal.clientAccount as any)?.id
+    const userClientId = typeof user.clientAccount === 'string'
+      ? user.clientAccount
+      : (user.clientAccount as any)?.id
+    if (proposalClientId !== userClientId) return { success: false, error: 'Not authorized' }
+
+    const clientAccount = proposal.clientAccount as any
+    const email = clientAccount?.email
+    if (!email) return { success: false, error: 'No email address on file' }
+
+    // Build totals from line items
+    const lineItems = (proposal.lineItems ?? []) as any[]
+    let totalOneTime = 0, totalMonthly = 0, totalAnnual = 0
+    for (const item of lineItems) {
+      const total = (item.adjustedPrice ?? item.price ?? 0) * (item.quantity ?? 1)
+      if (item.isRecurring) {
+        if (item.recurringInterval === 'year') totalAnnual += total
+        else totalMonthly += total
+      } else {
+        totalOneTime += total
+      }
+    }
+
+    const clientUsername = await getClientUsername(payload, userClientId)
+    const proposalPrintUrl = clientUsername
+      ? `${APP_BASE}/u/${clientUsername}/packages/${packageId}/print`
+      : undefined
+
+    const result = await sendProposalEmailToAddresses(payload, {
+      recipientName: clientAccount?.name ?? undefined,
+      recipientEmail: email,
+      packageName: proposal.name,
+      packageDescription: (proposal as any).description ?? undefined,
+      coverMessage: (proposal as any).coverMessage ?? undefined,
+      lineItems: lineItems.map((item: any) => ({
+        name: item.name,
+        price: item.adjustedPrice ?? item.price ?? 0,
+        quantity: item.quantity ?? 1,
+        isRecurring: item.isRecurring ?? false,
+        recurringInterval: item.recurringInterval ?? undefined,
+      })),
+      totalOneTime,
+      totalMonthly,
+      totalAnnual,
+      paymentSchedule: ((proposal as any).paymentSchedule ?? []).map((e: any) => ({
+        label: e.label,
+        amount: e.amount,
+        dueDate: e.dueDate ?? null,
+      })),
+      proposalPrintUrl,
+    }, [email])
+
+    if (!result.success) {
+      return { success: false, error: result.errors[0] ?? 'Failed to send email' }
+    }
+    return { success: true }
+  } catch (error) {
+    console.error('[emailPackageToSelf]', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to send email' }
+  }
+}
+
+export async function sendProposalEmail(
+  packageId: string,
+  emails: string[],
+) {
+  try {
+    const user = await getCurrentUser()
+    if (!user || user.role === 'client') return { success: false, error: 'Unauthorized' }
+
+    const validEmails = emails.map(e => e.trim()).filter(e => e.includes('@'))
+    if (validEmails.length === 0) return { success: false, error: 'No valid email addresses provided' }
+
+    const payload = await getPayload({ config })
+
+    const pkg = await payload.findByID({ collection: 'packages', id: packageId, depth: 1 })
+    if (!pkg) return { success: false, error: 'Package not found' }
+
+    const lineItems = (pkg.lineItems ?? []) as any[]
+    let totalOneTime = 0, totalMonthly = 0, totalAnnual = 0
+    for (const item of lineItems) {
+      const total = (item.adjustedPrice ?? item.price ?? 0) * (item.quantity ?? 1)
+      if (item.isRecurring) {
+        if (item.recurringInterval === 'year') totalAnnual += total
+        else totalMonthly += total
+      } else {
+        totalOneTime += total
+      }
+    }
+
+    // Build proposal print URL using client username if available
+    const clientAccount = pkg.clientAccount as any
+    const clientAccountId = clientAccount
+      ? (typeof clientAccount === 'string' ? clientAccount : clientAccount.id)
+      : null
+    let proposalPrintUrl: string | undefined
+    if (clientAccountId) {
+      const clientUsername = await getClientUsername(payload, clientAccountId)
+      if (clientUsername) {
+        proposalPrintUrl = `${APP_BASE}/u/${clientUsername}/packages/${packageId}/print`
+      }
+    }
+
+    const result = await sendProposalEmailToAddresses(payload, {
+      packageName: pkg.name,
+      packageDescription: pkg.description ?? undefined,
+      coverMessage: (pkg as any).coverMessage ?? undefined,
+      lineItems: lineItems.map((item: any) => ({
+        name: item.name,
+        price: item.adjustedPrice ?? item.price ?? 0,
+        quantity: item.quantity ?? 1,
+        isRecurring: item.isRecurring ?? false,
+        recurringInterval: item.recurringInterval ?? 'month',
+      })),
+      totalOneTime,
+      totalMonthly,
+      totalAnnual,
+      paymentSchedule: ((pkg as any).paymentSchedule ?? []).map((e: any) => ({
+        label: e.label,
+        amount: e.amount,
+        dueDate: e.dueDate ?? null,
+      })),
+      proposalPrintUrl,
+      recipientEmail: validEmails[0],
+    }, validEmails)
+
+    return result
+  } catch (error) {
+    console.error('[sendProposalEmail]', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to send proposal' }
   }
 }

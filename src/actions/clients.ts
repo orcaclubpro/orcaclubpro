@@ -230,7 +230,12 @@ export async function deleteClientAccount({ id }: { id: string }) {
 
 /**
  * Update editable fields on an existing ClientAccount.
- * The createStripeCustomerHook will handle email → Stripe sync automatically.
+ *
+ * Email change side-effects (all automatic):
+ *  - Stripe customer email updated via createStripeCustomerHook (beforeChange)
+ *  - Linked User email updated via syncClientAccountToUser (afterChange)
+ *  - If a client User already exists → welcome sequence sent to new address
+ *  - If no client User exists yet → one is created and welcome sequence sent
  */
 export async function updateClientAccount({
   id,
@@ -265,6 +270,15 @@ export async function updateClientAccount({
 
     const payload = await getPayload({ config })
 
+    // Capture old email before the update so we can detect a change.
+    const currentAccount = await payload.findByID({
+      collection: 'client-accounts',
+      id,
+      depth: 0,
+      overrideAccess: true,
+    })
+    const oldEmail = (currentAccount.email as string | null | undefined) ?? null
+
     await payload.update({
       collection: 'client-accounts',
       id,
@@ -278,6 +292,62 @@ export async function updateClientAccount({
         ...(address !== undefined ? { address } : {}),
       },
     })
+
+    // If the email changed, handle the welcome sequence.
+    // syncClientAccountToUser has already run synchronously inside payload.update(),
+    // so any existing linked User already carries the new email at this point.
+    if (email && email !== oldEmail) {
+      setImmediate(async () => {
+        try {
+          // Check whether a client User is linked to this account.
+          const { docs: linkedUsers } = await payload.find({
+            collection: 'users',
+            where: {
+              and: [
+                { clientAccount: { equals: id } },
+                { role: { equals: 'client' } },
+              ],
+            },
+            limit: 1,
+            depth: 0,
+            overrideAccess: true,
+          })
+
+          if (linkedUsers.length === 0) {
+            // No client user yet — create one and send welcome.
+            payload.logger.info(
+              `[updateClientAccount] No linked client user found for account ${id} — creating one for ${email}`
+            )
+            await createClientUserAndSendWelcome({
+              payload,
+              email,
+              firstName,
+              lastName,
+              ...(company ? { company } : {}),
+            })
+          } else {
+            // User exists and has the new email (synced by hook) — send welcome.
+            payload.logger.info(
+              `[updateClientAccount] Email changed → sending welcome to ${email}`
+            )
+            const baseUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'https://orcaclub.pro'
+            const setupToken = await payload.forgotPassword({
+              collection: 'users',
+              data: { email },
+              disableEmail: true,
+            })
+            const setupUrl = `${baseUrl}/setup-account?token=${setupToken}`
+            const { subject, html, text } = clientWelcome({ name: firstName || 'there', setupUrl })
+            await payload.sendEmail({ to: email, subject, html, text })
+            payload.logger.info(`[updateClientAccount] Welcome email sent to ${email}`)
+          }
+        } catch (err) {
+          payload.logger.error(
+            `[updateClientAccount] Failed to run welcome sequence for ${email}: ${err}`
+          )
+        }
+      })
+    }
 
     if (user.username) revalidatePath(`/u/${user.username}/clients`)
 
@@ -543,6 +613,88 @@ async function createClientUserAndSendWelcome({
   } catch (err) {
     payload.logger.error(`[Welcome] Email send failed for ${email}: ${err}`)
     return false
+  }
+}
+
+/**
+ * Unlink a client-role user from a ClientAccount by clearing their clientAccount reference.
+ * The user record remains intact — they just lose portal access to this account.
+ */
+export async function removeClientUser({ userId }: { userId: string }) {
+  try {
+    const user = await getCurrentUser()
+    if (!user) return { success: false, error: 'Unauthorized' }
+    if (user.role === 'client') return { success: false, error: 'Permission denied' }
+
+    const payload = await getPayload({ config })
+
+    await payload.update({
+      collection: 'users',
+      id: userId,
+      data: { clientAccount: null },
+      context: { skipClientAccountSync: true, skipNameValidation: true },
+      overrideAccess: true,
+    })
+
+    if (user.username) revalidatePath(`/u/${user.username}/clients`)
+
+    return { success: true }
+  } catch (error) {
+    console.error('[removeClientUser]', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to remove client user',
+    }
+  }
+}
+
+/**
+ * Remove a staff user from a ClientAccount's assignedTo list.
+ * Used by the client edit modal's Team section.
+ */
+export async function removeUserFromClientTeam({
+  clientAccountId,
+  userId,
+}: {
+  clientAccountId: string
+  userId: string
+}) {
+  try {
+    const user = await getCurrentUser()
+    if (!user) return { success: false, error: 'Unauthorized' }
+    if (user.role === 'client') return { success: false, error: 'Permission denied' }
+
+    const payload = await getPayload({ config })
+
+    const account = await payload.findByID({
+      collection: 'client-accounts',
+      id: clientAccountId,
+      depth: 0,
+      overrideAccess: true,
+    })
+
+    const currentAssigned = Array.isArray(account.assignedTo)
+      ? (account.assignedTo as any[]).map((u: any) => (typeof u === 'string' ? u : u.id))
+      : []
+
+    const updated = currentAssigned.filter((id: string) => id !== userId)
+
+    await payload.update({
+      collection: 'client-accounts',
+      id: clientAccountId,
+      data: { assignedTo: updated },
+      overrideAccess: true,
+    })
+
+    if (user.username) revalidatePath(`/u/${user.username}/clients`)
+
+    return { success: true }
+  } catch (error) {
+    console.error('[removeUserFromClientTeam]', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to remove team member',
+    }
   }
 }
 

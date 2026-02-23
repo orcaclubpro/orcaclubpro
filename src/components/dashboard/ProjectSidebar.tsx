@@ -8,6 +8,7 @@ interface ProjectSidebarProps {
   username: string
   readOnly?: boolean
   clientProjects?: Project[]
+  staffProjects?: Project[]
 }
 
 const statusMap: Record<string, { dot: string; label: string; color: string }> = {
@@ -28,7 +29,7 @@ function fmtCurrency(amount: number | null | undefined, currency = 'USD') {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount)
 }
 
-export function ProjectSidebar({ project, tasks, username, readOnly, clientProjects }: ProjectSidebarProps) {
+export function ProjectSidebar({ project, tasks, username, readOnly, clientProjects, staffProjects }: ProjectSidebarProps) {
   const status = statusMap[project.status] ?? statusMap.pending
   const clientAccount = typeof project.client === 'object' ? project.client : null
 
@@ -55,8 +56,8 @@ export function ProjectSidebar({ project, tasks, username, readOnly, clientProje
 
       {/* ── Client project navigator ────────────────────────────────────── */}
       {clientProjects && clientProjects.length > 0 && (
-        <div className="space-y-1">
-          <p className="text-[10px] font-medium text-gray-600 uppercase tracking-[0.08em] px-1 mb-2">
+        <div className="space-y-0.5">
+          <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest px-1 mb-2">
             Your Projects
           </p>
           {clientProjects.map((p) => {
@@ -66,16 +67,47 @@ export function ProjectSidebar({ project, tasks, username, readOnly, clientProje
               <Link
                 key={p.id}
                 href={`/u/${username}/projects/${p.id}`}
-                className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-colors ${
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
                   isCurrent
                     ? 'bg-white/[0.08] text-white'
-                    : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.04]'
+                    : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'
                 }`}
               >
-                <span className={`size-1.5 rounded-full shrink-0 ${pStatus.dot}`} />
+                <span className={`size-2 rounded-full shrink-0 ${pStatus.dot}`} />
                 <span className="truncate flex-1">{p.name}</span>
                 {isCurrent && (
-                  <span className="size-1 rounded-full bg-intelligence-cyan shrink-0" />
+                  <span className="size-1.5 rounded-full bg-intelligence-cyan shrink-0" />
+                )}
+              </Link>
+            )
+          })}
+          <div className="border-t border-white/[0.06] pt-2 mt-2" />
+        </div>
+      )}
+
+      {/* ── Staff / admin assigned projects navigator ────────────────────── */}
+      {!readOnly && staffProjects && staffProjects.length > 0 && (
+        <div className="space-y-0.5">
+          <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest px-1 mb-2">
+            Assigned
+          </p>
+          {staffProjects.map((p) => {
+            const pStatus = statusMap[p.status] ?? statusMap.pending
+            const isCurrent = p.id === project.id
+            return (
+              <Link
+                key={p.id}
+                href={`/u/${username}/projects/${p.id}`}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                  isCurrent
+                    ? 'bg-white/[0.08] text-white'
+                    : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'
+                }`}
+              >
+                <span className={`size-2 rounded-full shrink-0 ${pStatus.dot}`} />
+                <span className="truncate flex-1">{p.name}</span>
+                {isCurrent && (
+                  <span className="size-1.5 rounded-full bg-intelligence-cyan shrink-0" />
                 )}
               </Link>
             )

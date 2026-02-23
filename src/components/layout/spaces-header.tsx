@@ -4,6 +4,7 @@ import Link from "next/link"
 import { LogOut } from "lucide-react"
 import { logoutAction } from "@/actions/auth"
 import { UserSettingsModal } from "@/components/dashboard/UserSettingsModal"
+import { WelcomeInfoButton } from "@/components/dashboard/WelcomeInfoButton"
 import { useHeaderTitle } from "@/app/(spaces)/HeaderTitleContext"
 
 interface SpacesHeaderProps {
@@ -16,14 +17,16 @@ interface SpacesHeaderProps {
     email?: string | null
     title?: string | null
   } | null
+  showTips?: boolean
 }
 
-export function SpacesHeader({ user }: SpacesHeaderProps) {
+export function SpacesHeader({ user, showTips }: SpacesHeaderProps) {
   const handleLogout = async () => {
     await logoutAction()
   }
 
   const isDeveloper = user?.role === 'admin' || user?.role === 'user'
+  const isClient = user?.role === 'client'
   const homeHref = user?.username ? `/u/${user.username}` : '/'
   const { title, subtitle } = useHeaderTitle()
 
@@ -62,9 +65,14 @@ export function SpacesHeader({ user }: SpacesHeaderProps) {
           </Link>
         )}
 
-        {/* User info + settings + logout */}
+        {/* Right side actions */}
         {user && (
           <div className="flex items-center gap-2.5">
+
+            {/* Welcome info — clients only, portal-rendered so backdrop-filter can't trap it */}
+            {isClient && (
+              <WelcomeInfoButton firstName={user.firstName} showTips={showTips} />
+            )}
 
             <button
               onClick={handleLogout}

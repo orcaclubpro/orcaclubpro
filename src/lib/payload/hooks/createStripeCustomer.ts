@@ -27,25 +27,31 @@ export const createStripeCustomerHook: CollectionBeforeChangeHook = async ({
   }
 
   try {
-    // STEP 1: If stripeCustomerId already exists, verify it's still valid in Stripe
-    if (data.stripeCustomerId) {
-      try {
-        await stripe.customers.retrieve(data.stripeCustomerId)
+    // STEP 1: If stripeCustomerId already exists, verify it's still valid in Stripe.
+    // For partial updates (e.g. from updateClientAccount), stripeCustomerId is not in
+    // the incoming data — fall back to originalDoc to avoid creating duplicates.
+    const existingStripeId = data.stripeCustomerId ?? originalDoc?.stripeCustomerId
 
-        // Customer exists and is valid
-        // If email changed, update it in Stripe
-        const emailChanged = operation === 'update' && originalDoc?.email !== data.email
+    if (existingStripeId) {
+      // Always carry the ID forward so it is saved on partial updates
+      data.stripeCustomerId = existingStripeId
+
+      try {
+        await stripe.customers.retrieve(existingStripeId)
+
+        // Customer exists and is valid — update email/name in Stripe if they changed
+        const emailChanged = operation === 'update' && data.email && originalDoc?.email !== data.email
         if (emailChanged) {
-          await stripe.customers.update(data.stripeCustomerId, {
+          await stripe.customers.update(existingStripeId, {
             email: data.email,
             name: data.name || data.email.split('@')[0],
           })
           req.payload.logger.info(
-            `[Stripe Customer Hook] Updated email for ${data.stripeCustomerId}: ${originalDoc?.email} → ${data.email}`
+            `[Stripe Customer Hook] Updated email for ${existingStripeId}: ${originalDoc?.email} → ${data.email}`
           )
         }
 
-        req.payload.logger.info(`[Stripe Customer Hook] Customer verified: ${data.stripeCustomerId}`)
+        req.payload.logger.info(`[Stripe Customer Hook] Customer verified: ${existingStripeId}`)
         return data
       } catch (error: any) {
         // Customer was deleted or doesn't exist in Stripe, need to find/create new one
@@ -55,7 +61,7 @@ export const createStripeCustomerHook: CollectionBeforeChangeHook = async ({
           error.statusCode === 400
         ) {
           req.payload.logger.warn(
-            `[Stripe Customer Hook] Customer ${data.stripeCustomerId} invalid or not found in Stripe, will search/create new`
+            `[Stripe Customer Hook] Customer ${existingStripeId} invalid or not found in Stripe, will search/create new`
           )
           req.payload.logger.warn(`[Stripe Customer Hook] Error details: ${error.message}`)
           data.stripeCustomerId = undefined // Clear invalid ID

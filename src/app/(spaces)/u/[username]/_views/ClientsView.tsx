@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
   Users, FolderOpen, ArrowRight, Building2, AlertCircle, CheckCircle,
-  Settings, Save, Loader2, Trash2, AlertTriangle, X, CheckCircle2,
+  Settings, Save, Loader2, Trash2, AlertTriangle, X, CheckCircle2, Shield,
 } from 'lucide-react'
 import {
   Dialog, DialogContent, DialogTitle, DialogDescription,
@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { NewClientModal } from '@/components/dashboard/NewClientModal'
 import { PortfolioTimeline } from '@/components/dashboard/PortfolioTimeline'
-import { deleteClientAccount, updateClientAccount } from '@/actions/clients'
+import { deleteClientAccount, updateClientAccount, removeUserFromClientTeam } from '@/actions/clients'
 import type { SerializedProject } from '@/components/dashboard/ProjectsCarousel'
 
 interface ClientsViewProps {
@@ -117,11 +117,13 @@ function ClientEditModal({
   open,
   onOpenChange,
   onDeleted,
+  teamMembers: initialTeamMembers = [],
 }: {
   client: any
   open: boolean
   onOpenChange: (v: boolean) => void
   onDeleted: () => void
+  teamMembers?: Array<{ id: string; name: string; title?: string | null }>
 }) {
   const router = useRouter()
 
@@ -134,6 +136,10 @@ function ClientEditModal({
   const [isSaving, setIsSaving]   = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saved, setSaved]         = useState(false)
+
+  // Team state
+  const [members, setMembers]       = useState(initialTeamMembers)
+  const [removingId, setRemovingId] = useState<string | null>(null)
 
   // Delete zone state
   const [showDelete, setShowDelete]     = useState(false)
@@ -154,8 +160,19 @@ function ClientEditModal({
       setShowDelete(false)
       setDeleteInput('')
       setDeleteError(null)
+      setMembers(initialTeamMembers)
     }
-  }, [open, client])
+  }, [open, client]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleRemoveMember = async (userId: string) => {
+    setRemovingId(userId)
+    const result = await removeUserFromClientTeam({ clientAccountId: client.id, userId })
+    setRemovingId(null)
+    if (result.success) {
+      setMembers((m) => m.filter((u) => u.id !== userId))
+      router.refresh()
+    }
+  }
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -262,6 +279,39 @@ function ClientEditModal({
               />
             </div>
           </section>
+
+          {/* Team Members */}
+          {members.length > 0 && (
+            <section className="space-y-3 border-t border-white/[0.05] pt-5">
+              <p className="text-[10px] tracking-[0.4em] uppercase text-white/20 font-light">Team Members</p>
+              <div className="space-y-1.5">
+                {members.map((m) => (
+                  <div
+                    key={m.id}
+                    className="flex items-center gap-3 px-4 py-2.5 rounded-lg bg-white/[0.025] border border-white/[0.04]"
+                  >
+                    <Shield className="size-3.5 text-gray-700 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-white/60 truncate">{m.name}</p>
+                      {m.title && <p className="text-[10px] text-white/25 truncate">{m.title}</p>}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveMember(m.id)}
+                      disabled={removingId === m.id || isSaving}
+                      title="Remove from team"
+                      className="size-6 rounded-full flex items-center justify-center text-white/20 hover:text-red-400/70 hover:bg-red-500/10 transition-all duration-150 disabled:opacity-30"
+                    >
+                      {removingId === m.id
+                        ? <Loader2 className="size-3 animate-spin" />
+                        : <X className="size-3" />
+                      }
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* Danger Zone */}
           <section className="space-y-3 border-t border-red-500/10 pt-5">
@@ -404,6 +454,16 @@ function ClientDetail({
   const hasBalance = balance > 0
   const [editOpen, setEditOpen] = useState(false)
 
+  const teamMembers: Array<{ id: string; name: string; title?: string | null }> = Array.isArray(client.assignedTo)
+    ? (client.assignedTo as any[])
+        .filter((u: any) => typeof u !== 'string' && u?.id)
+        .map((u: any) => ({
+          id: u.id,
+          name: u.name || `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim() || u.email || '',
+          title: u.title ?? null,
+        }))
+    : []
+
   return (
     <div className="flex flex-col h-full">
 
@@ -457,6 +517,7 @@ function ClientDetail({
               open={editOpen}
               onOpenChange={setEditOpen}
               onDeleted={onDeleted}
+              teamMembers={teamMembers}
             />
           )}
 

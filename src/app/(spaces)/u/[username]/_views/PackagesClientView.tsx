@@ -3,11 +3,11 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import {
-  ChevronLeft, ChevronRight, Check, Plus, X, Loader2,
-  Sparkles, FileText, ExternalLink,
+  ChevronLeft, ChevronRight, Check, X, Loader2,
+  Sparkles, FileText, ExternalLink, CheckCircle2, CalendarDays, Mail,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { getClientProposalTemplateItems, requestPackageLineItem } from '@/actions/packages'
+import { acceptPackage, emailPackageToSelf } from '@/actions/packages'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -21,26 +21,27 @@ interface LineItem {
   recurringInterval?: 'month' | 'year'
 }
 
+interface ScheduledEntry {
+  id: string
+  label: string
+  amount: number
+  dueDate?: string | null
+  orderId?: string | null
+}
+
 interface PackageDoc {
   id: string
   name: string
   description?: string | null
   coverMessage?: string | null
   lineItems?: LineItem[]
+  paymentSchedule?: ScheduledEntry[]
   status?: string
 }
 
 interface PackagesClientViewProps {
   clientPackages: PackageDoc[]
   username: string
-}
-
-interface PkgData {
-  items: LineItem[]
-  requestedNames: Set<string>
-  loading: boolean
-  error: string | null
-  loaded: boolean
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -67,6 +68,16 @@ function pad(n: number) {
   return String(n).padStart(2, '0')
 }
 
+function formatDisplayDate(isoDate: string): string {
+  if (!isoDate) return ''
+  const parts = isoDate.split('T')[0].split('-').map(Number)
+  if (parts.length !== 3 || parts.some(isNaN)) return ''
+  const [y, m, d] = parts
+  const date = new Date(y, m - 1, d)
+  if (!isFinite(date.getTime())) return ''
+  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(date)
+}
+
 function statusStyle(status?: string) {
   switch (status) {
     case 'accepted': return 'text-emerald-400 border-emerald-400/25 bg-emerald-400/10'
@@ -75,30 +86,49 @@ function statusStyle(status?: string) {
   }
 }
 
-// ── Detail Modal ───────────────────────────────────────────────────────────────
+// ── Package Detail Modal ────────────────────────────────────────────────────────
 
 function PackageModal({
   pkg,
   username,
   onClose,
-  pkgData,
-  onRequest,
-  requestingKey,
 }: {
   pkg: PackageDoc
   username: string
   onClose: () => void
-  pkgData: PkgData | undefined
-  onRequest: (item: LineItem) => void
-  requestingKey: string | null
 }) {
-  const lineItems = pkg.lineItems ?? []
-  const { oneTime, monthly, annual } = computeTotals(lineItems)
-  const availableItems = (pkgData?.items ?? []).filter(
-    ti => !lineItems.some(li => li.name === ti.name)
-  )
+  const [confirmAccept, setConfirmAccept] = useState(false)
+  const [accepting, setAccepting] = useState(false)
+  const [accepted, setAccepted] = useState(false)
+  const [acceptError, setAcceptError] = useState<string | null>(null)
 
-  // Close on Escape
+  const lineItems = pkg.lineItems ?? []
+  const schedule = pkg.paymentSchedule ?? []
+  const { oneTime, monthly, annual } = computeTotals(lineItems)
+
+  const pendingEntries = schedule.filter(e => !e.orderId)
+  const canAccept =
+    pkg.status !== 'accepted' &&
+    (pendingEntries.length > 0 || (schedule.length === 0 && lineItems.length > 0))
+
+  const pendingTotal = schedule.length > 0
+    ? pendingEntries.reduce((s, e) => s + e.amount, 0)
+    : oneTime + monthly + annual
+
+  const handleAccept = async () => {
+    setAccepting(true)
+    setAcceptError(null)
+    const result = await acceptPackage(pkg.id)
+    setAccepting(false)
+    if (result.success) {
+      setAccepted(true)
+      setConfirmAccept(false)
+    } else {
+      setAcceptError(result.error ?? 'Failed to accept package')
+    }
+  }
+
+  // ESC close
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', handler)
@@ -114,10 +144,7 @@ function PackageModal({
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
       {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/75 backdrop-blur-sm"
-        onClick={onClose}
-      />
+      <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={onClose} />
 
       {/* Panel */}
       <div
@@ -146,12 +173,19 @@ function PackageModal({
                 <p className="text-sm text-gray-400 mt-2 leading-relaxed">{pkg.description}</p>
               )}
             </div>
-            <button
-              onClick={onClose}
-              className="shrink-0 size-8 rounded-lg border border-white/[0.08] flex items-center justify-center text-gray-500 hover:text-white hover:border-white/20 transition-all mt-0.5"
-            >
-              <X className="size-3.5" />
-            </button>
+            <div className="flex flex-col items-end gap-2 shrink-0">
+              {pkg.status === 'accepted' && (
+                <span className="text-[9px] font-bold uppercase tracking-[0.18em] px-2.5 py-1 rounded-full border text-emerald-400 border-emerald-400/25 bg-emerald-400/10">
+                  Accepted
+                </span>
+              )}
+              <button
+                onClick={onClose}
+                className="size-8 rounded-lg border border-white/[0.08] flex items-center justify-center text-gray-500 hover:text-white hover:border-white/20 transition-all"
+              >
+                <X className="size-3.5" />
+              </button>
+            </div>
           </div>
 
           {/* Pricing summary */}
@@ -240,122 +274,140 @@ function PackageModal({
             </div>
           )}
 
-          {/* Loading add-ons */}
-          {pkgData?.loading && (
-            <div className="flex items-center gap-2 py-2 text-gray-600 text-xs">
-              <Loader2 className="size-3.5 animate-spin" />
-              Loading options…
-            </div>
-          )}
-
-          {/* Available add-ons */}
-          {pkgData?.loaded && !pkgData.error && availableItems.length > 0 && (
+          {/* Payment schedule */}
+          {schedule.length > 0 && (
             <div>
               <div className="flex items-center gap-2 mb-2.5">
+                <CalendarDays className="size-3.5 text-gray-600" />
                 <p className="text-[9px] font-bold tracking-[0.25em] uppercase text-gray-500">
-                  Available Add-ons
+                  Payment Schedule
                 </p>
-                <span className="text-[9px] text-gray-600 bg-white/[0.04] border border-white/[0.08] rounded-full px-2 py-0.5 tracking-wide">
-                  tap to request
-                </span>
               </div>
               <div className="space-y-1.5">
-                {availableItems.map((item, i) => {
-                  const qty = item.quantity ?? 1
-                  const basePrice = item.price ?? 0
-                  const adjustedTotal = (item.adjustedPrice ?? basePrice) * qty
-                  const baseTotal = basePrice * qty
-                  const hasDiscount = item.adjustedPrice != null && item.adjustedPrice !== basePrice
-                  const requested = pkgData.requestedNames.has(item.name)
-                  const isRequesting = requestingKey === `${pkg.id}:${item.name}`
+                {schedule.map((entry, i) => {
+                  const isInvoiced = !!entry.orderId
                   return (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => onRequest(item)}
-                      disabled={isRequesting}
+                    <div
+                      key={entry.id ?? i}
                       className={cn(
-                        'w-full flex items-start gap-3 px-3.5 py-3 rounded-xl border text-left transition-all duration-150 disabled:opacity-60',
-                        requested
-                          ? 'border-amber-400/25 bg-amber-400/[0.04]'
-                          : 'border-white/[0.06] hover:border-white/[0.14] hover:bg-white/[0.02]',
+                        'flex items-center gap-3 px-3.5 py-2.5 rounded-xl border',
+                        isInvoiced
+                          ? 'bg-white/[0.015] border-white/[0.04]'
+                          : 'bg-white/[0.025] border-white/[0.05]',
                       )}
                     >
-                      <div className={cn(
-                        'mt-0.5 size-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-all',
-                        requested ? 'bg-amber-400/20 border-amber-400/60' : 'border-white/[0.22]',
-                      )}>
-                        {isRequesting
-                          ? <Loader2 className="size-2.5 animate-spin text-gray-500" />
-                          : requested
-                            ? <Check className="size-2.5 text-amber-400" />
-                            : <Plus className="size-2.5 text-gray-600" />
-                        }
-                      </div>
+                      <div className={`size-1.5 rounded-full shrink-0 ${isInvoiced ? 'bg-emerald-400' : 'bg-[#67e8f9]/50'}`} />
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-baseline justify-between gap-2">
-                          <p className={cn('text-sm font-semibold leading-snug', requested ? 'text-amber-200/80' : 'text-gray-400')}>
-                            {item.name}
-                          </p>
-                          <div className="flex flex-col items-end gap-0.5 shrink-0">
-                            {hasDiscount && (
-                              <span className="text-xs text-gray-600 line-through tabular-nums font-mono">
-                                {fmt(baseTotal)}
-                              </span>
-                            )}
-                            <span className={cn('text-sm font-bold tabular-nums font-mono', hasDiscount ? 'text-[#67e8f9]' : requested ? 'text-amber-200/70' : 'text-gray-600')}>
-                              {fmt(adjustedTotal)}
-                              {item.isRecurring && (
-                                <span className="text-xs font-normal">/{item.recurringInterval === 'year' ? 'yr' : 'mo'}</span>
-                              )}
-                            </span>
-                          </div>
-                        </div>
-                        {item.description && (
-                          <p className="text-xs text-gray-600 mt-0.5 line-clamp-2 leading-relaxed">{item.description}</p>
-                        )}
-                        {requested && (
-                          <p className="text-[10px] text-amber-400/60 mt-1 flex items-center gap-1">
-                            Requested · tap to withdraw
+                        <p className={cn('text-sm font-medium', isInvoiced ? 'text-gray-500' : 'text-gray-300')}>
+                          {entry.label}
+                        </p>
+                        {entry.dueDate && (
+                          <p className={cn('text-[10px] mt-0.5', isInvoiced ? 'text-gray-700' : 'text-gray-600')}>
+                            Due {formatDisplayDate(entry.dueDate)}
                           </p>
                         )}
                       </div>
-                    </button>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {isInvoiced && (
+                          <span className="text-[9px] font-bold text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 rounded px-1.5 py-0.5">
+                            Invoiced
+                          </span>
+                        )}
+                        <span className={cn('text-sm font-bold tabular-nums font-mono', isInvoiced ? 'text-gray-500' : 'text-white')}>
+                          {fmt(entry.amount)}
+                        </span>
+                      </div>
+                    </div>
                   )
                 })}
+                {/* Schedule total */}
+                <div className="flex items-center justify-between px-3.5 py-2 rounded-lg bg-white/[0.01]">
+                  <span className="text-[10px] text-gray-600 font-semibold uppercase tracking-widest">Total</span>
+                  <span className="text-sm font-bold text-white tabular-nums font-mono">
+                    {fmt(schedule.reduce((s, e) => s + e.amount, 0))}
+                  </span>
+                </div>
               </div>
-              <p className="text-[11px] text-gray-700 mt-3 leading-relaxed">
-                Requesting an add-on notifies your team — they&apos;ll review and update your package.
-              </p>
             </div>
           )}
 
-          {/* All included already */}
-          {pkgData?.loaded && !pkgData.error && availableItems.length === 0 && lineItems.length > 0 && (
-            <p className="text-xs text-gray-700 italic">All available options are already included in your package.</p>
+          {/* Empty state */}
+          {lineItems.length === 0 && schedule.length === 0 && (
+            <p className="text-xs text-gray-600 italic py-1">
+              Your team is still configuring this package. Check back soon.
+            </p>
           )}
 
         </div>
 
         {/* Footer */}
-        <div className="shrink-0 flex items-center gap-3 px-6 py-4 border-t border-white/[0.07] bg-black/20">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm text-gray-500 hover:text-white transition-colors rounded-lg hover:bg-white/[0.04]"
-          >
-            Close
-          </button>
-          <div className="flex-1" />
-          <Link
-            href={`/u/${username}/packages/${pkg.id}/print`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-[#67e8f9]/[0.10] border border-[#67e8f9]/25 text-[#67e8f9] hover:bg-[#67e8f9]/[0.18] hover:border-[#67e8f9]/40 transition-all"
-          >
-            <FileText className="size-3.5" />
-            View Full Package
-            <ExternalLink className="size-3" />
-          </Link>
+        <div className="shrink-0 border-t border-white/[0.07] bg-black/20">
+          {accepted ? (
+            <div className="flex items-center gap-3 px-6 py-4">
+              <CheckCircle2 className="size-5 text-emerald-400 shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-emerald-400">Package accepted!</p>
+                <p className="text-xs text-gray-500 mt-0.5">Your invoice(s) have been sent to your email.</p>
+              </div>
+            </div>
+          ) : confirmAccept ? (
+            <div className="px-6 py-4 space-y-3">
+              <p className="text-xs text-gray-400 leading-relaxed">
+                By accepting, you authorize invoices totalling{' '}
+                <span className="text-white font-semibold">{fmt(pendingTotal)}</span>{' '}
+                to be issued. This cannot be undone.
+              </p>
+              {acceptError && (
+                <p className="text-xs text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2">
+                  {acceptError}
+                </p>
+              )}
+              <div className="flex items-center gap-2 justify-end">
+                <button
+                  onClick={() => { setConfirmAccept(false); setAcceptError(null) }}
+                  className="px-4 py-2 text-sm text-gray-500 hover:text-white transition-colors rounded-lg hover:bg-white/[0.04]"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAccept}
+                  disabled={accepting}
+                  className="flex items-center gap-2 px-5 py-2 text-sm font-semibold rounded-xl bg-[#67e8f9]/[0.12] border border-[#67e8f9]/30 text-[#67e8f9] hover:bg-[#67e8f9]/[0.20] disabled:opacity-50 transition-all"
+                >
+                  {accepting && <Loader2 className="size-3.5 animate-spin" />}
+                  {accepting ? 'Processing…' : 'Confirm & Accept'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 px-6 py-4">
+              <button
+                onClick={onClose}
+                className="px-4 py-2 text-sm text-gray-500 hover:text-white transition-colors rounded-lg hover:bg-white/[0.04]"
+              >
+                Close
+              </button>
+              <div className="flex-1" />
+              <Link
+                href={`/u/${username}/packages/${pkg.id}/print`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-4 py-2 text-sm rounded-xl border border-white/[0.08] text-gray-400 hover:text-white hover:border-white/20 transition-all"
+              >
+                <FileText className="size-3.5" />
+                View Package
+                <ExternalLink className="size-3" />
+              </Link>
+              {canAccept && (
+                <button
+                  onClick={() => setConfirmAccept(true)}
+                  className="flex items-center gap-2 px-5 py-2 text-sm font-semibold rounded-xl bg-[#67e8f9]/[0.10] border border-[#67e8f9]/25 text-[#67e8f9] hover:bg-[#67e8f9]/[0.18] hover:border-[#67e8f9]/40 transition-all duration-200"
+                >
+                  Accept Package
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -367,9 +419,23 @@ function PackageModal({
 export function PackagesClientView({ clientPackages, username }: PackagesClientViewProps) {
   const [activeIdx, setActiveIdx] = useState(0)
   const [modalPkg, setModalPkg] = useState<PackageDoc | null>(null)
-  const [pkgData, setPkgData] = useState<Record<string, PkgData>>({})
-  const [requestingKey, setRequestingKey] = useState<string | null>(null)
+  const [emailingId, setEmailingId] = useState<string | null>(null)
+  const [emailSentIds, setEmailSentIds] = useState<Set<string>>(new Set())
+  const [emailErrors, setEmailErrors] = useState<Record<string, string>>({})
   const total = clientPackages.length
+
+  const handleEmailSelf = async (pkgId: string) => {
+    setEmailingId(pkgId)
+    setEmailErrors(prev => { const n = { ...prev }; delete n[pkgId]; return n })
+    const result = await emailPackageToSelf(pkgId)
+    setEmailingId(null)
+    if (result.success) {
+      setEmailSentIds(prev => new Set(prev).add(pkgId))
+      setTimeout(() => setEmailSentIds(prev => { const n = new Set(prev); n.delete(pkgId); return n }), 4000)
+    } else {
+      setEmailErrors(prev => ({ ...prev, [pkgId]: result.error ?? 'Failed to send' }))
+    }
+  }
   const containerRef = useRef<HTMLDivElement>(null)
 
   // Touch swipe on carousel
@@ -378,47 +444,6 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
   const touchLocked = useRef<'h' | 'v' | null>(null)
 
   const goTo = (idx: number) => setActiveIdx(Math.max(0, Math.min(total - 1, idx)))
-
-  const loadPkgData = async (pkg: PackageDoc) => {
-    if (pkgData[pkg.id]?.loaded) return
-    setPkgData(prev => ({
-      ...prev,
-      [pkg.id]: { items: [], requestedNames: new Set(), loading: true, error: null, loaded: false },
-    }))
-    const result = await getClientProposalTemplateItems(pkg.id)
-    setPkgData(prev => ({
-      ...prev,
-      [pkg.id]: {
-        items: result.items ?? [],
-        requestedNames: new Set((result.requestedItems ?? []).map((r: any) => r.name)),
-        loading: false,
-        error: result.success ? null : (result.error ?? 'Failed to load'),
-        loaded: true,
-      },
-    }))
-  }
-
-  const openModal = async (pkg: PackageDoc) => {
-    setModalPkg(pkg)
-    loadPkgData(pkg)
-  }
-
-  const handleRequest = async (item: LineItem) => {
-    if (!modalPkg) return
-    const pkg = modalPkg
-    const key = `${pkg.id}:${item.name}`
-    if (requestingKey === key) return
-    setRequestingKey(key)
-    const data = pkgData[pkg.id]
-    if (!data) { setRequestingKey(null); return }
-    const alreadyRequested = data.requestedNames.has(item.name)
-    const newNames = new Set(data.requestedNames)
-    if (alreadyRequested) { newNames.delete(item.name) } else { newNames.add(item.name) }
-    setPkgData(prev => ({ ...prev, [pkg.id]: { ...data, requestedNames: newNames } }))
-    const result = await requestPackageLineItem({ packageId: pkg.id, itemName: item.name })
-    if (!result.success) setPkgData(prev => ({ ...prev, [pkg.id]: data }))
-    setRequestingKey(null)
-  }
 
   // Keyboard nav (only when modal closed)
   useEffect(() => {
@@ -494,7 +519,7 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
         <div className="px-6 lg:px-10 pt-8 pb-6 flex items-end justify-between">
           <div>
             <p className="text-[9px] font-bold tracking-[0.32em] uppercase text-[#67e8f9]/50 mb-1.5">
-              Service Proposals
+              Service Packages
             </p>
             <h2 className="text-xl font-bold text-white tracking-tight">Your Packages</h2>
           </div>
@@ -517,16 +542,18 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
             {clientPackages.map((pkg, i) => {
               const { oneTime, monthly, annual } = computeTotals(pkg.lineItems ?? [])
               const lineItems = pkg.lineItems ?? []
+              const schedule = pkg.paymentSchedule ?? []
               const isActive = i === activeIdx
+              const canAccept =
+                pkg.status !== 'accepted' &&
+                (schedule.some(e => !e.orderId) || (schedule.length === 0 && lineItems.length > 0))
 
               return (
                 <div key={pkg.id} className="min-w-full">
                   <div
                     className={cn(
                       'relative rounded-2xl border overflow-hidden transition-all duration-500',
-                      isActive
-                        ? 'border-[#67e8f9]/[0.18]'
-                        : 'border-white/[0.06]',
+                      isActive ? 'border-[#67e8f9]/[0.18]' : 'border-white/[0.06]',
                     )}
                     style={{ background: 'linear-gradient(155deg, #181818 0%, #0e0e0e 60%, #121212 100%)' }}
                   >
@@ -599,9 +626,9 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                       {lineItems.length > 0 && (
                         <div className="flex items-center gap-3 mb-9">
                           <div className="flex -space-x-1.5">
-                            {Array.from({ length: Math.min(6, lineItems.length) }).map((_, i) => (
+                            {Array.from({ length: Math.min(6, lineItems.length) }).map((_, j) => (
                               <div
-                                key={i}
+                                key={j}
                                 className="size-6 rounded-full bg-[#67e8f9]/15 border-2 flex items-center justify-center"
                                 style={{ borderColor: '#0e0e0e' }}
                               >
@@ -626,10 +653,35 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                       {/* Actions */}
                       <div className="flex items-center gap-4 flex-wrap">
                         <button
-                          onClick={() => openModal(pkg)}
-                          className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-[#67e8f9]/[0.10] border border-[#67e8f9]/25 text-[#67e8f9] hover:bg-[#67e8f9]/[0.18] hover:border-[#67e8f9]/40 transition-all duration-200"
+                          onClick={() => setModalPkg(pkg)}
+                          className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-white/[0.05] border border-white/[0.12] text-gray-300 hover:bg-white/[0.09] hover:text-white transition-all duration-200"
                         >
                           View Details
+                        </button>
+                        {canAccept && (
+                          <button
+                            onClick={() => setModalPkg(pkg)}
+                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-[#67e8f9]/[0.10] border border-[#67e8f9]/25 text-[#67e8f9] hover:bg-[#67e8f9]/[0.18] hover:border-[#67e8f9]/40 transition-all duration-200"
+                          >
+                            Accept Package
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleEmailSelf(pkg.id)}
+                          disabled={emailingId === pkg.id}
+                          className={cn(
+                            'flex items-center gap-1.5 text-sm transition-colors',
+                            emailSentIds.has(pkg.id)
+                              ? 'text-emerald-400'
+                              : 'text-gray-500 hover:text-gray-300',
+                          )}
+                        >
+                          {emailingId === pkg.id
+                            ? <Loader2 className="size-3.5 animate-spin" />
+                            : emailSentIds.has(pkg.id)
+                            ? <CheckCircle2 className="size-3.5" />
+                            : <Mail className="size-3.5" />}
+                          {emailingId === pkg.id ? 'Sending…' : emailSentIds.has(pkg.id) ? 'Sent!' : 'Email Me'}
                         </button>
                         <Link
                           href={`/u/${username}/packages/${pkg.id}/print`}
@@ -642,6 +694,9 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                           <ExternalLink className="size-3" />
                         </Link>
                       </div>
+                      {emailErrors[pkg.id] && (
+                        <p className="mt-3 text-xs text-red-400">{emailErrors[pkg.id]}</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -710,12 +765,12 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
             </p>
             <div className="flex gap-2.5 overflow-x-auto scrollbar-none pb-1">
               {clientPackages.map((pkg, i) => {
-                const { oneTime, monthly, annual } = computeTotals(pkg.lineItems ?? [])
+                const { oneTime, monthly } = computeTotals(pkg.lineItems ?? [])
                 const isActive = i === activeIdx
                 return (
                   <button
                     key={pkg.id}
-                    onClick={() => { goTo(i); openModal(pkg) }}
+                    onClick={() => { goTo(i); setModalPkg(pkg) }}
                     className={cn(
                       'shrink-0 flex flex-col gap-1.5 p-3.5 rounded-xl border text-left transition-all duration-200',
                       isActive
@@ -725,24 +780,15 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                     style={{ minWidth: 150, maxWidth: 200 }}
                   >
                     <div className="flex items-center gap-1.5">
-                      <span className={cn(
-                        'text-[9px] font-bold tabular-nums',
-                        isActive ? 'text-[#67e8f9]/60' : 'text-gray-600',
-                      )}>
+                      <span className={cn('text-[9px] font-bold tabular-nums', isActive ? 'text-[#67e8f9]/60' : 'text-gray-600')}>
                         {pad(i + 1)}
                       </span>
                     </div>
-                    <p className={cn(
-                      'text-xs font-semibold leading-snug line-clamp-2',
-                      isActive ? 'text-white' : 'text-gray-400',
-                    )}>
+                    <p className={cn('text-xs font-semibold leading-snug line-clamp-2', isActive ? 'text-white' : 'text-gray-400')}>
                       {pkg.name}
                     </p>
                     {(oneTime > 0 || monthly > 0) && (
-                      <p className={cn(
-                        'text-xs font-mono tabular-nums',
-                        isActive ? 'text-[#67e8f9]' : 'text-gray-600',
-                      )}>
+                      <p className={cn('text-xs font-mono tabular-nums', isActive ? 'text-[#67e8f9]' : 'text-gray-600')}>
                         {oneTime > 0 ? fmt(oneTime) : `${fmt(monthly)}/mo`}
                       </p>
                     )}
@@ -761,9 +807,6 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
           pkg={modalPkg}
           username={username}
           onClose={() => setModalPkg(null)}
-          pkgData={pkgData[modalPkg.id]}
-          onRequest={handleRequest}
-          requestingKey={requestingKey}
         />
       )}
     </>

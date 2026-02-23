@@ -7,6 +7,7 @@ import {
   FileText, ArrowRight, ChevronDown, ChevronUp,
   X, Check, Loader2, Trash2, Copy, CheckCheck, Sparkles,
   Receipt, ExternalLink, CheckCircle2, CalendarDays, ListOrdered,
+  Mail, Plus,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { AssignPackageModal } from './AssignPackageModal'
@@ -15,9 +16,11 @@ import {
   updatePackage,
   deleteProposal,
   createOrderFromPackage,
-  savePaymentSchedule,
+  savePaymentScheduleOnly,
+  pushPackageSchedule,
   sendScheduledPayment,
   removeScheduleEntry,
+  sendProposalEmail,
 } from '@/actions/packages'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -340,10 +343,18 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
   const [scheduleStartDate, setScheduleStartDate]       = useState<Record<string, string>>({})
   const [installmentDates, setInstallmentDates]         = useState<Record<string, string[]>>({})
   const [savingSchedule, setSavingSchedule]             = useState(false)
+  const [pushingScheduleId, setPushingScheduleId]       = useState<string | null>(null)
+  const [pushScheduleResult, setPushScheduleResult]     = useState<Record<string, string | null>>({})
   const [scheduleError, setScheduleError]               = useState<Record<string, string | null>>({})
   const [sendingEntryId, setSendingEntryId]             = useState<string | null>(null)
   const [removingEntryId, setRemovingEntryId]           = useState<string | null>(null)
   const [entryResults, setEntryResults]                 = useState<Record<string, { url: string } | { error: string }>>({})
+
+  // Email proposal modal state
+  const [emailModalPkgId, setEmailModalPkgId]   = useState<string | null>(null)
+  const [emailAddresses, setEmailAddresses]       = useState('')
+  const [emailSending, setEmailSending]           = useState(false)
+  const [emailResult, setEmailResult]             = useState<{ sent?: number; error?: string } | null>(null)
 
   const getDays = (pkgId: string) => daysUntilDue[pkgId] ?? 30
   const getMode = (pkgId: string) => invoiceMode[pkgId] ?? 'full'
@@ -426,8 +437,44 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
       notes: pkg.notes ?? undefined,
       lineItems: editItems.map(item => ({ ...item, description: item.description ?? undefined })),
     })
+    if (!result.success) {
+      setSaving(false)
+      setSaveError(result.error ?? 'Failed to save')
+      return
+    }
+
+    // In schedule mode, also persist the schedule entries to DB so the client can view them
+    if (getMode(pkg.id) === 'schedule') {
+      const frequency = getFrequency(pkg.id)
+      const startDate = scheduleStartDate[pkg.id] ?? ''
+      if (frequency === 'custom' || startDate) {
+        const depositStr = scheduleDeposit[pkg.id] ?? ''
+        const depositVal = depositStr !== '' ? parseFloat(depositStr) : 0
+        const hasDeposit = depositStr !== '' && !isNaN(depositVal) && depositVal > 0
+        const deposit = hasDeposit ? depositVal : 0
+        const { oneTime } = computeTotals(editItems.length > 0 ? editItems : (pkg.lineItems ?? []))
+        const numInstallments = getNumInstallments(pkg.id)
+        const remaining = Math.max(0, oneTime - deposit)
+        const amounts = computeInstallmentAmounts(remaining, numInstallments)
+        const dates = frequency !== 'custom'
+          ? generateInstallmentDates(startDate, numInstallments, frequency)
+          : (installmentDates[pkg.id] ?? [])
+
+        const entries: Array<{ label: string; amount: number; dueDate?: string }> = [
+          ...(hasDeposit ? [{ label: 'Deposit', amount: deposit, dueDate: scheduleDepositDate[pkg.id] || undefined }] : []),
+          ...Array.from({ length: numInstallments }, (_, i) => ({
+            label: numInstallments === 1 ? 'Balance' : i === numInstallments - 1 ? 'Final Payment' : `Installment ${i + 1}`,
+            amount: amounts[i],
+            dueDate: dates[i] || undefined,
+          })),
+        ]
+
+        await savePaymentScheduleOnly(pkg.id, entries)
+      }
+    }
+
     setSaving(false)
-    if (!result.success) setSaveError(result.error ?? 'Failed to save')
+    router.refresh()
   }
 
   const handleDelete = async (pkgId: string) => {
@@ -447,6 +494,26 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     })
+  }
+
+  const handleEmailProposal = async () => {
+    if (!emailModalPkgId) return
+    const emails = emailAddresses.split(',').map(e => e.trim()).filter(e => e.includes('@'))
+    if (emails.length === 0) return
+    setEmailSending(true)
+    setEmailResult(null)
+    const result = await sendProposalEmail(emailModalPkgId, emails)
+    setEmailSending(false)
+    if ('sent' in result && result.sent > 0) {
+      setEmailResult({ sent: result.sent })
+      setTimeout(() => {
+        setEmailModalPkgId(null)
+        setEmailAddresses('')
+        setEmailResult(null)
+      }, 2500)
+    } else {
+      setEmailResult({ error: ('error' in result ? result.error : undefined) ?? 'Failed to send' })
+    }
   }
 
   const handleFrequencyChange = (pkgId: string, freq: Frequency) => {
@@ -477,49 +544,16 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
     })
   }
 
-  const handleSaveSchedule = async (pkg: PackageDoc) => {
-    const depositStr = scheduleDeposit[pkg.id] ?? ''
-    const depositVal = depositStr !== '' ? parseFloat(depositStr) : 0
-    const hasDeposit = depositStr !== '' && !isNaN(depositVal) && depositVal > 0
-    const deposit = hasDeposit ? depositVal : 0
-    const frequency = getFrequency(pkg.id)
-    const startDate = scheduleStartDate[pkg.id] ?? ''
-    if (frequency !== 'custom' && !startDate) {
-      setScheduleError(prev => ({ ...prev, [pkg.id]: 'Set the first payment due date' }))
-      return
-    }
-    setScheduleError(prev => ({ ...prev, [pkg.id]: null }))
-
-    // Use editItems (current UI selection) for total — pkg.lineItems may be empty
-    // if items haven't been saved to DB yet
-    const { oneTime } = computeTotals(editItems.length > 0 ? editItems : (pkg.lineItems ?? []))
-    const numInstallments = getNumInstallments(pkg.id)
-    const remaining = Math.max(0, oneTime - deposit)
-    const amounts = computeInstallmentAmounts(remaining, numInstallments)
-    const dates = frequency !== 'custom'
-      ? generateInstallmentDates(startDate, numInstallments, frequency)
-      : (installmentDates[pkg.id] ?? [])
-
-    const entries: Array<{ label: string; amount: number; dueDate?: string }> = [
-      ...(hasDeposit ? [{ label: 'Deposit', amount: deposit, dueDate: scheduleDepositDate[pkg.id] || undefined }] : []),
-      ...Array.from({ length: numInstallments }, (_, i) => ({
-        label: numInstallments === 1
-          ? 'Balance'
-          : i === numInstallments - 1
-            ? 'Final Payment'
-            : `Installment ${i + 1}`,
-        amount: amounts[i],
-        dueDate: dates[i] || undefined,
-      })),
-    ]
-
-    setSavingSchedule(true)
-    const result = await savePaymentSchedule(pkg.id, entries)
-    setSavingSchedule(false)
+  const handlePushSchedule = async (pkgId: string) => {
+    setPushScheduleResult(prev => ({ ...prev, [pkgId]: null }))
+    setPushingScheduleId(pkgId)
+    const result = await pushPackageSchedule(pkgId)
+    setPushingScheduleId(null)
     if (result.success) {
+      setPushScheduleResult(prev => ({ ...prev, [pkgId]: `${result.count} invoice${(result.count ?? 0) !== 1 ? 's' : ''} sent` }))
       router.refresh()
     } else {
-      setScheduleError(prev => ({ ...prev, [pkg.id]: result.error ?? 'Failed to save schedule' }))
+      setScheduleError(prev => ({ ...prev, [pkgId]: result.error ?? 'Failed to push schedule' }))
     }
   }
 
@@ -726,6 +760,13 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                           View Package
                           <ArrowRight className="size-3" />
                         </Link>
+                        <button
+                          onClick={() => { setEmailModalPkgId(pkg.id); setEmailAddresses(''); setEmailResult(null) }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-400 border border-white/[0.08] rounded-lg hover:text-[#67e8f9] hover:border-[#67e8f9]/30 transition-all"
+                        >
+                          <Mail className="size-3.5" />
+                          Email Proposal
+                        </button>
                       </div>
 
                       {/* Project link */}
@@ -1102,17 +1143,6 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                               </p>
                             )}
 
-                            {/* Save Schedule */}
-                            <button
-                              type="button"
-                              onClick={() => handleSaveSchedule(pkg)}
-                              disabled={savingSchedule}
-                              className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold bg-[#67e8f9]/[0.10] border border-[#67e8f9]/30 text-[#67e8f9] rounded-lg hover:bg-[#67e8f9]/[0.18] disabled:opacity-40 transition-all"
-                            >
-                              {savingSchedule ? <Loader2 className="size-3 animate-spin" /> : <ListOrdered className="size-3.5" />}
-                              Save Schedule
-                            </button>
-
                             {/* Saved schedule entries */}
                             {pkg.paymentSchedule && pkg.paymentSchedule.length > 0 && (
                               <div className="space-y-2 pt-4 border-t border-white/[0.05]">
@@ -1241,11 +1271,28 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                             return null
                           })()}
 
+                          {/* Push Schedule result */}
+                          {mode === 'schedule' && pushScheduleResult[pkg.id] && (
+                            <span className="text-[10px] text-emerald-400 bg-emerald-400/[0.06] border border-emerald-400/20 rounded px-2 py-1">
+                              ✓ {pushScheduleResult[pkg.id]}
+                            </span>
+                          )}
+
                           <button
                             onClick={() => setExpandedId(null)}
                             className="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-300 transition-colors"
                           >
                             Cancel
+                          </button>
+
+                          {/* Save — visible in both modes */}
+                          <button
+                            onClick={() => handleSave(pkg)}
+                            disabled={saving}
+                            className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold bg-white/[0.06] border border-white/[0.12] text-gray-300 rounded-lg hover:bg-white/[0.10] disabled:opacity-50 transition-colors"
+                          >
+                            {saving && <Loader2 className="size-3 animate-spin" />}
+                            Save
                           </button>
 
                           {mode === 'full' && (
@@ -1263,24 +1310,30 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                               </select>
 
                               <button
-                                onClick={() => handleSave(pkg)}
-                                disabled={saving}
-                                className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold bg-white/[0.06] border border-white/[0.12] text-gray-300 rounded-lg hover:bg-white/[0.10] disabled:opacity-50 transition-colors"
-                              >
-                                {saving && <Loader2 className="size-3 animate-spin" />}
-                                Save
-                              </button>
-
-                              <button
                                 onClick={() => handleCreateInvoice(pkg)}
                                 disabled={invoicingId === pkg.id || !editItems.length}
                                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-[#67e8f9]/[0.1] border border-[#67e8f9]/30 text-[#67e8f9] rounded-lg hover:bg-[#67e8f9]/[0.18] disabled:opacity-40 transition-all"
                               >
                                 {invoicingId === pkg.id ? <Loader2 className="size-3.5 animate-spin" /> : <Receipt className="size-3.5" />}
-                                {invoicingId === pkg.id ? 'Creating…' : 'Create Invoice'}
+                                {invoicingId === pkg.id ? 'Pushing…' : 'Push Invoice'}
                               </button>
                             </>
                           )}
+
+                          {mode === 'schedule' && (() => {
+                            const hasPending = (pkg.paymentSchedule ?? []).some(e => !e.orderId)
+                            return (
+                              <button
+                                onClick={() => handlePushSchedule(pkg.id)}
+                                disabled={pushingScheduleId === pkg.id || !hasPending}
+                                title={!hasPending ? 'Save your schedule first to enable pushing' : undefined}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-[#67e8f9]/[0.1] border border-[#67e8f9]/30 text-[#67e8f9] rounded-lg hover:bg-[#67e8f9]/[0.18] disabled:opacity-40 transition-all"
+                              >
+                                {pushingScheduleId === pkg.id ? <Loader2 className="size-3.5 animate-spin" /> : <ListOrdered className="size-3.5" />}
+                                {pushingScheduleId === pkg.id ? 'Pushing…' : 'Push Schedule'}
+                              </button>
+                            )
+                          })()}
                         </div>
                       </div>
 
@@ -1306,6 +1359,78 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
               Assign a service package to start building a custom offering for this client.
             </p>
             <AssignPackageModal clientId={clientId} />
+          </div>
+        </div>
+      )}
+
+      {/* ── Email Proposal Modal ──────────────────────────────────────────── */}
+      {emailModalPkgId && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={() => { setEmailModalPkgId(null); setEmailAddresses(''); setEmailResult(null) }}
+          />
+          {/* Dialog */}
+          <div className="relative z-10 w-full max-w-sm rounded-2xl border border-white/[0.1] bg-[#111] p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Mail className="size-4 text-[#67e8f9]" />
+                <h3 className="text-sm font-semibold text-white">Email Proposal</h3>
+              </div>
+              <button
+                onClick={() => { setEmailModalPkgId(null); setEmailAddresses(''); setEmailResult(null) }}
+                className="p-1 text-gray-600 hover:text-gray-300 transition-colors rounded-lg hover:bg-white/[0.06]"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">
+                Email addresses
+              </label>
+              <textarea
+                value={emailAddresses}
+                onChange={e => setEmailAddresses(e.target.value)}
+                placeholder="client@example.com, another@example.com"
+                rows={3}
+                className="w-full px-3 py-2.5 text-sm bg-white/[0.05] border border-white/[0.12] rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-[#67e8f9]/40 resize-none"
+              />
+              <p className="text-[10px] text-gray-600">Separate multiple addresses with commas</p>
+            </div>
+
+            {emailResult && (
+              <div className={`rounded-xl px-3 py-2.5 text-xs font-medium ${
+                emailResult.sent
+                  ? 'bg-emerald-500/[0.08] border border-emerald-500/20 text-emerald-400'
+                  : 'bg-red-500/[0.08] border border-red-500/20 text-red-400'
+              }`}>
+                {'sent' in emailResult && emailResult.sent
+                  ? `✓ Proposal sent to ${emailResult.sent} recipient${emailResult.sent !== 1 ? 's' : ''}`
+                  : `✗ ${emailResult.error ?? 'Failed to send'}`
+                }
+              </div>
+            )}
+
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                onClick={() => { setEmailModalPkgId(null); setEmailAddresses(''); setEmailResult(null) }}
+                className="flex-1 px-4 py-2 text-xs font-medium text-gray-500 border border-white/[0.08] rounded-xl hover:text-gray-300 hover:border-white/[0.14] transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleEmailProposal}
+                disabled={emailSending || !emailAddresses.trim()}
+                className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-semibold bg-[#67e8f9]/[0.1] border border-[#67e8f9]/30 text-[#67e8f9] rounded-xl hover:bg-[#67e8f9]/[0.18] disabled:opacity-40 transition-all"
+              >
+                {emailSending
+                  ? <><Loader2 className="size-3.5 animate-spin" /> Sending…</>
+                  : <><Mail className="size-3.5" /> Send Proposal</>
+                }
+              </button>
+            </div>
           </div>
         </div>
       )}

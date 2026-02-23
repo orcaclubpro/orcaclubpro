@@ -108,8 +108,8 @@ export default async function ClientDetailPage({
     }
   }
 
-  // Fetch orders, projects, users, packages
-  const [{ docs: orders }, { docs: projects }, { docs: clientUsers }, packagesResult] = await Promise.all([
+  // Fetch orders, projects, users, packages, and all client accounts for sidebar nav
+  const [{ docs: orders }, { docs: projects }, { docs: clientUsers }, packagesResult, { docs: allClients }] = await Promise.all([
     payload.find({
       collection: 'orders',
       where: { clientAccount: { equals: clientId } },
@@ -143,6 +143,14 @@ export default async function ClientDetailPage({
       sort: '-createdAt',
       limit: 100,
     }).catch(() => ({ docs: [] })),
+    payload.find({
+      collection: 'client-accounts',
+      user,
+      overrideAccess: false,
+      depth: 0,
+      sort: 'name',
+      limit: 100,
+    }),
   ])
   const packages = packagesResult.docs
 
@@ -255,6 +263,11 @@ export default async function ClientDetailPage({
       email: u.email,
     })),
     username,
+    allClients: allClients.map((c) => ({
+      id: c.id,
+      name: c.name,
+      company: c.company ?? null,
+    })),
   }
 
   return (

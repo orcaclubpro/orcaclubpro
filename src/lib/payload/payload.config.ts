@@ -899,40 +899,10 @@ export default buildConfig({
   }),
   // Email configuration using Gmail SMTP via nodemailer
   //
-  // GMAIL FROM-ADDRESS OVERRIDE — WHY emails come from chance@orcaclub.pro
-  // -----------------------------------------------------------------------
-  // Gmail's SMTP server enforces a security policy that IGNORES the From header
-  // set by the sending application and rewrites it to the authenticated SMTP
-  // user's address. This means even though `defaultFromAddress` is set to
-  // carbon@orcaclub.pro and individual sendEmail() calls pass `from:
-  // carbon@orcaclub.pro`, Gmail will silently replace the From header with
-  // chance@orcaclub.pro (the SMTP_USER) before delivering the message.
-  //
-  // This is intentional behavior on Google's part to prevent address spoofing.
-  // The `defaultFromAddress` / `from` field still appears in the raw MIME
-  // headers that Payload constructs, but Gmail overwrites it at the transport
-  // layer during the SMTP AUTH handshake.
-  //
-  // FIX OPTIONS (choose one):
-  //   1. GMAIL ALIAS — In Google Workspace / Gmail settings, add
-  //      carbon@orcaclub.pro as a "Send mail as" alias for the
-  //      chance@orcaclub.pro account. Gmail will then allow that From address
-  //      to pass through. Requires domain verification via DNS or SMTP.
-  //
-  //   2. CHANGE SMTP_USER — Authenticate as carbon@orcaclub.pro directly.
-  //      Update SMTP_USER=carbon@orcaclub.pro and SMTP_PASS to that account's
-  //      app password. The From address will then match automatically.
-  //
-  //   3. SWITCH PROVIDERS — Use a transactional email service (Resend,
-  //      SendGrid, Postmark) that does not rewrite From headers. These services
-  //      authenticate via API key instead of SMTP user credentials and honor
-  //      any From address that passes DKIM/SPF checks for the sending domain.
-  //      Payload supports @payloadcms/email-resend out of the box.
-  //
-  // Until one of the above is implemented, all outbound emails will display
-  // chance@orcaclub.pro as the sender regardless of what `defaultFromAddress`
-  // or the per-send `from` field is set to.
-  // -----------------------------------------------------------------------
+  // SENDER ADDRESS: SMTP_USER must equal EMAIL_FROM.
+  // Gmail rewrites the From header to the authenticated user, so we authenticate
+  // directly as carbon@orcaclub.pro (the desired sender). Set the app password
+  // in SMTP_PASS — see .env.example for setup steps.
   email: nodemailerAdapter({
     defaultFromAddress: process.env.EMAIL_FROM || 'carbon@orcaclub.pro',
     defaultFromName: process.env.EMAIL_FROM_NAME || 'ORCACLUB',

@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState, useLayoutEffect, useEffect } from 'react'
+import { usePackageCount } from '@/app/(spaces)/PackageCountContext'
 import { AdminHomeView } from './_views/AdminHomeView'
 import { ClientHomeView } from './_views/ClientHomeView'
 import { ClientsView } from './_views/ClientsView'
@@ -79,7 +80,15 @@ export function DashboardTabView({
   clientData,
 }: DashboardTabViewProps) {
   const { activeTab, navigate } = useTabContext()
+  const { setPackageCount } = usePackageCount()
   const tabList = (role === 'client' ? CLIENT_TABS : ADMIN_TABS) as readonly AnyTab[]
+
+  // Sync client package count into context so MobileBottomNav can badge it
+  useEffect(() => {
+    if (role === 'client' && clientData) {
+      setPackageCount(clientData.clientPackages.length)
+    }
+  }, [role, clientData?.clientPackages.length, setPackageCount])
 
   // ── Animation state ───────────────────────────────────────────────────────
 
@@ -385,7 +394,7 @@ export function DashboardTabView({
           />
         )
       case 'invoices':
-        return <OrdersView allOrders={d.orders as any} clientAccount={d.clientAccount} />
+        return <OrdersView allOrders={d.orders as any} clientAccount={d.clientAccount} clientPackages={d.clientPackages as any} username={username} />
       case 'packages':
         return <PackagesClientView clientPackages={d.clientPackages} username={username} />
       default:
@@ -398,6 +407,7 @@ export function DashboardTabView({
             clientProjects={d.clientProjects}
             orders={d.orders}
             clientSprints={d.clientSprints}
+            clientPackages={d.clientPackages}
           />
         )
     }

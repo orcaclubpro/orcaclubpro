@@ -43,15 +43,15 @@ export function middleware(request: NextRequest) {
   }
 
   // Check if accessing a protected dashboard route
-  const isProtectedRoute = request.nextUrl.pathname.startsWith('/login/u/')
+  const isProtectedRoute = request.nextUrl.pathname.startsWith('/u/')
 
   if (isProtectedRoute) {
     // Check for authentication token
     const token = request.cookies.get('payload-token')?.value
 
     if (!token) {
-      // Redirect to login if no token found
       const loginUrl = new URL('/login', request.url)
+      loginUrl.searchParams.set('callbackUrl', request.nextUrl.pathname + request.nextUrl.search)
       return NextResponse.redirect(loginUrl)
     }
   }

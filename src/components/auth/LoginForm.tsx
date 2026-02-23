@@ -6,7 +6,7 @@ import { loginAction } from '@/actions/auth'
 import { Button } from '@/components/ui/button'
 import { Eye, EyeOff, Mail, Lock, Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
 
-export function LoginForm() {
+export function LoginForm({ callbackUrl }: { callbackUrl?: string }) {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -62,6 +62,17 @@ export function LoginForm() {
       const result = await loginAction({ email, password })
 
       if (result.success) {
+        // Trigger browser save-password prompt
+        if (typeof window !== 'undefined' && 'PasswordCredential' in window) {
+          try {
+            // @ts-ignore — PasswordCredential not in all TS DOM libs
+            const cred = new window.PasswordCredential({ id: email, password })
+            await navigator.credentials.store(cred)
+          } catch {
+            // Non-blocking — don't fail login if credential save fails
+          }
+        }
+
         // Check if user has username for dashboard access
         if (!result.username) {
           // Admin/User without username should use admin panel
@@ -83,8 +94,11 @@ export function LoginForm() {
         // Show success state
         setSuccess(true)
 
-        // Redirect to user dashboard
-        const redirectPath = `/u/${result.username}`
+        // Use callbackUrl if it's a safe relative path, otherwise fall back to dashboard
+        const safeFallback = `/u/${result.username}`
+        const redirectPath = callbackUrl && callbackUrl.startsWith('/')
+          ? callbackUrl
+          : safeFallback
 
         // Wait for animation before redirect
         setTimeout(() => {
@@ -167,6 +181,8 @@ export function LoginForm() {
           <input
             id="email"
             type="email"
+            name="email"
+            autoComplete="email"
             value={email}
             onChange={(e) => handleEmailChange(e.target.value)}
             onBlur={(e) => validateEmail(e.target.value)}
@@ -201,6 +217,8 @@ export function LoginForm() {
           <input
             id="password"
             type={showPassword ? 'text' : 'password'}
+            name="password"
+            autoComplete="current-password"
             value={password}
             onChange={(e) => handlePasswordChange(e.target.value)}
             onBlur={(e) => validatePassword(e.target.value)}

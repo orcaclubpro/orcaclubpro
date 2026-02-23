@@ -134,6 +134,20 @@ export default async function ProjectDetailPage({
     }
   }
 
+  // For staff/admin: fetch all projects visible to this user for quick switching
+  let staffProjects: Project[] = []
+  if (!isClient) {
+    const { docs } = await payload.find({
+      collection: 'projects',
+      user,
+      overrideAccess: false,
+      depth: 0,
+      sort: '-updatedAt',
+      limit: 40,
+    })
+    staffProjects = docs as Project[]
+  }
+
   const activeTab = tab === 'sprints' ? 'sprints' : 'home'
   const basePath = `/u/${username}/projects/${projectId}`
   const PROJECT_TABS = ['home', 'sprints'] as const
@@ -155,6 +169,7 @@ export default async function ProjectDetailPage({
           username={username}
           readOnly={isClient}
           clientProjects={isClient ? clientProjects : undefined}
+          staffProjects={!isClient ? staffProjects : undefined}
         />
       </CollapsibleSidebar>
 

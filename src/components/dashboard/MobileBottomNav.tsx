@@ -5,6 +5,7 @@ import { LayoutDashboard, FolderKanban, Building2, CheckSquare, Receipt, Package
 
 import { cn } from '@/lib/utils'
 import { useTabContext } from '@/app/(spaces)/TabContext'
+import { usePackageCount } from '@/app/(spaces)/PackageCountContext'
 
 interface MobileBottomNavProps {
   role?: string | null
@@ -14,6 +15,7 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
   const pathname = usePathname()
   const router = useRouter()
   const { activeTab, navigate } = useTabContext()
+  const { packageCount } = usePackageCount()
 
   // Only show on /u/[username] dashboard routes
   const match = pathname?.match(/^\/u\/([^\/]+)/)
@@ -92,10 +94,17 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
               )}
               style={active ? { boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05), inset 0 0 20px rgba(103,232,249,0.02)' } : undefined}
             >
-              <Icon
-                className={cn('size-5 transition-all duration-200', active ? 'text-cyan-400' : 'text-gray-500')}
-                style={active ? { filter: 'drop-shadow(0 0 6px rgba(103, 232, 249, 0.45))' } : undefined}
-              />
+              <div className="relative">
+                <Icon
+                  className={cn('size-5 transition-all duration-200', active ? 'text-cyan-400' : 'text-gray-500')}
+                  style={active ? { filter: 'drop-shadow(0 0 6px rgba(103, 232, 249, 0.45))' } : undefined}
+                />
+                {item.tab === 'packages' && isClient && packageCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] rounded-full bg-red-500 text-white text-[8px] font-bold flex items-center justify-center px-0.5 leading-none shadow-sm">
+                    {packageCount > 9 ? '9+' : packageCount}
+                  </span>
+                )}
+              </div>
               <span className={cn('text-[9px] font-semibold uppercase tracking-widest transition-colors duration-200 leading-none', active ? 'text-gray-300' : 'text-gray-600')}>
                 {item.label}
               </span>
