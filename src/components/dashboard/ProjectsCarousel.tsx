@@ -293,6 +293,161 @@ function EmptyState({ canCreate, clients }: { canCreate: boolean; clients: Clien
   )
 }
 
+// ─── Right panel: sprints tab content ─────────────────────────────────────────
+
+function SprintsDetailPanel({
+  project,
+  username,
+}: {
+  project: SerializedProject
+  username: string
+}) {
+  const activeSprints = project.sprints.filter(
+    (s) => s.status === 'in-progress' || s.status === 'delayed',
+  )
+  const latestSprints = [...project.sprints]
+    .filter((s) => s.status !== 'in-progress' && s.status !== 'delayed')
+    .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
+
+  if (project.sprints.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-center px-12">
+        <Zap className="size-10 text-white/10 mb-4" />
+        <p className="text-sm text-white/25">No sprints yet</p>
+        <p className="text-xs text-white/15 mt-2 max-w-xs">
+          Open the workspace to create sprints and track progress.
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="px-8 py-8 space-y-8 animate-in fade-in duration-200">
+
+      {/* ── Active sprints ── */}
+      <div className="space-y-4">
+        <p className="text-[11px] tracking-[0.4em] uppercase text-white/25 font-light flex items-center gap-2">
+          <Zap className="size-3 text-cyan-400/40" />
+          Active
+        </p>
+
+        {activeSprints.length > 0 ? (
+          <div className="space-y-3">
+            {activeSprints.map((sprint) => {
+              const cfg = SPRINT_STATUS[sprint.status]
+              const progress =
+                sprint.totalTasksCount > 0
+                  ? Math.round((sprint.completedTasksCount / sprint.totalTasksCount) * 100)
+                  : 0
+              return (
+                <Link
+                  key={sprint.id}
+                  href={`/u/${username}/projects/${project.id}/sprints/${sprint.id}`}
+                  className="block rounded-xl border border-cyan-400/12 bg-gradient-to-b from-cyan-950/15 to-transparent p-5 space-y-4 hover:border-cyan-400/25 transition-colors group"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-base font-semibold text-white group-hover:text-cyan-100 transition-colors leading-snug">
+                        {sprint.name}
+                      </p>
+                      <p className="text-xs text-white/35 mt-0.5">
+                        {fmtShort(sprint.startDate)} → {fmtShort(sprint.endDate)}
+                      </p>
+                    </div>
+                    <span
+                      className={cn(
+                        'flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border shrink-0',
+                        cfg.bg, cfg.color,
+                      )}
+                    >
+                      <span className={cn('size-1.5 rounded-full animate-pulse', cfg.dot)} />
+                      {cfg.label}
+                    </span>
+                  </div>
+
+                  {(sprint.goalDescription || sprint.description) && (
+                    <p className="text-xs text-white/35 leading-relaxed">
+                      {sprint.goalDescription || sprint.description}
+                    </p>
+                  )}
+
+                  {sprint.totalTasksCount > 0 && (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between text-xs text-white/30">
+                        <span className="tabular-nums">
+                          {sprint.completedTasksCount}/{sprint.totalTasksCount} tasks
+                        </span>
+                        <span className="tabular-nums font-medium">{progress}%</span>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-white/[0.06]">
+                        <div
+                          className="h-full bg-cyan-400/55 rounded-full transition-all duration-500"
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </Link>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="rounded-xl border border-white/[0.06] bg-white/[0.01] px-5 py-4 flex items-center gap-3">
+            <Zap className="size-4 text-white/15 shrink-0" />
+            <p className="text-sm text-white/25">No active sprint</p>
+          </div>
+        )}
+      </div>
+
+      {/* ── Latest sprints ── */}
+      {latestSprints.length > 0 && (
+        <div className="space-y-3">
+          <p className="text-[11px] tracking-[0.4em] uppercase text-white/25 font-light">
+            Latest · {latestSprints.length}
+          </p>
+          <div className="rounded-xl border border-white/[0.06] overflow-hidden divide-y divide-white/[0.04]">
+            {latestSprints.map((sprint) => {
+              const cfg = SPRINT_STATUS[sprint.status]
+              const progress =
+                sprint.totalTasksCount > 0
+                  ? Math.round((sprint.completedTasksCount / sprint.totalTasksCount) * 100)
+                  : 0
+              return (
+                <Link
+                  key={sprint.id}
+                  href={`/u/${username}/projects/${project.id}/sprints/${sprint.id}`}
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors group"
+                >
+                  <span className={cn('flex items-center gap-1.5 text-[10px] font-medium shrink-0 w-[58px]', cfg.color)}>
+                    <span className={cn('size-1.5 rounded-full shrink-0', cfg.dot)} />
+                    {cfg.label}
+                  </span>
+                  <span className="flex-1 text-sm text-white/60 group-hover:text-white/85 transition-colors truncate min-w-0">
+                    {sprint.name}
+                  </span>
+                  <span className="text-xs text-white/25 shrink-0 tabular-nums hidden sm:block">
+                    {fmtShort(sprint.startDate)} → {fmtShort(sprint.endDate)}
+                  </span>
+                  <div className="w-12 shrink-0 hidden md:flex items-center">
+                    <div className="h-px w-full bg-white/[0.08] relative">
+                      <div
+                        className={cn('absolute inset-y-0 left-0 h-full', cfg.dot)}
+                        style={{ width: `${progress}%`, height: '1px' }}
+                      />
+                    </div>
+                  </div>
+                  <span className="text-xs text-white/25 shrink-0 tabular-nums w-7 text-right">{progress}%</span>
+                  <ArrowRight className="size-3.5 text-white/15 group-hover:text-white/40 shrink-0 transition-colors" />
+                </Link>
+              )
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Right panel: project detail ───────────────────────────────────────────────
 
 function ProjectDetail({
@@ -306,6 +461,8 @@ function ProjectDetail({
   showClientLink: boolean
   canEdit: boolean
 }) {
+  const [activeTab, setActiveTab] = useState<'overview' | 'sprints'>('overview')
+
   const cfg = getStatus(project.status)
   const activeSprint = getActiveSprint(project.sprints)
   const otherSprints = project.sprints.filter((s) => s.id !== activeSprint?.id)
@@ -329,219 +486,247 @@ function ProjectDetail({
     stats.push({ icon: Flag, label: 'Milestones', value: `${completedMilestones} / ${project.milestones.length} done` })
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full relative">
 
-      {/* ── Action buttons — in layout flow, above scroll area ─────────── */}
-      <div className="shrink-0 flex items-center justify-end gap-3 px-8 pt-5 pb-3">
+      {/* ── Floating action buttons ──────────────────────────────────── */}
+      <div className="absolute top-3 right-6 z-30 flex items-center gap-3">
         {canEdit && <ProjectCarouselEditModal project={project} large />}
         <Link
           href={`/u/${username}/projects/${project.id}`}
-          className="flex items-center gap-2.5 bg-intelligence-cyan hover:bg-intelligence-cyan/90 active:scale-[0.98] text-black font-bold rounded-full px-7 py-3 text-sm transition-all duration-200 group shadow-[0_0_28px_rgba(103,232,249,0.35)] hover:shadow-[0_0_42px_rgba(103,232,249,0.5)]"
+          className="flex items-center gap-2.5 bg-intelligence-cyan hover:bg-intelligence-cyan/90 active:scale-[0.98] text-black font-bold rounded-full px-5 py-2 text-sm transition-all duration-200 group shadow-[0_0_28px_rgba(103,232,249,0.35)] hover:shadow-[0_0_42px_rgba(103,232,249,0.5)]"
         >
           Open Workspace
           <ArrowRight className="size-4 group-hover:translate-x-0.5 transition-transform duration-200" />
         </Link>
       </div>
 
-      {/* Scrollable content */}
+      {/* ── Tab nav ──────────────────────────────────────────────────── */}
+      <div className="shrink-0 flex items-center gap-1 px-8 pt-3 border-b border-white/[0.06]">
+        {(['overview', 'sprints'] as const).map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            onClick={() => setActiveTab(tab)}
+            className={cn(
+              'px-4 h-10 text-sm font-medium border-b-2 transition-colors duration-150 capitalize',
+              activeTab === tab
+                ? 'border-cyan-400/70 text-white'
+                : 'border-transparent text-white/35 hover:text-white/65',
+            )}
+          >
+            {tab}
+            {tab === 'sprints' && project.sprints.length > 0 && (
+              <span className="ml-1.5 text-[10px] text-white/25 tabular-nums">
+                {project.sprints.length}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Scrollable content ───────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto min-h-0 relative">
 
-        {/* Orbital geometry */}
-        <div
-          className="sticky top-0 pointer-events-none select-none"
-          aria-hidden="true"
-          style={{ height: 0, overflow: 'visible' }}
-        >
-          <div className="absolute top-6 right-6 opacity-[0.03]">
-            <svg width="240" height="240" viewBox="0 0 240 240" fill="none">
-              <circle cx="120" cy="120" r="119" stroke="white" strokeWidth="1" />
-              <circle cx="120" cy="120" r="89" stroke="white" strokeWidth="0.5" />
-              <circle cx="120" cy="120" r="52" stroke="white" strokeWidth="0.5" />
-              <line x1="120" y1="0" x2="120" y2="240" stroke="white" strokeWidth="0.5" />
-              <line x1="0" y1="120" x2="240" y2="120" stroke="white" strokeWidth="0.5" />
-              <circle cx="120" cy="120" r="2.5" stroke="white" strokeWidth="0.5" fill="none" />
-            </svg>
-          </div>
-        </div>
-
-        <div className="px-12 py-10 space-y-10 relative z-10">
-
-          {/* ── Header ── */}
-          <div
-            className="animate-in fade-in slide-in-from-bottom-2 duration-300"
-            style={{ animationDelay: '0ms' }}
-          >
-            {/* Top bar: status · client chip · workspace button */}
-            <div className="flex items-center justify-between gap-4 mb-7">
-              <div className="flex items-center gap-4">
-                {/* Status */}
-                <div className="flex items-center gap-2">
-                  {overdue ? (
-                    <>
-                      <AlertTriangle className="size-3.5 text-amber-400/80 shrink-0" />
-                      <span className="text-xs font-semibold uppercase tracking-[0.35em] text-amber-400/90">
-                        Overdue
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <span className={cn('size-2 rounded-full', cfg.dot)} />
-                      <span className={cn('text-xs font-semibold uppercase tracking-[0.35em]', cfg.color)}>
-                        {cfg.label}
-                      </span>
-                    </>
-                  )}
-                </div>
-
-                {/* Client chip — links directly to the client profile */}
-                {showClientLink && project.client && (
-                  <Link
-                    href={`/u/${username}/clients/${project.client.id}`}
-                    className="flex items-center gap-2 text-xs bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] hover:border-white/[0.18] rounded-full px-3.5 py-1.5 transition-all duration-150 group shrink-0"
-                  >
-                    <Building2 className="size-3.5 text-cyan-400/50 group-hover:text-cyan-400 transition-colors shrink-0" />
-                    <span className="text-white/55 group-hover:text-white/85 font-medium transition-colors">
-                      {project.client.name}
-                    </span>
-                  </Link>
-                )}
-              </div>
-
-              <div />
-            </div>
-
-            {/* Project name — huge */}
-            <h2 className="text-6xl xl:text-7xl font-bold gradient-text leading-none mb-4">
-              {project.name}
-            </h2>
-            <div className="w-10 h-px bg-cyan-400/40 mb-5" />
-
-            {/* Description */}
-            {project.description && (
-              <p className="text-base text-white/50 leading-relaxed max-w-2xl">
-                {project.description}
-              </p>
-            )}
-          </div>
-
-          {/* ── Timeline ── */}
-          <div
-            className="animate-in fade-in slide-in-from-bottom-2 duration-300"
-            style={{ animationDelay: '60ms' }}
-          >
-            <p className="text-[11px] tracking-[0.4em] uppercase text-white/25 font-light mb-5">
-              Timeline
-            </p>
-            <ProfileTimeline project={project} />
-          </div>
-
-          {/* ── Stats grid ── */}
-          {stats.length > 0 && (
+        {activeTab === 'sprints' ? (
+          <SprintsDetailPanel project={project} username={username} />
+        ) : (
+          <>
+            {/* Orbital geometry */}
             <div
-              className={cn(
-                'grid gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300',
-                stats.length <= 2 ? 'grid-cols-2' : 'grid-cols-2 xl:grid-cols-4',
-              )}
-              style={{ animationDelay: '75ms' }}
+              className="sticky top-0 pointer-events-none select-none"
+              aria-hidden="true"
+              style={{ height: 0, overflow: 'visible' }}
             >
-              {stats.map((s) => (
-                <StatCard key={s.label} {...s} />
-              ))}
+              <div className="absolute top-6 right-6 opacity-[0.03]">
+                <svg width="240" height="240" viewBox="0 0 240 240" fill="none">
+                  <circle cx="120" cy="120" r="119" stroke="white" strokeWidth="1" />
+                  <circle cx="120" cy="120" r="89" stroke="white" strokeWidth="0.5" />
+                  <circle cx="120" cy="120" r="52" stroke="white" strokeWidth="0.5" />
+                  <line x1="120" y1="0" x2="120" y2="240" stroke="white" strokeWidth="0.5" />
+                  <line x1="0" y1="120" x2="240" y2="120" stroke="white" strokeWidth="0.5" />
+                  <circle cx="120" cy="120" r="2.5" stroke="white" strokeWidth="0.5" fill="none" />
+                </svg>
+              </div>
             </div>
-          )}
 
-          {/* ── Active sprint ── */}
-          <div
-            className="animate-in fade-in slide-in-from-bottom-2 duration-300"
-            style={{ animationDelay: '150ms' }}
-          >
-            {activeSprint ? (
-              <div className="space-y-3">
-                <p className="text-[11px] tracking-[0.4em] uppercase text-white/25 font-light flex items-center gap-2">
-                  <Zap className="size-3.5 text-cyan-400/40" />
-                  Current Sprint
-                </p>
-                <div className="rounded-2xl border border-cyan-400/12 bg-gradient-to-b from-cyan-950/15 to-transparent p-6 space-y-5">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-base font-semibold text-white mb-1.5">{activeSprint.name}</p>
-                      <p className="text-xs text-white/35">
-                        {fmtShort(activeSprint.startDate)} → {fmtShort(activeSprint.endDate)}
-                      </p>
-                    </div>
-                    <span
-                      className={cn(
-                        'flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border shrink-0',
-                        SPRINT_STATUS[activeSprint.status].bg,
-                        SPRINT_STATUS[activeSprint.status].color,
+            <div className="px-12 py-10 space-y-10 relative z-10">
+
+              {/* ── Header ── */}
+              <div
+                className="animate-in fade-in slide-in-from-bottom-2 duration-300"
+                style={{ animationDelay: '0ms' }}
+              >
+                {/* Top bar: status · client chip */}
+                <div className="flex items-center justify-between gap-4 mb-7">
+                  <div className="flex items-center gap-4">
+                    {/* Status */}
+                    <div className="flex items-center gap-2">
+                      {overdue ? (
+                        <>
+                          <AlertTriangle className="size-3.5 text-amber-400/80 shrink-0" />
+                          <span className="text-xs font-semibold uppercase tracking-[0.35em] text-amber-400/90">
+                            Overdue
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <span className={cn('size-2 rounded-full', cfg.dot)} />
+                          <span className={cn('text-xs font-semibold uppercase tracking-[0.35em]', cfg.color)}>
+                            {cfg.label}
+                          </span>
+                        </>
                       )}
-                    >
-                      <span className={cn('size-1.5 rounded-full', SPRINT_STATUS[activeSprint.status].dot)} />
-                      {SPRINT_STATUS[activeSprint.status].label}
-                    </span>
-                  </div>
-
-                  {activeSprint.totalTasksCount > 0 ? (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-white/30 tabular-nums">
-                          {activeSprint.completedTasksCount} of {activeSprint.totalTasksCount} tasks done
-                        </span>
-                        <span className="text-xs text-white/30 tabular-nums font-medium">
-                          {sprintProgress}%
-                        </span>
-                      </div>
-                      <div className="h-2 w-full bg-white/[0.05] rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-cyan-400/55 rounded-full transition-all duration-700"
-                          style={{ width: `${sprintProgress}%` }}
-                        />
-                      </div>
                     </div>
-                  ) : (
-                    <p className="text-xs text-white/25">No tasks assigned yet</p>
-                  )}
 
-                  {activeSprint.goalDescription && (
-                    <p className="text-sm text-white/35 leading-relaxed border-t border-white/[0.05] pt-4">
-                      {activeSprint.goalDescription}
-                    </p>
-                  )}
+                    {/* Client chip */}
+                    {showClientLink && project.client && (
+                      <Link
+                        href={`/u/${username}/clients/${project.client.id}`}
+                        className="flex items-center gap-2 text-xs bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] hover:border-white/[0.18] rounded-full px-3.5 py-1.5 transition-all duration-150 group shrink-0"
+                      >
+                        <Building2 className="size-3.5 text-cyan-400/50 group-hover:text-cyan-400 transition-colors shrink-0" />
+                        <span className="text-white/55 group-hover:text-white/85 font-medium transition-colors">
+                          {project.client.name}
+                        </span>
+                      </Link>
+                    )}
+                  </div>
+                  <div />
                 </div>
 
-                {otherSprints.length > 0 && (
-                  <div className="flex items-center gap-3 pl-1 text-xs text-white/25">
-                    {upcomingSprints.length > 0 && <span>{upcomingSprints.length} upcoming</span>}
-                    {upcomingSprints.length > 0 && finishedSprints.length > 0 && (
-                      <span className="text-white/20">·</span>
+                {/* Project name — huge */}
+                <h2 className="text-6xl xl:text-7xl font-bold gradient-text leading-none mb-4">
+                  {project.name}
+                </h2>
+                <div className="w-10 h-px bg-cyan-400/40 mb-5" />
+
+                {/* Description */}
+                {project.description && (
+                  <p className="text-base text-white/50 leading-relaxed max-w-2xl">
+                    {project.description}
+                  </p>
+                )}
+              </div>
+
+              {/* ── Timeline ── */}
+              <div
+                className="animate-in fade-in slide-in-from-bottom-2 duration-300"
+                style={{ animationDelay: '60ms' }}
+              >
+                <p className="text-[11px] tracking-[0.4em] uppercase text-white/25 font-light mb-5">
+                  Timeline
+                </p>
+                <ProfileTimeline project={project} username={username} />
+              </div>
+
+              {/* ── Stats grid ── */}
+              {stats.length > 0 && (
+                <div
+                  className={cn(
+                    'grid gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300',
+                    stats.length <= 2 ? 'grid-cols-2' : 'grid-cols-2 xl:grid-cols-4',
+                  )}
+                  style={{ animationDelay: '75ms' }}
+                >
+                  {stats.map((s) => (
+                    <StatCard key={s.label} {...s} />
+                  ))}
+                </div>
+              )}
+
+              {/* ── Active sprint ── */}
+              <div
+                className="animate-in fade-in slide-in-from-bottom-2 duration-300"
+                style={{ animationDelay: '150ms' }}
+              >
+                {activeSprint ? (
+                  <div className="space-y-3">
+                    <p className="text-[11px] tracking-[0.4em] uppercase text-white/25 font-light flex items-center gap-2">
+                      <Zap className="size-3.5 text-cyan-400/40" />
+                      Current Sprint
+                    </p>
+                    <div className="rounded-2xl border border-cyan-400/12 bg-gradient-to-b from-cyan-950/15 to-transparent p-6 space-y-5">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-base font-semibold text-white mb-1.5">{activeSprint.name}</p>
+                          <p className="text-xs text-white/35">
+                            {fmtShort(activeSprint.startDate)} → {fmtShort(activeSprint.endDate)}
+                          </p>
+                        </div>
+                        <span
+                          className={cn(
+                            'flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border shrink-0',
+                            SPRINT_STATUS[activeSprint.status].bg,
+                            SPRINT_STATUS[activeSprint.status].color,
+                          )}
+                        >
+                          <span className={cn('size-1.5 rounded-full', SPRINT_STATUS[activeSprint.status].dot)} />
+                          {SPRINT_STATUS[activeSprint.status].label}
+                        </span>
+                      </div>
+
+                      {activeSprint.totalTasksCount > 0 ? (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-white/30 tabular-nums">
+                              {activeSprint.completedTasksCount} of {activeSprint.totalTasksCount} tasks done
+                            </span>
+                            <span className="text-xs text-white/30 tabular-nums font-medium">
+                              {sprintProgress}%
+                            </span>
+                          </div>
+                          <div className="h-2 w-full bg-white/[0.05] rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-cyan-400/55 rounded-full transition-all duration-700"
+                              style={{ width: `${sprintProgress}%` }}
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-white/25">No tasks assigned yet</p>
+                      )}
+
+                      {activeSprint.goalDescription && (
+                        <p className="text-sm text-white/35 leading-relaxed border-t border-white/[0.05] pt-4">
+                          {activeSprint.goalDescription}
+                        </p>
+                      )}
+                    </div>
+
+                    {otherSprints.length > 0 && (
+                      <div className="flex items-center gap-3 pl-1 text-xs text-white/25">
+                        {upcomingSprints.length > 0 && <span>{upcomingSprints.length} upcoming</span>}
+                        {upcomingSprints.length > 0 && finishedSprints.length > 0 && (
+                          <span className="text-white/20">·</span>
+                        )}
+                        {finishedSprints.length > 0 && <span>{finishedSprints.length} finished</span>}
+                      </div>
                     )}
-                    {finishedSprints.length > 0 && <span>{finishedSprints.length} finished</span>}
+                  </div>
+                ) : project.sprints.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-white/[0.07] px-6 py-8 text-center">
+                    <p className="text-sm text-white/20">No sprints yet — all work is on the project page.</p>
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border border-green-400/12 bg-green-400/5 px-6 py-5 flex items-center gap-3">
+                    <CheckCircle2 className="size-5 text-green-400/50 shrink-0" />
+                    <p className="text-sm text-green-400/60">
+                      All {project.sprints.length} sprint{project.sprints.length !== 1 ? 's' : ''} complete
+                    </p>
                   </div>
                 )}
               </div>
-            ) : project.sprints.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-white/[0.07] px-6 py-8 text-center">
-                <p className="text-sm text-white/20">No sprints yet — all work is on the project page.</p>
-              </div>
-            ) : (
-              <div className="rounded-2xl border border-green-400/12 bg-green-400/5 px-6 py-5 flex items-center gap-3">
-                <CheckCircle2 className="size-5 text-green-400/50 shrink-0" />
-                <p className="text-sm text-green-400/60">
-                  All {project.sprints.length} sprint{project.sprints.length !== 1 ? 's' : ''} complete
+
+              {/* Last updated */}
+              <div className="border-t border-white/[0.05] pt-4">
+                <p className="text-xs text-white/25 tabular-nums tracking-wide uppercase font-light flex items-center gap-1.5">
+                  <Clock className="size-3" />
+                  Updated {relTime(project.updatedAt)}
                 </p>
               </div>
-            )}
-          </div>
-
-
-          {/* Last updated */}
-          <div className="border-t border-white/[0.05] pt-4">
-            <p className="text-xs text-white/25 tabular-nums tracking-wide uppercase font-light flex items-center gap-1.5">
-              <Clock className="size-3" />
-              Updated {relTime(project.updatedAt)}
-            </p>
-          </div>
-        </div>
+            </div>
+          </>
+        )}
       </div>
 
     </div>
@@ -702,7 +887,7 @@ export function ProjectsCarousel({
 
           {/* Header */}
           <div className="px-6 pt-8 pb-5 shrink-0">
-            <p className="text-[10px] tracking-[0.4em] uppercase text-white/20 font-light mb-3">
+            <p className="text-[10px] tracking-[0.4em] uppercase gradient-text font-medium mb-3">
               Workspace
             </p>
             <h1 className="text-2xl font-bold text-white uppercase tracking-wide">Projects</h1>
@@ -775,7 +960,7 @@ export function ProjectsCarousel({
       {/* ── MOBILE: stacked list ───────────────────────────────────────────── */}
       <div className="lg:hidden px-4 pt-6 pb-28 space-y-4">
         <div className="mb-6">
-          <p className="text-[10px] tracking-[0.4em] uppercase text-white/25 font-light mb-2">
+          <p className="text-[10px] tracking-[0.4em] uppercase gradient-text font-medium mb-2">
             {canCreate ? 'Workspace' : 'Client Dashboard'}
           </p>
           <h1 className="text-2xl font-bold text-white uppercase tracking-wide">Projects</h1>

@@ -121,7 +121,7 @@ export function ProjectsList({ projects }: { projects: any[] }) {
           <div className="p-2.5 rounded-lg bg-[#1c1c1c] border border-white/[0.10]">
             <Folder className="size-5 text-intelligence-cyan" />
           </div>
-          <h2 className="text-2xl font-semibold text-white">Your Projects</h2>
+          <h2 className="text-2xl font-bold text-white">Your Projects</h2>
         </div>
         {upcomingDeadlines.length > 0 && (
           <MetricBadge
@@ -145,8 +145,8 @@ export function ProjectsList({ projects }: { projects: any[] }) {
             <Link
               key={index}
               href={`/u/${username}/projects/${project.id}`}
-              className="block group relative overflow-hidden rounded-xl border border-white/[0.08] bg-[#1c1c1c] backdrop-blur-md p-6 hover:border-white/[0.14] hover:bg-[#242424] transition-all duration-500 hover:scale-[1.01] fluid-enter cursor-pointer"
-              style={{ animationDelay: `${index * 100}ms` }}
+              className="block group relative overflow-hidden rounded-xl border border-white/[0.08] bg-[#1c1c1c] backdrop-blur-md p-6 hover:border-white/[0.14] hover:bg-[#242424] transition-all duration-500 hover:scale-[1.01] animate-in fade-in slide-in-from-bottom-2 duration-300 cursor-pointer"
+              style={{ animationDelay: `${Math.min(index * 40, 200)}ms` }}
             >
               {/* Subtle glow orb */}
               <div className={`absolute top-0 right-0 w-32 h-32 ${statusConfig.glowColor} blur-3xl opacity-0 group-hover:opacity-[0.06] transition-opacity duration-500`} />
@@ -156,7 +156,7 @@ export function ProjectsList({ projects }: { projects: any[] }) {
                 <div className="flex items-start justify-between mb-6">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-xl font-semibold text-white">
+                      <h3 className="text-2xl font-bold text-white">
                         {project.name}
                       </h3>
                       <Badge
@@ -168,7 +168,7 @@ export function ProjectsList({ projects }: { projects: any[] }) {
                       </Badge>
                     </div>
                     {project.description && (
-                      <p className="text-gray-400 text-sm leading-relaxed">
+                      <p className="text-gray-200 text-sm leading-relaxed">
                         {project.description}
                       </p>
                     )}
@@ -195,10 +195,10 @@ export function ProjectsList({ projects }: { projects: any[] }) {
                 {project.status !== 'cancelled' && (
                   <div className="mb-6">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <span className="text-xs font-semibold text-gray-300 uppercase tracking-wider">
                         Progress
                       </span>
-                      <span className="text-xs font-semibold text-gray-300">
+                      <span className="text-xs font-semibold text-white">
                         {progress}%
                       </span>
                     </div>
@@ -224,7 +224,7 @@ export function ProjectsList({ projects }: { projects: any[] }) {
                       <Calendar className="size-3.5 text-intelligence-cyan" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs text-gray-500 uppercase tracking-wider font-medium mb-0.5">
+                      <p className="text-xs font-semibold text-gray-300 uppercase tracking-wider mb-0.5">
                         Start Date
                       </p>
                       <p className="text-sm text-white font-medium">
@@ -238,7 +238,7 @@ export function ProjectsList({ projects }: { projects: any[] }) {
                       <Clock className="size-3.5 text-blue-400" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs text-gray-500 uppercase tracking-wider font-medium mb-0.5">
+                      <p className="text-xs font-semibold text-gray-300 uppercase tracking-wider mb-0.5">
                         End Date
                       </p>
                       <p className="text-sm text-white font-medium">
@@ -267,7 +267,7 @@ export function ProjectsList({ projects }: { projects: any[] }) {
                         <DollarSign className="size-3.5 text-green-400" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs text-gray-500 uppercase tracking-wider font-medium mb-0.5">
+                        <p className="text-xs font-semibold text-gray-300 uppercase tracking-wider mb-0.5">
                           Budget
                         </p>
                         <p className="text-sm text-white font-medium">

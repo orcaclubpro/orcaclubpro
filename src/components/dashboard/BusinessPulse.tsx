@@ -52,7 +52,7 @@ function CustomTooltip({ active, payload, label }: any) {
     <div className="bg-[#1c1c1c] border border-white/[0.12] rounded-lg px-3 py-2 text-xs shadow-xl">
       <p className="text-gray-400 mb-1">{label}</p>
       <p className="text-white font-medium">{fmt(payload[0]?.value ?? 0)}</p>
-      <p className="text-gray-500">{payload[0]?.payload?.orders} order{payload[0]?.payload?.orders !== 1 ? 's' : ''}</p>
+      <p className="text-gray-300">{payload[0]?.payload?.orders} order{payload[0]?.payload?.orders !== 1 ? 's' : ''}</p>
     </div>
   )
 }
@@ -84,16 +84,16 @@ export function BusinessPulse({ weeklyRevenue, orderPipeline, projectStatus, kpi
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-sm font-semibold text-white">30-Day Pulse</h2>
-          <p className="text-xs text-gray-600 mt-0.5">Revenue · Pipeline · Projects</p>
+          <p className="text-xs text-gray-300 mt-0.5">Revenue · Pipeline · Projects</p>
         </div>
-        <span className="text-[10px] tracking-widest uppercase text-white/20 font-light">Last 30 days</span>
+        <span className="text-xs tracking-widest uppercase gradient-text font-medium">Last 30 days</span>
       </div>
 
       {/* KPI row */}
       <div className="grid grid-cols-4 gap-3">
         {kpiItems.map((k) => (
           <div key={k.label} className="space-y-0.5">
-            <p className="text-[10px] uppercase tracking-widest text-gray-600 font-medium">{k.label}</p>
+            <p className="text-xs uppercase tracking-widest text-gray-300 font-semibold">{k.label}</p>
             <p className={`text-xl font-bold tabular-nums tracking-tight ${k.accent ? 'text-intelligence-cyan' : 'text-white'}`}>
               {k.value}
             </p>
@@ -107,7 +107,7 @@ export function BusinessPulse({ weeklyRevenue, orderPipeline, projectStatus, kpi
           <BarChart data={weeklyRevenue} barSize={28} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
             <XAxis
               dataKey="label"
-              tick={{ fill: '#4b5563', fontSize: 10, fontFamily: 'inherit' }}
+              tick={{ fill: '#9ca3af', fontSize: 11, fontFamily: 'inherit' }}
               axisLine={false}
               tickLine={false}
             />
@@ -130,7 +130,7 @@ export function BusinessPulse({ weeklyRevenue, orderPipeline, projectStatus, kpi
 
         {/* Order pipeline */}
         <div className="space-y-2">
-          <p className="text-[10px] uppercase tracking-widest text-gray-600 font-medium">Order Pipeline</p>
+          <p className="text-xs uppercase tracking-widest gradient-text font-medium">Order Pipeline</p>
           <div className="h-1.5 w-full rounded-full overflow-hidden flex bg-white/[0.06]">
             {paidPct > 0 && (
               <div style={{ width: `${paidPct}%` }} className="bg-emerald-400/70 transition-all duration-500" />
@@ -142,7 +142,7 @@ export function BusinessPulse({ weeklyRevenue, orderPipeline, projectStatus, kpi
               <div style={{ width: `${cancelledPct}%` }} className="bg-red-400/40 transition-all duration-500" />
             )}
           </div>
-          <div className="flex items-center gap-3 text-[10px] text-gray-500">
+          <div className="flex items-center gap-3 text-xs text-gray-300">
             <span className="flex items-center gap-1">
               <span className="size-1.5 rounded-full bg-emerald-400/70 inline-block" />
               Paid {fmt(orderPipeline.paidAmount)}
@@ -156,7 +156,7 @@ export function BusinessPulse({ weeklyRevenue, orderPipeline, projectStatus, kpi
 
         {/* Project health */}
         <div className="space-y-2">
-          <p className="text-[10px] uppercase tracking-widest text-gray-600 font-medium">Project Health</p>
+          <p className="text-xs uppercase tracking-widest gradient-text font-medium">Project Health</p>
           <div className="h-1.5 w-full rounded-full overflow-hidden flex bg-white/[0.06]">
             {activePct > 0 && (
               <div style={{ width: `${activePct}%` }} className="bg-cyan-400/70 transition-all duration-500" />
@@ -168,7 +168,7 @@ export function BusinessPulse({ weeklyRevenue, orderPipeline, projectStatus, kpi
               <div style={{ width: `${completedPct}%` }} className="bg-white/20 transition-all duration-500" />
             )}
           </div>
-          <div className="flex items-center gap-3 text-[10px] text-gray-500">
+          <div className="flex items-center gap-3 text-xs text-gray-300">
             <span className="flex items-center gap-1">
               <span className="size-1.5 rounded-full bg-cyan-400/70 inline-block" />
               Active {projectStatus.active}

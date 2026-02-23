@@ -650,6 +650,7 @@ export function SprintDetailView({
   const [deleteMenuOpen, setDeleteMenuOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [editName, setEditName] = useState(initialSprint.name)
+  const [editDescription, setEditDescription] = useState(initialSprint.description ?? '')
   const [editStartDate, setEditStartDate] = useState(initialSprint.startDate?.slice(0, 10) ?? '')
   const [editEndDate, setEditEndDate] = useState(initialSprint.endDate?.slice(0, 10) ?? '')
   const [editGoal, setEditGoal] = useState(initialSprint.goalDescription ?? '')
@@ -774,13 +775,14 @@ export function SprintDetailView({
       setEditError('End date must be after start date.')
       return
     }
-    const snapshot = { name: sprint.name, startDate: sprint.startDate, endDate: sprint.endDate, goalDescription: sprint.goalDescription }
-    setSprint((s) => ({ ...s, name: editName.trim(), startDate: editStartDate, endDate: editEndDate, goalDescription: editGoal || null }))
+    const snapshot = { name: sprint.name, description: sprint.description, startDate: sprint.startDate, endDate: sprint.endDate, goalDescription: sprint.goalDescription }
+    setSprint((s) => ({ ...s, name: editName.trim(), description: editDescription.trim() || null, startDate: editStartDate, endDate: editEndDate, goalDescription: editGoal || null }))
     setEditOpen(false)
     startTransition(async () => {
       const result = await updateSprint({
         sprintId: sprint.id,
         name: editName.trim(),
+        description: editDescription.trim() || undefined,
         startDate: editStartDate,
         endDate: editEndDate,
         goalDescription: editGoal.trim() || undefined,
@@ -843,11 +845,11 @@ export function SprintDetailView({
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="lg:flex fluid-enter" style={{ minHeight: 'calc(100vh - 64px)' }}>
+    <div className="lg:flex fluid-enter" style={{ minHeight: 'calc((100vh - 64px) / 1.3)' }}>
 
       {/* ── Sidebar (desktop) ─────────────────────────────────────────── */}
       <aside className={cn(
-        'hidden lg:flex flex-col shrink-0 border-r border-white/[0.08] bg-[#1c1c1c]/40 sticky top-16 self-start h-[calc(100vh-64px)] overflow-hidden transition-[width] duration-300 ease-in-out',
+        'hidden lg:flex flex-col shrink-0 border-r border-white/[0.08] bg-[#1c1c1c]/40 sticky top-[49px] self-start h-[calc((100vh-64px)/1.3)] overflow-hidden transition-[width] duration-300 ease-in-out',
         sidebarCollapsed ? 'w-12' : 'w-72 xl:w-80',
       )}>
         {/* Top bar: back nav + collapse toggle */}
@@ -919,6 +921,11 @@ export function SprintDetailView({
                   )}
                 </div>
 
+                {/* Description */}
+                {sprint.description && !editOpen && (
+                  <p className="text-xs text-gray-500 leading-relaxed">{sprint.description}</p>
+                )}
+
                 {/* Goal */}
                 {sprint.goalDescription && !editOpen && (
                   <div className="flex items-start gap-2 py-0.5">
@@ -984,6 +991,7 @@ export function SprintDetailView({
                       type="button"
                       onClick={() => {
                         setEditName(sprint.name)
+                        setEditDescription(sprint.description ?? '')
                         setEditStartDate(sprint.startDate?.slice(0, 10) ?? '')
                         setEditEndDate(sprint.endDate?.slice(0, 10) ?? '')
                         setEditGoal(sprint.goalDescription ?? '')
@@ -1015,6 +1023,17 @@ export function SprintDetailView({
                             placeholder="Sprint name"
                             autoFocus
                             className="bg-white/[0.03] border-white/[0.08] text-white placeholder:text-gray-600 focus:border-intelligence-cyan/40 h-8 text-sm"
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <Label className="text-[10px] text-gray-500 uppercase tracking-wider">Description</Label>
+                          <Textarea
+                            value={editDescription}
+                            onChange={(e) => setEditDescription(e.target.value)}
+                            placeholder="Sprint description…"
+                            rows={2}
+                            className="bg-white/[0.03] border-white/[0.08] text-white placeholder:text-gray-600 focus:border-intelligence-cyan/40 resize-none text-sm"
                           />
                         </div>
 

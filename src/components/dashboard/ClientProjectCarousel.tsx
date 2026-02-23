@@ -92,11 +92,11 @@ function ProjectCard({ project, username }: { project: CarouselProject; username
 
         {/* Project name */}
         <div className="flex-1">
-          <h3 className="text-base font-semibold text-white leading-snug group-hover:text-intelligence-cyan transition-colors duration-200">
+          <h3 className="text-lg font-bold text-white leading-snug group-hover:text-intelligence-cyan transition-colors duration-200">
             {project.name}
           </h3>
           {project.description && (
-            <p className="text-xs text-gray-500 mt-2 leading-relaxed line-clamp-2">
+            <p className="text-sm text-gray-200 mt-2 leading-relaxed line-clamp-2">
               {project.description}
             </p>
           )}
@@ -105,8 +105,8 @@ function ProjectCard({ project, username }: { project: CarouselProject; username
         {/* Meta info */}
         <div className="space-y-2 pt-1 border-t border-white/[0.06]">
           {(startFmt || endFmt) && (
-            <div className="flex items-center gap-1.5 text-xs text-gray-500">
-              <Calendar className="size-3 shrink-0 text-gray-600" />
+            <div className="flex items-center gap-1.5 text-sm text-gray-300">
+              <Calendar className="size-3 shrink-0 text-gray-400" />
               <span>
                 {startFmt && endFmt
                   ? `${startFmt} → ${endFmt}`
@@ -117,8 +117,8 @@ function ProjectCard({ project, username }: { project: CarouselProject; username
             </div>
           )}
           {budget && (
-            <div className="flex items-center gap-1.5 text-xs text-gray-500">
-              <DollarSign className="size-3 shrink-0 text-gray-600" />
+            <div className="flex items-center gap-1.5 text-sm text-gray-300">
+              <DollarSign className="size-3 shrink-0 text-gray-400" />
               <span>{budget}</span>
             </div>
           )}
@@ -127,7 +127,7 @@ function ProjectCard({ project, username }: { project: CarouselProject; username
         {/* View link */}
         <Link
           href={`/u/${username}/projects/${project.id}`}
-          className="flex items-center justify-between text-xs font-medium text-gray-500 hover:text-white transition-colors duration-200 group/link"
+          className="flex items-center justify-between text-sm font-medium text-gray-300 hover:text-white transition-colors duration-200 group/link"
         >
           <span>View project</span>
           <ArrowRight className="size-3 group-hover/link:translate-x-0.5 transition-transform duration-150" />

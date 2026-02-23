@@ -44,11 +44,11 @@ export function ProjectSidebar({ project, tasks, username, readOnly, clientProje
     : []
 
   return (
-    <div className="p-5 space-y-5 h-full">
+    <div className="p-6 space-y-7 h-full">
       {/* Back nav */}
       <Link
         href={`/u/${username}/projects`}
-        className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 transition-colors group"
+        className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-white transition-colors group"
       >
         <ArrowLeft className="size-3 group-hover:-translate-x-0.5 transition-transform" />
         All Projects
@@ -57,7 +57,7 @@ export function ProjectSidebar({ project, tasks, username, readOnly, clientProje
       {/* ── Client project navigator ────────────────────────────────────── */}
       {clientProjects && clientProjects.length > 0 && (
         <div className="space-y-0.5">
-          <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest px-1 mb-2">
+          <p className="text-sm font-bold text-white uppercase tracking-widest px-1 mb-3">
             Your Projects
           </p>
           {clientProjects.map((p) => {
@@ -67,7 +67,7 @@ export function ProjectSidebar({ project, tasks, username, readOnly, clientProje
               <Link
                 key={p.id}
                 href={`/u/${username}/projects/${p.id}`}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-base transition-colors ${
                   isCurrent
                     ? 'bg-white/[0.08] text-white'
                     : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'
@@ -88,7 +88,7 @@ export function ProjectSidebar({ project, tasks, username, readOnly, clientProje
       {/* ── Staff / admin assigned projects navigator ────────────────────── */}
       {!readOnly && staffProjects && staffProjects.length > 0 && (
         <div className="space-y-0.5">
-          <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest px-1 mb-2">
+          <p className="text-sm font-bold text-white uppercase tracking-widest px-1 mb-3">
             Assigned
           </p>
           {staffProjects.map((p) => {
@@ -98,7 +98,7 @@ export function ProjectSidebar({ project, tasks, username, readOnly, clientProje
               <Link
                 key={p.id}
                 href={`/u/${username}/projects/${p.id}`}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-base transition-colors ${
                   isCurrent
                     ? 'bg-white/[0.08] text-white'
                     : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'
@@ -127,23 +127,23 @@ export function ProjectSidebar({ project, tasks, username, readOnly, clientProje
 
       {/* Description */}
       {project.description && (
-        <p className="text-xs text-gray-500 leading-relaxed">{project.description}</p>
+        <p className="text-sm text-gray-100 leading-relaxed">{project.description}</p>
       )}
 
       {/* Task progress */}
       {totalTasks > 0 && (
         <div className="space-y-1.5">
           <div className="flex items-center justify-between text-xs">
-            <span className="text-gray-600">Progress</span>
-            <span className="text-gray-400 tabular-nums">{completedTasks}/{totalTasks} tasks</span>
+            <span className="text-white font-semibold">Progress</span>
+            <span className="text-white font-bold tabular-nums">{completedTasks}/{totalTasks} tasks</span>
           </div>
-          <div className="h-1 bg-white/[0.08] rounded-full overflow-hidden">
+          <div className="h-2 bg-white/[0.10] rounded-full overflow-hidden">
             <div
               className="h-full bg-intelligence-cyan rounded-full"
               style={{ width: `${progress}%` }}
             />
           </div>
-          <p className="text-xs text-gray-600">{progress}% complete</p>
+          <p className="text-xs text-gray-400">{progress}% complete</p>
         </div>
       )}
 
@@ -153,37 +153,37 @@ export function ProjectSidebar({ project, tasks, username, readOnly, clientProje
       <div className="space-y-3.5">
         {/* Client name — only shown to admins/staff, not to clients themselves */}
         {!readOnly && clientAccount && (
-          <div className="flex items-start gap-2.5">
-            <Building2 className="size-3.5 text-gray-600 mt-0.5 shrink-0" />
+          <div className="flex items-start gap-3">
+            <Building2 className="size-4 text-gray-200 mt-0.5 shrink-0" />
             <div>
-              <p className="text-xs text-gray-600 mb-0.5">Client</p>
-              <p className="text-xs text-gray-300 font-medium">{(clientAccount as any).name}</p>
+              <p className="text-sm text-gray-300 mb-1">Client</p>
+              <p className="text-sm text-white font-bold">{(clientAccount as any).name}</p>
             </div>
           </div>
         )}
 
-        <div className="flex items-start gap-2.5">
-          <Calendar className="size-3.5 text-gray-600 mt-0.5 shrink-0" />
+        <div className="flex items-start gap-3">
+          <Calendar className="size-4 text-gray-200 mt-0.5 shrink-0" />
           <div>
-            <p className="text-xs text-gray-600 mb-0.5">Start date</p>
-            <p className="text-xs text-gray-300">{fmt(project.startDate)}</p>
+            <p className="text-sm text-gray-300 mb-1">Start date</p>
+            <p className="text-sm text-white font-medium">{fmt(project.startDate)}</p>
           </div>
         </div>
 
-        <div className="flex items-start gap-2.5">
-          <Calendar className="size-3.5 text-gray-600 mt-0.5 shrink-0" />
+        <div className="flex items-start gap-3">
+          <Calendar className="size-4 text-gray-200 mt-0.5 shrink-0" />
           <div>
-            <p className="text-xs text-gray-600 mb-0.5">Target completion</p>
-            <p className="text-xs text-gray-300">{fmt(project.projectedEndDate)}</p>
+            <p className="text-sm text-gray-300 mb-1">Target completion</p>
+            <p className="text-sm text-white font-medium">{fmt(project.projectedEndDate)}</p>
           </div>
         </div>
 
         {project.budgetAmount && (
-          <div className="flex items-start gap-2.5">
-            <DollarSign className="size-3.5 text-gray-600 mt-0.5 shrink-0" />
+          <div className="flex items-start gap-3">
+            <DollarSign className="size-4 text-gray-200 mt-0.5 shrink-0" />
             <div>
-              <p className="text-xs text-gray-600 mb-0.5">Budget</p>
-              <p className="text-xs text-gray-300">
+              <p className="text-sm text-gray-300 mb-1">Budget</p>
+              <p className="text-sm text-white font-medium">
                 {fmtCurrency(project.budgetAmount, project.currency || 'USD')}
               </p>
             </div>
@@ -192,11 +192,11 @@ export function ProjectSidebar({ project, tasks, username, readOnly, clientProje
 
         {/* Assigned users — only shown to admins/staff */}
         {!readOnly && assignedUsers.length > 0 && (
-          <div className="flex items-start gap-2.5">
-            <Users className="size-3.5 text-gray-600 mt-0.5 shrink-0" />
+          <div className="flex items-start gap-3">
+            <Users className="size-4 text-gray-200 mt-0.5 shrink-0" />
             <div>
-              <p className="text-xs text-gray-600 mb-0.5">Assigned to</p>
-              <p className="text-xs text-gray-300 leading-relaxed">{assignedUsers.join(', ')}</p>
+              <p className="text-sm text-gray-300 mb-1">Assigned to</p>
+              <p className="text-sm text-white leading-relaxed">{assignedUsers.join(', ')}</p>
             </div>
           </div>
         )}

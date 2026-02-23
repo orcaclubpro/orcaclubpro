@@ -104,7 +104,7 @@ function SidebarTask({ task }: { task: any }) {
       <span className={`shrink-0 size-1.5 rounded-full ${STATUS_DOT[task.status] ?? 'bg-gray-500'}`} />
       <div className="flex-1 min-w-0">
         <p className="text-[11px] text-gray-400 truncate leading-tight">{task.title}</p>
-        {projectName && <p className="text-[9px] text-gray-700 truncate">{projectName}</p>}
+        {projectName && <p className="text-[9px] text-gray-400 truncate">{projectName}</p>}
       </div>
       {over && <span className="shrink-0 size-1 rounded-full bg-red-400/70" />}
       <span className={`shrink-0 text-[9px] font-bold px-1 rounded border leading-4 ${pc.color} ${pc.bg}`}>
@@ -216,7 +216,7 @@ function SprintColumn({
     <div className={`flex-1 flex flex-col min-w-0 ${bg}`}>
       <div className="px-4 pt-4 pb-3 border-b border-white/[0.06] shrink-0">
         <div className="flex items-center justify-between mb-2.5">
-          <span className="text-[9px] font-bold text-gray-700 uppercase tracking-[0.15em]">{label}</span>
+          <span className="text-[9px] font-bold gradient-text uppercase tracking-[0.15em]">{label}</span>
           {sCfg && <span className={`text-[10px] font-medium ${sCfg.text}`}>{sCfg.label}</span>}
         </div>
         <Select
@@ -253,7 +253,7 @@ function SprintColumn({
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <span className="text-[10px] text-gray-600 shrink-0 tabular-nums">
+            <span className="text-[10px] text-gray-300 shrink-0 tabular-nums">
               {completedCount}/{columnTasks.length}
             </span>
           </div>
@@ -263,7 +263,7 @@ function SprintColumn({
       <div className="flex-1 overflow-y-auto py-2">
         {columnTasks.length === 0 ? (
           <div className="flex items-center justify-center h-32 px-4">
-            <p className="text-xs text-gray-700 text-center">
+            <p className="text-xs text-gray-400 text-center">
               {selectedSprintId === null
                 ? 'No unassigned tasks'
                 : sprint
@@ -277,10 +277,10 @@ function SprintColumn({
               <div key={status}>
                 <div className="flex items-center gap-1.5 px-3 py-1.5">
                   <span className={`size-1 rounded-full ${STATUS_DOT[status] ?? 'bg-gray-500'}`} />
-                  <span className="text-[9px] font-semibold text-gray-600 uppercase tracking-[0.12em]">
+                  <span className="text-[9px] font-semibold gradient-text uppercase tracking-[0.12em]">
                     {STATUS_LABEL[status]}
                   </span>
-                  <span className="text-[9px] text-gray-700">· {tasks.length}</span>
+                  <span className="text-[9px] text-gray-400">· {tasks.length}</span>
                 </div>
                 {tasks.map((task) => (
                   <TaskCard
@@ -339,10 +339,10 @@ function TaskBoard({
       {/* top bar */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-white/[0.06] shrink-0">
         <div className="flex items-center gap-2.5">
-          <span className="text-[10px] font-bold text-gray-600 uppercase tracking-[0.14em]">
+          <span className="text-[10px] font-bold gradient-text uppercase tracking-[0.14em]">
             Tasks
           </span>
-          <span className="text-[10px] text-gray-700 tabular-nums">
+          <span className="text-[10px] text-gray-300 tabular-nums">
             {tasks.length} · {completedCount} done
           </span>
         </div>
@@ -372,14 +372,14 @@ function TaskBoard({
         <aside className="w-52 shrink-0 bg-[#0c0c0c] flex flex-col">
           <div className="flex items-center gap-2 px-3 py-2.5 border-b border-white/[0.06] shrink-0">
             <Zap className="size-3 text-intelligence-cyan shrink-0" />
-            <span className="text-[9px] font-bold text-gray-600 uppercase tracking-[0.12em]">
+            <span className="text-[9px] font-bold gradient-text uppercase tracking-[0.12em]">
               Active Sprints
             </span>
           </div>
           <div className="flex-1 overflow-y-auto">
             {activeSprints.length === 0 ? (
               <div className="flex items-center justify-center h-32 px-4">
-                <p className="text-xs text-gray-700 text-center">No active sprints</p>
+                <p className="text-xs text-gray-400 text-center">No active sprints</p>
               </div>
             ) : (
               <div className="py-2">
@@ -403,7 +403,7 @@ function TaskBoard({
                           </span>
                         </div>
                         {projName && (
-                          <p className="text-[9px] text-gray-700 truncate mb-1.5">{projName}</p>
+                          <p className="text-[9px] text-gray-400 truncate mb-1.5">{projName}</p>
                         )}
                         {sTasks.length > 0 && (
                           <div className="flex items-center gap-1.5 mb-1">
@@ -413,7 +413,7 @@ function TaskBoard({
                                 style={{ width: `${pct}%` }}
                               />
                             </div>
-                            <span className="text-[9px] text-gray-700 shrink-0 tabular-nums">
+                            <span className="text-[9px] text-gray-400 shrink-0 tabular-nums">
                               {pct}%
                             </span>
                           </div>
@@ -421,14 +421,14 @@ function TaskBoard({
                       </div>
                       <div className="px-1">
                         {sTasks.length === 0 ? (
-                          <p className="text-[10px] text-gray-700 px-2 py-1">No tasks</p>
+                          <p className="text-[10px] text-gray-400 px-2 py-1">No tasks</p>
                         ) : (
                           <>
                             {sTasks.slice(0, 8).map((t) => (
                               <SidebarTask key={t.id} task={t} />
                             ))}
                             {sTasks.length > 8 && (
-                              <p className="text-[10px] text-gray-700 px-2 py-1">
+                              <p className="text-[10px] text-gray-400 px-2 py-1">
                                 +{sTasks.length - 8} more
                               </p>
                             )}

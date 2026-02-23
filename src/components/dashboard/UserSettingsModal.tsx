@@ -101,14 +101,14 @@ export function UserSettingsModal({ name, email, title }: UserSettingsModalProps
     <>
       <button
         onClick={handleOpen}
-        className="group flex items-center justify-center w-8 h-8 rounded-lg hover:bg-white/[0.06] hover:shadow-[0_0_14px_rgba(103,232,249,0.18)] transition-all duration-200 focus:outline-none focus-visible:ring-1 focus-visible:ring-cyan-400/50"
+        className="group flex items-center justify-center w-12 h-12 rounded-lg hover:bg-white/[0.06] hover:shadow-[0_0_14px_rgba(103,232,249,0.18)] transition-all duration-200 focus:outline-none focus-visible:ring-1 focus-visible:ring-cyan-400/50"
         aria-label="Profile"
       >
         <Image
           src="/orcaclubpro.png"
           alt="Profile"
-          width={24}
-          height={24}
+          width={48}
+          height={48}
           className="brightness-0 invert opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-all duration-200"
         />
       </button>

@@ -274,10 +274,17 @@ export default async function DashboardPage({
       collection: 'sprints',
       where: { project: { in: clientProjectIds } },
       depth: 0,
-      sort: '-startDate',
+      sort: 'startDate',
       limit: 200,
     })
     clientSprints = sprints
+  }
+
+  const clientSprintsByProject: Record<string, SerializedSprint[]> = {}
+  for (const s of clientSprints) {
+    const pid = typeof s.project === 'string' ? s.project : (s.project as any)?.id ?? ''
+    if (!clientSprintsByProject[pid]) clientSprintsByProject[pid] = []
+    clientSprintsByProject[pid].push(serializeSprint(s))
   }
 
   return (
@@ -293,7 +300,7 @@ export default async function DashboardPage({
         clientSprints,
         clientPackages,
         serializedClientProjects: clientProjects
-          .map((p: any) => serializeProject(p, []))
+          .map((p: any) => serializeProject(p, clientSprintsByProject[p.id] ?? []))
           .sort((a: SerializedProject, b: SerializedProject) =>
             new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
           ),

@@ -1,5 +1,4 @@
 import { SpacesHeader } from "@/components/layout/spaces-header"
-import { Footer } from "@/components/layout/footer"
 import { MobileBottomNav } from "@/components/dashboard/MobileBottomNav"
 import { GlobalSearchPalette } from "@/components/dashboard/GlobalSearchPalette"
 import { getCurrentUser } from "@/actions/auth"
@@ -20,9 +19,8 @@ export default async function SpacesLayout({
     <TabProvider>
     <PackageCountProvider>
       <SpacesHeader user={user} showTips={(user as any)?.showTips !== false && user?.role === 'client'} />
-      {/* pb-24 on mobile reserves space above the floating bottom nav */}
-      <main className="pt-16 min-h-screen bg-black pb-28">{children}</main>
-      <Footer />
+      {/* min-h-[calc(100vh/1.3)] — with zoom:1.3, visually fills exactly 100vh. pb-28 reserved for mobile bottom nav only. */}
+      <main className="pt-[49px] min-h-[calc(100vh/1.3)] bg-black pb-28 lg:pb-0 text-gray-200 overflow-x-hidden" style={{ zoom: 1.3 }}>{children}</main>
       <MobileBottomNav role={user?.role} />
       {isDeveloper && user?.username && (
         <GlobalSearchPalette username={user.username} />

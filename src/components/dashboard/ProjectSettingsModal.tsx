@@ -275,8 +275,10 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
         </DialogTrigger>
       )}
 
-      <DialogContent className="bg-black border-white/[0.06] max-w-5xl p-0 overflow-hidden h-[85vh]">
-        <div className="flex h-full min-h-0">
+      <DialogContent className="bg-transparent border-0 max-w-5xl p-0 overflow-hidden h-[85vh] shadow-[0_0_60px_rgba(103,232,249,0.12)]">
+        {/* Gradient border wrapper */}
+        <div className="h-full [background:linear-gradient(135deg,rgba(103,232,249,0.5),rgba(59,130,246,0.3),rgba(103,232,249,0.15))] p-px rounded-[inherit] overflow-hidden">
+        <div className="flex h-full min-h-0 bg-black rounded-[inherit] overflow-hidden">
 
           {/* ── LEFT PANEL ── atmospheric, informational */}
           <div className="relative hidden lg:flex w-[38%] flex-col bg-black overflow-hidden border-r border-white/[0.05]">
@@ -309,7 +311,7 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
 
             {/* Project identity */}
             <div className="relative z-10 flex-1 flex flex-col justify-center px-10">
-              <p className="text-[10px] tracking-[0.4em] uppercase text-white/20 font-light mb-4">
+              <p className="text-[10px] tracking-[0.4em] uppercase gradient-text font-medium mb-4">
                 Project
               </p>
               <h3 className="text-2xl font-bold gradient-text leading-tight mb-2 line-clamp-2">
@@ -345,13 +347,13 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
                   {/* Stat rows */}
                   <div className="space-y-3.5">
                     {[
-                      { label: 'Total Tasks', value: totalTasks, color: 'text-white/50' },
-                      { label: 'Completed', value: completedTasks, color: 'text-green-400/60' },
-                      { label: 'In Progress', value: inProgressTasks, color: 'text-blue-400/60' },
-                      { label: 'Pending', value: pendingTasks, color: 'text-yellow-400/60' },
+                      { label: 'Total Tasks', value: totalTasks, color: 'text-white' },
+                      { label: 'Completed', value: completedTasks, color: 'text-green-400' },
+                      { label: 'In Progress', value: inProgressTasks, color: 'text-blue-400' },
+                      { label: 'Pending', value: pendingTasks, color: 'text-yellow-400' },
                     ].map(({ label, value, color }) => (
                       <div key={label} className="flex items-center justify-between">
-                        <span className="text-[10px] tracking-[0.25em] uppercase text-white/20 font-light">
+                        <span className="text-[10px] tracking-[0.25em] uppercase gradient-text font-medium">
                           {label}
                         </span>
                         <span className={cn('text-sm font-semibold tabular-nums', color)}>
@@ -369,7 +371,7 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
             {/* Client info — pinned to bottom */}
             {clientAccount && (
               <div className="relative z-10 px-10 pb-10 pt-6 border-t border-white/[0.04]">
-                <p className="text-[10px] tracking-[0.4em] uppercase text-white/20 font-light mb-3">
+                <p className="text-[10px] tracking-[0.4em] uppercase gradient-text font-medium mb-3">
                   Client
                 </p>
                 <div className="flex items-center gap-3">
@@ -377,8 +379,8 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
                     <Building2 className="size-3 text-intelligence-cyan/50" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-white/60 truncate">{clientAccount.name}</p>
-                    <p className="text-[11px] text-white/25 truncate">{clientAccount.email}</p>
+                    <p className="text-sm font-medium text-gray-200 truncate">{clientAccount.name}</p>
+                    <p className="text-xs text-gray-400 truncate">{clientAccount.email}</p>
                   </div>
                 </div>
               </div>
@@ -401,7 +403,7 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
 
             {/* Header */}
             <div className="px-10 pt-10 pb-6 border-b border-white/[0.05] flex-shrink-0">
-              <p className="text-[10px] tracking-[0.4em] uppercase text-white/25 font-light mb-4">
+              <p className="text-[10px] tracking-[0.4em] uppercase gradient-text font-medium mb-4">
                 Configuration
               </p>
               <DialogTitle className={`${gothic.className} text-2xl text-white`}>
@@ -421,12 +423,12 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
             >
               {/* ── Identity ── */}
               <section className="space-y-5">
-                <p className="text-[10px] tracking-[0.4em] uppercase text-white/20 font-light">
+                <p className="text-[10px] tracking-[0.4em] uppercase gradient-text font-medium">
                   Identity
                 </p>
 
                 <div className="space-y-1.5">
-                  <label htmlFor="proj-name" className="text-[11px] text-white/35 tracking-wide">
+                  <label htmlFor="proj-name" className="text-xs text-gray-300 tracking-wide">
                     Project Name <span className="text-red-400/60">*</span>
                   </label>
                   <Input
@@ -440,7 +442,7 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
                 </div>
 
                 <div className="space-y-1.5">
-                  <label htmlFor="proj-description" className="text-[11px] text-white/35 tracking-wide">
+                  <label htmlFor="proj-description" className="text-xs text-gray-300 tracking-wide">
                     Description
                   </label>
                   <Textarea
@@ -457,7 +459,7 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
 
               {/* ── Client Account ── */}
               <section className="space-y-4">
-                <p className="text-[10px] tracking-[0.4em] uppercase text-white/20 font-light">
+                <p className="text-[10px] tracking-[0.4em] uppercase gradient-text font-medium">
                   Client Account
                 </p>
                 <ClientAccountCombobox
@@ -471,7 +473,7 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
 
               {/* ── Status ── */}
               <section className="space-y-4">
-                <p className="text-[10px] tracking-[0.4em] uppercase text-white/20 font-light">
+                <p className="text-[10px] tracking-[0.4em] uppercase gradient-text font-medium">
                   Status
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -502,12 +504,12 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
 
               {/* ── Timeline ── */}
               <section className="space-y-4">
-                <p className="text-[10px] tracking-[0.4em] uppercase text-white/20 font-light">
+                <p className="text-[10px] tracking-[0.4em] uppercase gradient-text font-medium">
                   Timeline
                 </p>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label htmlFor="proj-start" className="text-[11px] text-white/35 tracking-wide">
+                    <label htmlFor="proj-start" className="text-xs text-gray-300 tracking-wide">
                       Start Date
                     </label>
                     <Input
@@ -520,7 +522,7 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label htmlFor="proj-end" className="text-[11px] text-white/35 tracking-wide">
+                    <label htmlFor="proj-end" className="text-xs text-gray-300 tracking-wide">
                       Target End
                     </label>
                     <Input
@@ -536,7 +538,7 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
                     <div className="space-y-1.5 col-span-2">
                       <label
                         htmlFor="proj-actual-end"
-                        className="text-[11px] text-white/35 tracking-wide"
+                        className="text-xs text-gray-300 tracking-wide"
                       >
                         Actual End Date
                       </label>
@@ -555,7 +557,7 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
 
               {/* ── Budget ── */}
               <section className="space-y-4">
-                <p className="text-[10px] tracking-[0.4em] uppercase text-white/20 font-light">
+                <p className="text-[10px] tracking-[0.4em] uppercase gradient-text font-medium">
                   Budget
                 </p>
                 <div className="flex gap-3">
@@ -594,7 +596,7 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
 
               {/* ── Danger Zone ── */}
               <section className="space-y-3 border-t border-red-500/10 pt-6">
-                <p className="text-[10px] tracking-[0.4em] uppercase text-red-400/40 font-light flex items-center gap-2">
+                <p className="text-[10px] tracking-[0.4em] uppercase text-red-400/70 font-medium flex items-center gap-2">
                   <AlertTriangle className="size-3" />
                   Danger Zone
                 </p>
@@ -702,6 +704,7 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
               </div>
             </div>
           </div>
+        </div>
         </div>
       </DialogContent>
     </Dialog>

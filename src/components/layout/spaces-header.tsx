@@ -31,8 +31,8 @@ export function SpacesHeader({ user, showTips }: SpacesHeaderProps) {
   const { title, subtitle } = useHeaderTitle()
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white/[0.02] backdrop-blur-md border-b border-white/[0.06]">
-      <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-8" aria-label="Global">
+    <header className="fixed top-0 left-0 right-0 z-50 h-16 bg-white/[0.02] backdrop-blur-md border-b border-white/[0.06]">
+      <nav className="flex h-full w-full items-center justify-between px-6 lg:px-10" aria-label="Global">
 
         {/* Logo / breadcrumb */}
         {title ? (
@@ -44,13 +44,13 @@ export function SpacesHeader({ user, showTips }: SpacesHeaderProps) {
               SPACES
             </Link>
             <span className="text-gray-700 select-none shrink-0">/</span>
-            <span className={`text-sm font-semibold text-white truncate ${subtitle ? 'max-w-[120px] sm:max-w-[200px]' : 'max-w-[180px] sm:max-w-[320px]'}`}>
+            <span className={`text-sm font-semibold text-white truncate animate-in fade-in duration-200 ${subtitle ? 'max-w-[120px] sm:max-w-[200px]' : 'max-w-[180px] sm:max-w-[320px]'}`}>
               {title}
             </span>
             {subtitle && (
               <>
                 <span className="text-gray-700 select-none shrink-0">/</span>
-                <span className="text-sm font-semibold text-white truncate max-w-[120px] sm:max-w-[200px]">
+                <span className="text-sm font-semibold text-white truncate max-w-[120px] sm:max-w-[200px] animate-in fade-in duration-200">
                   {subtitle}
                 </span>
               </>

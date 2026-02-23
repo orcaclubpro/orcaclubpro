@@ -91,7 +91,7 @@ export async function OrdersList({ accountId }: { accountId: string }) {
               <Package className="size-10 text-gray-500" />
             </div>
             <h3 className="text-xl font-semibold text-white mb-2">No Orders Yet</h3>
-            <p className="text-gray-400 text-sm max-w-md mx-auto">
+            <p className="text-gray-200 text-sm max-w-md mx-auto">
               Your order history will appear here once you place your first order.
             </p>
           </div>
@@ -124,8 +124,8 @@ export async function OrdersList({ accountId }: { accountId: string }) {
               return (
                 <div
                   key={order.id}
-                  className="relative overflow-hidden rounded-lg border border-white/[0.08] bg-[#1c1c1c] p-4 hover:bg-[#242424] transition-all duration-300"
-                  style={{ animationDelay: `${index * 50}ms` }}
+                  className="relative overflow-hidden rounded-lg border border-white/[0.08] bg-[#1c1c1c] p-4 hover:bg-[#242424] transition-all duration-300 animate-in fade-in slide-in-from-bottom-2"
+                  style={{ animationDelay: `${Math.min(index * 40, 200)}ms`, animationDuration: '300ms' }}
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div>
@@ -155,7 +155,7 @@ export async function OrdersList({ accountId }: { accountId: string }) {
                       <p className="text-xs text-gray-500 uppercase tracking-wider font-medium mb-1">
                         Date
                       </p>
-                      <p className="text-gray-400 font-medium text-sm">
+                      <p className="text-gray-200 font-medium text-sm">
                         {formatDate(order.createdAt)}
                       </p>
                     </div>
@@ -170,16 +170,16 @@ export async function OrdersList({ accountId }: { accountId: string }) {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-white/[0.08]">
-                  <th className="text-left py-4 px-6 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="text-left py-4 px-6 text-xs font-semibold text-gray-300 uppercase tracking-wider">
                     Order #
                   </th>
-                  <th className="text-left py-4 px-6 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="text-left py-4 px-6 text-xs font-semibold text-gray-300 uppercase tracking-wider">
                     Amount
                   </th>
-                  <th className="text-left py-4 px-6 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="text-left py-4 px-6 text-xs font-semibold text-gray-300 uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="text-left py-4 px-6 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="text-left py-4 px-6 text-xs font-semibold text-gray-300 uppercase tracking-wider">
                     Date
                   </th>
                 </tr>
@@ -192,8 +192,8 @@ export async function OrdersList({ accountId }: { accountId: string }) {
                   return (
                     <tr
                       key={order.id}
-                      className="border-b border-white/[0.06] hover:bg-white/[0.04] transition-all duration-300 fluid-enter"
-                      style={{ animationDelay: `${index * 50}ms` }}
+                      className="border-b border-white/[0.06] hover:bg-white/[0.04] transition-all duration-300 animate-in fade-in slide-in-from-bottom-2"
+                      style={{ animationDelay: `${Math.min(index * 40, 200)}ms`, animationDuration: '300ms' }}
                     >
                       <td className="py-4 px-6 text-white font-semibold text-sm">
                         {order.orderNumber}
@@ -210,7 +210,7 @@ export async function OrdersList({ accountId }: { accountId: string }) {
                           {statusConfig.label}
                         </Badge>
                       </td>
-                      <td className="py-4 px-6 text-gray-400 font-medium text-sm">
+                      <td className="py-4 px-6 text-gray-200 font-medium text-sm">
                         {formatDate(order.createdAt)}
                       </td>
                     </tr>

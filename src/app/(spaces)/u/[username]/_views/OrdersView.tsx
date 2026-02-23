@@ -6,24 +6,20 @@ import {
   CreditCard, ChevronDown, ExternalLink, Minus, Package,
 } from 'lucide-react'
 import { BillingPortalButton } from '@/components/dashboard/BillingPortalButton'
+import { PaymentScheduleCard } from '@/components/dashboard/PaymentScheduleCard'
 import Link from 'next/link'
 import type { Order } from '@/types/payload-types'
+import {
+  fmtCurrency,
+  fmtCurrencyFull,
+  fmtDate,
+  fmtMonthYear,
+  ORDER_STATUS_CFG,
+  type OrderStatusKey,
+  type ScheduledPackage,
+} from '@/lib/dashboard/utils'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-
-interface ScheduledEntry {
-  id: string
-  label: string
-  amount: number
-  dueDate?: string | null
-  orderId?: string | null
-}
-
-interface ScheduledPackage {
-  id: string
-  name: string
-  paymentSchedule?: ScheduledEntry[]
-}
 
 interface OrdersViewProps {
   allOrders: Order[]
@@ -32,72 +28,6 @@ interface OrdersViewProps {
   username?: string
 }
 
-// ─── Formatters ───────────────────────────────────────────────────────────────
-
-const fmt = (n: number) =>
-  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
-
-const fmtFull = (n: number) =>
-  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n)
-
-const fmtDate = (iso: string) =>
-  new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(iso))
-
-const fmtMonthYear = (iso: string) =>
-  new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(new Date(iso))
-
-function fmtScheduleDate(iso: string): string {
-  const parts = iso.split('T')[0].split('-').map(Number)
-  if (parts.length !== 3 || parts.some(isNaN)) return iso
-  const [y, m, d] = parts
-  const dt = new Date(y, m - 1, d)
-  if (!isFinite(dt.getTime())) return iso
-  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(dt)
-}
-
-function isDueSoon(dueDate: string | null | undefined): boolean {
-  if (!dueDate) return false
-  const parts = dueDate.split('T')[0].split('-').map(Number)
-  if (parts.length !== 3 || parts.some(isNaN)) return false
-  const due = new Date(parts[0], parts[1] - 1, parts[2])
-  const cutoff = new Date()
-  cutoff.setDate(cutoff.getDate() + 30)
-  return due <= cutoff
-}
-
-// ─── Status Config ────────────────────────────────────────────────────────────
-
-const STATUS = {
-  paid: {
-    label: 'Paid',
-    dotClass: 'bg-emerald-400',
-    badgeClass: 'text-emerald-400 bg-emerald-400/[0.07] border-emerald-400/20',
-    amountClass: 'text-white',
-    cardClass: 'border-white/[0.08] hover:border-white/[0.13]',
-    lineClass: 'bg-emerald-400/20',
-    titleClass: 'text-white',
-  },
-  pending: {
-    label: 'Pending',
-    dotClass: 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.55)]',
-    badgeClass: 'text-amber-400 bg-amber-400/[0.07] border-amber-400/20',
-    amountClass: 'text-amber-400',
-    cardClass: 'border-amber-400/20 hover:border-amber-400/30',
-    lineClass: 'bg-amber-400/30',
-    titleClass: 'text-white',
-  },
-  cancelled: {
-    label: 'Cancelled',
-    dotClass: 'bg-white/20',
-    badgeClass: 'text-gray-600 bg-white/[0.03] border-white/[0.08]',
-    amountClass: 'text-gray-600 line-through',
-    cardClass: 'border-white/[0.05] hover:border-white/[0.08]',
-    lineClass: 'bg-white/[0.07]',
-    titleClass: 'text-gray-500',
-  },
-} as const
-
-type StatusKey = keyof typeof STATUS
 type TabType = 'all' | 'pending' | 'paid' | 'cancelled'
 
 // ─── Donut Chart ──────────────────────────────────────────────────────────────
@@ -135,7 +65,7 @@ function AccountDonut({
         {pendingAmount > 0 ? (
           <div className="text-center px-1">
             <p className="text-[7px] text-amber-400/50 font-bold uppercase tracking-wider leading-none">due</p>
-            <p className="text-[9px] font-black text-amber-400 tabular-nums leading-snug mt-px">{fmt(pendingAmount)}</p>
+            <p className="text-[9px] font-black text-amber-400 tabular-nums leading-snug mt-px">{fmtCurrency(pendingAmount)}</p>
           </div>
         ) : hasOrders ? (
           <CheckCircle className="size-3.5 text-emerald-400" />
@@ -151,8 +81,8 @@ function AccountDonut({
 
 function InvoiceRow({ order, isLast }: { order: Order; isLast: boolean }) {
   const [expanded, setExpanded] = useState(false)
-  const statusKey = (order.status ?? 'pending') as StatusKey
-  const cfg = STATUS[statusKey] ?? STATUS.pending
+  const statusKey = (order.status ?? 'pending') as OrderStatusKey
+  const cfg = ORDER_STATUS_CFG[statusKey] ?? ORDER_STATUS_CFG.pending
   const lineItems = (order.lineItems ?? []) as any[]
   const hasLineItems = lineItems.length > 0
   const showPay = statusKey === 'pending' && order.stripeInvoiceUrl
@@ -191,7 +121,7 @@ function InvoiceRow({ order, isLast }: { order: Order; isLast: boolean }) {
           </div>
           <div className="flex items-start gap-2 shrink-0">
             <span className={`text-base font-bold tabular-nums leading-tight ${cfg.amountClass}`}>
-              {fmtFull(order.amount ?? 0)}
+              {fmtCurrencyFull(order.amount ?? 0)}
             </span>
             <span className={`mt-0.5 text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border ${cfg.badgeClass}`}>
               {cfg.label}
@@ -218,10 +148,10 @@ function InvoiceRow({ order, isLast }: { order: Order; isLast: boolean }) {
                   <div key={i} className="flex items-center justify-between gap-4 py-1.5 px-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                     <div className="flex-1 min-w-0">
                       <p className="text-xs text-gray-300 font-medium truncate">{item.title}</p>
-                      <p className="text-[10px] text-gray-600 mt-0.5">{item.quantity ?? 1} × {fmtFull(item.price ?? 0)}</p>
+                      <p className="text-[10px] text-gray-600 mt-0.5">{item.quantity ?? 1} × {fmtCurrencyFull(item.price ?? 0)}</p>
                     </div>
                     <p className="text-xs font-semibold text-white tabular-nums shrink-0">
-                      {fmtFull((item.quantity ?? 1) * (item.price ?? 0))}
+                      {fmtCurrencyFull((item.quantity ?? 1) * (item.price ?? 0))}
                     </p>
                   </div>
                 ))}
@@ -240,7 +170,7 @@ function InvoiceRow({ order, isLast }: { order: Order; isLast: boolean }) {
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-400/[0.08] border border-amber-400/20 text-amber-400 text-xs font-semibold hover:bg-amber-400/[0.14] hover:border-amber-400/30 transition-all"
             >
               <CreditCard className="size-3.5" />
-              Pay {fmtFull(order.amount ?? 0)}
+              Pay {fmtCurrencyFull(order.amount ?? 0)}
               <ExternalLink className="size-3 opacity-60" />
             </a>
           </div>
@@ -265,7 +195,7 @@ function MonthGroup({ monthLabel, orders, isLastGroup }: {
           <div className="w-5 flex justify-center shrink-0">
             <div className="size-1 rounded-full bg-white/20" />
           </div>
-          <span className="ml-4 text-[9px] font-bold uppercase tracking-[0.22em] text-gray-600">
+          <span className="ml-4 text-[9px] font-bold uppercase tracking-[0.22em] gradient-text">
             {monthLabel}
           </span>
         </div>
@@ -301,10 +231,6 @@ export function OrdersView({ allOrders, clientAccount, clientPackages = [], user
   const paidPct = totalAmount > 0 ? paidAmount / totalAmount : 0
   const pendingPct = totalAmount > 0 ? pendingAmount / totalAmount : 0
   const cancelledPct = totalAmount > 0 ? cancelledAmount / totalAmount : 0
-
-  const scheduledPkgs = clientPackages
-    .map(pkg => ({ ...pkg, upcoming: (pkg.paymentSchedule ?? []).filter(e => !e.orderId) }))
-    .filter(pkg => pkg.upcoming.length > 0)
 
   const displayedOrders: Order[] = (() => {
     switch (activeTab) {
@@ -342,7 +268,7 @@ export function OrdersView({ allOrders, clientAccount, clientPackages = [], user
 
       {/* Page header */}
       <div className="mb-8">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-gray-600 mb-1.5">Billing</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.22em] gradient-text mb-1.5">Billing</p>
         <h1 className="text-3xl font-bold text-white tracking-tight">Invoices &amp; Payments</h1>
       </div>
 
@@ -354,7 +280,7 @@ export function OrdersView({ allOrders, clientAccount, clientPackages = [], user
           {/* Account Balance Card */}
           <div className="rounded-2xl border border-white/[0.08] bg-gradient-to-b from-[#141414] to-[#0d0d0d] overflow-hidden">
             <div className="px-5 pt-5 pb-4">
-              <p className="text-[9px] font-bold uppercase tracking-[0.28em] text-gray-600 mb-4">
+              <p className="text-[9px] font-bold uppercase tracking-[0.28em] gradient-text mb-4">
                 Account Overview
               </p>
 
@@ -371,13 +297,13 @@ export function OrdersView({ allOrders, clientAccount, clientPackages = [], user
                   {pendingAmount > 0 ? (
                     <>
                       <p className="text-2xl font-black text-amber-400 tabular-nums leading-none">
-                        {fmt(pendingAmount)}
+                        {fmtCurrency(pendingAmount)}
                       </p>
                       <p className="text-[11px] text-gray-500 mt-1">outstanding balance</p>
                       {paidAmount > 0 && (
                         <div className="flex items-center gap-1.5 mt-2">
                           <span className="size-1.5 rounded-full bg-emerald-400 shrink-0" />
-                          <span className="text-[10px] text-gray-500">{fmt(paidAmount)} paid</span>
+                          <span className="text-[10px] text-gray-500">{fmtCurrency(paidAmount)} paid</span>
                         </div>
                       )}
                     </>
@@ -392,7 +318,7 @@ export function OrdersView({ allOrders, clientAccount, clientPackages = [], user
                       {paidAmount > 0 && (
                         <div className="flex items-center gap-1.5 mt-2">
                           <span className="size-1.5 rounded-full bg-emerald-400 shrink-0" />
-                          <span className="text-[10px] text-gray-500">{fmt(paidAmount)} total paid</span>
+                          <span className="text-[10px] text-gray-500">{fmtCurrency(paidAmount)} total paid</span>
                         </div>
                       )}
                     </>
@@ -405,19 +331,19 @@ export function OrdersView({ allOrders, clientAccount, clientPackages = [], user
                 {paidPct > 0 && (
                   <div className="flex items-center gap-1.5">
                     <span className="size-1.5 rounded-full bg-emerald-400 shrink-0" />
-                    <span className="text-[10px] text-gray-600">Paid</span>
+                    <span className="text-[10px] text-gray-300">Paid</span>
                   </div>
                 )}
                 {pendingPct > 0 && (
                   <div className="flex items-center gap-1.5">
                     <span className="size-1.5 rounded-full bg-amber-400 shrink-0" />
-                    <span className="text-[10px] text-gray-600">Pending</span>
+                    <span className="text-[10px] text-gray-300">Pending</span>
                   </div>
                 )}
                 {cancelledPct > 0 && (
                   <div className="flex items-center gap-1.5">
                     <span className="size-1.5 rounded-full bg-white/20 shrink-0" />
-                    <span className="text-[10px] text-gray-600">Cancelled</span>
+                    <span className="text-[10px] text-gray-300">Cancelled</span>
                   </div>
                 )}
               </div>
@@ -425,17 +351,17 @@ export function OrdersView({ allOrders, clientAccount, clientPackages = [], user
               {/* Stats grid */}
               <div className="grid grid-cols-3 gap-3 pt-4 border-t border-white/[0.06]">
                 <div>
-                  <p className="text-[9px] text-gray-600 uppercase tracking-wider font-semibold mb-0.5">Total</p>
+                  <p className="text-[9px] gradient-text uppercase tracking-wider font-semibold mb-0.5">Total</p>
                   <p className="text-xl font-bold text-white tabular-nums">{allOrders.length}</p>
                 </div>
                 <div>
-                  <p className="text-[9px] text-gray-600 uppercase tracking-wider font-semibold mb-0.5">Paid</p>
+                  <p className="text-[9px] gradient-text uppercase tracking-wider font-semibold mb-0.5">Paid</p>
                   <p className={`text-xl font-bold tabular-nums ${paidOrders.length > 0 ? 'text-emerald-400' : 'text-gray-700'}`}>
                     {paidOrders.length}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[9px] text-gray-600 uppercase tracking-wider font-semibold mb-0.5">Due</p>
+                  <p className="text-[9px] gradient-text uppercase tracking-wider font-semibold mb-0.5">Due</p>
                   <p className={`text-xl font-bold tabular-nums ${pendingOrders.length > 0 ? 'text-amber-400' : 'text-gray-700'}`}>
                     {pendingOrders.length}
                   </p>
@@ -456,67 +382,18 @@ export function OrdersView({ allOrders, clientAccount, clientPackages = [], user
           </div>
 
           {/* Payment Schedule */}
-          {scheduledPkgs.length > 0 && (
-            <div className="rounded-2xl border border-white/[0.08] bg-[#0d0d0d] overflow-hidden">
-              <div className="flex items-center gap-2 px-5 py-3.5 border-b border-white/[0.05]">
-                <CalendarDays className="size-3.5 text-[#67e8f9]/50 shrink-0" />
-                <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-gray-600">
-                  Payment Schedule
-                </p>
-              </div>
-              <div className="divide-y divide-white/[0.04]">
-                {scheduledPkgs.map(pkg => (
-                  <div key={pkg.id}>
-                    {/* Package label row */}
-                    <div className="flex items-center justify-between px-5 py-2 bg-white/[0.01]">
-                      <span className="text-[9px] font-bold uppercase tracking-widest text-gray-600 truncate">
-                        {pkg.name}
-                      </span>
-                      {username && (
-                        <Link
-                          href={`/u/${username}/packages/${pkg.id}/print`}
-                          className="text-[9px] text-[#67e8f9]/40 hover:text-[#67e8f9]/80 transition-colors ml-2 shrink-0"
-                        >
-                          View →
-                        </Link>
-                      )}
-                    </div>
-                    {/* Schedule entries */}
-                    {pkg.upcoming.map((entry) => {
-                      const soon = isDueSoon(entry.dueDate)
-                      return (
-                        <div key={entry.id} className="flex items-start gap-3 px-5 py-3">
-                          <div className={`size-1.5 rounded-full mt-[3px] shrink-0 ${
-                            soon
-                              ? 'bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.4)]'
-                              : 'bg-[#67e8f9]/30'
-                          }`} />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-medium text-gray-300 truncate leading-snug">
-                              {entry.label}
-                            </p>
-                            {entry.dueDate && (
-                              <p className={`text-[10px] mt-0.5 ${soon ? 'text-amber-400' : 'text-gray-600'}`}>
-                                Due {fmtScheduleDate(entry.dueDate)}
-                                {soon && (
-                                  <span className="ml-1.5 text-[8px] px-1.5 py-px rounded-full bg-amber-400/10 border border-amber-400/20">
-                                    Soon
-                                  </span>
-                                )}
-                              </p>
-                            )}
-                          </div>
-                          <span className="text-xs font-semibold text-[#67e8f9] tabular-nums shrink-0">
-                            {fmt(entry.amount)}
-                          </span>
-                        </div>
-                      )
-                    })}
-                  </div>
-                ))}
-              </div>
+          <div className="rounded-2xl border border-white/[0.08] bg-[#0d0d0d] overflow-hidden">
+            <div className="flex items-center gap-2 px-5 py-3.5 border-b border-white/[0.05]">
+              <CalendarDays className="size-3.5 text-[#67e8f9]/50 shrink-0" />
+              <p className="text-[9px] font-bold uppercase tracking-[0.25em] gradient-text">
+                Payment Schedule
+              </p>
             </div>
-          )}
+            <PaymentScheduleCard
+              packages={clientPackages}
+              getPackageHref={username ? (id) => `/u/${username}/packages/${id}/print` : undefined}
+            />
+          </div>
         </div>
 
         {/* ── MAIN CONTENT ──────────────────────────────────────────────── */}
@@ -574,12 +451,17 @@ export function OrdersView({ allOrders, clientAccount, clientPackages = [], user
           {monthGroups.length > 0 && (
             <div className="pl-1">
               {monthGroups.map((group, gi) => (
-                <MonthGroup
+                <div
                   key={group.monthKey}
-                  monthLabel={group.monthLabel}
-                  orders={group.orders}
-                  isLastGroup={gi === monthGroups.length - 1}
-                />
+                  className="animate-in fade-in slide-in-from-bottom-2 duration-300"
+                  style={{ animationDelay: `${Math.min(gi * 40, 160)}ms` }}
+                >
+                  <MonthGroup
+                    monthLabel={group.monthLabel}
+                    orders={group.orders}
+                    isLastGroup={gi === monthGroups.length - 1}
+                  />
+                </div>
               ))}
             </div>
           )}

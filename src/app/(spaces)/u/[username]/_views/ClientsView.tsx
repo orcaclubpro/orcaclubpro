@@ -211,7 +211,7 @@ function ClientEditModal({
 
         {/* Header */}
         <div className="px-8 pt-8 pb-6 border-b border-white/[0.05]">
-          <p className="text-[10px] tracking-[0.4em] uppercase text-white/25 font-light mb-2">
+          <p className="text-[10px] tracking-[0.4em] uppercase gradient-text font-medium mb-2">
             Client Settings
           </p>
           <DialogTitle className="text-xl font-bold text-white leading-tight line-clamp-1">
@@ -226,7 +226,7 @@ function ClientEditModal({
 
           {/* Identity */}
           <section className="space-y-4">
-            <p className="text-[10px] tracking-[0.4em] uppercase text-white/20 font-light">Identity</p>
+            <p className="text-[10px] tracking-[0.4em] uppercase gradient-text font-medium">Identity</p>
             <div className="space-y-1.5">
               <label className="text-[11px] text-white/35 tracking-wide">Display Name <span className="text-red-400/60">*</span></label>
               <Input
@@ -283,7 +283,7 @@ function ClientEditModal({
           {/* Team Members */}
           {members.length > 0 && (
             <section className="space-y-3 border-t border-white/[0.05] pt-5">
-              <p className="text-[10px] tracking-[0.4em] uppercase text-white/20 font-light">Team Members</p>
+              <p className="text-[10px] tracking-[0.4em] uppercase gradient-text font-medium">Team Members</p>
               <div className="space-y-1.5">
                 {members.map((m) => (
                   <div
@@ -293,7 +293,7 @@ function ClientEditModal({
                     <Shield className="size-3.5 text-gray-700 shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-xs text-white/60 truncate">{m.name}</p>
-                      {m.title && <p className="text-[10px] text-white/25 truncate">{m.title}</p>}
+                      {m.title && <p className="text-[10px] text-gray-400 truncate">{m.title}</p>}
                     </div>
                     <button
                       type="button"
@@ -315,7 +315,7 @@ function ClientEditModal({
 
           {/* Danger Zone */}
           <section className="space-y-3 border-t border-red-500/10 pt-5">
-            <p className="text-[10px] tracking-[0.4em] uppercase text-red-400/40 font-light flex items-center gap-2">
+            <p className="text-[10px] tracking-[0.4em] uppercase text-red-400/70 font-medium flex items-center gap-2">
               <AlertTriangle className="size-3" />
               Danger Zone
             </p>
@@ -420,8 +420,8 @@ function EmptyState({ canCreate, username }: { canCreate: boolean; username: str
         <div className="absolute inset-0 bg-cyan-400/5 rounded-full blur-3xl scale-150" />
         <Users className="size-12 text-white/10 relative z-10" />
       </div>
-      <p className="text-[10px] tracking-[0.4em] uppercase text-white/20 font-light mb-3">No Clients</p>
-      <p className="text-sm text-white/25 mb-8 leading-relaxed">
+      <p className="text-[10px] tracking-[0.4em] uppercase gradient-text font-medium mb-3">No Clients</p>
+      <p className="text-sm text-gray-300 mb-8 leading-relaxed">
         Client accounts will appear here once created.
       </p>
       {canCreate && (
@@ -593,7 +593,7 @@ function ClientDetail({
                     : 'bg-white/[0.025] border-white/[0.06]',
                 )}
               >
-                <p className="text-[10px] uppercase tracking-[0.3em] text-white/30 mb-2.5">
+                <p className="text-[10px] uppercase tracking-[0.3em] gradient-text mb-2.5">
                   {s.label}
                 </p>
                 <p
@@ -615,7 +615,7 @@ function ClientDetail({
           >
             {clientProjects.length > 0 ? (
               <>
-                <p className="text-[11px] tracking-[0.4em] uppercase text-white/25 font-light mb-5">
+                <p className="text-[11px] tracking-[0.4em] uppercase gradient-text font-medium mb-5">
                   Project Timeline
                 </p>
                 <PortfolioTimeline projects={clientProjects} allOrders={clientOrders} username={username} />
@@ -623,7 +623,7 @@ function ClientDetail({
             ) : (
               <div className="rounded-2xl border border-dashed border-white/[0.07] px-6 py-8 text-center">
                 <FolderOpen className="size-8 text-white/10 mx-auto mb-3" />
-                <p className="text-sm text-white/20">No projects assigned yet</p>
+                <p className="text-sm text-gray-400">No projects assigned yet</p>
               </div>
             )}
           </div>
@@ -671,7 +671,7 @@ function MobileClientCard({
           {client.company && (
             <p className="text-xs text-white/35 truncate">{client.company}</p>
           )}
-          <p className="text-xs text-white/20 truncate">{client.email}</p>
+          <p className="text-xs text-gray-400 truncate">{client.email}</p>
         </div>
         {hasBalance ? (
           <span className="text-sm font-mono text-amber-400 shrink-0 tabular-nums">{fmt(balance)}</span>
@@ -745,7 +745,7 @@ export function ClientsView({
 
           {/* Header */}
           <div className="px-6 pt-8 pb-5 shrink-0">
-            <p className="text-[10px] tracking-[0.4em] uppercase text-white/20 font-light mb-3">
+            <p className="text-[10px] tracking-[0.4em] uppercase gradient-text font-medium mb-3">
               Workspace
             </p>
             <h1 className="text-2xl font-bold text-white uppercase tracking-wide">Clients</h1>
@@ -768,7 +768,7 @@ export function ClientsView({
           {/* Client list */}
           <div ref={listRef} className="flex-1 overflow-y-auto py-1">
             {clientAccounts.length === 0 ? (
-              <p className="text-xs text-white/20 px-5 py-6 text-center">No clients yet.</p>
+              <p className="text-xs text-gray-400 px-5 py-6 text-center">No clients yet.</p>
             ) : (
               clientAccounts.map((client, i) => (
                 <ClientNavRow
@@ -826,7 +826,7 @@ export function ClientsView({
       {/* ── MOBILE: stacked list ───────────────────────────────────────────── */}
       <div className="lg:hidden px-4 pt-6 pb-28 space-y-4">
         <div className="mb-6">
-          <p className="text-[10px] tracking-[0.4em] uppercase text-white/25 font-light mb-2">
+          <p className="text-[10px] tracking-[0.4em] uppercase gradient-text font-medium mb-2">
             Workspace
           </p>
           <h1 className="text-2xl font-bold text-white uppercase tracking-wide">Clients</h1>

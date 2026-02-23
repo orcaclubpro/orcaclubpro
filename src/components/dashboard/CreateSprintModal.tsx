@@ -28,7 +28,7 @@ const PRIORITY_CONFIG = {
 
 type Priority = keyof typeof PRIORITY_CONFIG
 
-interface DraftTask { title: string; priority: Priority }
+interface DraftTask { title: string; description: string; priority: Priority }
 
 const STEPS = ['Name', 'Goal', 'Timeline', 'Tasks'] as const
 
@@ -101,7 +101,13 @@ export function CreateSprintModal({ projectId, open, onOpenChange, onSuccess }: 
       if (sprintId) {
         await Promise.all(
           validTasks.map((t) =>
-            createTask({ projectId, title: t.title.trim(), priority: t.priority, sprintId })
+            createTask({
+              projectId,
+              title: t.title.trim(),
+              description: t.description.trim() || undefined,
+              priority: t.priority,
+              sprintId,
+            })
           )
         )
       }
@@ -113,15 +119,15 @@ export function CreateSprintModal({ projectId, open, onOpenChange, onSuccess }: 
   }
 
   const addDraftTask = () => {
-    if (draftTasks.length < 5) setDraftTasks((p) => [...p, { title: '', priority: 'medium' }])
+    if (draftTasks.length < 10) setDraftTasks((p) => [...p, { title: '', description: '', priority: 'medium' }])
   }
   const removeDraftTask = (i: number) => setDraftTasks((p) => p.filter((_, idx) => idx !== i))
-  const updateDraftTask = (i: number, f: 'title' | 'priority', v: string) =>
+  const updateDraftTask = (i: number, f: 'title' | 'description' | 'priority', v: string) =>
     setDraftTasks((p) => p.map((t, idx) => (idx === i ? { ...t, [f]: v } : t)))
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="bg-[#0a0a0a] border-white/[0.08] sm:max-w-[460px] p-0 overflow-hidden gap-0">
+      <DialogContent className="bg-[#0a0a0a] border-white/[0.08] sm:max-w-[520px] p-0 overflow-hidden gap-0">
         <DialogTitle className="sr-only">New Sprint</DialogTitle>
         <DialogDescription className="sr-only">Create a new sprint step by step</DialogDescription>
 
@@ -258,60 +264,78 @@ export function CreateSprintModal({ projectId, open, onOpenChange, onSuccess }: 
               </div>
 
               {draftTasks.length > 0 && (
-                <div className="space-y-2">
+                <div className="space-y-2.5 max-h-[320px] overflow-y-auto pr-1 -mr-1">
                   {draftTasks.map((task, i) => (
-                    <div key={i} className="flex items-center gap-2 group">
-                      <div className="size-1.5 rounded-full bg-gray-700 shrink-0" />
-                      <Input
-                        value={task.title}
-                        onChange={(e) => updateDraftTask(i, 'title', e.target.value)}
-                        placeholder="Task title..."
-                        className="flex-1 bg-white/[0.02] border-white/[0.08] text-white placeholder:text-gray-600 text-sm h-9 focus:border-white/20"
+                    <div
+                      key={i}
+                      className="rounded-lg border border-white/[0.08] bg-white/[0.02] p-3 space-y-2.5 group"
+                    >
+                      {/* Title row */}
+                      <div className="flex items-start gap-2.5">
+                        <div className="size-1.5 rounded-full bg-gray-600 shrink-0 mt-2" />
+                        <Input
+                          value={task.title}
+                          onChange={(e) => updateDraftTask(i, 'title', e.target.value)}
+                          placeholder="Task title..."
+                          className="flex-1 bg-transparent border-0 border-b border-white/[0.10] rounded-none px-0 text-sm font-medium text-white placeholder:text-gray-700 focus-visible:ring-0 focus-visible:border-intelligence-cyan/50 h-auto py-1 transition-colors"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeDraftTask(i)}
+                          className="shrink-0 p-0.5 text-gray-700 hover:text-gray-400 opacity-0 group-hover:opacity-100 transition-all mt-1"
+                        >
+                          <X className="size-3.5" />
+                        </button>
+                      </div>
+
+                      {/* Description */}
+                      <Textarea
+                        value={task.description}
+                        onChange={(e) => updateDraftTask(i, 'description', e.target.value)}
+                        placeholder="Add a description... (optional)"
+                        rows={2}
+                        className="w-full bg-transparent border-0 text-gray-400 placeholder:text-gray-700 resize-none text-xs leading-relaxed focus-visible:ring-0 focus-visible:outline-none p-0 ml-[18px] min-h-0"
                       />
-                      <div className="flex items-center gap-0.5 shrink-0">
+
+                      {/* Priority pills */}
+                      <div className="flex items-center gap-1 ml-[18px]">
+                        <span className="text-[10px] text-gray-700 mr-1">Priority:</span>
                         {(Object.keys(PRIORITY_CONFIG) as Priority[]).map((p) => (
                           <button
                             key={p}
                             type="button"
                             onClick={() => updateDraftTask(i, 'priority', p)}
-                            title={PRIORITY_CONFIG[p].label}
                             className={cn(
-                              'text-[10px] font-semibold px-1.5 py-1 rounded border transition-all',
+                              'text-[10px] font-semibold px-2 py-0.5 rounded-full border transition-all',
                               task.priority === p
                                 ? PRIORITY_CONFIG[p].activeClass
                                 : 'text-gray-700 border-transparent hover:border-white/[0.08] hover:text-gray-500'
                             )}
                           >
-                            {PRIORITY_CONFIG[p].label[0]}
+                            {PRIORITY_CONFIG[p].label}
                           </button>
                         ))}
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => removeDraftTask(i)}
-                        className="shrink-0 p-1 text-gray-700 hover:text-gray-400 opacity-0 group-hover:opacity-100 transition-all"
-                      >
-                        <X className="size-3.5" />
-                      </button>
                     </div>
                   ))}
                 </div>
               )}
 
-              {draftTasks.length < 5 && (
-                <button
-                  type="button"
-                  onClick={addDraftTask}
-                  className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-300 transition-colors"
-                >
-                  <Plus className="size-3.5" />
-                  Add a task
-                </button>
-              )}
-
-              {draftTasks.length === 0 && (
-                <p className="text-xs text-gray-700">Skip to create the sprint now.</p>
-              )}
+              <div className="flex items-center gap-3">
+                {draftTasks.length < 10 && (
+                  <button
+                    type="button"
+                    onClick={addDraftTask}
+                    className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-300 transition-colors"
+                  >
+                    <Plus className="size-3.5" />
+                    Add a task
+                  </button>
+                )}
+                {draftTasks.length === 0 && (
+                  <p className="text-xs text-gray-700">Skip to create the sprint now.</p>
+                )}
+              </div>
             </div>
           )}
         </div>

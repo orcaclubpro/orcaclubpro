@@ -1,16 +1,19 @@
 'use client'
 
 import { useState } from 'react'
+import { ChevronLeft, ChevronRight, Zap, ArrowRight } from 'lucide-react'
+import Link from 'next/link'
 import { DashboardGreeting } from '@/components/dashboard/DashboardGreeting'
 import { AnalyticsSidebar } from '@/components/dashboard/AnalyticsSidebar'
 import { PortfolioTimeline } from '@/components/dashboard/PortfolioTimeline'
 import { ClientPortfolioTimeline } from '@/components/dashboard/ClientPortfolioTimeline'
-import type { SerializedProject } from '@/components/dashboard/ProjectsCarousel'
+import type { SerializedProject, SerializedSprint } from '@/components/dashboard/ProjectsCarousel'
 import type { Range } from '@/components/dashboard/PortfolioTimeline'
 import { RANGE_CFG } from '@/components/dashboard/PortfolioTimeline'
 import { cn } from '@/lib/utils'
 import { RevenueChart } from '@/components/dashboard/RevenueChart'
-import { Receipt } from 'lucide-react'
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface AdminHomeViewProps {
   user: { firstName?: string | null; role: string }
@@ -25,8 +28,179 @@ interface AdminHomeViewProps {
   serializedProjects: SerializedProject[]
 }
 
-const formatCurrency = (amount: number) =>
-  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)
+type ActiveSprint = SerializedSprint & { projectName: string }
+
+// ─── Sprint status config ─────────────────────────────────────────────────────
+
+const SPRINT_STATUS_CFG: Record<string, { label: string; badge: string; bar: string; daysColor: string }> = {
+  'in-progress': {
+    label: 'In Progress',
+    badge: 'text-[#67e8f9] bg-[#67e8f9]/[0.08] border-[#67e8f9]/20',
+    bar: 'bg-[#67e8f9]/70',
+    daysColor: 'text-white/30',
+  },
+  delayed: {
+    label: 'Delayed',
+    badge: 'text-yellow-400 bg-yellow-400/[0.08] border-yellow-400/20',
+    bar: 'bg-yellow-400/70',
+    daysColor: 'text-yellow-400',
+  },
+}
+
+// ─── Sprint Carousel ──────────────────────────────────────────────────────────
+
+function fmtShort(iso: string) {
+  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date(iso))
+}
+
+function SprintCarousel({ sprints, username }: { sprints: ActiveSprint[]; username: string }) {
+  const [idx, setIdx] = useState(0)
+  const safeIdx = Math.min(idx, sprints.length - 1)
+  const sprint = sprints[safeIdx]
+
+  const prev = () => setIdx(i => Math.max(0, i - 1))
+  const next = () => setIdx(i => Math.min(sprints.length - 1, i + 1))
+
+  const cfg = SPRINT_STATUS_CFG[sprint.status] ?? SPRINT_STATUS_CFG['in-progress']
+
+  const pct = sprint.totalTasksCount > 0
+    ? Math.round((sprint.completedTasksCount / sprint.totalTasksCount) * 100)
+    : 0
+
+  const daysLeft = Math.ceil((new Date(sprint.endDate).getTime() - Date.now()) / 86_400_000)
+
+  return (
+    <div className="space-y-3">
+
+      {/* Section header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Zap className="size-3 text-[#67e8f9]/40 shrink-0" />
+          <p className="text-[10px] font-semibold text-white/40 uppercase tracking-[0.3em]">
+            Active Sprints
+          </p>
+          <span className="text-[9px] text-white/20">· {sprints.length} running</span>
+        </div>
+
+        {sprints.length > 1 && (
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={e => { e.preventDefault(); prev() }}
+              disabled={safeIdx === 0}
+              className="flex items-center justify-center size-6 rounded-md border border-white/[0.08] text-white/30 hover:text-white hover:border-white/20 disabled:opacity-20 disabled:pointer-events-none transition-all"
+            >
+              <ChevronLeft className="size-3.5" />
+            </button>
+            <span className="text-[10px] text-white/25 tabular-nums w-9 text-center">
+              {safeIdx + 1} / {sprints.length}
+            </span>
+            <button
+              onClick={e => { e.preventDefault(); next() }}
+              disabled={safeIdx === sprints.length - 1}
+              className="flex items-center justify-center size-6 rounded-md border border-white/[0.08] text-white/30 hover:text-white hover:border-white/20 disabled:opacity-20 disabled:pointer-events-none transition-all"
+            >
+              <ChevronRight className="size-3.5" />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Sprint card */}
+      <Link
+        href={`/u/${username}/projects/${sprint.projectId}/sprints/${sprint.id}`}
+        className="block rounded-xl border border-white/[0.10] bg-[#0a0a0a] overflow-hidden hover:border-white/[0.18] hover:bg-[#0d0d0d] transition-all duration-150 group"
+      >
+        <div className="p-5 sm:p-6">
+
+          {/* Status + days remaining + open link */}
+          <div className="flex items-center justify-between gap-4 mb-3">
+            <span className={`text-[9px] font-bold uppercase tracking-[0.18em] px-2 py-0.5 rounded-full border ${cfg.badge}`}>
+              {cfg.label}
+            </span>
+            <div className="flex items-center gap-3 shrink-0">
+              <span className={`text-[10px] font-medium ${
+                daysLeft < 0 ? 'text-red-400' : daysLeft <= 3 ? 'text-amber-400' : cfg.daysColor
+              }`}>
+                {daysLeft < 0
+                  ? `${Math.abs(daysLeft)}d overdue`
+                  : daysLeft === 0 ? 'Due today'
+                  : daysLeft === 1 ? 'Due tomorrow'
+                  : `${daysLeft}d left`}
+              </span>
+              <span className="flex items-center gap-0.5 text-[10px] text-white/20 group-hover:text-white/50 transition-colors">
+                Open <ArrowRight className="size-2.5" />
+              </span>
+            </div>
+          </div>
+
+          {/* Sprint name */}
+          <h3 className="text-lg sm:text-xl font-bold text-white leading-snug mb-1">
+            {sprint.name}
+          </h3>
+
+          {/* Project name + date range */}
+          <p className="text-[11px] text-white/25 mb-4">
+            {sprint.projectName}
+            <span className="mx-1.5 text-white/10">·</span>
+            {fmtShort(sprint.startDate)} → {fmtShort(sprint.endDate)}
+          </p>
+
+          {/* Goal description */}
+          {sprint.goalDescription && (
+            <p className="text-xs text-white/35 leading-relaxed line-clamp-2 mb-4">
+              {sprint.goalDescription}
+            </p>
+          )}
+
+          {/* Task progress */}
+          {sprint.totalTasksCount > 0 && (
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[9px] uppercase tracking-[0.15em] text-white/20 font-semibold">
+                  Tasks
+                </span>
+                <span className="text-[10px] text-white/35 tabular-nums">
+                  {sprint.completedTasksCount} / {sprint.totalTasksCount}
+                  <span className="ml-1.5 text-white/20">· {pct}%</span>
+                </span>
+              </div>
+              <div className="h-[3px] rounded-full bg-white/[0.06] overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${cfg.bar}`}
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+            </div>
+          )}
+
+        </div>
+
+        {/* Dot navigation strip */}
+        {sprints.length > 1 && (
+          <div
+            className="flex items-center justify-center gap-1.5 px-5 py-3 border-t border-white/[0.04]"
+            onClick={e => e.preventDefault()}
+          >
+            {sprints.map((_, i) => (
+              <button
+                key={i}
+                onClick={e => { e.preventDefault(); setIdx(i) }}
+                className={`rounded-full transition-all duration-200 ${
+                  i === safeIdx
+                    ? 'size-1.5 bg-[#67e8f9]/70'
+                    : 'size-1 bg-white/15 hover:bg-white/35'
+                }`}
+              />
+            ))}
+          </div>
+        )}
+      </Link>
+
+    </div>
+  )
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 export function AdminHomeView({
   user,
@@ -41,6 +215,7 @@ export function AdminHomeView({
   serializedProjects,
 }: AdminHomeViewProps) {
   const [range, setRange] = useState<Range>('week')
+  const [analyticsOpen, setAnalyticsOpen] = useState(false)
 
   const now = Date.now()
 
@@ -68,35 +243,32 @@ export function AdminHomeView({
   })
 
   const orderPipeline = {
-    paidAmount: orders30d.filter((o: any) => o.status === 'paid').reduce((s: number, o: any) => s + (o.amount || 0), 0),
-    pendingAmount: orders30d.filter((o: any) => o.status === 'pending').reduce((s: number, o: any) => s + (o.amount || 0), 0),
+    paidAmount:      orders30d.filter((o: any) => o.status === 'paid').reduce((s: number, o: any) => s + (o.amount || 0), 0),
+    pendingAmount:   orders30d.filter((o: any) => o.status === 'pending').reduce((s: number, o: any) => s + (o.amount || 0), 0),
     cancelledAmount: orders30d.filter((o: any) => o.status === 'cancelled').reduce((s: number, o: any) => s + (o.amount || 0), 0),
-    paidCount: orders30d.filter((o: any) => o.status === 'paid').length,
-    pendingCount: orders30d.filter((o: any) => o.status === 'pending').length,
-    cancelledCount: orders30d.filter((o: any) => o.status === 'cancelled').length,
+    paidCount:       orders30d.filter((o: any) => o.status === 'paid').length,
+    pendingCount:    orders30d.filter((o: any) => o.status === 'pending').length,
+    cancelledCount:  orders30d.filter((o: any) => o.status === 'cancelled').length,
   }
 
   const projectStatus = {
-    active: allProjects.filter((p: any) => p.status === 'in-progress').length,
-    pending: allProjects.filter((p: any) => p.status === 'pending').length,
+    active:    allProjects.filter((p: any) => p.status === 'in-progress').length,
+    pending:   allProjects.filter((p: any) => p.status === 'pending').length,
     completed: allProjects.filter((p: any) => p.status === 'completed').length,
   }
 
   const pulseKpis = {
-    revenue30d: orderPipeline.paidAmount,
-    orders30d: orders30d.length,
+    revenue30d:    orderPipeline.paidAmount,
+    orders30d:     orders30d.length,
     activeClients: clientAccounts.filter((ca: any) => ca.accountBalance > 0 || (ca.projects?.length ?? 0) > 0).length,
     activeProjects: projectStatus.active,
   }
 
-  const projectedOrders = allOrders
-    .filter((o: any) => o.status === 'pending')
-    .sort((a: any, b: any) => {
-      const aMs = a.dueDate ? new Date(a.dueDate).getTime() : Infinity
-      const bMs = b.dueDate ? new Date(b.dueDate).getTime() : Infinity
-      return aMs - bMs
-    })
-  const projectedTotal = projectedOrders.reduce((s: number, o: any) => s + (o.amount || 0), 0)
+  // Derive active sprints (in-progress + delayed) from serialized projects
+  const activeSprints: ActiveSprint[] = serializedProjects
+    .flatMap(p => p.sprints.map(s => ({ ...s, projectName: p.name })))
+    .filter(s => s.status === 'in-progress' || s.status === 'delayed')
+    .sort((a, b) => new Date(a.endDate).getTime() - new Date(b.endDate).getTime())
 
   return (
     <>
@@ -107,7 +279,7 @@ export function AdminHomeView({
 
           {/* Left: greeting */}
           <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-[0.25em] mb-5">
+            <p className="text-xs font-semibold gradient-text uppercase tracking-[0.25em] mb-5">
               {user.role === 'admin' ? 'Admin' : 'Workspace'} · ORCACLUB Spaces
             </p>
             <DashboardGreeting
@@ -121,114 +293,27 @@ export function AdminHomeView({
             />
           </div>
 
-          {/* Right: revenue donut — reacts to the timeline range picker */}
+          {/* Right: revenue chart — reacts to the timeline range picker */}
           <div className="w-full lg:w-auto lg:shrink-0" style={{ maxWidth: 420 }}>
-            <RevenueChart allOrders={allOrders} range={range} />
+            <RevenueChart
+              allOrders={allOrders}
+              range={range}
+              onInfo={() => setAnalyticsOpen(true)}
+            />
           </div>
 
         </div>
 
-        {/* ── PROJECTED REVENUE ───────────────────────────────────────────── */}
-        {projectedTotal > 0 && (
-          <div className="rounded-2xl border border-amber-400/[0.12] overflow-hidden">
-
-            <div className="flex items-center justify-between px-5 sm:px-6 py-4 sm:py-5 bg-gradient-to-r from-amber-400/[0.05] to-transparent border-b border-amber-400/[0.08]">
-              <div className="flex items-center gap-3">
-                <div className="p-1.5 rounded-lg bg-amber-400/10 border border-amber-400/20 shrink-0">
-                  <Receipt className="size-3.5 text-amber-400" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-400/80">
-                    Projected Revenue
-                  </p>
-                  <p className="text-[10px] text-gray-600 mt-0.5">
-                    {projectedOrders.length} pending invoice{projectedOrders.length !== 1 ? 's' : ''} awaiting payment
-                  </p>
-                </div>
-              </div>
-              <p className="text-xl sm:text-2xl font-black text-amber-400 tabular-nums">
-                {formatCurrency(projectedTotal)}
-              </p>
-            </div>
-
-            <div className="bg-[#0c0900]/60 divide-y divide-white/[0.04]">
-              {projectedOrders.slice(0, 8).map((order: any) => {
-                const clientName = typeof order.clientAccount === 'object'
-                  ? ((order.clientAccount as any)?.name ?? '—')
-                  : '—'
-                const projectName = typeof order.projectRef === 'object' && order.projectRef
-                  ? ((order.projectRef as any)?.name ?? null)
-                  : null
-                const dueDate = order.dueDate ? new Date(order.dueDate) : null
-                const daysUntil = dueDate
-                  ? Math.ceil((dueDate.getTime() - now) / (1000 * 60 * 60 * 24))
-                  : null
-                const isOverdue = daysUntil !== null && daysUntil < 0
-                const isDueSoon = daysUntil !== null && daysUntil >= 0 && daysUntil <= 7
-
-                return (
-                  <div
-                    key={order.id}
-                    className="flex items-center gap-0 pr-4 sm:pr-5 py-3.5 hover:bg-white/[0.02] transition-colors"
-                  >
-                    <div className={`w-0.5 self-stretch shrink-0 mr-4 ${
-                      isOverdue
-                        ? 'bg-red-400'
-                        : isDueSoon
-                          ? 'bg-amber-400'
-                          : dueDate
-                            ? 'bg-yellow-400/30'
-                            : 'bg-white/[0.06]'
-                    }`} />
-
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white truncate">
-                        {order.orderNumber ?? `INV-${order.id.slice(-6).toUpperCase()}`}
-                      </p>
-                      <p className="text-[10px] text-gray-500 mt-0.5 truncate">
-                        {clientName}{projectName ? ` · ${projectName}` : ''}
-                      </p>
-                    </div>
-
-                    <div className="text-right shrink-0">
-                      <p className="text-sm font-semibold text-amber-400 tabular-nums">
-                        {formatCurrency(order.amount ?? 0)}
-                      </p>
-                      <p className={`text-[10px] mt-0.5 ${
-                        isOverdue ? 'text-red-400' : isDueSoon ? 'text-amber-400' : 'text-gray-600'
-                      }`}>
-                        {dueDate
-                          ? isOverdue
-                            ? `${Math.abs(daysUntil!)}d overdue`
-                            : daysUntil === 0
-                              ? 'Due today'
-                              : daysUntil === 1
-                                ? 'Due tomorrow'
-                                : `Due ${dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
-                          : 'No due date'
-                        }
-                      </p>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-
-            {projectedOrders.length > 8 && (
-              <div className="px-5 py-3 border-t border-amber-400/[0.06] text-center">
-                <p className="text-[10px] text-gray-600">
-                  Showing 8 of {projectedOrders.length} pending invoices
-                </p>
-              </div>
-            )}
-          </div>
+        {/* ── ACTIVE SPRINTS CAROUSEL ──────────────────────────────────────── */}
+        {activeSprints.length > 0 && (
+          <SprintCarousel sprints={activeSprints} username={username} />
         )}
 
         {/* ── TIMELINES ─────────────────────────────────────────────────────── */}
         {(serializedProjects.length > 0 || clientAccounts.length > 0) && (
           <div className="space-y-8">
 
-            {/* ── Shared header: title + range picker ───────────────────────── */}
+            {/* Shared header: title + range picker */}
             <div className="flex items-center justify-between">
               <p className="text-[10px] font-semibold text-white/40 uppercase tracking-[0.3em]">
                 Timelines
@@ -281,6 +366,9 @@ export function AdminHomeView({
         orderPipeline={orderPipeline}
         projectStatus={projectStatus}
         kpis={pulseKpis}
+        allOrders={allOrders}
+        open={analyticsOpen}
+        onOpenChange={setAnalyticsOpen}
       />
     </>
   )

@@ -43,6 +43,34 @@ import {
   type ClientWelcomeData,
 } from './client-welcome'
 
+import {
+  accountSetupNotificationHTML,
+  accountSetupNotificationText,
+  accountSetupNotificationSubject,
+  type AccountSetupNotificationData,
+} from './account-setup-notification'
+
+import {
+  accountSetupConfirmationHTML,
+  accountSetupConfirmationText,
+  accountSetupConfirmationSubject,
+  type AccountSetupConfirmationData,
+} from './account-setup-confirmation'
+
+import {
+  passwordResetAdminNotificationHTML,
+  passwordResetAdminNotificationText,
+  passwordResetAdminNotificationSubject,
+  type PasswordResetAdminNotificationData,
+} from './password-reset-admin-notification'
+
+import {
+  passwordResetConfirmationHTML,
+  passwordResetConfirmationText,
+  passwordResetConfirmationSubject,
+  type PasswordResetConfirmationData,
+} from './password-reset-confirmation'
+
 // Contact Confirmation (sent to customer)
 export function contactConfirmation(data: ContactConfirmationData) {
   return {
@@ -79,10 +107,50 @@ export function clientWelcome(data: ClientWelcomeData) {
   }
 }
 
+// Account Setup Notification (sent to admin when client completes first-time setup)
+export function accountSetupNotification(data: AccountSetupNotificationData) {
+  return {
+    subject: accountSetupNotificationSubject(data.clientName),
+    html: accountSetupNotificationHTML(data),
+    text: accountSetupNotificationText(data),
+  }
+}
+
+// Account Setup Confirmation (sent to client after they complete first-time setup)
+export function accountSetupConfirmation(data: AccountSetupConfirmationData) {
+  return {
+    subject: accountSetupConfirmationSubject(),
+    html: accountSetupConfirmationHTML(data),
+    text: accountSetupConfirmationText(data),
+  }
+}
+
+// Password Reset Admin Notification (sent to admin when a client resets their password)
+export function passwordResetAdminNotification(data: PasswordResetAdminNotificationData) {
+  return {
+    subject: passwordResetAdminNotificationSubject(data.clientName),
+    html: passwordResetAdminNotificationHTML(data),
+    text: passwordResetAdminNotificationText(data),
+  }
+}
+
+// Password Reset Confirmation (sent to client after they reset their password)
+export function passwordResetConfirmation(data: PasswordResetConfirmationData) {
+  return {
+    subject: passwordResetConfirmationSubject(),
+    html: passwordResetConfirmationHTML(data),
+    text: passwordResetConfirmationText(data),
+  }
+}
+
 // Export types
 export type {
   ContactConfirmationData,
   ContactAdminNotificationData,
   BookingConfirmationData,
   ClientWelcomeData,
+  AccountSetupNotificationData,
+  AccountSetupConfirmationData,
+  PasswordResetAdminNotificationData,
+  PasswordResetConfirmationData,
 }

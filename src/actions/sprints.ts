@@ -70,12 +70,14 @@ export async function createSprint({
 export async function updateSprint({
   sprintId,
   name,
+  description,
   startDate,
   endDate,
   goalDescription,
 }: {
   sprintId: string
   name: string
+  description?: string
   startDate?: string
   endDate?: string
   goalDescription?: string
@@ -106,6 +108,7 @@ export async function updateSprint({
       id: sprintId,
       data: {
         name,
+        description: description || null,
         ...(startDate !== undefined ? { startDate } : {}),
         endDate: endDate || null,
         goalDescription: goalDescription || null,

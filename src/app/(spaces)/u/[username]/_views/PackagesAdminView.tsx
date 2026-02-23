@@ -70,7 +70,7 @@ function statusStyle(status?: string) {
 
 function PricingSummary({ lineItems }: { lineItems: LineItem[] }) {
   const { oneTime, monthly, annual } = computeTotals(lineItems)
-  if (!oneTime && !monthly && !annual) return <span className="text-gray-700 text-xs">No pricing</span>
+  if (!oneTime && !monthly && !annual) return <span className="text-gray-400 text-xs">No pricing</span>
   return (
     <div className="flex items-center gap-2 flex-wrap">
       {oneTime > 0 && (
@@ -150,7 +150,7 @@ function ProposalModal({
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap mb-2">
-                <p className="text-[9px] font-bold tracking-[0.28em] uppercase text-[#67e8f9]/50">
+                <p className="text-[9px] font-bold tracking-[0.28em] uppercase text-[#67e8f9]/80">
                   Proposal
                 </p>
                 {pkg.status && (
@@ -166,7 +166,7 @@ function ProposalModal({
               <div className="flex items-center gap-1.5 mt-1.5">
                 <span className="text-sm font-semibold text-gray-300">{clientName}</span>
                 {clientCompany && (
-                  <span className="text-xs text-gray-600">· {clientCompany}</span>
+                  <span className="text-xs text-gray-300">· {clientCompany}</span>
                 )}
               </div>
               {pkg.description && (
@@ -187,7 +187,7 @@ function ProposalModal({
               {oneTime > 0 && (
                 <div>
                   <p className="text-2xl font-bold text-white tabular-nums">{fmt(oneTime)}</p>
-                  <p className="text-[9px] text-gray-600 mt-1 uppercase tracking-[0.18em]">one-time</p>
+                  <p className="text-[9px] text-gray-300 mt-1 uppercase tracking-[0.18em]">one-time</p>
                 </div>
               )}
               {monthly > 0 && (
@@ -196,7 +196,7 @@ function ProposalModal({
                     <p className="text-2xl font-bold text-white tabular-nums">{fmt(monthly)}</p>
                     <p className="text-sm text-gray-500">/mo</p>
                   </div>
-                  <p className="text-[9px] text-gray-600 mt-1 uppercase tracking-[0.18em]">monthly</p>
+                  <p className="text-[9px] text-gray-300 mt-1 uppercase tracking-[0.18em]">monthly</p>
                 </div>
               )}
               {annual > 0 && (
@@ -205,7 +205,7 @@ function ProposalModal({
                     <p className="text-2xl font-bold text-white tabular-nums">{fmt(annual)}</p>
                     <p className="text-sm text-gray-500">/yr</p>
                   </div>
-                  <p className="text-[9px] text-gray-600 mt-1 uppercase tracking-[0.18em]">annually</p>
+                  <p className="text-[9px] text-gray-300 mt-1 uppercase tracking-[0.18em]">annually</p>
                 </div>
               )}
             </div>
@@ -214,7 +214,7 @@ function ProposalModal({
           {/* Line items */}
           {lineItems.length > 0 ? (
             <div>
-              <p className="text-[9px] font-bold tracking-[0.25em] uppercase text-gray-500 mb-2.5">
+              <p className="text-[9px] font-bold tracking-[0.25em] uppercase gradient-text mb-2.5">
                 Included · {lineItems.length}
               </p>
               <div className="space-y-1.5">
@@ -239,7 +239,7 @@ function ProposalModal({
                           </span>
                         </div>
                         {item.description && (
-                          <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">{item.description}</p>
+                          <p className="text-xs text-gray-300 mt-0.5 leading-relaxed">{item.description}</p>
                         )}
                       </div>
                     </div>
@@ -248,7 +248,7 @@ function ProposalModal({
               </div>
             </div>
           ) : (
-            <p className="text-xs text-gray-700 italic py-2">No line items configured.</p>
+            <p className="text-xs text-gray-400 italic py-2">No line items configured.</p>
           )}
 
           {/* Invoice result */}
@@ -335,7 +335,7 @@ function ProposalCard({
         )}>
           {pkg.status ?? 'draft'}
         </span>
-        <ChevronRight className="size-3.5 text-gray-700 group-hover:text-[#67e8f9]/60 group-hover:translate-x-0.5 transition-all" />
+        <ChevronRight className="size-3.5 text-gray-400 group-hover:text-[#67e8f9]/60 group-hover:translate-x-0.5 transition-all" />
       </div>
 
       {/* Name */}
@@ -344,7 +344,7 @@ function ProposalCard({
           {pkg.name}
         </p>
         {pkg.description && (
-          <p className="text-xs text-gray-600 mt-1 line-clamp-2 leading-relaxed">
+          <p className="text-xs text-gray-300 mt-1 line-clamp-2 leading-relaxed">
             {pkg.description}
           </p>
         )}
@@ -354,7 +354,7 @@ function ProposalCard({
       <div>
         <PricingSummary lineItems={lineItems} />
         {lineItems.length > 0 && (
-          <p className="text-[10px] text-gray-700 mt-1">
+          <p className="text-[10px] text-gray-400 mt-1">
             {lineItems.length} service{lineItems.length !== 1 ? 's' : ''}
           </p>
         )}
@@ -392,11 +392,11 @@ function TemplateRow({ pkg }: { pkg: PackageDoc }) {
             </div>
           </div>
           {pkg.description && !expanded && (
-            <p className="text-xs text-gray-700 mt-0.5 truncate">{pkg.description}</p>
+            <p className="text-xs text-gray-400 mt-0.5 truncate">{pkg.description}</p>
           )}
         </div>
         <div className="flex items-center gap-2.5 shrink-0">
-          <span className="text-[10px] text-gray-700 tabular-nums">{lineItems.length} item{lineItems.length !== 1 ? 's' : ''}</span>
+          <span className="text-[10px] text-gray-400 tabular-nums">{lineItems.length} item{lineItems.length !== 1 ? 's' : ''}</span>
           <div className={cn('size-5 rounded-md border border-white/[0.08] flex items-center justify-center transition-all', expanded && 'bg-white/[0.05]')}>
             <ChevronRight className={cn('size-3 text-gray-600 transition-transform', expanded && 'rotate-90')} />
           </div>
@@ -419,18 +419,18 @@ function TemplateRow({ pkg }: { pkg: PackageDoc }) {
                       )}
                     </div>
                     {item.description && (
-                      <p className="text-gray-700 mt-0.5 leading-relaxed whitespace-pre-line">{item.description}</p>
+                      <p className="text-gray-400 mt-0.5 leading-relaxed whitespace-pre-line">{item.description}</p>
                     )}
                   </div>
                   <span className="text-gray-600 tabular-nums shrink-0 font-mono">
                     {fmt((item.adjustedPrice ?? item.price ?? 0) * (item.quantity ?? 1))}
-                    {item.isRecurring && <span className="text-gray-700">/{item.recurringInterval === 'year' ? 'yr' : 'mo'}</span>}
+                    {item.isRecurring && <span className="text-gray-400">/{item.recurringInterval === 'year' ? 'yr' : 'mo'}</span>}
                   </span>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="pt-3 text-xs text-gray-700 italic">No line items</p>
+            <p className="pt-3 text-xs text-gray-400 italic">No line items</p>
           )}
         </div>
       )}
@@ -491,7 +491,7 @@ export function PackagesAdminView({ allPackages, username }: PackagesAdminViewPr
         {/* ── Header ─────────────────────────────────────────────────────── */}
         <div className="flex items-start gap-4 flex-wrap">
           <div className="flex-1">
-            <p className="text-[9px] font-bold tracking-[0.32em] uppercase text-[#67e8f9]/50 mb-1">
+            <p className="text-[9px] font-bold tracking-[0.32em] uppercase text-[#67e8f9]/80 mb-1">
               Operations
             </p>
             <h2 className="text-xl font-bold text-white tracking-tight">Packages</h2>
@@ -509,7 +509,7 @@ export function PackagesAdminView({ allPackages, username }: PackagesAdminViewPr
                 className="flex flex-col items-center px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06]"
               >
                 <span className="text-lg font-bold text-white tabular-nums">{s.value}</span>
-                <span className="text-[9px] text-gray-600 uppercase tracking-[0.15em] mt-0.5">{s.label}</span>
+                <span className="text-[9px] text-gray-300 uppercase tracking-[0.15em] mt-0.5">{s.label}</span>
               </div>
             ))}
           </div>
@@ -547,7 +547,7 @@ export function PackagesAdminView({ allPackages, username }: PackagesAdminViewPr
                         <p className="text-[10px] text-gray-600 mt-0.5">{group.clientCompany}</p>
                       )}
                     </div>
-                    <span className="text-[10px] text-gray-700 ml-1 tabular-nums">
+                    <span className="text-[10px] text-gray-400 ml-1 tabular-nums">
                       {group.proposals.length} package{group.proposals.length !== 1 ? 's' : ''}
                     </span>
                   </div>
@@ -577,7 +577,7 @@ export function PackagesAdminView({ allPackages, username }: PackagesAdminViewPr
               <FileText className="size-7 text-gray-600" />
             </div>
             <p className="text-sm text-gray-500 font-medium mb-1">No proposals yet</p>
-            <p className="text-xs text-gray-700 max-w-xs mx-auto leading-relaxed">
+            <p className="text-xs text-gray-400 max-w-xs mx-auto leading-relaxed">
               Assign packages to clients from their profile page to create proposals.
             </p>
           </div>
@@ -591,14 +591,14 @@ export function PackagesAdminView({ allPackages, username }: PackagesAdminViewPr
               <p className="text-[10px] font-bold text-gray-600 uppercase tracking-[0.2em]">
                 Templates
               </p>
-              <span className="text-[10px] text-gray-700 tabular-nums ml-0.5">{filteredTemplates.length}</span>
+              <span className="text-[10px] text-gray-400 tabular-nums ml-0.5">{filteredTemplates.length}</span>
             </div>
             <div className="space-y-1.5">
               {filteredTemplates.map(t => (
                 <TemplateRow key={t.id} pkg={t} />
               ))}
             </div>
-            <p className="text-[10px] text-gray-700 mt-4 text-center">
+            <p className="text-[10px] text-gray-400 mt-4 text-center">
               Manage templates in the{' '}
               <a href="/admin/collections/packages" className="text-gray-500 hover:text-gray-400 underline transition-colors">
                 admin panel
@@ -614,7 +614,7 @@ export function PackagesAdminView({ allPackages, username }: PackagesAdminViewPr
               <Package className="size-8 text-gray-600" />
             </div>
             <p className="text-sm text-gray-500 font-medium mb-1.5">No packages yet</p>
-            <p className="text-xs text-gray-700 max-w-xs mx-auto leading-relaxed">
+            <p className="text-xs text-gray-400 max-w-xs mx-auto leading-relaxed">
               Create package templates in the admin panel, then assign them to clients from their profile.
             </p>
           </div>

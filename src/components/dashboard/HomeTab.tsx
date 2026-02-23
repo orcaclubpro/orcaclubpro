@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useRef, useEffect } from 'react'
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { CheckCircle2, Circle, Calendar, Flag, Zap, Pencil, ArrowRight, Building2, Settings } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -77,7 +77,23 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
   const [editState, setEditState]                   = useState<EditState | null>(null)
   const [hoveredMilestone, setHoveredMilestone]     = useState<number | null>(null)
   const [hoveredSprint, setHoveredSprint]           = useState<string | null>(null)
-  const [clickedSprint, setClickedSprint]           = useState<string | null>(null)
+
+  type SprintBandRow = {
+    id: string
+    name: string
+    status: string
+    startDate: string | null | undefined
+    endDate: string | null | undefined
+    goalDescription: string | null | undefined
+    description: string | null | undefined
+    completedTasksCount: number | null | undefined
+    totalTasksCount: number | null | undefined
+    leftPx: number
+    widthPx: number
+    cfg: ReturnType<typeof getSprintCfg>
+    row: number
+  }
+  const [fixedTooltip, setFixedTooltip] = useState<{ sprint: SprintBandRow; x: number; y: number } | null>(null)
 
   const statusCfg = PROJECT_STATUS[(project.status as keyof typeof PROJECT_STATUS)] ?? PROJECT_STATUS.pending
   const daysLeft  = getDaysUntil(project.projectedEndDate)
@@ -132,14 +148,6 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
     el.scrollLeft = Math.max(0, todayPx - el.clientWidth * 0.35)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Close clicked sprint tooltip when clicking outside
-  useEffect(() => {
-    if (!clickedSprint) return
-    const handler = () => setClickedSprint(null)
-    document.addEventListener('click', handler)
-    return () => document.removeEventListener('click', handler)
-  }, [clickedSprint])
-
   // Month tick marks
   const monthTicks = useMemo(() => {
     if (!hasTimeline) return []
@@ -153,15 +161,40 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
     return ticks
   }, [hasTimeline, tlStart, tlEnd]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Sprint bands
-  const sprintBands = useMemo(() => {
+  // Sprint bands with multi-row layout to prevent horizontal overlap
+  const sprintBands = useMemo((): SprintBandRow[] => {
     if (!hasTimeline || tlDur <= 0) return []
-    return sprints.filter((s) => s.startDate && s.endDate).map((s) => {
-      const leftPx  = toPx(s.startDate)
-      const rightPx = toPx(s.endDate)
-      return { ...s, leftPx, widthPx: Math.max(4, rightPx - leftPx), cfg: getSprintCfg(s.status) }
+    const raw = sprints
+      .filter((s) => s.startDate && s.endDate)
+      .map((s) => {
+        const leftPx  = toPx(s.startDate)
+        const rightPx = toPx(s.endDate)
+        return {
+          ...s,
+          leftPx,
+          widthPx: Math.max(4, rightPx - leftPx),
+          cfg: getSprintCfg(s.status),
+          row: 0,
+        } as SprintBandRow
+      })
+      .sort((a, b) => a.leftPx - b.leftPx)
+    const rowEnds: number[] = []
+    raw.forEach((band) => {
+      let row = rowEnds.findIndex((end) => end <= band.leftPx)
+      if (row === -1) row = rowEnds.length
+      rowEnds[row] = band.leftPx + band.widthPx
+      band.row = row
     })
+    return raw
   }, [sprints, hasTimeline]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const SPRINT_GAP = 5
+  const sprintRowCount = useMemo(
+    () => (sprintBands.length === 0 ? 1 : Math.max(...sprintBands.map((b) => b.row + 1))),
+    [sprintBands],
+  )
+  const dynamicTickY  = SPRINT_TOP + sprintRowCount * (SPRINT_H + SPRINT_GAP) + 10
+  const dynamicInnerH = dynamicTickY + 28
 
   // Current sprints: in-progress / delayed, or date range contains today
   const currentSprints = useMemo(() => {
@@ -176,26 +209,26 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
   }, [sprints])
 
   return (
-    <div className="space-y-8 fluid-enter">
+    <div className="space-y-12 fluid-enter">
 
       {/* ── Project header ────────────────────────────────────────────────── */}
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-2 flex-1 min-w-0">
           <div className="flex items-center gap-2.5 flex-wrap">
             <div className={cn('size-2 rounded-full', statusCfg.dot)} />
-            <span className={cn('text-sm font-medium', statusCfg.text)}>{statusCfg.label}</span>
+            <span className={cn('text-base font-semibold', statusCfg.text)}>{statusCfg.label}</span>
             {isOngoing && (
               <>
-                <span className="text-gray-700">·</span>
-                <span className="text-[10px] tracking-[0.2em] uppercase font-medium text-intelligence-cyan/60 border border-intelligence-cyan/20 px-2 py-0.5 rounded-full">
+                <span className="text-gray-400">·</span>
+                <span className="text-xs tracking-[0.2em] uppercase font-semibold text-intelligence-cyan border border-intelligence-cyan/40 px-2 py-0.5 rounded-full">
                   Ongoing
                 </span>
               </>
             )}
             {daysLeft !== null && !isOngoing && (
               <>
-                <span className="text-gray-700">·</span>
-                <span className={cn('text-sm', daysLeft < 0 ? 'text-red-400' : daysLeft < 14 ? 'text-orange-400' : 'text-gray-400')}>
+                <span className="text-gray-400">·</span>
+                <span className={cn('text-base font-medium', daysLeft < 0 ? 'text-red-400' : daysLeft < 14 ? 'text-orange-400' : 'text-white')}>
                   {daysLeft < 0 ? `${Math.abs(daysLeft)}d overdue` : `${daysLeft} days remaining`}
                 </span>
               </>
@@ -204,7 +237,7 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
             {/* Client chip — staff only */}
             {!readOnly && client && username && (
               <>
-                <span className="text-gray-700">·</span>
+                <span className="text-gray-400">·</span>
                 <Link
                   href={`/u/${username}/clients/${client.id}`}
                   className="flex items-center gap-1.5 text-xs bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] hover:border-white/[0.18] rounded-full px-3 py-1 transition-all duration-150 group"
@@ -219,7 +252,7 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
           </div>
           <h1 className="text-6xl font-bold tracking-tight gradient-text leading-none">{project.name}</h1>
           {project.description && (
-            <p className="text-gray-400 max-w-2xl leading-relaxed">{project.description}</p>
+            <p className="text-gray-100 max-w-2xl leading-relaxed text-base">{project.description}</p>
           )}
         </div>
 
@@ -228,7 +261,7 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
           <button
             type="button"
             onClick={() => setSettingsOpen(true)}
-            className="shrink-0 flex items-center gap-1.5 text-xs text-white/45 hover:text-white/75 bg-white/[0.03] hover:bg-white/[0.07] border border-white/[0.07] hover:border-white/[0.18] rounded-lg px-3.5 py-2.5 transition-all duration-150 mt-1"
+            className="shrink-0 flex items-center gap-1.5 text-sm text-white/70 hover:text-white/75 bg-white/[0.03] hover:bg-white/[0.07] border border-white/[0.07] hover:border-white/[0.18] rounded-lg px-3.5 py-2.5 transition-all duration-150 mt-1"
           >
             <Settings className="size-3.5" />
             Edit
@@ -250,19 +283,19 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
       <div className="h-px bg-white/[0.06]" />
 
       {/* ── Timeline label ────────────────────────────────────────────────── */}
-      <p className="text-xs tracking-[0.3em] uppercase text-gray-600 font-medium">Timeline</p>
+      <p className="text-sm tracking-[0.2em] uppercase text-white font-bold">Timeline</p>
 
       {/* ── No dates state ────────────────────────────────────────────────── */}
       {!hasTimeline ? (
         <div className="flex flex-col items-center justify-center py-24 rounded-xl border border-white/[0.06] bg-white/[0.02] text-center">
-          <Calendar className="size-10 text-gray-700 mb-4" />
+          <Calendar className="size-10 text-gray-500 mb-4" />
           <p className="text-white font-semibold">No timeline configured</p>
-          <p className="text-sm text-gray-500 mt-1 max-w-xs">Set a start and projected end date, or mark the project as ongoing.</p>
+          <p className="text-sm text-gray-300 mt-1 max-w-xs">Set a start and projected end date, or mark the project as ongoing.</p>
         </div>
       ) : (
 
         /* ── Scrollable timeline card ─────────────────────────────────────── */
-        <div className="relative rounded-xl border border-white/[0.08] bg-[#080808] overflow-hidden">
+        <div className="relative rounded-xl border border-white/[0.08] bg-[#080808]">
 
           {/* Ambient glow */}
           <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-intelligence-cyan/15 to-transparent pointer-events-none" />
@@ -278,12 +311,12 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
           {/* Card header */}
           <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-white/[0.06]">
             <div className="flex items-center gap-3">
-              <p className="text-[10px] tracking-[0.3em] uppercase text-gray-600 font-medium">Project Track</p>
+              <p className="text-sm tracking-[0.2em] uppercase text-white font-bold">Project Track</p>
               {sprintBands.length > 0 && (
-                <span className="text-[10px] text-gray-700">{sprintBands.length} sprint{sprintBands.length > 1 ? 's' : ''}</span>
+                <span className="text-sm text-gray-200">{sprintBands.length} sprint{sprintBands.length > 1 ? 's' : ''}</span>
               )}
               {milestones.length > 0 && (
-                <span className="text-[10px] text-gray-700">{milestones.length} milestone{milestones.length > 1 ? 's' : ''}</span>
+                <span className="text-sm text-gray-200">{milestones.length} milestone{milestones.length > 1 ? 's' : ''}</span>
               )}
             </div>
             {todayPx > 0 && todayPx < timelineWidth && (
@@ -293,7 +326,7 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
                   if (!el) return
                   el.scrollTo({ left: Math.max(0, todayPx - el.clientWidth * 0.35), behavior: 'smooth' })
                 }}
-                className="text-[10px] tracking-wide text-intelligence-cyan/50 hover:text-intelligence-cyan transition-colors flex items-center gap-1"
+                className="text-xs tracking-wide text-intelligence-cyan hover:text-white transition-colors flex items-center gap-1"
               >
                 <ArrowRight className="size-3" />Jump to today
               </button>
@@ -315,33 +348,37 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
               {/* Inner track canvas */}
               <div
                 className="relative select-none"
-                style={{ width: timelineWidth, height: INNER_H, minWidth: '100%' }}
+                style={{ width: timelineWidth, height: dynamicInnerH, minWidth: '100%' }}
               >
 
                 {/* ── Sprint bands ─────────────────────────────────────────── */}
                 {sprintBands.map((sprint) => {
-                  const isHov     = hoveredSprint === sprint.id
-                  const isClicked = clickedSprint === sprint.id
-                  const showInfo  = isHov || isClicked
+                  const sprintTop = SPRINT_TOP + sprint.row * (SPRINT_H + SPRINT_GAP)
                   return (
-                    <div
+                    <Link
                       key={sprint.id}
-                      className="absolute transition-all duration-200 cursor-pointer"
-                      style={{ left: sprint.leftPx, top: SPRINT_TOP, width: sprint.widthPx, height: SPRINT_H }}
-                      onMouseEnter={() => setHoveredSprint(sprint.id)}
-                      onMouseLeave={() => setHoveredSprint(null)}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setClickedSprint(clickedSprint === sprint.id ? null : sprint.id)
+                      href={username ? `/u/${username}/projects/${project.id}/sprints/${sprint.id}` : '#'}
+                      className="absolute transition-all duration-200 cursor-pointer group"
+                      style={{ left: sprint.leftPx, top: sprintTop, width: sprint.widthPx, height: SPRINT_H }}
+                      onMouseEnter={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect()
+                        setFixedTooltip({ sprint, x: rect.left + rect.width / 2, y: rect.top })
+                        setHoveredSprint(sprint.id)
+                      }}
+                      onMouseLeave={() => {
+                        setFixedTooltip(null)
+                        setHoveredSprint(null)
                       }}
                     >
+                      {/* Background tint matching status */}
+                      <div className={cn('absolute inset-0 rounded-sm opacity-30', sprint.cfg.bg)} />
                       {/* ORCACLUB logo */}
                       <Image
                         src="/orcaclubpro.png"
                         alt=""
                         width={SPRINT_H - 8}
                         height={SPRINT_H - 8}
-                        className="absolute inset-0 m-auto object-contain pointer-events-none"
+                        className="absolute inset-0 m-auto object-contain pointer-events-none group-hover:opacity-80 transition-opacity"
                         aria-hidden="true"
                       />
                       {/* Sprint name + status dot */}
@@ -354,56 +391,7 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
                           </span>
                         </div>
                       )}
-
-                      {/* Tooltip — outside overflow-hidden so it can float above */}
-                      {showInfo && (
-                        <div
-                          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2.5 z-50 pointer-events-none"
-                          style={{ minWidth: 210, maxWidth: 280 }}
-                        >
-                          <div className="animate-in fade-in slide-in-from-bottom-1 duration-150 bg-[#0c0c0c] border border-white/[0.12] rounded-xl overflow-hidden shadow-2xl text-left">
-                            {/* Colored top accent */}
-                            <div className={cn('h-0.5 w-full', sprint.cfg.dot)} />
-                            <div className="px-4 py-3 space-y-1.5">
-                              {/* Name + status badge */}
-                              <div className="flex items-center justify-between gap-2">
-                                <p className="text-sm font-semibold text-white leading-snug truncate">{sprint.name}</p>
-                                <span className={cn(
-                                  'shrink-0 text-[9px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded-full border',
-                                  sprint.cfg.text, sprint.cfg.bg, sprint.cfg.border,
-                                )}>
-                                  {sprint.cfg.label}
-                                </span>
-                              </div>
-                              {/* Date range */}
-                              <p className="text-xs text-gray-500">
-                                {formatDate(sprint.startDate)} → {formatDate(sprint.endDate)}
-                              </p>
-                              {/* Goal / description */}
-                              {(sprint.goalDescription || sprint.description) && (
-                                <p className="text-xs text-gray-400 leading-relaxed border-t border-white/[0.06] pt-2 mt-1">
-                                  {sprint.goalDescription || sprint.description}
-                                </p>
-                              )}
-                              {/* Task progress */}
-                              {(sprint.totalTasksCount ?? 0) > 0 && (
-                                <div className="flex items-center gap-2 border-t border-white/[0.06] pt-2 mt-1">
-                                  <div className="flex-1 h-1 rounded-full bg-white/[0.08]">
-                                    <div
-                                      className={cn('h-full rounded-full transition-all', sprint.cfg.dot)}
-                                      style={{ width: `${((sprint.completedTasksCount ?? 0) / (sprint.totalTasksCount ?? 1)) * 100}%` }}
-                                    />
-                                  </div>
-                                  <span className="text-[10px] text-gray-600 whitespace-nowrap">
-                                    {sprint.completedTasksCount ?? 0}/{sprint.totalTasksCount} tasks
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                    </Link>
                   )
                 })}
 
@@ -431,7 +419,7 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
                 {todayPx > 0 && todayPx < timelineWidth && (
                   <div
                     className="absolute pointer-events-none z-20"
-                    style={{ left: todayPx, top: 0, height: INNER_H, transform: 'translateX(-50%)' }}
+                    style={{ left: todayPx, top: 0, height: dynamicInnerH, transform: 'translateX(-50%)' }}
                   >
                     {/* Vertical line */}
                     <div
@@ -439,7 +427,7 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
                       style={{ top: LABEL_Y, height: INNER_H - LABEL_Y, background: 'linear-gradient(to bottom, rgba(103,232,249,0.4), rgba(103,232,249,0.1), transparent)' }}
                     />
                     {/* "TODAY" label */}
-                    <p className="absolute left-1/2 -translate-x-1/2 text-[8px] tracking-[0.2em] uppercase text-intelligence-cyan/50 font-medium whitespace-nowrap"
+                    <p className="absolute left-1/2 -translate-x-1/2 text-[9px] tracking-[0.2em] uppercase text-intelligence-cyan/70 font-medium whitespace-nowrap"
                       style={{ top: LABEL_Y }}>
                       Today
                     </p>
@@ -463,7 +451,7 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
                     <div
                       key={m.id || i}
                       className="absolute z-20"
-                      style={{ left: px, top: 0, height: INNER_H, transform: 'translateX(-50%)' }}
+                      style={{ left: px, top: 0, height: dynamicInnerH, transform: 'translateX(-50%)' }}
                       onMouseEnter={() => setHoveredMilestone(i)}
                       onMouseLeave={() => setHoveredMilestone(null)}
                     >
@@ -473,12 +461,12 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
                         style={{ top: LABEL_Y, left: '50%', transform: 'translateX(-50%)', opacity: isHov ? 1 : 0.55 }}
                       >
                         <p className={cn(
-                          'text-[9px] font-medium truncate leading-tight',
-                          m.completed ? 'text-gray-600' : isNext ? 'text-intelligence-cyan' : 'text-gray-500',
+                          'text-xs font-medium truncate leading-tight',
+                          m.completed ? 'text-gray-500' : isNext ? 'text-intelligence-cyan' : 'text-gray-200',
                         )}>
                           {m.title}
                         </p>
-                        <p className="text-[8px] text-gray-700 mt-0.5">{formatDate(m.date)}</p>
+                        <p className="text-xs text-gray-300 mt-0.5">{formatDate(m.date)}</p>
                       </div>
 
                       {/* Upper whisker (label → icon) */}
@@ -512,7 +500,7 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
                           </div>
                         ) : (
                           <Circle
-                            className="text-gray-700 group-hover:text-gray-500 transition-colors"
+                            className="text-gray-600 group-hover:text-gray-400 transition-colors"
                             style={{ width: ICON_SIZE, height: ICON_SIZE }}
                           />
                         )}
@@ -553,20 +541,20 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
                   <div
                     key={tick.px}
                     className="absolute pointer-events-none"
-                    style={{ left: tick.px, top: TICK_Y }}
+                    style={{ left: tick.px, top: dynamicTickY }}
                   >
-                    <div className="w-px h-3 bg-white/[0.08] mx-auto" />
-                    <p className="text-[8px] text-gray-700 text-center mt-1 whitespace-nowrap -translate-x-1/2">
+                    <div className="w-px h-3 bg-white/[0.12] mx-auto" />
+                    <p className="text-xs text-gray-300 text-center mt-1 whitespace-nowrap -translate-x-1/2">
                       {tick.label}
                     </p>
                   </div>
                 ))}
 
                 {/* Start / End date labels */}
-                <div className="absolute text-[9px] text-gray-700 pointer-events-none" style={{ left: 6, top: TICK_Y + 16 }}>
+                <div className="absolute text-xs text-gray-300 pointer-events-none" style={{ left: 6, top: dynamicTickY + 16 }}>
                   {project.startDate ? formatDate(project.startDate) : 'Today'}
                 </div>
-                <div className="absolute text-[9px] text-gray-700 pointer-events-none text-right" style={{ right: 0, top: TICK_Y + 16 }}>
+                <div className="absolute text-xs text-gray-300 pointer-events-none text-right" style={{ right: 0, top: dynamicTickY + 16 }}>
                   {isOngoing ? '∞ Rolling' : formatDate(project.projectedEndDate)}
                 </div>
 
@@ -578,32 +566,32 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
           <div className="flex items-center flex-wrap gap-x-5 gap-y-1.5 px-6 py-4 border-t border-white/[0.05]">
             <div className="flex items-center gap-2">
               <div className="h-[3px] w-6 rounded-full bg-gradient-to-r from-intelligence-cyan to-blue-500" />
-              <span className="text-[10px] text-gray-600">Elapsed</span>
+              <span className="text-sm text-white">Elapsed</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="size-2 rounded-full bg-intelligence-cyan shadow-[0_0_4px_rgba(103,232,249,0.6)]" />
-              <span className="text-[10px] text-gray-600">Today</span>
+              <span className="text-sm text-white">Today</span>
             </div>
             {milestones.length > 0 && (
               <>
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="size-3 text-green-400" />
-                  <span className="text-[10px] text-gray-600">Completed</span>
+                  <span className="text-sm text-white">Completed</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Circle className="size-3 text-gray-600" />
-                  <span className="text-[10px] text-gray-600">Milestone</span>
+                  <Circle className="size-3 text-gray-500" />
+                  <span className="text-sm text-white">Milestone</span>
                 </div>
               </>
             )}
             {sprintBands.length > 0 && (
               <div className="flex items-center gap-2">
-                <Image src="/orcaclubpro.png" alt="" width={12} height={12} className="opacity-40" />
-                <span className="text-[10px] text-gray-600">Sprint</span>
+                <Image src="/orcaclubpro.png" alt="" width={12} height={12} className="opacity-50" />
+                <span className="text-sm text-white">Sprint</span>
               </div>
             )}
             {milestones.length > 0 && !readOnly && (
-              <span className="text-[10px] text-gray-700 ml-auto hidden sm:block">Click milestone to edit</span>
+              <span className="text-sm text-gray-300 ml-auto hidden sm:block">Click milestone to edit</span>
             )}
           </div>
 
@@ -612,9 +600,9 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
 
       {/* ── Active Sprints ────────────────────────────────────────────────── */}
       {currentSprints.length > 0 && (
-        <div className="space-y-4">
-          <p className="text-[10px] tracking-[0.3em] uppercase text-gray-600 font-medium">Active Sprints</p>
-          <div className="space-y-3">
+        <div className="space-y-6">
+          <p className="text-sm tracking-[0.2em] uppercase text-white font-bold">Active Sprints</p>
+          <div className="space-y-5">
             {currentSprints.map((sprint) => {
               const cfg = getSprintCfg(sprint.status)
               const sprintTasks = tasks.filter((t) => {
@@ -628,26 +616,35 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
               const daysLeft = getDaysUntil(sprint.endDate)
 
               return (
-                <div key={sprint.id} className={cn('rounded-xl border p-5 space-y-4', cfg.bg, cfg.border)}>
+                <Link
+                  key={sprint.id}
+                  href={username ? `/u/${username}/projects/${project.id}/sprints/${sprint.id}` : '#'}
+                  className={cn(
+                    'group block rounded-xl border p-7 space-y-5',
+                    'transition-all duration-200',
+                    'hover:-translate-y-px hover:shadow-lg hover:shadow-black/30 hover:border-white/[0.14]',
+                    cfg.bg, cfg.border,
+                  )}
+                >
                   {/* Sprint header */}
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1.5">
                         <div className={cn('size-1.5 rounded-full shrink-0', cfg.dot)} />
-                        <span className={cn('text-[10px] font-semibold tracking-wider uppercase', cfg.text)}>
+                        <span className={cn('text-sm font-semibold tracking-wider uppercase', cfg.text)}>
                           {cfg.label}
                         </span>
                       </div>
-                      <p className="text-base font-semibold text-white leading-snug">{sprint.name}</p>
+                      <p className="text-xl font-bold text-white leading-snug">{sprint.name}</p>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="text-xs text-gray-500">
+                      <p className="text-sm text-white">
                         {formatDate(sprint.startDate)} → {formatDate(sprint.endDate)}
                       </p>
                       {daysLeft !== null && (
                         <p className={cn(
                           'text-xs mt-0.5 tabular-nums',
-                          daysLeft < 0 ? 'text-red-400' : daysLeft < 7 ? 'text-orange-400' : 'text-gray-600',
+                          daysLeft < 0 ? 'text-red-400' : daysLeft < 7 ? 'text-orange-400' : 'text-white',
                         )}>
                           {daysLeft < 0 ? `${Math.abs(daysLeft)}d overdue` : `${daysLeft}d left`}
                         </p>
@@ -657,7 +654,7 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
 
                   {/* Goal description */}
                   {(sprint.goalDescription || sprint.description) && (
-                    <p className="text-sm text-gray-400 leading-relaxed -mt-1">
+                    <p className="text-sm text-gray-300 leading-relaxed -mt-1">
                       {sprint.goalDescription || sprint.description}
                     </p>
                   )}
@@ -666,8 +663,8 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
                   {totalCount > 0 && (
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-gray-600 tracking-wide">Progress</span>
-                        <span className="text-[10px] text-gray-500">{completedCount}/{totalCount} tasks</span>
+                        <span className="text-sm text-gray-200 tracking-wide">Progress</span>
+                        <span className="text-sm text-white font-medium">{completedCount}/{totalCount} tasks</span>
                       </div>
                       <div className="h-1.5 rounded-full bg-white/[0.06]">
                         <div
@@ -691,13 +688,13 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
                           <div key={task.id} className="flex items-center gap-2.5">
                             <div className={cn('size-1.5 rounded-full shrink-0', dot)} />
                             <span className={cn(
-                              'text-xs flex-1 min-w-0 truncate',
-                              ts === 'completed' ? 'text-gray-600 line-through decoration-gray-700' : 'text-gray-400',
+                              'text-sm flex-1 min-w-0 truncate',
+                              ts === 'completed' ? 'text-gray-500 line-through decoration-gray-600' : 'text-white',
                             )}>
                               {task.title}
                             </span>
                             {task.dueDate && (
-                              <span className="text-[10px] text-gray-700 shrink-0 tabular-nums">
+                              <span className="text-sm text-gray-300 shrink-0 tabular-nums">
                                 {formatDate(task.dueDate)}
                               </span>
                             )}
@@ -705,11 +702,18 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
                         )
                       })}
                       {sprintTasks.length > 6 && (
-                        <p className="text-[10px] text-gray-600 pl-4">+{sprintTasks.length - 6} more</p>
+                        <p className="text-sm text-gray-300 pl-4">+{sprintTasks.length - 6} more</p>
                       )}
                     </div>
                   )}
-                </div>
+
+                  {/* Clickable hint */}
+                  <div className="flex justify-end pt-1 border-t border-white/[0.04] -mb-1">
+                    <span className="flex items-center gap-1 text-xs text-white/20 group-hover:text-white/60 transition-colors duration-200">
+                      View sprint <ArrowRight className="size-3 transition-transform duration-200 group-hover:translate-x-0.5" />
+                    </span>
+                  </div>
+                </Link>
               )
             })}
           </div>
@@ -719,7 +723,7 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
       {/* ── Milestone list ────────────────────────────────────────────────── */}
       {milestones.length > 0 && (
         <div className="space-y-1">
-          <p className="text-[10px] tracking-[0.3em] uppercase text-gray-600 font-medium mb-5">Milestones</p>
+          <p className="text-sm tracking-[0.2em] uppercase text-white font-bold mb-6">Milestones</p>
           <div className="space-y-0">
             {milestones.map((m, i) => {
               const isNext = i === nextMilestoneIdx
@@ -753,27 +757,27 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
                     <div className="flex items-start justify-between gap-3 flex-wrap">
                       <div className="min-w-0 flex-1">
                         <p className={cn(
-                          'text-sm font-medium leading-snug',
-                          m.completed ? 'text-gray-500 line-through decoration-gray-700' : isNext ? 'text-white' : 'text-gray-400',
+                          'text-base font-semibold leading-snug',
+                          m.completed ? 'text-gray-500 line-through decoration-gray-700' : isNext ? 'text-white' : 'text-gray-200',
                         )}>
                           {m.title}
                         </p>
                         {m.description && (
-                          <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">{m.description}</p>
+                          <p className="text-sm text-gray-200 mt-0.5 leading-relaxed">{m.description}</p>
                         )}
                         {isNext && (
-                          <p className="text-[10px] tracking-[0.2em] uppercase text-intelligence-cyan/50 mt-1.5">Next up</p>
+                          <p className="text-xs tracking-[0.2em] uppercase text-intelligence-cyan mt-1.5">Next up</p>
                         )}
                       </div>
 
                       <div className="flex items-center gap-2 shrink-0">
-                        <span className={cn('text-xs tabular-nums', m.completed ? 'text-gray-700' : isNext ? 'text-intelligence-cyan/70' : 'text-gray-600')}>
+                        <span className={cn('text-xs tabular-nums', m.completed ? 'text-gray-400' : isNext ? 'text-intelligence-cyan/90' : 'text-gray-300')}>
                           {formatDate(m.date)}
                         </span>
                         {!readOnly && (
                           <button
                             onClick={() => setEditState({ index: i, milestone: m })}
-                            className="p-1 rounded-md text-gray-700 hover:text-gray-300 hover:bg-white/[0.05] transition-colors"
+                            className="p-1 rounded-md text-gray-400 hover:text-white hover:bg-white/[0.05] transition-colors"
                             title="Edit milestone"
                           >
                             <Pencil className="size-3" />
@@ -793,13 +797,67 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
       {milestones.length === 0 && !readOnly && hasTimeline && (
         <button
           onClick={() => setMilestoneSheetOpen(true)}
-          className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-400 transition-colors group"
+          className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-200 transition-colors group"
         >
           <div className="size-5 rounded-full border border-dashed border-white/[0.12] group-hover:border-white/20 transition-colors flex items-center justify-center">
-            <Flag className="size-2.5 text-gray-700 group-hover:text-gray-500" />
+            <Flag className="size-2.5 text-gray-400 group-hover:text-gray-200" />
           </div>
           Add a milestone to track project progress
         </button>
+      )}
+
+      {/* ── Fixed-position sprint tooltip ─────────────────────────────── */}
+      {fixedTooltip && (
+        <div
+          className="fixed pointer-events-none z-[9999]"
+          style={{
+            left: fixedTooltip.x,
+            top: fixedTooltip.y,
+            transform: 'translate(-50%, calc(-100% - 10px))',
+          }}
+        >
+          <div
+            className="animate-in fade-in slide-in-from-bottom-1 duration-150 bg-[#0c0c0c] border border-white/[0.12] rounded-xl overflow-hidden shadow-2xl text-left"
+            style={{ minWidth: 210, maxWidth: 280 }}
+          >
+            <div className={cn('h-0.5 w-full', fixedTooltip.sprint.cfg.dot)} />
+            <div className="px-4 py-3 space-y-1.5">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-semibold text-white leading-snug truncate">{fixedTooltip.sprint.name}</p>
+                <span className={cn(
+                  'shrink-0 text-[9px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded-full border',
+                  fixedTooltip.sprint.cfg.text, fixedTooltip.sprint.cfg.bg, fixedTooltip.sprint.cfg.border,
+                )}>
+                  {fixedTooltip.sprint.cfg.label}
+                </span>
+              </div>
+              <p className="text-xs text-gray-300">
+                {formatDate(fixedTooltip.sprint.startDate)} → {formatDate(fixedTooltip.sprint.endDate)}
+              </p>
+              {(fixedTooltip.sprint.goalDescription || fixedTooltip.sprint.description) && (
+                <p className="text-sm text-white leading-relaxed border-t border-white/[0.06] pt-2 mt-1">
+                  {fixedTooltip.sprint.goalDescription || fixedTooltip.sprint.description}
+                </p>
+              )}
+              {(fixedTooltip.sprint.totalTasksCount ?? 0) > 0 && (
+                <div className="flex items-center gap-2 border-t border-white/[0.06] pt-2 mt-1">
+                  <div className="flex-1 h-1 rounded-full bg-white/[0.08]">
+                    <div
+                      className={cn('h-full rounded-full transition-all', fixedTooltip.sprint.cfg.dot)}
+                      style={{ width: `${((fixedTooltip.sprint.completedTasksCount ?? 0) / (fixedTooltip.sprint.totalTasksCount ?? 1)) * 100}%` }}
+                    />
+                  </div>
+                  <span className="text-sm text-gray-200 whitespace-nowrap">
+                    {fixedTooltip.sprint.completedTasksCount ?? 0}/{fixedTooltip.sprint.totalTasksCount} tasks
+                  </span>
+                </div>
+              )}
+              {username && (
+                <p className="text-[10px] text-intelligence-cyan/50 pt-1">Click to open sprint →</p>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ── Sheets ───────────────────────────────────────────────────────── */}

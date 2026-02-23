@@ -124,7 +124,7 @@ export function AccountOverview({
               <h3 className="font-semibold text-white mb-1.5 text-base">
                 Payment Due
               </h3>
-              <p className="text-sm text-gray-400 leading-relaxed">
+              <p className="text-sm text-gray-200 leading-relaxed">
                 You have an outstanding balance of{' '}
                 <span className="font-semibold text-yellow-400">
                   {formatCurrency(account.accountBalance || 0)}
@@ -165,14 +165,14 @@ export function AccountOverview({
                   )}
                 </div>
                 <div className="space-y-2">
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <p className="text-xs font-semibold text-gray-300 uppercase tracking-wider">
                     {stat.label}
                   </p>
                   <p className={`text-3xl font-bold ${stat.color} tracking-tight`}>
                     {stat.value}
                   </p>
                   <div className="flex items-center justify-between">
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-300">
                       {stat.description}
                     </p>
                     {/* Show sparkline for balance card */}
@@ -210,7 +210,7 @@ export function AccountOverview({
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               <div className="space-y-1.5">
-                <p className="text-xs text-gray-500 uppercase tracking-wider font-medium">
+                <p className="text-xs text-gray-300 uppercase tracking-wider font-semibold">
                   Projects
                 </p>
                 <p className="text-2xl font-bold text-white">
@@ -218,7 +218,7 @@ export function AccountOverview({
                 </p>
               </div>
               <div className="space-y-1.5">
-                <p className="text-xs text-gray-500 uppercase tracking-wider font-medium">
+                <p className="text-xs text-gray-300 uppercase tracking-wider font-semibold">
                   Active
                 </p>
                 <p className="text-2xl font-bold text-green-400">
@@ -226,7 +226,7 @@ export function AccountOverview({
                 </p>
               </div>
               <div className="space-y-1.5">
-                <p className="text-xs text-gray-500 uppercase tracking-wider font-medium">
+                <p className="text-xs text-gray-300 uppercase tracking-wider font-semibold">
                   Completed
                 </p>
                 <p className="text-2xl font-bold text-blue-400">
@@ -235,7 +235,7 @@ export function AccountOverview({
                 </p>
               </div>
               <div className="space-y-1.5">
-                <p className="text-xs text-gray-500 uppercase tracking-wider font-medium">
+                <p className="text-xs text-gray-300 uppercase tracking-wider font-semibold">
                   Total Orders
                 </p>
                 <p className="text-2xl font-bold text-intelligence-cyan">
@@ -247,7 +247,7 @@ export function AccountOverview({
             {/* Order Status Distribution */}
             {orders.length > 0 && (
               <div className="pt-4 border-t border-white/[0.06]">
-                <p className="text-xs text-gray-500 uppercase tracking-wider font-medium mb-3">
+                <p className="text-xs text-gray-300 uppercase tracking-wider font-semibold mb-3">
                   Order Status Distribution
                 </p>
                 <MiniBar segments={orderDistribution} height={6} showLabels={true} />

@@ -102,11 +102,11 @@ function SidebarTask({ task }: { task: Task }) {
   return (
     <div className="flex items-center gap-2 px-2 py-[5px] rounded hover:bg-white/[0.03] transition-colors">
       <span className={`shrink-0 size-1.5 rounded-full ${STATUS_DOT[task.status]}`} />
-      <span className="flex-1 min-w-0 text-[11px] text-gray-400 truncate leading-tight">
+      <span className="flex-1 min-w-0 text-xs text-white truncate leading-tight">
         {task.title}
       </span>
       {over && <span className="shrink-0 size-1 rounded-full bg-red-400/70" />}
-      <span className={`shrink-0 text-[9px] font-bold px-1 rounded border leading-4 ${pc.color} ${pc.bg}`}>
+      <span className={`shrink-0 text-[10px] font-bold px-1 rounded border leading-4 ${pc.color} ${pc.bg}`}>
         {pc.label}
       </span>
     </div>
@@ -135,7 +135,7 @@ function TaskCard({ task, updating, onToggle, readOnly }: TaskCardProps) {
       } ${done ? 'opacity-55' : ''}`}
     >
       {readOnly ? (
-        <span className="shrink-0 mt-[3px] size-4 flex items-center justify-center">
+        <span className="shrink-0 mt-[3px] size-5 flex items-center justify-center">
           <span className={`size-1.5 rounded-full ${STATUS_DOT[task.status]}`} />
         </span>
       ) : (
@@ -162,7 +162,7 @@ function TaskCard({ task, updating, onToggle, readOnly }: TaskCardProps) {
       <div className="flex-1 min-w-0">
         <p
           className={`text-sm leading-snug ${
-            done ? 'line-through text-gray-600' : 'text-gray-200'
+            done ? 'line-through text-gray-500' : 'text-white'
           }`}
         >
           {task.title}
@@ -174,7 +174,7 @@ function TaskCard({ task, updating, onToggle, readOnly }: TaskCardProps) {
             {pc.label}
           </span>
           {task.dueDate && (
-            <span className={`text-[10px] ${over ? 'text-red-400' : 'text-gray-600'}`}>
+            <span className={`text-xs ${over ? 'text-red-400' : 'text-gray-400'}`}>
               {fmtDate(task.dueDate)}
               {over ? ' · overdue' : ''}
             </span>
@@ -228,13 +228,13 @@ function SprintColumn({
   return (
     <div className={`flex-1 flex flex-col min-w-0 ${bg}`}>
       {/* column header */}
-      <div className="px-4 pt-4 pb-3 border-b border-white/[0.06] shrink-0">
+      <div className="px-5 pt-5 pb-4 border-b border-white/[0.06] shrink-0">
         <div className="flex items-center justify-between mb-2.5">
-          <span className="text-[9px] font-bold text-gray-700 uppercase tracking-[0.15em]">
+          <span className="text-xs font-bold text-white uppercase tracking-[0.12em]">
             {label}
           </span>
           {sCfg && (
-            <span className={`text-[10px] font-medium ${sCfg.text}`}>{sCfg.label}</span>
+            <span className={`text-xs font-medium ${sCfg.text}`}>{sCfg.label}</span>
           )}
         </div>
         <Select
@@ -265,7 +265,7 @@ function SprintColumn({
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <span className="text-[10px] text-gray-600 shrink-0 tabular-nums">
+            <span className="text-sm text-white font-semibold shrink-0 tabular-nums">
               {completedCount}/{columnTasks.length}
             </span>
           </div>
@@ -276,7 +276,7 @@ function SprintColumn({
       <div className="flex-1 overflow-y-auto py-2">
         {columnTasks.length === 0 ? (
           <div className="flex items-center justify-center h-32 px-4">
-            <p className="text-xs text-gray-700 text-center">
+            <p className="text-sm text-gray-300 text-center">
               {selectedSprintId === null
                 ? 'No unassigned tasks'
                 : sprint
@@ -290,10 +290,10 @@ function SprintColumn({
               <div key={status}>
                 <div className="flex items-center gap-1.5 px-3 py-1.5">
                   <span className={`size-1 rounded-full ${STATUS_DOT[status]}`} />
-                  <span className="text-[9px] font-semibold text-gray-600 uppercase tracking-[0.12em]">
+                  <span className="text-xs font-bold text-white uppercase tracking-[0.08em]">
                     {STATUS_LABEL[status]}
                   </span>
-                  <span className="text-[9px] text-gray-700">· {tasks.length}</span>
+                  <span className="text-xs text-gray-300">· {tasks.length}</span>
                 </div>
                 {tasks.map((task) => (
                   <TaskCard
@@ -366,7 +366,7 @@ function CreateTaskSheet({ projectId, sprints, open, onOpenChange }: CreateTaskS
       <SheetContent className="bg-black/95 border-white/[0.08] w-full sm:max-w-md overflow-y-auto">
         <SheetHeader className="pb-0">
           <SheetTitle className="text-lg font-semibold text-white">New Task</SheetTitle>
-          <SheetDescription className="text-sm text-gray-500">
+          <SheetDescription className="text-sm text-gray-200">
             Add a task to this project.
           </SheetDescription>
         </SheetHeader>
@@ -528,10 +528,10 @@ export function TasksTab({ tasks, sprints, projectId, readOnly }: TasksTabProps)
       style={{ height: 'calc(100vh - 12rem)' }}
     >
       {/* top bar */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/[0.06] bg-[#0d0d0d] shrink-0">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/[0.06] bg-[#0d0d0d] shrink-0">
+        <div className="flex items-center gap-4">
           <h2 className="text-sm font-semibold text-white">Tasks</h2>
-          <span className="text-xs text-gray-600">
+          <span className="text-sm text-gray-200">
             {tasks.length} total · {completedCount} done
           </span>
         </div>
@@ -549,17 +549,17 @@ export function TasksTab({ tasks, sprints, projectId, readOnly }: TasksTabProps)
       {/* three-panel layout */}
       <div className="flex-1 flex divide-x divide-white/[0.06] min-h-0 overflow-hidden">
         {/* left sidebar — active sprints overview */}
-        <aside className="w-52 shrink-0 bg-[#0c0c0c] flex flex-col">
-          <div className="flex items-center gap-2 px-3 py-2.5 border-b border-white/[0.06] shrink-0">
+        <aside className="w-60 shrink-0 bg-[#0c0c0c] flex flex-col">
+          <div className="flex items-center gap-2 px-4 py-3.5 border-b border-white/[0.06] shrink-0">
             <Zap className="size-3 text-intelligence-cyan shrink-0" />
-            <span className="text-[9px] font-bold text-gray-600 uppercase tracking-[0.12em]">
+            <span className="text-xs font-bold text-white uppercase tracking-[0.08em]">
               Active Sprints
             </span>
           </div>
           <div className="flex-1 overflow-y-auto">
             {activeSprints.length === 0 ? (
               <div className="flex items-center justify-center h-32 px-4">
-                <p className="text-xs text-gray-700 text-center">No active sprints</p>
+                <p className="text-sm text-gray-200 text-center">No active sprints</p>
               </div>
             ) : (
               <div className="py-2">
@@ -572,7 +572,7 @@ export function TasksTab({ tasks, sprints, projectId, readOnly }: TasksTabProps)
                     <div key={sprint.id} className="mb-4">
                       <div className="px-3 py-1.5">
                         <div className="flex items-center justify-between gap-1 mb-1.5">
-                          <span className="text-xs font-medium text-white truncate leading-tight">
+                          <span className="text-sm font-semibold text-white truncate leading-tight">
                             {sprint.name}
                           </span>
                           <span className={`shrink-0 text-[9px] font-bold ${cfg.text}`}>
@@ -587,7 +587,7 @@ export function TasksTab({ tasks, sprints, projectId, readOnly }: TasksTabProps)
                                 style={{ width: `${pct}%` }}
                               />
                             </div>
-                            <span className="text-[9px] text-gray-700 shrink-0 tabular-nums">
+                            <span className="text-xs text-gray-300 shrink-0 tabular-nums">
                               {pct}%
                             </span>
                           </div>
@@ -595,14 +595,14 @@ export function TasksTab({ tasks, sprints, projectId, readOnly }: TasksTabProps)
                       </div>
                       <div className="px-1">
                         {sTasks.length === 0 ? (
-                          <p className="text-[10px] text-gray-700 px-2 py-1">No tasks</p>
+                          <p className="text-xs text-gray-300 px-2 py-1">No tasks</p>
                         ) : (
                           <>
                             {sTasks.slice(0, 10).map((t) => (
                               <SidebarTask key={t.id} task={t} />
                             ))}
                             {sTasks.length > 10 && (
-                              <p className="text-[10px] text-gray-700 px-2 py-1">
+                              <p className="text-xs text-gray-300 px-2 py-1">
                                 +{sTasks.length - 10} more
                               </p>
                             )}

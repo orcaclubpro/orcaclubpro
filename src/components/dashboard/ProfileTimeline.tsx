@@ -3,21 +3,21 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { CheckCircle2, Circle, Calendar, ArrowRight, Flag } from 'lucide-react'
 import Image from 'next/image'
+import Link from 'next/link'
 import type { SerializedProject } from './ProjectsCarousel'
 import { formatDate } from '@/lib/utils/dateUtils'
 import { cn } from '@/lib/utils'
 
-// ── Timeline layout constants (px from top of inner track div) ──────────────
-const LABEL_Y   = 2
-const ICON_Y    = 62
-const ICON_SIZE = 20
-const STEM_TOP  = ICON_Y + ICON_SIZE   // = 82
-const TRACK_Y   = 120
-const TRACK_H   = 3
-const SPRINT_TOP = TRACK_Y + TRACK_H + 4  // = 127
-const SPRINT_H   = 52
-const TICK_Y     = SPRINT_TOP + SPRINT_H + 10  // = 189
-const INNER_H    = TICK_Y + 28                  // = 217
+// ── Timeline layout constants ────────────────────────────────────────────────
+const LABEL_Y    = 2
+const ICON_Y     = 62
+const ICON_SIZE  = 20
+const STEM_TOP   = ICON_Y + ICON_SIZE   // = 82
+const TRACK_Y    = 120
+const TRACK_H    = 3
+const SPRINT_TOP  = TRACK_Y + TRACK_H + 4  // = 127
+const SPRINT_H    = 52
+const SPRINT_GAP  = 5   // vertical gap between sprint rows
 
 const PX_PER_DAY = 10
 
@@ -28,7 +28,26 @@ const SPRINT_CFG = {
   finished:      { label: 'Finished', dot: 'bg-green-400',         bg: 'bg-green-400/[0.06]',         border: 'border-green-400/[0.15]',         text: 'text-green-400'         },
 } as const
 
-function getSprintCfg(s: string | null | undefined) {
+type SprintCfg = typeof SPRINT_CFG[keyof typeof SPRINT_CFG]
+
+type SprintBand = {
+  id: string
+  projectId: string
+  name: string
+  status: 'pending' | 'in-progress' | 'delayed' | 'finished'
+  startDate: string
+  endDate: string
+  description: string | null
+  goalDescription: string | null
+  completedTasksCount: number
+  totalTasksCount: number
+  leftPx: number
+  widthPx: number
+  cfg: SprintCfg
+  row: number
+}
+
+function getSprintCfg(s: string | null | undefined): SprintCfg {
   return SPRINT_CFG[(s as keyof typeof SPRINT_CFG)] ?? SPRINT_CFG.pending
 }
 
@@ -36,15 +55,13 @@ function fmtMonth(d: Date) {
   return d.toLocaleDateString('en-US', { month: 'short', ...(d.getMonth() === 0 ? { year: '2-digit' } : {}) })
 }
 
-export function ProfileTimeline({ project }: { project: SerializedProject }) {
+export function ProfileTimeline({ project, username }: { project: SerializedProject; username: string }) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [hoveredMilestone, setHoveredMilestone] = useState<number | null>(null)
-  const [hoveredSprint, setHoveredSprint]       = useState<string | null>(null)
-  const [clickedSprint, setClickedSprint]       = useState<string | null>(null)
+  const [fixedTooltip, setFixedTooltip] = useState<{ sprint: SprintBand; x: number; y: number } | null>(null)
 
   const sprints = project.sprints
 
-  // Milestones with a date — used on the timeline canvas
   const datedMilestones = useMemo(
     () =>
       [...(project.milestones || [])]
@@ -53,7 +70,6 @@ export function ProfileTimeline({ project }: { project: SerializedProject }) {
     [project.milestones],
   )
 
-  // All milestones sorted — used in the list below
   const allMilestones = useMemo(
     () =>
       [...(project.milestones || [])].sort((a, b) => {
@@ -68,7 +84,6 @@ export function ProfileTimeline({ project }: { project: SerializedProject }) {
   const nextMilestoneIdx = allMilestones.findIndex((m) => !m.completed)
 
   // ── Timeline math ─────────────────────────────────────────────────────────
-  // `endDate` here maps to Payload's `projectedEndDate` (renamed at serialization time)
   const isOngoing   = !project.endDate
   const hasTimeline = !!project.startDate || isOngoing
 
@@ -79,7 +94,6 @@ export function ProfileTimeline({ project }: { project: SerializedProject }) {
   const tlEnd = (() => {
     if (!hasTimeline) return 0
     if (!isOngoing)   return new Date(project.endDate!).getTime()
-    // Ongoing: extend to cover furthest sprint/milestone + 14d buffer
     let end = Date.now()
     sprints.forEach((s) => { if (s.endDate) end = Math.max(end, new Date(s.endDate).getTime()) })
     project.milestones.forEach((m) => { if (m.date) end = Math.max(end, new Date(m.date).getTime()) })
@@ -103,20 +117,50 @@ export function ProfileTimeline({ project }: { project: SerializedProject }) {
     return ((now - tlStart) / tlDur) * timelineWidth
   }, [hasTimeline, tlStart, tlEnd, tlDur, timelineWidth])
 
+  // ── Sprint bands with multi-row layout ────────────────────────────────────
+  const sprintBands = useMemo((): SprintBand[] => {
+    if (!hasTimeline || tlDur <= 0) return []
+    const raw = sprints
+      .filter((s) => s.startDate && s.endDate)
+      .map((s) => {
+        const leftPx  = toPx(s.startDate)
+        const rightPx = toPx(s.endDate)
+        return {
+          ...s,
+          leftPx,
+          widthPx: Math.max(4, rightPx - leftPx),
+          cfg: getSprintCfg(s.status),
+          row: 0,
+        } as SprintBand
+      })
+      .sort((a, b) => a.leftPx - b.leftPx)
+
+    // Greedy row assignment — prevents horizontal overlap
+    const rowEnds: number[] = []
+    raw.forEach((band) => {
+      let row = rowEnds.findIndex((end) => end <= band.leftPx)
+      if (row === -1) row = rowEnds.length
+      rowEnds[row] = band.leftPx + band.widthPx
+      band.row = row
+    })
+    return raw
+  }, [sprints, hasTimeline, tlDur, timelineWidth]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const sprintRowCount = useMemo(
+    () => (sprintBands.length === 0 ? 1 : Math.max(...sprintBands.map((b) => b.row + 1))),
+    [sprintBands],
+  )
+
+  // Dynamic heights based on actual number of sprint rows
+  const dynamicTickY  = SPRINT_TOP + sprintRowCount * (SPRINT_H + SPRINT_GAP) + 6
+  const dynamicInnerH = dynamicTickY + 28
+
   // Scroll to today on mount
   useEffect(() => {
     const el = scrollRef.current
     if (!el || todayPx <= 0) return
     el.scrollLeft = Math.max(0, todayPx - el.clientWidth * 0.35)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Close clicked sprint tooltip when clicking outside
-  useEffect(() => {
-    if (!clickedSprint) return
-    const handler = () => setClickedSprint(null)
-    document.addEventListener('click', handler)
-    return () => document.removeEventListener('click', handler)
-  }, [clickedSprint])
 
   // Month tick marks
   const monthTicks = useMemo(() => {
@@ -130,16 +174,6 @@ export function ProfileTimeline({ project }: { project: SerializedProject }) {
     }
     return ticks
   }, [hasTimeline, tlStart, tlEnd]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Sprint bands
-  const sprintBands = useMemo(() => {
-    if (!hasTimeline || tlDur <= 0) return []
-    return sprints.filter((s) => s.startDate && s.endDate).map((s) => {
-      const leftPx  = toPx(s.startDate)
-      const rightPx = toPx(s.endDate)
-      return { ...s, leftPx, widthPx: Math.max(4, rightPx - leftPx), cfg: getSprintCfg(s.status) }
-    })
-  }, [sprints, hasTimeline]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="space-y-8">
@@ -156,7 +190,7 @@ export function ProfileTimeline({ project }: { project: SerializedProject }) {
       ) : (
 
         /* ── Scrollable timeline card ────────────────────────────────────── */
-        <div className="relative rounded-xl border border-white/[0.08] bg-[#080808] overflow-hidden">
+        <div className="relative rounded-xl border border-white/[0.08] bg-[#080808]">
 
           {/* Ambient glow */}
           <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-intelligence-cyan/15 to-transparent pointer-events-none" />
@@ -198,8 +232,8 @@ export function ProfileTimeline({ project }: { project: SerializedProject }) {
             )}
           </div>
 
-          {/* Scroll wrapper with edge fade */}
-          <div className="relative">
+          {/* Scroll wrapper — overflow-x clips canvas; no overflow-hidden on card so tooltips escape */}
+          <div className="relative overflow-x-hidden">
             <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-[#080808] to-transparent z-30 pointer-events-none" />
             <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-[#080808] to-transparent z-30 pointer-events-none" />
 
@@ -210,34 +244,35 @@ export function ProfileTimeline({ project }: { project: SerializedProject }) {
             >
               {/* Inner track canvas */}
               <div
-                className="relative select-none"
-                style={{ width: timelineWidth, height: INNER_H, minWidth: '100%' }}
+                className="relative select-none overflow-visible"
+                style={{ width: timelineWidth, height: dynamicInnerH, minWidth: '100%' }}
               >
 
                 {/* ── Sprint bands ─────────────────────────────────────────── */}
                 {sprintBands.map((sprint) => {
-                  const isHov     = hoveredSprint === sprint.id
-                  const isClicked = clickedSprint === sprint.id
-                  const showInfo  = isHov || isClicked
+                  const sprintTop = SPRINT_TOP + sprint.row * (SPRINT_H + SPRINT_GAP)
                   return (
-                    <div
+                    <Link
                       key={sprint.id}
-                      className="absolute transition-all duration-200 cursor-pointer"
-                      style={{ left: sprint.leftPx, top: SPRINT_TOP, width: sprint.widthPx, height: SPRINT_H }}
-                      onMouseEnter={() => setHoveredSprint(sprint.id)}
-                      onMouseLeave={() => setHoveredSprint(null)}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setClickedSprint(clickedSprint === sprint.id ? null : sprint.id)
+                      href={`/u/${username}/projects/${sprint.projectId}/sprints/${sprint.id}`}
+                      className="absolute transition-all duration-200 cursor-pointer group"
+                      style={{ left: sprint.leftPx, top: sprintTop, width: sprint.widthPx, height: SPRINT_H }}
+                      onMouseEnter={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect()
+                        setFixedTooltip({ sprint, x: rect.left + rect.width / 2, y: rect.top })
                       }}
+                      onMouseLeave={() => setFixedTooltip(null)}
                     >
+                      {/* Background tint matching status */}
+                      <div className={cn('absolute inset-0 rounded-sm opacity-30', sprint.cfg.bg)} />
+
                       {/* ORCACLUB logo */}
                       <Image
                         src="/orcaclubpro.png"
                         alt=""
                         width={SPRINT_H - 8}
                         height={SPRINT_H - 8}
-                        className="absolute inset-0 m-auto object-contain pointer-events-none"
+                        className="absolute inset-0 m-auto object-contain pointer-events-none group-hover:opacity-80 transition-opacity"
                         aria-hidden="true"
                       />
 
@@ -245,57 +280,15 @@ export function ProfileTimeline({ project }: { project: SerializedProject }) {
                       {sprint.widthPx > 54 && (
                         <div className="absolute top-2 left-2.5 right-2 flex items-center gap-1.5">
                           <div className={cn('size-1.5 rounded-full shrink-0', sprint.cfg.dot)} />
-                          <span className={cn('text-[10px] font-medium truncate', sprint.cfg.text)}
-                            style={{ maxWidth: sprint.widthPx - 28 }}>
+                          <span
+                            className={cn('text-[10px] font-medium truncate', sprint.cfg.text)}
+                            style={{ maxWidth: sprint.widthPx - 28 }}
+                          >
                             {sprint.name}
                           </span>
                         </div>
                       )}
-
-                      {/* Tooltip */}
-                      {showInfo && (
-                        <div
-                          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2.5 z-50 pointer-events-none"
-                          style={{ minWidth: 210, maxWidth: 280 }}
-                        >
-                          <div className="animate-in fade-in slide-in-from-bottom-1 duration-150 bg-[#0c0c0c] border border-white/[0.12] rounded-xl overflow-hidden shadow-2xl text-left">
-                            <div className={cn('h-0.5 w-full', sprint.cfg.dot)} />
-                            <div className="px-4 py-3 space-y-1.5">
-                              <div className="flex items-center justify-between gap-2">
-                                <p className="text-sm font-semibold text-white leading-snug truncate">{sprint.name}</p>
-                                <span className={cn(
-                                  'shrink-0 text-[9px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded-full border',
-                                  sprint.cfg.text, sprint.cfg.bg, sprint.cfg.border,
-                                )}>
-                                  {sprint.cfg.label}
-                                </span>
-                              </div>
-                              <p className="text-xs text-gray-500">
-                                {formatDate(sprint.startDate)} → {formatDate(sprint.endDate)}
-                              </p>
-                              {(sprint.goalDescription || sprint.description) && (
-                                <p className="text-xs text-gray-400 leading-relaxed border-t border-white/[0.06] pt-2 mt-1">
-                                  {sprint.goalDescription || sprint.description}
-                                </p>
-                              )}
-                              {(sprint.totalTasksCount ?? 0) > 0 && (
-                                <div className="flex items-center gap-2 border-t border-white/[0.06] pt-2 mt-1">
-                                  <div className="flex-1 h-1 rounded-full bg-white/[0.08]">
-                                    <div
-                                      className={cn('h-full rounded-full transition-all', sprint.cfg.dot)}
-                                      style={{ width: `${((sprint.completedTasksCount ?? 0) / (sprint.totalTasksCount ?? 1)) * 100}%` }}
-                                    />
-                                  </div>
-                                  <span className="text-[10px] text-gray-600 whitespace-nowrap">
-                                    {sprint.completedTasksCount ?? 0}/{sprint.totalTasksCount} tasks
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                    </Link>
                   )
                 })}
 
@@ -321,11 +314,11 @@ export function ProfileTimeline({ project }: { project: SerializedProject }) {
                 {todayPx > 0 && todayPx < timelineWidth && (
                   <div
                     className="absolute pointer-events-none z-20"
-                    style={{ left: todayPx, top: 0, height: INNER_H, transform: 'translateX(-50%)' }}
+                    style={{ left: todayPx, top: 0, height: dynamicInnerH, transform: 'translateX(-50%)' }}
                   >
                     <div
                       className="absolute left-1/2 -translate-x-1/2 w-px"
-                      style={{ top: LABEL_Y, height: INNER_H - LABEL_Y, background: 'linear-gradient(to bottom, rgba(103,232,249,0.4), rgba(103,232,249,0.1), transparent)' }}
+                      style={{ top: LABEL_Y, height: dynamicInnerH - LABEL_Y, background: 'linear-gradient(to bottom, rgba(103,232,249,0.4), rgba(103,232,249,0.1), transparent)' }}
                     />
                     <p className="absolute left-1/2 -translate-x-1/2 text-[8px] tracking-[0.2em] uppercase text-intelligence-cyan/50 font-medium whitespace-nowrap"
                       style={{ top: LABEL_Y }}>
@@ -351,7 +344,7 @@ export function ProfileTimeline({ project }: { project: SerializedProject }) {
                     <div
                       key={m.id || i}
                       className="absolute z-20"
-                      style={{ left: px, top: 0, height: INNER_H, transform: 'translateX(-50%)' }}
+                      style={{ left: px, top: 0, height: dynamicInnerH, transform: 'translateX(-50%)' }}
                       onMouseEnter={() => setHoveredMilestone(i)}
                       onMouseLeave={() => setHoveredMilestone(null)}
                     >
@@ -419,7 +412,7 @@ export function ProfileTimeline({ project }: { project: SerializedProject }) {
                   <div
                     key={tick.px}
                     className="absolute pointer-events-none"
-                    style={{ left: tick.px, top: TICK_Y }}
+                    style={{ left: tick.px, top: dynamicTickY }}
                   >
                     <div className="w-px h-3 bg-white/[0.08] mx-auto" />
                     <p className="text-[8px] text-gray-700 text-center mt-1 whitespace-nowrap -translate-x-1/2">
@@ -429,10 +422,10 @@ export function ProfileTimeline({ project }: { project: SerializedProject }) {
                 ))}
 
                 {/* Start / End date labels */}
-                <div className="absolute text-[9px] text-gray-700 pointer-events-none" style={{ left: 6, top: TICK_Y + 16 }}>
+                <div className="absolute text-[9px] text-gray-700 pointer-events-none" style={{ left: 6, top: dynamicTickY + 16 }}>
                   {project.startDate ? formatDate(project.startDate) : 'Today'}
                 </div>
-                <div className="absolute text-[9px] text-gray-700 pointer-events-none text-right" style={{ right: 0, top: TICK_Y + 16 }}>
+                <div className="absolute text-[9px] text-gray-700 pointer-events-none text-right" style={{ right: 0, top: dynamicTickY + 16 }}>
                   {isOngoing ? '∞ Rolling' : formatDate(project.endDate)}
                 </div>
 
@@ -465,7 +458,7 @@ export function ProfileTimeline({ project }: { project: SerializedProject }) {
             {sprintBands.length > 0 && (
               <div className="flex items-center gap-2">
                 <Image src="/orcaclubpro.png" alt="" width={12} height={12} className="opacity-40" />
-                <span className="text-[10px] text-gray-600">Sprint</span>
+                <span className="text-[10px] text-gray-600">Sprint (click to open)</span>
               </div>
             )}
           </div>
@@ -484,7 +477,6 @@ export function ProfileTimeline({ project }: { project: SerializedProject }) {
 
               return (
                 <div key={m.id || i} className="flex gap-4">
-                  {/* Left: icon + connector */}
                   <div className="flex flex-col items-center shrink-0 w-5">
                     <div className="relative z-10 mt-0.5">
                       {m.completed ? (
@@ -505,7 +497,6 @@ export function ProfileTimeline({ project }: { project: SerializedProject }) {
                     )}
                   </div>
 
-                  {/* Right: content */}
                   <div className={cn('flex-1 min-w-0', !isLast ? 'pb-6' : 'pb-0')}>
                     <div className="flex items-start justify-between gap-3 flex-wrap">
                       <div className="min-w-0 flex-1">
@@ -536,13 +527,63 @@ export function ProfileTimeline({ project }: { project: SerializedProject }) {
         </div>
       )}
 
-      {/* No milestones prompt */}
       {allMilestones.length === 0 && hasTimeline && (
         <div className="flex items-center gap-2 text-sm text-gray-700">
           <div className="size-5 rounded-full border border-dashed border-white/[0.12] flex items-center justify-center shrink-0">
             <Flag className="size-2.5" />
           </div>
           No milestones added yet
+        </div>
+      )}
+
+      {/* ── Fixed-position sprint tooltip (escapes scroll container clipping) ── */}
+      {fixedTooltip && (
+        <div
+          className="fixed pointer-events-none z-[9999]"
+          style={{
+            left: fixedTooltip.x,
+            top: fixedTooltip.y,
+            transform: 'translate(-50%, calc(-100% - 10px))',
+          }}
+        >
+          <div className="animate-in fade-in slide-in-from-bottom-1 duration-150 bg-[#0c0c0c] border border-white/[0.12] rounded-xl overflow-hidden shadow-2xl text-left"
+            style={{ minWidth: 210, maxWidth: 280 }}
+          >
+            <div className={cn('h-0.5 w-full', fixedTooltip.sprint.cfg.dot)} />
+            <div className="px-4 py-3 space-y-1.5">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-semibold text-white leading-snug truncate">{fixedTooltip.sprint.name}</p>
+                <span className={cn(
+                  'shrink-0 text-[9px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded-full border',
+                  fixedTooltip.sprint.cfg.text, fixedTooltip.sprint.cfg.bg, fixedTooltip.sprint.cfg.border,
+                )}>
+                  {fixedTooltip.sprint.cfg.label}
+                </span>
+              </div>
+              <p className="text-xs text-gray-500">
+                {formatDate(fixedTooltip.sprint.startDate)} → {formatDate(fixedTooltip.sprint.endDate)}
+              </p>
+              {(fixedTooltip.sprint.goalDescription || fixedTooltip.sprint.description) && (
+                <p className="text-xs text-gray-400 leading-relaxed border-t border-white/[0.06] pt-2 mt-1">
+                  {fixedTooltip.sprint.goalDescription || fixedTooltip.sprint.description}
+                </p>
+              )}
+              {(fixedTooltip.sprint.totalTasksCount ?? 0) > 0 && (
+                <div className="flex items-center gap-2 border-t border-white/[0.06] pt-2 mt-1">
+                  <div className="flex-1 h-1 rounded-full bg-white/[0.08]">
+                    <div
+                      className={cn('h-full rounded-full transition-all', fixedTooltip.sprint.cfg.dot)}
+                      style={{ width: `${((fixedTooltip.sprint.completedTasksCount ?? 0) / (fixedTooltip.sprint.totalTasksCount ?? 1)) * 100}%` }}
+                    />
+                  </div>
+                  <span className="text-[10px] text-gray-600 whitespace-nowrap">
+                    {fixedTooltip.sprint.completedTasksCount ?? 0}/{fixedTooltip.sprint.totalTasksCount} tasks
+                  </span>
+                </div>
+              )}
+              <p className="text-[10px] text-intelligence-cyan/50 pt-1">Click to open sprint →</p>
+            </div>
+          </div>
         </div>
       )}
 

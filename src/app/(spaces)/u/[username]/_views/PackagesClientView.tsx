@@ -165,7 +165,7 @@ function PackageModal({
           {/* Header */}
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
-              <p className="text-[9px] font-bold tracking-[0.32em] uppercase text-[#67e8f9]/50 mb-2">
+              <p className="text-[9px] font-bold tracking-[0.32em] uppercase text-[#67e8f9]/80 mb-2">
                 Service Package
               </p>
               <h2 className="text-xl font-bold text-white leading-tight">{pkg.name}</h2>
@@ -194,7 +194,7 @@ function PackageModal({
               {oneTime > 0 && (
                 <div>
                   <p className="text-2xl font-bold text-white tabular-nums">{fmt(oneTime)}</p>
-                  <p className="text-[9px] text-gray-600 mt-1 uppercase tracking-[0.18em]">one-time</p>
+                  <p className="text-[9px] text-gray-300 mt-1 uppercase tracking-[0.18em]">one-time</p>
                 </div>
               )}
               {monthly > 0 && (
@@ -203,7 +203,7 @@ function PackageModal({
                     <p className="text-2xl font-bold text-white tabular-nums">{fmt(monthly)}</p>
                     <p className="text-sm text-gray-500">/mo</p>
                   </div>
-                  <p className="text-[9px] text-gray-600 mt-1 uppercase tracking-[0.18em]">monthly</p>
+                  <p className="text-[9px] text-gray-300 mt-1 uppercase tracking-[0.18em]">monthly</p>
                 </div>
               )}
               {annual > 0 && (
@@ -212,7 +212,7 @@ function PackageModal({
                     <p className="text-2xl font-bold text-white tabular-nums">{fmt(annual)}</p>
                     <p className="text-sm text-gray-500">/yr</p>
                   </div>
-                  <p className="text-[9px] text-gray-600 mt-1 uppercase tracking-[0.18em]">annually</p>
+                  <p className="text-[9px] text-gray-300 mt-1 uppercase tracking-[0.18em]">annually</p>
                 </div>
               )}
             </div>
@@ -228,7 +228,7 @@ function PackageModal({
           {/* Included services */}
           {lineItems.length > 0 && (
             <div>
-              <p className="text-[9px] font-bold tracking-[0.25em] uppercase text-gray-500 mb-2.5">
+              <p className="text-[9px] font-bold tracking-[0.25em] uppercase gradient-text mb-2.5">
                 What&apos;s Included &middot; {lineItems.length}
               </p>
               <div className="space-y-1.5">
@@ -251,7 +251,7 @@ function PackageModal({
                           <p className="text-sm font-semibold text-white leading-snug">{item.name}</p>
                           <div className="flex flex-col items-end gap-0.5 shrink-0">
                             {hasDiscount && (
-                              <span className="text-xs text-gray-600 line-through tabular-nums font-mono">
+                              <span className="text-xs text-gray-300 line-through tabular-nums font-mono">
                                 {fmt(baseTotal)}
                               </span>
                             )}
@@ -264,7 +264,7 @@ function PackageModal({
                           </div>
                         </div>
                         {item.description && (
-                          <p className="text-xs text-gray-600 mt-1 leading-relaxed">{item.description}</p>
+                          <p className="text-xs text-gray-300 mt-1 leading-relaxed">{item.description}</p>
                         )}
                       </div>
                     </div>
@@ -333,7 +333,7 @@ function PackageModal({
 
           {/* Empty state */}
           {lineItems.length === 0 && schedule.length === 0 && (
-            <p className="text-xs text-gray-600 italic py-1">
+            <p className="text-xs text-gray-300 italic py-1">
               Your team is still configuring this package. Check back soon.
             </p>
           )}
@@ -518,13 +518,13 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
         {/* Header */}
         <div className="px-6 lg:px-10 pt-8 pb-6 flex items-end justify-between">
           <div>
-            <p className="text-[9px] font-bold tracking-[0.32em] uppercase text-[#67e8f9]/50 mb-1.5">
+            <p className="text-[9px] font-bold tracking-[0.32em] uppercase text-[#67e8f9]/80 mb-1.5">
               Service Packages
             </p>
             <h2 className="text-xl font-bold text-white tracking-tight">Your Packages</h2>
           </div>
           {total > 1 && (
-            <span className="text-sm font-mono text-gray-600 tabular-nums">
+            <span className="text-sm font-mono text-gray-300 tabular-nums">
               {pad(activeIdx + 1)}<span className="text-gray-700 mx-1">/</span>{pad(total)}
             </span>
           )}
@@ -568,7 +568,7 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                     <div className="p-8 lg:p-10">
                       {/* Eyebrow + status */}
                       <div className="flex items-center justify-between mb-8">
-                        <p className="text-[9px] font-bold tracking-[0.32em] uppercase text-[#67e8f9]/50">
+                        <p className="text-[9px] font-bold tracking-[0.32em] uppercase text-[#67e8f9]/80">
                           Service Package
                         </p>
                         {pkg.status && pkg.status !== 'draft' && (
@@ -598,25 +598,25 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                           {oneTime > 0 && (
                             <div>
                               <p className="text-4xl font-bold text-white tabular-nums tracking-tight">{fmt(oneTime)}</p>
-                              <p className="text-[9px] text-gray-600 mt-1.5 uppercase tracking-[0.2em]">one-time</p>
+                              <p className="text-[9px] text-gray-300 mt-1.5 uppercase tracking-[0.2em]">one-time</p>
                             </div>
                           )}
                           {monthly > 0 && (
                             <div>
                               <div className="flex items-baseline gap-1">
                                 <p className="text-4xl font-bold text-white tabular-nums tracking-tight">{fmt(monthly)}</p>
-                                <p className="text-xl text-gray-600 font-normal">/mo</p>
+                                <p className="text-xl text-gray-300 font-normal">/mo</p>
                               </div>
-                              <p className="text-[9px] text-gray-600 mt-1.5 uppercase tracking-[0.2em]">monthly</p>
+                              <p className="text-[9px] text-gray-300 mt-1.5 uppercase tracking-[0.2em]">monthly</p>
                             </div>
                           )}
                           {annual > 0 && (
                             <div>
                               <div className="flex items-baseline gap-1">
                                 <p className="text-4xl font-bold text-white tabular-nums tracking-tight">{fmt(annual)}</p>
-                                <p className="text-xl text-gray-600 font-normal">/yr</p>
+                                <p className="text-xl text-gray-300 font-normal">/yr</p>
                               </div>
-                              <p className="text-[9px] text-gray-600 mt-1.5 uppercase tracking-[0.2em]">annually</p>
+                              <p className="text-[9px] text-gray-300 mt-1.5 uppercase tracking-[0.2em]">annually</p>
                             </div>
                           )}
                         </div>
@@ -760,7 +760,7 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
         {/* ── Package selector strip ────────────────────────────────────────── */}
         {total > 1 && (
           <div className="px-6 lg:px-10 pt-4 pb-10">
-            <p className="text-[9px] font-bold tracking-[0.28em] uppercase text-gray-600 mb-3">
+            <p className="text-[9px] font-bold tracking-[0.28em] uppercase gradient-text mb-3">
               All Packages
             </p>
             <div className="flex gap-2.5 overflow-x-auto scrollbar-none pb-1">

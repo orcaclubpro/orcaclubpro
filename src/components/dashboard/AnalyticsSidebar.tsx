@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { X, BarChart2 } from 'lucide-react'
 import {
   BarChart,
@@ -45,7 +45,16 @@ function SidebarContent({
   orderPipeline,
   projectStatus,
   kpis,
-}: BusinessPulseProps) {
+  allOrders,
+}: BusinessPulseProps & { allOrders?: any[] }) {
+  const pendingOrders = allOrders
+    ? allOrders
+        .filter((o: any) => o.status === 'pending')
+        .sort((a: any, b: any) =>
+          new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime()
+        )
+    : []
+  const pendingTotal = pendingOrders.reduce((s: number, o: any) => s + (o.amount ?? 0), 0)
   const maxRevenue = Math.max(...weeklyRevenue.map((w) => w.revenue), 1)
 
   const pipelineTotal =
@@ -72,6 +81,44 @@ function SidebarContent({
 
   return (
     <div className="space-y-7">
+
+      {/* Projected Revenue — only when pending orders exist */}
+      {pendingOrders.length > 0 && (
+        <div className="space-y-2.5">
+          <p className="text-[10px] uppercase tracking-widest text-gray-600 font-medium">
+            Projected Revenue
+          </p>
+          <div className="rounded-xl border border-amber-400/20 bg-amber-400/[0.03] px-4 py-3.5">
+            <p className="text-[9px] uppercase tracking-widest text-amber-400/50 font-medium mb-1">
+              Outstanding
+            </p>
+            <p className="text-2xl font-bold text-amber-400 tabular-nums leading-none">
+              {fmt(pendingTotal)}
+            </p>
+            <p className="text-[10px] text-gray-600 mt-1">
+              {pendingOrders.length} pending invoice{pendingOrders.length !== 1 ? 's' : ''}
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            {pendingOrders.slice(0, 5).map((o: any) => (
+              <div key={o.id} className="flex items-center justify-between text-[11px]">
+                <span className="text-gray-500 truncate">
+                  {o.orderNumber ?? `INV-${String(o.id).slice(-6).toUpperCase()}`}
+                </span>
+                <span className="text-amber-400/80 tabular-nums shrink-0 ml-2 font-medium">
+                  {fmt(o.amount ?? 0)}
+                </span>
+              </div>
+            ))}
+            {pendingOrders.length > 5 && (
+              <p className="text-[10px] text-gray-600 pt-0.5">
+                +{pendingOrders.length - 5} more
+              </p>
+            )}
+          </div>
+          <div className="h-px bg-white/[0.05]" />
+        </div>
+      )}
 
       {/* KPI 2×2 grid */}
       <div className="grid grid-cols-2 gap-2.5">
@@ -279,14 +326,39 @@ function PanelHeader({ onClose }: { onClose: () => void }) {
 
 // ─── Main export ──────────────────────────────────────────────────────────────
 
-export function AnalyticsSidebar(props: BusinessPulseProps) {
+export function AnalyticsSidebar({
+  allOrders,
+  open: externalOpen,
+  onOpenChange,
+  ...props
+}: BusinessPulseProps & {
+  allOrders?: any[]
+  open?: boolean
+  onOpenChange?: (v: boolean) => void
+}) {
   const [open, setOpen] = useState(false)
+
+  // Sync external open signal into local state
+  useEffect(() => {
+    if (externalOpen === true) setOpen(true)
+  }, [externalOpen])
+
+  const handleClose = () => {
+    setOpen(false)
+    onOpenChange?.(false)
+  }
+
+  const handleToggle = () => {
+    const next = !open
+    setOpen(next)
+    onOpenChange?.(next)
+  }
 
   return (
     <>
       {/* ── Desktop: right-edge vertical tab ─────────────────────────────── */}
       <button
-        onClick={() => setOpen((o) => !o)}
+        onClick={handleToggle}
         className="hidden md:flex fixed right-0 top-1/2 -translate-y-1/2 z-40
                    flex-col items-center gap-2.5
                    pl-3 pr-2.5 py-5
@@ -308,7 +380,7 @@ export function AnalyticsSidebar(props: BusinessPulseProps) {
 
       {/* ── Mobile: right-edge vertical tab (matches desktop pattern) ────── */}
       <button
-        onClick={() => setOpen((o) => !o)}
+        onClick={handleToggle}
         className="md:hidden fixed right-0 top-1/2 -translate-y-1/2 z-40
                    flex flex-col items-center gap-2
                    pl-2.5 pr-2 py-4
@@ -332,7 +404,7 @@ export function AnalyticsSidebar(props: BusinessPulseProps) {
         className={`fixed inset-0 z-[45] bg-black/50 backdrop-blur-[2px]
                     transition-opacity duration-300
                     ${open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
-        onClick={() => setOpen(false)}
+        onClick={handleClose}
         aria-hidden="true"
       />
 
@@ -345,9 +417,9 @@ export function AnalyticsSidebar(props: BusinessPulseProps) {
                     ${open ? 'translate-x-0' : 'translate-x-full'}`}
         aria-label="Analytics sidebar"
       >
-        <PanelHeader onClose={() => setOpen(false)} />
+        <PanelHeader onClose={handleClose} />
         <div className="flex-1 overflow-y-auto px-6 py-6">
-          <SidebarContent {...props} />
+          <SidebarContent {...props} allOrders={allOrders} />
         </div>
       </aside>
 
@@ -365,9 +437,9 @@ export function AnalyticsSidebar(props: BusinessPulseProps) {
         <div className="flex justify-center pt-3 pb-1 shrink-0">
           <div className="w-9 h-1 rounded-full bg-white/[0.12]" />
         </div>
-        <PanelHeader onClose={() => setOpen(false)} />
+        <PanelHeader onClose={handleClose} />
         <div className="overflow-y-auto px-6 pb-10 pt-5" style={{ overscrollBehavior: 'contain' }}>
-          <SidebarContent {...props} />
+          <SidebarContent {...props} allOrders={allOrders} />
         </div>
       </div>
     </>

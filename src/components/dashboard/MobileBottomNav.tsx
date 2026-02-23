@@ -1,5 +1,6 @@
 'use client'
 
+import { useRef, useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { LayoutDashboard, FolderKanban, Building2, CheckSquare, Receipt, Package, ChevronLeft, Search } from 'lucide-react'
 
@@ -16,6 +17,13 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
   const router = useRouter()
   const { activeTab, navigate } = useTabContext()
   const { packageCount } = usePackageCount()
+  const navRef = useRef<HTMLElement>(null)
+
+  useEffect(() => {
+    const el = navRef.current
+    if (!el) return
+    el.style.animation = 'navSlideUp 400ms cubic-bezier(0.22, 1, 0.36, 1) forwards'
+  }, [])
 
   // Only show on /u/[username] dashboard routes
   const match = pathname?.match(/^\/u\/([^\/]+)/)
@@ -62,8 +70,9 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
       style={{ paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom))' }}
     >
       <nav
+        ref={navRef}
         className="pointer-events-auto flex items-center gap-1 p-1.5 rounded-2xl"
-        style={{
+        style={{ opacity: 0,
           background: 'rgba(6, 6, 10, 0.82)',
           backdropFilter: 'blur(28px) saturate(180%)',
           WebkitBackdropFilter: 'blur(28px) saturate(180%)',
@@ -105,7 +114,7 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
                   </span>
                 )}
               </div>
-              <span className={cn('text-[9px] font-semibold uppercase tracking-widest transition-colors duration-200 leading-none', active ? 'text-gray-300' : 'text-gray-600')}>
+              <span className={cn('text-[10px] font-semibold uppercase tracking-widest transition-colors duration-200 leading-none', active ? 'text-gray-300' : 'text-gray-400')}>
                 {item.label}
               </span>
               {active && (
@@ -125,8 +134,8 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
               className="relative flex flex-col items-center gap-1.5 px-4 py-2.5 rounded-xl transition-all duration-200 active:scale-95 min-w-[52px] hover:bg-white/[0.03] cursor-pointer"
               aria-label="Open search"
             >
-              <Search className="size-5 text-gray-500" />
-              <span className="text-[9px] font-semibold uppercase tracking-widest text-gray-600 leading-none">
+              <Search className="size-5 text-gray-400" />
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 leading-none">
                 Search
               </span>
             </button>
