@@ -161,11 +161,12 @@ export function ClientProjectCarousel({ projects, username }: ClientProjectCarou
       {/* Scroll container */}
       <div
         ref={scrollRef}
+        data-h-scroll
         className="flex gap-4 overflow-x-auto scroll-smooth pb-2 -mx-1 px-1"
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', scrollSnapType: 'x mandatory' }}
       >
         {sorted.map((project) => (
-          <div key={project.id} data-card>
+          <div key={project.id} data-card style={{ scrollSnapAlign: 'start' }}>
             <ProjectCard project={project} username={username} />
           </div>
         ))}

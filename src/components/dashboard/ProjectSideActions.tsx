@@ -6,7 +6,7 @@ import { Settings, Flag, Zap } from 'lucide-react'
 import type { Project, Task } from '@/types/payload-types'
 import { cn } from '@/lib/utils'
 import { ProjectSettingsModal } from './ProjectSettingsModal'
-import { CreateMilestoneSheet } from './CreateMilestoneSheet'
+import { CreateMilestoneModal } from './CreateMilestoneModal'
 import { CreateSprintModal } from './CreateSprintModal'
 
 interface ProjectSideActionsProps {
@@ -75,10 +75,11 @@ export function ProjectSideActions({ project, tasks, username }: ProjectSideActi
         onOpenChange={setSettingsOpen}
         username={username}
       />
-      <CreateMilestoneSheet
+      <CreateMilestoneModal
         projectId={project.id}
         open={milestoneOpen}
         onOpenChange={setMilestoneOpen}
+        onSuccess={() => { setMilestoneOpen(false); router.refresh() }}
       />
       <CreateSprintModal
         projectId={project.id}

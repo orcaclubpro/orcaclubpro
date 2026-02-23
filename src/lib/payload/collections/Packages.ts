@@ -109,6 +109,17 @@ const Packages: CollectionConfig = {
       },
     },
     {
+      name: 'projectRef',
+      type: 'relationship',
+      relationTo: 'projects',
+      index: true,
+      admin: {
+        position: 'sidebar',
+        description: 'Project this proposal is linked to',
+        condition: (data) => data.type === 'proposal',
+      },
+    },
+    {
       name: 'requestedItems',
       type: 'array',
       admin: {

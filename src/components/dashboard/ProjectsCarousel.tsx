@@ -608,36 +608,10 @@ function ProjectDetail({
                 )}
               </div>
 
-              {/* ── Timeline ── */}
-              <div
-                className="animate-in fade-in slide-in-from-bottom-2 duration-300"
-                style={{ animationDelay: '60ms' }}
-              >
-                <p className="text-[11px] tracking-[0.4em] uppercase text-white/25 font-light mb-5">
-                  Timeline
-                </p>
-                <ProfileTimeline project={project} username={username} />
-              </div>
-
-              {/* ── Stats grid ── */}
-              {stats.length > 0 && (
-                <div
-                  className={cn(
-                    'grid gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300',
-                    stats.length <= 2 ? 'grid-cols-2' : 'grid-cols-2 xl:grid-cols-4',
-                  )}
-                  style={{ animationDelay: '75ms' }}
-                >
-                  {stats.map((s) => (
-                    <StatCard key={s.label} {...s} />
-                  ))}
-                </div>
-              )}
-
               {/* ── Active sprint ── */}
               <div
                 className="animate-in fade-in slide-in-from-bottom-2 duration-300"
-                style={{ animationDelay: '150ms' }}
+                style={{ animationDelay: '60ms' }}
               >
                 {activeSprint ? (
                   <div className="space-y-3">
@@ -716,6 +690,32 @@ function ProjectDetail({
                   </div>
                 )}
               </div>
+
+              {/* ── Timeline ── */}
+              <div
+                className="animate-in fade-in slide-in-from-bottom-2 duration-300"
+                style={{ animationDelay: '120ms' }}
+              >
+                <p className="text-[11px] tracking-[0.4em] uppercase text-white/25 font-light mb-5">
+                  Timeline
+                </p>
+                <ProfileTimeline project={project} username={username} />
+              </div>
+
+              {/* ── Stats grid ── */}
+              {stats.length > 0 && (
+                <div
+                  className={cn(
+                    'grid gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300',
+                    stats.length <= 2 ? 'grid-cols-2' : 'grid-cols-2 xl:grid-cols-4',
+                  )}
+                  style={{ animationDelay: '150ms' }}
+                >
+                  {stats.map((s) => (
+                    <StatCard key={s.label} {...s} />
+                  ))}
+                </div>
+              )}
 
               {/* Last updated */}
               <div className="border-t border-white/[0.05] pt-4">

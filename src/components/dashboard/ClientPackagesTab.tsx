@@ -54,6 +54,7 @@ interface PackageDoc {
   lineItems?: LineItem[]
   requestedItems?: Array<{ name: string; requestedAt?: string }>
   paymentSchedule?: ScheduledEntry[]
+  projectRef?: string | { id: string; name: string } | null
   createdAt: string
 }
 
@@ -396,6 +397,11 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
     setTemplateItems([])
     setSaveError(null)
     setConfirmDeleteId(null)
+    // Pre-populate project selection from saved value
+    const existingProjectId = pkg.projectRef
+      ? (typeof pkg.projectRef === 'string' ? pkg.projectRef : pkg.projectRef.id)
+      : ''
+    setSelectedProjectId(prev => ({ ...prev, [pkg.id]: existingProjectId }))
     setLoadingTemplate(true)
     try {
       const result = await getProposalWithTemplate(pkg.id)
@@ -436,6 +442,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
       coverMessage: pkg.coverMessage ?? undefined,
       notes: pkg.notes ?? undefined,
       lineItems: editItems.map(item => ({ ...item, description: item.description ?? undefined })),
+      projectRef: selectedProjectId[pkg.id] || null,
     })
     if (!result.success) {
       setSaving(false)
@@ -770,23 +777,25 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                       </div>
 
                       {/* Project link */}
-                      {projects && projects.length > 0 && (
-                        <div className="flex items-center justify-between gap-3">
-                          <span className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold shrink-0">
-                            Link to project
-                          </span>
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold shrink-0">
+                          Link to project
+                        </span>
+                        {projects && projects.length > 0 ? (
                           <select
                             value={selectedProjectId[pkg.id] ?? ''}
                             onChange={e => setSelectedProjectId(prev => ({ ...prev, [pkg.id]: e.target.value }))}
                             className="flex-1 max-w-[220px] appearance-none px-3 py-1.5 text-xs bg-white/[0.05] border border-white/[0.12] rounded-lg text-white focus:outline-none focus:border-[#67e8f9]/40"
                           >
-                            <option value="">No project (optional)</option>
+                            <option value="">No project</option>
                             {projects.map(p => (
                               <option key={p.id} value={p.id}>{p.name}</option>
                             ))}
                           </select>
-                        </div>
-                      )}
+                        ) : (
+                          <span className="text-[10px] text-gray-700 italic">No projects yet</span>
+                        )}
+                      </div>
 
                       {/* Line item checklist */}
                       {loadingTemplate ? (

@@ -3,6 +3,8 @@
  * Generates a clean, branded HTML email for draft order invoices
  */
 
+import { EMAIL_LIGHT_MODE_STYLES } from '@/lib/email/templates/base'
+
 interface OrderLineItem {
   id: string
   title: string
@@ -58,6 +60,7 @@ export function generateOrderInvoiceEmail(order: OrderEmailData): string {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Order Invoice - ORCACLUB</title>
+  ${EMAIL_LIGHT_MODE_STYLES}
 </head>
 <body style="margin: 0; padding: 0; background-color: #000000; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #000000;">
@@ -78,7 +81,7 @@ export function generateOrderInvoiceEmail(order: OrderEmailData): string {
           <!-- Order Confirmation Message -->
           <tr>
             <td style="padding-bottom: 32px;">
-              <h2 style="margin: 0 0 16px 0; color: #ffffff; font-size: 24px; font-weight: 300; letter-spacing: -0.01em;">
+              <h2 class="oc-heading" style="margin: 0 0 16px 0; color: #ffffff; font-size: 24px; font-weight: 300; letter-spacing: -0.01em;">
                 Order Confirmation
               </h2>
               <p style="margin: 0; color: #d1d5db; font-size: 16px; line-height: 1.6; font-weight: 300;">

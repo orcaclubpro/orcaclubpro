@@ -129,10 +129,12 @@ export async function OrdersList({ accountId }: { accountId: string }) {
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div>
-                      <p className="text-xs text-gray-500 uppercase tracking-wider font-medium mb-1">
-                        Order Number
+                      <p className="font-semibold text-white text-base">
+                        {(order.lineItems as any[])?.[0]?.title ?? order.orderNumber}
                       </p>
-                      <p className="font-semibold text-white text-base">{order.orderNumber}</p>
+                      {(order.lineItems as any[])?.[0]?.title && (
+                        <p className="text-xs text-gray-500 font-mono mt-0.5">#{order.orderNumber}</p>
+                      )}
                     </div>
                     <Badge
                       variant="outline"
@@ -171,7 +173,7 @@ export async function OrdersList({ accountId }: { accountId: string }) {
               <thead>
                 <tr className="border-b border-white/[0.08]">
                   <th className="text-left py-4 px-6 text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                    Order #
+                    Order
                   </th>
                   <th className="text-left py-4 px-6 text-xs font-semibold text-gray-300 uppercase tracking-wider">
                     Amount
@@ -195,8 +197,13 @@ export async function OrdersList({ accountId }: { accountId: string }) {
                       className="border-b border-white/[0.06] hover:bg-white/[0.04] transition-all duration-300 animate-in fade-in slide-in-from-bottom-2"
                       style={{ animationDelay: `${Math.min(index * 40, 200)}ms`, animationDuration: '300ms' }}
                     >
-                      <td className="py-4 px-6 text-white font-semibold text-sm">
-                        {order.orderNumber}
+                      <td className="py-4 px-6">
+                        <p className="text-white font-semibold text-sm">
+                          {(order.lineItems as any[])?.[0]?.title ?? order.orderNumber}
+                        </p>
+                        {(order.lineItems as any[])?.[0]?.title && (
+                          <p className="text-xs text-gray-500 font-mono mt-0.5">#{order.orderNumber}</p>
+                        )}
                       </td>
                       <td className="py-4 px-6 text-white font-semibold text-base">
                         {formatCurrency(order.amount || 0)}

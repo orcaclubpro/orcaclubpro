@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X, BarChart2 } from 'lucide-react'
+import { createPortal } from 'react-dom'
+import { X, Wallet, Send, Check, AlertCircle } from 'lucide-react'
 import {
   BarChart,
   Bar,
@@ -38,6 +39,128 @@ function ChartTooltip({ active, payload, label }: any) {
   )
 }
 
+// ─── Due-date badge helper ─────────────────────────────────────────────────────
+
+function dueBadge(dueDate: string | null | undefined): { label: string; cls: string } {
+  if (!dueDate) return { label: 'No due date', cls: 'text-white/20' }
+  const diff = Math.ceil((new Date(dueDate).getTime() - Date.now()) / 86_400_000)
+  if (diff < 0)  return { label: `${Math.abs(diff)}d overdue`,  cls: 'text-red-400 bg-red-400/[0.08] border border-red-400/20 px-1.5 py-0.5 rounded-md' }
+  if (diff === 0) return { label: 'Due today',                  cls: 'text-amber-400 bg-amber-400/[0.08] border border-amber-400/20 px-1.5 py-0.5 rounded-md' }
+  if (diff === 1) return { label: 'Tomorrow',                   cls: 'text-amber-400/80 bg-amber-400/[0.05] border border-amber-400/15 px-1.5 py-0.5 rounded-md' }
+  if (diff <= 7)  return { label: `${diff}d left`,              cls: 'text-white/45 bg-white/[0.04] border border-white/[0.08] px-1.5 py-0.5 rounded-md' }
+  return {
+    label: new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date(dueDate)),
+    cls: 'text-white/30',
+  }
+}
+
+// ─── Pending invoice card ──────────────────────────────────────────────────────
+
+type SendState = 'idle' | 'sending' | 'sent' | 'error'
+
+function PendingInvoiceCard({ order }: { order: any }) {
+  const [sendState, setSendState] = useState<SendState>('idle')
+
+  const clientName: string =
+    typeof order.clientAccount === 'object'
+      ? (order.clientAccount?.name ?? order.clientAccount?.firstName ?? 'Unknown')
+      : 'Unknown'
+
+  const projectName: string | null =
+    typeof order.projectRef === 'object' && order.projectRef?.name
+      ? order.projectRef.name
+      : (order.project as string | null) ?? null
+
+  const invoiceLabel =
+    order.orderNumber ??
+    `INV-${String(order.id).slice(-6).toUpperCase()}`
+
+  const invoiceType: string | null = order.invoiceType ?? null
+
+  const { label: dueLabel, cls: dueCls } = dueBadge(order.dueDate)
+
+  const handleSend = async () => {
+    if (sendState !== 'idle') return
+    setSendState('sending')
+    try {
+      const res  = await fetch('/api/invoices/send', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ orderId: order.id }),
+      })
+      const data = await res.json()
+      setSendState(res.ok && data.success ? 'sent' : 'error')
+    } catch {
+      setSendState('error')
+    }
+    setTimeout(() => setSendState('idle'), 3000)
+  }
+
+  return (
+    <div className="rounded-xl border border-white/[0.07] bg-[#111] overflow-hidden group hover:border-white/[0.12] transition-colors duration-150">
+
+      {/* Main content */}
+      <div className="px-3.5 pt-3.5 pb-3 space-y-2">
+
+        {/* Row 1 — client + amount */}
+        <div className="flex items-start justify-between gap-3">
+          <p className="text-[13px] font-semibold text-white leading-tight truncate">{clientName}</p>
+          <p className="text-[14px] font-bold text-amber-400 tabular-nums shrink-0 leading-tight">{fmt(order.amount ?? 0)}</p>
+        </div>
+
+        {/* Row 2 — project + invoice type */}
+        <div className="flex items-center gap-1.5 min-w-0">
+          {projectName && (
+            <span className="text-[10px] text-white/35 truncate">{projectName}</span>
+          )}
+          {projectName && invoiceType && (
+            <span className="text-white/15 text-[10px]">·</span>
+          )}
+          {invoiceType && (
+            <span className="text-[9px] font-medium text-white/25 uppercase tracking-wide capitalize shrink-0">{invoiceType}</span>
+          )}
+        </div>
+
+        {/* Row 3 — invoice label + due date */}
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[10px] text-white/20 truncate">{invoiceLabel}</span>
+          <span className={`text-[9px] font-semibold whitespace-nowrap tabular-nums ${dueCls}`}>{dueLabel}</span>
+        </div>
+      </div>
+
+      {/* Send invoice button */}
+      <button
+        onClick={handleSend}
+        disabled={sendState === 'sending' || sendState === 'sent'}
+        className={`w-full flex items-center justify-center gap-1.5 px-3.5 py-2.5 text-[11px] font-medium border-t transition-all duration-200
+          ${sendState === 'sent'
+            ? 'border-emerald-400/20 bg-emerald-400/[0.06] text-emerald-400 cursor-default'
+            : sendState === 'error'
+            ? 'border-red-400/20 bg-red-400/[0.06] text-red-400 cursor-pointer'
+            : sendState === 'sending'
+            ? 'border-white/[0.06] bg-white/[0.02] text-white/30 cursor-wait'
+            : 'border-white/[0.06] bg-transparent text-white/35 hover:bg-white/[0.04] hover:text-white/70 cursor-pointer'
+          }`}
+      >
+        {sendState === 'sending' && (
+          <svg className="size-3 animate-spin shrink-0" viewBox="0 0 24 24" fill="none">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+        )}
+        {sendState === 'sent'    && <Check        className="size-3 shrink-0" />}
+        {sendState === 'error'   && <AlertCircle  className="size-3 shrink-0" />}
+        {sendState === 'idle'    && <Send         className="size-3 shrink-0" />}
+        {sendState === 'idle'    ? 'Send Invoice'
+          : sendState === 'sending' ? 'Sending…'
+          : sendState === 'sent'    ? 'Invoice sent'
+          : 'Failed · tap to retry'}
+      </button>
+
+    </div>
+  )
+}
+
 // ─── Sidebar content (shared between desktop panel + mobile sheet) ─────────────
 
 function SidebarContent({
@@ -50,9 +173,12 @@ function SidebarContent({
   const pendingOrders = allOrders
     ? allOrders
         .filter((o: any) => o.status === 'pending')
-        .sort((a: any, b: any) =>
-          new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime()
-        )
+        .sort((a: any, b: any) => {
+          // Soonest due date first; no dueDate goes to the bottom
+          const aT = a.dueDate ? new Date(a.dueDate).getTime() : Infinity
+          const bT = b.dueDate ? new Date(b.dueDate).getTime() : Infinity
+          return aT - bT
+        })
     : []
   const pendingTotal = pendingOrders.reduce((s: number, o: any) => s + (o.amount ?? 0), 0)
   const maxRevenue = Math.max(...weeklyRevenue.map((w) => w.revenue), 1)
@@ -99,19 +225,12 @@ function SidebarContent({
               {pendingOrders.length} pending invoice{pendingOrders.length !== 1 ? 's' : ''}
             </p>
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             {pendingOrders.slice(0, 5).map((o: any) => (
-              <div key={o.id} className="flex items-center justify-between text-[11px]">
-                <span className="text-gray-500 truncate">
-                  {o.orderNumber ?? `INV-${String(o.id).slice(-6).toUpperCase()}`}
-                </span>
-                <span className="text-amber-400/80 tabular-nums shrink-0 ml-2 font-medium">
-                  {fmt(o.amount ?? 0)}
-                </span>
-              </div>
+              <PendingInvoiceCard key={o.id} order={o} />
             ))}
             {pendingOrders.length > 5 && (
-              <p className="text-[10px] text-gray-600 pt-0.5">
+              <p className="text-[10px] text-white/20 text-center pt-0.5">
                 +{pendingOrders.length - 5} more
               </p>
             )}
@@ -337,6 +456,10 @@ export function AnalyticsSidebar({
   onOpenChange?: (v: boolean) => void
 }) {
   const [open, setOpen] = useState(false)
+  // Delay render until client-side so createPortal can target document.body
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => { setMounted(true) }, [])
 
   // Sync external open signal into local state
   useEffect(() => {
@@ -354,34 +477,36 @@ export function AnalyticsSidebar({
     onOpenChange?.(next)
   }
 
-  return (
+  // All fixed UI portaled to document.body to escape the zoom:1.3 stacking
+  // context on <main>, which would otherwise trap z-indices below the header.
+  const portal = (
     <>
-      {/* ── Desktop: right-edge vertical tab ─────────────────────────────── */}
+      {/* ── Desktop: right-edge vertical tab ────────────────────────────── */}
       <button
         onClick={handleToggle}
-        className="hidden md:flex fixed right-0 top-1/2 -translate-y-1/2 z-40
+        className="hidden md:flex fixed right-0 top-1/2 -translate-y-1/2 z-[60]
                    flex-col items-center gap-2.5
                    pl-3 pr-2.5 py-5
                    bg-[#111] border border-r-0 border-white/[0.10]
                    rounded-l-xl
                    hover:border-intelligence-cyan/30 hover:bg-[#181818]
                    transition-all duration-300 group"
-        aria-label="Toggle analytics sidebar"
+        aria-label="Toggle revenue sidebar"
       >
-        <BarChart2 className="size-3.5 text-intelligence-cyan" />
+        <Wallet className="size-3.5 text-intelligence-cyan" />
         <span
           className="text-[9px] font-semibold text-gray-500 uppercase tracking-[0.18em]
                      group-hover:text-gray-300 transition-colors
                      [writing-mode:vertical-rl] rotate-180"
         >
-          Analytics
+          Revenue
         </span>
       </button>
 
-      {/* ── Mobile: right-edge vertical tab (matches desktop pattern) ────── */}
+      {/* ── Mobile: right-edge vertical tab ─────────────────────────────── */}
       <button
         onClick={handleToggle}
-        className="md:hidden fixed right-0 top-1/2 -translate-y-1/2 z-40
+        className="md:hidden fixed right-0 top-1/2 -translate-y-1/2 z-[60]
                    flex flex-col items-center gap-2
                    pl-2.5 pr-2 py-4
                    bg-black/75 backdrop-blur-xl border border-r-0 border-white/[0.10]
@@ -390,18 +515,18 @@ export function AnalyticsSidebar({
                    transition-all duration-300 active:scale-95"
         aria-label="Toggle analytics"
       >
-        <BarChart2 className="size-3.5 text-intelligence-cyan" />
+        <Wallet className="size-3.5 text-intelligence-cyan" />
         <span
           className="text-[8px] font-semibold text-gray-500 uppercase tracking-[0.15em]
                      [writing-mode:vertical-rl] rotate-180"
         >
-          Analytics
+          Revenue
         </span>
       </button>
 
-      {/* ── Backdrop — z-[45] ensures it covers the mobile bottom nav (z-40) ── */}
+      {/* ── Backdrop ─────────────────────────────────────────────────────── */}
       <div
-        className={`fixed inset-0 z-[45] bg-black/50 backdrop-blur-[2px]
+        className={`fixed inset-0 z-[65] bg-black/50 backdrop-blur-[2px]
                     transition-opacity duration-300
                     ${open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
         onClick={handleClose}
@@ -410,7 +535,7 @@ export function AnalyticsSidebar({
 
       {/* ── Desktop: slide-in panel from right ──────────────────────────── */}
       <aside
-        className={`hidden md:flex fixed top-[65px] right-0 bottom-0 z-40
+        className={`hidden md:flex fixed top-[65px] right-0 bottom-0 z-[70]
                     w-[360px] xl:w-[400px] flex-col
                     bg-[#0a0a0a] border-l border-white/[0.08]
                     transition-transform duration-300 ease-in-out
@@ -425,7 +550,7 @@ export function AnalyticsSidebar({
 
       {/* ── Mobile: slide-up bottom sheet ────────────────────────────────── */}
       <div
-        className={`md:hidden fixed bottom-0 left-0 right-0 z-[55]
+        className={`md:hidden fixed bottom-0 left-0 right-0 z-[70]
                     flex flex-col
                     bg-[#0a0a0a] border-t border-white/[0.08] rounded-t-2xl
                     transition-transform duration-300 ease-in-out
@@ -444,4 +569,7 @@ export function AnalyticsSidebar({
       </div>
     </>
   )
+
+  if (!mounted) return null
+  return createPortal(portal, document.body)
 }

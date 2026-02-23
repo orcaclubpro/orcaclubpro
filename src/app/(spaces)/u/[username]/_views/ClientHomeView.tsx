@@ -86,6 +86,7 @@ export function ClientHomeView({
   const serializedOrders: ClientOrderSummary[] = orders.map((o: any) => ({
     id: o.id,
     orderNumber: o.orderNumber ?? null,
+    title: (o.lineItems as any[])?.[0]?.title ?? null,
     amount: o.amount ?? 0,
     status: o.status ?? 'pending',
     createdAt: o.createdAt,

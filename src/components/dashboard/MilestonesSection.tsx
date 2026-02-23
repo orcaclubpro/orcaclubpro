@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Flag, Plus, Calendar, CheckCircle, Circle, Award } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { CreateMilestoneSheet } from './CreateMilestoneSheet'
+import { CreateMilestoneModal } from './CreateMilestoneModal'
 import { toggleMilestoneCompletion } from '@/actions/projects'
 import { formatDate } from '@/lib/utils/dateUtils'
 import type { Project } from '@/types/payload-types'
@@ -247,11 +247,12 @@ export function MilestonesSection({ project }: MilestonesSectionProps) {
         </div>
       )}
 
-      {/* Create Milestone Sheet */}
-      <CreateMilestoneSheet
+      {/* Create Milestone Modal */}
+      <CreateMilestoneModal
         projectId={project.id}
         open={isCreateOpen}
         onOpenChange={setIsCreateOpen}
+        onSuccess={() => { setIsCreateOpen(false); router.refresh() }}
       />
     </div>
   )

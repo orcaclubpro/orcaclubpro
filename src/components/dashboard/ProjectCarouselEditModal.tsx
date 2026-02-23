@@ -22,11 +22,11 @@ export function ProjectCarouselEditModal({ project, large }: { project: Serializ
         type="button"
         onClick={() => setOpen(true)}
         className={large
-          ? "flex items-center gap-3 bg-[#1c1c1c] hover:bg-[#242424] border border-white/[0.14] hover:border-white/[0.24] text-white/75 hover:text-white font-semibold rounded-full px-8 py-4 text-base transition-all duration-200 shadow-xl"
+          ? "flex items-center gap-2.5 bg-[#1c1c1c] hover:bg-[#242424] border border-white/[0.14] hover:border-white/[0.24] text-white/75 hover:text-white font-bold rounded-full px-5 py-2 text-sm transition-all duration-200"
           : "flex items-center gap-1.5 text-xs text-white/45 hover:text-white/75 bg-white/[0.03] hover:bg-white/[0.07] border border-white/[0.07] hover:border-white/[0.18] rounded-lg px-3.5 py-2.5 transition-all duration-150"
         }
       >
-        <Settings className={large ? "size-5" : "size-3.5"} />
+        <Settings className={large ? "size-4" : "size-3.5"} />
         Edit
       </button>
       <ProjectSettingsModal

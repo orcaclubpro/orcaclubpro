@@ -4,6 +4,8 @@
  * Subject: Welcome to Spaces | ORCACLUB
  */
 
+import { EMAIL_LIGHT_MODE_STYLES } from './base'
+
 export interface ClientWelcomeData {
   name: string
   setupUrl: string
@@ -24,6 +26,7 @@ export function clientWelcomeHTML({ name, setupUrl }: ClientWelcomeData): string
   <title>Welcome to Spaces — ORCACLUB</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&display=swap" rel="stylesheet">
+  ${EMAIL_LIGHT_MODE_STYLES}
 </head>
 <body style="margin:0;padding:0;background-color:#000000;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
 
@@ -34,11 +37,11 @@ export function clientWelcomeHTML({ name, setupUrl }: ClientWelcomeData): string
 
         <!-- Card -->
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center"
-               style="max-width:520px;width:100%;background-color:#080808;border:1px solid #111111;">
+               class="oc-card" style="max-width:520px;width:100%;background-color:#080808;border:1px solid #111111;">
 
           <!-- ── Header: wordmark + label ── -->
           <tr>
-            <td style="padding:32px 40px 24px 40px;border-bottom:1px solid #0f0f0f;">
+            <td class="oc-header-td" style="padding:32px 40px 24px 40px;border-bottom:1px solid #0f0f0f;">
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                 <tr>
                   <td>
@@ -57,7 +60,7 @@ export function clientWelcomeHTML({ name, setupUrl }: ClientWelcomeData): string
             <td style="padding:48px 40px 0 40px;">
 
               <!-- Eyebrow -->
-              <p style="margin:0 0 22px 0;font-size:10px;letter-spacing:0.5em;text-transform:uppercase;color:#2a2a2a;font-weight:400;">Your workspace is ready</p>
+              <p class="oc-eyebrow" style="margin:0 0 22px 0;font-size:10px;letter-spacing:0.5em;text-transform:uppercase;color:#2a2a2a;font-weight:400;">Your workspace is ready</p>
 
               <!-- SPACES — gradient letters: deep cyan → bright cyan -->
               <p style="margin:0;line-height:1;letter-spacing:0.08em;">
@@ -65,7 +68,7 @@ export function clientWelcomeHTML({ name, setupUrl }: ClientWelcomeData): string
               </p>
 
               <!-- Sub-caption -->
-              <p style="margin:14px 0 0 0;font-size:13px;color:#3a3a3a;line-height:1.5;font-weight:300;letter-spacing:0.03em;">Club account for managing your projects and payments.</p>
+              <p class="oc-detail-val" style="margin:14px 0 0 0;font-size:13px;color:#3a3a3a;line-height:1.5;font-weight:300;letter-spacing:0.03em;">Club account for managing your projects and payments.</p>
 
               <!-- Cyan hairline -->
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin-top:32px;">
@@ -77,10 +80,10 @@ export function clientWelcomeHTML({ name, setupUrl }: ClientWelcomeData): string
               </table>
 
               <!-- Greeting -->
-              <p style="margin:32px 0 0 0;font-size:13px;color:#555555;line-height:1.7;font-weight:300;">Hello ${name},</p>
+              <p class="oc-body-text" style="margin:32px 0 0 0;font-size:13px;color:#555555;line-height:1.7;font-weight:300;">Hello ${name},</p>
 
               <!-- Body copy -->
-              <p style="margin:12px 0 0 0;font-size:13px;color:#555555;line-height:1.9;font-weight:300;">Your ORCACLUB client account is live. Use the button below to set your password and step into your workspace — where your projects, invoices, and activity all live in one place.</p>
+              <p class="oc-body-text" style="margin:12px 0 0 0;font-size:13px;color:#555555;line-height:1.9;font-weight:300;">Your ORCACLUB client account is live. Use the button below to set your password and step into your workspace — where your projects, invoices, and activity all live in one place.</p>
 
             </td>
           </tr>
@@ -89,27 +92,27 @@ export function clientWelcomeHTML({ name, setupUrl }: ClientWelcomeData): string
           <tr>
             <td style="padding:28px 40px 0 40px;">
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
-                     style="background-color:#0d0d0d;border:1px solid #161616;border-left:3px solid #67e8f9;">
+                     class="oc-detail-box-lborder" style="background-color:#0d0d0d;border:1px solid #161616;border-left:3px solid #67e8f9;">
                 <tr>
                   <td style="padding:20px 22px;">
-                    <p style="margin:0 0 14px 0;font-size:10px;font-weight:600;color:#2a2a2a;text-transform:uppercase;letter-spacing:0.5px;">Inside your Spaces</p>
+                    <p class="oc-detail-label" style="margin:0 0 14px 0;font-size:10px;font-weight:600;color:#2a2a2a;text-transform:uppercase;letter-spacing:0.5px;">Inside your Spaces</p>
                     <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                       <tr>
                         <td style="padding:5px 0;">
                           <span style="font-size:11px;color:#1e9db3;font-weight:600;letter-spacing:0.05em;">&#8212;</span>
-                          <span style="font-size:12px;color:#444444;font-weight:300;margin-left:10px;">Live project progress &amp; milestones</span>
+                          <span class="oc-detail-val" style="font-size:12px;color:#444444;font-weight:300;margin-left:10px;">Live project progress &amp; milestones</span>
                         </td>
                       </tr>
                       <tr>
                         <td style="padding:5px 0;">
                           <span style="font-size:11px;color:#38c2e8;font-weight:600;letter-spacing:0.05em;">&#8212;</span>
-                          <span style="font-size:12px;color:#444444;font-weight:300;margin-left:10px;">Invoices and payment history</span>
+                          <span class="oc-detail-val" style="font-size:12px;color:#444444;font-weight:300;margin-left:10px;">Invoices and payment history</span>
                         </td>
                       </tr>
                       <tr>
                         <td style="padding:5px 0;">
                           <span style="font-size:11px;color:#67e8f9;font-weight:600;letter-spacing:0.05em;">&#8212;</span>
-                          <span style="font-size:12px;color:#444444;font-weight:300;margin-left:10px;">Proposals and service packages</span>
+                          <span class="oc-detail-val" style="font-size:12px;color:#444444;font-weight:300;margin-left:10px;">Proposals and service packages</span>
                         </td>
                       </tr>
                     </table>
@@ -135,7 +138,7 @@ export function clientWelcomeHTML({ name, setupUrl }: ClientWelcomeData): string
           <!-- ── Secondary link: log in ── -->
           <tr>
             <td style="padding:16px 40px 0 40px;">
-              <p style="margin:0;font-size:11px;color:#2e2e2e;font-weight:300;">
+              <p class="oc-muted" style="margin:0;font-size:11px;color:#2e2e2e;font-weight:300;">
                 Already set a password?
                 <a href="${LOGIN_URL}" style="color:#3a5a5e;text-decoration:none;font-weight:400;">Log in to Spaces &#8250;</a>
               </p>
@@ -145,8 +148,8 @@ export function clientWelcomeHTML({ name, setupUrl }: ClientWelcomeData): string
           <!-- ── Fallback URL ── -->
           <tr>
             <td style="padding:24px 40px 0 40px;">
-              <p style="margin:0 0 5px 0;font-size:10px;color:#232323;letter-spacing:0.01em;line-height:1.5;text-transform:uppercase;letter-spacing:0.08em;">Setup link</p>
-              <p style="margin:0;font-size:11px;color:#2a4a4e;word-break:break-all;line-height:1.6;"><a href="${setupUrl}" style="color:#2a4a4e;text-decoration:none;">${setupUrl}</a></p>
+              <p class="oc-eyebrow" style="margin:0 0 5px 0;font-size:10px;color:#232323;letter-spacing:0.01em;line-height:1.5;text-transform:uppercase;letter-spacing:0.08em;">Setup link</p>
+              <p class="oc-url-text" style="margin:0;font-size:11px;color:#2a4a4e;word-break:break-all;line-height:1.6;"><a class="oc-url-text" href="${setupUrl}" style="color:#2a4a4e;text-decoration:none;">${setupUrl}</a></p>
             </td>
           </tr>
 
@@ -155,8 +158,8 @@ export function clientWelcomeHTML({ name, setupUrl }: ClientWelcomeData): string
             <td style="padding:32px 40px 40px 40px;">
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                 <tr>
-                  <td style="border-top:1px solid #0f0f0f;padding-top:24px;">
-                    <p style="margin:0;font-size:11px;color:#252525;line-height:1.8;font-weight:300;">This setup link expires in <span style="color:#333333;">7 days</span>. If you need a new one, use the forgot password flow on the login page. Questions? Reply to this email or reach us at <a href="mailto:carbon@orcaclub.pro" style="color:#2a6068;text-decoration:none;">carbon@orcaclub.pro</a>.</p>
+                  <td class="oc-footer-note-td" style="border-top:1px solid #0f0f0f;padding-top:24px;">
+                    <p class="oc-muted" style="margin:0;font-size:11px;color:#252525;line-height:1.8;font-weight:300;">This setup link expires in <span style="color:#333333;">7 days</span>. If you need a new one, use the forgot password flow on the login page. Questions? Reply to this email or reach us at <a href="mailto:carbon@orcaclub.pro" style="color:#2a6068;text-decoration:none;">carbon@orcaclub.pro</a>.</p>
                   </td>
                 </tr>
               </table>
@@ -165,14 +168,14 @@ export function clientWelcomeHTML({ name, setupUrl }: ClientWelcomeData): string
 
           <!-- ── Footer bar ── -->
           <tr>
-            <td style="padding:18px 40px;border-top:1px solid #0a0a0a;background-color:#050505;">
+            <td class="oc-footer-bar" style="padding:18px 40px;border-top:1px solid #0a0a0a;background-color:#050505;">
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                 <tr>
                   <td>
-                    <span style="font-family:'Cinzel Decorative',Georgia,serif;font-size:10px;font-weight:700;color:#1f1f1f;">ORCA</span><span style="font-family:'Cinzel Decorative',Georgia,serif;font-size:10px;font-weight:700;color:#1a3a3e;">CLUB</span>
+                    <span class="oc-footer-orca" style="font-family:'Cinzel Decorative',Georgia,serif;font-size:10px;font-weight:700;color:#1f1f1f;">ORCA</span><span class="oc-footer-club" style="font-family:'Cinzel Decorative',Georgia,serif;font-size:10px;font-weight:700;color:#1a3a3e;">CLUB</span>
                   </td>
                   <td align="right">
-                    <a href="https://orcaclub.pro" style="font-size:10px;color:#1f1f1f;text-decoration:none;font-weight:300;letter-spacing:0.02em;">orcaclub.pro</a>
+                    <a href="https://orcaclub.pro" class="oc-footer-link" style="font-size:10px;color:#1f1f1f;text-decoration:none;font-weight:300;letter-spacing:0.02em;">orcaclub.pro</a>
                   </td>
                 </tr>
               </table>

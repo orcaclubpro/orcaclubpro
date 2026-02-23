@@ -178,6 +178,7 @@ export async function updatePackage({
   coverMessage,
   notes,
   lineItems,
+  projectRef,
 }: {
   packageId: string
   name: string
@@ -192,6 +193,7 @@ export async function updatePackage({
     isRecurring?: boolean
     recurringInterval?: 'month' | 'year'
   }>
+  projectRef?: string | null
 }) {
   try {
     const user = await getCurrentUser()
@@ -205,7 +207,7 @@ export async function updatePackage({
     const pkg = await payload.update({
       collection: 'packages',
       id: packageId,
-      data: { name, description, coverMessage, notes, lineItems, ...statusReset },
+      data: { name, description, coverMessage, notes, lineItems, projectRef: projectRef || null, ...statusReset } as any,
     })
 
     return { success: true, package: pkg }

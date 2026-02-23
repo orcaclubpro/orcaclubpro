@@ -6,6 +6,7 @@
 
 import crypto from 'crypto'
 import type { Payload } from 'payload'
+import { EMAIL_LIGHT_MODE_STYLES } from '@/lib/email/templates/base'
 
 const EXPIRY_MS = 60 * 60 * 1000 // 1 hour
 
@@ -74,6 +75,7 @@ export function generateUnlockAccountEmailHTML(unlockUrl: string, userName: stri
   <title>Unlock your account — ORCACLUB</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&display=swap" rel="stylesheet">
+  ${EMAIL_LIGHT_MODE_STYLES}
 </head>
 <body style="margin:0;padding:0;background-color:#000000;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
 
@@ -83,11 +85,11 @@ export function generateUnlockAccountEmailHTML(unlockUrl: string, userName: stri
       <td style="padding:48px 20px;">
 
         <!-- Card -->
-        <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="max-width:520px;width:100%;background-color:#080808;border:1px solid #111111;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" class="oc-card" style="max-width:520px;width:100%;background-color:#080808;border:1px solid #111111;">
 
           <!-- Header: wordmark -->
           <tr>
-            <td style="padding:32px 40px 24px 40px;border-bottom:1px solid #0f0f0f;">
+            <td class="oc-header-td" style="padding:32px 40px 24px 40px;border-bottom:1px solid #0f0f0f;">
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                 <tr>
                   <td>
@@ -106,10 +108,10 @@ export function generateUnlockAccountEmailHTML(unlockUrl: string, userName: stri
             <td style="padding:40px 40px 0 40px;">
 
               <!-- Eyebrow label -->
-              <p style="margin:0 0 14px 0;font-size:10px;letter-spacing:0.35em;text-transform:uppercase;color:#3a3a3a;font-weight:400;">Account Unlock</p>
+              <p class="oc-eyebrow" style="margin:0 0 14px 0;font-size:10px;letter-spacing:0.35em;text-transform:uppercase;color:#3a3a3a;font-weight:400;">Account Unlock</p>
 
               <!-- Heading -->
-              <p style="margin:0;font-size:22px;font-weight:200;color:#ffffff;letter-spacing:0.01em;line-height:1.3;">Unlock your account.</p>
+              <p class="oc-heading" style="margin:0;font-size:22px;font-weight:200;color:#ffffff;letter-spacing:0.01em;line-height:1.3;">Unlock your account.</p>
 
               <!-- Cyan accent hairline -->
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin-top:18px;">
@@ -119,10 +121,10 @@ export function generateUnlockAccountEmailHTML(unlockUrl: string, userName: stri
               </table>
 
               <!-- Greeting -->
-              <p style="margin:32px 0 0 0;font-size:13px;color:#555555;line-height:1.7;font-weight:300;">Hello ${userName},</p>
+              <p class="oc-body-text" style="margin:32px 0 0 0;font-size:13px;color:#555555;line-height:1.7;font-weight:300;">Hello ${userName},</p>
 
               <!-- Body copy -->
-              <p style="margin:12px 0 0 0;font-size:13px;color:#555555;line-height:1.8;font-weight:300;">Your account was temporarily locked after too many failed login attempts. Click the button below to unlock it. This link expires in <span style="color:#888888;">1 hour</span>.</p>
+              <p class="oc-body-text" style="margin:12px 0 0 0;font-size:13px;color:#555555;line-height:1.8;font-weight:300;">Your account was temporarily locked after too many failed login attempts. Click the button below to unlock it. This link expires in <span style="color:#888888;">1 hour</span>.</p>
 
             </td>
           </tr>
@@ -143,8 +145,8 @@ export function generateUnlockAccountEmailHTML(unlockUrl: string, userName: stri
           <!-- Fallback URL -->
           <tr>
             <td style="padding:24px 40px 0 40px;">
-              <p style="margin:0 0 6px 0;font-size:11px;color:#2e2e2e;letter-spacing:0.01em;line-height:1.5;">If the button doesn't work, paste this into your browser:</p>
-              <p style="margin:0;font-size:11px;color:#3a5a5e;word-break:break-all;line-height:1.6;"><a href="${unlockUrl}" style="color:#3a5a5e;text-decoration:none;">${unlockUrl}</a></p>
+              <p class="oc-muted" style="margin:0 0 6px 0;font-size:11px;color:#2e2e2e;letter-spacing:0.01em;line-height:1.5;">If the button doesn't work, paste this into your browser:</p>
+              <p class="oc-url-text" style="margin:0;font-size:11px;color:#3a5a5e;word-break:break-all;line-height:1.6;"><a href="${unlockUrl}" style="color:#3a5a5e;text-decoration:none;">${unlockUrl}</a></p>
             </td>
           </tr>
 
@@ -153,8 +155,8 @@ export function generateUnlockAccountEmailHTML(unlockUrl: string, userName: stri
             <td style="padding:28px 40px 40px 40px;">
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                 <tr>
-                  <td style="border-top:1px solid #0f0f0f;padding-top:24px;">
-                    <p style="margin:0;font-size:11px;color:#2e2e2e;line-height:1.7;font-weight:300;">Didn't request this? You can safely ignore it — your account will remain locked. If you have concerns, contact us at <a href="mailto:carbon@orcaclub.pro" style="color:#2a6068;text-decoration:none;">carbon@orcaclub.pro</a>.</p>
+                  <td class="oc-footer-note-td" style="border-top:1px solid #0f0f0f;padding-top:24px;">
+                    <p class="oc-muted" style="margin:0;font-size:11px;color:#2e2e2e;line-height:1.7;font-weight:300;">Didn't request this? You can safely ignore it — your account will remain locked. If you have concerns, contact us at <a href="mailto:carbon@orcaclub.pro" style="color:#2a6068;text-decoration:none;">carbon@orcaclub.pro</a>.</p>
                   </td>
                 </tr>
               </table>
@@ -163,14 +165,14 @@ export function generateUnlockAccountEmailHTML(unlockUrl: string, userName: stri
 
           <!-- Footer bar -->
           <tr>
-            <td style="padding:18px 40px;border-top:1px solid #0a0a0a;background-color:#050505;">
+            <td class="oc-footer-bar" style="padding:18px 40px;border-top:1px solid #0a0a0a;background-color:#050505;">
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                 <tr>
                   <td>
-                    <span style="font-family:'Cinzel Decorative',Georgia,serif;font-size:10px;font-weight:700;color:#1f1f1f;">ORCA</span><span style="font-family:'Cinzel Decorative',Georgia,serif;font-size:10px;font-weight:700;color:#1a3a3e;">CLUB</span>
+                    <span class="oc-footer-orca" style="font-family:'Cinzel Decorative',Georgia,serif;font-size:10px;font-weight:700;color:#1f1f1f;">ORCA</span><span class="oc-footer-club" style="font-family:'Cinzel Decorative',Georgia,serif;font-size:10px;font-weight:700;color:#1a3a3e;">CLUB</span>
                   </td>
                   <td align="right">
-                    <a href="https://orcaclub.pro" style="font-size:10px;color:#1f1f1f;text-decoration:none;font-weight:300;letter-spacing:0.02em;">orcaclub.pro</a>
+                    <a href="https://orcaclub.pro" class="oc-footer-link" style="font-size:10px;color:#1f1f1f;text-decoration:none;font-weight:300;letter-spacing:0.02em;">orcaclub.pro</a>
                   </td>
                 </tr>
               </table>

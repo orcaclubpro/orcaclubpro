@@ -172,6 +172,8 @@ export function DashboardTabView({
     const onTouchStart = (e: TouchEvent) => {
       // Don't start a new drag while an animation is running
       if (animModeRef.current === 'animating') return
+      // Yield to horizontally-scrollable children (carousels, timelines)
+      if ((e.target as Element).closest('[data-h-scroll]')) return
 
       dragRef.current = {
         active: true,

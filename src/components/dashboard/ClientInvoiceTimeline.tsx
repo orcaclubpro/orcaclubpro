@@ -74,9 +74,11 @@ export function ClientInvoiceTimeline({ orders }: ClientInvoiceTimelineProps) {
 
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-white truncate">
-                  {order.orderNumber ?? `INV-${order.id.slice(-6).toUpperCase()}`}
+                  {order.title ?? order.orderNumber ?? `INV-${order.id.slice(-6).toUpperCase()}`}
                 </p>
-                <p className="text-xs text-gray-300 mt-0.5">{fmtDate(order.createdAt)}</p>
+                <p className="text-xs text-gray-300 mt-0.5">
+                  {order.orderNumber ? `#${order.orderNumber} · ` : ''}{fmtDate(order.createdAt)}
+                </p>
               </div>
 
               <span className={`text-sm font-semibold tabular-nums shrink-0 ${isPending ? 'text-amber-400' : 'text-white'}`}>

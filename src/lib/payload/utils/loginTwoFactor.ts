@@ -4,6 +4,7 @@
  */
 
 import type { Payload } from 'payload'
+import { EMAIL_LIGHT_MODE_STYLES } from '@/lib/email/templates/base'
 
 /**
  * Generate a random 6-digit login verification code
@@ -36,6 +37,7 @@ export function generateLoginCodeEmailHTML(code: string, userName: string): stri
   <title>Your Login Code — ORCACLUB</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&display=swap" rel="stylesheet">
+  ${EMAIL_LIGHT_MODE_STYLES}
 </head>
 <body style="margin:0;padding:0;background-color:#000000;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
 
@@ -45,11 +47,11 @@ export function generateLoginCodeEmailHTML(code: string, userName: string): stri
       <td style="padding:48px 20px;">
 
         <!-- Card -->
-        <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="max-width:520px;width:100%;background-color:#080808;border:1px solid #111111;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" class="oc-card" style="max-width:520px;width:100%;background-color:#080808;border:1px solid #111111;">
 
           <!-- Header: wordmark -->
           <tr>
-            <td style="padding:32px 40px 24px 40px;border-bottom:1px solid #0f0f0f;">
+            <td class="oc-header-td" style="padding:32px 40px 24px 40px;border-bottom:1px solid #0f0f0f;">
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                 <tr>
                   <td>
@@ -68,10 +70,10 @@ export function generateLoginCodeEmailHTML(code: string, userName: string): stri
             <td style="padding:40px 40px 0 40px;">
 
               <!-- Eyebrow label -->
-              <p style="margin:0 0 14px 0;font-size:10px;letter-spacing:0.35em;text-transform:uppercase;color:#3a3a3a;font-weight:400;">Login Verification</p>
+              <p class="oc-eyebrow" style="margin:0 0 14px 0;font-size:10px;letter-spacing:0.35em;text-transform:uppercase;color:#3a3a3a;font-weight:400;">Login Verification</p>
 
               <!-- Heading -->
-              <p style="margin:0;font-size:22px;font-weight:200;color:#ffffff;letter-spacing:0.01em;line-height:1.3;">Your login code.</p>
+              <p class="oc-heading" style="margin:0;font-size:22px;font-weight:200;color:#ffffff;letter-spacing:0.01em;line-height:1.3;">Your login code.</p>
 
               <!-- Cyan accent hairline -->
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin-top:18px;">
@@ -81,10 +83,10 @@ export function generateLoginCodeEmailHTML(code: string, userName: string): stri
               </table>
 
               <!-- Greeting -->
-              <p style="margin:32px 0 0 0;font-size:13px;color:#555555;line-height:1.7;font-weight:300;">Hello ${userName},</p>
+              <p class="oc-body-text" style="margin:32px 0 0 0;font-size:13px;color:#555555;line-height:1.7;font-weight:300;">Hello ${userName},</p>
 
               <!-- Body copy -->
-              <p style="margin:12px 0 0 0;font-size:13px;color:#555555;line-height:1.8;font-weight:300;">Use the code below to complete your login. It expires in <span style="color:#888888;">10 minutes</span>.</p>
+              <p class="oc-body-text" style="margin:12px 0 0 0;font-size:13px;color:#555555;line-height:1.8;font-weight:300;">Use the code below to complete your login. It expires in <span style="color:#888888;">10 minutes</span>.</p>
 
             </td>
           </tr>
@@ -94,9 +96,9 @@ export function generateLoginCodeEmailHTML(code: string, userName: string): stri
             <td style="padding:32px 40px 0 40px;">
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                 <tr>
-                  <td style="background-color:#111111;border:1px solid #67e8f9;padding:24px 40px;text-align:center;">
-                    <p style="margin:0;font-size:36px;font-weight:700;letter-spacing:8px;color:#67e8f9;font-family:'Courier New',monospace;">${code}</p>
-                    <p style="margin:8px 0 0 0;font-size:10px;letter-spacing:0.35em;text-transform:uppercase;color:#3a3a3a;">Login Code</p>
+                  <td class="oc-code-box" style="background-color:#111111;border:1px solid #67e8f9;padding:24px 40px;text-align:center;">
+                    <p class="oc-code" style="margin:0;font-size:36px;font-weight:700;letter-spacing:8px;color:#67e8f9;font-family:'Courier New',monospace;">${code}</p>
+                    <p class="oc-code-label" style="margin:8px 0 0 0;font-size:10px;letter-spacing:0.35em;text-transform:uppercase;color:#3a3a3a;">Login Code</p>
                   </td>
                 </tr>
               </table>
@@ -108,8 +110,8 @@ export function generateLoginCodeEmailHTML(code: string, userName: string): stri
             <td style="padding:28px 40px 40px 40px;">
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                 <tr>
-                  <td style="border-top:1px solid #0f0f0f;padding-top:24px;">
-                    <p style="margin:0;font-size:11px;color:#2e2e2e;line-height:1.7;font-weight:300;">If you didn't attempt to log in, you can safely ignore this email. Your account remains secure.</p>
+                  <td class="oc-footer-note-td" style="border-top:1px solid #0f0f0f;padding-top:24px;">
+                    <p class="oc-muted" style="margin:0;font-size:11px;color:#2e2e2e;line-height:1.7;font-weight:300;">If you didn't attempt to log in, you can safely ignore this email. Your account remains secure.</p>
                   </td>
                 </tr>
               </table>
@@ -118,14 +120,14 @@ export function generateLoginCodeEmailHTML(code: string, userName: string): stri
 
           <!-- Footer bar -->
           <tr>
-            <td style="padding:18px 40px;border-top:1px solid #0a0a0a;background-color:#050505;">
+            <td class="oc-footer-bar" style="padding:18px 40px;border-top:1px solid #0a0a0a;background-color:#050505;">
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                 <tr>
                   <td>
-                    <span style="font-family:'Cinzel Decorative',Georgia,serif;font-size:10px;font-weight:700;color:#1f1f1f;">ORCA</span><span style="font-family:'Cinzel Decorative',Georgia,serif;font-size:10px;font-weight:700;color:#1a3a3e;">CLUB</span>
+                    <span class="oc-footer-orca" style="font-family:'Cinzel Decorative',Georgia,serif;font-size:10px;font-weight:700;color:#1f1f1f;">ORCA</span><span class="oc-footer-club" style="font-family:'Cinzel Decorative',Georgia,serif;font-size:10px;font-weight:700;color:#1a3a3e;">CLUB</span>
                   </td>
                   <td align="right">
-                    <a href="https://orcaclub.pro" style="font-size:10px;color:#1f1f1f;text-decoration:none;font-weight:300;letter-spacing:0.02em;">orcaclub.pro</a>
+                    <a href="https://orcaclub.pro" class="oc-footer-link" style="font-size:10px;color:#1f1f1f;text-decoration:none;font-weight:300;letter-spacing:0.02em;">orcaclub.pro</a>
                   </td>
                 </tr>
               </table>

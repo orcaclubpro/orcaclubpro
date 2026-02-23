@@ -290,6 +290,7 @@ export function ClientPortfolioTimeline({
 
         <div
           ref={scrollRef}
+          data-h-scroll
           className="overflow-x-auto"
           style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.08) transparent' }}
         >

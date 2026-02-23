@@ -84,6 +84,20 @@ type Priority = 'low' | 'medium' | 'high' | 'urgent'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
+function extractPlainText(description: unknown): string {
+  if (!description || typeof description !== 'object') return ''
+  const desc = description as any
+  try {
+    return (desc.root?.children ?? [])
+      .flatMap((n: any) => n.children ?? [])
+      .filter((n: any) => n.type === 'text')
+      .map((n: any) => n.text ?? '')
+      .join('')
+  } catch {
+    return ''
+  }
+}
+
 function fmtDate(d: string | null | undefined) {
   if (!d) return '—'
   return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(d))
@@ -170,10 +184,12 @@ function TaskCard({
   isPending,
   editingTaskId,
   editTaskTitle,
+  editTaskDescription,
   editTaskPriority,
   editTaskDueDate,
   onEditStart,
   onEditTitleChange,
+  onEditDescriptionChange,
   onEditPriorityChange,
   onEditDueDateChange,
   onEditSave,
@@ -186,10 +202,12 @@ function TaskCard({
   isPending: boolean
   editingTaskId: string | null
   editTaskTitle: string
+  editTaskDescription: string
   editTaskPriority: Priority
   editTaskDueDate: string
   onEditStart: (task: Task) => void
   onEditTitleChange: (v: string) => void
+  onEditDescriptionChange: (v: string) => void
   onEditPriorityChange: (v: Priority) => void
   onEditDueDateChange: (v: string) => void
   onEditSave: (task: Task) => void
@@ -211,8 +229,8 @@ function TaskCard({
   // Inline edit mode
   if (isEditing && !readOnly) {
     return (
-      <div className="px-4 py-3 bg-white/[0.025] border-b border-white/[0.04] last:border-0">
-        <div className="flex items-center gap-2 mb-3">
+      <div className="px-4 py-3 bg-white/[0.025] border-b border-white/[0.04] last:border-0 space-y-2.5">
+        <div className="flex items-center gap-2">
           <Input
             ref={editInputRef}
             value={editTaskTitle}
@@ -242,6 +260,13 @@ function TaskCard({
             <X className="size-3.5" />
           </button>
         </div>
+        <Textarea
+          value={editTaskDescription}
+          onChange={(e) => onEditDescriptionChange(e.target.value)}
+          placeholder="Description (optional)…"
+          rows={2}
+          className="w-full bg-white/[0.03] border-white/[0.08] text-gray-300 placeholder:text-gray-700 focus:border-intelligence-cyan/30 resize-none text-xs leading-relaxed"
+        />
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex gap-1">
             {(['low', 'medium', 'high', 'urgent'] as const).map((p) => (
@@ -386,6 +411,7 @@ function InlineTaskCreate({
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
   const [priority, setPriority] = useState<Priority>('medium')
   const [dueDate, setDueDate] = useState('')
   const [isPending, startTransition] = useTransition()
@@ -404,6 +430,7 @@ function InlineTaskCreate({
       const result = await createTask({
         projectId,
         title: title.trim(),
+        description: description.trim() || undefined,
         priority,
         dueDate: dueDate || undefined,
         sprintId,
@@ -413,6 +440,7 @@ function InlineTaskCreate({
         return
       }
       setTitle('')
+      setDescription('')
       setDueDate('')
       setPriority('medium')
       onCreated()
@@ -423,6 +451,7 @@ function InlineTaskCreate({
     if (e.key === 'Escape') {
       setIsOpen(false)
       setTitle('')
+      setDescription('')
       setError(null)
     }
   }
@@ -444,7 +473,7 @@ function InlineTaskCreate({
     <form
       onSubmit={handleSubmit}
       onKeyDown={handleKeyDown}
-      className="border-t border-white/[0.06] px-4 py-4 space-y-3 bg-white/[0.01]"
+      className="border-t border-white/[0.06] px-4 py-4 space-y-2.5 bg-white/[0.01]"
     >
       <Input
         ref={inputRef}
@@ -453,6 +482,15 @@ function InlineTaskCreate({
         placeholder="Task title…"
         className="bg-white/[0.04] border-white/[0.10] text-white placeholder:text-gray-600 focus:border-intelligence-cyan/40 h-8 text-sm"
         disabled={isPending}
+      />
+
+      <Textarea
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        placeholder="Description (optional)…"
+        rows={2}
+        disabled={isPending}
+        className="bg-white/[0.03] border-white/[0.08] text-gray-300 placeholder:text-gray-700 focus:border-intelligence-cyan/30 resize-none text-xs leading-relaxed"
       />
 
       <div className="flex items-center gap-2 flex-wrap">
@@ -496,7 +534,7 @@ function InlineTaskCreate({
         </Button>
         <button
           type="button"
-          onClick={() => { setIsOpen(false); setTitle(''); setError(null) }}
+          onClick={() => { setIsOpen(false); setTitle(''); setDescription(''); setError(null) }}
           className="h-7 text-xs text-gray-600 hover:text-gray-400 px-2 transition-colors"
         >
           Cancel
@@ -660,6 +698,7 @@ export function SprintDetailView({
   // Task inline edit state
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
   const [editTaskTitle, setEditTaskTitle] = useState('')
+  const [editTaskDescription, setEditTaskDescription] = useState('')
   const [editTaskPriority, setEditTaskPriority] = useState<Priority>('medium')
   const [editTaskDueDate, setEditTaskDueDate] = useState('')
 
@@ -717,6 +756,7 @@ export function SprintDetailView({
   const handleEditStart = (task: Task) => {
     setEditingTaskId(task.id)
     setEditTaskTitle(task.title)
+    setEditTaskDescription(extractPlainText(task.description))
     setEditTaskPriority((task.priority as Priority) ?? 'medium')
     setEditTaskDueDate(task.dueDate?.slice(0, 10) ?? '')
   }
@@ -735,6 +775,7 @@ export function SprintDetailView({
         taskId: task.id,
         data: {
           title: editTaskTitle.trim(),
+          description: editTaskDescription.trim() || undefined,
           priority: editTaskPriority,
           dueDate: editTaskDueDate || undefined,
         },
@@ -830,12 +871,14 @@ export function SprintDetailView({
     isPending,
     editingTaskId,
     editTaskTitle,
+    editTaskDescription,
     editTaskPriority,
     editTaskDueDate,
     onCircleClick: handleCircleClick,
     onRemoveFromSprint: handleRemoveFromSprint,
     onEditStart: handleEditStart,
     onEditTitleChange: setEditTaskTitle,
+    onEditDescriptionChange: setEditTaskDescription,
     onEditPriorityChange: setEditTaskPriority,
     onEditDueDateChange: setEditTaskDueDate,
     onEditSave: handleEditSave,

@@ -98,6 +98,7 @@ export async function updateTask({
   taskId: string
   data: {
     title?: string
+    description?: string
     status?: 'pending' | 'in-progress' | 'completed' | 'cancelled'
     sprint?: string | null
     priority?: 'low' | 'medium' | 'high' | 'urgent'
@@ -124,10 +125,27 @@ export async function updateTask({
       }
     }
 
+    const { description, ...rest } = data
+    const updateData: Record<string, unknown> = { ...rest }
+    if (description !== undefined) {
+      updateData.description = description.trim()
+        ? {
+            root: {
+              type: 'root',
+              children: [{ type: 'paragraph', version: 1, children: [{ type: 'text', version: 1, text: description.trim() }] }],
+              direction: null,
+              format: '',
+              indent: 0,
+              version: 1,
+            },
+          }
+        : null
+    }
+
     const updatedTask = await payload.update({
       collection: 'tasks',
       id: taskId,
-      data: data as any,
+      data: updateData as any,
     })
 
     return { success: true, task: updatedTask }

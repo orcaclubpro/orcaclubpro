@@ -5,6 +5,7 @@ import config from '@payload-config'
 import { ProjectTabNav } from '@/components/dashboard/ProjectTabNav'
 import { HomeTab } from '@/components/dashboard/HomeTab'
 import { SprintsTab } from '@/components/dashboard/SprintsTab'
+import { CredentialsTab } from '@/components/dashboard/CredentialsTab'
 import { SwipeTabRouter } from '@/components/dashboard/SwipeTabRouter'
 import { DetailTabSlide } from '@/components/dashboard/DetailTabSlide'
 import type { Project, Task, Sprint } from '@/types/payload-types'
@@ -50,7 +51,7 @@ export default async function ProjectDetailPage({
     notFound()
   }
 
-  const [{ docs: tasks }, { docs: sprints }] = await Promise.all([
+  const [{ docs: tasks }, { docs: sprints }, { docs: credentials }] = await Promise.all([
     payload.find({
       collection: 'tasks',
       where: { project: { equals: projectId } },
@@ -65,11 +66,19 @@ export default async function ProjectDetailPage({
       sort: 'startDate',
       limit: 50,
     }),
+    payload.find({
+      collection: 'credentials',
+      where: { project: { equals: projectId } },
+      depth: 0,
+      sort: 'title',
+      limit: 200,
+    }),
   ])
 
-  const activeTab = tab === 'sprints' ? 'sprints' : 'overview'
+  const activeTab =
+    tab === 'sprints' ? 'sprints' : tab === 'credentials' ? 'credentials' : 'overview'
   const basePath = `/u/${username}/projects/${projectId}`
-  const PROJECT_TABS = ['overview', 'sprints'] as const
+  const PROJECT_TABS = ['overview', 'credentials', 'sprints'] as const
 
   return (
     <>
@@ -92,6 +101,13 @@ export default async function ProjectDetailPage({
             tasks={tasks as Task[]}
             readOnly={isClient}
             username={username}
+          />
+        ) : activeTab === 'credentials' ? (
+          <CredentialsTab
+            credentials={credentials as any[]}
+            projectId={projectId}
+            username={username}
+            readOnly={isClient}
           />
         ) : (
           <SprintsTab

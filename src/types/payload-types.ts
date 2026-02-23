@@ -82,6 +82,7 @@ export interface Config {
     tasks: Task;
     sprints: Sprint;
     files: File;
+    credentials: Credential;
     'payload-jobs': PayloadJob;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -109,6 +110,7 @@ export interface Config {
     tasks: TasksSelect<false> | TasksSelect<true>;
     sprints: SprintsSelect<false> | SprintsSelect<true>;
     files: FilesSelect<false> | FilesSelect<true>;
+    credentials: CredentialsSelect<false> | CredentialsSelect<true>;
     'payload-jobs': PayloadJobsSelect<false> | PayloadJobsSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -847,6 +849,10 @@ export interface Package {
    */
   sourcePackage?: (string | null) | Package;
   /**
+   * Project this proposal is linked to
+   */
+  projectRef?: (string | null) | Project;
+  /**
    * Add-on items requested by the client via their portal
    */
   requestedItems?:
@@ -1125,6 +1131,53 @@ export interface File {
   createdAt: string;
 }
 /**
+ * Secure per-project credentials with passwords and secrets encrypted at rest
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "credentials".
+ */
+export interface Credential {
+  id: string;
+  /**
+   * Credential label (e.g. "WordPress Admin", "AWS Console")
+   */
+  title: string;
+  /**
+   * Project this credential belongs to
+   */
+  project: string | Project;
+  /**
+   * Login URL or service homepage
+   */
+  website?: string | null;
+  /**
+   * Username or email address
+   */
+  username?: string | null;
+  /**
+   * Password (encrypted at rest using AES-256-GCM)
+   */
+  password?: string | null;
+  /**
+   * Additional key/value secrets (API keys, tokens, environment variables)
+   */
+  secrets?:
+    | {
+        /**
+         * Secret name (e.g. "API_KEY", "Secret Token")
+         */
+        key: string;
+        /**
+         * Secret value (encrypted at rest)
+         */
+        value: string;
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-jobs".
  */
@@ -1282,6 +1335,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'files';
         value: string | File;
+      } | null)
+    | ({
+        relationTo: 'credentials';
+        value: string | Credential;
       } | null)
     | ({
         relationTo: 'payload-jobs';
@@ -1593,6 +1650,7 @@ export interface PackagesSelect<T extends boolean = true> {
   status?: T;
   clientAccount?: T;
   sourcePackage?: T;
+  projectRef?: T;
   requestedItems?:
     | T
     | {
@@ -1720,6 +1778,26 @@ export interface FilesSelect<T extends boolean = true> {
   sprint?: T;
   version?: T;
   tags?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "credentials_select".
+ */
+export interface CredentialsSelect<T extends boolean = true> {
+  title?: T;
+  project?: T;
+  website?: T;
+  username?: T;
+  password?: T;
+  secrets?:
+    | T
+    | {
+        key?: T;
+        value?: T;
+        id?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
 }

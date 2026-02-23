@@ -56,6 +56,7 @@ export type OrderStatusKey = 'paid' | 'pending' | 'cancelled'
 export type ClientOrderSummary = {
   id: string
   orderNumber: string | null
+  title?: string | null
   amount: number
   status: OrderStatusKey
   createdAt: string

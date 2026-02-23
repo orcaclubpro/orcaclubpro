@@ -16,14 +16,14 @@ export function contactConfirmationHTML(data: ContactConfirmationData): string {
           <!-- Eyebrow label -->
           <tr>
             <td style="padding: 0 0 14px 0;">
-              <p style="margin: 0; font-size: 10px; letter-spacing: 0.35em; text-transform: uppercase; color: #3a3a3a; font-weight: 400;">Inquiry Received</p>
+              <p class="oc-eyebrow" style="margin: 0; font-size: 10px; letter-spacing: 0.35em; text-transform: uppercase; color: #3a3a3a; font-weight: 400;">Inquiry Received</p>
             </td>
           </tr>
 
           <!-- Heading -->
           <tr>
             <td style="padding: 0 0 4px 0;">
-              <p style="margin: 0; font-size: 22px; font-weight: 200; color: #ffffff; letter-spacing: 0.01em; line-height: 1.3;">We've got your message.</p>
+              <p class="oc-heading" style="margin: 0; font-size: 22px; font-weight: 200; color: #ffffff; letter-spacing: 0.01em; line-height: 1.3;">We've got your message.</p>
             </td>
           </tr>
 
@@ -41,14 +41,14 @@ export function contactConfirmationHTML(data: ContactConfirmationData): string {
           <!-- Greeting -->
           <tr>
             <td style="padding: 0 0 12px 0;">
-              <p style="margin: 0; font-size: 13px; color: #555555; line-height: 1.7; font-weight: 300;">Hi ${firstName},</p>
+              <p class="oc-body-text" style="margin: 0; font-size: 13px; color: #555555; line-height: 1.7; font-weight: 300;">Hi ${firstName},</p>
             </td>
           </tr>
 
           <!-- Body -->
           <tr>
             <td style="padding: 0 0 24px 0;">
-              <p style="margin: 0; font-size: 13px; line-height: 1.8; color: #555555; font-weight: 300;">
+              <p class="oc-body-text" style="margin: 0; font-size: 13px; line-height: 1.8; color: #555555; font-weight: 300;">
                 We've received your inquiry. Our team will review your request and get back to you within 24 hours.
               </p>
             </td>
@@ -56,23 +56,23 @@ export function contactConfirmationHTML(data: ContactConfirmationData): string {
 
           <!-- Details -->
           <tr>
-            <td style="padding: 16px 20px; background-color: #111111; border: 1px solid #1a1a1a; border-left: 3px solid #67e8f9;">
-              <p style="margin: 0 0 12px 0; font-size: 10px; font-weight: 600; color: #3a3a3a; text-transform: uppercase; letter-spacing: 0.35em;">Your Inquiry</p>
+            <td class="oc-detail-box-lborder" style="padding: 16px 20px; background-color: #111111; border: 1px solid #1a1a1a; border-left: 3px solid #67e8f9;">
+              <p class="oc-detail-label" style="margin: 0 0 12px 0; font-size: 10px; font-weight: 600; color: #3a3a3a; text-transform: uppercase; letter-spacing: 0.35em;">Your Inquiry</p>
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
                 <tr>
-                  <td style="padding: 6px 0; font-size: 13px; color: #3a3a3a;">Service</td>
-                  <td style="padding: 6px 0; font-size: 13px; color: #555555; text-align: right;">${service}</td>
+                  <td class="oc-detail-key" style="padding: 6px 0; font-size: 13px; color: #3a3a3a;">Service</td>
+                  <td class="oc-detail-val" style="padding: 6px 0; font-size: 13px; color: #555555; text-align: right;">${service}</td>
                 </tr>
                 ${company ? `
                 <tr>
-                  <td style="padding: 6px 0; font-size: 13px; color: #3a3a3a;">Company</td>
-                  <td style="padding: 6px 0; font-size: 13px; color: #555555; text-align: right;">${company}</td>
+                  <td class="oc-detail-key" style="padding: 6px 0; font-size: 13px; color: #3a3a3a;">Company</td>
+                  <td class="oc-detail-val" style="padding: 6px 0; font-size: 13px; color: #555555; text-align: right;">${company}</td>
                 </tr>
                 ` : ''}
                 ${phone ? `
                 <tr>
-                  <td style="padding: 6px 0; font-size: 13px; color: #3a3a3a;">Phone</td>
-                  <td style="padding: 6px 0; font-size: 13px; color: #555555; text-align: right;">${phone}</td>
+                  <td class="oc-detail-key" style="padding: 6px 0; font-size: 13px; color: #3a3a3a;">Phone</td>
+                  <td class="oc-detail-val" style="padding: 6px 0; font-size: 13px; color: #555555; text-align: right;">${phone}</td>
                 </tr>
                 ` : ''}
               </table>
@@ -84,8 +84,8 @@ export function contactConfirmationHTML(data: ContactConfirmationData): string {
             <td style="padding: 28px 0 40px 0;">
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                 <tr>
-                  <td style="border-top: 1px solid #0f0f0f; padding-top: 24px;">
-                    <p style="margin: 0; font-size: 11px; color: #2e2e2e; line-height: 1.7; font-weight: 300;">Questions? Reply to this email or contact <a href="mailto:${adminEmail}" style="color: #2a6068; text-decoration: none;">${adminEmail}</a></p>
+                  <td class="oc-footer-note-td" style="border-top: 1px solid #0f0f0f; padding-top: 24px;">
+                    <p class="oc-muted" style="margin: 0; font-size: 11px; color: #2e2e2e; line-height: 1.7; font-weight: 300;">Questions? Reply to this email or contact <a href="mailto:${adminEmail}" style="color: #2a6068; text-decoration: none;">${adminEmail}</a></p>
                   </td>
                 </tr>
               </table>

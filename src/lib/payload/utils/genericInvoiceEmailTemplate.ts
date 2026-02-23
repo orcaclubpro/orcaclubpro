@@ -4,6 +4,7 @@
  */
 
 import type { Payload } from 'payload'
+import { EMAIL_LIGHT_MODE_STYLES } from '@/lib/email/templates/base'
 
 interface OrderLineItem {
   title: string
@@ -98,49 +99,49 @@ export function generateGenericInvoiceEmail(order: GenericInvoiceEmailData): str
   // Build Bill To rows (left column)
   const billToRows: string[] = []
   if (order.customerName) {
-    billToRows.push(`<div style="font-size:13px;font-weight:700;color:#cccccc;line-height:1.5;">${order.customerName}</div>`)
+    billToRows.push(`<div class="oc-bill-name" style="font-size:13px;font-weight:700;color:#cccccc;line-height:1.5;">${order.customerName}</div>`)
   }
   if (order.customerCompany) {
-    billToRows.push(`<div style="font-size:12px;color:#555555;line-height:1.5;">${order.customerCompany}</div>`)
+    billToRows.push(`<div class="oc-detail-val" style="font-size:12px;color:#555555;line-height:1.5;">${order.customerCompany}</div>`)
   }
   if (order.customerAddress?.line1) {
-    billToRows.push(`<div style="font-size:12px;color:#555555;line-height:1.5;">${order.customerAddress.line1}</div>`)
+    billToRows.push(`<div class="oc-detail-val" style="font-size:12px;color:#555555;line-height:1.5;">${order.customerAddress.line1}</div>`)
   }
   if (order.customerAddress?.line2) {
-    billToRows.push(`<div style="font-size:12px;color:#555555;line-height:1.5;">${order.customerAddress.line2}</div>`)
+    billToRows.push(`<div class="oc-detail-val" style="font-size:12px;color:#555555;line-height:1.5;">${order.customerAddress.line2}</div>`)
   }
   const cityStateZip = [order.customerAddress?.city, order.customerAddress?.state, order.customerAddress?.zip].filter(Boolean).join(', ')
   if (cityStateZip) {
-    billToRows.push(`<div style="font-size:12px;color:#555555;line-height:1.5;">${cityStateZip}</div>`)
+    billToRows.push(`<div class="oc-detail-val" style="font-size:12px;color:#555555;line-height:1.5;">${cityStateZip}</div>`)
   }
   if (order.customerPhone) {
-    billToRows.push(`<div style="font-size:12px;color:#555555;line-height:1.5;">${order.customerPhone}</div>`)
+    billToRows.push(`<div class="oc-detail-val" style="font-size:12px;color:#555555;line-height:1.5;">${order.customerPhone}</div>`)
   }
   if (order.customerEmail) {
-    billToRows.push(`<div style="font-size:12px;color:#555555;line-height:1.5;"><a href="mailto:${order.customerEmail}" style="color:#2a6068;text-decoration:none;">${order.customerEmail}</a></div>`)
+    billToRows.push(`<div class="oc-detail-val" style="font-size:12px;color:#555555;line-height:1.5;"><a href="mailto:${order.customerEmail}" style="color:#2a6068;text-decoration:none;">${order.customerEmail}</a></div>`)
   }
 
   // Build Order Details rows (right column)
   const orderRows: string[] = []
-  orderRows.push(`<div style="font-size:13px;font-weight:600;color:#cccccc;line-height:1.5;">#${order.orderNumber}</div>`)
+  orderRows.push(`<div class="oc-bill-name" style="font-size:13px;font-weight:600;color:#cccccc;line-height:1.5;">#${order.orderNumber}</div>`)
   if (order.packageName) {
-    orderRows.push(`<div style="font-size:12px;color:#555555;line-height:1.5;">Package: ${order.packageName}</div>`)
+    orderRows.push(`<div class="oc-detail-val" style="font-size:12px;color:#555555;line-height:1.5;">Package: ${order.packageName}</div>`)
   }
   if (order.dueDate) {
-    orderRows.push(`<div style="font-size:12px;color:#555555;line-height:1.5;margin-top:4px;">Due: ${fmtDueDate(order.dueDate)}</div>`)
+    orderRows.push(`<div class="oc-detail-val" style="font-size:12px;color:#555555;line-height:1.5;margin-top:4px;">Due: ${fmtDueDate(order.dueDate)}</div>`)
   }
 
   // Line items HTML
   const lineItemsHtml = order.lineItems
     .map(item => `
     <tr>
-      <td style="padding:10px 0;border-bottom:1px solid #1a1a1a;">
-        <div style="color:#cccccc;font-size:13px;font-weight:400;">${item.title}</div>
-        ${item.isRecurring ? `<div style="color:#3a3a3a;font-size:11px;margin-top:3px;letter-spacing:0.02em;">Recurring (${item.recurringInterval}ly)</div>` : ''}
+      <td class="oc-item-divider" style="padding:10px 0;border-bottom:1px solid #1a1a1a;">
+        <div class="oc-item-name" style="color:#cccccc;font-size:13px;font-weight:400;">${item.title}</div>
+        ${item.isRecurring ? `<div class="oc-detail-key" style="color:#3a3a3a;font-size:11px;margin-top:3px;letter-spacing:0.02em;">Recurring (${item.recurringInterval}ly)</div>` : ''}
       </td>
-      <td style="padding:10px 0;border-bottom:1px solid #1a1a1a;text-align:center;color:#555555;font-size:13px;width:50px;">${item.quantity}</td>
-      <td style="padding:10px 0;border-bottom:1px solid #1a1a1a;text-align:right;color:#555555;font-size:13px;width:80px;">${fmtUsd(item.price)}${item.isRecurring ? `<span style="color:#3a3a3a;font-size:11px;">/${item.recurringInterval}</span>` : ''}</td>
-      <td style="padding:10px 0;border-bottom:1px solid #1a1a1a;text-align:right;color:#cccccc;font-size:13px;font-weight:600;width:90px;">${fmtUsd(item.price * item.quantity)}${item.isRecurring ? `<span style="color:#3a3a3a;font-size:11px;font-weight:400;">/${item.recurringInterval}</span>` : ''}</td>
+      <td class="oc-item-divider oc-detail-val" style="padding:10px 0;border-bottom:1px solid #1a1a1a;text-align:center;color:#555555;font-size:13px;width:50px;">${item.quantity}</td>
+      <td class="oc-item-divider oc-detail-val" style="padding:10px 0;border-bottom:1px solid #1a1a1a;text-align:right;color:#555555;font-size:13px;width:80px;">${fmtUsd(item.price)}${item.isRecurring ? `<span class="oc-detail-key" style="color:#3a3a3a;font-size:11px;">/${item.recurringInterval}</span>` : ''}</td>
+      <td class="oc-item-divider oc-item-total" style="padding:10px 0;border-bottom:1px solid #1a1a1a;text-align:right;color:#cccccc;font-size:13px;font-weight:600;width:90px;">${fmtUsd(item.price * item.quantity)}${item.isRecurring ? `<span class="oc-detail-key" style="color:#3a3a3a;font-size:11px;font-weight:400;">/${item.recurringInterval}</span>` : ''}</td>
     </tr>`)
     .join('')
 
@@ -152,6 +153,7 @@ export function generateGenericInvoiceEmail(order: GenericInvoiceEmailData): str
   <title>Invoice #${order.orderNumber} — ORCACLUB</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&display=swap" rel="stylesheet">
+  ${EMAIL_LIGHT_MODE_STYLES}
 </head>
 <body style="margin:0;padding:0;background-color:#000000;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
 
@@ -160,11 +162,11 @@ export function generateGenericInvoiceEmail(order: GenericInvoiceEmailData): str
       <td style="padding:48px 20px;">
 
         <!-- Card -->
-        <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="max-width:560px;width:100%;background-color:#080808;border:1px solid #111111;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" class="oc-card" style="max-width:560px;width:100%;background-color:#080808;border:1px solid #111111;">
 
           <!-- Header: wordmark + label -->
           <tr>
-            <td style="padding:28px 40px 24px 40px;border-bottom:1px solid #0f0f0f;">
+            <td class="oc-header-td" style="padding:28px 40px 24px 40px;border-bottom:1px solid #0f0f0f;">
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                 <tr>
                   <td>
@@ -183,10 +185,10 @@ export function generateGenericInvoiceEmail(order: GenericInvoiceEmailData): str
             <td style="padding:36px 40px 0 40px;">
 
               <!-- Eyebrow -->
-              <p style="margin:0 0 10px 0;font-size:10px;letter-spacing:0.35em;text-transform:uppercase;color:#3a3a3a;font-weight:400;">${eyebrow}</p>
+              <p class="oc-eyebrow" style="margin:0 0 10px 0;font-size:10px;letter-spacing:0.35em;text-transform:uppercase;color:#3a3a3a;font-weight:400;">${eyebrow}</p>
 
               <!-- Heading -->
-              <p style="margin:0;font-size:22px;font-weight:200;color:#ffffff;letter-spacing:0.01em;line-height:1.3;">Invoice #${order.orderNumber}</p>
+              <p class="oc-heading" style="margin:0;font-size:22px;font-weight:200;color:#ffffff;letter-spacing:0.01em;line-height:1.3;">Invoice #${order.orderNumber}</p>
 
               <!-- Cyan hairline -->
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin-top:18px;">
@@ -201,16 +203,16 @@ export function generateGenericInvoiceEmail(order: GenericInvoiceEmailData): str
           <!-- Bill To + Order Details two-column box -->
           <tr>
             <td style="padding:24px 40px 0 40px;">
-              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color:#111111;border:1px solid #1a1a1a;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="oc-detail-box" style="background-color:#111111;border:1px solid #1a1a1a;">
                 <tr>
                   <!-- Bill To -->
-                  <td style="padding:18px 20px;vertical-align:top;width:55%;border-right:1px solid #1a1a1a;">
-                    <div style="font-size:9px;letter-spacing:0.35em;text-transform:uppercase;color:#3a3a3a;font-weight:400;margin-bottom:10px;">Bill To</div>
+                  <td class="oc-footer-note-td" style="padding:18px 20px;vertical-align:top;width:55%;border-right:1px solid #1a1a1a;">
+                    <div class="oc-detail-label" style="font-size:9px;letter-spacing:0.35em;text-transform:uppercase;color:#3a3a3a;font-weight:400;margin-bottom:10px;">Bill To</div>
                     ${billToRows.join('\n                    ')}
                   </td>
                   <!-- Order Details -->
                   <td style="padding:18px 20px;vertical-align:top;width:45%;">
-                    <div style="font-size:9px;letter-spacing:0.35em;text-transform:uppercase;color:#3a3a3a;font-weight:400;margin-bottom:10px;">Order Details</div>
+                    <div class="oc-detail-label" style="font-size:9px;letter-spacing:0.35em;text-transform:uppercase;color:#3a3a3a;font-weight:400;margin-bottom:10px;">Order Details</div>
                     ${orderRows.join('\n                    ')}
                   </td>
                 </tr>
@@ -221,7 +223,7 @@ export function generateGenericInvoiceEmail(order: GenericInvoiceEmailData): str
           <!-- Line Items Card -->
           <tr>
             <td style="padding:16px 40px 0 40px;">
-              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color:#111111;border:1px solid #1a1a1a;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="oc-detail-box" style="background-color:#111111;border:1px solid #1a1a1a;">
                 <tr>
                   <td style="padding:20px 20px 0 20px;">
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
@@ -242,10 +244,10 @@ export function generateGenericInvoiceEmail(order: GenericInvoiceEmailData): str
 
                 <!-- Total row -->
                 <tr>
-                  <td style="padding:16px 20px;border-top:1px solid #1a1a1a;">
+                  <td class="oc-footer-note-td" style="padding:16px 20px;border-top:1px solid #1a1a1a;">
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                       <tr>
-                        <td style="font-size:10px;letter-spacing:0.35em;text-transform:uppercase;color:#3a3a3a;font-weight:400;">Total Due</td>
+                        <td class="oc-total-label" style="font-size:10px;letter-spacing:0.35em;text-transform:uppercase;color:#3a3a3a;font-weight:400;">Total Due</td>
                         <td style="text-align:right;font-size:18px;font-weight:700;color:#67e8f9;">${fmtUsd(order.totalAmount)} <span style="font-size:11px;font-weight:400;color:#3a3a3a;">USD</span></td>
                       </tr>
                     </table>
@@ -272,7 +274,7 @@ export function generateGenericInvoiceEmail(order: GenericInvoiceEmailData): str
                   ` : ''}
                 </tr>
               </table>
-              <p style="margin:10px 0 0 0;font-size:11px;color:#2e2e2e;word-break:break-all;">${paymentUrl}</p>
+              <p class="oc-muted" style="margin:10px 0 0 0;font-size:11px;color:#2e2e2e;word-break:break-all;">${paymentUrl}</p>
             </td>
           </tr>
           ` : ''}
@@ -282,8 +284,8 @@ export function generateGenericInvoiceEmail(order: GenericInvoiceEmailData): str
             <td style="padding:28px 40px 40px 40px;">
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                 <tr>
-                  <td style="border-top:1px solid #0f0f0f;padding-top:24px;">
-                    <p style="margin:0;font-size:11px;color:#2e2e2e;line-height:1.7;font-weight:300;">Questions about your invoice? Reply to this email or contact <a href="mailto:chance@orcaclub.pro" style="color:#2a6068;text-decoration:none;">chance@orcaclub.pro</a></p>
+                  <td class="oc-footer-note-td" style="border-top:1px solid #0f0f0f;padding-top:24px;">
+                    <p class="oc-muted" style="margin:0;font-size:11px;color:#2e2e2e;line-height:1.7;font-weight:300;">Questions about your invoice? Reply to this email or contact <a href="mailto:chance@orcaclub.pro" style="color:#2a6068;text-decoration:none;">chance@orcaclub.pro</a></p>
                   </td>
                 </tr>
               </table>
@@ -292,14 +294,14 @@ export function generateGenericInvoiceEmail(order: GenericInvoiceEmailData): str
 
           <!-- Footer bar -->
           <tr>
-            <td style="padding:18px 40px;border-top:1px solid #0a0a0a;background-color:#050505;">
+            <td class="oc-footer-bar" style="padding:18px 40px;border-top:1px solid #0a0a0a;background-color:#050505;">
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                 <tr>
                   <td>
-                    <span style="font-family:'Cinzel Decorative',Georgia,serif;font-size:10px;font-weight:700;color:#1f1f1f;">ORCA</span><span style="font-family:'Cinzel Decorative',Georgia,serif;font-size:10px;font-weight:700;color:#1a3a3e;">CLUB</span>
+                    <span class="oc-footer-orca" style="font-family:'Cinzel Decorative',Georgia,serif;font-size:10px;font-weight:700;color:#1f1f1f;">ORCA</span><span class="oc-footer-club" style="font-family:'Cinzel Decorative',Georgia,serif;font-size:10px;font-weight:700;color:#1a3a3e;">CLUB</span>
                   </td>
                   <td align="right">
-                    <a href="https://orcaclub.pro" style="font-size:10px;color:#1f1f1f;text-decoration:none;font-weight:300;letter-spacing:0.02em;">orcaclub.pro</a>
+                    <a href="https://orcaclub.pro" class="oc-footer-link" style="font-size:10px;color:#1f1f1f;text-decoration:none;font-weight:300;letter-spacing:0.02em;">orcaclub.pro</a>
                   </td>
                 </tr>
               </table>
@@ -456,12 +458,12 @@ export function generatePaymentScheduleEmail(data: PaymentScheduleEmailData): st
 
   const scheduleRows = data.entries.map((e, i) => `
     <tr>
-      <td style="padding:10px 0;border-bottom:1px solid #1a1a1a;">
-        <div style="color:#cccccc;font-size:13px;font-weight:400;">${e.label}</div>
-        <div style="color:#3a3a3a;font-size:11px;margin-top:2px;">Payment ${i + 1} of ${data.entries.length}</div>
+      <td class="oc-item-divider" style="padding:10px 0;border-bottom:1px solid #1a1a1a;">
+        <div class="oc-item-name" style="color:#cccccc;font-size:13px;font-weight:400;">${e.label}</div>
+        <div class="oc-detail-key" style="color:#3a3a3a;font-size:11px;margin-top:2px;">Payment ${i + 1} of ${data.entries.length}</div>
       </td>
-      <td style="padding:10px 0;border-bottom:1px solid #1a1a1a;text-align:right;color:#cccccc;font-size:13px;font-weight:600;width:110px;">${fmtUsd(e.amount)}</td>
-      <td style="padding:10px 0;border-bottom:1px solid #1a1a1a;text-align:right;color:#555555;font-size:12px;width:120px;">${e.dueDate ? fmtDate(e.dueDate) : '—'}</td>
+      <td class="oc-item-divider oc-item-total" style="padding:10px 0;border-bottom:1px solid #1a1a1a;text-align:right;color:#cccccc;font-size:13px;font-weight:600;width:110px;">${fmtUsd(e.amount)}</td>
+      <td class="oc-item-divider oc-detail-val" style="padding:10px 0;border-bottom:1px solid #1a1a1a;text-align:right;color:#555555;font-size:12px;width:120px;">${e.dueDate ? fmtDate(e.dueDate) : '—'}</td>
     </tr>`).join('')
 
   return `<!DOCTYPE html>
@@ -472,16 +474,17 @@ export function generatePaymentScheduleEmail(data: PaymentScheduleEmailData): st
   <title>Payment Schedule — ORCACLUB</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&display=swap" rel="stylesheet">
+  ${EMAIL_LIGHT_MODE_STYLES}
 </head>
 <body style="margin:0;padding:0;background-color:#000000;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
   <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
     <tr>
       <td style="padding:48px 20px;">
-        <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="max-width:560px;width:100%;background-color:#080808;border:1px solid #111111;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" class="oc-card" style="max-width:560px;width:100%;background-color:#080808;border:1px solid #111111;">
 
           <!-- Header -->
           <tr>
-            <td style="padding:28px 40px 24px 40px;border-bottom:1px solid #0f0f0f;">
+            <td class="oc-header-td" style="padding:28px 40px 24px 40px;border-bottom:1px solid #0f0f0f;">
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                 <tr>
                   <td>
@@ -498,9 +501,9 @@ export function generatePaymentScheduleEmail(data: PaymentScheduleEmailData): st
           <!-- Body -->
           <tr>
             <td style="padding:36px 40px 0 40px;">
-              <p style="margin:0 0 10px 0;font-size:10px;letter-spacing:0.35em;text-transform:uppercase;color:#3a3a3a;font-weight:400;">Your Package</p>
-              <p style="margin:0;font-size:22px;font-weight:200;color:#ffffff;letter-spacing:0.01em;line-height:1.3;">Package: ${data.packageName}</p>
-              ${data.packageDescription ? `<p style="margin:12px 0 0 0;font-size:13px;color:#555555;line-height:1.7;font-weight:300;">${data.packageDescription}</p>` : ''}
+              <p class="oc-eyebrow" style="margin:0 0 10px 0;font-size:10px;letter-spacing:0.35em;text-transform:uppercase;color:#3a3a3a;font-weight:400;">Your Package</p>
+              <p class="oc-heading" style="margin:0;font-size:22px;font-weight:200;color:#ffffff;letter-spacing:0.01em;line-height:1.3;">Package: ${data.packageName}</p>
+              ${data.packageDescription ? `<p class="oc-body-text" style="margin:12px 0 0 0;font-size:13px;color:#555555;line-height:1.7;font-weight:300;">${data.packageDescription}</p>` : ''}
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin-top:18px;">
                 <tr>
                   <td style="width:24px;height:1px;line-height:1px;font-size:1px;background-color:#2a6068;">&nbsp;</td>
@@ -512,7 +515,7 @@ export function generatePaymentScheduleEmail(data: PaymentScheduleEmailData): st
           <!-- Schedule table -->
           <tr>
             <td style="padding:16px 40px 0 40px;">
-              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color:#111111;border:1px solid #1a1a1a;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="oc-detail-box" style="background-color:#111111;border:1px solid #1a1a1a;">
                 <tr>
                   <td style="padding:20px 20px 0 20px;">
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
@@ -528,11 +531,11 @@ export function generatePaymentScheduleEmail(data: PaymentScheduleEmailData): st
                   </td>
                 </tr>
                 <tr>
-                  <td style="padding:16px 20px;border-top:1px solid #1a1a1a;">
+                  <td class="oc-footer-note-td" style="padding:16px 20px;border-top:1px solid #1a1a1a;">
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                       <tr>
-                        <td style="font-size:10px;letter-spacing:0.35em;text-transform:uppercase;color:#3a3a3a;font-weight:400;">Total</td>
-                        <td style="text-align:right;font-size:18px;font-weight:700;color:#67e8f9;">${fmtUsd(data.totalAmount)} <span style="font-size:11px;font-weight:400;color:#3a3a3a;">USD</span></td>
+                        <td class="oc-total-label" style="font-size:10px;letter-spacing:0.35em;text-transform:uppercase;color:#3a3a3a;font-weight:400;">Total</td>
+                        <td style="text-align:right;font-size:18px;font-weight:700;color:#67e8f9;">${fmtUsd(data.totalAmount)} <span class="oc-total-label" style="font-size:11px;font-weight:400;color:#3a3a3a;">USD</span></td>
                       </tr>
                     </table>
                   </td>
@@ -552,7 +555,7 @@ export function generatePaymentScheduleEmail(data: PaymentScheduleEmailData): st
                   </td>
                 </tr>
               </table>
-              <p style="margin:10px 0 0 0;font-size:11px;color:#2e2e2e;word-break:break-all;">${data.proposalPrintUrl}</p>
+              <p class="oc-muted" style="margin:10px 0 0 0;font-size:11px;color:#2e2e2e;word-break:break-all;">${data.proposalPrintUrl}</p>
             </td>
           </tr>
           ` : ''}
@@ -562,8 +565,8 @@ export function generatePaymentScheduleEmail(data: PaymentScheduleEmailData): st
             <td style="padding:28px 40px 40px 40px;">
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                 <tr>
-                  <td style="border-top:1px solid #0f0f0f;padding-top:24px;">
-                    <p style="margin:0;font-size:11px;color:#2e2e2e;line-height:1.7;font-weight:300;">Questions about your payment schedule? Reply to this email or contact <a href="mailto:chance@orcaclub.pro" style="color:#2a6068;text-decoration:none;">chance@orcaclub.pro</a></p>
+                  <td class="oc-footer-note-td" style="border-top:1px solid #0f0f0f;padding-top:24px;">
+                    <p class="oc-muted" style="margin:0;font-size:11px;color:#2e2e2e;line-height:1.7;font-weight:300;">Questions about your payment schedule? Reply to this email or contact <a href="mailto:chance@orcaclub.pro" style="color:#2a6068;text-decoration:none;">chance@orcaclub.pro</a></p>
                   </td>
                 </tr>
               </table>
@@ -572,14 +575,14 @@ export function generatePaymentScheduleEmail(data: PaymentScheduleEmailData): st
 
           <!-- Footer bar -->
           <tr>
-            <td style="padding:18px 40px;border-top:1px solid #0a0a0a;background-color:#050505;">
+            <td class="oc-footer-bar" style="padding:18px 40px;border-top:1px solid #0a0a0a;background-color:#050505;">
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                 <tr>
                   <td>
-                    <span style="font-family:'Cinzel Decorative',Georgia,serif;font-size:10px;font-weight:700;color:#1f1f1f;">ORCA</span><span style="font-family:'Cinzel Decorative',Georgia,serif;font-size:10px;font-weight:700;color:#1a3a3e;">CLUB</span>
+                    <span class="oc-footer-orca" style="font-family:'Cinzel Decorative',Georgia,serif;font-size:10px;font-weight:700;color:#1f1f1f;">ORCA</span><span class="oc-footer-club" style="font-family:'Cinzel Decorative',Georgia,serif;font-size:10px;font-weight:700;color:#1a3a3e;">CLUB</span>
                   </td>
                   <td align="right">
-                    <a href="https://orcaclub.pro" style="font-size:10px;color:#1f1f1f;text-decoration:none;font-weight:300;letter-spacing:0.02em;">orcaclub.pro</a>
+                    <a href="https://orcaclub.pro" class="oc-footer-link" style="font-size:10px;color:#1f1f1f;text-decoration:none;font-weight:300;letter-spacing:0.02em;">orcaclub.pro</a>
                   </td>
                 </tr>
               </table>
@@ -653,29 +656,29 @@ export function generateProposalEmail(data: ProposalEmailData): string {
   const lineItemRows = data.lineItems.map(item => {
     const qty = item.quantity ?? 1
     const total = item.price * qty
-    const recurringLabel = item.isRecurring ? `<div style="color:#3a3a3a;font-size:11px;margin-top:2px;">per ${item.recurringInterval ?? 'month'}</div>` : ''
+    const recurringLabel = item.isRecurring ? `<div class="oc-detail-key" style="color:#3a3a3a;font-size:11px;margin-top:2px;">per ${item.recurringInterval ?? 'month'}</div>` : ''
     return `
     <tr>
-      <td style="padding:10px 0;border-bottom:1px solid #1a1a1a;">
-        <div style="color:#cccccc;font-size:13px;font-weight:400;">${item.name}</div>
+      <td class="oc-item-divider" style="padding:10px 0;border-bottom:1px solid #1a1a1a;">
+        <div class="oc-item-name" style="color:#cccccc;font-size:13px;font-weight:400;">${item.name}</div>
         ${recurringLabel}
       </td>
-      <td style="padding:10px 0;border-bottom:1px solid #1a1a1a;text-align:right;color:#cccccc;font-size:13px;font-weight:600;width:100px;">${fmtUsd(total)}${item.isRecurring ? `<span style="color:#3a3a3a;font-size:11px;font-weight:400;">/${item.recurringInterval ?? 'mo'}</span>` : ''}</td>
+      <td class="oc-item-divider oc-item-total" style="padding:10px 0;border-bottom:1px solid #1a1a1a;text-align:right;color:#cccccc;font-size:13px;font-weight:600;width:100px;">${fmtUsd(total)}${item.isRecurring ? `<span class="oc-detail-key" style="color:#3a3a3a;font-size:11px;font-weight:400;">/${item.recurringInterval ?? 'mo'}</span>` : ''}</td>
     </tr>`
   }).join('')
 
   const totalsHtml = [
-    data.totalOneTime > 0 ? `<div style="font-size:12px;color:#555555;margin-bottom:4px;">One-time: <span style="color:#cccccc;font-weight:600;">${fmtUsd(data.totalOneTime)}</span></div>` : '',
-    data.totalMonthly > 0 ? `<div style="font-size:12px;color:#555555;margin-bottom:4px;">Monthly: <span style="color:#cccccc;font-weight:600;">${fmtUsd(data.totalMonthly)}/mo</span></div>` : '',
-    data.totalAnnual > 0 ? `<div style="font-size:12px;color:#555555;margin-bottom:4px;">Annual: <span style="color:#cccccc;font-weight:600;">${fmtUsd(data.totalAnnual)}/yr</span></div>` : '',
+    data.totalOneTime > 0 ? `<div class="oc-detail-val" style="font-size:12px;color:#555555;margin-bottom:4px;">One-time: <span class="oc-item-total" style="color:#cccccc;font-weight:600;">${fmtUsd(data.totalOneTime)}</span></div>` : '',
+    data.totalMonthly > 0 ? `<div class="oc-detail-val" style="font-size:12px;color:#555555;margin-bottom:4px;">Monthly: <span class="oc-item-total" style="color:#cccccc;font-weight:600;">${fmtUsd(data.totalMonthly)}/mo</span></div>` : '',
+    data.totalAnnual > 0 ? `<div class="oc-detail-val" style="font-size:12px;color:#555555;margin-bottom:4px;">Annual: <span class="oc-item-total" style="color:#cccccc;font-weight:600;">${fmtUsd(data.totalAnnual)}/yr</span></div>` : '',
   ].filter(Boolean).join('')
 
   const scheduleHtml = data.paymentSchedule && data.paymentSchedule.length > 0 ? `
   <!-- Payment Schedule -->
   <tr>
     <td style="padding:16px 40px 0 40px;">
-      <p style="margin:0 0 10px 0;font-size:9px;letter-spacing:0.35em;text-transform:uppercase;color:#3a3a3a;font-weight:400;">Payment Schedule</p>
-      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color:#111111;border:1px solid #1a1a1a;">
+      <p class="oc-eyebrow" style="margin:0 0 10px 0;font-size:9px;letter-spacing:0.35em;text-transform:uppercase;color:#3a3a3a;font-weight:400;">Payment Schedule</p>
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="oc-detail-box" style="background-color:#111111;border:1px solid #1a1a1a;">
         <tr>
           <td style="padding:16px 20px;">
             ${data.paymentSchedule.map((e, i) => {
@@ -689,8 +692,8 @@ export function generateProposalEmail(data: ProposalEmailData): string {
                   : e.dueDate
               })() : null
               return `<div style="display:flex;justify-content:space-between;padding:8px 0;${i > 0 ? 'border-top:1px solid #1a1a1a;' : ''}">
-                <div style="font-size:12px;color:#888888;">${e.label}${dueStr ? `<span style="color:#444444;font-size:11px;"> · ${dueStr}</span>` : ''}</div>
-                <div style="font-size:12px;color:#cccccc;font-weight:600;">${fmtUsd(e.amount)}</div>
+                <div class="oc-detail-val" style="font-size:12px;color:#888888;">${e.label}${dueStr ? `<span class="oc-detail-key" style="color:#444444;font-size:11px;"> · ${dueStr}</span>` : ''}</div>
+                <div class="oc-item-total" style="font-size:12px;color:#cccccc;font-weight:600;">${fmtUsd(e.amount)}</div>
               </div>`
             }).join('')}
           </td>
@@ -707,16 +710,17 @@ export function generateProposalEmail(data: ProposalEmailData): string {
   <title>Your Package — ${data.packageName} — ORCACLUB</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&display=swap" rel="stylesheet">
+  ${EMAIL_LIGHT_MODE_STYLES}
 </head>
 <body style="margin:0;padding:0;background-color:#000000;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
   <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
     <tr>
       <td style="padding:48px 20px;">
-        <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="max-width:560px;width:100%;background-color:#080808;border:1px solid #111111;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" class="oc-card" style="max-width:560px;width:100%;background-color:#080808;border:1px solid #111111;">
 
           <!-- Header -->
           <tr>
-            <td style="padding:28px 40px 24px 40px;border-bottom:1px solid #0f0f0f;">
+            <td class="oc-header-td" style="padding:28px 40px 24px 40px;border-bottom:1px solid #0f0f0f;">
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                 <tr>
                   <td>
@@ -733,9 +737,9 @@ export function generateProposalEmail(data: ProposalEmailData): string {
           <!-- Body -->
           <tr>
             <td style="padding:36px 40px 0 40px;">
-              <p style="margin:0 0 10px 0;font-size:10px;letter-spacing:0.35em;text-transform:uppercase;color:#3a3a3a;font-weight:400;">Your Package</p>
-              <p style="margin:0;font-size:22px;font-weight:200;color:#ffffff;letter-spacing:0.01em;line-height:1.3;">Package: ${data.packageName}</p>
-              ${data.coverMessage ? `<p style="margin:14px 0 0 0;font-size:13px;color:#666666;line-height:1.8;font-weight:300;font-style:italic;">&ldquo;${data.coverMessage}&rdquo;</p>` : data.packageDescription ? `<p style="margin:12px 0 0 0;font-size:13px;color:#555555;line-height:1.7;font-weight:300;">${data.packageDescription}</p>` : ''}
+              <p class="oc-eyebrow" style="margin:0 0 10px 0;font-size:10px;letter-spacing:0.35em;text-transform:uppercase;color:#3a3a3a;font-weight:400;">Your Package</p>
+              <p class="oc-heading" style="margin:0;font-size:22px;font-weight:200;color:#ffffff;letter-spacing:0.01em;line-height:1.3;">Package: ${data.packageName}</p>
+              ${data.coverMessage ? `<p class="oc-body-text" style="margin:14px 0 0 0;font-size:13px;color:#666666;line-height:1.8;font-weight:300;font-style:italic;">&ldquo;${data.coverMessage}&rdquo;</p>` : data.packageDescription ? `<p class="oc-body-text" style="margin:12px 0 0 0;font-size:13px;color:#555555;line-height:1.7;font-weight:300;">${data.packageDescription}</p>` : ''}
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin-top:18px;">
                 <tr>
                   <td style="width:24px;height:1px;line-height:1px;font-size:1px;background-color:#2a6068;">&nbsp;</td>
@@ -747,7 +751,7 @@ export function generateProposalEmail(data: ProposalEmailData): string {
           <!-- Line Items -->
           <tr>
             <td style="padding:16px 40px 0 40px;">
-              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color:#111111;border:1px solid #1a1a1a;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="oc-detail-box" style="background-color:#111111;border:1px solid #1a1a1a;">
                 <tr>
                   <td style="padding:20px 20px 0 20px;">
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
@@ -762,9 +766,9 @@ export function generateProposalEmail(data: ProposalEmailData): string {
                   </td>
                 </tr>
                 <tr>
-                  <td style="padding:16px 20px;border-top:1px solid #1a1a1a;">
+                  <td class="oc-footer-note-td" style="padding:16px 20px;border-top:1px solid #1a1a1a;">
                     ${totalsHtml}
-                    ${data.totalOneTime > 0 ? `<div style="margin-top:8px;font-size:18px;font-weight:700;color:#67e8f9;">${fmtUsd(data.totalOneTime)} <span style="font-size:11px;font-weight:400;color:#3a3a3a;">USD</span></div>` : ''}
+                    ${data.totalOneTime > 0 ? `<div style="margin-top:8px;font-size:18px;font-weight:700;color:#67e8f9;">${fmtUsd(data.totalOneTime)} <span class="oc-total-label" style="font-size:11px;font-weight:400;color:#3a3a3a;">USD</span></div>` : ''}
                   </td>
                 </tr>
               </table>
@@ -784,7 +788,7 @@ export function generateProposalEmail(data: ProposalEmailData): string {
                   </td>
                 </tr>
               </table>
-              <p style="margin:10px 0 0 0;font-size:11px;color:#2e2e2e;word-break:break-all;">${data.proposalPrintUrl}</p>
+              <p class="oc-muted" style="margin:10px 0 0 0;font-size:11px;color:#2e2e2e;word-break:break-all;">${data.proposalPrintUrl}</p>
             </td>
           </tr>
           ` : ''}
@@ -794,8 +798,8 @@ export function generateProposalEmail(data: ProposalEmailData): string {
             <td style="padding:28px 40px 40px 40px;">
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                 <tr>
-                  <td style="border-top:1px solid #0f0f0f;padding-top:24px;">
-                    <p style="margin:0;font-size:11px;color:#2e2e2e;line-height:1.7;font-weight:300;">Questions about this package? Reply to this email or contact <a href="mailto:chance@orcaclub.pro" style="color:#2a6068;text-decoration:none;">chance@orcaclub.pro</a></p>
+                  <td class="oc-footer-note-td" style="border-top:1px solid #0f0f0f;padding-top:24px;">
+                    <p class="oc-muted" style="margin:0;font-size:11px;color:#2e2e2e;line-height:1.7;font-weight:300;">Questions about this package? Reply to this email or contact <a href="mailto:chance@orcaclub.pro" style="color:#2a6068;text-decoration:none;">chance@orcaclub.pro</a></p>
                   </td>
                 </tr>
               </table>
@@ -804,14 +808,14 @@ export function generateProposalEmail(data: ProposalEmailData): string {
 
           <!-- Footer bar -->
           <tr>
-            <td style="padding:18px 40px;border-top:1px solid #0a0a0a;background-color:#050505;">
+            <td class="oc-footer-bar" style="padding:18px 40px;border-top:1px solid #0a0a0a;background-color:#050505;">
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                 <tr>
                   <td>
-                    <span style="font-family:'Cinzel Decorative',Georgia,serif;font-size:10px;font-weight:700;color:#1f1f1f;">ORCA</span><span style="font-family:'Cinzel Decorative',Georgia,serif;font-size:10px;font-weight:700;color:#1a3a3e;">CLUB</span>
+                    <span class="oc-footer-orca" style="font-family:'Cinzel Decorative',Georgia,serif;font-size:10px;font-weight:700;color:#1f1f1f;">ORCA</span><span class="oc-footer-club" style="font-family:'Cinzel Decorative',Georgia,serif;font-size:10px;font-weight:700;color:#1a3a3e;">CLUB</span>
                   </td>
                   <td align="right">
-                    <a href="https://orcaclub.pro" style="font-size:10px;color:#1f1f1f;text-decoration:none;font-weight:300;letter-spacing:0.02em;">orcaclub.pro</a>
+                    <a href="https://orcaclub.pro" class="oc-footer-link" style="font-size:10px;color:#1f1f1f;text-decoration:none;font-weight:300;letter-spacing:0.02em;">orcaclub.pro</a>
                   </td>
                 </tr>
               </table>

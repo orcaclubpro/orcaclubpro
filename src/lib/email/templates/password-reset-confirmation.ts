@@ -21,14 +21,14 @@ export function passwordResetConfirmationHTML({ name }: PasswordResetConfirmatio
           <!-- Eyebrow label -->
           <tr>
             <td style="padding:0 0 14px 0;">
-              <p style="margin:0;font-size:10px;letter-spacing:0.35em;text-transform:uppercase;color:#3a3a3a;font-weight:400;">Security Update</p>
+              <p class="oc-eyebrow" style="margin:0;font-size:10px;letter-spacing:0.35em;text-transform:uppercase;color:#3a3a3a;font-weight:400;">Security Update</p>
             </td>
           </tr>
 
           <!-- Heading -->
           <tr>
             <td style="padding:0 0 0 0;">
-              <p style="margin:0;font-size:22px;font-weight:200;color:#ffffff;letter-spacing:0.01em;line-height:1.3;">Password updated.</p>
+              <p class="oc-heading" style="margin:0;font-size:22px;font-weight:200;color:#ffffff;letter-spacing:0.01em;line-height:1.3;">Password updated.</p>
             </td>
           </tr>
 
@@ -46,8 +46,8 @@ export function passwordResetConfirmationHTML({ name }: PasswordResetConfirmatio
           <!-- Greeting + Body -->
           <tr>
             <td style="padding:32px 0 0 0;">
-              <p style="margin:0;font-size:13px;color:#555555;line-height:1.7;font-weight:300;">Hello ${name},</p>
-              <p style="margin:12px 0 0 0;font-size:13px;color:#555555;line-height:1.8;font-weight:300;">Your ORCACLUB password was successfully changed. You can sign in to your Spaces dashboard using your new password.</p>
+              <p class="oc-body-text" style="margin:0;font-size:13px;color:#555555;line-height:1.7;font-weight:300;">Hello ${name},</p>
+              <p class="oc-body-text" style="margin:12px 0 0 0;font-size:13px;color:#555555;line-height:1.8;font-weight:300;">Your ORCACLUB password was successfully changed. You can sign in to your Spaces dashboard using your new password.</p>
             </td>
           </tr>
 
@@ -55,10 +55,10 @@ export function passwordResetConfirmationHTML({ name }: PasswordResetConfirmatio
           <tr>
             <td style="padding:24px 0 0 0;">
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
-                     style="background-color:#1a0a0a;border:1px solid #3a1515;">
+                     class="oc-warn-box" style="background-color:#1a0a0a;border:1px solid #3a1515;">
                 <tr>
                   <td style="padding:14px 18px;">
-                    <p style="margin:0;font-size:11px;color:#7a3a3a;line-height:1.7;font-weight:300;">If you didn't make this change, contact us immediately at <a href="mailto:chance@orcaclub.pro" style="color:#7a3a3a;text-decoration:underline;">chance@orcaclub.pro</a> — your account may be compromised.</p>
+                    <p class="oc-warn-text" style="margin:0;font-size:11px;color:#7a3a3a;line-height:1.7;font-weight:300;">If you didn't make this change, contact us immediately at <a href="mailto:chance@orcaclub.pro" style="color:#7a3a3a;text-decoration:underline;">chance@orcaclub.pro</a> — your account may be compromised.</p>
                   </td>
                 </tr>
               </table>
@@ -83,8 +83,8 @@ export function passwordResetConfirmationHTML({ name }: PasswordResetConfirmatio
             <td style="padding:28px 0 40px 0;">
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                 <tr>
-                  <td style="border-top:1px solid #0f0f0f;padding-top:24px;">
-                    <p style="margin:0;font-size:11px;color:#2e2e2e;line-height:1.7;font-weight:300;">Questions? Reply to this email or reach us at <a href="mailto:chance@orcaclub.pro" style="color:#2a6068;text-decoration:none;">chance@orcaclub.pro</a>.</p>
+                  <td class="oc-footer-note-td" style="border-top:1px solid #0f0f0f;padding-top:24px;">
+                    <p class="oc-muted" style="margin:0;font-size:11px;color:#2e2e2e;line-height:1.7;font-weight:300;">Questions? Reply to this email or reach us at <a href="mailto:chance@orcaclub.pro" style="color:#2a6068;text-decoration:none;">chance@orcaclub.pro</a>.</p>
                   </td>
                 </tr>
               </table>

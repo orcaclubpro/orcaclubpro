@@ -69,6 +69,25 @@ function SprintCarousel({ sprints, username }: { sprints: ActiveSprint[]; userna
 
   const daysLeft = Math.ceil((new Date(sprint.endDate).getTime() - Date.now()) / 86_400_000)
 
+  // Touch swipe to cycle through sprints
+  const touchStartX = useRef(0)
+  const touchStartY = useRef(0)
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX
+    touchStartY.current = e.touches[0].clientY
+  }
+
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (sprints.length <= 1) return
+    const dx = e.changedTouches[0].clientX - touchStartX.current
+    const dy = e.changedTouches[0].clientY - touchStartY.current
+    if (Math.abs(dy) > Math.abs(dx) * 0.85) return // vertical gesture — ignore
+    if (Math.abs(dx) < 40) return // too short
+    if (dx < 0) next()
+    else prev()
+  }
+
   return (
     <div className="space-y-3">
 
@@ -105,96 +124,102 @@ function SprintCarousel({ sprints, username }: { sprints: ActiveSprint[]; userna
         )}
       </div>
 
-      {/* Sprint card */}
-      <Link
-        href={`/u/${username}/projects/${sprint.projectId}/sprints/${sprint.id}`}
-        className="block rounded-xl border border-white/[0.10] bg-[#0a0a0a] overflow-hidden hover:border-white/[0.18] hover:bg-[#0d0d0d] transition-all duration-150 group"
+      {/* Sprint card with swipe gesture */}
+      <div
+        data-h-scroll
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
       >
-        <div className="p-5 sm:p-6">
+        <Link
+          href={`/u/${username}/projects/${sprint.projectId}/sprints/${sprint.id}`}
+          className="block rounded-xl border border-white/[0.10] bg-[#0a0a0a] overflow-hidden hover:border-white/[0.18] hover:bg-[#0d0d0d] transition-all duration-150 group"
+        >
+          <div className="p-5 sm:p-6">
 
-          {/* Status + days remaining + open link */}
-          <div className="flex items-center justify-between gap-4 mb-3">
-            <span className={`text-[9px] font-bold uppercase tracking-[0.18em] px-2 py-0.5 rounded-full border ${cfg.badge}`}>
-              {cfg.label}
-            </span>
-            <div className="flex items-center gap-3 shrink-0">
-              <span className={`text-[10px] font-medium ${
-                daysLeft < 0 ? 'text-red-400' : daysLeft <= 3 ? 'text-amber-400' : cfg.daysColor
-              }`}>
-                {daysLeft < 0
-                  ? `${Math.abs(daysLeft)}d overdue`
-                  : daysLeft === 0 ? 'Due today'
-                  : daysLeft === 1 ? 'Due tomorrow'
-                  : `${daysLeft}d left`}
+            {/* Status + days remaining + open link */}
+            <div className="flex items-center justify-between gap-4 mb-3">
+              <span className={`text-[9px] font-bold uppercase tracking-[0.18em] px-2 py-0.5 rounded-full border ${cfg.badge}`}>
+                {cfg.label}
               </span>
-              <span className="flex items-center gap-0.5 text-[10px] text-white/20 group-hover:text-white/50 transition-colors">
-                Open <ArrowRight className="size-2.5" />
-              </span>
+              <div className="flex items-center gap-3 shrink-0">
+                <span className={`text-[10px] font-medium ${
+                  daysLeft < 0 ? 'text-red-400' : daysLeft <= 3 ? 'text-amber-400' : cfg.daysColor
+                }`}>
+                  {daysLeft < 0
+                    ? `${Math.abs(daysLeft)}d overdue`
+                    : daysLeft === 0 ? 'Due today'
+                    : daysLeft === 1 ? 'Due tomorrow'
+                    : `${daysLeft}d left`}
+                </span>
+                <span className="flex items-center gap-0.5 text-[10px] text-white/20 group-hover:text-white/50 transition-colors">
+                  Open <ArrowRight className="size-2.5" />
+                </span>
+              </div>
             </div>
-          </div>
 
-          {/* Sprint name */}
-          <h3 className="text-lg sm:text-xl font-bold text-white leading-snug mb-1">
-            {sprint.name}
-          </h3>
+            {/* Sprint name */}
+            <h3 className="text-lg sm:text-xl font-bold text-white leading-snug mb-1">
+              {sprint.name}
+            </h3>
 
-          {/* Project name + date range */}
-          <p className="text-[11px] text-white/25 mb-4">
-            {sprint.projectName}
-            <span className="mx-1.5 text-white/10">·</span>
-            {fmtShort(sprint.startDate)} → {fmtShort(sprint.endDate)}
-          </p>
-
-          {/* Goal description */}
-          {sprint.goalDescription && (
-            <p className="text-xs text-white/35 leading-relaxed line-clamp-2 mb-4">
-              {sprint.goalDescription}
+            {/* Project name + date range */}
+            <p className="text-[11px] text-white/25 mb-4">
+              {sprint.projectName}
+              <span className="mx-1.5 text-white/10">·</span>
+              {fmtShort(sprint.startDate)} → {fmtShort(sprint.endDate)}
             </p>
-          )}
 
-          {/* Task progress */}
-          {sprint.totalTasksCount > 0 && (
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="text-[9px] uppercase tracking-[0.15em] text-white/20 font-semibold">
-                  Tasks
-                </span>
-                <span className="text-[10px] text-white/35 tabular-nums">
-                  {sprint.completedTasksCount} / {sprint.totalTasksCount}
-                  <span className="ml-1.5 text-white/20">· {pct}%</span>
-                </span>
+            {/* Goal description */}
+            {sprint.goalDescription && (
+              <p className="text-xs text-white/35 leading-relaxed line-clamp-2 mb-4">
+                {sprint.goalDescription}
+              </p>
+            )}
+
+            {/* Task progress */}
+            {sprint.totalTasksCount > 0 && (
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] uppercase tracking-[0.15em] text-white/20 font-semibold">
+                    Tasks
+                  </span>
+                  <span className="text-[10px] text-white/35 tabular-nums">
+                    {sprint.completedTasksCount} / {sprint.totalTasksCount}
+                    <span className="ml-1.5 text-white/20">· {pct}%</span>
+                  </span>
+                </div>
+                <div className="h-[3px] rounded-full bg-white/[0.06] overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${cfg.bar}`}
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
               </div>
-              <div className="h-[3px] rounded-full bg-white/[0.06] overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all duration-500 ${cfg.bar}`}
-                  style={{ width: `${pct}%` }}
+            )}
+
+          </div>
+
+          {/* Dot navigation strip */}
+          {sprints.length > 1 && (
+            <div
+              className="flex items-center justify-center gap-1.5 px-5 py-3 border-t border-white/[0.04]"
+              onClick={e => e.preventDefault()}
+            >
+              {sprints.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={e => { e.preventDefault(); setIdx(i) }}
+                  className={`rounded-full transition-all duration-200 ${
+                    i === safeIdx
+                      ? 'size-1.5 bg-[#67e8f9]/70'
+                      : 'size-1 bg-white/15 hover:bg-white/35'
+                  }`}
                 />
-              </div>
+              ))}
             </div>
           )}
-
-        </div>
-
-        {/* Dot navigation strip */}
-        {sprints.length > 1 && (
-          <div
-            className="flex items-center justify-center gap-1.5 px-5 py-3 border-t border-white/[0.04]"
-            onClick={e => e.preventDefault()}
-          >
-            {sprints.map((_, i) => (
-              <button
-                key={i}
-                onClick={e => { e.preventDefault(); setIdx(i) }}
-                className={`rounded-full transition-all duration-200 ${
-                  i === safeIdx
-                    ? 'size-1.5 bg-[#67e8f9]/70'
-                    : 'size-1 bg-white/15 hover:bg-white/35'
-                }`}
-              />
-            ))}
-          </div>
-        )}
-      </Link>
+        </Link>
+      </div>
 
     </div>
   )
@@ -275,11 +300,11 @@ export function AdminHomeView({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12 pb-20 space-y-6 sm:space-y-10">
 
         {/* ── GREETING + REVENUE CHART ─────────────────────────────────────── */}
-        <div className="flex flex-col lg:flex-row lg:items-center gap-6 sm:gap-8 py-6 sm:py-8">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-6 sm:gap-8 py-4 sm:py-8">
 
           {/* Left: greeting */}
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold gradient-text uppercase tracking-[0.25em] mb-5">
+            <p className="text-xs font-semibold gradient-text uppercase tracking-[0.25em] mb-4">
               {user.role === 'admin' ? 'Admin' : 'Workspace'} · ORCACLUB Spaces
             </p>
             <DashboardGreeting
@@ -291,10 +316,43 @@ export function AdminHomeView({
                   : `${clientAccounts.length} assigned client${clientAccounts.length !== 1 ? 's' : ''} · ${activeProjects} active project${activeProjects !== 1 ? 's' : ''}`
               }
             />
+
+            {/* Mobile KPI chips — hidden on lg where the analytics sidebar provides this */}
+            <div className="flex flex-wrap gap-2 mt-5 lg:hidden">
+              {pulseKpis.revenue30d > 0 && (
+                <div className="flex items-center gap-1.5 bg-white/[0.04] border border-white/[0.08] rounded-full px-3 py-1.5">
+                  <span className="size-1.5 rounded-full bg-green-400 shrink-0" />
+                  <span className="text-xs text-white/60 tabular-nums">
+                    {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(pulseKpis.revenue30d)}
+                    <span className="text-white/30 ml-1">30d</span>
+                  </span>
+                </div>
+              )}
+              <div className="flex items-center gap-1.5 bg-white/[0.04] border border-white/[0.08] rounded-full px-3 py-1.5">
+                <span className="size-1.5 rounded-full bg-cyan-400 shrink-0" />
+                <span className="text-xs text-white/60 tabular-nums">
+                  {pulseKpis.activeProjects} active project{pulseKpis.activeProjects !== 1 ? 's' : ''}
+                </span>
+              </div>
+              {pulseKpis.activeClients > 0 && (
+                <div className="flex items-center gap-1.5 bg-white/[0.04] border border-white/[0.08] rounded-full px-3 py-1.5">
+                  <span className="size-1.5 rounded-full bg-violet-400 shrink-0" />
+                  <span className="text-xs text-white/60 tabular-nums">
+                    {pulseKpis.activeClients} client{pulseKpis.activeClients !== 1 ? 's' : ''}
+                  </span>
+                </div>
+              )}
+              <button
+                onClick={() => setAnalyticsOpen(true)}
+                className="flex items-center gap-1.5 bg-white/[0.04] border border-white/[0.08] hover:border-white/[0.18] rounded-full px-3 py-1.5 transition-colors"
+              >
+                <span className="text-xs text-white/40 hover:text-white/60">Analytics →</span>
+              </button>
+            </div>
           </div>
 
-          {/* Right: revenue chart — reacts to the timeline range picker */}
-          <div className="w-full lg:w-auto lg:shrink-0" style={{ maxWidth: 420 }}>
+          {/* Right: revenue chart — hidden on mobile, shown on lg */}
+          <div className="hidden lg:block lg:w-auto lg:shrink-0" style={{ maxWidth: 420 }}>
             <RevenueChart
               allOrders={allOrders}
               range={range}

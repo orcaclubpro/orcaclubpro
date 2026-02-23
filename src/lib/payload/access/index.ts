@@ -118,6 +118,26 @@ export const adminOrSelf: Access = ({ req: { user } }) => {
   return { id: { equals: user.id } }
 }
 
+/**
+ * Admin, project member (staff), or client whose account owns the project.
+ * Used for Credentials collection — clients get read access to credentials on their own projects.
+ */
+export const adminOrProjectMemberOrClient: Access = ({ req: { user } }) => {
+  if (!user) return false
+
+  if (user.role === 'admin') return true
+
+  if (user.role === 'client') {
+    if (!user.clientAccount) return false
+    const clientAccountId =
+      typeof user.clientAccount === 'string' ? user.clientAccount : user.clientAccount.id
+    return { 'project.client': { equals: clientAccountId } } as any
+  }
+
+  // Staff (user role): credentials on projects they're assigned to
+  return { 'project.assignedTo': { contains: user.id } } as any
+}
+
 // ============================================================================
 // FIELD-LEVEL ACCESS FUNCTIONS
 // ============================================================================
