@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { updateTaskStatus, updateTask, createTask } from '@/actions/tasks'
 import { cn } from '@/lib/utils'
+import { CreateSprintModal } from '@/components/dashboard/CreateSprintModal'
 
 // ─── constants ────────────────────────────────────────────────────────────────
 
@@ -160,6 +161,7 @@ function TaskCard({
   onEditSave,
   onEditCancel,
   isSaving,
+  onPriorityChange,
 }: {
   task: any
   updating: boolean
@@ -172,6 +174,7 @@ function TaskCard({
   onEditSave: (task: any) => void
   onEditCancel: () => void
   isSaving: boolean
+  onPriorityChange: (task: any, priority: Priority) => void
 }) {
   const pc = PRIORITY_CFG[task.priority] ?? PRIORITY_CFG.medium
   const over = isOverdue(task.dueDate) && task.status !== 'completed'
@@ -179,6 +182,7 @@ function TaskCard({
   const projectName = getProjectName(task)
   const isEditing = editState?.taskId === task.id
   const titleRef = useRef<HTMLInputElement>(null)
+  const [priorityPickerOpen, setPriorityPickerOpen] = useState(false)
 
   useEffect(() => {
     if (isEditing) setTimeout(() => titleRef.current?.focus(), 50)
@@ -257,7 +261,7 @@ function TaskCard({
         (updating || isSaving) && 'opacity-50 pointer-events-none',
         done && 'opacity-55',
       )}
-      onClick={onActivate}
+      onClick={() => { setPriorityPickerOpen(false); onActivate() }}
     >
       <button
         type="button"
@@ -292,9 +296,35 @@ function TaskCard({
         })()}
         <div className="flex items-center gap-2 mt-1 flex-wrap">
           {projectName && <span className="text-[10px] text-gray-600">{projectName}</span>}
-          <span className={`text-[10px] font-semibold px-1.5 rounded border leading-4 ${pc.color} ${pc.bg}`}>
-            {pc.short}
-          </span>
+          {priorityPickerOpen ? (
+            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+              {(['low', 'medium', 'high', 'urgent'] as Priority[]).map((p) => {
+                const cfg = PRIORITY_CFG[p]
+                return (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); onPriorityChange(task, p); setPriorityPickerOpen(false) }}
+                    className={cn(
+                      'text-[9px] font-bold px-1.5 rounded border leading-4 transition-all',
+                      task.priority === p ? cn(cfg.color, cfg.bg) : 'text-gray-500 border-white/[0.10] hover:text-gray-200 hover:border-white/25',
+                    )}
+                  >
+                    {cfg.short}
+                  </button>
+                )
+              })}
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setPriorityPickerOpen(true) }}
+              className={cn('text-[10px] font-semibold px-1.5 rounded border leading-4 transition-opacity hover:opacity-60', pc.color, pc.bg)}
+              title="Change priority"
+            >
+              {pc.short}
+            </button>
+          )}
           {task.dueDate && (
             <span className={`text-[10px] ${over ? 'text-red-400' : 'text-gray-600'}`}>
               {fmtDate(task.dueDate)}{over ? ' · overdue' : ''}
@@ -424,6 +454,7 @@ interface ColumnBodyProps {
   onEditCancel: () => void
   savingId: string | null
   onTaskCreated: () => void
+  onPriorityChange: (task: any, priority: Priority) => void
 }
 
 function ColumnBody({
@@ -432,7 +463,7 @@ function ColumnBody({
   activeTasks, statusGroups, projectId, label,
   updatingIds, onToggle, activeTaskIds, onActivate,
   editState, onEditStart, onEditChange, onEditSave, onEditCancel,
-  savingId, onTaskCreated,
+  savingId, onTaskCreated, onPriorityChange,
 }: ColumnBodyProps) {
   const sCfg = sprint ? (SPRINT_STATUS_CFG[sprint.status] ?? SPRINT_STATUS_CFG.pending) : null
   const allSprints = Array.from(sprintMap.values())
@@ -504,6 +535,7 @@ function ColumnBody({
                     onEditSave={onEditSave}
                     onEditCancel={onEditCancel}
                     isSaving={savingId === task.id}
+                    onPriorityChange={onPriorityChange}
                   />
                 ))
               )}
@@ -536,6 +568,7 @@ function ColumnBody({
                     onEditSave={onEditSave}
                     onEditCancel={onEditCancel}
                     isSaving={savingId === task.id}
+                    onPriorityChange={onPriorityChange}
                   />
                 ))}
               </div>
@@ -560,7 +593,7 @@ function SprintColumn({
   updatingIds, onToggle, bg = 'bg-[#0f0f0f]',
   activeTaskIds, onActivate,
   editState, onEditStart, onEditChange, onEditSave, onEditCancel,
-  savingId, onTaskCreated,
+  savingId, onTaskCreated, onPriorityChange,
 }: {
   label: string
   sprintMap: Map<string, any>
@@ -579,6 +612,7 @@ function SprintColumn({
   onEditCancel: () => void
   savingId: string | null
   onTaskCreated: () => void
+  onPriorityChange: (task: any, priority: Priority) => void
 }) {
   const sprint = selectedSprintId ? sprintMap.get(selectedSprintId) : null
   const projectId = sprint ? getProjectId(sprint) : null
@@ -601,6 +635,7 @@ function SprintColumn({
           updatingIds={updatingIds} onToggle={onToggle} activeTaskIds={activeTaskIds} onActivate={onActivate}
           editState={editState} onEditStart={onEditStart} onEditChange={onEditChange}
           onEditSave={onEditSave} onEditCancel={onEditCancel} savingId={savingId} onTaskCreated={onTaskCreated}
+          onPriorityChange={onPriorityChange}
         />
       </div>
     </div>
@@ -721,7 +756,7 @@ function MobileOverview({
 // ─── board ────────────────────────────────────────────────────────────────────
 
 function TaskBoard({
-  tasks, sprintMap, activeSprints, sorted, isPopup, onExpandToggle,
+  tasks, sprintMap, activeSprints, sorted, isPopup, onExpandToggle, projects,
 }: {
   tasks: any[]
   sprintMap: Map<string, any>
@@ -729,6 +764,7 @@ function TaskBoard({
   sorted: any[]
   isPopup: boolean
   onExpandToggle: () => void
+  projects: { id: string; name: string }[]
 }) {
   const router = useRouter()
   const [updatingIds, setUpdatingIds] = useState<Set<string>>(new Set())
@@ -736,15 +772,68 @@ function TaskBoard({
   const [editState, setEditState] = useState<EditState | null>(null)
   const [activeTaskIds, setActiveTaskIds] = useState<Set<string>>(new Set())
   const [optimisticStatus, setOptimisticStatus] = useState<Map<string, string>>(new Map())
+  const [optimisticPriority, setOptimisticPriority] = useState<Map<string, string>>(new Map())
   const [colAId, setColAId] = useState<string | null>(sorted[0]?.id ?? null)
   const [colBId, setColBId] = useState<string | null>(sorted[1]?.id ?? null)
   const [mobileTab, setMobileTab] = useState<MobileTab>('a')
+  const [sidebarHovered, setSidebarHovered] = useState(false)
+  const [sprintModalOpen, setSprintModalOpen] = useState(false)
+  const [sprintProjectId, setSprintProjectId] = useState('')
+  const [showProjectPicker, setShowProjectPicker] = useState(false)
   const completedCount = tasks.filter((t) => t.status === 'completed').length
+
+  const sidebarExpanded = sidebarHovered || showProjectPicker
 
   const localTasks = tasks.map((t) => {
     const os = optimisticStatus.get(t.id)
-    return os ? { ...t, status: os } : t
+    const op = optimisticPriority.get(t.id)
+    return os || op ? { ...t, ...(os && { status: os }), ...(op && { priority: op }) } : t
   })
+
+  // ── Priority keyboard shortcuts (L/M/H/U) ─────────────────────────────────
+  // Use a ref so the single registered handler always reads the latest activeTaskIds
+  const activeTaskIdsRef = useRef(activeTaskIds)
+  activeTaskIdsRef.current = activeTaskIds
+  const editStateRef = useRef(editState)
+  editStateRef.current = editState
+  const optimisticPrioritySetRef = useRef(setOptimisticPriority)
+  optimisticPrioritySetRef.current = setOptimisticPriority
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return
+      // Block if a Radix Select popover is open (listbox visible in DOM)
+      if (document.querySelector('[role="listbox"]')) return
+      if (activeTaskIdsRef.current.size === 0) return
+      if (editStateRef.current) return
+      const priority =
+        e.key === 'l' || e.key === 'L' ? 'low'
+        : e.key === 'm' || e.key === 'M' ? 'medium'
+        : e.key === 'h' || e.key === 'H' ? 'high'
+        : e.key === 'u' || e.key === 'U' ? 'urgent'
+        : null
+      if (!priority) return
+      e.preventDefault()
+      const ids = Array.from(activeTaskIdsRef.current)
+      optimisticPrioritySetRef.current((prev) => {
+        const m = new Map(prev)
+        for (const id of ids) m.set(id, priority)
+        return m
+      })
+      Promise.all(ids.map((taskId) => updateTask({ taskId, data: { priority: priority as Priority } }))).then(() => {
+        optimisticPrioritySetRef.current((prev) => {
+          const m = new Map(prev)
+          for (const id of ids) m.delete(id)
+          return m
+        })
+        router.refresh()
+      })
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleToggle = (task: any) => {
     const current = optimisticStatus.get(task.id) ?? task.status
@@ -806,12 +895,20 @@ function TaskBoard({
   const handleEditCancel = () => setEditState(null)
   const handleTaskCreated = () => router.refresh()
 
+  const handlePriorityChange = (task: any, priority: Priority) => {
+    setOptimisticPriority((prev) => new Map(prev).set(task.id, priority))
+    updateTask({ taskId: task.id, data: { priority } }).then(() => {
+      setOptimisticPriority((prev) => { const m = new Map(prev); m.delete(task.id); return m })
+      router.refresh()
+    })
+  }
+
   const columnProps = {
     sprintMap, allTasks: localTasks, updatingIds, onToggle: handleToggle,
     activeTaskIds, onActivate: handleActivate,
     editState, onEditStart: handleEditStart, onEditChange: handleEditChange,
     onEditSave: handleEditSave, onEditCancel: handleEditCancel,
-    savingId, onTaskCreated: handleTaskCreated,
+    savingId, onTaskCreated: handleTaskCreated, onPriorityChange: handlePriorityChange,
   }
 
   // Derived data for mobile column views
@@ -910,58 +1007,117 @@ function TaskBoard({
       {/* ── DESKTOP 3-PANEL LAYOUT ──────────────────────────────────────── */}
       <div className="hidden lg:flex flex-1 divide-x divide-white/[0.06] min-h-0 overflow-hidden">
 
-        {/* Sidebar */}
-        <aside className="w-52 shrink-0 bg-[#0c0c0c] flex flex-col">
-          <div className="flex items-center gap-2 px-3 py-2.5 border-b border-white/[0.06] shrink-0">
-            <Zap className="size-3 text-intelligence-cyan shrink-0" />
-            <span className="text-[9px] font-bold gradient-text uppercase tracking-[0.12em]">Active Sprints</span>
-          </div>
-          <div className="flex-1 overflow-y-auto">
-            {activeSprints.length === 0 ? (
-              <div className="flex items-center justify-center h-32 px-4">
-                <p className="text-xs text-gray-400 text-center">No active sprints</p>
+        {/* Sidebar — hover to expand */}
+        <aside
+          className={cn(
+            'shrink-0 bg-[#0c0c0c] flex flex-col transition-[width] duration-200 overflow-hidden',
+            sidebarExpanded ? 'w-52' : 'w-8',
+          )}
+          onMouseEnter={() => setSidebarHovered(true)}
+          onMouseLeave={() => setSidebarHovered(false)}
+        >
+          {sidebarExpanded ? (
+            <>
+              {/* Header */}
+              <div className="flex items-center gap-2 px-3 py-2.5 border-b border-white/[0.06] shrink-0">
+                <Zap className="size-3 text-intelligence-cyan shrink-0" />
+                <span className="text-[9px] font-bold gradient-text uppercase tracking-[0.12em]">Active Sprints</span>
               </div>
-            ) : (
-              <div className="py-2">
-                {activeSprints.map((sprint) => {
-                  const sTasks = tasksForSprint(tasks, sprint.id)
-                  const done = sTasks.filter((t) => t.status === 'completed').length
-                  const pct = sTasks.length > 0 ? Math.round((done / sTasks.length) * 100) : 0
-                  const cfg = SPRINT_STATUS_CFG[sprint.status] ?? SPRINT_STATUS_CFG.pending
-                  const projName = typeof sprint.project === 'object' ? (sprint.project?.name ?? '') : ''
-                  return (
-                    <div key={sprint.id} className="mb-4">
-                      <div className="px-3 py-1.5">
-                        <div className="flex items-center justify-between gap-1 mb-0.5">
-                          <span className="text-xs font-medium text-white truncate leading-tight">{sprint.name}</span>
-                          <span className={`shrink-0 text-[9px] font-bold ${cfg.text}`}>{cfg.label}</span>
-                        </div>
-                        {projName && <p className="text-[9px] text-gray-400 truncate mb-1.5">{projName}</p>}
-                        {sTasks.length > 0 && (
-                          <div className="flex items-center gap-1.5 mb-1">
-                            <div className="flex-1 h-[2px] bg-white/[0.05] rounded-full overflow-hidden">
-                              <div className={`h-full rounded-full ${cfg.bar}`} style={{ width: `${pct}%` }} />
-                            </div>
-                            <span className="text-[9px] text-gray-400 shrink-0 tabular-nums">{pct}%</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="px-1">
-                        {sTasks.length === 0 ? (
-                          <p className="text-[10px] text-gray-400 px-2 py-1">No tasks</p>
-                        ) : (
-                          <>
-                            {sTasks.slice(0, 8).map((t) => <SidebarTask key={t.id} task={t} />)}
-                            {sTasks.length > 8 && <p className="text-[10px] text-gray-400 px-2 py-1">+{sTasks.length - 8} more</p>}
-                          </>
-                        )}
-                      </div>
+
+              {/* New Sprint — top of sidebar */}
+              {projects.length > 0 && (
+                <div className="shrink-0 border-b border-white/[0.06]">
+                  {showProjectPicker ? (
+                    <div className="p-2 space-y-1">
+                      <p className="text-[9px] text-gray-600 px-1 pb-0.5 uppercase tracking-wider">Select project</p>
+                      {projects.map((p) => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => { setSprintProjectId(p.id); setSprintModalOpen(true); setShowProjectPicker(false) }}
+                          className="w-full text-left px-2 py-1.5 rounded text-xs text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors truncate"
+                        >
+                          {p.name}
+                        </button>
+                      ))}
+                      <button type="button" onClick={() => setShowProjectPicker(false)} className="text-[10px] text-gray-600 hover:text-gray-400 px-2 py-1 transition-colors">
+                        Cancel
+                      </button>
                     </div>
-                  )
-                })}
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (projects.length === 1 && projects[0]) {
+                          setSprintProjectId(projects[0].id)
+                          setSprintModalOpen(true)
+                        } else {
+                          setShowProjectPicker(true)
+                        }
+                      }}
+                      className="flex items-center gap-1.5 w-full px-3 py-2.5 text-[10px] text-white/70 hover:text-white hover:bg-white/[0.03] transition-colors"
+                    >
+                      <Plus className="size-3" />
+                      New Sprint
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Sprint list */}
+              <div className="flex-1 overflow-y-auto">
+                {activeSprints.length === 0 ? (
+                  <div className="flex items-center justify-center h-32 px-4">
+                    <p className="text-xs text-gray-400 text-center">No active sprints</p>
+                  </div>
+                ) : (
+                  <div className="py-2">
+                    {activeSprints.map((sprint) => {
+                      const sTasks = tasksForSprint(tasks, sprint.id)
+                      const done = sTasks.filter((t) => t.status === 'completed').length
+                      const pct = sTasks.length > 0 ? Math.round((done / sTasks.length) * 100) : 0
+                      const cfg = SPRINT_STATUS_CFG[sprint.status] ?? SPRINT_STATUS_CFG.pending
+                      const projName = typeof sprint.project === 'object' ? (sprint.project?.name ?? '') : ''
+                      return (
+                        <div key={sprint.id} className="mb-4">
+                          <div className="px-3 py-1.5">
+                            <div className="flex items-center justify-between gap-1 mb-0.5">
+                              <span className="text-xs font-medium text-white truncate leading-tight">{sprint.name}</span>
+                              <span className={`shrink-0 text-[9px] font-bold ${cfg.text}`}>{cfg.label}</span>
+                            </div>
+                            {projName && <p className="text-[9px] text-gray-400 truncate mb-1.5">{projName}</p>}
+                            {sTasks.length > 0 && (
+                              <div className="flex items-center gap-1.5 mb-1">
+                                <div className="flex-1 h-[2px] bg-white/[0.05] rounded-full overflow-hidden">
+                                  <div className={`h-full rounded-full ${cfg.bar}`} style={{ width: `${pct}%` }} />
+                                </div>
+                                <span className="text-[9px] text-gray-400 shrink-0 tabular-nums">{pct}%</span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="px-1">
+                            {sTasks.length === 0 ? (
+                              <p className="text-[10px] text-gray-400 px-2 py-1">No tasks</p>
+                            ) : (
+                              <>
+                                {sTasks.slice(0, 8).map((t) => <SidebarTask key={t.id} task={t} />)}
+                                {sTasks.length > 8 && <p className="text-[10px] text-gray-400 px-2 py-1">+{sTasks.length - 8} more</p>}
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </>
+          ) : (
+            /* Collapsed hint */
+            <div className="flex flex-col items-center pt-2.5">
+              <Zap className="size-3 text-intelligence-cyan/40" />
+            </div>
+          )}
         </aside>
 
         {/* Column A */}
@@ -970,6 +1126,15 @@ function TaskBoard({
         {/* Column B */}
         <SprintColumn label="Sprint B" selectedSprintId={colBId} onSelect={setColBId} bg="bg-[#0f0f0f]" {...columnProps} />
       </div>
+
+      {sprintProjectId && (
+        <CreateSprintModal
+          projectId={sprintProjectId}
+          open={sprintModalOpen}
+          onOpenChange={(v) => { setSprintModalOpen(v); if (!v) setSprintProjectId('') }}
+          onSuccess={() => { setSprintModalOpen(false); setSprintProjectId(''); router.refresh() }}
+        />
+      )}
     </div>
   )
 }
@@ -978,9 +1143,10 @@ function TaskBoard({
 
 interface TasksViewProps {
   tasks: any[]
+  projects?: { id: string; name: string }[]
 }
 
-export function TasksView({ tasks }: TasksViewProps) {
+export function TasksView({ tasks, projects = [] }: TasksViewProps) {
   const [popup, setPopup] = useState(false)
   const [mounted, setMounted] = useState(false)
 
@@ -996,7 +1162,7 @@ export function TasksView({ tasks }: TasksViewProps) {
   const sprintMap = extractSprintMap(tasks)
   const sorted = sortedByUpdated(Array.from(sprintMap.values()))
   const activeSprints = sorted.filter((s) => ACTIVE_SPRINT_STATUSES.has(s.status ?? ''))
-  const boardProps = { tasks, sprintMap, activeSprints, sorted }
+  const boardProps = { tasks, sprintMap, activeSprints, sorted, projects }
 
   return (
     <>

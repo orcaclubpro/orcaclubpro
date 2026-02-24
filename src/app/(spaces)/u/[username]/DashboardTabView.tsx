@@ -367,7 +367,7 @@ export function DashboardTabView({
             />
           )
         case 'tasks':
-          return <TasksView tasks={d.allTasks} />
+          return <TasksView tasks={d.allTasks} projects={d.allProjects.map((p: any) => ({ id: p.id, name: p.name ?? '' }))} />
         case 'packages':
           return <PackagesAdminView allPackages={d.allPackages} username={username} />
         default:
