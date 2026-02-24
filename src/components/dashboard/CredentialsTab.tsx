@@ -18,6 +18,7 @@ import {
   KeyRound,
   Lock,
   X,
+  ShieldCheck,
 } from 'lucide-react'
 import {
   Dialog,
@@ -28,7 +29,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { createCredential, updateCredential, deleteCredential } from '@/actions/credentials'
+import { createCredential, updateCredential, deleteCredential, verifyCurrentPassword } from '@/actions/credentials'
 import { cn } from '@/lib/utils'
 
 // ─── Badge Colors ─────────────────────────────────────────────────────────────
@@ -103,11 +104,13 @@ function CopyButton({ value }: { value: string }) {
 function CredentialCard({
   credential,
   readOnly,
+  canDelete = true,
   onEdit,
   onDelete,
 }: {
   credential: Credential
   readOnly: boolean
+  canDelete?: boolean
   onEdit: () => void
   onDelete: () => void
 }) {
@@ -166,12 +169,14 @@ function CredentialCard({
               >
                 <Pencil className="size-3" />
               </button>
-              <button
-                onClick={onDelete}
-                className="size-6 flex items-center justify-center rounded text-gray-600 hover:text-red-400 hover:bg-red-400/[0.08] transition-colors"
-              >
-                <Trash2 className="size-3" />
-              </button>
+              {canDelete && (
+                <button
+                  onClick={onDelete}
+                  className="size-6 flex items-center justify-center rounded text-gray-600 hover:text-red-400 hover:bg-red-400/[0.08] transition-colors"
+                >
+                  <Trash2 className="size-3" />
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -588,6 +593,80 @@ function DeleteConfirmModal({
   )
 }
 
+// ─── Vault Lock Gate ──────────────────────────────────────────────────────────
+
+function VaultLockGate({ onUnlock }: { onUnlock: () => void }) {
+  const [password, setPassword] = useState('')
+  const [show, setShow] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleUnlock = async () => {
+    if (!password) return
+    setLoading(true)
+    setError(null)
+    const result = await verifyCurrentPassword(password)
+    setLoading(false)
+    if (result.success) {
+      onUnlock()
+    } else {
+      setError(result.error ?? 'Incorrect password')
+      setPassword('')
+    }
+  }
+
+  return (
+    <div className="flex flex-col items-center justify-center py-20 gap-6">
+      <div className="flex flex-col items-center gap-3">
+        <div className="size-14 rounded-2xl bg-white/[0.03] border border-white/[0.07] flex items-center justify-center">
+          <Lock className="size-6 text-gray-500" />
+        </div>
+        <div className="text-center">
+          <p className="text-sm font-semibold text-white">Vault Locked</p>
+          <p className="text-xs text-gray-500 mt-1">Enter your account password to access stored credentials.</p>
+        </div>
+      </div>
+
+      <div className="w-full max-w-[280px] space-y-3">
+        <div className="relative">
+          <Input
+            type={show ? 'text' : 'password'}
+            value={password}
+            onChange={(e) => { setPassword(e.target.value); setError(null) }}
+            onKeyDown={(e) => e.key === 'Enter' && handleUnlock()}
+            placeholder="Account password"
+            autoFocus
+            autoComplete="current-password"
+            className="bg-white/[0.03] border-white/[0.08] focus:border-[#67e8f9]/40 text-sm text-white pr-10 font-mono"
+          />
+          <button
+            type="button"
+            onClick={() => setShow((v) => !v)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
+          >
+            {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+          </button>
+        </div>
+
+        {error && (
+          <p className="text-xs text-red-400 text-center">{error}</p>
+        )}
+
+        <Button
+          onClick={handleUnlock}
+          disabled={!password || loading}
+          className="w-full bg-[#67e8f9] text-black hover:bg-[#67e8f9]/90 font-semibold disabled:opacity-40"
+        >
+          {loading
+            ? <><Loader2 className="size-4 mr-2 animate-spin" /> Verifying…</>
+            : <><ShieldCheck className="size-4 mr-2" /> Unlock Vault</>
+          }
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 // ─── Main Export ──────────────────────────────────────────────────────────────
 
 export function CredentialsTab({
@@ -598,6 +677,9 @@ export function CredentialsTab({
 }: CredentialsTabProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
+
+  // Vault lock — all users must confirm their password to access credential data
+  const [unlocked, setUnlocked] = useState(false)
 
   const [formOpen, setFormOpen] = useState(false)
   const [editingCredential, setEditingCredential] = useState<Credential | null>(null)
@@ -629,6 +711,11 @@ export function CredentialsTab({
     })
   }
 
+  // clients can edit credentials but not create or delete
+  const canEdit = true
+  const canCreate = !readOnly
+  const canDelete = !readOnly
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -637,7 +724,12 @@ export function CredentialsTab({
         <span className="text-[11px] text-gray-600 font-mono tabular-nums bg-white/[0.04] border border-white/[0.06] rounded px-1.5 py-0.5">
           {credentials.length}
         </span>
-        {!readOnly && (
+        {unlocked && (
+          <span className="flex items-center gap-1 text-[10px] text-emerald-400/70 font-medium ml-1">
+            <ShieldCheck className="size-3" /> Unlocked
+          </span>
+        )}
+        {canCreate && unlocked && (
           <Button
             onClick={openCreate}
             className="ml-auto h-7 px-3 bg-white/[0.06] border border-white/[0.10] hover:bg-white/[0.10] text-white text-xs font-medium"
@@ -647,14 +739,16 @@ export function CredentialsTab({
         )}
       </div>
 
-      {/* Grid or empty state */}
-      {credentials.length === 0 ? (
+      {/* Vault gate or content */}
+      {!unlocked ? (
+        <VaultLockGate onUnlock={() => setUnlocked(true)} />
+      ) : credentials.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <div className="size-10 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mb-3">
             <Lock className="size-5 text-gray-600" />
           </div>
           <p className="text-sm font-medium text-gray-400">No accounts stored yet</p>
-          {!readOnly && (
+          {canCreate && (
             <p className="text-xs text-gray-600 mt-1">
               Add logins, API keys, and secrets for this project.
             </p>
@@ -666,7 +760,8 @@ export function CredentialsTab({
             <CredentialCard
               key={c.id}
               credential={c}
-              readOnly={readOnly}
+              readOnly={!canEdit}
+              canDelete={canDelete}
               onEdit={() => openEdit(c)}
               onDelete={() => openDelete(c)}
             />

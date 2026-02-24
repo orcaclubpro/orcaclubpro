@@ -890,6 +890,48 @@ export interface Package {
         id?: string | null;
       }[]
     | null;
+  /**
+   * ORCACLUB representative who authorized this proposal
+   */
+  orcaclubSignature?: {
+    /**
+     * Authorizing representative full name
+     */
+    authorizedByName?: string | null;
+    authorizedByEmail?: string | null;
+    authorizedByUserId?: string | null;
+    authorizedAt?: string | null;
+  };
+  /**
+   * Client e-signature record — immutable once set
+   */
+  clientSignature?: {
+    /**
+     * Exactly as typed by the client
+     */
+    typedName?: string | null;
+    signedByEmail?: string | null;
+    signedByUserId?: string | null;
+    signedAt?: string | null;
+    ipAddress?: string | null;
+    userAgent?: string | null;
+    /**
+     * SHA-256 of signed document content
+     */
+    documentHash?: string | null;
+    /**
+     * Exact ESIGN disclosure shown to signer
+     */
+    consentText?: string | null;
+    /**
+     * SHA-256 of the full signing certificate JSON
+     */
+    certificateHash?: string | null;
+    /**
+     * Full signing certificate JSON (tamper-evident)
+     */
+    signingCertificate?: string | null;
+  };
   lineItems?:
     | {
         name: string;
@@ -918,52 +960,104 @@ export interface Package {
         id?: string | null;
       }[]
     | null;
+  /**
+   * Auto-generated signed contract PDF (populated when both parties sign)
+   */
+  contractFile?: (string | null) | File;
   updatedAt: string;
   createdAt: string;
 }
 /**
- * Tracks processed Stripe webhook events
+ * Manage documents and files linked to projects and sprints
  *
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "webhook-events".
+ * via the `definition` "files".
  */
-export interface WebhookEvent {
+export interface File {
   id: string;
   /**
-   * Stripe event ID (e.g., evt_xxx)
+   * File or document name (auto-populated from filename if not provided)
    */
-  eventId: string;
+  name: string;
   /**
-   * Type of Stripe event (e.g., invoice.paid)
+   * Type of file
    */
-  eventType: string;
-  status: 'processing' | 'processed' | 'failed';
+  fileType?: ('document' | 'image' | 'spreadsheet' | 'presentation' | 'pdf' | 'other') | null;
   /**
-   * PayloadCMS Order ID if applicable
+   * Description of the file contents or purpose
    */
-  orderId?: string | null;
+  description?: string | null;
   /**
-   * Stripe Invoice ID
+   * Upload a file or document
    */
-  stripeInvoiceId?: string | null;
+  file: string | Media;
   /**
-   * Full event payload from Stripe
+   * Project this file belongs to (optional)
    */
-  payload?:
-    | {
-        [k: string]: unknown;
-      }
-    | unknown[]
-    | string
-    | number
-    | boolean
-    | null;
+  project?: (string | null) | Project;
   /**
-   * Error message if processing failed
+   * Sprint this file is a deliverable for (optional)
    */
-  errorMessage?: string | null;
-  processingStartedAt?: string | null;
-  processingCompletedAt?: string | null;
+  sprint?: (string | null) | Sprint;
+  /**
+   * Version number (e.g., "1.0", "2.1")
+   */
+  version?: string | null;
+  /**
+   * Tags for organization (e.g., "contract", "design", "invoice")
+   */
+  tags?: string[] | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Manage project sprints with tasks and timeframes
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "sprints".
+ */
+export interface Sprint {
+  id: string;
+  /**
+   * Sprint name (e.g., "Sprint 1", "Q1 2026")
+   */
+  name: string;
+  /**
+   * Sprint description and objectives
+   */
+  description?: string | null;
+  /**
+   * Project this sprint belongs to
+   */
+  project: string | Project;
+  /**
+   * Current sprint status
+   */
+  status: 'pending' | 'in-progress' | 'delayed' | 'finished';
+  /**
+   * Sprint start date
+   */
+  startDate?: string | null;
+  /**
+   * Sprint end date (leave blank for ongoing sprints)
+   */
+  endDate?: string | null;
+  /**
+   * What should be accomplished in this sprint
+   */
+  goalDescription?: string | null;
+  /**
+   * Tasks included in this sprint
+   */
+  tasks?: (string | Task)[] | null;
+  /**
+   * Number of completed tasks (auto-calculated)
+   */
+  completedTasksCount?: number | null;
+  /**
+   * Total number of tasks (auto-calculated)
+   */
+  totalTasksCount?: number | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1037,96 +1131,48 @@ export interface Task {
   createdAt: string;
 }
 /**
- * Manage project sprints with tasks and timeframes
+ * Tracks processed Stripe webhook events
  *
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "sprints".
+ * via the `definition` "webhook-events".
  */
-export interface Sprint {
+export interface WebhookEvent {
   id: string;
   /**
-   * Sprint name (e.g., "Sprint 1", "Q1 2026")
+   * Stripe event ID (e.g., evt_xxx)
    */
-  name: string;
+  eventId: string;
   /**
-   * Sprint description and objectives
+   * Type of Stripe event (e.g., invoice.paid)
    */
-  description?: string | null;
+  eventType: string;
+  status: 'processing' | 'processed' | 'failed';
   /**
-   * Project this sprint belongs to
+   * PayloadCMS Order ID if applicable
    */
-  project: string | Project;
+  orderId?: string | null;
   /**
-   * Current sprint status
+   * Stripe Invoice ID
    */
-  status: 'pending' | 'in-progress' | 'delayed' | 'finished';
+  stripeInvoiceId?: string | null;
   /**
-   * Sprint start date
+   * Full event payload from Stripe
    */
-  startDate?: string | null;
+  payload?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
   /**
-   * Sprint end date (leave blank for ongoing sprints)
+   * Error message if processing failed
    */
-  endDate?: string | null;
-  /**
-   * What should be accomplished in this sprint
-   */
-  goalDescription?: string | null;
-  /**
-   * Tasks included in this sprint
-   */
-  tasks?: (string | Task)[] | null;
-  /**
-   * Number of completed tasks (auto-calculated)
-   */
-  completedTasksCount?: number | null;
-  /**
-   * Total number of tasks (auto-calculated)
-   */
-  totalTasksCount?: number | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * Manage documents and files linked to projects and sprints
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "files".
- */
-export interface File {
-  id: string;
-  /**
-   * File or document name (auto-populated from filename if not provided)
-   */
-  name: string;
-  /**
-   * Type of file
-   */
-  fileType?: ('document' | 'image' | 'spreadsheet' | 'presentation' | 'pdf' | 'other') | null;
-  /**
-   * Description of the file contents or purpose
-   */
-  description?: string | null;
-  /**
-   * Upload a file or document
-   */
-  file: string | Media;
-  /**
-   * Project this file belongs to (optional)
-   */
-  project?: (string | null) | Project;
-  /**
-   * Sprint this file is a deliverable for (optional)
-   */
-  sprint?: (string | null) | Sprint;
-  /**
-   * Version number (e.g., "1.0", "2.1")
-   */
-  version?: string | null;
-  /**
-   * Tags for organization (e.g., "contract", "design", "invoice")
-   */
-  tags?: string[] | null;
+  errorMessage?: string | null;
+  processingStartedAt?: string | null;
+  processingCompletedAt?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1668,6 +1714,28 @@ export interface PackagesSelect<T extends boolean = true> {
         invoicedAt?: T;
         id?: T;
       };
+  orcaclubSignature?:
+    | T
+    | {
+        authorizedByName?: T;
+        authorizedByEmail?: T;
+        authorizedByUserId?: T;
+        authorizedAt?: T;
+      };
+  clientSignature?:
+    | T
+    | {
+        typedName?: T;
+        signedByEmail?: T;
+        signedByUserId?: T;
+        signedAt?: T;
+        ipAddress?: T;
+        userAgent?: T;
+        documentHash?: T;
+        consentText?: T;
+        certificateHash?: T;
+        signingCertificate?: T;
+      };
   lineItems?:
     | T
     | {
@@ -1681,6 +1749,7 @@ export interface PackagesSelect<T extends boolean = true> {
         stripePriceId?: T;
         id?: T;
       };
+  contractFile?: T;
   updatedAt?: T;
   createdAt?: T;
 }

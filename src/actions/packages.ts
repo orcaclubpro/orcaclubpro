@@ -18,6 +18,7 @@ import {
   buildSigningCertificate,
   ESIGN_CONSENT_TEXT,
 } from '@/lib/contract-terms'
+import { generateContractPDF } from '@/lib/generate-contract-pdf'
 
 const APP_BASE = process.env.NEXT_PUBLIC_SERVER_URL ?? 'https://app.orcaclub.pro'
 
@@ -1323,6 +1324,66 @@ export async function emailPackageToSelf(packageId: string) {
   }
 }
 
+/** Client-initiated: re-sends the fully-executed contract URL to the client's own email. */
+export async function emailContractToSelf(packageId: string) {
+  try {
+    const user = await getCurrentUser()
+    if (!user || user.role !== 'client') return { success: false, error: 'Unauthorized' }
+
+    const payload = await getPayload({ config })
+
+    const proposal = await payload.findByID({ collection: 'packages', id: packageId, depth: 1 })
+    if (!proposal || proposal.type !== 'proposal') return { success: false, error: 'Package not found' }
+
+    // Verify ownership
+    const proposalClientId = typeof proposal.clientAccount === 'string'
+      ? proposal.clientAccount
+      : (proposal.clientAccount as any)?.id
+    const userClientId = typeof user.clientAccount === 'string'
+      ? user.clientAccount
+      : (user.clientAccount as any)?.id
+    if (proposalClientId !== userClientId) return { success: false, error: 'Not authorized' }
+
+    const clientSig = (proposal as any).clientSignature
+    const orcaclubSig = (proposal as any).orcaclubSignature
+    if (!clientSig?.signedAt || !orcaclubSig?.authorizedAt) {
+      return { success: false, error: 'Contract is not fully executed yet' }
+    }
+
+    const clientAccount = proposal.clientAccount as any
+    const email = clientAccount?.email
+    if (!email) return { success: false, error: 'No email address on file' }
+
+    const contractUrl = `${APP_BASE}/u/${user.username}/packages/${packageId}/print`
+    const signedDate = new Date(clientSig.signedAt).toLocaleDateString('en-US', {
+      month: 'long', day: 'numeric', year: 'numeric',
+    })
+    const authorizedDate = new Date(orcaclubSig.authorizedAt).toLocaleDateString('en-US', {
+      month: 'long', day: 'numeric', year: 'numeric',
+    })
+
+    const subject = `Contract Signed | ${proposal.name}`
+    const htmlBody = `
+      <p>Hi${clientAccount?.name ? ` ${clientAccount.name}` : ''},</p>
+      <p>Your service agreement for <strong>${proposal.name}</strong> has been fully executed. Both parties have signed.</p>
+      <p><a href="${contractUrl}" style="color:#0891b2;font-weight:600;">View &amp; Print Signed Contract →</a></p>
+      <p style="font-size:12px;color:#6b7280;">
+        Client signed: ${signedDate}<br>
+        ORCACLUB authorized: ${authorizedDate}
+      </p>
+      <p>Keep this email and the contract link for your records.</p>
+      <p>— ORCACLUB</p>
+    `
+    const textBody = `Your service agreement for ${proposal.name} has been fully executed. Both parties have signed.\n\nView the signed contract at: ${contractUrl}\n\nClient signed: ${signedDate}\nORCACLUB authorized: ${authorizedDate}\n\nKeep this email and the contract link for your records.`
+
+    await payload.sendEmail({ to: email, from: 'carbon@orcaclub.pro', subject, html: htmlBody, text: textBody })
+    return { success: true }
+  } catch (error) {
+    console.error('[emailContractToSelf]', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to send email' }
+  }
+}
+
 export async function sendProposalEmail(
   packageId: string,
   emails: string[],
@@ -1395,6 +1456,106 @@ export async function sendProposalEmail(
 }
 
 // ── E-Signature Actions ──────────────────────────────────────────────────────
+
+/**
+ * Emails the fully-executed (signed by both parties) contract to the client
+ * and ORCACLUB. This is a non-blocking fire-and-forget email — it does not
+ * return invoices or change package status.
+ */
+export async function sendSignedContract(packageId: string) {
+  try {
+    const user = await getCurrentUser()
+    if (!user || user.role === 'client') return { success: false, error: 'Unauthorized' }
+
+    const payload = await getPayload({ config })
+
+    const pkg = await payload.findByID({ collection: 'packages', id: packageId, depth: 1 })
+    if (!pkg || pkg.type !== 'proposal') return { success: false, error: 'Proposal not found' }
+
+    const clientSig = (pkg as any).clientSignature
+    const orcaclubSig = (pkg as any).orcaclubSignature
+    const bothSigned = !!clientSig?.signedAt && !!orcaclubSig?.authorizedAt
+
+    if (!bothSigned) {
+      return { success: false, error: 'Both parties must sign before sending the contract.' }
+    }
+
+    const clientAccount = pkg.clientAccount as any
+    const clientAccountId = typeof clientAccount === 'string' ? clientAccount : clientAccount?.id
+    const clientEmail = typeof clientAccount === 'object' ? (clientAccount?.email ?? null) : null
+    const clientName  = typeof clientAccount === 'object' ? (clientAccount?.name  ?? null) : null
+
+    const clientUsername = await getClientUsername(payload, clientAccountId)
+    const contractUrl = clientUsername
+      ? `${APP_BASE}/u/${clientUsername}/packages/${packageId}/print`
+      : null
+
+    if (!contractUrl) {
+      return { success: false, error: 'Could not build contract URL — client has no username.' }
+    }
+
+    const signedDate = new Date(clientSig.signedAt).toLocaleDateString('en-US', {
+      month: 'long', day: 'numeric', year: 'numeric',
+    })
+
+    const subject = `Contract Signed |${pkg.name}`
+    const htmlBody = `
+      <p>Hi${clientName ? ` ${clientName}` : ''},</p>
+      <p>Your service agreement for <strong>${pkg.name}</strong> has been fully executed. Both parties have signed.</p>
+      <p><a href="${contractUrl}" style="color:#0891b2;font-weight:600;">View &amp; Print Signed Contract →</a></p>
+      <p style="font-size:12px;color:#6b7280;">
+        Client signed: ${signedDate}<br>
+        ORCACLUB authorized: ${new Date(orcaclubSig.authorizedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+      </p>
+      <p>Keep this email and the contract link for your records.</p>
+      <p>— ORCACLUB</p>
+    `
+    const textBody = `Your service agreement for ${pkg.name} has been fully executed. Both parties have signed.\n\nView the signed contract at: ${contractUrl}\n\nClient signed: ${signedDate}\nORCACLUB authorized: ${new Date(orcaclubSig.authorizedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}\n\nKeep this email and the contract link for your records.`
+
+    const sends: Promise<any>[] = []
+
+    if (clientEmail) {
+      sends.push(
+        payload.sendEmail({
+          to: clientEmail,
+          from: 'carbon@orcaclub.pro',
+          subject,
+          html: htmlBody,
+          text: textBody,
+        })
+      )
+    }
+
+    sends.push(
+      payload.sendEmail({
+        to: 'carbon@orcaclub.pro',
+        from: 'carbon@orcaclub.pro',
+        subject: `[Contract Executed] ${pkg.name} — ${clientName ?? clientEmail}`,
+        html: `<p>The service agreement for <strong>${pkg.name}</strong> has been fully executed by both parties.</p>${htmlBody}`,
+        text: textBody,
+      })
+    )
+
+    await Promise.allSettled(sends)
+
+    // Non-blocking: generate PDF if not already archived
+    if (!(pkg as any).contractFile) {
+      ;(async () => {
+        try {
+          await generateContractPDF(payload, packageId, pkg)
+        } catch (e) {
+          console.error('[sendSignedContract] Contract PDF generation failed:', e)
+        }
+      })()
+    }
+
+    revalidatePath(`/u/${user.username}/clients`)
+    return { success: true, contractUrl }
+  } catch (error) {
+    console.error('[sendSignedContract]', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to send contract' }
+  }
+}
 
 /**
  * Client signs the proposal with a typed name e-signature (ESIGN/UETA compliant).
@@ -1519,21 +1680,186 @@ export async function signProposal({
           html: `<p><strong>${proposal.name}</strong> has been signed by ${typedName.trim()} (${user.email}).</p><p style="font-family:monospace;font-size:12px;background:#f4f4f4;padding:12px;border-radius:4px;">${signedLine}<br>IP: ${ipAddress}<br>${docLine}<br>${certLine}</p>`,
           text: `${proposal.name} signed by ${typedName.trim()} (${user.email}).\nIP: ${ipAddress}\n${docLine}\n${certLine}`,
         })
+
+        // If ORCACLUB had already signed, the contract is now fully executed — send the signed copy to both parties.
+        if (orcaclubSig?.authorizedAt) {
+          const clientAccountId = typeof clientAccount === 'object'
+            ? clientAccount?.id
+            : clientAccount
+          const clientUsername = await getClientUsername(payload, clientAccountId)
+          const contractUrl = clientUsername
+            ? `${APP_BASE}/u/${clientUsername}/packages/${packageId}/print`
+            : null
+
+          if (contractUrl) {
+            const executedDate = new Date(signedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+            const contractSubject = `Contract Signed |${proposal.name}`
+            const contractHtml = `<p>Hi ${clientName ?? 'there'},</p><p>Your service agreement for <strong>${proposal.name}</strong> is now fully executed. Both parties have signed.</p><p><a href="${contractUrl}" style="color:#0891b2;font-weight:600;">View &amp; Print Signed Contract →</a></p><p style="font-size:12px;color:#6b7280;">Client signed: ${executedDate}<br>ORCACLUB authorized: ${new Date(orcaclubSig.authorizedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p><p>Keep this email for your records.</p><p>— ORCACLUB</p>`
+            const contractText = `Your service agreement for ${proposal.name} is now fully executed.\n\nView the signed contract: ${contractUrl}\n\nClient signed: ${executedDate}\nORCACLUB authorized: ${new Date(orcaclubSig.authorizedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
+
+            const contractSends: Promise<any>[] = []
+            if (clientEmail) {
+              contractSends.push(payload.sendEmail({ to: clientEmail, from: 'carbon@orcaclub.pro', subject: contractSubject, html: contractHtml, text: contractText }))
+            }
+            contractSends.push(payload.sendEmail({ to: 'carbon@orcaclub.pro', from: 'carbon@orcaclub.pro', subject: `[Contract Executed] ${proposal.name} — ${clientName ?? clientEmail}`, html: contractHtml, text: contractText }))
+            await Promise.allSettled(contractSends)
+          }
+
+          // Non-blocking: generate and archive the signed contract PDF
+          ;(async () => {
+            try {
+              await generateContractPDF(payload, packageId, proposal)
+            } catch (e) {
+              console.error('[signProposal] Contract PDF generation failed:', e)
+            }
+          })()
+        }
       } catch (e) {
         console.error('[signProposal] Confirmation email failed:', e)
       }
     })()
 
-    // Now run the existing acceptPackage logic (creates invoices, marks accepted)
-    const acceptResult = await acceptPackage(packageId)
-    if (!acceptResult.success) {
-      // Signature is saved but invoicing failed — return partial success
-      console.error('[signProposal] acceptPackage failed after signing:', acceptResult.error)
-      return { success: true, invoiceUrls: [], warning: acceptResult.error }
+    // Send only the FIRST pending schedule entry; leave the rest for staff to invoice manually.
+    const schedule = ((proposal as any).paymentSchedule ?? []) as Array<{
+      id: string; label: string; amount: number; dueDate?: string | null; orderId?: string | null
+    }>
+    const pendingEntries = schedule.filter(e => !e.orderId)
+    const lineItems = (proposal.lineItems ?? []) as any[]
+
+    const clientAccount = proposal.clientAccount as any
+    const clientAccountId = typeof clientAccount === 'string' ? clientAccount : clientAccount?.id
+    const stripeCustomerId = typeof clientAccount === 'object' ? clientAccount?.stripeCustomerId : null
+
+    if (!stripeCustomerId || (pendingEntries.length === 0 && lineItems.length === 0)) {
+      // No billing info or nothing to invoice — still mark accepted, return partial success if needed
+      await payload.update({
+        collection: 'packages',
+        id: packageId,
+        data: { status: 'accepted' } as any,
+      })
+      revalidatePath(`/u/${user.username}`)
+      const warning = !stripeCustomerId
+        ? 'No payment method on file — contact your team to set up billing.'
+        : undefined
+      return { success: true, invoiceUrls: [], warning }
+    }
+
+    const stripe = getStripe()
+    const invoiceUrls: string[] = []
+
+    if (schedule.length > 0 && pendingEntries.length > 0) {
+      // Invoice only the first pending entry; the rest stay pending for staff to push later.
+      const firstEntry = pendingEntries[0]
+      const { orderId, invoiceUrl } = await _sendScheduleEntryInvoice(
+        payload, stripe, firstEntry, packageId, proposal.name, clientAccountId, stripeCustomerId, user.id,
+      )
+
+      const updatedSchedule = schedule.map(e =>
+        e.id === firstEntry.id ? { ...e, orderId, invoicedAt: new Date().toISOString() } : e
+      )
+
+      await payload.update({
+        collection: 'packages',
+        id: packageId,
+        data: { paymentSchedule: updatedSchedule, status: 'accepted' } as any,
+      })
+
+      if (invoiceUrl) invoiceUrls.push(invoiceUrl)
+
+      // Non-blocking: send a schedule overview email so the client sees all upcoming payments
+      ;(async () => {
+        try {
+          const clientUsername = await getClientUsername(payload, clientAccountId)
+          const proposalPrintUrl = clientUsername
+            ? `${APP_BASE}/u/${clientUsername}/packages/${packageId}/print`
+            : undefined
+          const totalAmount = schedule.reduce((s, e) => s + (e.amount ?? 0), 0)
+          await sendPaymentScheduleEmail(payload, {
+            customerName: typeof clientAccount === 'object' ? (clientAccount?.name ?? undefined) : undefined,
+            customerEmail: typeof clientAccount === 'object' ? (clientAccount?.email ?? '') : '',
+            packageName: proposal.name,
+            packageDescription: (proposal as any).description ?? undefined,
+            entries: schedule.map(e => ({ label: e.label, amount: e.amount, dueDate: e.dueDate ?? null })),
+            totalAmount,
+            proposalPrintUrl,
+          })
+        } catch (e) {
+          console.error('[signProposal] Schedule confirmation email failed:', e)
+        }
+      })()
+    } else if (lineItems.length > 0) {
+      // No schedule — create one full invoice from all line items
+      const orderNumber = await nextOrderNumber(payload)
+      const totalAmount = lineItems.reduce((s: number, item: any) => s + (item.price ?? 0) * (item.quantity ?? 1), 0)
+
+      const invoice = await stripe.invoices.create({
+        customer: stripeCustomerId,
+        collection_method: 'send_invoice',
+        days_until_due: 30,
+        auto_advance: false,
+        description: `Order ${orderNumber} — ${proposal.name}`,
+        metadata: { order_number: orderNumber, orcaclub_package_id: packageId },
+      })
+
+      for (const item of lineItems) {
+        await stripe.invoiceItems.create({
+          customer: stripeCustomerId,
+          invoice: invoice.id,
+          amount: Math.round((item.price ?? 0) * (item.quantity ?? 1) * 100),
+          currency: 'usd',
+          description: item.name,
+          metadata: { order_number: orderNumber },
+        })
+      }
+
+      const finalizedInvoice = await stripe.invoices.finalizeInvoice(invoice.id)
+
+      const order = await payload.create({
+        collection: 'orders',
+        data: {
+          orderNumber,
+          clientAccount: clientAccountId,
+          packageRef: packageId,
+          invoiceType: 'full',
+          amount: totalAmount,
+          status: 'pending',
+          stripeCustomerId,
+          stripeInvoiceId: finalizedInvoice.id,
+          stripeInvoiceUrl: finalizedInvoice.hosted_invoice_url || '',
+          lineItems: lineItems.map((item: any) => ({
+            title: item.name,
+            description: item.description ?? undefined,
+            quantity: item.quantity ?? 1,
+            price: item.price ?? 0,
+            isRecurring: item.isRecurring ?? false,
+          })),
+        } as any,
+      })
+
+      if (finalizedInvoice.hosted_invoice_url) invoiceUrls.push(finalizedInvoice.hosted_invoice_url)
+
+      await payload.update({
+        collection: 'packages',
+        id: packageId,
+        data: { status: 'accepted' } as any,
+      })
+
+      // Non-blocking invoice email
+      ;(async () => {
+        try {
+          const clientUsername = await getClientUsername(payload, clientAccountId)
+          const proposalPrintUrl = clientUsername
+            ? `${APP_BASE}/u/${clientUsername}/packages/${packageId}/print`
+            : undefined
+          await sendGenericInvoiceEmail(payload, order.id, user.id, proposalPrintUrl)
+        } catch (e) {
+          console.error('[signProposal] Invoice email failed:', e)
+        }
+      })()
     }
 
     revalidatePath(`/u/${user.username}`)
-    return { success: true, invoiceUrls: acceptResult.invoiceUrls ?? [] }
+    return { success: true, invoiceUrls }
   } catch (error) {
     console.error('[signProposal]', error)
     return { success: false, error: error instanceof Error ? error.message : 'Failed to sign proposal' }
@@ -1561,8 +1887,10 @@ export async function authorizeProposal({
 
     const payload = await getPayload({ config })
 
-    const proposal = await payload.findByID({ collection: 'packages', id: packageId, depth: 0 })
+    const proposal = await payload.findByID({ collection: 'packages', id: packageId, depth: 1 })
     if (!proposal || proposal.type !== 'proposal') return { success: false, error: 'Proposal not found' }
+
+    const authorizedAt = new Date().toISOString()
 
     await payload.update({
       collection: 'packages',
@@ -1573,10 +1901,54 @@ export async function authorizeProposal({
           authorizedByName: authorizedByName.trim(),
           authorizedByEmail: user.email,
           authorizedByUserId: String(user.id),
-          authorizedAt: new Date().toISOString(),
+          authorizedAt,
         },
       } as any,
     })
+
+    // If the client had already signed, the contract is now fully executed — send it to both parties.
+    const clientSig = (proposal as any).clientSignature
+    if (clientSig?.signedAt) {
+      ;(async () => {
+        try {
+          const clientAccount = proposal.clientAccount as any
+          const clientAccountId = typeof clientAccount === 'string' ? clientAccount : clientAccount?.id
+          const clientEmail = typeof clientAccount === 'object' ? (clientAccount?.email ?? null) : null
+          const clientName  = typeof clientAccount === 'object' ? (clientAccount?.name  ?? null) : null
+
+          const clientUsername = await getClientUsername(payload, clientAccountId)
+          const contractUrl = clientUsername
+            ? `${APP_BASE}/u/${clientUsername}/packages/${packageId}/print`
+            : null
+
+          if (contractUrl) {
+            const contractSubject = `Contract Signed |${proposal.name}`
+            const contractHtml = `<p>Hi ${clientName ?? 'there'},</p><p>Your service agreement for <strong>${proposal.name}</strong> is now fully executed. Both parties have signed.</p><p><a href="${contractUrl}" style="color:#0891b2;font-weight:600;">View &amp; Print Signed Contract →</a></p><p style="font-size:12px;color:#6b7280;">Client signed: ${new Date(clientSig.signedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}<br>ORCACLUB authorized: ${new Date(authorizedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p><p>Keep this email for your records.</p><p>— ORCACLUB</p>`
+            const contractText = `Your service agreement for ${proposal.name} is now fully executed.\n\nView the signed contract: ${contractUrl}`
+
+            const sends: Promise<any>[] = []
+            if (clientEmail) {
+              sends.push(payload.sendEmail({ to: clientEmail, from: 'carbon@orcaclub.pro', subject: contractSubject, html: contractHtml, text: contractText }))
+            }
+            sends.push(payload.sendEmail({ to: 'carbon@orcaclub.pro', from: 'carbon@orcaclub.pro', subject: `[Contract Executed] ${proposal.name} — ${clientName ?? clientEmail}`, html: contractHtml, text: contractText }))
+            await Promise.allSettled(sends)
+
+            // Non-blocking: generate and archive the signed contract PDF
+            ;(async () => {
+              try {
+                // Attach the freshly-set orcaclubSignature so generateContractPDF sees both sigs
+                const freshPkg = { ...proposal, orcaclubSignature: { authorizedByName: authorizedByName.trim(), authorizedByEmail: user.email, authorizedAt } }
+                await generateContractPDF(payload, packageId, freshPkg)
+              } catch (e) {
+                console.error('[authorizeProposal] Contract PDF generation failed:', e)
+              }
+            })()
+          }
+        } catch (e) {
+          console.error('[authorizeProposal] Contract email failed:', e)
+        }
+      })()
+    }
 
     revalidatePath(`/u/${user.username}/clients`)
     return { success: true }

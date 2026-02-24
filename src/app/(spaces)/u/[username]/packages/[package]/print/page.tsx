@@ -2,11 +2,13 @@ import { redirect, notFound } from 'next/navigation'
 import { getCurrentUser } from '@/actions/auth'
 import { getPayload } from 'payload'
 import config from '@payload-config'
-import { Cinzel_Decorative } from 'next/font/google'
+import { Cinzel_Decorative, Dancing_Script } from 'next/font/google'
 import { PackageActions } from './PackageActions'
 import { ScrollToTop } from './ScrollToTop'
+import { SERVICE_AGREEMENT_TERMS } from '@/lib/contract-terms'
 
 const gothic = Cinzel_Decorative({ weight: '700', subsets: ['latin'] })
+const sigFont = Dancing_Script({ weight: '700', subsets: ['latin'] })
 
 interface LineItem {
   id?: string
@@ -91,6 +93,11 @@ export default async function PackagePrintPage({
   const clientEmail   = clientAccount && typeof clientAccount === 'object' ? (clientAccount as any).email   ?? '' : ''
   const clientPhone   = clientAccount && typeof clientAccount === 'object' ? (clientAccount as any).phone   ?? '' : ''
   const clientAddress = clientAccount && typeof clientAccount === 'object' ? (clientAccount as any).address ?? null : null
+
+  // Signature data
+  const clientSig     = (pkg as any).clientSignature ?? null
+  const orcaclubSig   = (pkg as any).orcaclubSignature ?? null
+  const isSigned      = !!clientSig?.signedAt
 
   const proposalDate = new Intl.DateTimeFormat('en-US', {
     month: 'long', day: 'numeric', year: 'numeric',
@@ -382,6 +389,99 @@ export default async function PackagePrintPage({
             <p style={{ fontSize: 12, color: '#4b5563', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{pkg.notes}</p>
           </div>
         )}
+
+        {/* ── SERVICE AGREEMENT TERMS ──────────────── */}
+        <div style={{ marginBottom: 32, paddingTop: 20, borderTop: '1px solid #f3f4f6' }}>
+          <p style={{ fontSize: 10, fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>
+            Service Agreement Terms &amp; Conditions
+          </p>
+          <p style={{ fontSize: 10, color: '#9ca3af', lineHeight: 1.7, whiteSpace: 'pre-line' }}>
+            {SERVICE_AGREEMENT_TERMS}
+          </p>
+        </div>
+
+        {/* ── SIGNATURE BLOCK ──────────────────────── */}
+        <div style={{ marginBottom: 32, paddingTop: 20, borderTop: '2px solid #111' }}>
+          <p style={{ fontSize: 10, fontWeight: 600, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 20 }}>
+            Agreement Acceptance
+          </p>
+          <p style={{ fontSize: 11, color: '#6b7280', lineHeight: 1.6, marginBottom: 24 }}>
+            By signing below, the parties agree to be bound by the terms of this Agreement.
+          </p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 32 }}>
+
+            {/* Client signature */}
+            <div>
+              <p style={{ fontSize: 10, fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 12 }}>Client</p>
+              {isSigned ? (
+                <>
+                  <p className={sigFont.className} style={{ fontSize: 26, color: '#111', borderBottom: '1px solid #111', paddingBottom: 4, marginBottom: 8, lineHeight: 1.2 }}>
+                    {clientSig.typedName}
+                  </p>
+                  <p style={{ fontSize: 12, color: '#374151', fontWeight: 600, marginBottom: 2 }}>{clientSig.typedName}</p>
+                  <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 2 }}>{clientName}{clientCompany ? ` — ${clientCompany}` : ''}</p>
+                  <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 2 }}>{clientSig.signedByEmail}</p>
+                  <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 8 }}>
+                    Signed: {new Date(clientSig.signedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}{' '}
+                    at {new Date(clientSig.signedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })} UTC
+                  </p>
+                  <p style={{ fontSize: 9, color: '#9ca3af', fontFamily: 'monospace' }}>
+                    IP: {clientSig.ipAddress}
+                  </p>
+                  <p style={{ fontSize: 9, color: '#9ca3af', fontFamily: 'monospace' }}>
+                    Doc hash: {clientSig.documentHash?.slice(0, 16)}...
+                  </p>
+                  <p style={{ fontSize: 9, color: '#9ca3af', marginTop: 4 }}>
+                    ESIGN Act compliant — typed name consent
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div style={{ borderBottom: '1px solid #9ca3af', marginBottom: 8, height: 28 }} />
+                  <p style={{ fontSize: 11, color: '#374151', fontWeight: 500, marginBottom: 2 }}>{clientName}</p>
+                  {clientCompany && <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 2 }}>{clientCompany}</p>}
+                  {clientEmail && <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 2 }}>{clientEmail}</p>}
+                  <p style={{ fontSize: 10, color: '#d1d5db', marginTop: 8, fontStyle: 'italic' }}>Awaiting signature</p>
+                </>
+              )}
+            </div>
+
+            {/* ORCACLUB signature */}
+            <div>
+              <p style={{ fontSize: 10, fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 12 }}>ORCACLUB LLC</p>
+              {orcaclubSig?.authorizedAt ? (
+                <>
+                  <p className={sigFont.className} style={{ fontSize: 26, color: '#111', borderBottom: '1px solid #111', paddingBottom: 4, marginBottom: 8, lineHeight: 1.2 }}>
+                    {orcaclubSig.authorizedByName}
+                  </p>
+                  <p style={{ fontSize: 12, color: '#374151', fontWeight: 600, marginBottom: 2 }}>{orcaclubSig.authorizedByName}</p>
+                  <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 2 }}>ORCACLUB LLC</p>
+                  <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 2 }}>{orcaclubSig.authorizedByEmail}</p>
+                  <p style={{ fontSize: 11, color: '#6b7280' }}>
+                    Authorized: {new Date(orcaclubSig.authorizedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div style={{ borderBottom: '1px solid #9ca3af', marginBottom: 8, height: 28 }} />
+                  <p style={{ fontSize: 11, color: '#374151', fontWeight: 500, marginBottom: 2 }}>ORCACLUB LLC</p>
+                  <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 2 }}>carbon@orcaclub.pro</p>
+                  <p style={{ fontSize: 10, color: '#d1d5db', marginTop: 8, fontStyle: 'italic' }}>Awaiting authorization</p>
+                </>
+              )}
+            </div>
+
+          </div>
+
+          {/* Signature reference row */}
+          <div style={{ marginTop: 20, paddingTop: 12, borderTop: '1px solid #f3f4f6' }}>
+            <p style={{ fontSize: 9, color: '#9ca3af' }}>
+              Proposal reference: {ref} · Created: {proposalDate}
+              {isSigned ? ` · Signed: ${new Date(clientSig.signedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}
+            </p>
+          </div>
+        </div>
 
         {/* ── FOOTER ───────────────────────────────── */}
         <div style={{ marginTop: 48, paddingTop: 16, borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

@@ -285,7 +285,10 @@ function TaskCard({
         </p>
         {(() => {
           const desc = extractPlainText(task.description)
-          return desc ? <p className="text-xs text-gray-600 mt-0.5 truncate leading-snug">{desc}</p> : null
+          if (!desc) return null
+          return isLocallyActive
+            ? <p className="text-xs text-gray-400 mt-1 leading-relaxed">{desc}</p>
+            : <p className="text-xs text-gray-600 mt-0.5 truncate leading-snug">{desc}</p>
         })()}
         <div className="flex items-center gap-2 mt-1 flex-wrap">
           {projectName && <span className="text-[10px] text-gray-600">{projectName}</span>}
@@ -298,6 +301,30 @@ function TaskCard({
             </span>
           )}
         </div>
+        {isLocallyActive && (
+          <div className="mt-2 pt-2 border-t border-white/[0.06] flex flex-wrap gap-x-3 gap-y-1">
+            <span className={`text-[10px] font-medium ${STATUS_DOT[task.status] ? '' : ''}`}>
+              <span className={`inline-block size-1.5 rounded-full mr-1 ${STATUS_DOT[task.status] ?? 'bg-gray-500'}`} />
+              <span className="text-gray-400">{STATUS_LABEL[task.status] ?? 'Pending'}</span>
+            </span>
+            {task.estimatedHours != null && (
+              <span className="text-[10px] text-gray-500">
+                Est <span className="text-gray-400">{task.estimatedHours}h</span>
+              </span>
+            )}
+            {task.actualHours != null && (
+              <span className="text-[10px] text-gray-500">
+                Actual <span className="text-gray-400">{task.actualHours}h</span>
+              </span>
+            )}
+            {(() => {
+              const sprint = getSprintObj(task)
+              return sprint?.name
+                ? <span className="text-[10px] text-gray-500">Sprint <span className="text-gray-400">{sprint.name}</span></span>
+                : null
+            })()}
+          </div>
+        )}
       </div>
 
       <button

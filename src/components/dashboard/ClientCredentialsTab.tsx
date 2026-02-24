@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition, useEffect } from 'react'
 import {
   Globe,
   User2,
@@ -12,8 +12,26 @@ import {
   ChevronUp,
   Lock,
   FolderKanban,
+  LayoutGrid,
+  ShieldCheck,
+  Loader2,
+  Pencil,
+  X,
+  KeyRound,
+  Plus,
 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog'
+import { verifyCurrentPassword, updateCredential } from '@/actions/credentials'
 
 // ─── Badge Colors ─────────────────────────────────────────────────────────────
 
@@ -101,9 +119,187 @@ function SecretRow({ label, value }: { label: string; value: string }) {
   )
 }
 
+// ─── Edit Form Modal ──────────────────────────────────────────────────────────
+
+interface EditFormState {
+  title: string
+  website: string
+  username: string
+  password: string
+  showPassword: boolean
+  secrets: Array<{ key: string; value: string }>
+}
+
+function CredentialEditModal({
+  open,
+  onOpenChange,
+  credential,
+}: {
+  open: boolean
+  onOpenChange: (v: boolean) => void
+  credential: CredentialWithProject | null
+}) {
+  const router = useRouter()
+  const [isPending, startTransition] = useTransition()
+  const [form, setForm] = useState<EditFormState>({
+    title: '', website: '', username: '', password: '', showPassword: false, secrets: [],
+  })
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (open && credential) {
+      setForm({
+        title: credential.title,
+        website: credential.website ?? '',
+        username: credential.username ?? '',
+        password: credential.password ?? '',
+        showPassword: false,
+        secrets: (credential.secrets ?? [])
+          .filter((s) => s.key && s.value)
+          .map(({ key, value }) => ({ key, value })),
+      })
+      setError(null)
+    }
+  }, [open, credential])
+
+  const setField = <K extends keyof EditFormState>(key: K, value: EditFormState[K]) =>
+    setForm((f) => ({ ...f, [key]: value }))
+
+  const addSecret = () =>
+    setForm((f) => ({ ...f, secrets: [...f.secrets, { key: '', value: '' }] }))
+
+  const removeSecret = (i: number) =>
+    setForm((f) => ({ ...f, secrets: f.secrets.filter((_, idx) => idx !== i) }))
+
+  const updateSecret = (i: number, field: 'key' | 'value', value: string) =>
+    setForm((f) => {
+      const secrets = [...f.secrets]
+      secrets[i] = { ...secrets[i], [field]: value }
+      return { ...f, secrets }
+    })
+
+  const handleSubmit = () => {
+    if (!form.title.trim()) { setError('Title is required.'); return }
+    setError(null)
+    startTransition(async () => {
+      const result = await updateCredential(credential!.id, {
+        title: form.title.trim(),
+        website: form.website.trim() || undefined,
+        username: form.username.trim() || undefined,
+        password: form.password || undefined,
+        secrets: form.secrets.filter((s) => s.key.trim() && s.value.trim()),
+      })
+      if (!result.success) { setError(result.error ?? 'Something went wrong.'); return }
+      onOpenChange(false)
+      router.refresh()
+    })
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="bg-[#0d0d0d] border-white/[0.08] sm:max-w-[480px] p-0 overflow-hidden gap-0">
+        <DialogTitle className="sr-only">Edit Credential</DialogTitle>
+        <DialogDescription className="sr-only">Update this credential</DialogDescription>
+
+        <div className="px-6 py-5 border-b border-white/[0.06]">
+          <div className="flex items-center gap-3">
+            <div className="size-8 rounded-lg bg-[#67e8f9]/[0.08] border border-[#67e8f9]/[0.15] flex items-center justify-center">
+              <KeyRound className="size-4 text-[#67e8f9]" />
+            </div>
+            <h2 className="text-base font-semibold text-white">Edit Credential</h2>
+          </div>
+        </div>
+
+        <div className="px-6 py-5 space-y-4 max-h-[60vh] overflow-y-auto">
+          <div className="space-y-1.5">
+            <Label className="text-xs text-gray-400">Title <span className="text-red-400">*</span></Label>
+            <Input autoFocus value={form.title} onChange={(e) => setField('title', e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+              placeholder="WordPress Admin, AWS Console…"
+              className="bg-white/[0.03] border-white/[0.08] focus:border-[#67e8f9]/40 text-sm text-white" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs text-gray-400">Website URL</Label>
+            <Input value={form.website} onChange={(e) => setField('website', e.target.value)}
+              placeholder="https://example.com"
+              className="bg-white/[0.03] border-white/[0.08] focus:border-[#67e8f9]/40 text-sm text-white" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs text-gray-400">Username / Email</Label>
+            <Input value={form.username} onChange={(e) => setField('username', e.target.value)}
+              placeholder="admin@example.com" autoComplete="off"
+              className="bg-white/[0.03] border-white/[0.08] focus:border-[#67e8f9]/40 text-sm text-white" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs text-gray-400">Password</Label>
+            <div className="relative">
+              <Input value={form.password} onChange={(e) => setField('password', e.target.value)}
+                type={form.showPassword ? 'text' : 'password'}
+                placeholder="••••••••" autoComplete="new-password"
+                className="bg-white/[0.03] border-white/[0.08] focus:border-[#67e8f9]/40 text-sm text-white pr-10 font-mono" />
+              <button type="button" onClick={() => setField('showPassword', !form.showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors">
+                {form.showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </button>
+            </div>
+          </div>
+          <div className="space-y-2 border-t border-white/[0.06] pt-4">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs text-gray-400">Secrets</Label>
+              <button type="button" onClick={addSecret}
+                className="flex items-center gap-1 text-xs text-[#67e8f9] hover:text-[#67e8f9]/70 transition-colors">
+                <Plus className="size-3" /> Add secret
+              </button>
+            </div>
+            {form.secrets.length > 0 && (
+              <div className="space-y-2">
+                {form.secrets.map((secret, i) => (
+                  <div key={i} className="flex gap-2">
+                    <Input value={secret.key} onChange={(e) => updateSecret(i, 'key', e.target.value)}
+                      placeholder="KEY_NAME"
+                      className="bg-white/[0.03] border-white/[0.08] focus:border-[#67e8f9]/40 text-xs flex-[2] font-mono text-white" />
+                    <Input value={secret.value} onChange={(e) => updateSecret(i, 'value', e.target.value)}
+                      placeholder="value…"
+                      className="bg-white/[0.03] border-white/[0.08] focus:border-[#67e8f9]/40 text-xs flex-[3] font-mono text-white" />
+                    <button type="button" onClick={() => removeSecret(i)}
+                      className="size-9 flex items-center justify-center text-gray-600 hover:text-red-400 transition-colors shrink-0">
+                      <X className="size-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {error && (
+          <div className="mx-6 mb-1 rounded-lg border border-red-400/20 bg-red-400/10 px-3 py-2 text-sm text-red-400">
+            {error}
+          </div>
+        )}
+
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-white/[0.06]">
+          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={isPending}
+            className="text-gray-400 hover:text-gray-200">Cancel</Button>
+          <Button onClick={handleSubmit} disabled={isPending || !form.title.trim()}
+            className="bg-[#67e8f9] text-black hover:bg-[#67e8f9]/90 font-semibold disabled:opacity-40">
+            {isPending ? <><Loader2 className="size-4 mr-2 animate-spin" />Saving…</> : 'Save Changes'}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 // ─── Credential Card ──────────────────────────────────────────────────────────
 
-function CredentialCard({ credential }: { credential: CredentialWithProject }) {
+function CredentialCard({
+  credential,
+  onEdit,
+}: {
+  credential: CredentialWithProject
+  onEdit?: () => void
+}) {
   const [showPassword, setShowPassword] = useState(false)
   const [showSecrets, setShowSecrets] = useState(false)
   const secrets = credential.secrets?.filter((s) => s.key && s.value) ?? []
@@ -159,6 +355,15 @@ function CredentialCard({ credential }: { credential: CredentialWithProject }) {
               </span>
             ) : null}
           </div>
+
+          {onEdit && (
+            <button
+              onClick={onEdit}
+              className="size-6 flex items-center justify-center rounded text-gray-600 hover:text-gray-200 hover:bg-white/[0.06] transition-colors opacity-0 group-hover:opacity-100 shrink-0"
+            >
+              <Pencil className="size-3" />
+            </button>
+          )}
         </div>
 
         {/* Project badge (shown below website if website also present) */}
@@ -233,21 +438,206 @@ function CredentialCard({ credential }: { credential: CredentialWithProject }) {
   )
 }
 
+// ─── Vault Lock Gate ──────────────────────────────────────────────────────────
+
+function VaultLockGate({ onUnlock }: { onUnlock: () => void }) {
+  const [password, setPassword] = useState('')
+  const [show, setShow] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleUnlock = async () => {
+    if (!password) return
+    setLoading(true)
+    setError(null)
+    const result = await verifyCurrentPassword(password)
+    setLoading(false)
+    if (result.success) {
+      onUnlock()
+    } else {
+      setError(result.error ?? 'Incorrect password')
+      setPassword('')
+    }
+  }
+
+  return (
+    <div className="flex flex-col items-center justify-center py-20 gap-6">
+      <div className="flex flex-col items-center gap-3">
+        <div className="size-14 rounded-2xl bg-white/[0.03] border border-white/[0.07] flex items-center justify-center">
+          <Lock className="size-6 text-gray-500" />
+        </div>
+        <div className="text-center">
+          <p className="text-sm font-semibold text-white">Vault Locked</p>
+          <p className="text-xs text-gray-500 mt-1">Enter your account password to access stored credentials.</p>
+        </div>
+      </div>
+
+      <div className="w-full max-w-[280px] space-y-3">
+        <div className="relative">
+          <Input
+            type={show ? 'text' : 'password'}
+            value={password}
+            onChange={(e) => { setPassword(e.target.value); setError(null) }}
+            onKeyDown={(e) => e.key === 'Enter' && handleUnlock()}
+            placeholder="Account password"
+            autoFocus
+            autoComplete="current-password"
+            className="bg-white/[0.03] border-white/[0.08] focus:border-[#67e8f9]/40 text-sm text-white pr-10 font-mono"
+          />
+          <button
+            type="button"
+            onClick={() => setShow((v) => !v)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
+          >
+            {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+          </button>
+        </div>
+
+        {error && (
+          <p className="text-xs text-red-400 text-center">{error}</p>
+        )}
+
+        <Button
+          onClick={handleUnlock}
+          disabled={!password || loading}
+          className="w-full bg-[#67e8f9] text-black hover:bg-[#67e8f9]/90 font-semibold disabled:opacity-40"
+        >
+          {loading
+            ? <><Loader2 className="size-4 mr-2 animate-spin" /> Verifying…</>
+            : <><ShieldCheck className="size-4 mr-2" /> Unlock Vault</>
+          }
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+// ─── Project Group ────────────────────────────────────────────────────────────
+
+function ProjectGroup({
+  projectName,
+  credentials,
+  onEdit,
+}: {
+  projectName: string
+  credentials: CredentialWithProject[]
+  onEdit: (c: CredentialWithProject) => void
+}) {
+  const [collapsed, setCollapsed] = useState(false)
+
+  return (
+    <div className="space-y-2">
+      <button
+        onClick={() => setCollapsed((v) => !v)}
+        className="flex items-center gap-2 w-full group"
+      >
+        <FolderKanban className="size-3.5 text-gray-500 shrink-0" />
+        <span className="text-xs font-semibold text-gray-400 group-hover:text-gray-300 transition-colors truncate">
+          {projectName}
+        </span>
+        <span className="text-[10px] text-gray-600 font-mono tabular-nums bg-white/[0.04] border border-white/[0.06] rounded px-1.5 py-0.5 shrink-0">
+          {credentials.length}
+        </span>
+        <div className="flex-1 h-px bg-white/[0.05]" />
+        {collapsed
+          ? <ChevronDown className="size-3 text-gray-600 shrink-0" />
+          : <ChevronUp className="size-3 text-gray-600 shrink-0" />
+        }
+      </button>
+
+      {!collapsed && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 pl-5">
+          {credentials.map((c) => (
+            <CredentialCard key={c.id} credential={c} onEdit={() => onEdit(c)} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Main Export ──────────────────────────────────────────────────────────────
 
+type SortView = 'all' | 'by-project'
+
 export function ClientCredentialsTab({ credentials }: ClientCredentialsTabProps) {
+  const [unlocked, setUnlocked] = useState(false)
+  const [view, setView] = useState<SortView>('all')
+  const [editOpen, setEditOpen] = useState(false)
+  const [editingCredential, setEditingCredential] = useState<CredentialWithProject | null>(null)
+
+  const openEdit = (c: CredentialWithProject) => {
+    setEditingCredential(c)
+    setEditOpen(true)
+  }
+
+  // Group credentials by project for the "By Project" view
+  const projectGroups = (() => {
+    const map = new Map<string, { name: string; items: CredentialWithProject[] }>()
+    for (const c of credentials) {
+      const proj = c.project as { id: string; name: string }
+      const id = proj?.id ?? 'unknown'
+      const name = proj?.name ?? 'Unknown Project'
+      if (!map.has(id)) map.set(id, { name, items: [] })
+      map.get(id)!.items.push(c)
+    }
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name))
+  })()
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-3">
+    <div className="space-y-5">
+      {/* Header + floating sort nav */}
+      <div className="flex items-center gap-3 flex-wrap">
         <h2 className="text-base font-semibold text-white">Accounts</h2>
         <span className="text-[11px] text-gray-600 font-mono tabular-nums bg-white/[0.04] border border-white/[0.06] rounded px-1.5 py-0.5">
           {credentials.length}
         </span>
+        {unlocked && (
+          <span className="flex items-center gap-1 text-[10px] text-emerald-400/70 font-medium ml-1">
+            <ShieldCheck className="size-3" /> Unlocked
+          </span>
+        )}
+
+        {credentials.length > 0 && unlocked && (
+          <div
+            className="ml-auto flex items-center p-1 rounded-xl gap-0.5"
+            style={{
+              background: 'rgba(255,255,255,0.03)',
+              border: '1px solid rgba(255,255,255,0.07)',
+            }}
+          >
+            <button
+              onClick={() => setView('all')}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all duration-150',
+                view === 'all'
+                  ? 'bg-white/[0.08] text-white'
+                  : 'text-gray-500 hover:text-gray-300',
+              )}
+            >
+              <LayoutGrid className="size-3" />
+              All
+            </button>
+            <button
+              onClick={() => setView('by-project')}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all duration-150',
+                view === 'by-project'
+                  ? 'bg-white/[0.08] text-white'
+                  : 'text-gray-500 hover:text-gray-300',
+              )}
+            >
+              <FolderKanban className="size-3" />
+              By Project
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Grid or empty state */}
-      {credentials.length === 0 ? (
+      {/* Content */}
+      {!unlocked ? (
+        <VaultLockGate onUnlock={() => setUnlocked(true)} />
+      ) : credentials.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <div className="size-10 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mb-3">
             <Lock className="size-5 text-gray-600" />
@@ -257,13 +647,30 @@ export function ClientCredentialsTab({ credentials }: ClientCredentialsTabProps)
             Credentials added to this client&apos;s projects will appear here.
           </p>
         </div>
-      ) : (
+      ) : view === 'all' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
           {credentials.map((c) => (
-            <CredentialCard key={c.id} credential={c} />
+            <CredentialCard key={c.id} credential={c} onEdit={() => openEdit(c)} />
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {projectGroups.map((group) => (
+            <ProjectGroup
+              key={group.name}
+              projectName={group.name}
+              credentials={group.items}
+              onEdit={openEdit}
+            />
           ))}
         </div>
       )}
+
+      <CredentialEditModal
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        credential={editingCredential}
+      />
     </div>
   )
 }

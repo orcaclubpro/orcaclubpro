@@ -1,14 +1,14 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import {
   ChevronLeft, ChevronRight, Check, X, Loader2,
   Sparkles, FileText, ExternalLink, CheckCircle2, CalendarDays, Mail,
-  PenLine, ShieldCheck, AlertCircle,
+  PenLine, ShieldCheck, AlertCircle, ChevronDown, ScrollText,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { signProposal, emailPackageToSelf } from '@/actions/packages'
+import { signProposal, emailPackageToSelf, emailContractToSelf } from '@/actions/packages'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -287,13 +287,13 @@ function PackageModal({
   }, [])
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center p-0 sm:p-4 pb-20 sm:pb-0">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={onClose} />
 
       {/* Panel */}
       <div
-        className="relative z-10 w-full sm:max-w-[580px] max-h-[92vh] sm:max-h-[88vh] flex flex-col rounded-t-3xl sm:rounded-2xl border border-white/[0.10] overflow-hidden"
+        className="relative z-10 w-full sm:max-w-[580px] max-h-[calc(92vh-80px)] sm:max-h-[88vh] flex flex-col rounded-t-3xl sm:rounded-2xl border border-white/[0.10] overflow-hidden"
         style={{ background: 'linear-gradient(160deg, #141414 0%, #0d0d0d 100%)' }}
       >
         {/* Top cyan line */}
@@ -706,19 +706,28 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
   const [modalPkg, setModalPkg] = useState<PackageDoc | null>(null)
   const [emailingId, setEmailingId] = useState<string | null>(null)
   const [emailSentIds, setEmailSentIds] = useState<Set<string>>(new Set())
-  const [emailErrors, setEmailErrors] = useState<Record<string, string>>({})
+  const [emailPopupId, setEmailPopupId] = useState<string | null>(null)
+  const [emailOptPkg, setEmailOptPkg] = useState(true)
+  const [emailOptContract, setEmailOptContract] = useState(false)
   const total = clientPackages.length
 
-  const handleEmailSelf = async (pkgId: string) => {
-    setEmailingId(pkgId)
-    setEmailErrors(prev => { const n = { ...prev }; delete n[pkgId]; return n })
-    const result = await emailPackageToSelf(pkgId)
+  const openEmailPopup = (pkg: PackageDoc) => {
+    const bothSigned = !!pkg.clientSignature?.signedAt && !!pkg.orcaclubSignature?.authorizedAt
+    setEmailOptPkg(!bothSigned)
+    setEmailOptContract(bothSigned)
+    setEmailPopupId(pkg.id)
+  }
+
+  const handleEmailSend = async (pkg: PackageDoc) => {
+    setEmailPopupId(null)
+    setEmailingId(pkg.id)
+    const result = emailOptContract
+      ? await emailContractToSelf(pkg.id)
+      : await emailPackageToSelf(pkg.id)
     setEmailingId(null)
     if (result.success) {
-      setEmailSentIds(prev => new Set(prev).add(pkgId))
-      setTimeout(() => setEmailSentIds(prev => { const n = new Set(prev); n.delete(pkgId); return n }), 4000)
-    } else {
-      setEmailErrors(prev => ({ ...prev, [pkgId]: result.error ?? 'Failed to send' }))
+      setEmailSentIds(prev => new Set(prev).add(pkg.id))
+      setTimeout(() => setEmailSentIds(prev => { const n = new Set(prev); n.delete(pkg.id); return n }), 4000)
     }
   }
   const containerRef = useRef<HTMLDivElement>(null)
@@ -798,6 +807,11 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
 
   return (
     <>
+      {/* Backdrop to close email popup */}
+      {emailPopupId && (
+        <div className="fixed inset-0 z-40" onClick={() => setEmailPopupId(null)} />
+      )}
+
       <div className="flex flex-col">
 
         {/* Header */}
@@ -833,6 +847,7 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                 pkg.status !== 'accepted' &&
                 !pkg.clientSignature?.signedAt &&
                 (schedule.some(e => !e.orderId) || (schedule.length === 0 && lineItems.length > 0))
+              const bothSigned = !!pkg.clientSignature?.signedAt && !!pkg.orcaclubSignature?.authorizedAt
 
               return (
                 <div key={pkg.id} className="min-w-full">
@@ -937,13 +952,16 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                       )}
 
                       {/* Actions */}
-                      <div className="flex items-center gap-4 flex-wrap">
+                      <div className="flex items-center gap-3 flex-wrap">
+                        {/* View Details — primary action */}
                         <button
                           onClick={() => setModalPkg(pkg)}
-                          className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-white/[0.05] border border-white/[0.12] text-gray-300 hover:bg-white/[0.09] hover:text-white transition-all duration-200"
+                          className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold bg-white/[0.08] border border-white/[0.18] text-white hover:bg-white/[0.13] hover:border-white/30 transition-all duration-200"
                         >
                           View Details
                         </button>
+
+                        {/* Sign state */}
                         {canSign ? (
                           <button
                             onClick={() => setModalPkg(pkg)}
@@ -958,23 +976,8 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                             Signed
                           </span>
                         ) : null}
-                        <button
-                          onClick={() => handleEmailSelf(pkg.id)}
-                          disabled={emailingId === pkg.id}
-                          className={cn(
-                            'flex items-center gap-1.5 text-sm transition-colors',
-                            emailSentIds.has(pkg.id)
-                              ? 'text-emerald-400'
-                              : 'text-gray-500 hover:text-gray-300',
-                          )}
-                        >
-                          {emailingId === pkg.id
-                            ? <Loader2 className="size-3.5 animate-spin" />
-                            : emailSentIds.has(pkg.id)
-                            ? <CheckCircle2 className="size-3.5" />
-                            : <Mail className="size-3.5" />}
-                          {emailingId === pkg.id ? 'Sending…' : emailSentIds.has(pkg.id) ? 'Sent!' : 'Email Me'}
-                        </button>
+
+                        {/* Full Package link */}
                         <Link
                           href={`/u/${username}/packages/${pkg.id}/print`}
                           target="_blank"
@@ -985,10 +988,79 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                           Full Package
                           <ExternalLink className="size-3" />
                         </Link>
+
+                        {/* View Contract — only when both parties have signed */}
+                        {bothSigned && (
+                          <Link
+                            href={`/u/${username}/packages/${pkg.id}/print`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-300 transition-colors"
+                          >
+                            <ScrollText className="size-3.5" />
+                            View Contract
+                            <ExternalLink className="size-3" />
+                          </Link>
+                        )}
+
+                        {/* Email with popup — always last */}
+                        <div className="relative">
+                          <button
+                            onClick={() => emailPopupId === pkg.id ? setEmailPopupId(null) : openEmailPopup(pkg)}
+                            disabled={emailingId === pkg.id}
+                            className={cn(
+                              'flex items-center gap-1.5 text-sm transition-colors',
+                              emailSentIds.has(pkg.id)
+                                ? 'text-emerald-400'
+                                : 'text-gray-500 hover:text-gray-300',
+                            )}
+                          >
+                            {emailingId === pkg.id
+                              ? <Loader2 className="size-3.5 animate-spin" />
+                              : emailSentIds.has(pkg.id)
+                              ? <CheckCircle2 className="size-3.5" />
+                              : <Mail className="size-3.5" />}
+                            {emailingId === pkg.id ? 'Sending…' : emailSentIds.has(pkg.id) ? 'Sent!' : 'Email'}
+                            {!emailSentIds.has(pkg.id) && emailingId !== pkg.id && (
+                              <ChevronDown className={cn('size-3 transition-transform duration-200', emailPopupId === pkg.id && 'rotate-180')} />
+                            )}
+                          </button>
+
+                          {/* Popup */}
+                          {emailPopupId === pkg.id && (
+                            <div className="absolute bottom-full right-0 mb-2 w-52 rounded-xl bg-[#111] border border-white/[0.12] shadow-xl p-3 z-50">
+                              <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">Email me</p>
+                              <label className="flex items-center gap-2 py-1 cursor-pointer select-none">
+                                <input
+                                  type="checkbox"
+                                  checked={emailOptPkg}
+                                  onChange={e => setEmailOptPkg(e.target.checked)}
+                                  className="accent-[#67e8f9] size-3.5"
+                                />
+                                <span className="text-sm text-gray-300">Package proposal</span>
+                              </label>
+                              {bothSigned && (
+                                <label className="flex items-center gap-2 py-1 cursor-pointer select-none">
+                                  <input
+                                    type="checkbox"
+                                    checked={emailOptContract}
+                                    onChange={e => setEmailOptContract(e.target.checked)}
+                                    className="accent-[#67e8f9] size-3.5"
+                                  />
+                                  <span className="text-sm text-gray-300">Signed contract</span>
+                                </label>
+                              )}
+                              <button
+                                onClick={() => handleEmailSend(pkg)}
+                                disabled={!emailOptPkg && !emailOptContract}
+                                className="mt-2 w-full px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/[0.08] border border-white/[0.12] text-white hover:bg-white/[0.12] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                              >
+                                Send
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      {emailErrors[pkg.id] && (
-                        <p className="mt-3 text-xs text-red-400">{emailErrors[pkg.id]}</p>
-                      )}
                     </div>
                   </div>
                 </div>

@@ -293,6 +293,18 @@ const Packages: CollectionConfig = {
         },
       ],
     },
+
+    // ── Generated Contract PDF ─────────────────────────────────────────────
+    {
+      name: 'contractFile',
+      type: 'relationship',
+      relationTo: 'files',
+      admin: {
+        condition: (data: any) => data.type === 'proposal',
+        readOnly: true,
+        description: 'Auto-generated signed contract PDF (populated when both parties sign)',
+      },
+    },
   ],
 }
 

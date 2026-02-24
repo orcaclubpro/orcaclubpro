@@ -60,7 +60,7 @@ const Media: CollectionConfig = {
       },
     ],
     adminThumbnail: 'thumbnail',
-    mimeTypes: ['image/*'],
+    mimeTypes: ['image/*', 'application/pdf'],
   },
   access: {
     read: () => true,

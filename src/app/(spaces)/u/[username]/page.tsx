@@ -237,7 +237,7 @@ export default async function DashboardPage({
     )
   }
 
-  const [{ docs: clientProjects }, { docs: orders }, clientPackagesResult] = await Promise.all([
+  const [{ docs: clientProjects }, { docs: orders }, clientPackagesResult, { docs: clientCredentials }] = await Promise.all([
     payload.find({
       collection: 'projects',
       where: { client: { equals: clientAccount.id } },
@@ -263,6 +263,13 @@ export default async function DashboardPage({
       depth: 0,
       sort: '-createdAt',
       limit: 20,
+    }).catch(() => ({ docs: [] })),
+    payload.find({
+      collection: 'credentials',
+      where: { 'project.client': { equals: clientAccount.id } },
+      depth: 1,
+      sort: 'title',
+      limit: 200,
     }).catch(() => ({ docs: [] })),
   ])
   const clientPackages = clientPackagesResult.docs
@@ -299,6 +306,7 @@ export default async function DashboardPage({
         orders,
         clientSprints,
         clientPackages,
+        clientCredentials,
         serializedClientProjects: clientProjects
           .map((p: any) => serializeProject(p, clientSprintsByProject[p.id] ?? []))
           .sort((a: SerializedProject, b: SerializedProject) =>
