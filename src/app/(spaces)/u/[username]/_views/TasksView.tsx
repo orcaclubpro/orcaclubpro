@@ -770,7 +770,8 @@ function TaskBoard({
   const [updatingIds, setUpdatingIds] = useState<Set<string>>(new Set())
   const [savingId, setSavingId] = useState<string | null>(null)
   const [editState, setEditState] = useState<EditState | null>(null)
-  const [activeTaskIds, setActiveTaskIds] = useState<Set<string>>(new Set())
+  const [activeTaskIdsA, setActiveTaskIdsA] = useState<Set<string>>(new Set())
+  const [activeTaskIdsB, setActiveTaskIdsB] = useState<Set<string>>(new Set())
   const [optimisticStatus, setOptimisticStatus] = useState<Map<string, string>>(new Map())
   const [optimisticPriority, setOptimisticPriority] = useState<Map<string, string>>(new Map())
   const [colAId, setColAId] = useState<string | null>(sorted[0]?.id ?? null)
@@ -791,9 +792,11 @@ function TaskBoard({
   })
 
   // ── Priority keyboard shortcuts (L/M/H/U) ─────────────────────────────────
-  // Use a ref so the single registered handler always reads the latest activeTaskIds
-  const activeTaskIdsRef = useRef(activeTaskIds)
-  activeTaskIdsRef.current = activeTaskIds
+  // Use a ref so the single registered handler always reads the latest activeTaskIds (union of both columns)
+  const activeTaskIdsARef = useRef(activeTaskIdsA)
+  activeTaskIdsARef.current = activeTaskIdsA
+  const activeTaskIdsBRef = useRef(activeTaskIdsB)
+  activeTaskIdsBRef.current = activeTaskIdsB
   const editStateRef = useRef(editState)
   editStateRef.current = editState
   const optimisticPrioritySetRef = useRef(setOptimisticPriority)
@@ -805,7 +808,8 @@ function TaskBoard({
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return
       // Block if a Radix Select popover is open (listbox visible in DOM)
       if (document.querySelector('[role="listbox"]')) return
-      if (activeTaskIdsRef.current.size === 0) return
+      const allActiveIds = new Set([...activeTaskIdsARef.current, ...activeTaskIdsBRef.current])
+      if (allActiveIds.size === 0) return
       if (editStateRef.current) return
       const priority =
         e.key === 'l' || e.key === 'L' ? 'low'
@@ -815,7 +819,7 @@ function TaskBoard({
         : null
       if (!priority) return
       e.preventDefault()
-      const ids = Array.from(activeTaskIdsRef.current)
+      const ids = Array.from(allActiveIds)
       optimisticPrioritySetRef.current((prev) => {
         const m = new Map(prev)
         for (const id of ids) m.set(id, priority)
@@ -843,7 +847,8 @@ function TaskBoard({
     setUpdatingIds((p) => new Set(p).add(task.id))
     // Auto-remove from active when completing
     if (next === 'completed') {
-      setActiveTaskIds((prev) => { const s = new Set(prev); s.delete(task.id); return s })
+      setActiveTaskIdsA((prev) => { const s = new Set(prev); s.delete(task.id); return s })
+      setActiveTaskIdsB((prev) => { const s = new Set(prev); s.delete(task.id); return s })
     }
     updateTaskStatus({ taskId: task.id, status: next }).then(() => {
       setUpdatingIds((p) => { const s = new Set(p); s.delete(task.id); return s })
@@ -852,8 +857,9 @@ function TaskBoard({
     })
   }
 
-  const handleActivate = (taskId: string) => {
-    setActiveTaskIds((prev) => {
+  const handleActivate = (taskId: string, col: 'a' | 'b') => {
+    const setter = col === 'a' ? setActiveTaskIdsA : setActiveTaskIdsB
+    setter((prev) => {
       const next = new Set(prev)
       if (next.has(taskId)) next.delete(taskId)
       else next.add(taskId)
@@ -905,25 +911,25 @@ function TaskBoard({
 
   const columnProps = {
     sprintMap, allTasks: localTasks, updatingIds, onToggle: handleToggle,
-    activeTaskIds, onActivate: handleActivate,
     editState, onEditStart: handleEditStart, onEditChange: handleEditChange,
     onEditSave: handleEditSave, onEditCancel: handleEditCancel,
     savingId, onTaskCreated: handleTaskCreated, onPriorityChange: handlePriorityChange,
   }
 
   // Derived data for mobile column views
-  const mobileColData = (sprintId: string | null, label: string) => {
+  const mobileColData = (sprintId: string | null, label: string, col: 'a' | 'b') => {
+    const colActiveIds = col === 'a' ? activeTaskIdsA : activeTaskIdsB
     const sprint = sprintId ? sprintMap.get(sprintId) : null
     const projectId = sprint ? getProjectId(sprint) : null
     const columnTasks = tasksForSprint(localTasks, sprintId)
     const completedC = columnTasks.filter((t) => t.status === 'completed').length
     const prog = columnTasks.length > 0 ? Math.round((completedC / columnTasks.length) * 100) : 0
-    const activeTasks = columnTasks.filter((t) => activeTaskIds.has(t.id))
-    const nonActiveTasks = columnTasks.filter((t) => !activeTaskIds.has(t.id))
+    const activeTasks = columnTasks.filter((t) => colActiveIds.has(t.id))
+    const nonActiveTasks = columnTasks.filter((t) => !colActiveIds.has(t.id))
     const statusGroups = COLUMN_STATUS_ORDER
       .map((st) => ({ status: st, tasks: nonActiveTasks.filter((t) => t.status === st) }))
       .filter((g) => g.tasks.length > 0)
-    return { sprint, projectId, columnTasks, completedC, prog, activeTasks, statusGroups, label }
+    return { sprint, projectId, columnTasks, completedC, prog, activeTasks, statusGroups, label, colActiveIds }
   }
 
   const mobileTabs: { id: MobileTab; label: string }[] = [
@@ -940,8 +946,8 @@ function TaskBoard({
         <div className="flex items-center gap-2.5">
           <span className="text-[10px] font-bold gradient-text uppercase tracking-[0.14em]">Tasks</span>
           <span className="text-[10px] text-gray-300 tabular-nums">{tasks.length} · {completedCount} done</span>
-          {activeTaskIds.size > 0 && (
-            <span className="text-[10px] text-intelligence-cyan tabular-nums">· {activeTaskIds.size} active</span>
+          {(activeTaskIdsA.size + activeTaskIdsB.size) > 0 && (
+            <span className="text-[10px] text-intelligence-cyan tabular-nums">· {activeTaskIdsA.size + activeTaskIdsB.size} active</span>
           )}
         </div>
         {/* Expand only on desktop */}
@@ -981,21 +987,22 @@ function TaskBoard({
             tasks={localTasks}
             sprintMap={sprintMap}
             activeSprints={activeSprints}
-            activeTaskIds={activeTaskIds}
+            activeTaskIds={new Set([...activeTaskIdsA, ...activeTaskIdsB])}
           />
         )}
         {(mobileTab === 'a' || mobileTab === 'b') && (() => {
-          const sprintId = mobileTab === 'a' ? colAId : colBId
-          const setSprintId = mobileTab === 'a' ? setColAId : setColBId
-          const { sprint, projectId, columnTasks, completedC, prog, activeTasks, statusGroups, label } =
-            mobileColData(sprintId, mobileTab === 'a' ? 'Sprint A' : 'Sprint B')
+          const col = mobileTab as 'a' | 'b'
+          const sprintId = col === 'a' ? colAId : colBId
+          const setSprintId = col === 'a' ? setColAId : setColBId
+          const { sprint, projectId, columnTasks, completedC, prog, activeTasks, statusGroups, label, colActiveIds } =
+            mobileColData(sprintId, col === 'a' ? 'Sprint A' : 'Sprint B', col)
           return (
             <div className="pb-28">
               <ColumnBody
                 sprint={sprint} selectedSprintId={sprintId} sprintMap={sprintMap} onSelect={setSprintId}
                 columnTasks={columnTasks} completedCount={completedC} progress={prog}
                 activeTasks={activeTasks} statusGroups={statusGroups} projectId={projectId} label={label}
-                updatingIds={updatingIds} onToggle={handleToggle} activeTaskIds={activeTaskIds} onActivate={handleActivate}
+                updatingIds={updatingIds} onToggle={handleToggle} activeTaskIds={colActiveIds} onActivate={(id) => handleActivate(id, col)}
                 editState={editState} onEditStart={handleEditStart} onEditChange={handleEditChange}
                 onEditSave={handleEditSave} onEditCancel={handleEditCancel} savingId={savingId} onTaskCreated={handleTaskCreated}
                 onPriorityChange={handlePriorityChange}
@@ -1122,10 +1129,12 @@ function TaskBoard({
         </aside>
 
         {/* Column A */}
-        <SprintColumn label="Sprint A" selectedSprintId={colAId} onSelect={setColAId} bg="bg-[#0e0e0e]" {...columnProps} />
+        <SprintColumn label="Sprint A" selectedSprintId={colAId} onSelect={setColAId} bg="bg-[#0e0e0e]" {...columnProps}
+          activeTaskIds={activeTaskIdsA} onActivate={(id) => handleActivate(id, 'a')} />
 
         {/* Column B */}
-        <SprintColumn label="Sprint B" selectedSprintId={colBId} onSelect={setColBId} bg="bg-[#0f0f0f]" {...columnProps} />
+        <SprintColumn label="Sprint B" selectedSprintId={colBId} onSelect={setColBId} bg="bg-[#0f0f0f]" {...columnProps}
+          activeTaskIds={activeTaskIdsB} onActivate={(id) => handleActivate(id, 'b')} />
       </div>
 
       {sprintProjectId && (
