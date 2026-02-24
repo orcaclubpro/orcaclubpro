@@ -998,6 +998,7 @@ function TaskBoard({
                 updatingIds={updatingIds} onToggle={handleToggle} activeTaskIds={activeTaskIds} onActivate={handleActivate}
                 editState={editState} onEditStart={handleEditStart} onEditChange={handleEditChange}
                 onEditSave={handleEditSave} onEditCancel={handleEditCancel} savingId={savingId} onTaskCreated={handleTaskCreated}
+                onPriorityChange={handlePriorityChange}
               />
             </div>
           )
