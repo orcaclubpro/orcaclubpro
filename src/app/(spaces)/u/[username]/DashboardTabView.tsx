@@ -35,6 +35,7 @@ export interface AdminDataBundle {
   allOrders: any[]
   allProjects: any[]
   allTasks: any[]
+  allSprints: any[]
   allPackages: any[]
   completedTasksCount: number
   completedSprintsCount: number
@@ -367,7 +368,7 @@ export function DashboardTabView({
             />
           )
         case 'tasks':
-          return <TasksView tasks={d.allTasks} projects={d.allProjects.map((p: any) => ({ id: p.id, name: p.name ?? '' }))} />
+          return <TasksView tasks={d.allTasks} sprints={d.allSprints} projects={d.allProjects.map((p: any) => ({ id: p.id, name: p.name ?? '' }))} />
         case 'packages':
           return <PackagesAdminView allPackages={d.allPackages} username={username} />
         default:

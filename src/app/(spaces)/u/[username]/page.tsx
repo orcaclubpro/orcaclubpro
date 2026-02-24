@@ -186,6 +186,7 @@ export default async function DashboardPage({
           allOrders: filteredOrders,
           allProjects,
           allTasks,
+          allSprints,
           completedTasksCount,
           completedSprintsCount,
           serializedProjects: allProjects.map((p: any) =>

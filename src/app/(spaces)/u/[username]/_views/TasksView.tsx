@@ -3,7 +3,7 @@
 import { useState, useEffect, useTransition, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
-import { Check, Zap, Maximize2, X, Pencil, Plus, Loader2 } from 'lucide-react'
+import { Check, Zap, Maximize2, X, Pencil, Plus, Loader2, ChevronRight, ChevronDown } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -778,6 +778,7 @@ function TaskBoard({
   const [colBId, setColBId] = useState<string | null>(sorted[1]?.id ?? null)
   const [mobileTab, setMobileTab] = useState<MobileTab>('a')
   const [sidebarHovered, setSidebarHovered] = useState(false)
+  const [expandedSprintIds, setExpandedSprintIds] = useState<Set<string>>(new Set())
   const [sprintModalOpen, setSprintModalOpen] = useState(false)
   const [sprintProjectId, setSprintProjectId] = useState('')
   const [showProjectPicker, setShowProjectPicker] = useState(false)
@@ -1086,33 +1087,57 @@ function TaskBoard({
                       const pct = sTasks.length > 0 ? Math.round((done / sTasks.length) * 100) : 0
                       const cfg = SPRINT_STATUS_CFG[sprint.status] ?? SPRINT_STATUS_CFG.pending
                       const projName = typeof sprint.project === 'object' ? (sprint.project?.name ?? '') : ''
+                      const isExpanded = expandedSprintIds.has(sprint.id)
+                      const toggleExpanded = () => setExpandedSprintIds((prev) => {
+                        const next = new Set(prev)
+                        if (next.has(sprint.id)) next.delete(sprint.id)
+                        else next.add(sprint.id)
+                        return next
+                      })
                       return (
-                        <div key={sprint.id} className="mb-4">
-                          <div className="px-3 py-1.5">
-                            <div className="flex items-center justify-between gap-1 mb-0.5">
-                              <span className="text-xs font-medium text-white truncate leading-tight">{sprint.name}</span>
-                              <span className={`shrink-0 text-[9px] font-bold ${cfg.text}`}>{cfg.label}</span>
-                            </div>
-                            {projName && <p className="text-[9px] text-gray-400 truncate mb-1.5">{projName}</p>}
-                            {sTasks.length > 0 && (
-                              <div className="flex items-center gap-1.5 mb-1">
-                                <div className="flex-1 h-[2px] bg-white/[0.05] rounded-full overflow-hidden">
-                                  <div className={`h-full rounded-full ${cfg.bar}`} style={{ width: `${pct}%` }} />
-                                </div>
-                                <span className="text-[9px] text-gray-400 shrink-0 tabular-nums">{pct}%</span>
+                        <div key={sprint.id} className="mb-1">
+                          {/* Header row — always visible, click to expand/collapse */}
+                          <button
+                            type="button"
+                            onClick={toggleExpanded}
+                            className="w-full flex items-center gap-1.5 px-3 py-1.5 hover:bg-white/[0.03] transition-colors text-left group"
+                          >
+                            {isExpanded
+                              ? <ChevronDown className="size-3 text-gray-600 shrink-0 group-hover:text-gray-400 transition-colors" />
+                              : <ChevronRight className="size-3 text-gray-600 shrink-0 group-hover:text-gray-400 transition-colors" />
+                            }
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-1">
+                                <span className="text-xs font-medium text-white truncate leading-tight">{sprint.name}</span>
+                                <span className={`shrink-0 text-[9px] font-bold ${cfg.text}`}>{cfg.label}</span>
                               </div>
-                            )}
-                          </div>
-                          <div className="px-1">
-                            {sTasks.length === 0 ? (
-                              <p className="text-[10px] text-gray-400 px-2 py-1">No tasks</p>
-                            ) : (
-                              <>
-                                {sTasks.slice(0, 8).map((t) => <SidebarTask key={t.id} task={t} />)}
-                                {sTasks.length > 8 && <p className="text-[10px] text-gray-400 px-2 py-1">+{sTasks.length - 8} more</p>}
-                              </>
-                            )}
-                          </div>
+                              {projName && <p className="text-[9px] text-gray-400 truncate">{projName}</p>}
+                            </div>
+                          </button>
+
+                          {/* Expandable body */}
+                          {isExpanded && (
+                            <div className="pb-3">
+                              {sTasks.length > 0 && (
+                                <div className="flex items-center gap-1.5 px-3 pb-1">
+                                  <div className="flex-1 h-[2px] bg-white/[0.05] rounded-full overflow-hidden">
+                                    <div className={`h-full rounded-full ${cfg.bar}`} style={{ width: `${pct}%` }} />
+                                  </div>
+                                  <span className="text-[9px] text-gray-400 shrink-0 tabular-nums">{pct}%</span>
+                                </div>
+                              )}
+                              <div className="px-1">
+                                {sTasks.length === 0 ? (
+                                  <p className="text-[10px] text-gray-400 px-2 py-1">No tasks</p>
+                                ) : (
+                                  <>
+                                    {sTasks.slice(0, 8).map((t) => <SidebarTask key={t.id} task={t} />)}
+                                    {sTasks.length > 8 && <p className="text-[10px] text-gray-400 px-2 py-1">+{sTasks.length - 8} more</p>}
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )
                     })}
@@ -1153,10 +1178,11 @@ function TaskBoard({
 
 interface TasksViewProps {
   tasks: any[]
+  sprints?: any[]
   projects?: { id: string; name: string }[]
 }
 
-export function TasksView({ tasks, projects = [] }: TasksViewProps) {
+export function TasksView({ tasks, sprints = [], projects = [] }: TasksViewProps) {
   const [popup, setPopup] = useState(false)
   const [mounted, setMounted] = useState(false)
 
@@ -1170,6 +1196,10 @@ export function TasksView({ tasks, projects = [] }: TasksViewProps) {
   }, [popup])
 
   const sprintMap = extractSprintMap(tasks)
+  // Merge in sprints that have no tasks yet (they won't appear in extractSprintMap)
+  for (const s of sprints) {
+    if (!sprintMap.has(s.id)) sprintMap.set(s.id, s)
+  }
   const sorted = sortedByUpdated(Array.from(sprintMap.values()))
   const activeSprints = sorted.filter((s) => ACTIVE_SPRINT_STATUSES.has(s.status ?? ''))
   const boardProps = { tasks, sprintMap, activeSprints, sorted, projects }

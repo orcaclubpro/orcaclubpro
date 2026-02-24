@@ -44,13 +44,16 @@ export async function createSprint({
       }
     }
 
+    const today = new Date().toISOString().slice(0, 10) // YYYY-MM-DD UTC
+    const status = startDate && startDate <= today ? 'in-progress' : 'pending'
+
     const sprint = await payload.create({
       collection: 'sprints',
       data: {
         name,
         description: description || null,
         project: projectId,
-        status: 'pending',
+        status,
         startDate: startDate || null,
         endDate: endDate || null,
         goalDescription: goalDescription || null,

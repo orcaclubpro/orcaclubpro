@@ -21,9 +21,20 @@ export interface SearchProject {
   clientId?: string | null
 }
 
+export interface SearchSprint {
+  id: string
+  name: string
+  status: string
+  projectId: string
+  projectName: string
+  clientName?: string | null
+  description?: string | null
+}
+
 export interface SearchData {
   clients: SearchClient[]
   projects: SearchProject[]
+  sprints: SearchSprint[]
 }
 
 export async function fetchSearchData(): Promise<{
@@ -37,7 +48,7 @@ export async function fetchSearchData(): Promise<{
 
     const payload = await getPayload({ config })
 
-    const [clientsResult, projectsResult] = await Promise.all([
+    const [clientsResult, projectsResult, sprintsResult] = await Promise.all([
       payload.find({
         collection: 'client-accounts',
         depth: 0,
@@ -51,6 +62,13 @@ export async function fetchSearchData(): Promise<{
         limit: 500,
         sort: '-updatedAt',
         where: user.role === 'admin' ? {} : { assignedTo: { contains: user.id } },
+      }),
+      payload.find({
+        collection: 'sprints',
+        depth: 2,
+        limit: 500,
+        sort: 'name',
+        where: user.role === 'admin' ? {} : { 'project.assignedTo': { equals: user.id } },
       }),
     ])
 
@@ -81,7 +99,21 @@ export async function fetchSearchData(): Promise<{
       }
     })
 
-    return { success: true, data: { clients, projects } }
+    const sprints: SearchSprint[] = sprintsResult.docs.map((s: any) => {
+      const project = s.project && typeof s.project === 'object' ? s.project : null
+      const client = project?.client && typeof project.client === 'object' ? project.client : null
+      return {
+        id: s.id,
+        name: s.name ?? '',
+        status: s.status ?? 'pending',
+        projectId: project?.id ?? (typeof s.project === 'string' ? s.project : ''),
+        projectName: project?.name ?? '',
+        clientName: client?.name ?? null,
+        description: s.description ?? null,
+      }
+    })
+
+    return { success: true, data: { clients, projects, sprints } }
   } catch (error) {
     console.error('[fetchSearchData]', error)
     return { success: false, error: 'Failed to fetch search data' }

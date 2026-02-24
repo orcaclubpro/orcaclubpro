@@ -2,14 +2,14 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, X, Building2, FolderKanban, Loader2, ArrowRight } from 'lucide-react'
+import { Search, X, Building2, FolderKanban, Zap, Loader2, ArrowRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { fetchSearchData } from '@/actions/search'
-import type { SearchClient, SearchProject } from '@/actions/search'
+import type { SearchClient, SearchProject, SearchSprint } from '@/actions/search'
 
 // ─── Status dot colours ───────────────────────────────────────────────────────
 
-const STATUS_DOT: Record<string, string> = {
+const PROJECT_STATUS_DOT: Record<string, string> = {
   pending:       'bg-yellow-400',
   'in-progress': 'bg-cyan-400',
   'on-hold':     'bg-orange-400',
@@ -18,11 +18,19 @@ const STATUS_DOT: Record<string, string> = {
   active:        'bg-green-400',
 }
 
+const SPRINT_STATUS_DOT: Record<string, string> = {
+  pending:       'bg-yellow-400',
+  'in-progress': 'bg-cyan-400',
+  delayed:       'bg-orange-400',
+  finished:      'bg-green-400',
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type ResultItem =
   | { type: 'client'; data: SearchClient }
   | { type: 'project'; data: SearchProject }
+  | { type: 'sprint'; data: SearchSprint }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -32,7 +40,7 @@ function matches(text: string | null | undefined, query: string): boolean {
 }
 
 function buildResults(
-  data: { clients: SearchClient[]; projects: SearchProject[] } | null,
+  data: { clients: SearchClient[]; projects: SearchProject[]; sprints: SearchSprint[] } | null,
   query: string,
 ): ResultItem[] {
   if (!data || !query.trim()) return []
@@ -49,6 +57,11 @@ function buildResults(
       out.push({ type: 'project', data: project })
     }
   }
+  for (const sprint of data.sprints) {
+    if (matches(sprint.name, q) || matches(sprint.projectName, q) || matches(sprint.clientName, q) || matches(sprint.description, q)) {
+      out.push({ type: 'sprint', data: sprint })
+    }
+  }
   return out
 }
 
@@ -63,7 +76,7 @@ export function GlobalSearchPalette({ username }: GlobalSearchPaletteProps) {
 
   const [isOpen, setIsOpen] = useState(false)
   const [query, setQuery] = useState('')
-  const [data, setData] = useState<{ clients: SearchClient[]; projects: SearchProject[] } | null>(null)
+  const [data, setData] = useState<{ clients: SearchClient[]; projects: SearchProject[]; sprints: SearchSprint[] } | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [selectedIdx, setSelectedIdx] = useState(0)
@@ -203,8 +216,10 @@ export function GlobalSearchPalette({ username }: GlobalSearchPaletteProps) {
     closePalette()
     if (item.type === 'client') {
       router.push(`/u/${username}/clients/${item.data.id}`)
-    } else {
+    } else if (item.type === 'project') {
       router.push(`/u/${username}/projects/${item.data.id}`)
+    } else {
+      router.push(`/u/${username}/projects/${item.data.projectId}?tab=sprints`)
     }
   }
 
@@ -212,12 +227,14 @@ export function GlobalSearchPalette({ username }: GlobalSearchPaletteProps) {
 
   const clientResults = results.filter((r): r is { type: 'client'; data: SearchClient } => r.type === 'client')
   const projectResults = results.filter((r): r is { type: 'project'; data: SearchProject } => r.type === 'project')
+  const sprintResults = results.filter((r): r is { type: 'sprint'; data: SearchSprint } => r.type === 'sprint')
 
   // Global index within the flat `results` array
   let globalIdx = 0
 
   const totalClients = data?.clients.length ?? 0
   const totalProjects = data?.projects.length ?? 0
+  const totalSprints = data?.sprints.length ?? 0
 
   if (!isOpen) return null
 
@@ -251,7 +268,7 @@ export function GlobalSearchPalette({ username }: GlobalSearchPaletteProps) {
               ref={inputRef}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search clients and projects…"
+              placeholder="Search clients, projects and sprints…"
               className="flex-1 bg-transparent text-white text-sm placeholder:text-white/18 outline-none"
             />
             <div className="flex items-center gap-2 shrink-0">
@@ -300,8 +317,8 @@ export function GlobalSearchPalette({ username }: GlobalSearchPaletteProps) {
                 <p className="text-[10px] tracking-[0.35em] uppercase text-white/18 font-light">
                   Workspace
                 </p>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="flex items-center gap-2.5 px-3.5 py-3 rounded-xl bg-white/[0.025] border border-white/[0.05]">
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="flex items-center gap-2.5 px-3 py-3 rounded-xl bg-white/[0.025] border border-white/[0.05]">
                     <div className="p-1.5 rounded-lg bg-intelligence-cyan/[0.07] border border-intelligence-cyan/[0.12]">
                       <Building2 className="size-3 text-intelligence-cyan/60" />
                     </div>
@@ -312,7 +329,7 @@ export function GlobalSearchPalette({ username }: GlobalSearchPaletteProps) {
                       <p className="text-[10px] text-white/20">client{totalClients !== 1 ? 's' : ''}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2.5 px-3.5 py-3 rounded-xl bg-white/[0.025] border border-white/[0.05]">
+                  <div className="flex items-center gap-2.5 px-3 py-3 rounded-xl bg-white/[0.025] border border-white/[0.05]">
                     <div className="p-1.5 rounded-lg bg-intelligence-cyan/[0.07] border border-intelligence-cyan/[0.12]">
                       <FolderKanban className="size-3 text-intelligence-cyan/60" />
                     </div>
@@ -323,9 +340,20 @@ export function GlobalSearchPalette({ username }: GlobalSearchPaletteProps) {
                       <p className="text-[10px] text-white/20">project{totalProjects !== 1 ? 's' : ''}</p>
                     </div>
                   </div>
+                  <div className="flex items-center gap-2.5 px-3 py-3 rounded-xl bg-white/[0.025] border border-white/[0.05]">
+                    <div className="p-1.5 rounded-lg bg-intelligence-cyan/[0.07] border border-intelligence-cyan/[0.12]">
+                      <Zap className="size-3 text-intelligence-cyan/60" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-white/50 tabular-nums">
+                        {data ? totalSprints : '—'}
+                      </p>
+                      <p className="text-[10px] text-white/20">sprint{totalSprints !== 1 ? 's' : ''}</p>
+                    </div>
+                  </div>
                 </div>
                 <p className="text-[11px] text-white/15 leading-relaxed">
-                  Type to search across all clients and projects.
+                  Type to search across all clients, projects and sprints.
                 </p>
               </div>
             )}
@@ -406,7 +434,7 @@ export function GlobalSearchPalette({ username }: GlobalSearchPaletteProps) {
                     {projectResults.map((item) => {
                       const idx = globalIdx++
                       const isSelected = idx === selectedIdx
-                      const dotClass = STATUS_DOT[item.data.status] ?? 'bg-white/30'
+                      const dotClass = PROJECT_STATUS_DOT[item.data.status] ?? 'bg-white/30'
                       return (
                         <button
                           key={item.data.id}
@@ -435,6 +463,62 @@ export function GlobalSearchPalette({ username }: GlobalSearchPaletteProps) {
                             <p className="text-[11px] text-white/28 truncate">
                               {item.data.clientName ? `${item.data.clientName} · ` : ''}
                               {item.data.status}
+                            </p>
+                          </div>
+                          <ArrowRight className={cn(
+                            'size-3.5 shrink-0 transition-all duration-150',
+                            isSelected
+                              ? 'text-intelligence-cyan/60'
+                              : 'text-white/10 -translate-x-1 opacity-0 group-hover:opacity-100 group-hover:translate-x-0',
+                          )} />
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {/* Sprints group */}
+                {sprintResults.length > 0 && (
+                  <div>
+                    <p className={cn(
+                      'px-5 pb-1.5 text-[10px] tracking-[0.35em] uppercase text-white/20 font-light flex items-center gap-1.5',
+                      (clientResults.length > 0 || projectResults.length > 0) ? 'pt-4 mt-1 border-t border-white/[0.04]' : 'pt-3',
+                    )}>
+                      <Zap className="size-2.5" />
+                      Sprints
+                    </p>
+                    {sprintResults.map((item) => {
+                      const idx = globalIdx++
+                      const isSelected = idx === selectedIdx
+                      const dotClass = SPRINT_STATUS_DOT[item.data.status] ?? 'bg-white/30'
+                      return (
+                        <button
+                          key={item.data.id}
+                          data-idx={idx}
+                          onClick={() => navigateToResult(item)}
+                          className={cn(
+                            'w-full flex items-center gap-3 px-5 py-3 text-left transition-colors duration-100 group',
+                            isSelected ? 'bg-white/[0.055]' : 'hover:bg-white/[0.03]',
+                          )}
+                        >
+                          <div className={cn(
+                            'size-7 rounded-lg flex items-center justify-center shrink-0 transition-colors duration-100',
+                            isSelected
+                              ? 'bg-intelligence-cyan/15 border border-intelligence-cyan/30'
+                              : 'bg-white/[0.04] border border-white/[0.08]',
+                          )}>
+                            <Zap className={cn('size-3.5 transition-colors', isSelected ? 'text-intelligence-cyan' : 'text-white/30')} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className={cn('text-sm font-medium truncate transition-colors', isSelected ? 'text-white' : 'text-white/65')}>
+                                {item.data.name}
+                              </p>
+                              <span className={cn('size-1.5 rounded-full shrink-0', dotClass)} />
+                            </div>
+                            <p className="text-[11px] text-white/28 truncate">
+                              {item.data.projectName}
+                              {item.data.clientName ? ` · ${item.data.clientName}` : ''}
                             </p>
                           </div>
                           <ArrowRight className={cn(
