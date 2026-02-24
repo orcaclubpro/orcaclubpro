@@ -12,6 +12,7 @@ import { getStripe } from '@/lib/stripe'
 import { getPayload } from 'payload'
 import configPromise from '@payload-config'
 import Stripe from 'stripe'
+import { sendPaymentConfirmationEmails } from '@/lib/payload/utils/paymentConfirmationEmail'
 
 /**
  * Retry helper for transient MongoDB errors (write conflicts)
@@ -233,6 +234,9 @@ export async function POST(request: NextRequest) {
         })
 
         console.log('[Stripe Webhook] Order marked as paid:', orderNumber, resolvedOrderId)
+
+        // Send payment confirmation emails (non-blocking — errors caught inside)
+        void sendPaymentConfirmationEmails(payload, resolvedOrderId!)
 
         // ✅ MARK EVENT AS PROCESSED (with retry logic)
         await retryOnTransientError(async () => {

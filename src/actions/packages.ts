@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/actions/auth'
 import { getPayload } from 'payload'
 import config from '@payload-config'
 import { revalidatePath } from 'next/cache'
+import { headers } from 'next/headers'
 import { getStripe } from '@/lib/stripe'
 import {
   sendGenericInvoiceEmail,
@@ -12,6 +13,11 @@ import {
   generateProposalEmail,
   generateProposalEmailText,
 } from '@/lib/payload/utils/genericInvoiceEmailTemplate'
+import {
+  hashProposalDocument,
+  buildSigningCertificate,
+  ESIGN_CONSENT_TEXT,
+} from '@/lib/contract-terms'
 
 const APP_BASE = process.env.NEXT_PUBLIC_SERVER_URL ?? 'https://app.orcaclub.pro'
 
@@ -1385,5 +1391,197 @@ export async function sendProposalEmail(
   } catch (error) {
     console.error('[sendProposalEmail]', error)
     return { success: false, error: error instanceof Error ? error.message : 'Failed to send proposal' }
+  }
+}
+
+// ── E-Signature Actions ──────────────────────────────────────────────────────
+
+/**
+ * Client signs the proposal with a typed name e-signature (ESIGN/UETA compliant).
+ * Captures a full audit trail: typed name, timestamp, IP, user agent, document hash,
+ * and a tamper-evident signing certificate hash.
+ * On success, calls the existing acceptPackage logic to create invoices.
+ */
+export async function signProposal({
+  packageId,
+  typedName,
+}: {
+  packageId: string
+  typedName: string
+}) {
+  try {
+    const user = await getCurrentUser()
+    if (!user) return { success: false, error: 'Unauthorized' }
+    if (!typedName.trim()) return { success: false, error: 'Please type your full legal name to sign.' }
+
+    const payload = await getPayload({ config })
+
+    // Fetch and verify ownership
+    const proposal = await payload.findByID({ collection: 'packages', id: packageId, depth: 1 })
+    if (!proposal || proposal.type !== 'proposal') return { success: false, error: 'Proposal not found' }
+
+    if (user.role === 'client') {
+      const proposalClientId = typeof proposal.clientAccount === 'string'
+        ? proposal.clientAccount
+        : (proposal.clientAccount as any)?.id
+      const userClientId = typeof user.clientAccount === 'string'
+        ? user.clientAccount
+        : (user.clientAccount as any)?.id
+      if (proposalClientId !== userClientId) return { success: false, error: 'Not authorized' }
+    }
+
+    if ((proposal as any).status === 'accepted') {
+      return { success: false, error: 'This proposal has already been signed.' }
+    }
+    if ((proposal as any).clientSignature?.signedAt) {
+      return { success: false, error: 'This proposal has already been signed.' }
+    }
+
+    // Compute document hash server-side (source of truth)
+    const documentHash = hashProposalDocument({
+      id: proposal.id,
+      name: proposal.name,
+      description: (proposal as any).description,
+      coverMessage: (proposal as any).coverMessage,
+      notes: (proposal as any).notes,
+      lineItems: (proposal.lineItems ?? []) as any,
+      paymentSchedule: ((proposal as any).paymentSchedule ?? []) as any,
+      updatedAt: proposal.updatedAt,
+    })
+
+    // Collect audit data
+    const hdrs = await headers()
+    const ipAddress =
+      hdrs.get('x-forwarded-for')?.split(',')[0].trim() ||
+      hdrs.get('x-real-ip') ||
+      hdrs.get('cf-connecting-ip') ||
+      '0.0.0.0'
+    const userAgent = hdrs.get('user-agent') || ''
+    const signedAt = new Date().toISOString()
+
+    // Build tamper-evident signing certificate
+    const { signingCertificate, certificateHash } = buildSigningCertificate({
+      packageId,
+      typedName: typedName.trim(),
+      signedByEmail: user.email,
+      signedAt,
+      ipAddress,
+      userAgent,
+      documentHash,
+    })
+
+    // Persist the signature record (overrideAccess defaults to true for Local API)
+    await payload.update({
+      collection: 'packages',
+      id: packageId,
+      data: {
+        clientSignature: {
+          typedName: typedName.trim(),
+          signedByEmail: user.email,
+          signedByUserId: String(user.id),
+          signedAt,
+          ipAddress,
+          userAgent,
+          documentHash,
+          consentText: ESIGN_CONSENT_TEXT,
+          certificateHash,
+          signingCertificate,
+        },
+      } as any,
+    })
+
+    // Send certificate hash confirmation email to both parties (non-blocking, independent timestamp anchor)
+    ;(async () => {
+      try {
+        const clientAccount = proposal.clientAccount as any
+        const clientEmail = typeof clientAccount === 'object' ? clientAccount?.email : null
+        const clientName = typeof clientAccount === 'object' ? clientAccount?.name : null
+        const orcaclubSig = (proposal as any).orcaclubSignature
+
+        const signedLine = `Signed by: ${typedName.trim()} <${user.email}> on ${new Date(signedAt).toUTCString()}`
+        const certLine = `Certificate hash: ${certificateHash}`
+        const docLine = `Document hash: ${documentHash.slice(0, 16)}...`
+
+        if (clientEmail) {
+          await payload.sendEmail({
+            to: clientEmail,
+            from: 'carbon@orcaclub.pro',
+            subject: `Signed: ${proposal.name} — ORCACLUB`,
+            html: `<p>Hi ${clientName ?? 'there'},</p><p>Your signature has been recorded for <strong>${proposal.name}</strong>.</p><p style="font-family:monospace;font-size:12px;background:#f4f4f4;padding:12px;border-radius:4px;">${signedLine}<br>${docLine}<br>${certLine}</p><p>Keep this email as your signature record. Your invoices will follow separately.</p><p>— ORCACLUB</p>`,
+            text: `Your signature has been recorded for ${proposal.name}.\n\n${signedLine}\n${docLine}\n${certLine}\n\nKeep this email as your signature record.`,
+          })
+        }
+        // Notify ORCACLUB
+        await payload.sendEmail({
+          to: 'carbon@orcaclub.pro',
+          from: 'carbon@orcaclub.pro',
+          subject: `[Signed] ${proposal.name} — ${clientName ?? clientEmail}`,
+          html: `<p><strong>${proposal.name}</strong> has been signed by ${typedName.trim()} (${user.email}).</p><p style="font-family:monospace;font-size:12px;background:#f4f4f4;padding:12px;border-radius:4px;">${signedLine}<br>IP: ${ipAddress}<br>${docLine}<br>${certLine}</p>`,
+          text: `${proposal.name} signed by ${typedName.trim()} (${user.email}).\nIP: ${ipAddress}\n${docLine}\n${certLine}`,
+        })
+      } catch (e) {
+        console.error('[signProposal] Confirmation email failed:', e)
+      }
+    })()
+
+    // Now run the existing acceptPackage logic (creates invoices, marks accepted)
+    const acceptResult = await acceptPackage(packageId)
+    if (!acceptResult.success) {
+      // Signature is saved but invoicing failed — return partial success
+      console.error('[signProposal] acceptPackage failed after signing:', acceptResult.error)
+      return { success: true, invoiceUrls: [], warning: acceptResult.error }
+    }
+
+    revalidatePath(`/u/${user.username}`)
+    return { success: true, invoiceUrls: acceptResult.invoiceUrls ?? [] }
+  } catch (error) {
+    console.error('[signProposal]', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to sign proposal' }
+  }
+}
+
+/**
+ * Staff (admin/user) authorizes a proposal on behalf of ORCACLUB.
+ * Records the authorizing rep's name, email, and timestamp.
+ * Optionally sets status to 'sent'.
+ */
+export async function authorizeProposal({
+  packageId,
+  authorizedByName,
+  setSentStatus = true,
+}: {
+  packageId: string
+  authorizedByName: string
+  setSentStatus?: boolean
+}) {
+  try {
+    const user = await getCurrentUser()
+    if (!user || user.role === 'client') return { success: false, error: 'Unauthorized' }
+    if (!authorizedByName.trim()) return { success: false, error: 'Please enter your full name.' }
+
+    const payload = await getPayload({ config })
+
+    const proposal = await payload.findByID({ collection: 'packages', id: packageId, depth: 0 })
+    if (!proposal || proposal.type !== 'proposal') return { success: false, error: 'Proposal not found' }
+
+    await payload.update({
+      collection: 'packages',
+      id: packageId,
+      data: {
+        ...(setSentStatus && (proposal as any).status === 'draft' ? { status: 'sent' } : {}),
+        orcaclubSignature: {
+          authorizedByName: authorizedByName.trim(),
+          authorizedByEmail: user.email,
+          authorizedByUserId: String(user.id),
+          authorizedAt: new Date().toISOString(),
+        },
+      } as any,
+    })
+
+    revalidatePath(`/u/${user.username}/clients`)
+    return { success: true }
+  } catch (error) {
+    console.error('[authorizeProposal]', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to authorize proposal' }
   }
 }

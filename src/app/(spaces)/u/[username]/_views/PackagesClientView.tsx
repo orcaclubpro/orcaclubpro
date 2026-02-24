@@ -1,13 +1,14 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import {
   ChevronLeft, ChevronRight, Check, X, Loader2,
   Sparkles, FileText, ExternalLink, CheckCircle2, CalendarDays, Mail,
+  PenLine, ShieldCheck, AlertCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { acceptPackage, emailPackageToSelf } from '@/actions/packages'
+import { signProposal, emailPackageToSelf } from '@/actions/packages'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -37,6 +38,16 @@ interface PackageDoc {
   lineItems?: LineItem[]
   paymentSchedule?: ScheduledEntry[]
   status?: string
+  clientSignature?: {
+    typedName?: string | null
+    signedByEmail?: string | null
+    signedAt?: string | null
+  } | null
+  orcaclubSignature?: {
+    authorizedByName?: string | null
+    authorizedByEmail?: string | null
+    authorizedAt?: string | null
+  } | null
 }
 
 interface PackagesClientViewProps {
@@ -86,7 +97,133 @@ function statusStyle(status?: string) {
   }
 }
 
+const CONSENT_DISCLOSURE = `By typing your full legal name and clicking "Sign Agreement", you:
+
+1. Consent to receive this agreement and related notices electronically. You may request a paper copy at any time by emailing carbon@orcaclub.pro.
+
+2. Acknowledge your right to withdraw consent at any time without penalty by contacting carbon@orcaclub.pro — withdrawal applies to future records only.
+
+3. Confirm that typing your name constitutes a legal electronic signature under the ESIGN Act and UETA, equivalent to a handwritten signature.
+
+4. Confirm you have read and agree to the Service Agreement Terms displayed on the full proposal.`
+
+// ── Canvas Signature Pad ──────────────────────────────────────────────────────
+
+function SignaturePad({
+  onSign,
+}: {
+  onSign: (dataUrl: string | null) => void
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const drawing = useRef(false)
+  const lastPos = useRef<{ x: number; y: number } | null>(null)
+  const [hasSignature, setHasSignature] = useState(false)
+
+  const getPos = (e: MouseEvent | TouchEvent, canvas: HTMLCanvasElement) => {
+    const rect = canvas.getBoundingClientRect()
+    const scaleX = canvas.width / rect.width
+    const scaleY = canvas.height / rect.height
+    if (e instanceof MouseEvent) {
+      return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY }
+    } else {
+      const touch = e.touches[0]
+      return { x: (touch.clientX - rect.left) * scaleX, y: (touch.clientY - rect.top) * scaleY }
+    }
+  }
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    ctx.fillStyle = 'transparent'
+    ctx.strokeStyle = '#e2e8f0'
+    ctx.lineWidth = 2
+    ctx.lineCap = 'round'
+    ctx.lineJoin = 'round'
+
+    const onStart = (e: MouseEvent | TouchEvent) => {
+      e.preventDefault()
+      drawing.current = true
+      lastPos.current = getPos(e, canvas)
+    }
+    const onMove = (e: MouseEvent | TouchEvent) => {
+      e.preventDefault()
+      if (!drawing.current || !lastPos.current) return
+      const pos = getPos(e, canvas)
+      ctx.beginPath()
+      ctx.moveTo(lastPos.current.x, lastPos.current.y)
+      ctx.lineTo(pos.x, pos.y)
+      ctx.stroke()
+      lastPos.current = pos
+      setHasSignature(true)
+      onSign(canvas.toDataURL('image/png'))
+    }
+    const onEnd = () => { drawing.current = false; lastPos.current = null }
+
+    canvas.addEventListener('mousedown', onStart)
+    canvas.addEventListener('mousemove', onMove)
+    canvas.addEventListener('mouseup', onEnd)
+    canvas.addEventListener('mouseleave', onEnd)
+    canvas.addEventListener('touchstart', onStart, { passive: false })
+    canvas.addEventListener('touchmove', onMove, { passive: false })
+    canvas.addEventListener('touchend', onEnd)
+
+    return () => {
+      canvas.removeEventListener('mousedown', onStart)
+      canvas.removeEventListener('mousemove', onMove)
+      canvas.removeEventListener('mouseup', onEnd)
+      canvas.removeEventListener('mouseleave', onEnd)
+      canvas.removeEventListener('touchstart', onStart)
+      canvas.removeEventListener('touchmove', onMove)
+      canvas.removeEventListener('touchend', onEnd)
+    }
+  }, [onSign])
+
+  const clear = () => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    setHasSignature(false)
+    onSign(null)
+  }
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between">
+        <p className="text-[9px] font-bold tracking-[0.22em] uppercase text-gray-500">Draw Signature <span className="text-gray-700 normal-case tracking-normal font-normal">(optional)</span></p>
+        {hasSignature && (
+          <button type="button" onClick={clear} className="text-[9px] text-gray-600 hover:text-gray-400 transition-colors uppercase tracking-widest">
+            Clear
+          </button>
+        )}
+      </div>
+      <div className="relative rounded-xl border border-white/[0.10] bg-white/[0.02] overflow-hidden" style={{ height: 100 }}>
+        <canvas
+          ref={canvasRef}
+          width={600}
+          height={200}
+          className="w-full h-full cursor-crosshair"
+          style={{ touchAction: 'none' }}
+        />
+        {!hasSignature && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <p className="text-xs text-gray-700 italic">Draw your signature here</p>
+          </div>
+        )}
+        {/* Baseline */}
+        <div className="absolute bottom-6 left-8 right-8 border-b border-dashed border-white/[0.08] pointer-events-none" />
+      </div>
+    </div>
+  )
+}
+
 // ── Package Detail Modal ────────────────────────────────────────────────────────
+
+type ModalStep = 'details' | 'sign' | 'signed'
 
 function PackageModal({
   pkg,
@@ -97,34 +234,42 @@ function PackageModal({
   username: string
   onClose: () => void
 }) {
-  const [confirmAccept, setConfirmAccept] = useState(false)
-  const [accepting, setAccepting] = useState(false)
-  const [accepted, setAccepted] = useState(false)
-  const [acceptError, setAcceptError] = useState<string | null>(null)
+  const [step, setStep] = useState<ModalStep>(
+    pkg.clientSignature?.signedAt ? 'signed' : 'details'
+  )
+  const [signing, setSigning] = useState(false)
+  const [signError, setSignError] = useState<string | null>(null)
+  const [typedName, setTypedName] = useState('')
+  const [consentChecked, setConsentChecked] = useState(false)
+  const [invoiceUrls, setInvoiceUrls] = useState<string[]>([])
 
   const lineItems = pkg.lineItems ?? []
   const schedule = pkg.paymentSchedule ?? []
   const { oneTime, monthly, annual } = computeTotals(lineItems)
 
   const pendingEntries = schedule.filter(e => !e.orderId)
-  const canAccept =
+  const canSign =
     pkg.status !== 'accepted' &&
+    !pkg.clientSignature?.signedAt &&
     (pendingEntries.length > 0 || (schedule.length === 0 && lineItems.length > 0))
 
   const pendingTotal = schedule.length > 0
     ? pendingEntries.reduce((s, e) => s + e.amount, 0)
     : oneTime + monthly + annual
 
-  const handleAccept = async () => {
-    setAccepting(true)
-    setAcceptError(null)
-    const result = await acceptPackage(pkg.id)
-    setAccepting(false)
+  const isSignValid = typedName.trim().length >= 2 && consentChecked
+
+  const handleSign = async () => {
+    if (!isSignValid) return
+    setSigning(true)
+    setSignError(null)
+    const result = await signProposal({ packageId: pkg.id, typedName })
+    setSigning(false)
     if (result.success) {
-      setAccepted(true)
-      setConfirmAccept(false)
+      setInvoiceUrls(result.invoiceUrls ?? [])
+      setStep('signed')
     } else {
-      setAcceptError(result.error ?? 'Failed to accept package')
+      setSignError(result.error ?? 'Failed to sign agreement')
     }
   }
 
@@ -148,7 +293,7 @@ function PackageModal({
 
       {/* Panel */}
       <div
-        className="relative z-10 w-full sm:max-w-[560px] max-h-[92vh] sm:max-h-[85vh] flex flex-col rounded-t-3xl sm:rounded-2xl border border-white/[0.10] overflow-hidden"
+        className="relative z-10 w-full sm:max-w-[580px] max-h-[92vh] sm:max-h-[88vh] flex flex-col rounded-t-3xl sm:rounded-2xl border border-white/[0.10] overflow-hidden"
         style={{ background: 'linear-gradient(160deg, #141414 0%, #0d0d0d 100%)' }}
       >
         {/* Top cyan line */}
@@ -162,222 +307,361 @@ function PackageModal({
         {/* Scrollable body */}
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
 
-          {/* Header */}
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1 min-w-0">
-              <p className="text-[9px] font-bold tracking-[0.32em] uppercase text-[#67e8f9]/80 mb-2">
-                Service Package
-              </p>
-              <h2 className="text-xl font-bold text-white leading-tight">{pkg.name}</h2>
-              {pkg.description && (
-                <p className="text-sm text-gray-400 mt-2 leading-relaxed">{pkg.description}</p>
-              )}
-            </div>
-            <div className="flex flex-col items-end gap-2 shrink-0">
-              {pkg.status === 'accepted' && (
-                <span className="text-[9px] font-bold uppercase tracking-[0.18em] px-2.5 py-1 rounded-full border text-emerald-400 border-emerald-400/25 bg-emerald-400/10">
-                  Accepted
-                </span>
-              )}
-              <button
-                onClick={onClose}
-                className="size-8 rounded-lg border border-white/[0.08] flex items-center justify-center text-gray-500 hover:text-white hover:border-white/20 transition-all"
-              >
-                <X className="size-3.5" />
-              </button>
-            </div>
-          </div>
+          {/* ── SIGNED CONFIRMATION ── */}
+          {step === 'signed' && (
+            <div className="py-4 space-y-5">
+              <div className="flex flex-col items-center text-center gap-4 py-6">
+                <div className="size-14 rounded-2xl bg-emerald-400/10 border border-emerald-400/25 flex items-center justify-center">
+                  <ShieldCheck className="size-7 text-emerald-400" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-white mb-1.5">Agreement Signed</h2>
+                  <p className="text-sm text-gray-400 leading-relaxed max-w-xs mx-auto">
+                    Your electronic signature has been recorded. A confirmation with your certificate hash has been sent to your email.
+                  </p>
+                </div>
+              </div>
 
-          {/* Pricing summary */}
-          {(oneTime > 0 || monthly > 0 || annual > 0) && (
-            <div className="flex items-end gap-6 flex-wrap p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
-              {oneTime > 0 && (
-                <div>
-                  <p className="text-2xl font-bold text-white tabular-nums">{fmt(oneTime)}</p>
-                  <p className="text-[9px] text-gray-300 mt-1 uppercase tracking-[0.18em]">one-time</p>
+              {/* Signature record */}
+              {pkg.clientSignature?.signedAt && (
+                <div className="rounded-xl border border-emerald-400/20 bg-emerald-400/[0.04] p-4 space-y-2">
+                  <p className="text-[9px] font-bold uppercase tracking-[0.22em] text-emerald-400/80 mb-3">Signature Record</p>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <span className="text-gray-600">Signed by</span>
+                    <span className="text-gray-300 text-right font-medium">{pkg.clientSignature.typedName}</span>
+                    <span className="text-gray-600">Email</span>
+                    <span className="text-gray-300 text-right">{pkg.clientSignature.signedByEmail}</span>
+                    <span className="text-gray-600">Date</span>
+                    <span className="text-gray-300 text-right">
+                      {new Date(pkg.clientSignature.signedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                    </span>
+                  </div>
                 </div>
               )}
-              {monthly > 0 && (
-                <div>
-                  <div className="flex items-baseline gap-0.5">
-                    <p className="text-2xl font-bold text-white tabular-nums">{fmt(monthly)}</p>
-                    <p className="text-sm text-gray-500">/mo</p>
-                  </div>
-                  <p className="text-[9px] text-gray-300 mt-1 uppercase tracking-[0.18em]">monthly</p>
-                </div>
-              )}
-              {annual > 0 && (
-                <div>
-                  <div className="flex items-baseline gap-0.5">
-                    <p className="text-2xl font-bold text-white tabular-nums">{fmt(annual)}</p>
-                    <p className="text-sm text-gray-500">/yr</p>
-                  </div>
-                  <p className="text-[9px] text-gray-300 mt-1 uppercase tracking-[0.18em]">annually</p>
+
+              {invoiceUrls.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-[9px] font-bold uppercase tracking-[0.22em] text-gray-500">Your Invoices</p>
+                  {invoiceUrls.map((url, i) => (
+                    <a key={i} href={url} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-[#67e8f9]/20 bg-[#67e8f9]/[0.04] text-sm text-[#67e8f9] hover:bg-[#67e8f9]/[0.08] transition-all">
+                      <ExternalLink className="size-3.5 shrink-0" />
+                      View Invoice {invoiceUrls.length > 1 ? `#${i + 1}` : ''}
+                    </a>
+                  ))}
                 </div>
               )}
             </div>
           )}
 
-          {/* Cover message */}
-          {pkg.coverMessage && (
-            <div className="px-4 py-3.5 rounded-xl border-l-2 border-[#67e8f9]/30 bg-[#67e8f9]/[0.025]">
-              <p className="text-sm text-gray-400 leading-relaxed whitespace-pre-wrap">{pkg.coverMessage}</p>
-            </div>
-          )}
+          {/* ── SIGN STEP ── */}
+          {step === 'sign' && (
+            <div className="space-y-5">
+              {/* Header */}
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[9px] font-bold tracking-[0.32em] uppercase text-[#67e8f9]/80 mb-2">Sign Agreement</p>
+                  <h2 className="text-lg font-bold text-white leading-tight">{pkg.name}</h2>
+                </div>
+                <button onClick={onClose} className="size-8 rounded-lg border border-white/[0.08] flex items-center justify-center text-gray-500 hover:text-white hover:border-white/20 transition-all shrink-0">
+                  <X className="size-3.5" />
+                </button>
+              </div>
 
-          {/* Included services */}
-          {lineItems.length > 0 && (
-            <div>
-              <p className="text-[9px] font-bold tracking-[0.25em] uppercase gradient-text mb-2.5">
-                What&apos;s Included &middot; {lineItems.length}
-              </p>
+              {/* Amount to authorize */}
+              {pendingTotal > 0 && (
+                <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-white/[0.06] bg-white/[0.02]">
+                  <div className="flex-1">
+                    <p className="text-[9px] text-gray-600 uppercase tracking-widest font-semibold mb-0.5">Total authorized</p>
+                    <p className="text-lg font-bold text-white tabular-nums font-mono">{fmt(pendingTotal)}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[9px] text-gray-600 uppercase tracking-widest font-semibold mb-0.5">Proposal</p>
+                    <p className="text-xs text-gray-400">{pkg.name}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* ESIGN Disclosure */}
+              <div className="rounded-xl border border-amber-400/20 bg-amber-400/[0.04] p-4">
+                <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-amber-400/80 mb-2">Electronic Signature Disclosure</p>
+                <p className="text-[11px] text-gray-400 leading-relaxed whitespace-pre-line">{CONSENT_DISCLOSURE}</p>
+              </div>
+
+              {/* Canvas signature pad */}
+              <SignaturePad onSign={() => {}} />
+
+              {/* Typed name */}
               <div className="space-y-1.5">
-                {lineItems.map((item, i) => {
-                  const qty = item.quantity ?? 1
-                  const basePrice = item.price ?? 0
-                  const adjustedTotal = (item.adjustedPrice ?? basePrice) * qty
-                  const baseTotal = basePrice * qty
-                  const hasDiscount = item.adjustedPrice != null && item.adjustedPrice !== basePrice
-                  return (
-                    <div
-                      key={i}
-                      className="flex items-start gap-3 px-3.5 py-3 rounded-xl bg-white/[0.025] border border-white/[0.05]"
-                    >
-                      <div className="mt-0.5 size-4 rounded-full bg-[#67e8f9]/15 border border-[#67e8f9]/30 flex items-center justify-center shrink-0">
-                        <Check className="size-2.5 text-[#67e8f9]" />
+                <label className="text-[9px] font-bold tracking-[0.22em] uppercase text-gray-500">
+                  Type Your Full Legal Name <span className="text-[#67e8f9]/80">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={typedName}
+                  onChange={e => setTypedName(e.target.value)}
+                  placeholder="e.g. Jane Smith"
+                  autoComplete="name"
+                  className="w-full px-4 py-3 text-sm bg-white/[0.04] border border-white/[0.12] rounded-xl text-white placeholder-gray-700 focus:outline-none focus:border-[#67e8f9]/40 focus:bg-white/[0.06] transition-all"
+                  style={{ fontFamily: 'Georgia, serif', fontSize: 15 }}
+                />
+                <p className="text-[10px] text-gray-700">This constitutes your legal electronic signature</p>
+              </div>
+
+              {/* Consent checkbox */}
+              <label className="flex items-start gap-3 cursor-pointer group">
+                <div
+                  className={cn(
+                    'mt-0.5 size-4 rounded border-2 flex items-center justify-center shrink-0 transition-all',
+                    consentChecked
+                      ? 'bg-[#67e8f9]/20 border-[#67e8f9]/70'
+                      : 'border-white/[0.22] group-hover:border-white/40',
+                  )}
+                  onClick={() => setConsentChecked(v => !v)}
+                >
+                  {consentChecked && <Check className="size-2.5 text-[#67e8f9]" />}
+                </div>
+                <span className="text-xs text-gray-400 leading-relaxed" onClick={() => setConsentChecked(v => !v)}>
+                  I agree to sign this agreement electronically, have read the{' '}
+                  <Link href={`/u/${username}/packages/${pkg.id}/print`} target="_blank" className="text-[#67e8f9] hover:underline">
+                    full proposal and service terms
+                  </Link>
+                  , and consent to receive records electronically.
+                </span>
+              </label>
+
+              {signError && (
+                <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl border border-red-400/25 bg-red-400/[0.06]">
+                  <AlertCircle className="size-3.5 text-red-400 shrink-0 mt-0.5" />
+                  <p className="text-xs text-red-400">{signError}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── DETAILS STEP ── */}
+          {step === 'details' && (
+            <>
+              {/* Header */}
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <p className="text-[9px] font-bold tracking-[0.32em] uppercase text-[#67e8f9]/80 mb-2">
+                    Service Package
+                  </p>
+                  <h2 className="text-xl font-bold text-white leading-tight">{pkg.name}</h2>
+                  {pkg.description && (
+                    <p className="text-sm text-gray-400 mt-2 leading-relaxed">{pkg.description}</p>
+                  )}
+                </div>
+                <div className="flex flex-col items-end gap-2 shrink-0">
+                  {pkg.status === 'accepted' && (
+                    <span className="text-[9px] font-bold uppercase tracking-[0.18em] px-2.5 py-1 rounded-full border text-emerald-400 border-emerald-400/25 bg-emerald-400/10">
+                      Signed
+                    </span>
+                  )}
+                  <button
+                    onClick={onClose}
+                    className="size-8 rounded-lg border border-white/[0.08] flex items-center justify-center text-gray-500 hover:text-white hover:border-white/20 transition-all"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Pricing summary */}
+              {(oneTime > 0 || monthly > 0 || annual > 0) && (
+                <div className="flex items-end gap-6 flex-wrap p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                  {oneTime > 0 && (
+                    <div>
+                      <p className="text-2xl font-bold text-white tabular-nums">{fmt(oneTime)}</p>
+                      <p className="text-[9px] text-gray-300 mt-1 uppercase tracking-[0.18em]">one-time</p>
+                    </div>
+                  )}
+                  {monthly > 0 && (
+                    <div>
+                      <div className="flex items-baseline gap-0.5">
+                        <p className="text-2xl font-bold text-white tabular-nums">{fmt(monthly)}</p>
+                        <p className="text-sm text-gray-500">/mo</p>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-baseline justify-between gap-2">
-                          <p className="text-sm font-semibold text-white leading-snug">{item.name}</p>
-                          <div className="flex flex-col items-end gap-0.5 shrink-0">
-                            {hasDiscount && (
-                              <span className="text-xs text-gray-300 line-through tabular-nums font-mono">
-                                {fmt(baseTotal)}
+                      <p className="text-[9px] text-gray-300 mt-1 uppercase tracking-[0.18em]">monthly</p>
+                    </div>
+                  )}
+                  {annual > 0 && (
+                    <div>
+                      <div className="flex items-baseline gap-0.5">
+                        <p className="text-2xl font-bold text-white tabular-nums">{fmt(annual)}</p>
+                        <p className="text-sm text-gray-500">/yr</p>
+                      </div>
+                      <p className="text-[9px] text-gray-300 mt-1 uppercase tracking-[0.18em]">annually</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Cover message */}
+              {pkg.coverMessage && (
+                <div className="px-4 py-3.5 rounded-xl border-l-2 border-[#67e8f9]/30 bg-[#67e8f9]/[0.025]">
+                  <p className="text-sm text-gray-400 leading-relaxed whitespace-pre-wrap">{pkg.coverMessage}</p>
+                </div>
+              )}
+
+              {/* Included services */}
+              {lineItems.length > 0 && (
+                <div>
+                  <p className="text-[9px] font-bold tracking-[0.25em] uppercase gradient-text mb-2.5">
+                    What&apos;s Included &middot; {lineItems.length}
+                  </p>
+                  <div className="space-y-1.5">
+                    {lineItems.map((item, i) => {
+                      const qty = item.quantity ?? 1
+                      const basePrice = item.price ?? 0
+                      const adjustedTotal = (item.adjustedPrice ?? basePrice) * qty
+                      const baseTotal = basePrice * qty
+                      const hasDiscount = item.adjustedPrice != null && item.adjustedPrice !== basePrice
+                      return (
+                        <div
+                          key={i}
+                          className="flex items-start gap-3 px-3.5 py-3 rounded-xl bg-white/[0.025] border border-white/[0.05]"
+                        >
+                          <div className="mt-0.5 size-4 rounded-full bg-[#67e8f9]/15 border border-[#67e8f9]/30 flex items-center justify-center shrink-0">
+                            <Check className="size-2.5 text-[#67e8f9]" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-baseline justify-between gap-2">
+                              <p className="text-sm font-semibold text-white leading-snug">{item.name}</p>
+                              <div className="flex flex-col items-end gap-0.5 shrink-0">
+                                {hasDiscount && (
+                                  <span className="text-xs text-gray-300 line-through tabular-nums font-mono">
+                                    {fmt(baseTotal)}
+                                  </span>
+                                )}
+                                <span className={cn('text-sm font-bold tabular-nums font-mono', hasDiscount ? 'text-[#67e8f9]' : 'text-white')}>
+                                  {fmt(adjustedTotal)}
+                                  {item.isRecurring && (
+                                    <span className="text-xs font-normal text-gray-500">/{item.recurringInterval === 'year' ? 'yr' : 'mo'}</span>
+                                  )}
+                                </span>
+                              </div>
+                            </div>
+                            {item.description && (
+                              <p className="text-xs text-gray-300 mt-1 leading-relaxed">{item.description}</p>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Payment schedule */}
+              {schedule.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-2.5">
+                    <CalendarDays className="size-3.5 text-gray-600" />
+                    <p className="text-[9px] font-bold tracking-[0.25em] uppercase text-gray-500">
+                      Payment Schedule
+                    </p>
+                  </div>
+                  <div className="space-y-1.5">
+                    {schedule.map((entry, i) => {
+                      const isInvoiced = !!entry.orderId
+                      return (
+                        <div
+                          key={entry.id ?? i}
+                          className={cn(
+                            'flex items-center gap-3 px-3.5 py-2.5 rounded-xl border',
+                            isInvoiced
+                              ? 'bg-white/[0.015] border-white/[0.04]'
+                              : 'bg-white/[0.025] border-white/[0.05]',
+                          )}
+                        >
+                          <div className={`size-1.5 rounded-full shrink-0 ${isInvoiced ? 'bg-emerald-400' : 'bg-[#67e8f9]/50'}`} />
+                          <div className="flex-1 min-w-0">
+                            <p className={cn('text-sm font-medium', isInvoiced ? 'text-gray-500' : 'text-gray-300')}>
+                              {entry.label}
+                            </p>
+                            {entry.dueDate && (
+                              <p className={cn('text-[10px] mt-0.5', isInvoiced ? 'text-gray-700' : 'text-gray-600')}>
+                                Due {formatDisplayDate(entry.dueDate)}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {isInvoiced && (
+                              <span className="text-[9px] font-bold text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 rounded px-1.5 py-0.5">
+                                Invoiced
                               </span>
                             )}
-                            <span className={cn('text-sm font-bold tabular-nums font-mono', hasDiscount ? 'text-[#67e8f9]' : 'text-white')}>
-                              {fmt(adjustedTotal)}
-                              {item.isRecurring && (
-                                <span className="text-xs font-normal text-gray-500">/{item.recurringInterval === 'year' ? 'yr' : 'mo'}</span>
-                              )}
+                            <span className={cn('text-sm font-bold tabular-nums font-mono', isInvoiced ? 'text-gray-500' : 'text-white')}>
+                              {fmt(entry.amount)}
                             </span>
                           </div>
                         </div>
-                        {item.description && (
-                          <p className="text-xs text-gray-300 mt-1 leading-relaxed">{item.description}</p>
-                        )}
-                      </div>
+                      )
+                    })}
+                    {/* Schedule total */}
+                    <div className="flex items-center justify-between px-3.5 py-2 rounded-lg bg-white/[0.01]">
+                      <span className="text-[10px] text-gray-600 font-semibold uppercase tracking-widest">Total</span>
+                      <span className="text-sm font-bold text-white tabular-nums font-mono">
+                        {fmt(schedule.reduce((s, e) => s + e.amount, 0))}
+                      </span>
                     </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Payment schedule */}
-          {schedule.length > 0 && (
-            <div>
-              <div className="flex items-center gap-2 mb-2.5">
-                <CalendarDays className="size-3.5 text-gray-600" />
-                <p className="text-[9px] font-bold tracking-[0.25em] uppercase text-gray-500">
-                  Payment Schedule
-                </p>
-              </div>
-              <div className="space-y-1.5">
-                {schedule.map((entry, i) => {
-                  const isInvoiced = !!entry.orderId
-                  return (
-                    <div
-                      key={entry.id ?? i}
-                      className={cn(
-                        'flex items-center gap-3 px-3.5 py-2.5 rounded-xl border',
-                        isInvoiced
-                          ? 'bg-white/[0.015] border-white/[0.04]'
-                          : 'bg-white/[0.025] border-white/[0.05]',
-                      )}
-                    >
-                      <div className={`size-1.5 rounded-full shrink-0 ${isInvoiced ? 'bg-emerald-400' : 'bg-[#67e8f9]/50'}`} />
-                      <div className="flex-1 min-w-0">
-                        <p className={cn('text-sm font-medium', isInvoiced ? 'text-gray-500' : 'text-gray-300')}>
-                          {entry.label}
-                        </p>
-                        {entry.dueDate && (
-                          <p className={cn('text-[10px] mt-0.5', isInvoiced ? 'text-gray-700' : 'text-gray-600')}>
-                            Due {formatDisplayDate(entry.dueDate)}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        {isInvoiced && (
-                          <span className="text-[9px] font-bold text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 rounded px-1.5 py-0.5">
-                            Invoiced
-                          </span>
-                        )}
-                        <span className={cn('text-sm font-bold tabular-nums font-mono', isInvoiced ? 'text-gray-500' : 'text-white')}>
-                          {fmt(entry.amount)}
-                        </span>
-                      </div>
-                    </div>
-                  )
-                })}
-                {/* Schedule total */}
-                <div className="flex items-center justify-between px-3.5 py-2 rounded-lg bg-white/[0.01]">
-                  <span className="text-[10px] text-gray-600 font-semibold uppercase tracking-widest">Total</span>
-                  <span className="text-sm font-bold text-white tabular-nums font-mono">
-                    {fmt(schedule.reduce((s, e) => s + e.amount, 0))}
-                  </span>
+                  </div>
                 </div>
-              </div>
-            </div>
-          )}
+              )}
 
-          {/* Empty state */}
-          {lineItems.length === 0 && schedule.length === 0 && (
-            <p className="text-xs text-gray-300 italic py-1">
-              Your team is still configuring this package. Check back soon.
-            </p>
+              {/* Empty state */}
+              {lineItems.length === 0 && schedule.length === 0 && (
+                <p className="text-xs text-gray-300 italic py-1">
+                  Your team is still configuring this package. Check back soon.
+                </p>
+              )}
+            </>
           )}
 
         </div>
 
         {/* Footer */}
         <div className="shrink-0 border-t border-white/[0.07] bg-black/20">
-          {accepted ? (
+          {step === 'signed' ? (
             <div className="flex items-center gap-3 px-6 py-4">
-              <CheckCircle2 className="size-5 text-emerald-400 shrink-0" />
-              <div>
-                <p className="text-sm font-semibold text-emerald-400">Package accepted!</p>
-                <p className="text-xs text-gray-500 mt-0.5">Your invoice(s) have been sent to your email.</p>
-              </div>
+              <Link
+                href={`/u/${username}/packages/${pkg.id}/print`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-4 py-2 text-sm rounded-xl border border-white/[0.08] text-gray-400 hover:text-white hover:border-white/20 transition-all"
+              >
+                <FileText className="size-3.5" />
+                View Signed Contract
+              </Link>
+              <div className="flex-1" />
+              <button
+                onClick={onClose}
+                className="px-5 py-2 text-sm font-semibold text-white bg-white/[0.06] border border-white/[0.12] rounded-xl hover:bg-white/[0.10] transition-all"
+              >
+                Done
+              </button>
             </div>
-          ) : confirmAccept ? (
-            <div className="px-6 py-4 space-y-3">
-              <p className="text-xs text-gray-400 leading-relaxed">
-                By accepting, you authorize invoices totalling{' '}
-                <span className="text-white font-semibold">{fmt(pendingTotal)}</span>{' '}
-                to be issued. This cannot be undone.
-              </p>
-              {acceptError && (
-                <p className="text-xs text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2">
-                  {acceptError}
-                </p>
-              )}
-              <div className="flex items-center gap-2 justify-end">
-                <button
-                  onClick={() => { setConfirmAccept(false); setAcceptError(null) }}
-                  className="px-4 py-2 text-sm text-gray-500 hover:text-white transition-colors rounded-lg hover:bg-white/[0.04]"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleAccept}
-                  disabled={accepting}
-                  className="flex items-center gap-2 px-5 py-2 text-sm font-semibold rounded-xl bg-[#67e8f9]/[0.12] border border-[#67e8f9]/30 text-[#67e8f9] hover:bg-[#67e8f9]/[0.20] disabled:opacity-50 transition-all"
-                >
-                  {accepting && <Loader2 className="size-3.5 animate-spin" />}
-                  {accepting ? 'Processing…' : 'Confirm & Accept'}
-                </button>
-              </div>
+          ) : step === 'sign' ? (
+            <div className="flex items-center gap-3 px-6 py-4">
+              <button
+                onClick={() => { setStep('details'); setSignError(null) }}
+                className="px-4 py-2 text-sm text-gray-500 hover:text-white transition-colors rounded-lg hover:bg-white/[0.04]"
+              >
+                Back
+              </button>
+              <div className="flex-1" />
+              <button
+                onClick={handleSign}
+                disabled={signing || !isSignValid}
+                className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-xl bg-[#67e8f9]/[0.12] border border-[#67e8f9]/30 text-[#67e8f9] hover:bg-[#67e8f9]/[0.20] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              >
+                {signing
+                  ? <><Loader2 className="size-3.5 animate-spin" /> Signing…</>
+                  : <><PenLine className="size-3.5" /> Sign Agreement</>
+                }
+              </button>
             </div>
           ) : (
             <div className="flex items-center gap-3 px-6 py-4">
@@ -395,15 +679,16 @@ function PackageModal({
                 className="flex items-center gap-2 px-4 py-2 text-sm rounded-xl border border-white/[0.08] text-gray-400 hover:text-white hover:border-white/20 transition-all"
               >
                 <FileText className="size-3.5" />
-                View Package
+                Full Package
                 <ExternalLink className="size-3" />
               </Link>
-              {canAccept && (
+              {canSign && (
                 <button
-                  onClick={() => setConfirmAccept(true)}
+                  onClick={() => setStep('sign')}
                   className="flex items-center gap-2 px-5 py-2 text-sm font-semibold rounded-xl bg-[#67e8f9]/[0.10] border border-[#67e8f9]/25 text-[#67e8f9] hover:bg-[#67e8f9]/[0.18] hover:border-[#67e8f9]/40 transition-all duration-200"
                 >
-                  Accept Package
+                  <PenLine className="size-3.5" />
+                  Review & Sign
                 </button>
               )}
             </div>
@@ -544,8 +829,9 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
               const lineItems = pkg.lineItems ?? []
               const schedule = pkg.paymentSchedule ?? []
               const isActive = i === activeIdx
-              const canAccept =
+              const canSign =
                 pkg.status !== 'accepted' &&
+                !pkg.clientSignature?.signedAt &&
                 (schedule.some(e => !e.orderId) || (schedule.length === 0 && lineItems.length > 0))
 
               return (
@@ -658,14 +944,20 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                         >
                           View Details
                         </button>
-                        {canAccept && (
+                        {canSign ? (
                           <button
                             onClick={() => setModalPkg(pkg)}
                             className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-[#67e8f9]/[0.10] border border-[#67e8f9]/25 text-[#67e8f9] hover:bg-[#67e8f9]/[0.18] hover:border-[#67e8f9]/40 transition-all duration-200"
                           >
-                            Accept Package
+                            <PenLine className="size-3.5" />
+                            Review & Sign
                           </button>
-                        )}
+                        ) : pkg.clientSignature?.signedAt ? (
+                          <span className="flex items-center gap-1.5 text-sm text-emerald-400 font-medium">
+                            <ShieldCheck className="size-3.5" />
+                            Signed
+                          </span>
+                        ) : null}
                         <button
                           onClick={() => handleEmailSelf(pkg.id)}
                           disabled={emailingId === pkg.id}

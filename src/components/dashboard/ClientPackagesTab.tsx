@@ -7,7 +7,7 @@ import {
   FileText, ArrowRight, ChevronDown, ChevronUp,
   X, Check, Loader2, Trash2, Copy, CheckCheck, Sparkles,
   Receipt, ExternalLink, CheckCircle2, CalendarDays, ListOrdered,
-  Mail, Plus,
+  Mail, Plus, ShieldCheck, PenLine,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { AssignPackageModal } from './AssignPackageModal'
@@ -21,6 +21,7 @@ import {
   sendScheduledPayment,
   removeScheduleEntry,
   sendProposalEmail,
+  authorizeProposal,
 } from '@/actions/packages'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -56,6 +57,18 @@ interface PackageDoc {
   paymentSchedule?: ScheduledEntry[]
   projectRef?: string | { id: string; name: string } | null
   createdAt: string
+  clientSignature?: {
+    typedName?: string | null
+    signedByEmail?: string | null
+    signedAt?: string | null
+    ipAddress?: string | null
+    documentHash?: string | null
+  } | null
+  orcaclubSignature?: {
+    authorizedByName?: string | null
+    authorizedByEmail?: string | null
+    authorizedAt?: string | null
+  } | null
 }
 
 interface PackageOrderSummary {
@@ -356,6 +369,12 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
   const [emailAddresses, setEmailAddresses]       = useState('')
   const [emailSending, setEmailSending]           = useState(false)
   const [emailResult, setEmailResult]             = useState<{ sent?: number; error?: string } | null>(null)
+
+  // Authorize proposal modal state
+  const [authModalPkgId, setAuthModalPkgId]     = useState<string | null>(null)
+  const [authName, setAuthName]                   = useState('')
+  const [authorizing, setAuthorizing]             = useState(false)
+  const [authResult, setAuthResult]               = useState<{ success?: boolean; error?: string } | null>(null)
 
   const getDays = (pkgId: string) => daysUntilDue[pkgId] ?? 30
   const getMode = (pkgId: string) => invoiceMode[pkgId] ?? 'full'

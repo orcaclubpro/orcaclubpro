@@ -23,6 +23,7 @@ import { UnderlineFeatureClient as UnderlineFeatureClient_e70f5e05f09f93e00b997e
 import { BoldFeatureClient as BoldFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
 import { ItalicFeatureClient as ItalicFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
 import { default as default_e41f28be887112bcc62d12f2b3a7092a } from '@/components/payload/SendInvoiceButton'
+import { default as default_2ae4d900bd6d79680dd513e00921df27 } from '@/components/payload/MarkAsPaidButton'
 import { default as default_6f14b747d7d9d385f91171711bbf7132 } from '@/components/payload/Icon'
 import { default as default_e34c28bdc97e3fecf976b23b26d64cc9 } from '@/components/payload/Logo'
 import { default as default_424fafc23df3d6f7806ff182c0aec46d } from '@/components/payload/actions/CreateOrderButton'
@@ -57,6 +58,7 @@ export const importMap = {
   "@payloadcms/richtext-lexical/client#BoldFeatureClient": BoldFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
   "@payloadcms/richtext-lexical/client#ItalicFeatureClient": ItalicFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
   "@/components/payload/SendInvoiceButton#default": default_e41f28be887112bcc62d12f2b3a7092a,
+  "@/components/payload/MarkAsPaidButton#default": default_2ae4d900bd6d79680dd513e00921df27,
   "@/components/payload/Icon#default": default_6f14b747d7d9d385f91171711bbf7132,
   "@/components/payload/Logo#default": default_e34c28bdc97e3fecf976b23b26d64cc9,
   "@/components/payload/actions/CreateOrderButton#default": default_424fafc23df3d6f7806ff182c0aec46d,

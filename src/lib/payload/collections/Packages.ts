@@ -171,6 +171,42 @@ const Packages: CollectionConfig = {
         },
       ],
     },
+    // ── ORCACLUB Authorization ─────────────────────────────────────────────
+    {
+      name: 'orcaclubSignature',
+      type: 'group',
+      admin: {
+        condition: (data) => data.type === 'proposal',
+        description: 'ORCACLUB representative who authorized this proposal',
+      },
+      fields: [
+        { name: 'authorizedByName', type: 'text', admin: { description: 'Authorizing representative full name' } },
+        { name: 'authorizedByEmail', type: 'text', admin: { readOnly: true } },
+        { name: 'authorizedByUserId', type: 'text', admin: { readOnly: true } },
+        { name: 'authorizedAt', type: 'date', admin: { readOnly: true } },
+      ],
+    },
+    // ── Client E-Signature ─────────────────────────────────────────────────
+    {
+      name: 'clientSignature',
+      type: 'group',
+      admin: {
+        condition: (data) => data.type === 'proposal',
+        description: 'Client e-signature record — immutable once set',
+      },
+      fields: [
+        { name: 'typedName', type: 'text', admin: { readOnly: true, description: 'Exactly as typed by the client' } },
+        { name: 'signedByEmail', type: 'text', admin: { readOnly: true } },
+        { name: 'signedByUserId', type: 'text', admin: { readOnly: true } },
+        { name: 'signedAt', type: 'date', admin: { readOnly: true } },
+        { name: 'ipAddress', type: 'text', admin: { readOnly: true } },
+        { name: 'userAgent', type: 'textarea', admin: { readOnly: true } },
+        { name: 'documentHash', type: 'text', admin: { readOnly: true, description: 'SHA-256 of signed document content' } },
+        { name: 'consentText', type: 'textarea', admin: { readOnly: true, description: 'Exact ESIGN disclosure shown to signer' } },
+        { name: 'certificateHash', type: 'text', admin: { readOnly: true, description: 'SHA-256 of the full signing certificate JSON' } },
+        { name: 'signingCertificate', type: 'textarea', admin: { readOnly: true, description: 'Full signing certificate JSON (tamper-evident)' } },
+      ],
+    },
     {
       name: 'lineItems',
       type: 'array',

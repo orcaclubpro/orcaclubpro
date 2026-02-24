@@ -396,6 +396,18 @@ const Orders: CollectionConfig = {
         },
       },
     },
+
+    // MARK AS PAID BUTTON (UI Component in Sidebar)
+    {
+      name: 'markAsPaid',
+      type: 'ui',
+      admin: {
+        position: 'sidebar',
+        components: {
+          Field: '@/components/payload/MarkAsPaidButton',
+        },
+      },
+    },
   ],
 }
 
