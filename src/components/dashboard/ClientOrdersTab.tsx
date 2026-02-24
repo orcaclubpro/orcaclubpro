@@ -10,7 +10,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
-import { updateOrderDueDate, updateOrderLineItems, deleteOrder, type LineItemInput } from '@/actions/orders'
+import { updateOrderDueDate, updateOrderLineItems, deleteOrder, markOrderAsPaid, type LineItemInput } from '@/actions/orders'
 
 interface LineItem {
   title: string
@@ -450,6 +450,43 @@ function LineItemsEditor({
   )
 }
 
+// ── Mark as paid button ────────────────────────────────────────────────────────
+
+function MarkAsPaidButton({ orderId, onPaid }: { orderId: string; onPaid: () => void }) {
+  const [confirm, setConfirm]   = useState(false)
+  const [saving, setSaving]     = useState(false)
+  const [error, setError]       = useState<string | null>(null)
+
+  async function handleClick() {
+    if (!confirm) { setConfirm(true); return }
+    setSaving(true)
+    const result = await markOrderAsPaid(orderId)
+    setSaving(false)
+    if (!result.success) { setError(result.error ?? 'Failed'); return }
+    onPaid()
+  }
+
+  return (
+    <div className="flex flex-col items-start gap-1">
+      <button
+        onClick={handleClick}
+        onBlur={() => setTimeout(() => setConfirm(false), 200)}
+        disabled={saving}
+        className={cn(
+          'flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition-all disabled:opacity-50',
+          confirm
+            ? 'text-emerald-400 border-emerald-500/40 bg-emerald-500/10'
+            : 'text-gray-500 border-white/[0.08] hover:text-emerald-400 hover:border-emerald-500/30',
+        )}
+      >
+        {saving ? <Loader2 className="size-3 animate-spin" /> : <CheckCircle className="size-3.5" />}
+        {confirm ? 'Confirm payment' : 'Mark as Paid'}
+      </button>
+      {error && <p className="text-[10px] text-red-400">{error}</p>}
+    </div>
+  )
+}
+
 // ── Delete button ──────────────────────────────────────────────────────────────
 
 function DeleteOrderButton({ orderId, onDeleted }: { orderId: string; onDeleted: () => void }) {
@@ -503,10 +540,12 @@ function OrderCard({
   order,
   role,
   onDeleted,
+  onPaid,
 }: {
   order: OrderDoc
   role: 'admin' | 'user' | 'client'
   onDeleted: (id: string) => void
+  onPaid: (id: string) => void
 }) {
   const router = useRouter()
   const [expanded, setExpanded] = useState(false)
@@ -517,6 +556,7 @@ function OrderCard({
   const lineItems = order.lineItems ?? []
   const canEditDueDate   = role !== 'client' && order.status === 'pending'
   const canEditLineItems = role !== 'client'
+  const canMarkPaid      = role !== 'client' && order.status === 'pending'
   const canDelete        = role === 'admin'
 
   const handleCopyLink = () => {
@@ -678,13 +718,18 @@ function OrderCard({
               )}
             </div>
 
-            {/* Delete (admin only) */}
-            {canDelete && (
-              <div className="pt-2 border-t border-white/[0.06] flex items-center">
-                <DeleteOrderButton
-                  orderId={order.id}
-                  onDeleted={() => onDeleted(order.id)}
-                />
+            {/* Mark as paid / Delete */}
+            {(canMarkPaid || canDelete) && (
+              <div className="pt-2 border-t border-white/[0.06] flex items-center gap-3 flex-wrap">
+                {canMarkPaid && (
+                  <MarkAsPaidButton orderId={order.id} onPaid={() => onPaid(order.id)} />
+                )}
+                {canDelete && (
+                  <DeleteOrderButton
+                    orderId={order.id}
+                    onDeleted={() => onDeleted(order.id)}
+                  />
+                )}
               </div>
             )}
           </div>
@@ -709,6 +754,11 @@ export function ClientOrdersTab({
 
   function handleDeleted(id: string) {
     setOrders((prev) => prev.filter((o) => o.id !== id))
+    router.refresh()
+  }
+
+  function handlePaid(id: string) {
+    setOrders((prev) => prev.map((o) => o.id === id ? { ...o, status: 'paid' } : o))
     router.refresh()
   }
 
@@ -756,7 +806,7 @@ export function ClientOrdersTab({
           </div>
           <div className="space-y-3">
             {section.items.map((order) => (
-              <OrderCard key={order.id} order={order} role={role} onDeleted={handleDeleted} />
+              <OrderCard key={order.id} order={order} role={role} onDeleted={handleDeleted} onPaid={handlePaid} />
             ))}
           </div>
         </div>

@@ -163,6 +163,38 @@ export async function updateOrderLineItems(
   }
 }
 
+// ── Mark order as paid ─────────────────────────────────────────────────────────
+
+/**
+ * Manually mark a pending order as paid (for payments collected outside Stripe).
+ * Admin and user roles only — triggers the afterChange balance recalculation hook.
+ */
+export async function markOrderAsPaid(
+  orderId: string,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const user = await getCurrentUser()
+    if (!user || user.role === 'client') return { success: false, error: 'Unauthorized' }
+
+    const payload = await getPayload({ config })
+
+    const order = await payload.findByID({ collection: 'orders', id: orderId, depth: 0 })
+    if (!order) return { success: false, error: 'Order not found' }
+    if (order.status === 'paid') return { success: false, error: 'Order is already paid' }
+
+    await payload.update({
+      collection: 'orders',
+      id: orderId,
+      data: { status: 'paid' } as any,
+    })
+
+    return { success: true }
+  } catch (error) {
+    console.error('[markOrderAsPaid]', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to mark as paid' }
+  }
+}
+
 // ── Delete order ───────────────────────────────────────────────────────────────
 
 /**

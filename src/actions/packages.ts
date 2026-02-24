@@ -467,7 +467,7 @@ export async function createOrderFromPackage(
     const orderNumber = await nextOrderNumber(payload)
 
     const totalAmount = lineItems.reduce(
-      (sum: number, item: any) => sum + (item.price ?? 0) * (item.quantity ?? 1),
+      (sum: number, item: any) => sum + (item.adjustedPrice ?? item.price ?? 0) * (item.quantity ?? 1),
       0
     )
 
@@ -489,10 +489,11 @@ export async function createOrderFromPackage(
     //    Explicit attachment avoids pending items floating to unrelated invoices.
     for (const item of lineItems) {
       const qty = item.quantity ?? 1
-      const totalCents = Math.round((item.price ?? 0) * qty * 100)
+      const unitPrice = item.adjustedPrice ?? item.price ?? 0
+      const totalCents = Math.round(unitPrice * qty * 100)
       const descParts = [
         item.name,
-        qty > 1 ? `${qty} × $${item.price}` : null,
+        qty > 1 ? `${qty} × $${unitPrice}` : null,
         item.description || null,
       ].filter(Boolean)
       await stripe.invoiceItems.create({
@@ -527,11 +528,35 @@ export async function createOrderFromPackage(
           title: item.name,        // Packages use 'name'; Orders use 'title'
           description: item.description ?? undefined,
           quantity: item.quantity ?? 1,
-          price: item.price ?? 0,
+          price: item.adjustedPrice ?? item.price ?? 0,
           isRecurring: item.isRecurring ?? false,
         })),
       } as any,
     })
+
+    // 5. Append an entry to paymentSchedule so the invoice shows in the schedule view.
+    try {
+      const existingSchedule = ((pkg as any).paymentSchedule ?? []) as any[]
+      const dueDateStr = new Date(Date.now() + daysUntilDue * 86400000).toISOString().split('T')[0]
+      await payload.update({
+        collection: 'packages',
+        id: packageId,
+        data: {
+          paymentSchedule: [
+            ...existingSchedule,
+            {
+              label: 'Invoice',
+              amount: totalAmount,
+              dueDate: dueDateStr,
+              orderId: order.id,
+              invoicedAt: new Date().toISOString(),
+            },
+          ],
+        } as any,
+      })
+    } catch (e) {
+      console.error('[createOrderFromPackage] Failed to update payment schedule:', e)
+    }
 
     revalidatePath(`/u/${user.username}/clients`)
 
