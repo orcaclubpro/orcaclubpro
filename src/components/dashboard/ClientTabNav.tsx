@@ -14,6 +14,7 @@ const tabs = [
   { key: 'projects', label: 'Projects' },
   { key: 'orders', label: 'Orders' },
   { key: 'packages', label: 'Packages' },
+  { key: 'accounts', label: 'Accounts' },
 ]
 
 export function ClientTabNav({ activeTab, basePath }: ClientTabNavProps) {

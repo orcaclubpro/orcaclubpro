@@ -21,6 +21,7 @@ import type { ClientAccount, Project, User as UserType } from '@/types/payload-t
 import { CreateProjectModal } from '@/components/dashboard/CreateProjectModal'
 import { ClientTabNav } from '@/components/dashboard/ClientTabNav'
 import { ClientPackagesTab } from '@/components/dashboard/ClientPackagesTab'
+import { ClientCredentialsTab } from '@/components/dashboard/ClientCredentialsTab'
 import { ClientOrdersTab } from '@/components/dashboard/ClientOrdersTab'
 import { SwipeTabRouter } from '@/components/dashboard/SwipeTabRouter'
 import { DetailTabSlide } from '@/components/dashboard/DetailTabSlide'
@@ -61,7 +62,7 @@ export default async function ClientDetailPage({
 }) {
   const { username, client: clientId } = await params
   const { tab: rawTab } = await searchParams
-  const validTabs = ['overview', 'projects', 'orders', 'packages'] as const
+  const validTabs = ['overview', 'projects', 'orders', 'packages', 'accounts'] as const
   type ClientTab = (typeof validTabs)[number]
   const activeTab: ClientTab = (validTabs as readonly string[]).includes(rawTab ?? '')
     ? (rawTab as ClientTab)
@@ -83,7 +84,7 @@ export default async function ClientDetailPage({
     notFound()
   }
 
-  const [{ docs: orders }, { docs: projects }, { docs: clientUsers }, packagesResult] =
+  const [{ docs: orders }, { docs: projects }, { docs: clientUsers }, packagesResult, credentialsResult] =
     await Promise.all([
       payload.find({
         collection: 'orders',
@@ -118,8 +119,16 @@ export default async function ClientDetailPage({
         sort: '-createdAt',
         limit: 100,
       }).catch(() => ({ docs: [] })),
+      payload.find({
+        collection: 'credentials',
+        where: { 'project.client': { equals: clientId } },
+        depth: 1,
+        sort: 'title',
+        limit: 500,
+      }).catch(() => ({ docs: [] })),
     ])
   const packages = packagesResult.docs
+  const credentials = credentialsResult.docs
 
   const packageOrderMap: Record<string, any[]> = {}
   for (const o of orders) {
@@ -402,6 +411,11 @@ export default async function ClientDetailPage({
             projects={projects.map((p: any) => ({ id: p.id, name: p.name, status: p.status }))}
             packageOrders={packageOrderMap}
           />
+        )}
+
+        {/* ─── Accounts tab ─────────────────────────────────────────────────── */}
+        {activeTab === 'accounts' && (
+          <ClientCredentialsTab credentials={credentials as any[]} />
         )}
 
       </DetailTabSlide>

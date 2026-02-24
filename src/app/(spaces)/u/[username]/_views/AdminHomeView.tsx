@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { ChevronLeft, ChevronRight, Zap, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 import { DashboardGreeting } from '@/components/dashboard/DashboardGreeting'
@@ -372,17 +372,20 @@ export function AdminHomeView({
           <div className="space-y-8">
 
             {/* Shared header: title + range picker */}
-            <div className="flex items-center justify-between">
-              <p className="text-[10px] font-semibold text-white/40 uppercase tracking-[0.3em]">
-                Timelines
-              </p>
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-semibold text-white/40 uppercase tracking-[0.3em]">
+                  Schedule
+                </p>
+                <p className="text-[9px] text-white/20 mt-0.5 hidden sm:block">Swipe to browse</p>
+              </div>
               <div className="flex items-center p-1 bg-white/[0.04] rounded-lg border border-white/[0.08]">
                 {(['week', 'month', 'year'] as Range[]).map((r) => (
                   <button
                     key={r}
                     onClick={() => setRange(r)}
                     className={cn(
-                      'px-4 py-1.5 rounded-md text-[11px] font-medium transition-all duration-150',
+                      'px-3 sm:px-4 py-1.5 rounded-md text-[11px] font-medium transition-all duration-150',
                       range === r ? 'bg-white/[0.12] text-white shadow-sm' : 'text-white/40 hover:text-white/65',
                     )}
                   >
