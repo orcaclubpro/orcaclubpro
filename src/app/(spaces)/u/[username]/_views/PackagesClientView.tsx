@@ -385,7 +385,7 @@ function PackageModal({
               {/* ESIGN Disclosure */}
               <div className="rounded-xl border border-amber-400/20 bg-amber-400/[0.04] p-4">
                 <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-amber-400/80 mb-2">Electronic Signature Disclosure</p>
-                <p className="text-[11px] text-gray-400 leading-relaxed whitespace-pre-line">{CONSENT_DISCLOSURE}</p>
+                <p className="text-xs text-gray-400 leading-relaxed whitespace-pre-line">{CONSENT_DISCLOSURE}</p>
               </div>
 
               {/* Canvas signature pad */}
@@ -617,6 +617,18 @@ function PackageModal({
                   Your team is still configuring this package. Check back soon.
                 </p>
               )}
+
+              {/* Full Package link — visible in body on mobile, hidden on sm+ (shown in footer instead) */}
+              <Link
+                href={`/u/${username}/packages/${pkg.id}/print`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="sm:hidden flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-300 transition-colors"
+              >
+                <FileText className="size-3.5" />
+                Full Package
+                <ExternalLink className="size-3" />
+              </Link>
             </>
           )}
 
@@ -676,7 +688,7 @@ function PackageModal({
                 href={`/u/${username}/packages/${pkg.id}/print`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 px-4 py-2 text-sm rounded-xl border border-white/[0.08] text-gray-400 hover:text-white hover:border-white/20 transition-all"
+                className="hidden sm:flex items-center gap-2 px-4 py-2 text-sm rounded-xl border border-white/[0.08] text-gray-400 hover:text-white hover:border-white/20 transition-all"
               >
                 <FileText className="size-3.5" />
                 Full Package
@@ -866,9 +878,9 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                         : 'bg-gradient-to-r from-transparent via-white/[0.05] to-transparent',
                     )} />
 
-                    <div className="p-8 lg:p-10">
+                    <div className="p-5 sm:p-8 lg:p-10">
                       {/* Eyebrow + status */}
-                      <div className="flex items-center justify-between mb-8">
+                      <div className="flex items-center justify-between mb-5 lg:mb-8">
                         <p className="text-[9px] font-bold tracking-[0.32em] uppercase text-[#67e8f9]/80">
                           Service Package
                         </p>
@@ -883,12 +895,12 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                       </div>
 
                       {/* Name */}
-                      <h3 className="text-3xl lg:text-[2.5rem] font-bold text-white leading-tight tracking-tight mb-4">
+                      <h3 className="text-2xl sm:text-3xl lg:text-[2.5rem] font-bold text-white leading-tight tracking-tight mb-4">
                         {pkg.name}
                       </h3>
 
                       {pkg.description && (
-                        <p className="text-sm text-gray-400 leading-relaxed mb-8 max-w-xl">
+                        <p className="text-sm text-gray-400 leading-relaxed mb-5 lg:mb-8 max-w-xl">
                           {pkg.description}
                         </p>
                       )}
@@ -898,14 +910,14 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                         <div className="flex items-end gap-8 flex-wrap mb-8">
                           {oneTime > 0 && (
                             <div>
-                              <p className="text-4xl font-bold text-white tabular-nums tracking-tight">{fmt(oneTime)}</p>
+                              <p className="text-3xl sm:text-4xl font-bold text-white tabular-nums tracking-tight">{fmt(oneTime)}</p>
                               <p className="text-[9px] text-gray-300 mt-1.5 uppercase tracking-[0.2em]">one-time</p>
                             </div>
                           )}
                           {monthly > 0 && (
                             <div>
                               <div className="flex items-baseline gap-1">
-                                <p className="text-4xl font-bold text-white tabular-nums tracking-tight">{fmt(monthly)}</p>
+                                <p className="text-3xl sm:text-4xl font-bold text-white tabular-nums tracking-tight">{fmt(monthly)}</p>
                                 <p className="text-xl text-gray-300 font-normal">/mo</p>
                               </div>
                               <p className="text-[9px] text-gray-300 mt-1.5 uppercase tracking-[0.2em]">monthly</p>
@@ -914,7 +926,7 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                           {annual > 0 && (
                             <div>
                               <div className="flex items-baseline gap-1">
-                                <p className="text-4xl font-bold text-white tabular-nums tracking-tight">{fmt(annual)}</p>
+                                <p className="text-3xl sm:text-4xl font-bold text-white tabular-nums tracking-tight">{fmt(annual)}</p>
                                 <p className="text-xl text-gray-300 font-normal">/yr</p>
                               </div>
                               <p className="text-[9px] text-gray-300 mt-1.5 uppercase tracking-[0.2em]">annually</p>
@@ -925,7 +937,7 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
 
                       {/* Services cluster */}
                       {lineItems.length > 0 && (
-                        <div className="flex items-center gap-3 mb-9">
+                        <div className="flex items-center gap-3 mb-6 lg:mb-9">
                           <div className="flex -space-x-1.5">
                             {Array.from({ length: Math.min(6, lineItems.length) }).map((_, j) => (
                               <div
@@ -952,11 +964,11 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                       )}
 
                       {/* Actions */}
-                      <div className="flex items-center gap-3 flex-wrap">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
                         {/* View Details — primary action */}
                         <button
                           onClick={() => setModalPkg(pkg)}
-                          className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold bg-white/[0.08] border border-white/[0.18] text-white hover:bg-white/[0.13] hover:border-white/30 transition-all duration-200"
+                          className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-2.5 rounded-xl text-sm font-semibold bg-white/[0.08] border border-white/[0.18] text-white hover:bg-white/[0.13] hover:border-white/30 transition-all duration-200"
                         >
                           View Details
                         </button>
@@ -965,7 +977,7 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                         {canSign ? (
                           <button
                             onClick={() => setModalPkg(pkg)}
-                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-[#67e8f9]/[0.10] border border-[#67e8f9]/25 text-[#67e8f9] hover:bg-[#67e8f9]/[0.18] hover:border-[#67e8f9]/40 transition-all duration-200"
+                            className="flex items-center justify-center gap-2 w-full sm:w-auto px-5 py-2.5 rounded-xl text-sm font-semibold bg-[#67e8f9]/[0.10] border border-[#67e8f9]/25 text-[#67e8f9] hover:bg-[#67e8f9]/[0.18] hover:border-[#67e8f9]/40 transition-all duration-200"
                           >
                             <PenLine className="size-3.5" />
                             Review & Sign
@@ -977,34 +989,36 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                           </span>
                         ) : null}
 
-                        {/* Full Package link */}
-                        <Link
-                          href={`/u/${username}/packages/${pkg.id}/print`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-300 transition-colors"
-                        >
-                          <FileText className="size-3.5" />
-                          Full Package
-                          <ExternalLink className="size-3" />
-                        </Link>
-
-                        {/* View Contract — only when both parties have signed */}
-                        {bothSigned && (
+                        {/* Secondary actions row */}
+                        <div className="flex items-center gap-3 sm:contents">
+                          {/* Full Package link */}
                           <Link
                             href={`/u/${username}/packages/${pkg.id}/print`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-300 transition-colors"
                           >
-                            <ScrollText className="size-3.5" />
-                            View Contract
+                            <FileText className="size-3.5" />
+                            Full Package
                             <ExternalLink className="size-3" />
                           </Link>
-                        )}
 
-                        {/* Email with popup — always last */}
-                        <div className="relative">
+                          {/* View Contract — only when both parties have signed */}
+                          {bothSigned && (
+                            <Link
+                              href={`/u/${username}/packages/${pkg.id}/print`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-300 transition-colors"
+                            >
+                              <ScrollText className="size-3.5" />
+                              View Contract
+                              <ExternalLink className="size-3" />
+                            </Link>
+                          )}
+
+                          {/* Email with popup — always last */}
+                          <div className="relative">
                           <button
                             onClick={() => emailPopupId === pkg.id ? setEmailPopupId(null) : openEmailPopup(pkg)}
                             disabled={emailingId === pkg.id}
@@ -1028,7 +1042,7 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
 
                           {/* Popup */}
                           {emailPopupId === pkg.id && (
-                            <div className="absolute bottom-full right-0 mb-2 w-52 rounded-xl bg-[#111] border border-white/[0.12] shadow-xl p-3 z-50">
+                            <div className="absolute bottom-full right-0 mb-2 min-w-max max-w-[calc(100vw-3rem)] rounded-xl bg-[#111] border border-white/[0.12] shadow-xl p-3 z-50">
                               <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">Email me</p>
                               <label className="flex items-center gap-2 py-1 cursor-pointer select-none">
                                 <input
@@ -1059,6 +1073,7 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                               </button>
                             </div>
                           )}
+                        </div>
                         </div>
                       </div>
                     </div>

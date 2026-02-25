@@ -124,6 +124,36 @@ export const Sprints: CollectionConfig = {
     },
 
     // ============================================================================
+    // NOTES
+    // ============================================================================
+
+    {
+      name: 'notes',
+      type: 'array',
+      label: 'Notes',
+      admin: {
+        description: 'Running notes and observations for this sprint',
+      },
+      fields: [
+        {
+          name: 'text',
+          type: 'textarea',
+          required: true,
+          admin: { description: 'Note content' },
+        },
+        {
+          name: 'createdAt',
+          type: 'date',
+          admin: {
+            readOnly: true,
+            date: { pickerAppearance: 'dayAndTime' },
+            description: 'Auto-set when the note is created',
+          },
+        },
+      ],
+    },
+
+    // ============================================================================
     // TASKS RELATIONSHIP
     // ============================================================================
 

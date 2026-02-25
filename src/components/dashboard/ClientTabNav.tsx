@@ -19,6 +19,7 @@ const tabs = [
 
 export function ClientTabNav({ activeTab, basePath }: ClientTabNavProps) {
   const containerRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
   const [indicatorStyle, setIndicatorStyle] = useState<{ left: number; width: number; opacity: number }>({
     left: 0,
     width: 0,
@@ -35,10 +36,17 @@ export function ClientTabNav({ activeTab, basePath }: ClientTabNavProps) {
       width: activeEl.offsetWidth,
       opacity: 1,
     })
+    // Scroll active tab into view
+    const scroll = scrollRef.current
+    if (scroll) {
+      const elCenter = activeEl.offsetLeft + activeEl.offsetWidth / 2
+      scroll.scrollTo({ left: elCenter - scroll.clientWidth / 2, behavior: 'smooth' })
+    }
   }, [activeTab])
 
   return (
-    <div ref={containerRef} className="relative flex items-center h-11 gap-1">
+    <div ref={scrollRef} className="overflow-x-auto scrollbar-none">
+    <div ref={containerRef} className="relative flex items-center h-11 gap-1 min-w-max">
       {tabs.map((tab) => (
         <Link
           key={tab.key}
@@ -62,6 +70,7 @@ export function ClientTabNav({ activeTab, basePath }: ClientTabNavProps) {
           transition: 'left 220ms cubic-bezier(0.22, 1, 0.36, 1), width 220ms cubic-bezier(0.22, 1, 0.36, 1), opacity 150ms ease',
         }}
       />
+    </div>
     </div>
   )
 }

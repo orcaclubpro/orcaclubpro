@@ -72,7 +72,7 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
     >
       <nav
         ref={navRef}
-        className="pointer-events-auto flex items-center gap-1 p-1.5 rounded-2xl"
+        className="pointer-events-auto flex items-center gap-1 p-1.5 rounded-2xl max-w-[calc(100vw-1.5rem)]"
         style={{ opacity: 0,
           background: 'rgba(6, 6, 10, 0.82)',
           backdropFilter: 'blur(28px) saturate(180%)',
@@ -99,7 +99,7 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
                 }
               }}
               className={cn(
-                'relative flex flex-col items-center gap-1.5 px-5 py-2.5 rounded-xl transition-all duration-200 active:scale-95 min-w-[62px] cursor-pointer',
+                'relative flex flex-col items-center gap-1.5 px-3.5 py-2.5 rounded-xl transition-all duration-200 active:scale-95 flex-1 cursor-pointer',
                 active ? 'bg-white/[0.06]' : 'hover:bg-white/[0.03]',
               )}
               style={active ? { boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05), inset 0 0 20px rgba(103,232,249,0.02)' } : undefined}
@@ -132,7 +132,7 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
             <div className="w-px h-5 bg-white/[0.07] self-center mx-0.5" />
             <button
               onClick={() => document.dispatchEvent(new CustomEvent('orcaclub:open-search'))}
-              className="relative flex flex-col items-center gap-1.5 px-4 py-2.5 rounded-xl transition-all duration-200 active:scale-95 min-w-[52px] hover:bg-white/[0.03] cursor-pointer"
+              className="relative flex flex-col items-center gap-1.5 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-95 min-w-[52px] hover:bg-white/[0.03] cursor-pointer"
               aria-label="Open search"
             >
               <Search className="size-5 text-gray-400" />
@@ -152,7 +152,7 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
                 if (onProjectPage) router.push(`/u/${username}?tab=projects`)
                 else if (onClientPage) router.push(`/u/${username}?tab=clients`)
               }}
-              className="flex flex-col items-center justify-center size-11 rounded-full bg-white/[0.05] border border-white/[0.10] hover:border-intelligence-cyan/30 hover:bg-intelligence-cyan/[0.08] active:scale-95 transition-all duration-200"
+              className="flex flex-col items-center justify-center size-9 rounded-full bg-white/[0.05] border border-white/[0.10] hover:border-intelligence-cyan/30 hover:bg-intelligence-cyan/[0.08] active:scale-95 transition-all duration-200"
               aria-label="Go back"
             >
               <ChevronLeft className="size-4 text-gray-400" />

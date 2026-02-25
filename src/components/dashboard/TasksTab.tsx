@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Loader2, Check, Zap, Pencil, X, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, Loader2, Check, Zap, Pencil, X, ChevronLeft, ChevronRight, Maximize2, Minimize2, Target, AlignLeft, Calendar } from 'lucide-react'
 import {
   Sheet,
   SheetContent,
@@ -60,6 +60,7 @@ type Priority = NonNullable<Task['priority']>
 
 const ACTIVE_SPRINT_STATUSES = new Set<string>(['in-progress', 'delayed'])
 const COLUMN_STATUS_ORDER: Task['status'][] = ['in-progress', 'pending', 'completed', 'cancelled']
+const ACTIVE_TASK_STATUSES = new Set<Task['status']>(['in-progress', 'pending'])
 const UNASSIGNED = '__unassigned__'
 const PRIORITY_ORDER: Priority[] = ['low', 'medium', 'high', 'urgent']
 const nextPriority = (p: Priority): Priority => PRIORITY_ORDER[(PRIORITY_ORDER.indexOf(p) + 1) % PRIORITY_ORDER.length]
@@ -434,6 +435,9 @@ interface SprintColumnProps {
   projectId: string
   onTaskCreated: () => void
   onTaskSaved: () => void
+  isExpanded?: boolean
+  onExpand: () => void
+  onCollapse: () => void
 }
 
 function SprintColumn({
@@ -449,6 +453,9 @@ function SprintColumn({
   projectId,
   onTaskCreated,
   onTaskSaved,
+  isExpanded = false,
+  onExpand,
+  onCollapse,
 }: SprintColumnProps) {
   const [editState, setEditState] = useState<EditState | null>(null)
   const [savingId, setSavingId] = useState<string | null>(null)
@@ -500,10 +507,14 @@ function SprintColumn({
   const completedCount = columnTasks.filter((t) => t.status === 'completed').length
   const progress = columnTasks.length > 0 ? Math.round((completedCount / columnTasks.length) * 100) : 0
 
+  const hiddenDoneCount = isExpanded
+    ? 0
+    : columnTasks.filter((t) => !ACTIVE_TASK_STATUSES.has(t.status)).length
+
   const groups = COLUMN_STATUS_ORDER.map((st) => ({
     status: st,
     tasks: columnTasks.filter((t) => t.status === st),
-  })).filter((g) => g.tasks.length > 0)
+  })).filter((g) => g.tasks.length > 0 && (isExpanded || ACTIVE_TASK_STATUSES.has(g.status)))
 
   return (
     <div className={`flex-1 flex flex-col min-w-0 ${bg}`}>
@@ -511,7 +522,20 @@ function SprintColumn({
       <div className="px-5 pt-5 pb-4 border-b border-white/[0.06] shrink-0">
         <div className="flex items-center justify-between mb-2.5">
           <span className="text-xs font-bold text-white uppercase tracking-[0.12em]">{label}</span>
-          {sCfg && <span className={`text-xs font-medium ${sCfg.text}`}>{sCfg.label}</span>}
+          <div className="flex items-center gap-2">
+            {sCfg && <span className={`text-xs font-medium ${sCfg.text}`}>{sCfg.label}</span>}
+            <button
+              type="button"
+              onClick={isExpanded ? onCollapse : onExpand}
+              title={isExpanded ? 'Collapse column' : 'Expand column'}
+              className="p-1 rounded-md text-gray-600 hover:text-gray-300 hover:bg-white/[0.06] transition-colors"
+            >
+              {isExpanded
+                ? <Minimize2 className="size-3.5" />
+                : <Maximize2 className="size-3.5" />
+              }
+            </button>
+          </div>
         </div>
         <Select
           value={selectedSprintId ?? UNASSIGNED}
@@ -541,6 +565,64 @@ function SprintColumn({
           </div>
         )}
       </div>
+
+      {/* sprint info block — expanded only */}
+      {isExpanded && sprint && (sprint.goalDescription || sprint.description || sprint.startDate || sprint.endDate) && (
+        <div className="mx-4 mt-4 mb-1 rounded-xl border border-white/[0.06] bg-white/[0.02] overflow-hidden shrink-0">
+          {/* header strip */}
+          <div className="flex items-center gap-2 px-4 py-2.5 border-b border-white/[0.04] bg-white/[0.015]">
+            <span className="size-1 rounded-full bg-intelligence-cyan/60" />
+            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.12em]">Sprint Overview</span>
+          </div>
+          <div className="px-4 py-3 space-y-3">
+            {/* dates */}
+            {(sprint.startDate || sprint.endDate) && (
+              <div className="flex items-center gap-4">
+                <Calendar className="size-3 text-gray-600 shrink-0" />
+                <div className="flex items-center gap-3 text-xs">
+                  {sprint.startDate && (
+                    <span className="text-gray-500">
+                      Start <span className="text-gray-300 ml-1">{fmtDate(sprint.startDate)}</span>
+                    </span>
+                  )}
+                  {sprint.startDate && sprint.endDate && (
+                    <span className="text-gray-700">·</span>
+                  )}
+                  {sprint.endDate && (
+                    <span className="text-gray-500">
+                      End{' '}
+                      <span className={cn('ml-1', isOverdue(sprint.endDate) && sprint.status !== 'finished' ? 'text-red-400' : 'text-gray-300')}>
+                        {fmtDate(sprint.endDate)}
+                        {isOverdue(sprint.endDate) && sprint.status !== 'finished' && ' · overdue'}
+                      </span>
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+            {/* goal */}
+            {sprint.goalDescription && (
+              <div className="flex items-start gap-2.5">
+                <Target className="size-3 text-intelligence-cyan/50 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-[10px] font-bold text-gray-600 uppercase tracking-wider mb-1">Goal</p>
+                  <p className="text-sm text-gray-300 leading-relaxed">{sprint.goalDescription}</p>
+                </div>
+              </div>
+            )}
+            {/* description */}
+            {sprint.description && (
+              <div className="flex items-start gap-2.5">
+                <AlignLeft className="size-3 text-gray-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-[10px] font-bold text-gray-600 uppercase tracking-wider mb-1">Description</p>
+                  <p className="text-sm text-gray-400 leading-relaxed">{sprint.description}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* tasks */}
       <div className="flex-1 overflow-y-auto py-2">
@@ -583,6 +665,18 @@ function SprintColumn({
                 ))}
               </div>
             ))}
+            {/* hidden done count hint when collapsed */}
+            {!isExpanded && hiddenDoneCount > 0 && (
+              <button
+                type="button"
+                onClick={onExpand}
+                className="flex items-center gap-1.5 w-full px-4 py-2 text-xs text-gray-700 hover:text-gray-400 hover:bg-white/[0.02] transition-colors"
+              >
+                <span className="size-1 rounded-full bg-green-400/40" />
+                {hiddenDoneCount} completed — expand to view
+                <Maximize2 className="size-3 ml-auto opacity-50" />
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -779,6 +873,7 @@ export function TasksTab({ tasks, sprints, projectId, readOnly }: TasksTabProps)
   const [sprintModalOpen, setSprintModalOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [updatingIds, setUpdatingIds] = useState<Set<string>>(new Set())
+  const [expandedCol, setExpandedCol] = useState<'A' | 'B' | null>(null)
 
   const sorted = sortedByUpdated(sprints)
   const [colAId, setColAId] = useState<string | null>(sorted[0]?.id ?? null)
@@ -925,22 +1020,32 @@ export function TasksTab({ tasks, sprints, projectId, readOnly }: TasksTabProps)
         </aside>
 
         {/* Sprint Column A */}
-        <SprintColumn
-          label="Sprint A"
-          selectedSprintId={colAId}
-          onSelect={setColAId}
-          bg="bg-[#0e0e0e]"
-          {...columnProps}
-        />
+        {expandedCol !== 'B' && (
+          <SprintColumn
+            label="Sprint A"
+            selectedSprintId={colAId}
+            onSelect={setColAId}
+            bg="bg-[#0e0e0e]"
+            isExpanded={expandedCol === 'A'}
+            onExpand={() => setExpandedCol('A')}
+            onCollapse={() => setExpandedCol(null)}
+            {...columnProps}
+          />
+        )}
 
         {/* Sprint Column B */}
-        <SprintColumn
-          label="Sprint B"
-          selectedSprintId={colBId}
-          onSelect={setColBId}
-          bg="bg-[#0f0f0f]"
-          {...columnProps}
-        />
+        {expandedCol !== 'A' && (
+          <SprintColumn
+            label="Sprint B"
+            selectedSprintId={colBId}
+            onSelect={setColBId}
+            bg="bg-[#0f0f0f]"
+            isExpanded={expandedCol === 'B'}
+            onExpand={() => setExpandedCol('B')}
+            onCollapse={() => setExpandedCol(null)}
+            {...columnProps}
+          />
+        )}
       </div>
 
       {!readOnly && (

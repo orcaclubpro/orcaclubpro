@@ -1047,6 +1047,22 @@ export interface Sprint {
    */
   goalDescription?: string | null;
   /**
+   * Running notes and observations for this sprint
+   */
+  notes?:
+    | {
+        /**
+         * Note content
+         */
+        text: string;
+        /**
+         * Auto-set when the note is created
+         */
+        createdAt?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
    * Tasks included in this sprint
    */
   tasks?: (string | Task)[] | null;
@@ -1828,6 +1844,13 @@ export interface SprintsSelect<T extends boolean = true> {
   startDate?: T;
   endDate?: T;
   goalDescription?: T;
+  notes?:
+    | T
+    | {
+        text?: T;
+        createdAt?: T;
+        id?: T;
+      };
   tasks?: T;
   completedTasksCount?: T;
   totalTasksCount?: T;

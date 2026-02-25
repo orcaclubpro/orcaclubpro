@@ -3,7 +3,7 @@
 import { useState, useEffect, useTransition, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
-import { Check, Zap, Maximize2, X, Pencil, Plus, Loader2, ChevronRight, ChevronDown } from 'lucide-react'
+import { Check, Zap, Maximize2, Minimize2, X, Pencil, Plus, Loader2, ChevronRight, ChevronDown, Target, AlignLeft, Calendar } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -14,6 +14,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { updateTaskStatus, updateTask, createTask } from '@/actions/tasks'
+import { updateSprint, addSprintNote } from '@/actions/sprints'
 import { cn } from '@/lib/utils'
 import { CreateSprintModal } from '@/components/dashboard/CreateSprintModal'
 
@@ -49,6 +50,7 @@ const SPRINT_STATUS_CFG: Record<string, { label: string; text: string; dot: stri
 
 const ACTIVE_SPRINT_STATUSES = new Set(['in-progress', 'delayed'])
 const COLUMN_STATUS_ORDER = ['in-progress', 'pending', 'completed', 'cancelled']
+const ACTIVE_TASK_STATUSES = new Set<string>(['in-progress', 'pending'])
 const UNASSIGNED = '__unassigned__'
 
 type Priority = 'low' | 'medium' | 'high' | 'urgent'
@@ -374,6 +376,8 @@ function TaskCard({
 function InlineAdd({ projectId, sprintId, onCreated }: { projectId: string; sprintId: string; onCreated: () => void }) {
   const [isOpen, setIsOpen] = useState(false)
   const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+  const [priority, setPriority] = useState<Priority>('medium')
   const [isPending, startTransition] = useTransition()
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -381,13 +385,14 @@ function InlineAdd({ projectId, sprintId, onCreated }: { projectId: string; spri
     if (isOpen) setTimeout(() => inputRef.current?.focus(), 50)
   }, [isOpen])
 
+  const handleClose = () => { setIsOpen(false); setTitle(''); setDescription(''); setPriority('medium') }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!title.trim()) return
     startTransition(async () => {
-      await createTask({ projectId, title: title.trim(), priority: 'medium', sprintId })
-      setTitle('')
-      setIsOpen(false)
+      await createTask({ projectId, title: title.trim(), description: description.trim() || undefined, priority, sprintId })
+      handleClose()
       onCreated()
     })
   }
@@ -408,8 +413,8 @@ function InlineAdd({ projectId, sprintId, onCreated }: { projectId: string; spri
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex items-center gap-1.5 px-3 py-2 shrink-0 bg-white/[0.01]"
-      onKeyDown={(e) => { if (e.key === 'Escape') { setIsOpen(false); setTitle('') } }}
+      className="mx-3 my-2 rounded-lg border border-white/[0.08] bg-white/[0.02] overflow-hidden shrink-0"
+      onKeyDown={(e) => { if (e.key === 'Escape') handleClose() }}
     >
       <Input
         ref={inputRef}
@@ -417,14 +422,42 @@ function InlineAdd({ projectId, sprintId, onCreated }: { projectId: string; spri
         onChange={(e) => setTitle(e.target.value)}
         placeholder="Task title…"
         disabled={isPending}
-        className="flex-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-gray-700 focus:border-intelligence-cyan/40 h-7 text-xs"
+        className="border-0 border-b border-white/[0.06] rounded-none bg-transparent text-white placeholder:text-gray-700 focus-visible:ring-0 h-8 text-xs px-3"
       />
-      <button type="submit" disabled={isPending || !title.trim()} className="p-1.5 rounded-lg bg-intelligence-cyan/10 text-intelligence-cyan hover:bg-intelligence-cyan/20 transition-colors disabled:opacity-40 shrink-0">
-        {isPending ? <Loader2 className="size-3 animate-spin" /> : <Check className="size-3" />}
-      </button>
-      <button type="button" onClick={() => { setIsOpen(false); setTitle('') }} className="p-1.5 rounded-lg text-gray-700 hover:text-gray-400 transition-colors shrink-0">
-        <X className="size-3" />
-      </button>
+      <Textarea
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        placeholder="Description (optional)…"
+        disabled={isPending}
+        rows={2}
+        className="border-0 border-b border-white/[0.06] rounded-none bg-transparent text-white placeholder:text-gray-700 focus-visible:ring-0 text-xs px-3 py-2 resize-none min-h-0"
+      />
+      <div className="flex items-center gap-1.5 px-2 py-1.5">
+        <div className="flex items-center gap-1 flex-1">
+          {(['low', 'medium', 'high', 'urgent'] as Priority[]).map((p) => {
+            const pc = PRIORITY_CFG[p]
+            return (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setPriority(p)}
+                className={cn(
+                  'text-[9px] font-bold px-1.5 rounded border leading-4 transition-colors',
+                  priority === p ? `${pc.color} ${pc.bg}` : 'text-gray-700 border-white/[0.06] hover:text-gray-400',
+                )}
+              >
+                {pc.short}
+              </button>
+            )
+          })}
+        </div>
+        <button type="submit" disabled={isPending || !title.trim()} className="p-1.5 rounded-lg bg-intelligence-cyan/10 text-intelligence-cyan hover:bg-intelligence-cyan/20 transition-colors disabled:opacity-40 shrink-0">
+          {isPending ? <Loader2 className="size-3 animate-spin" /> : <Check className="size-3" />}
+        </button>
+        <button type="button" onClick={handleClose} className="p-1.5 rounded-lg text-gray-700 hover:text-gray-400 transition-colors shrink-0">
+          <X className="size-3" />
+        </button>
+      </div>
     </form>
   )
 }
@@ -455,6 +488,10 @@ interface ColumnBodyProps {
   savingId: string | null
   onTaskCreated: () => void
   onPriorityChange: (task: any, priority: Priority) => void
+  isExpanded?: boolean
+  onExpand?: () => void
+  onCollapse?: () => void
+  hiddenDoneCount?: number
 }
 
 function ColumnBody({
@@ -464,6 +501,7 @@ function ColumnBody({
   updatingIds, onToggle, activeTaskIds, onActivate,
   editState, onEditStart, onEditChange, onEditSave, onEditCancel,
   savingId, onTaskCreated, onPriorityChange,
+  isExpanded = false, onExpand = () => {}, onCollapse = () => {}, hiddenDoneCount = 0,
 }: ColumnBodyProps) {
   const sCfg = sprint ? (SPRINT_STATUS_CFG[sprint.status] ?? SPRINT_STATUS_CFG.pending) : null
   const allSprints = Array.from(sprintMap.values())
@@ -474,13 +512,23 @@ function ColumnBody({
       <div className="px-4 pt-4 pb-3 border-b border-white/[0.06] shrink-0">
         <div className="flex items-center justify-between mb-2.5">
           <span className="text-[9px] font-bold gradient-text uppercase tracking-[0.15em]">{label}</span>
-          {sCfg && <span className={`text-[10px] font-medium ${sCfg.text}`}>{sCfg.label}</span>}
+          <div className="flex items-center gap-2">
+            {sCfg && <span className={`text-[10px] font-medium ${sCfg.text}`}>{sCfg.label}</span>}
+            <button
+              type="button"
+              onClick={isExpanded ? onCollapse : onExpand}
+              title={isExpanded ? 'Collapse column' : 'Expand column'}
+              className="p-1 rounded-md text-gray-600 hover:text-gray-300 hover:bg-white/[0.06] transition-colors"
+            >
+              {isExpanded ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />}
+            </button>
+          </div>
         </div>
         <Select value={selectedSprintId ?? UNASSIGNED} onValueChange={(v) => onSelect(v === UNASSIGNED ? null : v)}>
           <SelectTrigger className="h-8 bg-white/[0.04] border-white/[0.08] text-white text-sm focus:border-intelligence-cyan/40">
             <SelectValue placeholder="Select sprint" />
           </SelectTrigger>
-          <SelectContent className="bg-[#1a1a1a] border-white/[0.08]">
+          <SelectContent className="bg-[#1a1a1a] border-white/[0.08] z-[300]">
             <SelectItem value={UNASSIGNED} className="text-gray-400">Unassigned tasks</SelectItem>
             {allSprints.map((s) => {
               const projName = typeof s.project === 'object' ? (s.project?.name ?? '') : ''
@@ -574,6 +622,17 @@ function ColumnBody({
               </div>
             ))}
 
+            {!isExpanded && hiddenDoneCount > 0 && (
+              <button
+                type="button"
+                onClick={onExpand}
+                className="w-full flex items-center gap-2 px-3 py-2 text-[10px] text-gray-600 hover:text-gray-400 transition-colors"
+              >
+                <span className="size-1 rounded-full bg-green-400/40 shrink-0" />
+                {hiddenDoneCount} completed · expand to view
+              </button>
+            )}
+
             {columnTasks.length === 0 && selectedSprintId && (
               <p className="text-xs text-gray-400 text-center py-8 px-4">
                 {sprint ? `No tasks in ${sprint.name}` : 'No tasks'}
@@ -586,6 +645,74 @@ function ColumnBody({
   )
 }
 
+// ─── sprint donut chart ───────────────────────────────────────────────────────
+
+function SprintDonutChart({
+  total, completed, inProg,
+}: {
+  total: number
+  completed: number
+  inProg: number
+}) {
+  const r = 38
+  const C = 2 * Math.PI * r
+  const pct = total > 0 ? Math.round((completed / total) * 100) : 0
+  const completedLen = total > 0 ? C * (completed / total) : 0
+  const inProgLen = total > 0 ? C * (inProg / total) : 0
+  const completedStartAngle = -90
+  const inProgStartAngle = -90 + 360 * (completed / (total || 1))
+
+  return (
+    <div className="relative flex items-center justify-center">
+      <svg width="180" height="180" viewBox="0 0 100 100">
+        <defs>
+          <linearGradient id="donut-done" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#67e8f9" />
+            <stop offset="100%" stopColor="#3b82f6" />
+          </linearGradient>
+        </defs>
+        {/* Background ring */}
+        <circle cx="50" cy="50" r={r} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="10" />
+        {/* Completed arc — gradient cyan → blue */}
+        {completed > 0 && (
+          <circle
+            cx="50" cy="50" r={r}
+            fill="none"
+            stroke="url(#donut-done)"
+            strokeWidth="10"
+            strokeDasharray={`${completedLen} ${C - completedLen}`}
+            transform={`rotate(${completedStartAngle}, 50, 50)`}
+            strokeLinecap="round"
+          />
+        )}
+        {/* In-progress arc — soft blue */}
+        {inProg > 0 && (
+          <circle
+            cx="50" cy="50" r={r}
+            fill="none"
+            stroke="rgba(147,197,253,0.4)"
+            strokeWidth="10"
+            strokeDasharray={`${inProgLen} ${C - inProgLen}`}
+            transform={`rotate(${inProgStartAngle}, 50, 50)`}
+            strokeLinecap="round"
+          />
+        )}
+      </svg>
+      <div className="absolute flex flex-col items-center pointer-events-none select-none">
+        {total === 0 ? (
+          <span className="text-xs text-gray-600">No tasks</span>
+        ) : (
+          <>
+            <span className="text-3xl font-bold text-white tabular-nums leading-none">{pct}%</span>
+            <span className="text-[9px] text-gray-500 uppercase tracking-[0.1em] mt-1">complete</span>
+            <span className="text-[10px] text-gray-400 tabular-nums mt-0.5">{completed}/{total}</span>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── sprint column (desktop panel) ───────────────────────────────────────────
 
 function SprintColumn({
@@ -594,6 +721,7 @@ function SprintColumn({
   activeTaskIds, onActivate,
   editState, onEditStart, onEditChange, onEditSave, onEditCancel,
   savingId, onTaskCreated, onPriorityChange,
+  isExpanded = false, onExpand, onCollapse,
 }: {
   label: string
   sprintMap: Map<string, any>
@@ -613,7 +741,68 @@ function SprintColumn({
   savingId: string | null
   onTaskCreated: () => void
   onPriorityChange: (task: any, priority: Priority) => void
+  isExpanded?: boolean
+  onExpand?: () => void
+  onCollapse?: () => void
 }) {
+  const router = useRouter()
+  const [editMode, setEditMode] = useState(false)
+  const [editDraft, setEditDraft] = useState({ name: '', goalDescription: '', description: '', startDate: '', endDate: '' })
+  const [isSavingSprint, startSprintSave] = useTransition()
+  const [localNotes, setLocalNotes] = useState<{ text: string; createdAt?: string | null }[]>([])
+  const [notesExpanded, setNotesExpanded] = useState(false)
+  const [newNoteText, setNewNoteText] = useState('')
+  const [isAddingNote, startAddNote] = useTransition()
+  const noteInputRef = useRef<HTMLTextAreaElement>(null)
+
+  // Sync notes when sprint changes
+  const sprintId = selectedSprintId
+  useEffect(() => {
+    const s = sprintId ? sprintMap.get(sprintId) : null
+    setLocalNotes(Array.isArray(s?.notes) ? s.notes : [])
+    setNotesExpanded(false)
+  }, [sprintId, sprintMap])
+
+  useEffect(() => { if (!isExpanded) setEditMode(false) }, [isExpanded])
+
+  const enterEditMode = (s: any) => {
+    setEditDraft({
+      name: s.name ?? '',
+      goalDescription: s.goalDescription ?? '',
+      description: s.description ?? '',
+      startDate: s.startDate?.slice(0, 10) ?? '',
+      endDate: s.endDate?.slice(0, 10) ?? '',
+    })
+    setEditMode(true)
+  }
+
+  const handleSaveSprint = (s: any) => {
+    startSprintSave(async () => {
+      await updateSprint({
+        sprintId: s.id,
+        name: editDraft.name.trim() || s.name,
+        goalDescription: editDraft.goalDescription.trim() || undefined,
+        description: editDraft.description.trim() || undefined,
+        startDate: editDraft.startDate || undefined,
+        endDate: editDraft.endDate || undefined,
+      })
+      setEditMode(false)
+      router.refresh()
+    })
+  }
+
+  const handleAddNote = (s: any) => {
+    const text = newNoteText.trim()
+    if (!text) return
+    const optimistic = { text, createdAt: new Date().toISOString() }
+    setLocalNotes((prev) => [...prev, optimistic])
+    setNewNoteText('')
+    startAddNote(async () => {
+      await addSprintNote({ sprintId: s.id, text })
+      router.refresh()
+    })
+  }
+
   const sprint = selectedSprintId ? sprintMap.get(selectedSprintId) : null
   const projectId = sprint ? getProjectId(sprint) : null
   const columnTasks = tasksForSprint(allTasks, selectedSprintId)
@@ -621,23 +810,248 @@ function SprintColumn({
   const progress = columnTasks.length > 0 ? Math.round((completedCount / columnTasks.length) * 100) : 0
   const activeTasks = columnTasks.filter((t) => activeTaskIds.has(t.id))
   const nonActiveTasks = columnTasks.filter((t) => !activeTaskIds.has(t.id))
-  const statusGroups = COLUMN_STATUS_ORDER
+  const allStatusGroups = COLUMN_STATUS_ORDER
     .map((st) => ({ status: st, tasks: nonActiveTasks.filter((t) => t.status === st) }))
     .filter((g) => g.tasks.length > 0)
+  const statusGroups = isExpanded
+    ? allStatusGroups
+    : allStatusGroups.filter((g) => ACTIVE_TASK_STATUSES.has(g.status))
+  const hiddenDoneCount = isExpanded
+    ? 0
+    : allStatusGroups
+        .filter((g) => !ACTIVE_TASK_STATUSES.has(g.status))
+        .reduce((acc, g) => acc + g.tasks.length, 0)
+
+  const sCfg = sprint ? (SPRINT_STATUS_CFG[sprint.status] ?? SPRINT_STATUS_CFG.pending) : null
+  const inProg = columnTasks.filter((t) => t.status === 'in-progress').length
+  const pendingC = columnTasks.filter((t) => t.status === 'pending').length
 
   return (
-    <div className={`flex-1 flex flex-col min-w-0 ${bg}`}>
-      <div className="flex-1 overflow-y-auto">
-        <ColumnBody
-          sprint={sprint} selectedSprintId={selectedSprintId} sprintMap={sprintMap} onSelect={onSelect}
-          columnTasks={columnTasks} completedCount={completedCount} progress={progress}
-          activeTasks={activeTasks} statusGroups={statusGroups} projectId={projectId} label={label}
-          updatingIds={updatingIds} onToggle={onToggle} activeTaskIds={activeTaskIds} onActivate={onActivate}
-          editState={editState} onEditStart={onEditStart} onEditChange={onEditChange}
-          onEditSave={onEditSave} onEditCancel={onEditCancel} savingId={savingId} onTaskCreated={onTaskCreated}
-          onPriorityChange={onPriorityChange}
-        />
+    <div className={`flex-1 flex min-w-0 ${bg}`}>
+
+      {/* Sprint detail sidebar — LEFT side, expanded only, independent scroll */}
+      {isExpanded && sprint && (
+        <div className="w-80 shrink-0 border-r border-white/[0.06] overflow-y-auto overscroll-contain flex flex-col bg-[#0b0b0b] self-stretch">
+
+          {/* Header: status + name + edit toggle */}
+          <div className="px-6 pt-6 pb-5 border-b border-white/[0.06]">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-1.5">
+                <span className={cn('size-1.5 rounded-full', sCfg?.dot ?? 'bg-gray-500')} />
+                <span className={cn('text-[9px] font-bold uppercase tracking-[0.14em]', sCfg?.text ?? 'text-gray-500')}>{sCfg?.label}</span>
+              </div>
+              {!editMode ? (
+                <button type="button" onClick={() => enterEditMode(sprint)} title="Edit sprint"
+                  className="p-1 rounded text-gray-600 hover:text-gray-300 hover:bg-white/[0.06] transition-colors">
+                  <Pencil className="size-3.5" />
+                </button>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <button type="button" onClick={() => handleSaveSprint(sprint)} disabled={isSavingSprint}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-semibold bg-intelligence-cyan/10 text-intelligence-cyan hover:bg-intelligence-cyan/20 transition-colors disabled:opacity-50">
+                    {isSavingSprint ? <Loader2 className="size-3 animate-spin" /> : <Check className="size-3" />}
+                    Save
+                  </button>
+                  <button type="button" onClick={() => setEditMode(false)}
+                    className="px-2 py-1 rounded-lg text-[10px] text-gray-500 hover:text-gray-300 hover:bg-white/[0.06] transition-colors">
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
+            {editMode ? (
+              <Input value={editDraft.name} onChange={(e) => setEditDraft((p) => ({ ...p, name: e.target.value }))}
+                disabled={isSavingSprint}
+                className="bg-white/[0.04] border-white/[0.08] text-white font-bold focus:border-intelligence-cyan/40 h-8 text-sm" />
+            ) : (
+              <h3 className="text-lg font-bold text-white leading-snug">{sprint.name}</h3>
+            )}
+            {typeof sprint.project === 'object' && sprint.project?.name && (
+              <p className="text-xs text-gray-500 mt-1">{sprint.project.name}</p>
+            )}
+          </div>
+
+          {/* Goal */}
+          {(sprint.goalDescription || editMode) && (
+            <div className="px-6 py-5 border-b border-white/[0.04]">
+              <div className="flex items-start gap-3">
+                <div className="w-0.5 self-stretch bg-intelligence-cyan/50 rounded-full shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[9px] font-bold text-intelligence-cyan uppercase tracking-[0.14em] mb-2">Goal</p>
+                  {editMode ? (
+                    <Textarea value={editDraft.goalDescription}
+                      onChange={(e) => setEditDraft((p) => ({ ...p, goalDescription: e.target.value }))}
+                      placeholder="Describe the goal…"
+                      rows={3} disabled={isSavingSprint}
+                      className="bg-white/[0.04] border-white/[0.08] text-white text-sm font-semibold placeholder:text-gray-700 focus:border-intelligence-cyan/40 resize-none" />
+                  ) : (
+                    <p className="text-base font-semibold text-white leading-relaxed">{sprint.goalDescription}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Donut chart + task pills */}
+          <div className="px-6 py-5 border-b border-white/[0.04] flex flex-col items-center gap-4">
+            <SprintDonutChart total={columnTasks.length} completed={completedCount} inProg={inProg} />
+            {columnTasks.length > 0 && (
+              <div className="flex flex-wrap justify-center gap-1.5">
+                {inProg > 0 && (
+                  <span className="text-[10px] text-intelligence-cyan/80 bg-intelligence-cyan/[0.06] border border-intelligence-cyan/[0.12] rounded-full px-2.5 py-0.5">
+                    {inProg} active
+                  </span>
+                )}
+                {pendingC > 0 && (
+                  <span className="text-[10px] text-gray-300 bg-white/[0.04] border border-white/[0.07] rounded-full px-2.5 py-0.5">
+                    {pendingC} pending
+                  </span>
+                )}
+                {completedCount > 0 && (
+                  <span className="text-[10px] text-blue-400/70 bg-blue-400/[0.05] border border-blue-400/[0.12] rounded-full px-2.5 py-0.5">
+                    {completedCount} done
+                  </span>
+                )}
+              </div>
+            )}
+            <div className="flex items-center gap-3 text-[9px] text-gray-600">
+              <span className="flex items-center gap-1.5">
+                <span className="size-2 rounded-full shrink-0" style={{ background: 'linear-gradient(to right, #67e8f9, #3b82f6)' }} />
+                Completed
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="size-2 rounded-full bg-blue-300/40 shrink-0" />
+                In progress
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="size-2 rounded-full bg-white/[0.05] shrink-0" />
+                Pending
+              </span>
+            </div>
+          </div>
+
+          {/* Description */}
+          {(sprint.description || editMode) && (
+            <div className="px-6 py-5 border-b border-white/[0.04]">
+              <div className="flex items-start gap-2">
+                <AlignLeft className="size-3.5 text-gray-600 shrink-0 mt-0.5" />
+                {editMode ? (
+                  <Textarea value={editDraft.description}
+                    onChange={(e) => setEditDraft((p) => ({ ...p, description: e.target.value }))}
+                    placeholder="Add a description…"
+                    rows={3} disabled={isSavingSprint}
+                    className="flex-1 bg-white/[0.04] border-white/[0.08] text-white text-xs placeholder:text-gray-700 focus:border-intelligence-cyan/40 resize-none" />
+                ) : (
+                  <p className="text-xs text-gray-300 leading-relaxed">{sprint.description}</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Dates */}
+          {(sprint.startDate || sprint.endDate || editMode) && (
+            <div className="px-6 py-5 border-b border-white/[0.04]">
+              {editMode ? (
+                <div className="space-y-2">
+                  <p className="text-[9px] text-gray-500 uppercase tracking-wider">Timeline</p>
+                  <div className="flex items-center gap-2">
+                    <Input type="date" value={editDraft.startDate} disabled={isSavingSprint}
+                      onChange={(e) => setEditDraft((p) => ({ ...p, startDate: e.target.value }))}
+                      className="flex-1 bg-white/[0.04] border-white/[0.08] text-white text-xs focus:border-intelligence-cyan/40 h-7" />
+                    <span className="text-gray-600 text-xs shrink-0">→</span>
+                    <Input type="date" value={editDraft.endDate} disabled={isSavingSprint}
+                      onChange={(e) => setEditDraft((p) => ({ ...p, endDate: e.target.value }))}
+                      className="flex-1 bg-white/[0.04] border-white/[0.08] text-white text-xs focus:border-intelligence-cyan/40 h-7" />
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-sm text-gray-400">
+                  <Calendar className="size-3.5 shrink-0" />
+                  <span>{fmtDate(sprint.startDate) ?? 'TBD'} → {fmtDate(sprint.endDate) ?? 'TBD'}</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Notes */}
+          <div className="px-6 py-5">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <p className="text-[9px] font-bold text-gray-500 uppercase tracking-[0.14em]">Notes</p>
+                {localNotes.length > 0 && (
+                  <span className="text-[9px] text-gray-600 tabular-nums">{localNotes.length}</span>
+                )}
+              </div>
+              {localNotes.length > 3 && (
+                <button type="button" onClick={() => setNotesExpanded((p) => !p)}
+                  className="text-[9px] text-gray-600 hover:text-gray-400 transition-colors">
+                  {notesExpanded ? 'Show less' : `Show all ${localNotes.length}`}
+                </button>
+              )}
+            </div>
+
+            {/* Note list */}
+            {localNotes.length > 0 && (
+              <div className="space-y-2 mb-3">
+                {(notesExpanded ? localNotes : localNotes.slice(-3)).map((note, i) => (
+                  <div key={i} className="flex items-start gap-2.5 group">
+                    <span className="size-1 rounded-full bg-gray-700 shrink-0 mt-1.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-gray-300 leading-relaxed break-words">{note.text}</p>
+                      {note.createdAt && (
+                        <p className="text-[9px] text-gray-700 mt-0.5">
+                          {new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(note.createdAt))}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Add note */}
+            <div className="flex items-start gap-2">
+              <Textarea
+                ref={noteInputRef}
+                value={newNoteText}
+                onChange={(e) => setNewNoteText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAddNote(sprint) }
+                  if (e.key === 'Escape') setNewNoteText('')
+                }}
+                placeholder="Add a note… (Enter to save)"
+                rows={2}
+                disabled={isAddingNote}
+                className="flex-1 bg-white/[0.03] border-white/[0.06] text-white text-xs placeholder:text-gray-700 focus:border-white/[0.15] resize-none min-h-0"
+              />
+              {newNoteText.trim() && (
+                <button type="button" onClick={() => handleAddNote(sprint)} disabled={isAddingNote}
+                  className="p-1.5 rounded-lg bg-intelligence-cyan/10 text-intelligence-cyan hover:bg-intelligence-cyan/20 transition-colors disabled:opacity-40 shrink-0 mt-0.5">
+                  {isAddingNote ? <Loader2 className="size-3 animate-spin" /> : <Check className="size-3" />}
+                </button>
+              )}
+            </div>
+          </div>
+
+        </div>
+      )}
+
+      {/* Task list panel */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <div className="flex-1 overflow-y-auto">
+          <ColumnBody
+            sprint={sprint} selectedSprintId={selectedSprintId} sprintMap={sprintMap} onSelect={onSelect}
+            columnTasks={columnTasks} completedCount={completedCount} progress={progress}
+            activeTasks={activeTasks} statusGroups={statusGroups} projectId={projectId} label={label}
+            updatingIds={updatingIds} onToggle={onToggle} activeTaskIds={activeTaskIds} onActivate={onActivate}
+            editState={editState} onEditStart={onEditStart} onEditChange={onEditChange}
+            onEditSave={onEditSave} onEditCancel={onEditCancel} savingId={savingId} onTaskCreated={onTaskCreated}
+            onPriorityChange={onPriorityChange}
+            isExpanded={isExpanded} onExpand={onExpand} onCollapse={onCollapse} hiddenDoneCount={hiddenDoneCount}
+          />
+        </div>
       </div>
+
     </div>
   )
 }
@@ -779,6 +1193,7 @@ function TaskBoard({
   const [mobileTab, setMobileTab] = useState<MobileTab>('a')
   const [sidebarHovered, setSidebarHovered] = useState(false)
   const [expandedSprintIds, setExpandedSprintIds] = useState<Set<string>>(new Set())
+  const [expandedCol, setExpandedCol] = useState<'A' | 'B' | null>(null)
   const [sprintModalOpen, setSprintModalOpen] = useState(false)
   const [sprintProjectId, setSprintProjectId] = useState('')
   const [showProjectPicker, setShowProjectPicker] = useState(false)
@@ -1084,6 +1499,8 @@ function TaskBoard({
                     {activeSprints.map((sprint) => {
                       const sTasks = tasksForSprint(tasks, sprint.id)
                       const done = sTasks.filter((t) => t.status === 'completed').length
+                      const inProg = sTasks.filter((t) => t.status === 'in-progress').length
+                      const pendingC = sTasks.filter((t) => t.status === 'pending').length
                       const pct = sTasks.length > 0 ? Math.round((done / sTasks.length) * 100) : 0
                       const cfg = SPRINT_STATUS_CFG[sprint.status] ?? SPRINT_STATUS_CFG.pending
                       const projName = typeof sprint.project === 'object' ? (sprint.project?.name ?? '') : ''
@@ -1115,27 +1532,65 @@ function TaskBoard({
                             </div>
                           </button>
 
-                          {/* Expandable body */}
+                          {/* Expandable body — SprintsTab card style */}
                           {isExpanded && (
-                            <div className="pb-3">
+                            <div className="pb-2 space-y-2">
+                              {/* Goal / description */}
+                              {(sprint.goalDescription || sprint.description) && (
+                                <p className="text-[10px] text-gray-300 px-3 leading-relaxed line-clamp-3">
+                                  {sprint.goalDescription || sprint.description}
+                                </p>
+                              )}
+
+                              {/* Progress bar */}
                               {sTasks.length > 0 && (
-                                <div className="flex items-center gap-1.5 px-3 pb-1">
+                                <div className="flex items-center gap-1.5 px-3">
                                   <div className="flex-1 h-[2px] bg-white/[0.05] rounded-full overflow-hidden">
                                     <div className={`h-full rounded-full ${cfg.bar}`} style={{ width: `${pct}%` }} />
                                   </div>
-                                  <span className="text-[9px] text-gray-400 shrink-0 tabular-nums">{pct}%</span>
+                                  <span className="text-[9px] text-gray-400 shrink-0 tabular-nums">{done}/{sTasks.length} · {pct}%</span>
                                 </div>
                               )}
-                              <div className="px-1">
-                                {sTasks.length === 0 ? (
-                                  <p className="text-[10px] text-gray-400 px-2 py-1">No tasks</p>
-                                ) : (
-                                  <>
-                                    {sTasks.slice(0, 8).map((t) => <SidebarTask key={t.id} task={t} />)}
-                                    {sTasks.length > 8 && <p className="text-[10px] text-gray-400 px-2 py-1">+{sTasks.length - 8} more</p>}
-                                  </>
-                                )}
-                              </div>
+
+                              {/* Task status pills */}
+                              {sTasks.length > 0 && (
+                                <div className="flex flex-wrap gap-1 px-3">
+                                  {inProg > 0 && (
+                                    <span className="text-[9px] text-intelligence-cyan/80 bg-intelligence-cyan/[0.06] border border-intelligence-cyan/[0.12] rounded-full px-1.5 py-0.5">
+                                      {inProg} active
+                                    </span>
+                                  )}
+                                  {pendingC > 0 && (
+                                    <span className="text-[9px] text-gray-300 bg-white/[0.04] border border-white/[0.07] rounded-full px-1.5 py-0.5">
+                                      {pendingC} pending
+                                    </span>
+                                  )}
+                                  {done > 0 && (
+                                    <span className="text-[9px] text-green-400/70 bg-green-400/[0.05] border border-green-400/[0.12] rounded-full px-1.5 py-0.5">
+                                      {done} done
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Date footer */}
+                              {(sprint.startDate || sprint.endDate) && (
+                                <div className="flex items-center gap-1 px-3 text-[9px] text-gray-500">
+                                  <Calendar className="size-2.5 shrink-0" />
+                                  <span>{fmtDate(sprint.startDate) ?? 'TBD'} → {fmtDate(sprint.endDate) ?? 'TBD'}</span>
+                                </div>
+                              )}
+
+                              {/* Task list */}
+                              {sTasks.length > 0 && (
+                                <div className="px-1 pt-1 border-t border-white/[0.04]">
+                                  {sTasks.slice(0, 8).map((t) => <SidebarTask key={t.id} task={t} />)}
+                                  {sTasks.length > 8 && <p className="text-[10px] text-gray-400 px-2 py-1">+{sTasks.length - 8} more</p>}
+                                </div>
+                              )}
+                              {sTasks.length === 0 && (
+                                <p className="text-[10px] text-gray-600 px-3 pb-1">No tasks yet</p>
+                              )}
                             </div>
                           )}
                         </div>
@@ -1154,12 +1609,18 @@ function TaskBoard({
         </aside>
 
         {/* Column A */}
-        <SprintColumn label="Sprint A" selectedSprintId={colAId} onSelect={setColAId} bg="bg-[#0e0e0e]" {...columnProps}
-          activeTaskIds={activeTaskIdsA} onActivate={(id) => handleActivate(id, 'a')} />
+        {expandedCol !== 'B' && (
+          <SprintColumn label="Sprint A" selectedSprintId={colAId} onSelect={setColAId} bg="bg-[#0e0e0e]" {...columnProps}
+            activeTaskIds={activeTaskIdsA} onActivate={(id) => handleActivate(id, 'a')}
+            isExpanded={expandedCol === 'A'} onExpand={() => setExpandedCol('A')} onCollapse={() => setExpandedCol(null)} />
+        )}
 
         {/* Column B */}
-        <SprintColumn label="Sprint B" selectedSprintId={colBId} onSelect={setColBId} bg="bg-[#0f0f0f]" {...columnProps}
-          activeTaskIds={activeTaskIdsB} onActivate={(id) => handleActivate(id, 'b')} />
+        {expandedCol !== 'A' && (
+          <SprintColumn label="Sprint B" selectedSprintId={colBId} onSelect={setColBId} bg="bg-[#0f0f0f]" {...columnProps}
+            activeTaskIds={activeTaskIdsB} onActivate={(id) => handleActivate(id, 'b')}
+            isExpanded={expandedCol === 'B'} onExpand={() => setExpandedCol('B')} onCollapse={() => setExpandedCol(null)} />
+        )}
       </div>
 
       {sprintProjectId && (
