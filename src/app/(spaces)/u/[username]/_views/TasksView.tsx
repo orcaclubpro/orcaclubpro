@@ -14,7 +14,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { updateTaskStatus, updateTask, createTask } from '@/actions/tasks'
-import { updateSprint, addSprintNote, deleteSprintNote } from '@/actions/sprints'
+import { updateSprint, addSprintNote, deleteSprintNote, updateSprintStatus } from '@/actions/sprints'
 import { cn } from '@/lib/utils'
 import { CreateSprintModal } from '@/components/dashboard/CreateSprintModal'
 
@@ -522,10 +522,17 @@ function ColumnBody({
               <button
                 type="button"
                 onClick={isExpanded ? onCollapse : onExpand}
-                title={isExpanded ? 'Collapse column' : 'Expand column'}
-                className="p-1 rounded-md text-gray-600 hover:text-gray-300 hover:bg-white/[0.06] transition-colors"
+                className={cn(
+                  'flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium transition-colors',
+                  isExpanded
+                    ? 'text-gray-400 hover:text-white bg-white/[0.06] hover:bg-white/[0.10]'
+                    : 'text-gray-500 hover:text-gray-200 hover:bg-white/[0.06]'
+                )}
               >
-                {isExpanded ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />}
+                {isExpanded
+                  ? <><Minimize2 className="size-3" />Collapse</>
+                  : <><Maximize2 className="size-3" />Expand</>
+                }
               </button>
             </div>
           </div>
@@ -677,7 +684,7 @@ function TaskTimeline({
   selectedSprintId: string | null
   onSelect: (id: string | null) => void
 }) {
-  const [isOpen, setIsOpen] = useState(true)
+  const [isOpen, setIsOpen] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   // Filter to project's sprints only
@@ -695,7 +702,7 @@ function TaskTimeline({
     : Date.now() + 30 * 86_400_000
   const tlDur = tlEnd - tlStart || 1
   const totalDays = Math.round(tlDur / 86_400_000)
-  const timelineWidth = Math.max(600, totalDays * TL_PX_PER_DAY)
+  const timelineWidth = Math.max(1200, totalDays * TL_PX_PER_DAY)
 
   const toPx = (d: string | null | undefined) => {
     if (!d) return 0
@@ -782,7 +789,7 @@ function TaskTimeline({
             className="overflow-x-auto [&::-webkit-scrollbar]:h-[3px] [&::-webkit-scrollbar-thumb]:bg-white/[0.12] [&::-webkit-scrollbar-track]:bg-transparent"
             style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.12) transparent' }}
           >
-            <div className="relative select-none" style={{ width: timelineWidth, height: innerH, minWidth: '100%' }}>
+            <div className="relative select-none" style={{ width: timelineWidth, height: innerH }}>
 
               {/* Sprint bands */}
               {sprintBands.map((sprint) => {
@@ -946,10 +953,10 @@ function SprintColumn({
   const [editDraft, setEditDraft] = useState({ name: '', goalDescription: '', description: '', startDate: '', endDate: '' })
   const [isSavingSprint, startSprintSave] = useTransition()
   const [localNotes, setLocalNotes] = useState<{ text: string; createdAt?: string | null }[]>([])
-  const [notesOpen, setNotesOpen] = useState(false)
   const [newNoteText, setNewNoteText] = useState('')
   const [isAddingNote, startAddNote] = useTransition()
   const [, startDeleteNote] = useTransition()
+  const [isFinishingSprint, startFinishSprint] = useTransition()
   const noteInputRef = useRef<HTMLTextAreaElement>(null)
 
   // Sync notes when sprint changes
@@ -957,7 +964,6 @@ function SprintColumn({
   useEffect(() => {
     const s = sprintId ? sprintMap.get(sprintId) : null
     setLocalNotes(Array.isArray(s?.notes) ? s.notes : [])
-    setNotesOpen(false)
   }, [sprintId, sprintMap])
 
   useEffect(() => { if (!isExpanded) setEditMode(false) }, [isExpanded])
@@ -984,6 +990,13 @@ function SprintColumn({
         endDate: editDraft.endDate || undefined,
       })
       setEditMode(false)
+      router.refresh()
+    })
+  }
+
+  const handleFinishSprint = (s: any, status: 'finished' | 'in-progress' = 'finished') => {
+    startFinishSprint(async () => {
+      await updateSprintStatus({ sprintId: s.id, status })
       router.refresh()
     })
   }
@@ -1032,11 +1045,13 @@ function SprintColumn({
   const pendingC = columnTasks.filter((t) => t.status === 'pending').length
 
   return (
-    <div className={`flex-1 flex min-w-0 min-h-0 relative ${bg}`}>
+    <div className={`flex-1 flex min-w-0 min-h-0 overflow-hidden relative ${bg}`}>
 
       {/* Sprint detail sidebar — LEFT side, expanded only, independent scroll */}
       {isExpanded && sprint && (
-        <div className="w-80 shrink-0 border-r border-white/[0.06] overflow-y-auto overscroll-contain flex flex-col bg-[#0b0b0b] self-stretch">
+        <div className="w-80 shrink-0 border-r border-white/[0.06] flex flex-col min-h-0 overflow-hidden bg-[#0b0b0b]">
+          {/* ── Scrollable sprint details + notes list ── */}
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
 
           {/* Header: status + name + edit toggle */}
           <div className="px-6 pt-6 pb-5 border-b border-white/[0.06]">
@@ -1135,6 +1150,41 @@ function SprintColumn({
             </div>
           </div>
 
+          {/* Notes list — inside scroll area, under project progression */}
+          <div className="px-6 pt-5 pb-4 border-b border-white/[0.04]">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.14em]">Notes</span>
+              {localNotes.length > 0 && (
+                <span className="text-[9px] text-gray-600 tabular-nums">{localNotes.length}</span>
+              )}
+            </div>
+            {localNotes.length === 0 && (
+              <p className="text-xs text-gray-700 py-1">No notes yet</p>
+            )}
+            <div className="space-y-3">
+              {localNotes.map((note, i) => (
+                <div key={i} className="flex items-start gap-2 group">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-gray-200 leading-relaxed break-words">{note.text}</p>
+                    {note.createdAt && (
+                      <p className="text-[9px] text-gray-600 mt-0.5">
+                        {new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(note.createdAt))}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteNote(sprint, i)}
+                    className="shrink-0 p-0.5 rounded text-gray-700 hover:text-red-400 hover:bg-red-400/[0.08] opacity-0 group-hover:opacity-100 transition-all"
+                    title="Delete note"
+                  >
+                    <X className="size-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* Description */}
           {(sprint.description || editMode) && (
             <div className="px-6 py-5 border-b border-white/[0.04]">
@@ -1178,12 +1228,66 @@ function SprintColumn({
             </div>
           )}
 
+          {/* Finish / Reopen Sprint button */}
+          {!editMode && (
+            <div className="px-6 py-5">
+              {sprint.status === 'finished' ? (
+                <button
+                  type="button"
+                  onClick={() => handleFinishSprint(sprint, 'in-progress')}
+                  disabled={isFinishingSprint}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-white/[0.06] border border-white/[0.10] text-white text-sm font-semibold hover:bg-white/[0.10] transition-colors disabled:opacity-50"
+                >
+                  {isFinishingSprint ? <Loader2 className="size-4 animate-spin" /> : <Zap className="size-4" />}
+                  Reopen Sprint
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleFinishSprint(sprint, 'finished')}
+                  disabled={isFinishingSprint}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-white text-black text-sm font-semibold hover:bg-gray-100 transition-colors disabled:opacity-50"
+                >
+                  {isFinishingSprint ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
+                  Finish Sprint
+                </button>
+              )}
+            </div>
+          )}
+
+          </div>{/* end scrollable area */}
+
+          {/* ── Pinned add-note input ── */}
+          <div className="shrink-0 px-6 py-4 border-t border-white/[0.06] bg-[#0b0b0b]">
+            <div className="flex items-start gap-2">
+              <Textarea
+                ref={noteInputRef}
+                value={newNoteText}
+                onChange={(e) => setNewNoteText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAddNote(sprint) }
+                  if (e.key === 'Escape') setNewNoteText('')
+                }}
+                placeholder="Add a note… (Enter to save)"
+                rows={2}
+                disabled={isAddingNote}
+                className="flex-1 bg-white/[0.03] border-white/[0.06] text-white text-sm placeholder:text-gray-700 focus:border-white/[0.15] resize-none min-h-0"
+              />
+              {newNoteText.trim() && (
+                <button type="button" onClick={() => handleAddNote(sprint)} disabled={isAddingNote}
+                  className="p-1.5 rounded-lg bg-intelligence-cyan/10 text-intelligence-cyan hover:bg-intelligence-cyan/20 transition-colors disabled:opacity-40 shrink-0 mt-0.5">
+                  {isAddingNote ? <Loader2 className="size-3 animate-spin" /> : <Check className="size-3" />}
+                </button>
+              )}
+            </div>
+          </div>
+
         </div>
       )}
 
       {/* Task list panel */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
           <ColumnBody
             sprint={sprint} selectedSprintId={selectedSprintId} sprintMap={sprintMap} onSelect={onSelect}
             columnTasks={columnTasks} completedCount={completedCount} progress={progress}
@@ -1197,95 +1301,6 @@ function SprintColumn({
         </div>
       </div>
 
-      {/* Floating notes FAB — expanded view only, positioned relative to SprintColumn outer */}
-      {isExpanded && sprint && (
-        <div className="absolute bottom-4 right-4 z-20 flex flex-col items-end gap-2">
-          {/* Expanded notes panel */}
-          {notesOpen && (
-            <div className="w-72 rounded-xl border border-white/[0.08] bg-[#111111] shadow-2xl shadow-black/60 flex flex-col max-h-80 overflow-hidden">
-              {/* Panel header */}
-              <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/[0.06] shrink-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.12em]">Notes</span>
-                  {localNotes.length > 0 && (
-                    <span className="text-[10px] text-gray-600 tabular-nums">{localNotes.length}</span>
-                  )}
-                </div>
-                <button type="button" onClick={() => setNotesOpen(false)}
-                  className="p-0.5 text-gray-600 hover:text-gray-300 transition-colors">
-                  <X className="size-3.5" />
-                </button>
-              </div>
-              {/* Notes list */}
-              <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2.5">
-                {localNotes.length === 0 && (
-                  <p className="text-xs text-gray-700 text-center py-4">No notes yet</p>
-                )}
-                {localNotes.map((note, i) => (
-                  <div key={i} className="flex items-start gap-2 group">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-gray-300 leading-relaxed break-words">{note.text}</p>
-                      {note.createdAt && (
-                        <p className="text-[9px] text-gray-700 mt-0.5">
-                          {new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(note.createdAt))}
-                        </p>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteNote(sprint, i)}
-                      className="shrink-0 p-0.5 rounded text-gray-700 hover:text-red-400 hover:bg-red-400/[0.08] opacity-0 group-hover:opacity-100 transition-all"
-                      title="Delete note"
-                    >
-                      <X className="size-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-              {/* Add note input */}
-              <div className="px-4 pb-3 pt-2 border-t border-white/[0.06] shrink-0">
-                <div className="flex items-start gap-2">
-                  <Textarea
-                    ref={noteInputRef}
-                    value={newNoteText}
-                    onChange={(e) => setNewNoteText(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAddNote(sprint) }
-                      if (e.key === 'Escape') setNewNoteText('')
-                    }}
-                    placeholder="Add a note… (Enter to save)"
-                    rows={2}
-                    disabled={isAddingNote}
-                    className="flex-1 bg-white/[0.03] border-white/[0.06] text-white text-xs placeholder:text-gray-700 focus:border-white/[0.15] resize-none min-h-0"
-                  />
-                  {newNoteText.trim() && (
-                    <button type="button" onClick={() => handleAddNote(sprint)} disabled={isAddingNote}
-                      className="p-1.5 rounded-lg bg-intelligence-cyan/10 text-intelligence-cyan hover:bg-intelligence-cyan/20 transition-colors disabled:opacity-40 shrink-0 mt-0.5">
-                      {isAddingNote ? <Loader2 className="size-3 animate-spin" /> : <Check className="size-3" />}
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Pill toggle button */}
-          <button
-            type="button"
-            onClick={() => setNotesOpen((p) => !p)}
-            className={cn(
-              'flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-medium transition-all border shadow-lg',
-              notesOpen
-                ? 'bg-white/[0.08] border-white/[0.12] text-white shadow-black/40'
-                : 'bg-[#111111] border-white/[0.07] text-gray-500 hover:text-gray-300 hover:border-white/[0.12] shadow-black/60',
-            )}
-          >
-            <span className={cn('size-1.5 rounded-full', localNotes.length > 0 ? 'bg-intelligence-cyan/60' : 'bg-gray-600')} />
-            Notes
-            {localNotes.length > 0 && <span className="tabular-nums">{localNotes.length}</span>}
-          </button>
-        </div>
-      )}
 
     </div>
   )
@@ -1902,9 +1917,10 @@ export function TasksView({ tasks, sprints = [], projects = [] }: TasksViewProps
 
   return (
     <>
+      {/* main has zoom:1.3 — divide by zoom factor so visual height = viewport minus header */}
       <div
         className="rounded-xl border border-white/[0.06] overflow-hidden"
-        style={{ height: 'calc(100svh - 64px)' }}
+        style={{ height: 'calc(100svh / 1.3 - 49px)' }}
       >
         <TaskBoard {...boardProps} isPopup={false} onExpandToggle={() => setPopup(true)} />
       </div>
