@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useTransition, useRef } from 'react'
+import { useState, useEffect, useTransition, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { Check, Zap, Maximize2, Minimize2, X, Pencil, Plus, Loader2, ChevronRight, ChevronDown, Target, AlignLeft, Calendar } from 'lucide-react'
@@ -14,7 +14,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { updateTaskStatus, updateTask, createTask } from '@/actions/tasks'
-import { updateSprint, addSprintNote } from '@/actions/sprints'
+import { updateSprint, addSprintNote, deleteSprintNote } from '@/actions/sprints'
 import { cn } from '@/lib/utils'
 import { CreateSprintModal } from '@/components/dashboard/CreateSprintModal'
 
@@ -88,6 +88,10 @@ function getSprintObj(task: any): any | null {
 
 function fmtDate(d: string) {
   return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date(d))
+}
+
+function fmtMonth(d: Date) {
+  return d.toLocaleDateString('en-US', { month: 'short', ...(d.getMonth() === 0 ? { year: '2-digit' } : {}) })
 }
 
 function isOverdue(d: string | null | undefined): boolean {
@@ -508,46 +512,57 @@ function ColumnBody({
 
   return (
     <>
-      {/* Sprint selector header */}
-      <div className="px-4 pt-4 pb-3 border-b border-white/[0.06] shrink-0">
-        <div className="flex items-center justify-between mb-2.5">
-          <span className="text-[9px] font-bold gradient-text uppercase tracking-[0.15em]">{label}</span>
-          <div className="flex items-center gap-2">
-            {sCfg && <span className={`text-[10px] font-medium ${sCfg.text}`}>{sCfg.label}</span>}
-            <button
-              type="button"
-              onClick={isExpanded ? onCollapse : onExpand}
-              title={isExpanded ? 'Collapse column' : 'Expand column'}
-              className="p-1 rounded-md text-gray-600 hover:text-gray-300 hover:bg-white/[0.06] transition-colors"
-            >
-              {isExpanded ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />}
-            </button>
-          </div>
-        </div>
-        <Select value={selectedSprintId ?? UNASSIGNED} onValueChange={(v) => onSelect(v === UNASSIGNED ? null : v)}>
-          <SelectTrigger className="h-8 bg-white/[0.04] border-white/[0.08] text-white text-sm focus:border-intelligence-cyan/40">
-            <SelectValue placeholder="Select sprint" />
-          </SelectTrigger>
-          <SelectContent className="bg-[#1a1a1a] border-white/[0.08] z-[300]">
-            <SelectItem value={UNASSIGNED} className="text-gray-400">Unassigned tasks</SelectItem>
-            {allSprints.map((s) => {
-              const projName = typeof s.project === 'object' ? (s.project?.name ?? '') : ''
-              return (
-                <SelectItem key={s.id} value={s.id} className="text-white">
-                  {s.name}
-                  {projName && <span className="text-gray-500 ml-1.5 text-xs">· {projName}</span>}
-                </SelectItem>
-              )
-            })}
-          </SelectContent>
-        </Select>
-        {columnTasks.length > 0 && (
-          <div className="flex items-center gap-2 mt-2.5">
-            <div className="flex-1 h-[3px] bg-white/[0.05] rounded-full overflow-hidden">
-              <div className={`h-full rounded-full transition-all duration-500 ${sCfg?.bar ?? 'bg-intelligence-cyan/60'}`} style={{ width: `${progress}%` }} />
+      {/* Sticky header group: sprint selector + timeline (when expanded) */}
+      <div className="sticky top-0 z-10 bg-[#0f0f0f]">
+        <div className="px-4 pt-4 pb-3 border-b border-white/[0.06] shrink-0">
+          <div className="flex items-center justify-between mb-2.5">
+            <span className="text-[9px] font-bold gradient-text uppercase tracking-[0.15em]">{label}</span>
+            <div className="flex items-center gap-2">
+              {sCfg && <span className={`text-[10px] font-medium ${sCfg.text}`}>{sCfg.label}</span>}
+              <button
+                type="button"
+                onClick={isExpanded ? onCollapse : onExpand}
+                title={isExpanded ? 'Collapse column' : 'Expand column'}
+                className="p-1 rounded-md text-gray-600 hover:text-gray-300 hover:bg-white/[0.06] transition-colors"
+              >
+                {isExpanded ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />}
+              </button>
             </div>
-            <span className="text-[10px] text-gray-300 shrink-0 tabular-nums">{completedCount}/{columnTasks.length}</span>
           </div>
+          <Select value={selectedSprintId ?? UNASSIGNED} onValueChange={(v) => onSelect(v === UNASSIGNED ? null : v)}>
+            <SelectTrigger className="h-8 bg-white/[0.04] border-white/[0.08] text-white text-sm focus:border-intelligence-cyan/40">
+              <SelectValue placeholder="Select sprint" />
+            </SelectTrigger>
+            <SelectContent className="bg-[#1a1a1a] border-white/[0.08] z-[300]">
+              <SelectItem value={UNASSIGNED} className="text-gray-400">Unassigned tasks</SelectItem>
+              {allSprints.map((s) => {
+                const projName = typeof s.project === 'object' ? (s.project?.name ?? '') : ''
+                return (
+                  <SelectItem key={s.id} value={s.id} className="text-white">
+                    {s.name}
+                    {projName && <span className="text-gray-500 ml-1.5 text-xs">· {projName}</span>}
+                  </SelectItem>
+                )
+              })}
+            </SelectContent>
+          </Select>
+          {columnTasks.length > 0 && (
+            <div className="flex items-center gap-2 mt-2.5">
+              <div className="flex-1 h-[3px] bg-white/[0.05] rounded-full overflow-hidden">
+                <div className={`h-full rounded-full transition-all duration-500 ${sCfg?.bar ?? 'bg-intelligence-cyan/60'}`} style={{ width: `${progress}%` }} />
+              </div>
+              <span className="text-[10px] text-gray-300 shrink-0 tabular-nums">{completedCount}/{columnTasks.length}</span>
+            </div>
+          )}
+        </div>
+        {/* Full project timeline — shown when expanded */}
+        {isExpanded && sprint && (
+          <TaskTimeline
+            sprintMap={sprintMap}
+            projectId={sprint ? getProjectId(sprint) : null}
+            selectedSprintId={selectedSprintId}
+            onSelect={onSelect}
+          />
         )}
       </div>
 
@@ -642,6 +657,187 @@ function ColumnBody({
         )}
       </div>
     </>
+  )
+}
+
+// ─── task timeline ────────────────────────────────────────────────────────────
+
+const TL_TRACK_Y    = 16
+const TL_TRACK_H    = 3
+const TL_SPRINT_TOP = TL_TRACK_Y + TL_TRACK_H + 6
+const TL_SPRINT_H   = 26
+const TL_SPRINT_GAP = 4
+const TL_PX_PER_DAY = 10
+
+function TaskTimeline({
+  sprintMap, projectId, selectedSprintId, onSelect,
+}: {
+  sprintMap: Map<string, any>
+  projectId: string | null
+  selectedSprintId: string | null
+  onSelect: (id: string | null) => void
+}) {
+  const [isOpen, setIsOpen] = useState(true)
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  // Filter to project's sprints only
+  const projectSprints = useMemo(
+    () => Array.from(sprintMap.values()).filter((s) => !projectId || getProjectId(s) === projectId),
+    [sprintMap, projectId],
+  )
+  const withDates = projectSprints.filter((s) => s.startDate && s.endDate)
+
+  const tlStart = withDates.length > 0
+    ? Math.min(...withDates.map((s) => new Date(s.startDate!).getTime()))
+    : Date.now()
+  const tlEnd = withDates.length > 0
+    ? Math.max(...withDates.map((s) => new Date(s.endDate!).getTime())) + 14 * 86_400_000
+    : Date.now() + 30 * 86_400_000
+  const tlDur = tlEnd - tlStart || 1
+  const totalDays = Math.round(tlDur / 86_400_000)
+  const timelineWidth = Math.max(600, totalDays * TL_PX_PER_DAY)
+
+  const toPx = (d: string | null | undefined) => {
+    if (!d) return 0
+    return Math.max(0, Math.min(timelineWidth, ((new Date(d).getTime() - tlStart) / tlDur) * timelineWidth))
+  }
+
+  const todayPx = Math.max(0, Math.min(timelineWidth, ((Date.now() - tlStart) / tlDur) * timelineWidth))
+
+  // Scroll to today on open
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el || !isOpen || todayPx <= 0) return
+    el.scrollLeft = Math.max(0, todayPx - el.clientWidth * 0.35)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen])
+
+  // Sprint bands with multi-row layout to prevent overlap
+  const sprintBands = useMemo(() => {
+    if (withDates.length === 0) return []
+    const raw = withDates.map((s) => {
+      const leftPx  = toPx(s.startDate)
+      const rightPx = toPx(s.endDate)
+      return { ...s, leftPx, widthPx: Math.max(4, rightPx - leftPx), cfg: SPRINT_STATUS_CFG[s.status] ?? SPRINT_STATUS_CFG.pending, row: 0 }
+    }).sort((a, b) => a.leftPx - b.leftPx)
+    const rowEnds: number[] = []
+    raw.forEach((band) => {
+      let row = rowEnds.findIndex((end) => end <= band.leftPx - 2)
+      if (row === -1) row = rowEnds.length
+      rowEnds[row] = band.leftPx + band.widthPx
+      band.row = row
+    })
+    return raw
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectSprints, tlStart, tlEnd])
+
+  const rowCount  = sprintBands.length === 0 ? 1 : Math.max(...sprintBands.map((b) => b.row + 1))
+  const tickY     = TL_SPRINT_TOP + rowCount * (TL_SPRINT_H + TL_SPRINT_GAP) + 8
+  const innerH    = tickY + 24
+
+  const monthTicks = useMemo(() => {
+    const ticks: { label: string; px: number }[] = []
+    const cursor = new Date(new Date(tlStart).getFullYear(), new Date(tlStart).getMonth() + 1, 1)
+    const end    = new Date(tlEnd)
+    while (cursor < end) {
+      ticks.push({ label: fmtMonth(cursor), px: toPx(cursor.toISOString()) })
+      cursor.setMonth(cursor.getMonth() + 1)
+    }
+    return ticks
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tlStart, tlEnd])
+
+  return (
+    <div className="border-b border-white/[0.06] bg-[#0a0a0a]">
+      {/* Header row */}
+      <div className="flex items-center justify-between px-4 py-2">
+        <div className="flex items-center gap-2">
+          <span className="text-[8px] font-bold text-gray-600 uppercase tracking-[0.16em]">Project Track</span>
+          {sprintBands.length > 0 && (
+            <span className="text-[8px] text-gray-700">{sprintBands.length} sprint{sprintBands.length !== 1 ? 's' : ''}</span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {isOpen && todayPx > 0 && todayPx < timelineWidth && (
+            <button type="button"
+              onClick={() => { const el = scrollRef.current; if (el) el.scrollTo({ left: Math.max(0, todayPx - el.clientWidth * 0.35), behavior: 'smooth' }) }}
+              className="text-[8px] text-intelligence-cyan/50 hover:text-intelligence-cyan transition-colors"
+            >→ today</button>
+          )}
+          <button type="button" onClick={() => setIsOpen((p) => !p)}
+            title={isOpen ? 'Minimize timeline' : 'Expand timeline'}
+            className="p-0.5 rounded text-gray-700 hover:text-gray-300 hover:bg-white/[0.06] transition-colors">
+            {isOpen ? <Minimize2 className="size-3" /> : <Maximize2 className="size-3" />}
+          </button>
+        </div>
+      </div>
+
+      {/* Timeline body */}
+      {isOpen && (
+        <div className="relative">
+          <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-[#0a0a0a] to-transparent z-10 pointer-events-none" />
+          <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-[#0a0a0a] to-transparent z-10 pointer-events-none" />
+          <div
+            ref={scrollRef}
+            className="overflow-x-auto [&::-webkit-scrollbar]:h-[3px] [&::-webkit-scrollbar-thumb]:bg-white/[0.12] [&::-webkit-scrollbar-track]:bg-transparent"
+            style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.12) transparent' }}
+          >
+            <div className="relative select-none" style={{ width: timelineWidth, height: innerH, minWidth: '100%' }}>
+
+              {/* Sprint bands */}
+              {sprintBands.map((sprint) => {
+                const top = TL_SPRINT_TOP + sprint.row * (TL_SPRINT_H + TL_SPRINT_GAP)
+                const isSelected = sprint.id === selectedSprintId
+                return (
+                  <button key={sprint.id} type="button" onClick={() => onSelect(sprint.id)} title={sprint.name}
+                    className={cn(
+                      'absolute rounded-sm flex items-center px-1.5 overflow-hidden transition-all duration-150',
+                      isSelected ? 'ring-1 ring-intelligence-cyan/50 z-10 opacity-100' : 'opacity-55 hover:opacity-85 z-0',
+                      sprint.cfg.bar,
+                    )}
+                    style={{ left: sprint.leftPx, top, width: sprint.widthPx, height: TL_SPRINT_H }}
+                  >
+                    {sprint.widthPx > 36 && (
+                      <span className={cn('text-[8px] font-semibold truncate leading-none', sprint.cfg.text)}>
+                        {sprint.name}
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+
+              {/* Track bar */}
+              <div className="absolute left-0 right-0 bg-white/[0.06] rounded-full" style={{ top: TL_TRACK_Y, height: TL_TRACK_H }} />
+              {todayPx > 0 && (
+                <div className="absolute left-0 rounded-full" style={{ top: TL_TRACK_Y, height: TL_TRACK_H, width: todayPx, background: 'linear-gradient(to right, #67e8f9, #3b82f6)' }} />
+              )}
+
+              {/* Today marker */}
+              {todayPx > 0 && todayPx < timelineWidth && (
+                <div className="absolute pointer-events-none z-20" style={{ left: todayPx, top: 0, height: innerH, transform: 'translateX(-50%)' }}>
+                  <div className="absolute left-1/2 -translate-x-1/2 w-px h-full" style={{ background: 'linear-gradient(to bottom, rgba(103,232,249,0.35), rgba(103,232,249,0.05))' }} />
+                  <p className="absolute left-1/2 -translate-x-1/2 text-[7px] tracking-[0.15em] uppercase text-intelligence-cyan/60 font-medium whitespace-nowrap" style={{ top: 2 }}>
+                    today
+                  </p>
+                  <div className="absolute left-1/2 z-30" style={{ top: TL_TRACK_Y - 3, transform: 'translateX(-50%)' }}>
+                    <div className="size-2 rounded-full bg-intelligence-cyan shadow-[0_0_6px_rgba(103,232,249,0.85)]" />
+                  </div>
+                </div>
+              )}
+
+              {/* Month tick marks */}
+              {monthTicks.map((tick) => (
+                <div key={tick.px} className="absolute pointer-events-none" style={{ left: tick.px, top: tickY }}>
+                  <div className="w-px h-2 bg-white/[0.10] mx-auto" />
+                  <p className="text-[7px] text-gray-700 text-center mt-0.5 whitespace-nowrap -translate-x-1/2">{tick.label}</p>
+                </div>
+              ))}
+
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -750,9 +946,10 @@ function SprintColumn({
   const [editDraft, setEditDraft] = useState({ name: '', goalDescription: '', description: '', startDate: '', endDate: '' })
   const [isSavingSprint, startSprintSave] = useTransition()
   const [localNotes, setLocalNotes] = useState<{ text: string; createdAt?: string | null }[]>([])
-  const [notesExpanded, setNotesExpanded] = useState(false)
+  const [notesOpen, setNotesOpen] = useState(false)
   const [newNoteText, setNewNoteText] = useState('')
   const [isAddingNote, startAddNote] = useTransition()
+  const [, startDeleteNote] = useTransition()
   const noteInputRef = useRef<HTMLTextAreaElement>(null)
 
   // Sync notes when sprint changes
@@ -760,7 +957,7 @@ function SprintColumn({
   useEffect(() => {
     const s = sprintId ? sprintMap.get(sprintId) : null
     setLocalNotes(Array.isArray(s?.notes) ? s.notes : [])
-    setNotesExpanded(false)
+    setNotesOpen(false)
   }, [sprintId, sprintMap])
 
   useEffect(() => { if (!isExpanded) setEditMode(false) }, [isExpanded])
@@ -803,6 +1000,14 @@ function SprintColumn({
     })
   }
 
+  const handleDeleteNote = (s: any, noteIndex: number) => {
+    setLocalNotes((prev) => prev.filter((_, i) => i !== noteIndex))
+    startDeleteNote(async () => {
+      await deleteSprintNote({ sprintId: s.id, noteIndex })
+      router.refresh()
+    })
+  }
+
   const sprint = selectedSprintId ? sprintMap.get(selectedSprintId) : null
   const projectId = sprint ? getProjectId(sprint) : null
   const columnTasks = tasksForSprint(allTasks, selectedSprintId)
@@ -827,7 +1032,7 @@ function SprintColumn({
   const pendingC = columnTasks.filter((t) => t.status === 'pending').length
 
   return (
-    <div className={`flex-1 flex min-w-0 ${bg}`}>
+    <div className={`flex-1 flex min-w-0 min-h-0 relative ${bg}`}>
 
       {/* Sprint detail sidebar — LEFT side, expanded only, independent scroll */}
       {isExpanded && sprint && (
@@ -973,66 +1178,6 @@ function SprintColumn({
             </div>
           )}
 
-          {/* Notes */}
-          <div className="px-6 py-5">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <p className="text-[9px] font-bold text-gray-500 uppercase tracking-[0.14em]">Notes</p>
-                {localNotes.length > 0 && (
-                  <span className="text-[9px] text-gray-600 tabular-nums">{localNotes.length}</span>
-                )}
-              </div>
-              {localNotes.length > 3 && (
-                <button type="button" onClick={() => setNotesExpanded((p) => !p)}
-                  className="text-[9px] text-gray-600 hover:text-gray-400 transition-colors">
-                  {notesExpanded ? 'Show less' : `Show all ${localNotes.length}`}
-                </button>
-              )}
-            </div>
-
-            {/* Note list */}
-            {localNotes.length > 0 && (
-              <div className="space-y-2 mb-3">
-                {(notesExpanded ? localNotes : localNotes.slice(-3)).map((note, i) => (
-                  <div key={i} className="flex items-start gap-2.5 group">
-                    <span className="size-1 rounded-full bg-gray-700 shrink-0 mt-1.5" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-gray-300 leading-relaxed break-words">{note.text}</p>
-                      {note.createdAt && (
-                        <p className="text-[9px] text-gray-700 mt-0.5">
-                          {new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(note.createdAt))}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Add note */}
-            <div className="flex items-start gap-2">
-              <Textarea
-                ref={noteInputRef}
-                value={newNoteText}
-                onChange={(e) => setNewNoteText(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAddNote(sprint) }
-                  if (e.key === 'Escape') setNewNoteText('')
-                }}
-                placeholder="Add a note… (Enter to save)"
-                rows={2}
-                disabled={isAddingNote}
-                className="flex-1 bg-white/[0.03] border-white/[0.06] text-white text-xs placeholder:text-gray-700 focus:border-white/[0.15] resize-none min-h-0"
-              />
-              {newNoteText.trim() && (
-                <button type="button" onClick={() => handleAddNote(sprint)} disabled={isAddingNote}
-                  className="p-1.5 rounded-lg bg-intelligence-cyan/10 text-intelligence-cyan hover:bg-intelligence-cyan/20 transition-colors disabled:opacity-40 shrink-0 mt-0.5">
-                  {isAddingNote ? <Loader2 className="size-3 animate-spin" /> : <Check className="size-3" />}
-                </button>
-              )}
-            </div>
-          </div>
-
         </div>
       )}
 
@@ -1051,6 +1196,96 @@ function SprintColumn({
           />
         </div>
       </div>
+
+      {/* Floating notes FAB — expanded view only, positioned relative to SprintColumn outer */}
+      {isExpanded && sprint && (
+        <div className="absolute bottom-4 right-4 z-20 flex flex-col items-end gap-2">
+          {/* Expanded notes panel */}
+          {notesOpen && (
+            <div className="w-72 rounded-xl border border-white/[0.08] bg-[#111111] shadow-2xl shadow-black/60 flex flex-col max-h-80 overflow-hidden">
+              {/* Panel header */}
+              <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/[0.06] shrink-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.12em]">Notes</span>
+                  {localNotes.length > 0 && (
+                    <span className="text-[10px] text-gray-600 tabular-nums">{localNotes.length}</span>
+                  )}
+                </div>
+                <button type="button" onClick={() => setNotesOpen(false)}
+                  className="p-0.5 text-gray-600 hover:text-gray-300 transition-colors">
+                  <X className="size-3.5" />
+                </button>
+              </div>
+              {/* Notes list */}
+              <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2.5">
+                {localNotes.length === 0 && (
+                  <p className="text-xs text-gray-700 text-center py-4">No notes yet</p>
+                )}
+                {localNotes.map((note, i) => (
+                  <div key={i} className="flex items-start gap-2 group">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-gray-300 leading-relaxed break-words">{note.text}</p>
+                      {note.createdAt && (
+                        <p className="text-[9px] text-gray-700 mt-0.5">
+                          {new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(note.createdAt))}
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteNote(sprint, i)}
+                      className="shrink-0 p-0.5 rounded text-gray-700 hover:text-red-400 hover:bg-red-400/[0.08] opacity-0 group-hover:opacity-100 transition-all"
+                      title="Delete note"
+                    >
+                      <X className="size-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              {/* Add note input */}
+              <div className="px-4 pb-3 pt-2 border-t border-white/[0.06] shrink-0">
+                <div className="flex items-start gap-2">
+                  <Textarea
+                    ref={noteInputRef}
+                    value={newNoteText}
+                    onChange={(e) => setNewNoteText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAddNote(sprint) }
+                      if (e.key === 'Escape') setNewNoteText('')
+                    }}
+                    placeholder="Add a note… (Enter to save)"
+                    rows={2}
+                    disabled={isAddingNote}
+                    className="flex-1 bg-white/[0.03] border-white/[0.06] text-white text-xs placeholder:text-gray-700 focus:border-white/[0.15] resize-none min-h-0"
+                  />
+                  {newNoteText.trim() && (
+                    <button type="button" onClick={() => handleAddNote(sprint)} disabled={isAddingNote}
+                      className="p-1.5 rounded-lg bg-intelligence-cyan/10 text-intelligence-cyan hover:bg-intelligence-cyan/20 transition-colors disabled:opacity-40 shrink-0 mt-0.5">
+                      {isAddingNote ? <Loader2 className="size-3 animate-spin" /> : <Check className="size-3" />}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Pill toggle button */}
+          <button
+            type="button"
+            onClick={() => setNotesOpen((p) => !p)}
+            className={cn(
+              'flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-medium transition-all border shadow-lg',
+              notesOpen
+                ? 'bg-white/[0.08] border-white/[0.12] text-white shadow-black/40'
+                : 'bg-[#111111] border-white/[0.07] text-gray-500 hover:text-gray-300 hover:border-white/[0.12] shadow-black/60',
+            )}
+          >
+            <span className={cn('size-1.5 rounded-full', localNotes.length > 0 ? 'bg-intelligence-cyan/60' : 'bg-gray-600')} />
+            Notes
+            {localNotes.length > 0 && <span className="tabular-nums">{localNotes.length}</span>}
+          </button>
+        </div>
+      )}
 
     </div>
   )
