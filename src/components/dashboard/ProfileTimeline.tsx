@@ -4,7 +4,7 @@ import { useState, useMemo, useRef, useEffect } from 'react'
 import { CheckCircle2, Circle, Calendar, ArrowRight, Flag } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
-import type { SerializedProject } from './ProjectsCarousel'
+import type { SerializedProject, SerializedTask } from './ProjectsCarousel'
 import { formatDate } from '@/lib/utils/dateUtils'
 import { cn } from '@/lib/utils'
 
@@ -20,6 +20,21 @@ const SPRINT_H    = 52
 const SPRINT_GAP  = 5   // vertical gap between sprint rows
 
 const PX_PER_DAY = 10
+
+const TASK_STATUS_CFG = {
+  'pending':     { dot: 'bg-gray-500',          glow: '',                                          label: 'Pending'     },
+  'in-progress': { dot: 'bg-intelligence-cyan',  glow: 'shadow-[0_0_6px_rgba(103,232,249,0.6)]',   label: 'In Progress' },
+  'completed':   { dot: 'bg-green-400',          glow: 'shadow-[0_0_6px_rgba(74,222,128,0.5)]',    label: 'Completed'   },
+  'cancelled':   { dot: 'bg-red-400/40',         glow: '',                                          label: 'Cancelled'   },
+} as const
+
+const PRIORITY_LABEL: Record<string, string> = {
+  low: 'Low', medium: 'Medium', high: 'High', urgent: 'Urgent',
+}
+
+const PRIORITY_COLOR: Record<string, string> = {
+  low: 'text-gray-500', medium: 'text-blue-400', high: 'text-yellow-400', urgent: 'text-red-400',
+}
 
 const SPRINT_CFG = {
   pending:       { label: 'Planned',  dot: 'bg-gray-500',          bg: 'bg-white/[0.03]',             border: 'border-white/[0.08]',             text: 'text-gray-500'          },
@@ -59,8 +74,16 @@ export function ProfileTimeline({ project, username }: { project: SerializedProj
   const scrollRef = useRef<HTMLDivElement>(null)
   const [hoveredMilestone, setHoveredMilestone] = useState<number | null>(null)
   const [fixedTooltip, setFixedTooltip] = useState<{ sprint: SprintBand; x: number; y: number } | null>(null)
+  const [taskTooltip, setTaskTooltip] = useState<{ task: SerializedTask; x: number; y: number } | null>(null)
 
   const sprints = project.sprints
+  const datedTasks = useMemo(
+    () =>
+      (project.tasks ?? [])
+        .filter((t) => !!t.dueDate)
+        .sort((a, b) => new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime()),
+    [project.tasks],
+  )
 
   const datedMilestones = useMemo(
     () =>
@@ -310,6 +333,32 @@ export function ProfileTimeline({ project, username }: { project: SerializedProj
                   />
                 </div>
 
+                {/* ── Task due-date markers ─────────────────────────────────── */}
+                {datedTasks.map((task) => {
+                  const px = toPx(task.dueDate)
+                  const cfg = TASK_STATUS_CFG[task.status] ?? TASK_STATUS_CFG.pending
+                  return (
+                    <div
+                      key={task.id}
+                      className="absolute z-10"
+                      style={{ left: px, top: TRACK_Y - 3, transform: 'translateX(-50%)' }}
+                      onMouseEnter={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect()
+                        setTaskTooltip({ task, x: rect.left + rect.width / 2, y: rect.top })
+                      }}
+                      onMouseLeave={() => setTaskTooltip(null)}
+                    >
+                      <div
+                        className={cn(
+                          'size-2 rounded-full cursor-pointer transition-transform duration-150 hover:scale-150',
+                          cfg.dot, cfg.glow,
+                          task.status === 'in-progress' && 'animate-pulse',
+                        )}
+                      />
+                    </div>
+                  )
+                })}
+
                 {/* ── Today indicator ───────────────────────────────────────── */}
                 {todayPx > 0 && todayPx < timelineWidth && (
                   <div
@@ -455,6 +504,12 @@ export function ProfileTimeline({ project, username }: { project: SerializedProj
                 </div>
               </>
             )}
+            {datedTasks.length > 0 && (
+              <div className="flex items-center gap-2">
+                <div className="size-2 rounded-full bg-green-400 shadow-[0_0_4px_rgba(74,222,128,0.5)]" />
+                <span className="text-[10px] text-gray-600">Task (hover for details)</span>
+              </div>
+            )}
             {sprintBands.length > 0 && (
               <div className="flex items-center gap-2">
                 <Image src="/orcaclubpro.png" alt="" width={12} height={12} className="opacity-40" />
@@ -533,6 +588,46 @@ export function ProfileTimeline({ project, username }: { project: SerializedProj
             <Flag className="size-2.5" />
           </div>
           No milestones added yet
+        </div>
+      )}
+
+      {/* ── Fixed-position task tooltip ─────────────────────────────────────── */}
+      {taskTooltip && (
+        <div
+          className="fixed pointer-events-none z-[9999]"
+          style={{
+            left: taskTooltip.x,
+            top: taskTooltip.y,
+            transform: 'translate(-50%, calc(-100% - 10px))',
+          }}
+        >
+          <div className="animate-in fade-in slide-in-from-bottom-1 duration-150 bg-[#0c0c0c] border border-white/[0.12] rounded-xl overflow-hidden shadow-2xl text-left"
+            style={{ minWidth: 190, maxWidth: 260 }}
+          >
+            <div className={cn('h-0.5 w-full', TASK_STATUS_CFG[taskTooltip.task.status]?.dot ?? 'bg-gray-500')} />
+            <div className="px-4 py-3 space-y-1.5">
+              <p className="text-sm font-semibold text-white leading-snug">{taskTooltip.task.title}</p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className={cn(
+                  'text-[9px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full border border-white/[0.10] bg-white/[0.04]',
+                  TASK_STATUS_CFG[taskTooltip.task.status]?.dot.replace('bg-', 'text-').replace('/40', '') ?? 'text-gray-400',
+                )}>
+                  {TASK_STATUS_CFG[taskTooltip.task.status]?.label}
+                </span>
+                {taskTooltip.task.priority && (
+                  <span className={cn('text-[9px] font-semibold', PRIORITY_COLOR[taskTooltip.task.priority])}>
+                    {PRIORITY_LABEL[taskTooltip.task.priority]}
+                  </span>
+                )}
+              </div>
+              {taskTooltip.task.dueDate && (
+                <p className="text-xs text-gray-500 flex items-center gap-1.5">
+                  <Calendar className="size-3 shrink-0" />
+                  Due {formatDate(taskTooltip.task.dueDate)}
+                </p>
+              )}
+            </div>
+          </div>
         </div>
       )}
 

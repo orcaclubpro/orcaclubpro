@@ -65,6 +65,24 @@ const UNASSIGNED = '__unassigned__'
 const PRIORITY_ORDER: Priority[] = ['low', 'medium', 'high', 'urgent']
 const nextPriority = (p: Priority): Priority => PRIORITY_ORDER[(PRIORITY_ORDER.indexOf(p) + 1) % PRIORITY_ORDER.length]
 
+function urgencyScore(task: Task): number {
+  const priorityScore = PRIORITY_ORDER.indexOf((task.priority ?? 'medium') as Priority) // 0–3
+  const overdue = isOverdue(task.dueDate) && task.status !== 'completed' ? 1 : 0
+  return overdue * 100 + priorityScore * 10
+}
+
+function sortByUrgency(tasks: Task[]): Task[] {
+  return [...tasks].sort((a, b) => {
+    const scoreDiff = urgencyScore(b) - urgencyScore(a)
+    if (scoreDiff !== 0) return scoreDiff
+    // Tiebreak: soonest due date first; no due date sinks to bottom
+    if (a.dueDate && b.dueDate) return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
+    if (a.dueDate) return -1
+    if (b.dueDate) return 1
+    return 0
+  })
+}
+
 // ─── interfaces ───────────────────────────────────────────────────────────────
 
 interface TasksTabProps {
@@ -513,7 +531,7 @@ function SprintColumn({
 
   const groups = COLUMN_STATUS_ORDER.map((st) => ({
     status: st,
-    tasks: columnTasks.filter((t) => t.status === st),
+    tasks: sortByUrgency(columnTasks.filter((t) => t.status === st)),
   })).filter((g) => g.tasks.length > 0 && (isExpanded || ACTIVE_TASK_STATUSES.has(g.status)))
 
   return (
@@ -1003,7 +1021,7 @@ export function TasksTab({ tasks, sprints, projectId, readOnly }: TasksTabProps)
                             <p className="text-xs text-gray-300 px-2 py-1">No tasks</p>
                           ) : (
                             <>
-                              {sTasks.slice(0, 10).map((t) => <SidebarTask key={t.id} task={t} />)}
+                              {sortByUrgency(sTasks).slice(0, 10).map((t) => <SidebarTask key={t.id} task={t} />)}
                               {sTasks.length > 10 && (
                                 <p className="text-xs text-gray-300 px-2 py-1">+{sTasks.length - 10} more</p>
                               )}

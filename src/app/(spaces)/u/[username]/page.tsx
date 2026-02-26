@@ -4,12 +4,12 @@ import { getPayload } from 'payload'
 import config from '@payload-config'
 import { Button } from '@/components/ui/button'
 import { HelpCircle, Mail } from 'lucide-react'
-import type { SerializedProject, SerializedSprint } from '@/components/dashboard/ProjectsCarousel'
+import type { SerializedProject, SerializedSprint, SerializedTask } from '@/components/dashboard/ProjectsCarousel'
 import { DashboardTabView } from './DashboardTabView'
 
 // ── Serialization helpers ─────────────────────────────────────────────────────
 
-function serializeProject(p: any, sprints: SerializedSprint[] = []): SerializedProject {
+function serializeProject(p: any, sprints: SerializedSprint[] = [], tasks: SerializedTask[] = []): SerializedProject {
   const clientRaw = p.client
   const client =
     clientRaw && typeof clientRaw === 'object'
@@ -35,6 +35,7 @@ function serializeProject(p: any, sprints: SerializedSprint[] = []): SerializedP
       completed: m.completed ?? false,
     })),
     sprints,
+    tasks,
   }
 }
 
@@ -168,6 +169,21 @@ export default async function DashboardPage({
       sprintsByProject[pid].push(serializeSprint(s))
     }
 
+    const tasksByProject: Record<string, SerializedTask[]> = {}
+    for (const t of allTasks) {
+      if (!t.dueDate) continue
+      const pid = typeof t.project === 'string' ? t.project : (t.project as any)?.id ?? ''
+      if (!pid) continue
+      if (!tasksByProject[pid]) tasksByProject[pid] = []
+      tasksByProject[pid].push({
+        id: t.id,
+        title: t.title ?? '',
+        status: (t.status ?? 'pending') as SerializedTask['status'],
+        priority: (t.priority ?? null) as SerializedTask['priority'],
+        dueDate: t.dueDate,
+      })
+    }
+
     const filteredOrders = clientAccountIds.length > 0
       ? allOrders.filter((o: any) => {
           const caId = typeof o.clientAccount === 'object' ? o.clientAccount?.id : o.clientAccount
@@ -190,7 +206,7 @@ export default async function DashboardPage({
           completedTasksCount,
           completedSprintsCount,
           serializedProjects: allProjects.map((p: any) =>
-            serializeProject(p, sprintsByProject[p.id] ?? [])
+            serializeProject(p, sprintsByProject[p.id] ?? [], tasksByProject[p.id] ?? [])
           ),
           allPackages,
           clientOptions: clientAccounts.map((c: any) => ({ id: c.id, name: c.name })),
@@ -277,15 +293,38 @@ export default async function DashboardPage({
 
   const clientProjectIds = clientProjects.map((p: any) => p.id)
   let clientSprints: any[] = []
+  let clientTasksByProject: Record<string, SerializedTask[]> = {}
   if (clientProjectIds.length > 0) {
-    const { docs: sprints } = await payload.find({
-      collection: 'sprints',
-      where: { project: { in: clientProjectIds } },
-      depth: 0,
-      sort: 'startDate',
-      limit: 200,
-    })
+    const [{ docs: sprints }, { docs: clientTasks }] = await Promise.all([
+      payload.find({
+        collection: 'sprints',
+        where: { project: { in: clientProjectIds } },
+        depth: 0,
+        sort: 'startDate',
+        limit: 200,
+      }),
+      payload.find({
+        collection: 'tasks',
+        where: { and: [{ project: { in: clientProjectIds } }, { dueDate: { exists: true } }] },
+        depth: 0,
+        sort: 'dueDate',
+        limit: 500,
+      }),
+    ])
     clientSprints = sprints
+    for (const t of clientTasks) {
+      if (!t.dueDate) continue
+      const pid = typeof t.project === 'string' ? t.project : (t.project as any)?.id ?? ''
+      if (!pid) continue
+      if (!clientTasksByProject[pid]) clientTasksByProject[pid] = []
+      clientTasksByProject[pid].push({
+        id: t.id,
+        title: t.title ?? '',
+        status: (t.status ?? 'pending') as SerializedTask['status'],
+        priority: (t.priority ?? null) as SerializedTask['priority'],
+        dueDate: t.dueDate,
+      })
+    }
   }
 
   const clientSprintsByProject: Record<string, SerializedSprint[]> = {}
@@ -309,7 +348,7 @@ export default async function DashboardPage({
         clientPackages,
         clientCredentials,
         serializedClientProjects: clientProjects
-          .map((p: any) => serializeProject(p, clientSprintsByProject[p.id] ?? []))
+          .map((p: any) => serializeProject(p, clientSprintsByProject[p.id] ?? [], clientTasksByProject[p.id] ?? []))
           .sort((a: SerializedProject, b: SerializedProject) =>
             new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
           ),

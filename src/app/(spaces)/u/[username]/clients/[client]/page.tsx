@@ -28,7 +28,7 @@ import { DetailTabSlide } from '@/components/dashboard/DetailTabSlide'
 import { ScheduledPaymentsSection } from '@/components/dashboard/ScheduledPaymentsSection'
 import { ClientSettingsCard } from '@/components/dashboard/ClientSettingsCard'
 import { ClientPortfolioTimeline } from '@/components/dashboard/ClientPortfolioTimeline'
-import type { SerializedProject, SerializedSprint } from '@/components/dashboard/ProjectsCarousel'
+import type { SerializedProject, SerializedSprint, SerializedTask } from '@/components/dashboard/ProjectsCarousel'
 import { ProjectRowActions } from '@/components/dashboard/ProjectRowActions'
 
 export async function generateMetadata({
@@ -194,6 +194,7 @@ export default async function ClientDetailPage({
       completed: m.completed ?? false,
     })),
     sprints: sprintsByProject.get(p.id) ?? [],
+    tasks: [] as SerializedTask[],
   }))
 
   const pendingOrders = orders.filter((o) => o.status === 'pending')

@@ -36,6 +36,14 @@ export type SerializedSprint = {
   projectId: string
 }
 
+export type SerializedTask = {
+  id: string
+  title: string
+  status: 'pending' | 'in-progress' | 'completed' | 'cancelled'
+  priority: 'low' | 'medium' | 'high' | 'urgent' | null
+  dueDate: string | null
+}
+
 export type SerializedProject = {
   id: string
   name: string
@@ -49,6 +57,7 @@ export type SerializedProject = {
   client: { id: string; name: string } | null
   milestones: Array<{ id: string; title: string; date: string | null; description: string | null; completed: boolean }>
   sprints: SerializedSprint[]
+  tasks: SerializedTask[]
 }
 
 // ─── Status config ─────────────────────────────────────────────────────────────
