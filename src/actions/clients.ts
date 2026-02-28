@@ -246,6 +246,7 @@ export async function updateClientAccount({
   email,
   phone,
   address,
+  skipWelcomeEmail = false,
 }: {
   id: string
   name: string
@@ -262,6 +263,7 @@ export async function updateClientAccount({
     zip?: string
     country?: string
   }
+  skipWelcomeEmail?: boolean
 }) {
   try {
     const user = await getCurrentUser()
@@ -293,10 +295,10 @@ export async function updateClientAccount({
       },
     })
 
-    // If the email changed, handle the welcome sequence.
+    // If the email changed, handle the welcome sequence (unless explicitly skipped).
     // syncClientAccountToUser has already run synchronously inside payload.update(),
     // so any existing linked User already carries the new email at this point.
-    if (email && email !== oldEmail) {
+    if (email && email !== oldEmail && !skipWelcomeEmail) {
       setImmediate(async () => {
         try {
           // Check whether a client User is linked to this account.
@@ -357,6 +359,50 @@ export async function updateClientAccount({
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to update client account',
+    }
+  }
+}
+
+/**
+ * Resend the welcome/setup email to a client account's primary email.
+ * Generates a fresh password-setup token and sends the branded welcome email.
+ */
+export async function resendClientWelcomeEmail({ id }: { id: string }) {
+  try {
+    const user = await getCurrentUser()
+    if (!user) return { success: false, error: 'Unauthorized' }
+    if (user.role === 'client') return { success: false, error: 'Permission denied' }
+
+    const payload = await getPayload({ config })
+
+    const account = await payload.findByID({
+      collection: 'client-accounts',
+      id,
+      depth: 0,
+      overrideAccess: true,
+    })
+
+    const email = account.email as string | null | undefined
+    if (!email) {
+      return { success: false, error: 'No email address on file for this client' }
+    }
+
+    const emailSent = await createClientUserAndSendWelcome({
+      payload,
+      email,
+      firstName: (account.firstName as string | undefined) || '',
+      lastName: (account.lastName as string | undefined) || '',
+      company: (account.company as string | undefined) || undefined,
+    })
+
+    return emailSent
+      ? { success: true }
+      : { success: false, error: 'Failed to send email — check server logs' }
+  } catch (error) {
+    console.error('[resendClientWelcomeEmail]', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to resend welcome email',
     }
   }
 }

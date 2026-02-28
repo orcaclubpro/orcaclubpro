@@ -4,13 +4,14 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Mail, Building2, Pencil, Check, Loader2,
-  Shield, User, Users, Phone, MapPin,
+  Shield, User, Users, Phone, MapPin, Send, CheckCircle2,
 } from 'lucide-react'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { updateClientAccount } from '@/actions/clients'
+import { Switch } from '@/components/ui/switch'
+import { updateClientAccount, resendClientWelcomeEmail } from '@/actions/clients'
 
 interface Address {
   line1?: string | null
@@ -72,8 +73,13 @@ export function ClientSettingsCard({
     phone: phone ?? '',
     address: address ? { ...blankAddress(), ...address } : blankAddress(),
   })
+  const [sendWelcomeEmail, setSendWelcomeEmail] = useState(true)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Resend welcome email state
+  const [resending, setResending] = useState(false)
+  const [resendResult, setResendResult] = useState<'sent' | 'error' | null>(null)
 
   const initials = getInitials(name)
   const allUsers = [
@@ -92,6 +98,7 @@ export function ClientSettingsCard({
       address: address ? { ...blankAddress(), ...address } : blankAddress(),
     })
     setError(null)
+    setSendWelcomeEmail(true)
     setEditOpen(true)
   }
 
@@ -132,6 +139,7 @@ export function ClientSettingsCard({
         zip:     form.address.zip     || undefined,
         country: form.address.country || undefined,
       },
+      skipWelcomeEmail: !sendWelcomeEmail,
     })
     setLoading(false)
     if (result.success) {
@@ -141,6 +149,18 @@ export function ClientSettingsCard({
       setError(result.error ?? 'Failed to update')
     }
   }
+
+  async function handleResendWelcome() {
+    setResending(true)
+    setResendResult(null)
+    const result = await resendClientWelcomeEmail({ id })
+    setResending(false)
+    setResendResult(result.success ? 'sent' : 'error')
+    // Auto-clear result after 4s
+    setTimeout(() => setResendResult(null), 4000)
+  }
+
+  const emailChanged = form.email && form.email !== (email ?? '')
 
   return (
     <div
@@ -201,13 +221,44 @@ export function ClientSettingsCard({
                 <span className="truncate">{company}</span>
               </div>
             )}
-            <button
-              onClick={handleOpenEdit}
-              className="mt-2.5 flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-400 border border-white/[0.08] rounded-lg hover:text-white hover:border-white/[0.18] hover:bg-white/[0.03] transition-all"
-            >
-              <Pencil className="size-3" />
-              Edit
-            </button>
+
+            {/* Action buttons */}
+            <div className="mt-2.5 flex items-center gap-2 flex-wrap">
+              <button
+                onClick={handleOpenEdit}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-400 border border-white/[0.08] rounded-lg hover:text-white hover:border-white/[0.18] hover:bg-white/[0.03] transition-all"
+              >
+                <Pencil className="size-3" />
+                Edit
+              </button>
+
+              {email && (
+                <button
+                  onClick={handleResendWelcome}
+                  disabled={resending}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs border rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                    resendResult === 'sent'
+                      ? 'text-emerald-400 border-emerald-400/20 bg-emerald-400/[0.06]'
+                      : resendResult === 'error'
+                      ? 'text-red-400 border-red-400/20 bg-red-400/[0.06]'
+                      : 'text-gray-400 border-white/[0.08] hover:text-[#67e8f9] hover:border-[#67e8f9]/20 hover:bg-[#67e8f9]/[0.04]'
+                  }`}
+                >
+                  {resending ? (
+                    <Loader2 className="size-3 animate-spin" />
+                  ) : resendResult === 'sent' ? (
+                    <CheckCircle2 className="size-3" />
+                  ) : (
+                    <Send className="size-3" />
+                  )}
+                  {resendResult === 'sent'
+                    ? 'Sent!'
+                    : resendResult === 'error'
+                    ? 'Failed'
+                    : 'Resend Welcome'}
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -292,6 +343,26 @@ export function ClientSettingsCard({
                 className="h-9 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-gray-700 focus-visible:ring-[#67e8f9]/30 text-sm"
               />
             </div>
+
+            {/* Welcome email toggle — visible whenever an email is set */}
+            {form.email && (
+              <div className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-white/[0.025] border border-white/[0.06]">
+                <div className="space-y-0.5">
+                  <p className="text-xs font-medium text-gray-300">Send setup email</p>
+                  <p className="text-[10px] text-gray-600 leading-snug">
+                    {emailChanged
+                      ? 'Sends a new setup link to the updated address'
+                      : 'Resends a setup link on save (only if email changes)'}
+                  </p>
+                </div>
+                <Switch
+                  checked={sendWelcomeEmail}
+                  onCheckedChange={setSendWelcomeEmail}
+                  className="data-[state=checked]:bg-[#67e8f9] data-[state=unchecked]:bg-white/[0.12] shrink-0 ml-3"
+                />
+              </div>
+            )}
+
             <div className="space-y-1.5">
               <Label className="text-gray-500 text-xs uppercase tracking-wide">Company</Label>
               <Input

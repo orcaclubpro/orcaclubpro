@@ -1,12 +1,9 @@
 import { redirect } from 'next/navigation'
 import { LoginForm } from '@/components/auth/LoginForm'
 import { getCurrentUser } from '@/actions/auth'
-import DynamicGreeting from '@/components/layout/dynamic-greeting'
-import { SpacesHeader } from '@/components/layout/spaces-header'
+import AnimatedBackground from '@/components/layout/animated-background'
+import LoginGreeting from '@/components/auth/LoginGreeting'
 import Link from 'next/link'
-import { Cinzel_Decorative } from 'next/font/google'
-
-const gothic = Cinzel_Decorative({ weight: '700', subsets: ['latin'] })
 
 export const metadata = {
   title: 'Client Login - ORCACLUB',
@@ -30,100 +27,84 @@ export default async function LoginPage({
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-black pt-16">
-      <SpacesHeader />
+    <div className="relative min-h-screen overflow-hidden">
+      <AnimatedBackground />
 
-      {/* ── LEFT PANEL ── atmospheric, structural, greeting */}
-      <div className="relative hidden lg:flex flex-col w-[60%] overflow-hidden bg-black">
+      {/* Full-screen two-panel layout above animated background */}
+      <div className="relative z-10 flex min-h-screen">
 
-        {/* Orbital geometry — barely visible, references logo grid */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
-          <svg
-            width="600"
-            height="600"
-            viewBox="0 0 600 600"
-            fill="none"
-            aria-hidden="true"
-            className="opacity-[0.032]"
-          >
-            <circle cx="300" cy="300" r="299" stroke="white" strokeWidth="1" />
-            <circle cx="300" cy="300" r="226" stroke="white" strokeWidth="0.5" />
-            <line x1="300" y1="0" x2="300" y2="600" stroke="white" strokeWidth="0.5" />
-            <line x1="0" y1="300" x2="600" y2="300" stroke="white" strokeWidth="0.5" />
-            <circle cx="300" cy="300" r="3" stroke="white" strokeWidth="0.5" fill="none" />
-            <line x1="300" y1="1" x2="300" y2="20" stroke="white" strokeWidth="1" />
-            <line x1="300" y1="580" x2="300" y2="599" stroke="white" strokeWidth="1" />
-            <line x1="1" y1="300" x2="20" y2="300" stroke="white" strokeWidth="1" />
-            <line x1="580" y1="300" x2="599" y2="300" stroke="white" strokeWidth="1" />
-          </svg>
-        </div>
+        {/* ── LEFT PANEL ── transparent over animated background */}
+        <div className="hidden lg:flex flex-col w-[55%] px-16 py-16">
+          {/* Brand wordmark */}
+          <div>
+            <Link href="/">
+              <span className="text-sm font-light tracking-[0.35em] uppercase text-white/50">
+                ORCA<span className="text-[#67e8f9]/60">CLUB</span>
+              </span>
+            </Link>
+          </div>
 
-        {/* Greeting — floats in the center of the darkness */}
-        <div className="relative z-10 flex-1 flex items-center justify-center">
-          <DynamicGreeting />
-        </div>
+          {/* Animated greeting — gothic tag + Welcome back. */}
+          <div className="flex-1 flex items-center justify-center">
+            <LoginGreeting />
+          </div>
 
-        {/* Bottom-left client portal label */}
-        <div className="relative z-10 px-12 pb-10 flex items-center gap-4">
-          <div className="h-px w-8 bg-white/10" />
-          <span className="text-[10px] tracking-[0.4em] uppercase text-white/15 font-light">
-            Client Portal
-          </span>
-        </div>
-      </div>
-
-      {/* Panel separator — a single hair-line */}
-      <div className="hidden lg:block w-px bg-white/[0.05] flex-shrink-0" />
-
-      {/* ── RIGHT PANEL ── clean, monastic, functional */}
-      <div className="flex-1 bg-[#080808] flex flex-col items-center justify-center px-10 py-12 relative overflow-hidden">
-
-        {/* Mobile-only logo */}
-        <div className="lg:hidden mb-12 text-center">
-          <h1 className={`${gothic.className} text-4xl tracking-tight`}>
-            <span className="text-white">Client </span>
-            <span className="gradient-text">Portal</span>
-          </h1>
-        </div>
-
-        <div className="w-full max-w-[320px]">
-
-          {/* Heading block */}
-          <div className="mb-10">
-            <p className="text-[10px] tracking-[0.35em] uppercase text-white/25 font-light mb-4">
+          {/* Bottom label */}
+          <div className="flex items-center gap-4">
+            <div className="h-px w-8 bg-white/15" />
+            <span className="text-[10px] tracking-[0.4em] uppercase text-white/25 font-light">
               Secure Access
-            </p>
-            <h2 className={`${gothic.className} text-3xl text-white`}>
-              Welcome back.
-            </h2>
-            <div className="mt-5 w-6 h-px bg-cyan-400/40" />
+            </span>
           </div>
+        </div>
 
-          {/* Login form — all functionality preserved */}
-          <LoginForm callbackUrl={callbackUrl} />
-
-          {/* Footer */}
-          <div className="mt-10 pt-6 border-t border-white/[0.06]">
-            <p className="text-[11px] text-white/20 font-light">
-              Need access?{' '}
-              <Link
-                href="/contact"
-                className="text-cyan-400/50 hover:text-cyan-400/80 transition-colors duration-300 hover:underline underline-offset-2"
-              >
-                Contact us
+        {/* ── RIGHT PANEL ── frosted glass card */}
+        <div className="flex-1 flex items-center justify-center px-6 py-16">
+          <div
+            className="w-full max-w-[400px] rounded-2xl p-8 lg:p-10"
+            style={{
+              background: 'rgba(8, 8, 12, 0.75)',
+              backdropFilter: 'blur(24px) saturate(1.2)',
+              border: '1px solid rgba(255,255,255,0.10)',
+            }}
+          >
+            {/* Mobile brand */}
+            <div className="lg:hidden mb-8">
+              <Link href="/">
+                <span className="text-sm font-light tracking-[0.35em] uppercase text-white/50">
+                  ORCA<span className="text-[#67e8f9]/60">CLUB</span>
+                </span>
               </Link>
-            </p>
+            </div>
+
+            {/* Heading */}
+            <div className="mb-8">
+              <p className="text-xs tracking-[0.4em] uppercase text-white/30 font-light mb-3">
+                Secure Access
+              </p>
+              <h2 className="text-4xl font-bold tracking-widest gradient-text">
+                SPACES
+              </h2>
+              <div className="mt-4 w-8 h-px bg-[#67e8f9]/40" />
+            </div>
+
+            {/* Login form — all logic preserved inside */}
+            <LoginForm callbackUrl={callbackUrl} />
+
+            {/* Footer */}
+            <div className="mt-8 pt-6 border-t border-white/[0.07]">
+              <p className="text-xs text-white/25 font-light">
+                Need access?{' '}
+                <Link
+                  href="/contact"
+                  className="text-[#67e8f9]/60 hover:text-[#67e8f9] transition-colors duration-200"
+                >
+                  Contact us
+                </Link>
+              </p>
+            </div>
           </div>
         </div>
-
-        {/* Corner geometry — bottom-right structural accent */}
-        <div className="absolute bottom-0 right-0 pointer-events-none select-none" aria-hidden="true">
-          <svg width="96" height="96" viewBox="0 0 96 96" fill="none" className="opacity-[0.05]">
-            <path d="M96 0 L96 96 L0 96" stroke="white" strokeWidth="1" />
-            <path d="M96 28 L96 96 L28 96" stroke="white" strokeWidth="0.5" />
-          </svg>
-        </div>
-
       </div>
     </div>
   )

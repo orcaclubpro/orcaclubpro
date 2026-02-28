@@ -3,369 +3,585 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Lock, Eye, EyeOff, CheckCircle2, AlertCircle, Check, X, Loader2 } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import {
+  Lock, Eye, EyeOff, AlertCircle, Check, X, Loader2,
+  Building2, Phone, MapPin, ArrowRight,
+} from 'lucide-react'
+import AnimatedBackground from '@/components/layout/animated-background'
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
 function RequirementItem({ met, text }: { met: boolean; text: string }) {
   return (
-    <div className="flex items-center gap-2">
-      {met ? (
-        <Check className="w-3 h-3 text-cyan-400/70 flex-shrink-0" />
-      ) : (
-        <X className="w-3 h-3 text-white/20 flex-shrink-0" />
-      )}
-      <span className={`text-[10px] tracking-[0.1em] font-light ${met ? 'text-cyan-400/70' : 'text-white/25'}`}>
+    <div className="flex items-center gap-2.5">
+      {met
+        ? <Check className="w-3.5 h-3.5 text-[#67e8f9] flex-shrink-0" />
+        : <X className="w-3.5 h-3.5 text-white/25 flex-shrink-0" />}
+      <span className={`text-xs font-medium ${met ? 'text-[#67e8f9]' : 'text-white/35'}`}>
         {text}
       </span>
     </div>
   )
 }
 
-function SetupAccountForm() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const token = searchParams.get('token')
+// ── Framer Motion variants ────────────────────────────────────────────────────
 
+const slideVariants = {
+  enter: { opacity: 0, x: 36 },
+  center: { opacity: 1, x: 0 },
+  exit: { opacity: 0, x: -36 },
+}
+
+const fadeUpVariants = {
+  enter: { opacity: 0, y: 24 },
+  center: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -16 },
+}
+
+const spring = { duration: 0.55, ease: [0.16, 1, 0.3, 1] as const }
+
+// ── Left panel copy per step ──────────────────────────────────────────────────
+
+const COPY = {
+  1: {
+    tag: 'Account Setup',
+    title: 'Welcome to\nORCACLUB.',
+    body: 'Create a strong password to secure your workspace and get access to your projects, invoices, and proposals.',
+    step: 'Step 1 of 2',
+  },
+  2: {
+    tag: 'Almost There',
+    title: 'Tell us about\nyour business.',
+    body: 'These details help us tailor your experience. Everything is for internal use only — never shared.',
+    step: 'Step 2 of 2',
+  },
+} as const
+
+type Step = 1 | 2
+
+// ── Shared input class ────────────────────────────────────────────────────────
+
+const inputCls =
+  'w-full px-4 py-3 rounded-xl bg-white/[0.06] border border-white/[0.10] text-white placeholder-white/25 text-sm transition-all duration-200 outline-none focus:bg-white/[0.09] focus:ring-2 focus:ring-[#67e8f9]/40 focus:border-[#67e8f9]/50 disabled:opacity-50 disabled:cursor-not-allowed'
+
+// ── Step 1: Password ──────────────────────────────────────────────────────────
+
+function PasswordStep({
+  token,
+  onSuccess,
+}: {
+  token: string | null
+  onSuccess: (username: string | null) => void
+}) {
   const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [confirm, setConfirm] = useState('')
+  const [showPw, setShowPw] = useState(false)
+  const [showCf, setShowCf] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
 
-  const [passwordChecks, setPasswordChecks] = useState({
-    minLength: false,
-    hasUppercase: false,
-    hasLowercase: false,
-    hasNumber: false,
-    passwordsMatch: false,
-  })
+  const checks = {
+    minLength: password.length >= 8,
+    hasUpper: /[A-Z]/.test(password),
+    hasLower: /[a-z]/.test(password),
+    hasNum: /[0-9]/.test(password),
+    match: password !== '' && password === confirm,
+  }
+  const allMet = Object.values(checks).every(Boolean)
 
-  useEffect(() => {
-    if (!token) {
-      setError('Invalid or missing setup link. Please contact support to resend your invitation.')
-    }
-  }, [token])
-
-  useEffect(() => {
-    setPasswordChecks({
-      minLength: password.length >= 8,
-      hasUppercase: /[A-Z]/.test(password),
-      hasLowercase: /[a-z]/.test(password),
-      hasNumber: /[0-9]/.test(password),
-      passwordsMatch: password !== '' && password === confirmPassword,
-    })
-  }, [password, confirmPassword])
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  async function submit(e: React.FormEvent) {
     e.preventDefault()
-
-    if (!token) {
-      setError('Invalid or missing setup link.')
-      return
-    }
-
-    if (password !== confirmPassword) {
-      setError('Passwords do not match.')
-      return
-    }
-
-    if (!Object.values(passwordChecks).every(check => check)) {
-      setError('Please meet all password requirements.')
-      return
-    }
-
+    if (!token) { setError('Invalid or missing setup link.'); return }
+    if (!allMet) { setError('Please meet all password requirements.'); return }
     setLoading(true)
     setError('')
-
     try {
-      const response = await fetch('/api/auth/reset-password', {
+      const res = await fetch('/api/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, password, source: 'setup' }),
       })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        setSuccess(true)
-        setPassword('')
-        setConfirmPassword('')
-        const redirectTo = data.username ? `/u/${data.username}` : '/login'
-        // Brief pause so the success state is visible, then navigate — the
-        // payload-token cookie was set in the response so the user is already
-        // authenticated when they land on the dashboard.
-        setTimeout(() => { router.push(redirectTo) }, 800)
-      } else {
-        setError(data.message || 'An error occurred. Please try again.')
-      }
+      const data = await res.json()
+      if (res.ok) { onSuccess(data.username ?? null) }
+      else { setError(data.message || 'Something went wrong. Please try again.') }
     } catch {
-      setError('Unable to connect to the server. Please try again later.')
+      setError('Unable to connect. Please try again.')
     } finally {
       setLoading(false)
     }
   }
 
-  const allChecksMet = Object.values(passwordChecks).every(Boolean)
-
   return (
-    <div className="flex h-screen overflow-hidden bg-black">
-
-      {/* ── LEFT PANEL ── */}
-      <div className="relative hidden lg:flex flex-col w-[60%] overflow-hidden bg-black">
-
-        {/* Orbital geometry */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
-          <svg
-            width="600"
-            height="600"
-            viewBox="0 0 600 600"
-            fill="none"
-            aria-hidden="true"
-            className="opacity-[0.032]"
-          >
-            <circle cx="300" cy="300" r="299" stroke="white" strokeWidth="1" />
-            <circle cx="300" cy="300" r="226" stroke="white" strokeWidth="0.5" />
-            <line x1="300" y1="0" x2="300" y2="600" stroke="white" strokeWidth="0.5" />
-            <line x1="0" y1="300" x2="600" y2="300" stroke="white" strokeWidth="0.5" />
-            <circle cx="300" cy="300" r="3" stroke="white" strokeWidth="0.5" fill="none" />
-            <line x1="300" y1="1" x2="300" y2="20" stroke="white" strokeWidth="1" />
-            <line x1="300" y1="580" x2="300" y2="599" stroke="white" strokeWidth="1" />
-            <line x1="1" y1="300" x2="20" y2="300" stroke="white" strokeWidth="1" />
-            <line x1="580" y1="300" x2="599" y2="300" stroke="white" strokeWidth="1" />
-          </svg>
-        </div>
-
-        {/* Top-left wordmark */}
-        <div className="relative z-10 px-12 pt-10">
-          <Link href="/">
-            <span className="text-[11px] font-light tracking-[0.4em] uppercase text-white/20">
-              ORCA<span className="text-cyan-400/30">CLUB</span>
-            </span>
-          </Link>
-        </div>
-
-        {/* Center content */}
-        <div className="relative z-10 flex-1 flex items-center justify-center">
-          <div className="text-center px-12">
-            <p className="text-[10px] tracking-[0.45em] uppercase text-white/15 font-light mb-6">
-              Account Setup
-            </p>
-            <h2 className="text-2xl font-extralight text-white/75 tracking-wide mb-8">
-              Welcome to ORCACLUB.
-            </h2>
-            <div className="w-6 h-px bg-cyan-400/30 mx-auto mb-10" />
-            <p className="text-[11px] tracking-[0.15em] text-white/20 font-light leading-relaxed max-w-[240px] mx-auto">
-              Create a strong, unique password to secure your workspace.
-            </p>
+    <form onSubmit={submit} className="space-y-5">
+      {error && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-start gap-3 bg-red-500/15 border border-red-400/30 rounded-xl px-4 py-3"
+        >
+          <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm text-red-300 leading-relaxed">{error}</p>
+            {error.includes('expired') && (
+              <Link href="/contact" className="text-sm text-[#67e8f9]/70 hover:text-[#67e8f9] transition-colors mt-1 inline-block underline underline-offset-2">
+                Contact support
+              </Link>
+            )}
           </div>
-        </div>
+        </motion.div>
+      )}
 
-        {/* Bottom label */}
-        <div className="relative z-10 px-12 pb-10 flex items-center gap-4">
-          <div className="h-px w-8 bg-white/10" />
-          <span className="text-[10px] tracking-[0.4em] uppercase text-white/15 font-light">
-            First Time Setup
-          </span>
+      {/* Password */}
+      <div className="space-y-2">
+        <label htmlFor="password" className="block text-sm font-medium text-white/70">
+          Password
+        </label>
+        <div className="relative group">
+          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+            <Lock className="w-4 h-4 text-white/30 group-focus-within:text-[#67e8f9]/70 transition-colors" />
+          </div>
+          <input
+            id="password"
+            type={showPw ? 'text' : 'password'}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            disabled={loading}
+            placeholder="Create a password"
+            className={`${inputCls} pl-11 pr-11`}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPw(!showPw)}
+            disabled={loading}
+            className="absolute inset-y-0 right-0 pr-4 flex items-center text-white/30 hover:text-white/60 transition-colors"
+          >
+            {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </button>
         </div>
       </div>
 
-      {/* Panel separator */}
-      <div className="hidden lg:block w-px bg-white/[0.05] flex-shrink-0" />
+      {/* Confirm */}
+      <div className="space-y-2">
+        <label htmlFor="confirm" className="block text-sm font-medium text-white/70">
+          Confirm Password
+        </label>
+        <div className="relative group">
+          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+            <Lock className="w-4 h-4 text-white/30 group-focus-within:text-[#67e8f9]/70 transition-colors" />
+          </div>
+          <input
+            id="confirm"
+            type={showCf ? 'text' : 'password'}
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            required
+            disabled={loading}
+            placeholder="Confirm your password"
+            className={`${inputCls} pl-11 pr-11`}
+          />
+          <button
+            type="button"
+            onClick={() => setShowCf(!showCf)}
+            disabled={loading}
+            className="absolute inset-y-0 right-0 pr-4 flex items-center text-white/30 hover:text-white/60 transition-colors"
+          >
+            {showCf ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </button>
+        </div>
+      </div>
 
-      {/* ── RIGHT PANEL ── */}
-      <div className="flex-1 bg-[#080808] flex flex-col items-center justify-center px-10 py-12 relative overflow-hidden">
+      {/* Requirements */}
+      <AnimatePresence>
+        {password && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="space-y-2 pt-3 pb-1 border-t border-white/[0.08]">
+              <RequirementItem met={checks.minLength} text="At least 8 characters" />
+              <RequirementItem met={checks.hasUpper}  text="One uppercase letter" />
+              <RequirementItem met={checks.hasLower}  text="One lowercase letter" />
+              <RequirementItem met={checks.hasNum}    text="One number" />
+              {confirm && <RequirementItem met={checks.match} text="Passwords match" />}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-        {/* Mobile-only logo */}
-        <div className="lg:hidden mb-12 text-center">
-          <h1 className="text-4xl font-bold tracking-tight">
-            <span className="text-white">ORCA</span>
-            <span className="gradient-text">CLUB</span>
-          </h1>
-          <p className="text-[11px] text-white/25 tracking-[0.3em] uppercase mt-2 font-light">
-            Account Setup
-          </p>
+      <button
+        type="submit"
+        disabled={loading || !allMet || !token}
+        className="w-full py-3.5 rounded-xl font-semibold text-sm bg-[#67e8f9] hover:bg-[#67e8f9]/90 text-black transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 shadow-lg shadow-[#67e8f9]/10"
+      >
+        {loading
+          ? <><Loader2 className="w-4 h-4 animate-spin" /> Setting up...</>
+          : <><span>Continue</span><ArrowRight className="w-4 h-4" /></>}
+      </button>
+
+      <p className="text-sm text-white/35 text-center pt-1">
+        Need help?{' '}
+        <Link href="/contact" className="text-[#67e8f9]/60 hover:text-[#67e8f9] transition-colors underline underline-offset-2">
+          Contact support
+        </Link>
+      </p>
+    </form>
+  )
+}
+
+// ── Step 2: Business Details ──────────────────────────────────────────────────
+
+function DetailsStep({
+  onSave,
+  onSkip,
+  saving,
+  error,
+}: {
+  onSave: (data: {
+    company: string
+    phone: string
+    address: { line1: string; line2: string; city: string; state: string; zip: string; country: string }
+  }) => Promise<void>
+  onSkip: () => void
+  saving: boolean
+  error: string
+}) {
+  const [company, setCompany] = useState('')
+  const [phone, setPhone] = useState('')
+  const [addr, setAddrState] = useState({ line1: '', line2: '', city: '', state: '', zip: '', country: '' })
+  const set = (k: keyof typeof addr) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setAddrState((a) => ({ ...a, [k]: e.target.value }))
+
+  return (
+    <form onSubmit={(e) => { e.preventDefault(); onSave({ company, phone, address: addr }) }} className="space-y-4">
+      {error && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-start gap-3 bg-red-500/15 border border-red-400/30 rounded-xl px-4 py-3"
+        >
+          <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-red-300 leading-relaxed">{error}</p>
+        </motion.div>
+      )}
+
+      {/* Company */}
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-white/70">Company Name</label>
+        <div className="relative">
+          <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30 pointer-events-none" />
+          <input type="text" value={company} onChange={(e) => setCompany(e.target.value)}
+            placeholder="Acme Corp" disabled={saving}
+            className={`${inputCls} pl-11`} />
+        </div>
+      </div>
+
+      {/* Phone */}
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-white/70">Phone Number</label>
+        <div className="relative">
+          <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30 pointer-events-none" />
+          <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)}
+            placeholder="+1 555-000-0000" disabled={saving}
+            className={`${inputCls} pl-11`} />
+        </div>
+      </div>
+
+      {/* Address */}
+      <div className="space-y-2">
+        <label className="flex items-center gap-1.5 text-sm font-medium text-white/70">
+          <MapPin className="w-3.5 h-3.5" />
+          Business Address
+        </label>
+        <div className="space-y-2">
+          <input type="text" value={addr.line1} onChange={set('line1')}
+            placeholder="Street address" disabled={saving} className={inputCls} />
+          <input type="text" value={addr.line2} onChange={set('line2')}
+            placeholder="Suite, unit, etc. (optional)" disabled={saving} className={inputCls} />
+          <div className="grid grid-cols-5 gap-2">
+            <input type="text" value={addr.city} onChange={set('city')}
+              placeholder="City" disabled={saving} className={`${inputCls} col-span-2`} />
+            <input type="text" value={addr.state} onChange={set('state')}
+              placeholder="State" disabled={saving} className={`${inputCls} col-span-1`} />
+            <input type="text" value={addr.zip} onChange={set('zip')}
+              placeholder="ZIP" disabled={saving} className={`${inputCls} col-span-2`} />
+          </div>
+          <input type="text" value={addr.country} onChange={set('country')}
+            placeholder="Country" disabled={saving} className={inputCls} />
+        </div>
+      </div>
+
+      <div className="space-y-3 pt-1">
+        <button
+          type="submit"
+          disabled={saving}
+          className="w-full py-3.5 rounded-xl font-semibold text-sm bg-[#67e8f9] hover:bg-[#67e8f9]/90 text-black transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 shadow-lg shadow-[#67e8f9]/10"
+        >
+          {saving
+            ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</>
+            : 'Save & Open Dashboard'}
+        </button>
+        <button
+          type="button"
+          onClick={onSkip}
+          disabled={saving}
+          className="w-full py-2.5 rounded-xl text-sm text-white/40 hover:text-white/70 border border-white/[0.08] hover:border-white/[0.15] transition-all disabled:opacity-40"
+        >
+          Skip for now
+        </button>
+      </div>
+
+      <p className="text-xs text-white/30 text-center leading-relaxed">
+        Details are for internal use only and for our records.
+        <br />You can update them anytime from your account.
+      </p>
+    </form>
+  )
+}
+
+// ── Main form ─────────────────────────────────────────────────────────────────
+
+function SetupAccountForm() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const token = searchParams.get('token')
+
+  const [step, setStep] = useState<Step>(1)
+  const [username, setUsername] = useState<string | null>(null)
+  const [tokenError, setTokenError] = useState('')
+  const [step2Saving, setStep2Saving] = useState(false)
+  const [step2Error, setStep2Error] = useState('')
+
+  useEffect(() => {
+    if (!token) setTokenError('Invalid or missing setup link. Please contact support to resend your invitation.')
+  }, [token])
+
+  const redirect = () => router.push(username ? `/u/${username}` : '/login')
+
+  async function handleSave(data: {
+    company: string
+    phone: string
+    address: { line1: string; line2: string; city: string; state: string; zip: string; country: string }
+  }) {
+    setStep2Saving(true)
+    setStep2Error('')
+    try {
+      const res = await fetch('/api/auth/complete-setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          company:  data.company || undefined,
+          phone:    data.phone   || undefined,
+          address: {
+            line1:   data.address.line1   || undefined,
+            line2:   data.address.line2   || undefined,
+            city:    data.address.city    || undefined,
+            state:   data.address.state   || undefined,
+            zip:     data.address.zip     || undefined,
+            country: data.address.country || undefined,
+          },
+        }),
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        setStep2Error(body.message || 'Failed to save — you can update these later.')
+        setTimeout(redirect, 2000)
+        return
+      }
+      redirect()
+    } catch {
+      setStep2Error('Could not save details — redirecting to your dashboard.')
+      setTimeout(redirect, 2000)
+    } finally {
+      setStep2Saving(false)
+    }
+  }
+
+  const copy = COPY[step]
+
+  return (
+    <div className="relative min-h-screen flex flex-col lg:flex-row overflow-hidden">
+
+      {/* Animated homepage background */}
+      <AnimatedBackground />
+
+      {/* ── LEFT: Atmospheric copy ───────────────────────────────────────── */}
+      <div className="relative z-10 hidden lg:flex flex-col justify-between w-[52%] px-16 py-14">
+
+        {/* Wordmark */}
+        <Link href="/" className="inline-flex items-center gap-2 group">
+          <span className="text-sm font-light tracking-[0.35em] uppercase text-white/50 group-hover:text-white/80 transition-colors">
+            ORCA<span className="text-[#67e8f9]/60">CLUB</span>
+          </span>
+        </Link>
+
+        {/* Center copy */}
+        <div className="flex-1 flex items-center">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={step}
+              variants={fadeUpVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={spring}
+              className="max-w-[420px]"
+            >
+              {/* Tag */}
+              <span className="inline-block text-xs font-semibold tracking-[0.25em] uppercase text-[#67e8f9]/70 mb-6">
+                {copy.tag}
+              </span>
+
+              {/* Title */}
+              <h1 className="text-[3rem] font-extralight text-white leading-[1.15] mb-6 whitespace-pre-line">
+                {copy.title}
+              </h1>
+
+              <div className="w-10 h-px bg-[#67e8f9]/30 mb-6" />
+
+              {/* Body */}
+              <p className="text-base text-white/50 leading-relaxed font-light max-w-[340px]">
+                {copy.body}
+              </p>
+            </motion.div>
+          </AnimatePresence>
         </div>
 
-        <div className="w-full max-w-[320px]">
+        {/* Step indicator */}
+        <div className="flex items-center gap-4">
+          <div className="flex gap-2">
+            {([1, 2] as Step[]).map((n) => (
+              <motion.div
+                key={n}
+                className="h-0.5 rounded-full"
+                animate={{
+                  width: n === step ? 32 : 10,
+                  backgroundColor: n <= step
+                    ? 'rgba(103,232,249,0.6)'
+                    : 'rgba(255,255,255,0.12)',
+                }}
+                transition={{ duration: 0.4, ease: 'easeInOut' }}
+              />
+            ))}
+          </div>
+          <span className="text-xs text-white/30 tracking-widest uppercase">{copy.step}</span>
+        </div>
+      </div>
 
-          {/* Heading block */}
-          <div className="mb-10">
-            <p className="text-[10px] tracking-[0.35em] uppercase text-white/25 font-light mb-4">
-              Set Your Password
-            </p>
-            <h2 className="text-xl font-extralight text-white tracking-wide">
-              Set up your account.
-            </h2>
-            <div className="mt-5 w-6 h-px bg-cyan-400/40" />
+      {/* ── RIGHT: Form ──────────────────────────────────────────────────── */}
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-8 py-14 lg:py-0">
+
+        {/* Glass panel */}
+        <div
+          className="w-full max-w-[420px] rounded-2xl border border-white/[0.10] p-8 lg:p-10 shadow-2xl"
+          style={{ background: 'rgba(8, 8, 12, 0.75)', backdropFilter: 'blur(24px) saturate(1.2)' }}
+        >
+
+          {/* Mobile wordmark */}
+          <div className="lg:hidden mb-8 text-center">
+            <p className="text-xs font-medium tracking-[0.3em] uppercase text-white/40 mb-1">ORCACLUB</p>
+            <p className="text-sm text-white/30">{copy.tag}</p>
           </div>
 
-          {/* Success state */}
-          {success ? (
-            <div className="space-y-6">
-              <div className="flex items-start gap-3">
-                <CheckCircle2 className="w-4 h-4 text-cyan-400/70 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-light text-white/80 mb-1">Account created.</p>
-                  <p className="text-[11px] font-light text-white/35 leading-relaxed">
-                    Redirecting you to your dashboard...
-                  </p>
-                </div>
+          {/* Step heading above the form */}
+          <div className="mb-7">
+            <div className="flex items-center gap-3 mb-5">
+              {/* Step dots */}
+              <div className="flex gap-1.5">
+                {([1, 2] as Step[]).map((n) => (
+                  <motion.div
+                    key={n}
+                    className="h-1 rounded-full"
+                    animate={{
+                      width: n === step ? 20 : 6,
+                      backgroundColor: n <= step
+                        ? 'rgba(103,232,249,0.7)'
+                        : 'rgba(255,255,255,0.15)',
+                    }}
+                    transition={{ duration: 0.35, ease: 'easeInOut' }}
+                  />
+                ))}
               </div>
-              <div className="pt-6 border-t border-white/[0.06]">
-                <Link
-                  href="/login"
-                  className="text-[11px] text-cyan-400/50 hover:text-cyan-400/80 transition-colors duration-300 hover:underline underline-offset-2"
-                >
-                  Go to sign in
-                </Link>
-              </div>
+              <span className="text-xs text-white/35 tracking-wider">{copy.step}</span>
             </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-6">
 
-              {/* Error message */}
-              {error && (
-                <div className="flex items-start gap-3 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 text-red-400/90">
-                  <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-[11px] font-light leading-relaxed">{error}</p>
-                    {error.includes('expired') && (
-                      <Link
-                        href="/contact"
-                        className="text-[11px] text-cyan-400/50 hover:text-cyan-400/80 transition-colors mt-2 inline-block"
-                      >
-                        Contact support
-                      </Link>
-                    )}
-                  </div>
-                </div>
-              )}
+            <h2 className="text-2xl font-light text-white">
+              {step === 1 ? 'Set up your account.' : 'Business details.'}
+            </h2>
+            <p className="text-sm text-white/45 mt-2 leading-relaxed">
+              {step === 1
+                ? 'Choose a strong password to protect your workspace.'
+                : 'Optional — helps us personalise your experience.'}
+            </p>
+          </div>
 
-              {/* New password */}
-              <div className="space-y-2">
-                <label htmlFor="password" className="block text-sm font-medium text-gray-300">
-                  Password
-                </label>
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Lock className="w-5 h-5 text-gray-500 group-focus-within:text-cyan-400 transition-colors" />
-                  </div>
-                  <input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    disabled={loading}
-                    placeholder="••••••••"
-                    className="w-full pl-12 pr-12 py-3 bg-gray-800/50 border border-gray-700 hover:border-gray-600 rounded-lg text-white placeholder-gray-500 transition-all duration-200 outline-none focus:bg-gray-800 focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    disabled={loading}
-                    className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-500 hover:text-gray-300 transition-colors"
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  >
-                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Confirm password */}
-              <div className="space-y-2">
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-300">
-                  Confirm Password
-                </label>
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Lock className="w-5 h-5 text-gray-500 group-focus-within:text-cyan-400 transition-colors" />
-                  </div>
-                  <input
-                    id="confirmPassword"
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
-                    disabled={loading}
-                    placeholder="••••••••"
-                    className="w-full pl-12 pr-12 py-3 bg-gray-800/50 border border-gray-700 hover:border-gray-600 rounded-lg text-white placeholder-gray-500 transition-all duration-200 outline-none focus:bg-gray-800 focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    disabled={loading}
-                    className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-500 hover:text-gray-300 transition-colors"
-                    aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
-                  >
-                    {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Password requirements */}
-              {password && (
-                <div className="space-y-1.5 pt-2 border-t border-white/[0.06]">
-                  <RequirementItem met={passwordChecks.minLength} text="At least 8 characters" />
-                  <RequirementItem met={passwordChecks.hasUppercase} text="One uppercase letter" />
-                  <RequirementItem met={passwordChecks.hasLowercase} text="One lowercase letter" />
-                  <RequirementItem met={passwordChecks.hasNumber} text="One number" />
-                  {confirmPassword && (
-                    <RequirementItem met={passwordChecks.passwordsMatch} text="Passwords match" />
-                  )}
-                </div>
-              )}
-
-              {/* Submit button */}
-              <button
-                type="submit"
-                disabled={loading || !allChecksMet}
-                className="w-full py-3 rounded-lg font-semibold bg-cyan-400 hover:bg-cyan-400/90 hover:shadow-lg hover:shadow-cyan-400/20 text-black transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] active:scale-[0.98] relative overflow-hidden group"
-              >
-                <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700" />
-                <span className="relative flex items-center justify-center gap-2">
-                  {loading ? (
-                    <><Loader2 className="w-4 h-4 animate-spin" /> Setting up...</>
-                  ) : 'Create Password'}
-                </span>
-              </button>
-
-              {/* Footer */}
-              <div className="pt-6 border-t border-white/[0.06]">
-                <p className="text-[11px] text-white/20 font-light">
-                  Need help?{' '}
-                  <Link
-                    href="/contact"
-                    className="text-cyan-400/50 hover:text-cyan-400/80 transition-colors duration-300 hover:underline underline-offset-2"
-                  >
-                    Contact support
-                  </Link>
-                </p>
-              </div>
-            </form>
+          {/* Token error */}
+          {tokenError && step === 1 && (
+            <div className="flex items-start gap-3 bg-red-500/15 border border-red-400/30 rounded-xl px-4 py-3 mb-5">
+              <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-red-300 leading-relaxed">{tokenError}</p>
+            </div>
           )}
-        </div>
 
-        {/* Corner geometry */}
-        <div className="absolute bottom-0 right-0 pointer-events-none select-none" aria-hidden="true">
-          <svg width="96" height="96" viewBox="0 0 96 96" fill="none" className="opacity-[0.05]">
-            <path d="M96 0 L96 96 L0 96" stroke="white" strokeWidth="1" />
-            <path d="M96 28 L96 96 L28 96" stroke="white" strokeWidth="0.5" />
-          </svg>
+          {/* Step content */}
+          <AnimatePresence mode="wait" custom={1}>
+            {step === 1 && (
+              <motion.div
+                key="step1"
+                variants={slideVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={spring}
+              >
+                <PasswordStep
+                  token={token}
+                  onSuccess={(u) => { setUsername(u); setStep(2) }}
+                />
+              </motion.div>
+            )}
+            {step === 2 && (
+              <motion.div
+                key="step2"
+                variants={slideVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={spring}
+              >
+                <DetailsStep
+                  onSave={handleSave}
+                  onSkip={redirect}
+                  saving={step2Saving}
+                  error={step2Error}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
     </div>
   )
 }
 
+// ── Page export ───────────────────────────────────────────────────────────────
+
 export default function SetupAccountPage() {
   return (
-    <Suspense fallback={
-      <div className="h-screen bg-black flex items-center justify-center">
-        <div className="w-px h-8 bg-cyan-400/40 animate-pulse" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="h-screen bg-black flex items-center justify-center">
+          <motion.div
+            animate={{ opacity: [0.3, 1, 0.3] }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+            className="w-0.5 h-8 bg-[#67e8f9]/50 rounded-full"
+          />
+        </div>
+      }
+    >
       <SetupAccountForm />
     </Suspense>
   )

@@ -466,6 +466,125 @@ function InlineAdd({ projectId, sprintId, onCreated }: { projectId: string; spri
   )
 }
 
+// ─── unassigned inline quick-add ─────────────────────────────────────────────
+
+function UnassignedInlineAdd({
+  projects,
+  onCreated,
+}: {
+  projects: { id: string; name: string }[]
+  onCreated: () => void
+}) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+  const [priority, setPriority] = useState<Priority>('medium')
+  const [selectedProjectId, setSelectedProjectId] = useState(projects[0]?.id ?? '')
+  const [isPending, startTransition] = useTransition()
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (isOpen) setTimeout(() => inputRef.current?.focus(), 50)
+  }, [isOpen])
+
+  const handleClose = () => {
+    setIsOpen(false)
+    setTitle('')
+    setDescription('')
+    setPriority('medium')
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!title.trim() || !selectedProjectId) return
+    startTransition(async () => {
+      await createTask({ projectId: selectedProjectId, title: title.trim(), description: description.trim() || undefined, priority })
+      handleClose()
+      onCreated()
+    })
+  }
+
+  if (!isOpen) {
+    return (
+      <button
+        type="button"
+        onClick={() => setIsOpen(true)}
+        className="flex items-center gap-1.5 w-full px-3 py-2 text-[11px] text-gray-700 hover:text-gray-400 hover:bg-white/[0.02] transition-colors shrink-0"
+      >
+        <Plus className="size-3" />
+        Add task
+      </button>
+    )
+  }
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="mx-3 my-2 rounded-lg border border-white/[0.08] bg-white/[0.02] overflow-hidden shrink-0"
+      onKeyDown={(e) => { if (e.key === 'Escape') handleClose() }}
+    >
+      {projects.length > 1 && (
+        <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
+          <SelectTrigger className="h-7 border-0 border-b border-white/[0.06] rounded-none bg-transparent text-gray-400 focus:ring-0 text-[11px] px-3">
+            <SelectValue placeholder="Select project" />
+          </SelectTrigger>
+          <SelectContent className="bg-[#1a1a1a] border-white/[0.08] z-[300]">
+            {projects.map((p) => (
+              <SelectItem key={p.id} value={p.id} className="text-white text-xs">{p.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+      <Input
+        ref={inputRef}
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        placeholder="Task title…"
+        disabled={isPending}
+        className="border-0 border-b border-white/[0.06] rounded-none bg-transparent text-white placeholder:text-gray-700 focus-visible:ring-0 h-8 text-xs px-3"
+      />
+      <Textarea
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        placeholder="Description (optional)…"
+        disabled={isPending}
+        rows={2}
+        className="border-0 border-b border-white/[0.06] rounded-none bg-transparent text-white placeholder:text-gray-700 focus-visible:ring-0 text-xs px-3 py-2 resize-none min-h-0"
+      />
+      <div className="flex items-center gap-1.5 px-2 py-1.5">
+        <div className="flex items-center gap-1 flex-1">
+          {(['low', 'medium', 'high', 'urgent'] as Priority[]).map((p) => {
+            const pc = PRIORITY_CFG[p]
+            return (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setPriority(p)}
+                className={cn(
+                  'text-[9px] font-bold px-1.5 rounded border leading-4 transition-colors',
+                  priority === p ? `${pc.color} ${pc.bg}` : 'text-gray-700 border-white/[0.06] hover:text-gray-400',
+                )}
+              >
+                {pc.short}
+              </button>
+            )
+          })}
+        </div>
+        <button
+          type="submit"
+          disabled={isPending || !title.trim() || !selectedProjectId}
+          className="p-1.5 rounded-lg bg-intelligence-cyan/10 text-intelligence-cyan hover:bg-intelligence-cyan/20 transition-colors disabled:opacity-40 shrink-0"
+        >
+          {isPending ? <Loader2 className="size-3 animate-spin" /> : <Check className="size-3" />}
+        </button>
+        <button type="button" onClick={handleClose} className="p-1.5 rounded-lg text-gray-700 hover:text-gray-400 transition-colors shrink-0">
+          <X className="size-3" />
+        </button>
+      </div>
+    </form>
+  )
+}
+
 // ─── sprint column body (reused on mobile + desktop) ─────────────────────────
 
 interface ColumnBodyProps {
@@ -496,6 +615,7 @@ interface ColumnBodyProps {
   onExpand?: () => void
   onCollapse?: () => void
   hiddenDoneCount?: number
+  projects?: { id: string; name: string }[]
 }
 
 function ColumnBody({
@@ -506,6 +626,7 @@ function ColumnBody({
   editState, onEditStart, onEditChange, onEditSave, onEditCancel,
   savingId, onTaskCreated, onPriorityChange,
   isExpanded = false, onExpand = () => {}, onCollapse = () => {}, hiddenDoneCount = 0,
+  projects = [],
 }: ColumnBodyProps) {
   const sCfg = sprint ? (SPRINT_STATUS_CFG[sprint.status] ?? SPRINT_STATUS_CFG.pending) : null
   const allSprints = Array.from(sprintMap.values())
@@ -575,7 +696,7 @@ function ColumnBody({
 
       {/* Task list */}
       <div className="py-2 space-y-1 px-1">
-        {selectedSprintId === null && columnTasks.length === 0 ? (
+        {selectedSprintId === null && columnTasks.length === 0 && projects.length === 0 ? (
           <div className="flex items-center justify-center py-10 px-4">
             <p className="text-xs text-gray-400 text-center">Select a sprint above</p>
           </div>
@@ -610,9 +731,12 @@ function ColumnBody({
                 ))
               )}
               {/* Add task — right under Active */}
-              {selectedSprintId && projectId && (
-                <InlineAdd projectId={projectId} sprintId={selectedSprintId} onCreated={onTaskCreated} />
-              )}
+              {selectedSprintId && projectId
+                ? <InlineAdd projectId={projectId} sprintId={selectedSprintId} onCreated={onTaskCreated} />
+                : selectedSprintId === null && projects.length > 0
+                  ? <UnassignedInlineAdd projects={projects} onCreated={onTaskCreated} />
+                  : null
+              }
               {statusGroups.length > 0 && <div className="mx-3 my-1.5 h-px bg-white/[0.05]" />}
             </div>
 
@@ -659,6 +783,9 @@ function ColumnBody({
               <p className="text-xs text-gray-400 text-center py-8 px-4">
                 {sprint ? `No tasks in ${sprint.name}` : 'No tasks'}
               </p>
+            )}
+            {columnTasks.length === 0 && selectedSprintId === null && projects.length > 0 && (
+              <p className="text-xs text-gray-500 text-center py-4 px-4">No unassigned tasks</p>
             )}
           </>
         )}
@@ -925,6 +1052,7 @@ function SprintColumn({
   editState, onEditStart, onEditChange, onEditSave, onEditCancel,
   savingId, onTaskCreated, onPriorityChange,
   isExpanded = false, onExpand, onCollapse,
+  projects = [],
 }: {
   label: string
   sprintMap: Map<string, any>
@@ -947,6 +1075,7 @@ function SprintColumn({
   isExpanded?: boolean
   onExpand?: () => void
   onCollapse?: () => void
+  projects?: { id: string; name: string }[]
 }) {
   const router = useRouter()
   const [editMode, setEditMode] = useState(false)
@@ -958,6 +1087,10 @@ function SprintColumn({
   const [, startDeleteNote] = useTransition()
   const [isFinishingSprint, startFinishSprint] = useTransition()
   const noteInputRef = useRef<HTMLTextAreaElement>(null)
+  const [sessionGoal, setSessionGoal] = useState('')
+  const [sessionNotes, setSessionNotes] = useState<{ text: string; createdAt: string }[]>([])
+  const [newSessionNoteText, setNewSessionNoteText] = useState('')
+  const sessionNoteInputRef = useRef<HTMLTextAreaElement>(null)
 
   // Sync notes when sprint changes
   const sprintId = selectedSprintId
@@ -1285,6 +1418,139 @@ function SprintColumn({
         </div>
       )}
 
+      {/* Unassigned session panel — shown when expanded and no sprint is selected */}
+      {isExpanded && selectedSprintId === null && (
+        <div className="w-80 shrink-0 border-r border-white/[0.06] flex flex-col min-h-0 overflow-hidden bg-[#0b0b0b]">
+          {/* Scrollable area */}
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+            {/* Header */}
+            <div className="px-6 pt-6 pb-5 border-b border-white/[0.06]">
+              <div className="flex items-center gap-1.5 mb-2">
+                <span className="size-1.5 rounded-full bg-gray-500 shrink-0" />
+                <span className="text-[9px] font-bold uppercase tracking-[0.14em] text-gray-500">Unassigned</span>
+              </div>
+              <h3 className="text-lg font-bold text-white leading-snug">Session</h3>
+              <p className="text-xs text-gray-600 mt-0.5">In-memory only · resets on refresh</p>
+            </div>
+
+            {/* Session Goal */}
+            <div className="px-6 py-5 border-b border-white/[0.04]">
+              <div className="flex items-start gap-3">
+                <div className="w-0.5 self-stretch bg-intelligence-cyan/50 rounded-full shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[9px] font-bold text-intelligence-cyan uppercase tracking-[0.14em] mb-2">
+                    <Target className="size-2.5 inline-block mr-1 -mt-px" />
+                    Session Goal
+                  </p>
+                  <Textarea
+                    value={sessionGoal}
+                    onChange={(e) => setSessionGoal(e.target.value)}
+                    placeholder="What do you want to accomplish this session?"
+                    rows={3}
+                    className="bg-white/[0.04] border-white/[0.08] text-white text-sm font-semibold placeholder:text-gray-700 focus:border-intelligence-cyan/40 resize-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Stats */}
+            <div className="px-6 py-5 border-b border-white/[0.04] flex flex-col items-center gap-4">
+              <SprintDonutChart total={columnTasks.length} completed={completedCount} inProg={inProg} />
+              {columnTasks.length > 0 && (
+                <div className="flex flex-wrap justify-center gap-1.5">
+                  {inProg > 0 && (
+                    <span className="text-[10px] text-intelligence-cyan/80 bg-intelligence-cyan/[0.06] border border-intelligence-cyan/[0.12] rounded-full px-2.5 py-0.5">
+                      {inProg} active
+                    </span>
+                  )}
+                  {pendingC > 0 && (
+                    <span className="text-[10px] text-gray-300 bg-white/[0.04] border border-white/[0.07] rounded-full px-2.5 py-0.5">
+                      {pendingC} pending
+                    </span>
+                  )}
+                  {completedCount > 0 && (
+                    <span className="text-[10px] text-blue-400/70 bg-blue-400/[0.05] border border-blue-400/[0.12] rounded-full px-2.5 py-0.5">
+                      {completedCount} done
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Session Notes list */}
+            <div className="px-6 pt-5 pb-4">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.14em]">Session Notes</span>
+                {sessionNotes.length > 0 && (
+                  <span className="text-[9px] text-gray-600 tabular-nums">{sessionNotes.length}</span>
+                )}
+              </div>
+              {sessionNotes.length === 0 && (
+                <p className="text-xs text-gray-700 py-1">No notes yet</p>
+              )}
+              <div className="space-y-3">
+                {sessionNotes.map((note, i) => (
+                  <div key={i} className="flex items-start gap-2 group">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-gray-200 leading-relaxed break-words">{note.text}</p>
+                      <p className="text-[9px] text-gray-600 mt-0.5">
+                        {new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(note.createdAt))}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSessionNotes((prev) => prev.filter((_, idx) => idx !== i))}
+                      className="shrink-0 p-0.5 rounded text-gray-700 hover:text-red-400 hover:bg-red-400/[0.08] opacity-0 group-hover:opacity-100 transition-all"
+                      title="Delete note"
+                    >
+                      <X className="size-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Pinned note input */}
+          <div className="shrink-0 px-6 py-4 border-t border-white/[0.06] bg-[#0b0b0b]">
+            <div className="flex items-start gap-2">
+              <Textarea
+                ref={sessionNoteInputRef}
+                value={newSessionNoteText}
+                onChange={(e) => setNewSessionNoteText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    const text = newSessionNoteText.trim()
+                    if (!text) return
+                    setSessionNotes((prev) => [...prev, { text, createdAt: new Date().toISOString() }])
+                    setNewSessionNoteText('')
+                  }
+                  if (e.key === 'Escape') setNewSessionNoteText('')
+                }}
+                placeholder="Add a note… (Enter to save)"
+                rows={2}
+                className="flex-1 bg-white/[0.03] border-white/[0.06] text-white text-sm placeholder:text-gray-700 focus:border-white/[0.15] resize-none min-h-0"
+              />
+              {newSessionNoteText.trim() && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const text = newSessionNoteText.trim()
+                    if (!text) return
+                    setSessionNotes((prev) => [...prev, { text, createdAt: new Date().toISOString() }])
+                    setNewSessionNoteText('')
+                  }}
+                  className="p-1.5 rounded-lg bg-intelligence-cyan/10 text-intelligence-cyan hover:bg-intelligence-cyan/20 transition-colors shrink-0 mt-0.5"
+                >
+                  <Check className="size-3" />
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Task list panel */}
       <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
@@ -1297,6 +1563,7 @@ function SprintColumn({
             onEditSave={onEditSave} onEditCancel={onEditCancel} savingId={savingId} onTaskCreated={onTaskCreated}
             onPriorityChange={onPriorityChange}
             isExpanded={isExpanded} onExpand={onExpand} onCollapse={onCollapse} hiddenDoneCount={hiddenDoneCount}
+            projects={projects}
           />
         </div>
       </div>
@@ -1580,6 +1847,7 @@ function TaskBoard({
     editState, onEditStart: handleEditStart, onEditChange: handleEditChange,
     onEditSave: handleEditSave, onEditCancel: handleEditCancel,
     savingId, onTaskCreated: handleTaskCreated, onPriorityChange: handlePriorityChange,
+    projects,
   }
 
   // Derived data for mobile column views
@@ -1672,6 +1940,7 @@ function TaskBoard({
                 editState={editState} onEditStart={handleEditStart} onEditChange={handleEditChange}
                 onEditSave={handleEditSave} onEditCancel={handleEditCancel} savingId={savingId} onTaskCreated={handleTaskCreated}
                 onPriorityChange={handlePriorityChange}
+                projects={projects}
               />
             </div>
           )

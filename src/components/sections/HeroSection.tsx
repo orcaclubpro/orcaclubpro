@@ -14,22 +14,30 @@ export default function HeroSection() {
         </ScrollReveal>
 
         <ScrollReveal delay={200}>
-          <div className="flex flex-col sm:flex-row gap-4 md:gap-6 justify-center items-stretch mb-6 md:mb-8">
+          <div className="flex flex-col sm:flex-row gap-4 md:gap-5 justify-center items-stretch mb-6 md:mb-8">
+            {/* SPACES — solid gradient, primary CTA */}
+            <Link
+              href="/login"
+              className="group relative px-10 md:px-14 py-4 md:py-5 rounded-md font-semibold text-base md:text-lg text-white inline-flex items-center justify-center gap-2.5 whitespace-nowrap overflow-hidden transition-all duration-300 shadow-lg shadow-blue-600/20 hover:shadow-blue-500/30 hover:scale-[1.02]"
+              style={{ background: 'linear-gradient(135deg, #2563eb 0%, #06b6d4 100%)' }}
+            >
+              {/* Shimmer */}
+              <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+              <span className="relative tracking-[0.12em] text-sm md:text-base uppercase font-bold">SPACES</span>
+            </Link>
+
+            {/* Free Consultation — glassmorphism secondary CTA */}
             <Link
               href="/contact"
-              className="group relative px-8 md:px-12 py-4 md:py-6 bg-gradient-to-r from-blue-600/20 to-cyan-500/20 border border-cyan-400/30 rounded-md text-base md:text-lg font-light text-cyan-400 hover:bg-gradient-to-r hover:from-blue-600/30 hover:to-cyan-500/30 transition-all duration-500 magnetic interactive inline-flex items-center justify-center whitespace-nowrap"
+              className="group relative px-10 md:px-14 py-4 md:py-5 bg-white/[0.04] border border-white/[0.12] rounded-md text-base md:text-lg font-light text-white/80 hover:bg-white/[0.08] hover:border-white/[0.22] hover:text-white transition-all duration-300 inline-flex items-center justify-center gap-2.5 whitespace-nowrap"
             >
-              Start Your Project
-            </Link>
-            <Link
-              href="/project"
-              className="group relative px-8 md:px-12 py-4 md:py-6 bg-white/5 border border-white/10 rounded-md text-base md:text-lg font-light text-white hover:bg-white/10 hover:border-white/20 transition-all duration-500 magnetic interactive inline-flex items-center justify-center gap-2 whitespace-nowrap"
-            >
-              View Project Tiers <ArrowRight size={16} className="opacity-50 group-hover:opacity-100 transition-opacity" />
+              Free Consultation
+              <ArrowRight size={15} className="opacity-40 group-hover:opacity-80 group-hover:translate-x-0.5 transition-all duration-200" />
             </Link>
           </div>
-          <p className="text-xs text-gray-600 font-light">
-            3-21 Day Delivery · Fixed Pricing · Direct Developer Access
+
+          <p className="text-xs text-white/20 font-light tracking-[0.25em] uppercase">
+            3–21 Day Delivery · Fixed Pricing · Direct Developer Access
           </p>
         </ScrollReveal>
       </div>

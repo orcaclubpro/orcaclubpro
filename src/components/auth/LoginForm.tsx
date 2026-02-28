@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { loginAction } from '@/actions/auth'
-import { Button } from '@/components/ui/button'
 import { Eye, EyeOff, Mail, Lock, Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
 
 export function LoginForm({ callbackUrl }: { callbackUrl?: string }) {
@@ -48,7 +47,6 @@ export function LoginForm({ callbackUrl }: { callbackUrl?: string }) {
     e.preventDefault()
     setError(null)
 
-    // Validate fields
     const isEmailValid = validateEmail(email)
     const isPasswordValid = validatePassword(password)
 
@@ -69,13 +67,11 @@ export function LoginForm({ callbackUrl }: { callbackUrl?: string }) {
             const cred = new window.PasswordCredential({ id: email, password })
             await navigator.credentials.store(cred)
           } catch {
-            // Non-blocking — don't fail login if credential save fails
+            // Non-blocking
           }
         }
 
-        // Check if user has username for dashboard access
         if (!result.username) {
-          // Admin/User without username should use admin panel
           if (result.role === 'admin' || result.role === 'user') {
             setSuccess(true)
             setTimeout(() => {
@@ -85,22 +81,18 @@ export function LoginForm({ callbackUrl }: { callbackUrl?: string }) {
             return
           }
 
-          // This shouldn't happen for clients (blocked in loginAction)
           setError('Your account does not have a username set. Please contact support.')
           setLoading(false)
           return
         }
 
-        // Show success state
         setSuccess(true)
 
-        // Use callbackUrl if it's a safe relative path, otherwise fall back to dashboard
         const safeFallback = `/u/${result.username}`
         const redirectPath = callbackUrl && callbackUrl.startsWith('/')
           ? callbackUrl
           : safeFallback
 
-        // Wait for animation before redirect
         setTimeout(() => {
           router.push(redirectPath)
           router.refresh()
@@ -132,35 +124,35 @@ export function LoginForm({ callbackUrl }: { callbackUrl?: string }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-5">
       {/* Success message */}
       {success && (
-        <div className="bg-green-500/10 border border-green-500/50 text-green-400 px-4 py-3 rounded-lg text-sm flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
-          <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
+        <div className="flex items-start gap-3 px-4 py-3 bg-[#67e8f9]/10 border border-[#67e8f9]/20 rounded-xl">
+          <CheckCircle2 className="w-4 h-4 text-[#67e8f9]/70 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="font-medium">Login successful!</p>
-            <p className="text-green-400/80 text-xs mt-0.5">Redirecting to your dashboard...</p>
+            <p className="text-sm text-white/80">Login successful!</p>
+            <p className="text-xs text-white/40 mt-0.5">Redirecting to your dashboard...</p>
           </div>
         </div>
       )}
 
       {/* Error message */}
       {error && (
-        <div className="bg-red-500/10 border border-red-500/50 text-red-400 px-4 py-3 rounded-lg text-sm flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
-          <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+        <div className="flex items-start gap-3 px-4 py-3 bg-red-500/15 border border-red-400/30 rounded-xl">
+          <AlertCircle className="w-4 h-4 text-red-300 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="font-medium">{error}</p>
+            <p className="text-sm text-red-300">{error}</p>
             {error.includes('admin panel') ? (
-              <p className="text-red-400/80 text-xs mt-1">
+              <p className="text-xs text-red-300/60 mt-1">
                 Admin users should{' '}
-                <a href="/admin" className="underline hover:text-red-300 transition-colors font-medium">
+                <a href="/admin" className="underline hover:text-red-200 transition-colors font-medium">
                   login via the admin panel
                 </a>
               </p>
             ) : (
-              <p className="text-red-400/80 text-xs mt-1">
+              <p className="text-xs text-red-300/60 mt-1">
                 Need help?{' '}
-                <a href="/contact" className="underline hover:text-red-300 transition-colors">
+                <a href="/contact" className="underline hover:text-red-200 transition-colors">
                   Contact support
                 </a>
               </p>
@@ -170,13 +162,13 @@ export function LoginForm({ callbackUrl }: { callbackUrl?: string }) {
       )}
 
       {/* Email field */}
-      <div className="space-y-2">
-        <label htmlFor="email" className="block text-sm font-medium text-gray-300">
+      <div className="space-y-1.5">
+        <label htmlFor="email" className="block text-sm font-medium text-white/70">
           Email Address
         </label>
         <div className="relative group">
-          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-            <Mail className="w-5 h-5 text-gray-500 group-focus-within:text-intelligence-cyan transition-colors" />
+          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+            <Mail className="w-4 h-4 text-white/25 group-focus-within:text-[#67e8f9]/60 transition-colors" />
           </div>
           <input
             id="email"
@@ -187,32 +179,32 @@ export function LoginForm({ callbackUrl }: { callbackUrl?: string }) {
             onChange={(e) => handleEmailChange(e.target.value)}
             onBlur={(e) => validateEmail(e.target.value)}
             disabled={loading || success}
-            className={`w-full pl-12 pr-4 py-3 bg-gray-800/50 border rounded-lg text-white placeholder-gray-500
-              transition-all duration-200 outline-none
-              focus:bg-gray-800 focus:ring-2 focus:ring-intelligence-cyan/50 focus:border-intelligence-cyan
-              disabled:opacity-50 disabled:cursor-not-allowed
-              ${emailError ? 'border-red-500/50 focus:ring-red-500/50 focus:border-red-500' : 'border-gray-700 hover:border-gray-600'}`}
+            className={`w-full pl-10 pr-4 py-3 text-sm text-white placeholder-white/25 rounded-xl bg-white/[0.06] border transition-all duration-200 outline-none focus:ring-2 focus:ring-[#67e8f9]/40 focus:border-[#67e8f9]/50 disabled:opacity-40 disabled:cursor-not-allowed ${
+              emailError
+                ? 'border-red-400/40 focus:ring-red-400/30 focus:border-red-400/50'
+                : 'border-white/[0.10] hover:border-white/[0.18]'
+            }`}
             placeholder="you@example.com"
             aria-invalid={!!emailError}
             aria-describedby={emailError ? 'email-error' : undefined}
           />
-          {emailError && (
-            <p id="email-error" className="mt-1.5 text-xs text-red-400 flex items-center gap-1">
-              <AlertCircle className="w-3 h-3" />
-              {emailError}
-            </p>
-          )}
         </div>
+        {emailError && (
+          <p id="email-error" className="text-xs text-red-300/80 flex items-center gap-1 mt-1">
+            <AlertCircle className="w-3 h-3" />
+            {emailError}
+          </p>
+        )}
       </div>
 
       {/* Password field */}
-      <div className="space-y-2">
-        <label htmlFor="password" className="block text-sm font-medium text-gray-300">
+      <div className="space-y-1.5">
+        <label htmlFor="password" className="block text-sm font-medium text-white/70">
           Password
         </label>
         <div className="relative group">
-          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-            <Lock className="w-5 h-5 text-gray-500 group-focus-within:text-intelligence-cyan transition-colors" />
+          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+            <Lock className="w-4 h-4 text-white/25 group-focus-within:text-[#67e8f9]/60 transition-colors" />
           </div>
           <input
             id="password"
@@ -223,11 +215,11 @@ export function LoginForm({ callbackUrl }: { callbackUrl?: string }) {
             onChange={(e) => handlePasswordChange(e.target.value)}
             onBlur={(e) => validatePassword(e.target.value)}
             disabled={loading || success}
-            className={`w-full pl-12 pr-12 py-3 bg-gray-800/50 border rounded-lg text-white placeholder-gray-500
-              transition-all duration-200 outline-none
-              focus:bg-gray-800 focus:ring-2 focus:ring-intelligence-cyan/50 focus:border-intelligence-cyan
-              disabled:opacity-50 disabled:cursor-not-allowed
-              ${passwordError ? 'border-red-500/50 focus:ring-red-500/50 focus:border-red-500' : 'border-gray-700 hover:border-gray-600'}`}
+            className={`w-full pl-10 pr-11 py-3 text-sm text-white placeholder-white/25 rounded-xl bg-white/[0.06] border transition-all duration-200 outline-none focus:ring-2 focus:ring-[#67e8f9]/40 focus:border-[#67e8f9]/50 disabled:opacity-40 disabled:cursor-not-allowed ${
+              passwordError
+                ? 'border-red-400/40 focus:ring-red-400/30 focus:border-red-400/50'
+                : 'border-white/[0.10] hover:border-white/[0.18]'
+            }`}
             placeholder="••••••••"
             aria-invalid={!!passwordError}
             aria-describedby={passwordError ? 'password-error' : undefined}
@@ -236,66 +228,55 @@ export function LoginForm({ callbackUrl }: { callbackUrl?: string }) {
             type="button"
             onClick={() => setShowPassword(!showPassword)}
             disabled={loading || success}
-            className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-500 hover:text-gray-300 transition-colors disabled:opacity-50"
+            className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-white/25 hover:text-white/50 transition-colors disabled:opacity-40"
             aria-label={showPassword ? 'Hide password' : 'Show password'}
           >
-            {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </button>
-          {passwordError && (
-            <p id="password-error" className="mt-1.5 text-xs text-red-400 flex items-center gap-1">
-              <AlertCircle className="w-3 h-3" />
-              {passwordError}
-            </p>
-          )}
         </div>
+        {passwordError && (
+          <p id="password-error" className="text-xs text-red-300/80 flex items-center gap-1 mt-1">
+            <AlertCircle className="w-3 h-3" />
+            {passwordError}
+          </p>
+        )}
       </div>
 
       {/* Forgot password link */}
-      <div className="flex items-center justify-end">
+      <div className="flex justify-end">
         <a
           href="/forgot-password"
-          className="text-sm text-intelligence-cyan hover:text-intelligence-cyan/80 transition-colors group inline-flex items-center gap-1"
+          className="text-xs text-[#67e8f9]/60 hover:text-[#67e8f9] transition-colors duration-200"
         >
           Forgot password?
-          <svg
-            className="w-3 h-3 transition-transform group-hover:translate-x-0.5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
         </a>
       </div>
 
       {/* Submit button */}
-      <Button
+      <button
         type="submit"
         disabled={loading || success}
-        className={`w-full py-3 rounded-lg font-semibold transition-all duration-300 relative overflow-hidden group
-          ${success
-            ? 'bg-green-500 hover:bg-green-500 text-white'
-            : 'bg-intelligence-cyan hover:bg-intelligence-cyan/90 hover:shadow-lg hover:shadow-intelligence-cyan/20 text-black'
-          }
-          disabled:opacity-50 disabled:cursor-not-allowed
-          transform hover:scale-[1.02] active:scale-[0.98]`}
+        className={`w-full py-3.5 rounded-xl font-semibold text-sm transition-all duration-200 relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed ${
+          success
+            ? 'bg-[#67e8f9]/15 border border-[#67e8f9]/25 text-[#67e8f9]'
+            : 'bg-[#67e8f9] hover:bg-[#67e8f9]/90 text-black hover:shadow-lg hover:shadow-[#67e8f9]/20 hover:scale-[1.01] active:scale-[0.99]'
+        }`}
       >
-        {/* Button shine effect */}
-        {!loading && !success && (
-          <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700" />
-        )}
-
-        {/* Button content */}
+        <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
         <span className="relative flex items-center justify-center gap-2">
-          {loading && <Loader2 className="w-5 h-5 animate-spin" />}
-          {success && <CheckCircle2 className="w-5 h-5" />}
+          {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+          {success && <CheckCircle2 className="w-4 h-4" />}
           {loading ? 'Signing in...' : success ? 'Success!' : 'Sign in'}
         </span>
-      </Button>
+      </button>
 
       {/* Keyboard shortcut hint */}
-      <p className="text-center text-xs text-gray-600">
-        Press <kbd className="px-2 py-0.5 bg-gray-800 border border-gray-700 rounded text-gray-400 font-mono">Enter</kbd> to sign in
+      <p className="text-center text-[11px] text-white/20 font-light">
+        Press{' '}
+        <kbd className="px-1.5 py-0.5 bg-white/[0.06] border border-white/[0.10] rounded text-white/30 font-mono text-[10px]">
+          Enter
+        </kbd>{' '}
+        to sign in
       </p>
     </form>
   )
