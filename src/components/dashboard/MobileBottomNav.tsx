@@ -2,7 +2,7 @@
 
 import { useRef, useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, FolderKanban, Building2, CheckSquare, Receipt, Package, ChevronLeft, Search, KeyRound } from 'lucide-react'
+import { LayoutDashboard, FolderKanban, Building2, CheckSquare, Receipt, Package, ChevronLeft, Search, KeyRound, CalendarRange } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { useTabContext } from '@/app/(spaces)/TabContext'
@@ -52,6 +52,7 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
         { href: `/u/${username}?tab=projects`, label: 'Plan', icon: FolderKanban, tab: 'projects' },
         { href: `/u/${username}?tab=clients`, label: 'Clients', icon: Building2, tab: 'clients' },
         { href: `/u/${username}?tab=tasks`, label: 'Tasks', icon: CheckSquare, tab: 'tasks' },
+        { href: `/u/${username}?tab=timelines`, label: 'Timelines', icon: CalendarRange, tab: 'timelines' },
       ]
 
   const isActive = (tab: string) => {

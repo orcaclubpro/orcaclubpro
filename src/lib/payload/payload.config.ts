@@ -23,6 +23,7 @@ import Sprints from './collections/Sprints'
 import Files from './collections/Files'
 import Packages from './collections/Packages'
 import Credentials from './collections/Credentials'
+import { Timelines } from './collections/Timelines'
 
 // Helper function to format strings as URL-friendly slugs
 const formatSlug = (val: string): string =>
@@ -890,7 +891,7 @@ export default buildConfig({
   editor: lexicalEditor(),
 
   // Define and configure your collections in this array
-  collections: [Media, Clients, Leads, Categories, Tags, Posts, Users, ClientAccounts, Orders, Packages, WebhookEvents, Projects, Tasks, Sprints, Files, Credentials],
+  collections: [Media, Clients, Leads, Categories, Tags, Posts, Users, ClientAccounts, Orders, Packages, WebhookEvents, Projects, Tasks, Sprints, Files, Credentials, Timelines],
 
   // Your Payload secret - should be a complex and secure string, unguessable
   secret: process.env.PAYLOAD_SECRET || 'your-secret-here',
@@ -936,11 +937,17 @@ export default buildConfig({
       beforeLogin: ['@/components/payload/BeforeLogin'],
       // Custom admin actions (floating action button)
       actions: ['@/components/payload/actions/CreateOrderButton'],
+      // Nav links injected after the built-in Payload nav links
+      afterNavLinks: ['@/components/payload/timelines/TimelinesNavLink'],
       // Custom views
       views: {
         order: {
           Component: '@/components/payload/order-creation/OrderCreationView#OrderCreationView',
           path: '/order',
+        },
+        timelinesBuilder: {
+          Component: '@/components/payload/timelines/TimelinesBuilderView#TimelinesBuilderView',
+          path: '/timelines-builder',
         },
         login: {
           Component: '@/components/payload/CustomLogin',

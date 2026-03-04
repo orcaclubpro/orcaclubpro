@@ -24,11 +24,14 @@ import { BoldFeatureClient as BoldFeatureClient_e70f5e05f09f93e00b997edb1ef0c864
 import { ItalicFeatureClient as ItalicFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
 import { default as default_e41f28be887112bcc62d12f2b3a7092a } from '@/components/payload/SendInvoiceButton'
 import { default as default_2ae4d900bd6d79680dd513e00921df27 } from '@/components/payload/MarkAsPaidButton'
+import { default as default_c114d55c6787adaccc858707e703acd4 } from '@/components/payload/timelines/TimelinePreviewTab'
 import { default as default_6f14b747d7d9d385f91171711bbf7132 } from '@/components/payload/Icon'
 import { default as default_e34c28bdc97e3fecf976b23b26d64cc9 } from '@/components/payload/Logo'
 import { default as default_424fafc23df3d6f7806ff182c0aec46d } from '@/components/payload/actions/CreateOrderButton'
+import { default as default_a223012472c0a9a5f584c034d43b18df } from '@/components/payload/timelines/TimelinesNavLink'
 import { default as default_be7cf7eb3883beb9807d8789bb1dd363 } from '@/components/payload/BeforeLogin'
 import { OrderCreationView as OrderCreationView_71b52cdd9543c07c1874ea3e119617ee } from '@/components/payload/order-creation/OrderCreationView'
+import { TimelinesBuilderView as TimelinesBuilderView_2feabaf31132f97746fda1c412a155e9 } from '@/components/payload/timelines/TimelinesBuilderView'
 import { default as default_7b22a19c71d70ad4ab3a5821bd557da0 } from '@/components/payload/CustomLogin'
 import { default as default_2b7937fe8a1db97f7a2ed004951e793e } from '@/components/payload/CustomAccount'
 
@@ -59,11 +62,14 @@ export const importMap = {
   "@payloadcms/richtext-lexical/client#ItalicFeatureClient": ItalicFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
   "@/components/payload/SendInvoiceButton#default": default_e41f28be887112bcc62d12f2b3a7092a,
   "@/components/payload/MarkAsPaidButton#default": default_2ae4d900bd6d79680dd513e00921df27,
+  "@/components/payload/timelines/TimelinePreviewTab#default": default_c114d55c6787adaccc858707e703acd4,
   "@/components/payload/Icon#default": default_6f14b747d7d9d385f91171711bbf7132,
   "@/components/payload/Logo#default": default_e34c28bdc97e3fecf976b23b26d64cc9,
   "@/components/payload/actions/CreateOrderButton#default": default_424fafc23df3d6f7806ff182c0aec46d,
+  "@/components/payload/timelines/TimelinesNavLink#default": default_a223012472c0a9a5f584c034d43b18df,
   "@/components/payload/BeforeLogin#default": default_be7cf7eb3883beb9807d8789bb1dd363,
   "@/components/payload/order-creation/OrderCreationView#OrderCreationView": OrderCreationView_71b52cdd9543c07c1874ea3e119617ee,
+  "@/components/payload/timelines/TimelinesBuilderView#TimelinesBuilderView": TimelinesBuilderView_2feabaf31132f97746fda1c412a155e9,
   "@/components/payload/CustomLogin#default": default_7b22a19c71d70ad4ab3a5821bd557da0,
   "@/components/payload/CustomAccount#default": default_2b7937fe8a1db97f7a2ed004951e793e
 }

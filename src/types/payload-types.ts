@@ -83,6 +83,7 @@ export interface Config {
     sprints: Sprint;
     files: File;
     credentials: Credential;
+    timelines: Timeline;
     'payload-jobs': PayloadJob;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -111,6 +112,7 @@ export interface Config {
     sprints: SprintsSelect<false> | SprintsSelect<true>;
     files: FilesSelect<false> | FilesSelect<true>;
     credentials: CredentialsSelect<false> | CredentialsSelect<true>;
+    timelines: TimelinesSelect<false> | TimelinesSelect<true>;
     'payload-jobs': PayloadJobsSelect<false> | PayloadJobsSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -1240,6 +1242,126 @@ export interface Credential {
   createdAt: string;
 }
 /**
+ * Interactive horizontal timeline pages for project roadmaps
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "timelines".
+ */
+export interface Timeline {
+  id: string;
+  /**
+   * Small label above the title (e.g. "Kawai Digital · Site Relaunch")
+   */
+  eyebrow: string;
+  /**
+   * Main heading (e.g. "Launch")
+   */
+  title: string;
+  /**
+   * Italic gold word appended to title (e.g. "Roadmap")
+   */
+  titleEmphasis?: string | null;
+  /**
+   * Header meta date span (e.g. "March 2 – April 2026")
+   */
+  dateRange?: string | null;
+  /**
+   * Second line of header meta (e.g. "Internal Planning Doc")
+   */
+  metaLabel?: string | null;
+  /**
+   * Controls the visual presentation of the public timeline page
+   */
+  style?: ('cinematic' | 'vertical-clean' | 'blueprint' | 'editorial' | 'terminal') | null;
+  /**
+   * URL path — auto-generated from title (e.g. "kawai-launch")
+   */
+  slug: string;
+  /**
+   * Add phase cards, checklist blocks, or a launch block in order
+   */
+  phases?:
+    | (
+        | {
+            /**
+             * e.g. "Mar 2 – 6"
+             */
+            dateRange: string;
+            /**
+             * e.g. "Setup", "Integrate", "Pre-Launch"
+             */
+            tag?: string | null;
+            tagColor?: ('build' | 'integrate' | 'touchup' | 'prep') | null;
+            title: string;
+            /**
+             * Bullet points inside the card
+             */
+            items?:
+              | {
+                  text: string;
+                  id?: string | null;
+                }[]
+              | null;
+            /**
+             * Highlighted callout at the bottom of the card
+             */
+            dealerPill?: {
+              enabled?: boolean | null;
+              /**
+               * e.g. "End of week — Soft launch to select dealers for testing"
+               */
+              text?: string | null;
+            };
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'phase';
+          }
+        | {
+            /**
+             * Badge text above the node (e.g. "Pre-Launch Checklist")
+             */
+            dateLabel?: string | null;
+            tag?: string | null;
+            /**
+             * e.g. "Launch Requirements"
+             */
+            title: string;
+            items?:
+              | {
+                  text: string;
+                  /**
+                   * Small warning shown below the item text
+                   */
+                  note?: string | null;
+                  id?: string | null;
+                }[]
+              | null;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'checklist';
+          }
+        | {
+            /**
+             * Badge above the pulsing node
+             */
+            dateLabel?: string | null;
+            label?: string | null;
+            /**
+             * Non-italic part (e.g. "Site")
+             */
+            title?: string | null;
+            titleEmphasis?: string | null;
+            subtitle?: string | null;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'launch';
+          }
+      )[]
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-jobs".
  */
@@ -1401,6 +1523,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'credentials';
         value: string | Credential;
+      } | null)
+    | ({
+        relationTo: 'timelines';
+        value: string | Timeline;
       } | null)
     | ({
         relationTo: 'payload-jobs';
@@ -1889,6 +2015,74 @@ export interface CredentialsSelect<T extends boolean = true> {
         key?: T;
         value?: T;
         id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "timelines_select".
+ */
+export interface TimelinesSelect<T extends boolean = true> {
+  eyebrow?: T;
+  title?: T;
+  titleEmphasis?: T;
+  dateRange?: T;
+  metaLabel?: T;
+  style?: T;
+  slug?: T;
+  phases?:
+    | T
+    | {
+        phase?:
+          | T
+          | {
+              dateRange?: T;
+              tag?: T;
+              tagColor?: T;
+              title?: T;
+              items?:
+                | T
+                | {
+                    text?: T;
+                    id?: T;
+                  };
+              dealerPill?:
+                | T
+                | {
+                    enabled?: T;
+                    text?: T;
+                  };
+              id?: T;
+              blockName?: T;
+            };
+        checklist?:
+          | T
+          | {
+              dateLabel?: T;
+              tag?: T;
+              title?: T;
+              items?:
+                | T
+                | {
+                    text?: T;
+                    note?: T;
+                    id?: T;
+                  };
+              id?: T;
+              blockName?: T;
+            };
+        launch?:
+          | T
+          | {
+              dateLabel?: T;
+              label?: T;
+              title?: T;
+              titleEmphasis?: T;
+              subtitle?: T;
+              id?: T;
+              blockName?: T;
+            };
       };
   updatedAt?: T;
   createdAt?: T;
