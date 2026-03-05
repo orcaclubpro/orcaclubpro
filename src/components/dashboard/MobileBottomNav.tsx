@@ -75,10 +75,10 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
         ref={navRef}
         className="pointer-events-auto flex items-center gap-1 p-1.5 rounded-2xl max-w-[calc(100vw-1.5rem)]"
         style={{ opacity: 0,
-          background: 'rgba(6, 6, 10, 0.82)',
+          background: 'var(--space-nav-bg)',
           backdropFilter: 'blur(28px) saturate(180%)',
           WebkitBackdropFilter: 'blur(28px) saturate(180%)',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
+          border: '1px solid var(--space-border)',
           boxShadow:
             '0 -1px 0 rgba(255,255,255,0.04) inset, 0 8px 40px rgba(0,0,0,0.9), 0 2px 8px rgba(0,0,0,0.6)',
         }}
@@ -103,12 +103,12 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
                 'relative flex flex-col items-center gap-1.5 px-3.5 py-2.5 rounded-xl transition-all duration-200 active:scale-95 flex-1 cursor-pointer',
                 active ? 'bg-white/[0.06]' : 'hover:bg-white/[0.03]',
               )}
-              style={active ? { boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05), inset 0 0 20px rgba(103,232,249,0.02)' } : undefined}
+              style={active ? { boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05), inset 0 0 20px var(--space-accent-soft)' } : undefined}
             >
               <div className="relative">
                 <Icon
-                  className={cn('size-5 transition-all duration-200', active ? 'text-cyan-400' : 'text-gray-500')}
-                  style={active ? { filter: 'drop-shadow(0 0 6px rgba(103, 232, 249, 0.45))' } : undefined}
+                  className={cn('size-5 transition-all duration-200', !active && 'text-gray-500')}
+                  style={active ? { color: 'var(--space-accent)', filter: 'drop-shadow(0 0 6px var(--space-accent-glow))' } : undefined}
                 />
                 {item.tab === 'packages' && isClient && packageCount > 0 && (
                   <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] rounded-full bg-red-500 text-white text-[8px] font-bold flex items-center justify-center px-0.5 leading-none shadow-sm">
@@ -121,7 +121,7 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
               </span>
               {active && (
                 <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 h-px w-5 rounded-full"
-                  style={{ background: 'linear-gradient(to right, transparent, rgba(103,232,249,0.55), transparent)' }} />
+                  style={{ background: 'linear-gradient(to right, transparent, var(--space-accent-glow), transparent)' }} />
               )}
             </a>
           )

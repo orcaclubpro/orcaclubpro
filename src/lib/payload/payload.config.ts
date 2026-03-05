@@ -881,6 +881,23 @@ const Users: CollectionConfig = {
         position: 'sidebar',
       },
     },
+    {
+      name: 'dashboardTheme',
+      type: 'select',
+      defaultValue: 'void',
+      options: [
+        { label: 'Void (Default)', value: 'void' },
+        { label: 'Arctic', value: 'arctic' },
+        { label: 'Ember', value: 'ember' },
+        { label: 'Emerald', value: 'emerald' },
+        { label: 'Dusk', value: 'dusk' },
+        { label: 'Chrome', value: 'chrome' },
+      ],
+      admin: {
+        description: 'Dashboard color preset',
+        position: 'sidebar',
+      },
+    },
   ],
 }
 

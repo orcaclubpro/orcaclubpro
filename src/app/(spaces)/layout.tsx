@@ -5,6 +5,8 @@ import { getCurrentUser } from "@/actions/auth"
 import { TabProvider } from "./TabContext"
 import { HeaderTitleProvider } from "./HeaderTitleContext"
 import { PackageCountProvider } from "./PackageCountContext"
+import { ThemeProvider } from "./ThemeContext"
+import type { ThemeId } from "./themes"
 
 export default async function SpacesLayout({
   children,
@@ -13,8 +15,10 @@ export default async function SpacesLayout({
 }) {
   const user = await getCurrentUser()
   const isDeveloper = user?.role === 'admin' || user?.role === 'user'
+  const initialTheme = ((user as any)?.dashboardTheme as ThemeId) ?? 'void'
 
   return (
+    <ThemeProvider initialTheme={initialTheme} username={user?.username ?? undefined}>
     <HeaderTitleProvider>
     <TabProvider>
     <PackageCountProvider>
@@ -28,5 +32,6 @@ export default async function SpacesLayout({
     </PackageCountProvider>
     </TabProvider>
     </HeaderTitleProvider>
+    </ThemeProvider>
   )
 }

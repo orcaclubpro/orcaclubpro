@@ -113,6 +113,17 @@
   --sidebar-accent-foreground: hsl(240 5.9% 10%);
   --sidebar-border: hsl(220 13% 91%);
   --sidebar-ring: hsl(217.2 91.2% 59.8%);
+
+  /* SPACES dashboard theme variables — defaults to Void (intelligence cyan) */
+  --space-accent: #67e8f9;
+  --space-accent-rgb: 103, 232, 249;
+  --space-accent-dim: #22d3ee;
+  --space-accent-glow: rgba(103, 232, 249, 0.45);
+  --space-accent-soft: rgba(103, 232, 249, 0.06);
+  --space-bg-base: #000000;
+  --space-bg-surface: rgba(255,255,255,0.03);
+  --space-nav-bg: rgba(6, 6, 10, 0.82);
+  --space-border: rgba(255,255,255,0.08);
 }
 
 * {

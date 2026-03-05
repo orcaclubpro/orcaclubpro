@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { ThemeSwitcher } from '@/components/dashboard/ThemeSwitcher'
 import { DashboardGreeting } from '@/components/dashboard/DashboardGreeting'
 import { ClientActiveProjects } from '@/components/dashboard/ClientActiveProjects'
 import { ClientInvoiceTimeline } from '@/components/dashboard/ClientInvoiceTimeline'
@@ -115,9 +116,12 @@ export function ClientHomeView({
 
         {/* Greeting — always first in DOM → first on mobile, col 1 on desktop */}
         <div className={`flex flex-col justify-center py-4 sm:py-8 lg:py-14 ${hasSchedule ? 'lg:order-1' : ''}`}>
-          <p className="text-xs font-semibold gradient-text uppercase tracking-[0.25em] mb-5">
-            Client Portal · ORCACLUB Spaces
-          </p>
+          <div className="flex items-center justify-between mb-5">
+            <p className="text-xs font-semibold gradient-text uppercase tracking-[0.25em]">
+              Client Portal · ORCACLUB Spaces
+            </p>
+            <ThemeSwitcher />
+          </div>
           <DashboardGreeting
             firstName={user.firstName}
             size="large"

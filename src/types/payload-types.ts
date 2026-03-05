@@ -471,6 +471,10 @@ export interface User {
    * Show the welcome tips banner in the client portal. Disabled when the client dismisses it.
    */
   showTips?: boolean | null;
+  /**
+   * Dashboard color preset
+   */
+  dashboardTheme?: ('void' | 'arctic' | 'ember' | 'emerald' | 'dusk' | 'chrome') | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -1722,6 +1726,7 @@ export interface UsersSelect<T extends boolean = true> {
   loginTwoFactorCode?: T;
   loginTwoFactorExpiry?: T;
   showTips?: T;
+  dashboardTheme?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;

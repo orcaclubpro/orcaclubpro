@@ -12,6 +12,7 @@ import type { Range } from '@/components/dashboard/PortfolioTimeline'
 import { RANGE_CFG } from '@/components/dashboard/PortfolioTimeline'
 import { cn } from '@/lib/utils'
 import { RevenueChart } from '@/components/dashboard/RevenueChart'
+import { ThemeSwitcher } from '@/components/dashboard/ThemeSwitcher'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -304,9 +305,12 @@ export function AdminHomeView({
 
           {/* Left: greeting */}
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold gradient-text uppercase tracking-[0.25em] mb-4">
-              {user.role === 'admin' ? 'Admin' : 'Workspace'} · ORCACLUB Spaces
-            </p>
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-xs font-semibold gradient-text uppercase tracking-[0.25em]">
+                {user.role === 'admin' ? 'Admin' : 'Workspace'} · ORCACLUB Spaces
+              </p>
+              <ThemeSwitcher />
+            </div>
             <DashboardGreeting
               firstName={user.firstName}
               size="large"
