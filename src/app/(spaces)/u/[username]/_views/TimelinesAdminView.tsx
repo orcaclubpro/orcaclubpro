@@ -12,6 +12,11 @@ import {
   Zap,
   Search,
   LayoutList,
+  Copy,
+  Eye,
+  EyeOff,
+  Link2,
+  KeyRound,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Timeline } from '@/types/payload-types'
@@ -108,10 +113,87 @@ function PhaseStrip({ phases }: { phases: TimelinePhase[] }) {
   )
 }
 
+// ── Copy button ───────────────────────────────────────────────────────────────
+
+function CopyButton({ text, className }: { text: string; className?: string }) {
+  const [copied, setCopied] = useState(false)
+
+  const copy = () => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1800)
+    })
+  }
+
+  return (
+    <button
+      onClick={copy}
+      title="Copy"
+      className={cn(
+        'flex items-center justify-center size-5 rounded-md',
+        'text-white/30 hover:text-[#67e8f9] hover:bg-[#67e8f9]/[0.08]',
+        'transition-all duration-150',
+        className,
+      )}
+    >
+      {copied ? (
+        <span className="text-[8px] font-bold text-[#67e8f9] tracking-tight">OK</span>
+      ) : (
+        <Copy className="size-3" />
+      )}
+    </button>
+  )
+}
+
 // ── Timeline card ─────────────────────────────────────────────────────────────
 
-function TimelineCard({ timeline, onEditBlocks }: { timeline: Timeline; onEditBlocks: () => void }) {
+function TimelineCard({
+  timeline,
+  onEditBlocks,
+  onUpdate,
+}: {
+  timeline: Timeline
+  onEditBlocks: () => void
+  onUpdate: (updated: Timeline) => void
+}) {
   const phases = (timeline.phases ?? []) as TimelinePhase[]
+  const [showCode, setShowCode] = useState(false)
+  const [editingCode, setEditingCode] = useState(false)
+  const [codeInput, setCodeInput] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+
+  const shareUrl = `orcaclub.pro/orcaclub/projects/${timeline.slug}`
+  const accessCode = (timeline as any).accessCode as string | null | undefined
+
+  const openEditor = () => {
+    setCodeInput(accessCode ?? '')
+    setSaveError(null)
+    setEditingCode(true)
+  }
+
+  const saveCode = async () => {
+    setSaving(true)
+    setSaveError(null)
+    try {
+      const res = await fetch(`/api/timelines/${timeline.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accessCode: codeInput.trim() || null }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data?.errors?.[0]?.message ?? `Error ${res.status}`)
+      }
+      const data = await res.json()
+      onUpdate(data.doc ?? data)
+      setEditingCode(false)
+    } catch (e: any) {
+      setSaveError(e.message)
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <div className={cn(
@@ -197,6 +279,108 @@ function TimelineCard({ timeline, onEditBlocks }: { timeline: Timeline; onEditBl
           )}
         </div>
       )}
+
+      {/* Share link + access code */}
+      <div className="space-y-2">
+        {/* Share URL row */}
+        <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/[0.025] border border-white/[0.05]">
+          <Link2 className="size-3 shrink-0 text-[#67e8f9]/40" />
+          <span className="flex-1 font-mono text-[9px] text-white/30 truncate tracking-wide">
+            {shareUrl}
+          </span>
+          <CopyButton text={`https://${shareUrl}`} />
+        </div>
+
+        {/* Access code row */}
+        {editingCode ? (
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5">
+              <KeyRound className="size-3 shrink-0 text-amber-400/40" />
+              <input
+                autoFocus
+                value={codeInput}
+                onChange={e => setCodeInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') saveCode()
+                  if (e.key === 'Escape') setEditingCode(false)
+                }}
+                placeholder="e.g. ORCA-2026 (blank to remove)"
+                className={cn(
+                  'flex-1 px-2.5 py-1 text-[10px] font-mono tracking-widest',
+                  'bg-white/[0.05] border rounded-lg text-white placeholder:text-white/15',
+                  'focus:outline-none focus:border-amber-400/30 focus:bg-white/[0.07]',
+                  'transition-all',
+                  saveError ? 'border-red-500/40' : 'border-amber-400/20',
+                )}
+              />
+              <button
+                onClick={saveCode}
+                disabled={saving}
+                className={cn(
+                  'shrink-0 flex items-center justify-center gap-1 px-2.5 py-1 rounded-lg',
+                  'text-[9px] font-bold tracking-wide uppercase',
+                  'bg-amber-400/[0.10] border border-amber-400/25 text-amber-400',
+                  'hover:bg-amber-400/[0.18] hover:border-amber-400/40',
+                  'disabled:opacity-40 disabled:pointer-events-none',
+                  'transition-all',
+                )}
+              >
+                {saving ? (
+                  <span className="size-2.5 rounded-full border border-amber-400/30 border-t-amber-400 animate-spin" />
+                ) : (
+                  'Save'
+                )}
+              </button>
+              <button
+                onClick={() => setEditingCode(false)}
+                className="shrink-0 flex items-center justify-center size-6 rounded-lg text-white/20 hover:text-white/50 transition-colors"
+              >
+                <X className="size-3" />
+              </button>
+            </div>
+            {saveError && (
+              <p className="text-[9px] text-red-400 pl-4">{saveError}</p>
+            )}
+          </div>
+        ) : accessCode ? (
+          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/[0.025] border border-white/[0.05]">
+            <KeyRound className="size-3 shrink-0 text-amber-400/40" />
+            <span className="flex-1 font-mono text-[9px] tracking-widest text-white/40 select-none">
+              {showCode ? accessCode : '•'.repeat(Math.min(accessCode.length, 10))}
+            </span>
+            <button
+              onClick={() => setShowCode(v => !v)}
+              title={showCode ? 'Hide code' : 'Reveal code'}
+              className="flex items-center justify-center size-5 rounded-md text-white/25 hover:text-white/60 transition-colors"
+            >
+              {showCode ? <EyeOff className="size-3" /> : <Eye className="size-3" />}
+            </button>
+            <CopyButton text={accessCode} />
+            <button
+              onClick={openEditor}
+              title="Edit access code"
+              className="flex items-center justify-center size-5 rounded-md text-white/20 hover:text-amber-400/70 transition-colors"
+            >
+              <Pencil className="size-3" />
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={openEditor}
+            className={cn(
+              'w-full flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg',
+              'border border-dashed border-white/[0.06] text-left',
+              'hover:border-amber-400/20 hover:bg-amber-400/[0.03]',
+              'transition-all duration-150 group/code',
+            )}
+          >
+            <KeyRound className="size-3 shrink-0 text-white/15 group-hover/code:text-amber-400/40 transition-colors" />
+            <span className="text-[9px] text-white/15 italic group-hover/code:text-white/30 transition-colors">
+              Add access code…
+            </span>
+          </button>
+        )}
+      </div>
 
       {/* Divider */}
       <div className="h-px bg-white/[0.05]" />
@@ -714,7 +898,14 @@ export function TimelinesAdminView({ username: _username }: Props) {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map(t => (
-            <TimelineCard key={t.id} timeline={t} onEditBlocks={() => setEditingTimeline(t)} />
+            <TimelineCard
+              key={t.id}
+              timeline={t}
+              onEditBlocks={() => setEditingTimeline(t)}
+              onUpdate={updated =>
+                setTimelines(prev => prev.map(x => (x.id === updated.id ? updated : x)))
+              }
+            />
           ))}
         </div>
       )}

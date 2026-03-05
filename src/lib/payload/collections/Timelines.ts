@@ -95,6 +95,18 @@ export const Timelines: CollectionConfig = {
       ],
     },
     {
+      name: 'accessCode',
+      type: 'text',
+      admin: {
+        description: 'Optional. If set, visitors must enter this code to view the timeline at /orcaclub/projects/[slug].',
+        position: 'sidebar',
+        placeholder: 'e.g. ORCA-2026',
+      },
+      access: {
+        read: ({ req: { user } }) => Boolean(user && (user.role === 'admin' || user.role === 'user')),
+      },
+    },
+    {
       name: 'slug',
       type: 'text',
       required: true,

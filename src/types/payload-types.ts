@@ -1278,6 +1278,10 @@ export interface Timeline {
    */
   style?: ('cinematic' | 'vertical-clean' | 'blueprint' | 'editorial' | 'terminal') | null;
   /**
+   * Optional. If set, visitors must enter this code to view the timeline at /orcaclub/projects/[slug].
+   */
+  accessCode?: string | null;
+  /**
    * URL path — auto-generated from title (e.g. "kawai-launch")
    */
   slug: string;
@@ -2035,6 +2039,7 @@ export interface TimelinesSelect<T extends boolean = true> {
   dateRange?: T;
   metaLabel?: T;
   style?: T;
+  accessCode?: T;
   slug?: T;
   phases?:
     | T
