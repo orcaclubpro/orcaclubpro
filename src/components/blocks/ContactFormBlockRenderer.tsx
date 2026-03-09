@@ -14,7 +14,7 @@ export default function ContactFormBlockRenderer({ block }: Props) {
   })) ?? []
 
   return (
-    <div className="relative min-h-screen overflow-hidden">
+    <div className="relative overflow-hidden">
       <AnimatedBackground />
       <ContactFormSection
         heading={block.heading ?? undefined}

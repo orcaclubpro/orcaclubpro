@@ -122,7 +122,7 @@ function Step1({
         <label htmlFor="name" className={labelCls}>Your Name *</label>
         <div className="relative">
           <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25" />
-          <input id="name" name="name" type="text" required autoFocus
+          <input id="name" name="name" type="text" required
             value={data.name} onChange={onChange} placeholder="Jane Smith"
             className={inputCls} />
         </div>
