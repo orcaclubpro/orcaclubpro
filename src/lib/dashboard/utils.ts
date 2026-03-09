@@ -60,6 +60,7 @@ export type ClientOrderSummary = {
   amount: number
   status: OrderStatusKey
   createdAt: string
+  stripeInvoiceUrl?: string | null
 }
 
 export type ScheduledEntry = {
@@ -131,3 +132,106 @@ export const ORDER_STATUS_CFG: Record<OrderStatusKey, OrderStatusCfg> = {
     titleClass: 'text-gray-500',
   },
 }
+
+// ─── Project status config ────────────────────────────────────────────────────
+
+export const PROJECT_STATUS_CFG = {
+  'in-progress': {
+    label: 'In Progress',
+    stripe: 'bg-cyan-400',
+    dot: 'bg-cyan-400',
+    color: 'text-cyan-400',
+    badgeClasses: 'text-cyan-400 bg-cyan-400/[0.07] border border-cyan-400/20',
+    ringColor: 'rgb(34,211,238)',
+  },
+  pending: {
+    label: 'Pending',
+    stripe: 'bg-yellow-400',
+    dot: 'bg-yellow-400',
+    color: 'text-yellow-400',
+    badgeClasses: 'text-yellow-400 bg-yellow-400/[0.07] border border-yellow-400/20',
+    ringColor: 'rgb(250,204,21)',
+  },
+  'on-hold': {
+    label: 'On Hold',
+    stripe: 'bg-orange-400',
+    dot: 'bg-orange-400',
+    color: 'text-orange-400',
+    badgeClasses: 'text-orange-400 bg-orange-400/[0.07] border border-orange-400/20',
+    ringColor: 'rgb(251,146,60)',
+  },
+  completed: {
+    label: 'Completed',
+    stripe: 'bg-emerald-400',
+    dot: 'bg-emerald-400',
+    color: 'text-emerald-400',
+    badgeClasses: 'text-emerald-400 bg-emerald-400/[0.07] border border-emerald-400/20',
+    ringColor: 'rgb(52,211,153)',
+  },
+  cancelled: {
+    label: 'Cancelled',
+    stripe: 'bg-red-400/60',
+    dot: 'bg-red-400',
+    color: 'text-red-400',
+    badgeClasses: 'text-red-400 bg-red-400/[0.07] border border-red-400/20',
+    ringColor: 'rgb(248,113,113)',
+  },
+} as const
+
+// ─── Sprint status config ─────────────────────────────────────────────────────
+
+export const SPRINT_STATUS_CFG = {
+  pending: {
+    label: 'Pending',
+    dot: 'bg-gray-500',
+    color: 'text-gray-400',
+    badgeClasses: 'text-gray-400 bg-gray-400/[0.07] border border-gray-400/20',
+    bar: 'bg-gray-500/60',
+  },
+  'in-progress': {
+    label: 'In Progress',
+    dot: 'bg-[#67e8f9]',
+    color: 'text-[#67e8f9]',
+    badgeClasses: 'text-[#67e8f9] bg-[#67e8f9]/[0.07] border border-[#67e8f9]/20',
+    bar: 'bg-[#67e8f9]/70',
+  },
+  delayed: {
+    label: 'Delayed',
+    dot: 'bg-yellow-400',
+    color: 'text-yellow-400',
+    badgeClasses: 'text-yellow-400 bg-yellow-400/[0.07] border border-yellow-400/20',
+    bar: 'bg-yellow-400/70',
+  },
+  finished: {
+    label: 'Finished',
+    dot: 'bg-emerald-400',
+    color: 'text-emerald-400',
+    badgeClasses: 'text-emerald-400 bg-emerald-400/[0.07] border border-emerald-400/20',
+    bar: 'bg-emerald-400/70',
+  },
+} as const
+
+// ─── Task status config ───────────────────────────────────────────────────────
+
+export const TASK_STATUS_CFG = {
+  pending: {
+    label: 'Pending',
+    dot: 'bg-gray-500',
+    color: 'text-gray-400',
+  },
+  'in-progress': {
+    label: 'In Progress',
+    dot: 'bg-[#67e8f9]',
+    color: 'text-[#67e8f9]',
+  },
+  completed: {
+    label: 'Completed',
+    dot: 'bg-emerald-400',
+    color: 'text-emerald-400',
+  },
+  blocked: {
+    label: 'Blocked',
+    dot: 'bg-red-400',
+    color: 'text-red-400',
+  },
+} as const

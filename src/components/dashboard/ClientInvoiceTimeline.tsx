@@ -1,6 +1,6 @@
 'use client'
 
-import { Receipt } from 'lucide-react'
+import { Receipt, ExternalLink } from 'lucide-react'
 import {
   fmtCurrency,
   fmtDate,
@@ -28,12 +28,12 @@ export function ClientInvoiceTimeline({ orders }: ClientInvoiceTimelineProps) {
 
   if (orders.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <Receipt className="size-7 text-gray-400 mb-3" />
-        <p className="text-sm font-medium text-white">No invoices yet</p>
-        <p className="text-sm text-gray-300 mt-1">
-          Invoices will appear here once work begins.
-        </p>
+      <div className="rounded-xl border border-dashed border-white/[0.06] bg-[#0a0a0a] py-12 text-center">
+        <div className="inline-flex p-3 rounded-full bg-white/[0.04] border border-white/[0.08] mb-4">
+          <Receipt className="size-6 text-gray-600" />
+        </div>
+        <p className="text-sm font-medium text-white/70">No invoices yet</p>
+        <p className="text-xs text-gray-600 mt-1">Invoices will appear here once work begins.</p>
       </div>
     )
   }
@@ -88,6 +88,17 @@ export function ClientInvoiceTimeline({ orders }: ClientInvoiceTimelineProps) {
               <span className={`inline-flex text-[10px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded-full border shrink-0 ${cfg.badgeClass}`}>
                 {cfg.label}
               </span>
+
+              {isPending && order.stripeInvoiceUrl && (
+                <a
+                  href={order.stripeInvoiceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold rounded-md bg-amber-400/10 border border-amber-400/25 text-amber-400 hover:bg-amber-400/20 transition-all shrink-0 whitespace-nowrap"
+                >
+                  Pay Now <ExternalLink className="size-2.5" />
+                </a>
+              )}
             </div>
           )
         })}

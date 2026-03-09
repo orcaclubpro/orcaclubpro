@@ -1,8 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowRight, Calendar, CheckCircle2, Circle, Zap } from 'lucide-react'
+import { ArrowRight, Calendar, Circle, FolderKanban, Zap } from 'lucide-react'
 import { ProgressRing } from './visualizations/ProgressRing'
+import { PROJECT_STATUS_CFG, SPRINT_STATUS_CFG } from '@/lib/dashboard/utils'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -21,24 +22,6 @@ export type ClientProjectSummary = {
     totalTasksCount: number
     endDate: string
   } | null
-}
-
-// ─── Status config ────────────────────────────────────────────────────────────
-
-const STATUS_CFG: Record<string, { stripe: string; dot: string; label: string; color: string; ringColor: string }> = {
-  active: { stripe: 'bg-green-400', dot: 'bg-green-400', label: 'Active', color: 'text-green-400', ringColor: 'rgb(74, 222, 128)' },
-  'in-progress': { stripe: 'bg-cyan-400', dot: 'bg-cyan-400', label: 'In Progress', color: 'text-cyan-400', ringColor: 'rgb(34, 211, 238)' },
-  'on-hold': { stripe: 'bg-yellow-400', dot: 'bg-yellow-400', label: 'On Hold', color: 'text-yellow-400', ringColor: 'rgb(250, 204, 21)' },
-  completed: { stripe: 'bg-blue-400', dot: 'bg-blue-400', label: 'Completed', color: 'text-blue-400', ringColor: 'rgb(96, 165, 250)' },
-  pending: { stripe: 'bg-gray-500', dot: 'bg-gray-500', label: 'Pending', color: 'text-gray-400', ringColor: 'rgb(156, 163, 175)' },
-  cancelled: { stripe: 'bg-red-400/60', dot: 'bg-red-400', label: 'Cancelled', color: 'text-red-400', ringColor: 'rgb(248, 113, 113)' },
-}
-
-const SPRINT_STATUS_CFG: Record<string, { dot: string; label: string; color: string }> = {
-  pending: { dot: 'bg-gray-500', label: 'Pending', color: 'text-gray-500' },
-  'in-progress': { dot: 'bg-intelligence-cyan', label: 'In Progress', color: 'text-intelligence-cyan' },
-  delayed: { dot: 'bg-yellow-400', label: 'Delayed', color: 'text-yellow-400' },
-  finished: { dot: 'bg-green-400', label: 'Finished', color: 'text-green-400' },
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -63,7 +46,7 @@ function fmtDate(d: string | null | undefined) {
 // ─── Project card ─────────────────────────────────────────────────────────────
 
 function ProjectCard({ project, username }: { project: ClientProjectSummary; username: string }) {
-  const cfg = STATUS_CFG[project.status] ?? STATUS_CFG['on-hold']
+  const cfg = PROJECT_STATUS_CFG[project.status as keyof typeof PROJECT_STATUS_CFG] ?? PROJECT_STATUS_CFG['on-hold']
   const timelineProgress = calcTimelineProgress(project.startDate, project.endDate, project.status)
 
   const completedMilestones = project.milestones.filter(m => m.completed).length
@@ -72,7 +55,7 @@ function ProjectCard({ project, username }: { project: ClientProjectSummary; use
   const nextMilestone = project.milestones.find(m => !m.completed)
 
   const sprintCfg = project.currentSprint
-    ? (SPRINT_STATUS_CFG[project.currentSprint.status] ?? SPRINT_STATUS_CFG.pending)
+    ? (SPRINT_STATUS_CFG[project.currentSprint.status as keyof typeof SPRINT_STATUS_CFG] ?? SPRINT_STATUS_CFG.pending)
     : null
   const sprintProgress = project.currentSprint && project.currentSprint.totalTasksCount > 0
     ? Math.round((project.currentSprint.completedTasksCount / project.currentSprint.totalTasksCount) * 100)
@@ -221,17 +204,20 @@ interface ClientActiveProjectsProps {
 export function ClientActiveProjects({ projects, username, totalCount }: ClientActiveProjectsProps) {
   if (projects.length === 0) {
     return (
-      <div className="rounded-xl border border-white/[0.06] bg-[#0d0d0d] p-12 text-center">
-        <CheckCircle2 className="size-7 text-gray-800 mx-auto mb-3" />
-        <p className="text-sm font-semibold text-white mb-1.5">No Active Projects</p>
-        <p className="text-xs text-gray-600 mb-5 leading-relaxed">
-          You don't have any active projects at the moment. Reach out to get started.
+      <div className="rounded-2xl border border-dashed border-white/[0.08] bg-[#080808] p-12 text-center">
+        <div className="inline-flex p-4 rounded-full bg-[#67e8f9]/[0.06] border border-[#67e8f9]/20 mb-5">
+          <FolderKanban className="size-7 text-[#67e8f9]/50" />
+        </div>
+        <p className="text-base font-semibold text-white mb-2">No active projects yet</p>
+        <p className="text-sm text-gray-500 mb-6 leading-relaxed max-w-xs mx-auto">
+          Your project work will appear here once your engagement begins.
         </p>
         <a
           href="/contact"
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-intelligence-cyan text-black text-xs font-medium hover:bg-intelligence-cyan/90 transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#67e8f9] text-black text-xs font-semibold hover:bg-[#67e8f9]/90 transition-colors"
         >
-          Start a Project
+          Start a conversation
+          <ArrowRight className="size-3.5" />
         </a>
       </div>
     )

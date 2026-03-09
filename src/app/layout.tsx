@@ -20,9 +20,9 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://orcaclub.pro'),
-  title: "ORCACLUB est 2025 | Branding, Marketing, and Consulting",
+  title: "ORCACLUB | Built to Surface",
   description:
-    "Full-service branding, marketing, and consulting agency established in 2025. We help businesses build powerful brands, execute strategic marketing campaigns, and navigate complex business challenges with expert consulting services.",
+    "Development, Marketing, and Design. Schedule a free call.",
   keywords: [
     "orcaclub",
     "software company",
@@ -69,8 +69,8 @@ export const metadata: Metadata = {
     locale: "en_US",
     url: "https://orcaclub.pro",
     siteName: "ORCACLUB",
-    title: "ORCACLUB - Leading Software Company | Web Design & AI Agents",
-    description: "Expert software company specializing in beautiful web design, AI agents, and custom software solutions. Transform your business with our tailored automation and intelligent workflows.",
+    title: "ORCACLUB | Built to Surface",
+    description: "Development, Marketing, and Design. Schedule a free call.",
     images: [
       {
         url: "/og-image.jpg",
@@ -82,8 +82,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "ORCACLUB - Leading Software Company | Web Design & AI Agents",
-    description: "Expert software company specializing in beautiful web design, AI agents, and custom software solutions. Transform your business with tailored automation.",
+    title: "ORCACLUB | Built to Surface",
+    description: "Development, Marketing, and Design. Schedule a free call.",
     creator: "@orcaclub",
     images: ["/og-image.jpg"],
   },

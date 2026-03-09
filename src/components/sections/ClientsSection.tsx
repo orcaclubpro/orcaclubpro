@@ -1,7 +1,6 @@
 "use client"
 
 import Image from "next/image"
-import ScrollReveal from "@/components/layout/scroll-reveal"
 
 interface ClientsSectionProps {
   clients: any[]
@@ -10,99 +9,112 @@ interface ClientsSectionProps {
 export default function ClientsSection({ clients }: ClientsSectionProps) {
   if (clients.length === 0) return null
 
+  // Duplicate enough times to ensure the track is always wider than the viewport
+  const repeated = [...clients, ...clients, ...clients, ...clients]
+
   return (
-    <section id="our-work" data-section="clients" className="py-20 px-8 border-t border-white/[0.04] relative z-10">
-      <div className="max-w-6xl mx-auto">
-        <ScrollReveal>
-          <div className="text-center mb-16">
-            <p className="text-[10px] tracking-[0.4em] uppercase text-white/15 font-light mb-5">
-              Our Work
-            </p>
-            <h2 className="text-3xl md:text-4xl font-extralight mb-5 tracking-tight">
-              Brands we&apos;ve built <span className="gradient-text font-light">solutions</span> for
-            </h2>
-            <div className="mx-auto w-6 h-px bg-cyan-400/40" />
-          </div>
-        </ScrollReveal>
+    <section
+      id="our-work"
+      data-section="clients"
+      className="py-20 border-t border-white/[0.04] relative z-10 overflow-hidden"
+    >
+      {/* Section label */}
+      <div className="text-center mb-12 px-6">
+        <p className="text-[10px] tracking-[0.4em] uppercase text-white/15 font-light">
+          Trusted By
+        </p>
+      </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-12 md:gap-16 justify-items-center">
-          {clients.map((client, index) => {
+      {/* Carousel track — edge fades via mask */}
+      <div
+        className="relative"
+        style={{
+          maskImage:
+            "linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%)",
+          WebkitMaskImage:
+            "linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%)",
+        }}
+      >
+        <div
+          className="flex gap-24 items-center carousel-track"
+          style={{ width: "max-content" }}
+        >
+          {repeated.map((client, index) => {
             const logo = client.logo
-            const logoUrl = typeof logo === 'object' && logo?.url ? logo.url : null
-            const hasWebsite = client.website && client.website.trim() !== ''
+            const logoUrl =
+              typeof logo === "object" && logo?.url ? logo.url : null
+            const hasWebsite = client.website && client.website.trim() !== ""
 
-            const logoContent = logoUrl ? (
-              <div className="relative w-full h-32 md:h-48 hover:scale-110 transition-all duration-500">
-                <Image
-                  src={logoUrl}
-                  alt={logo.alt || client.name}
-                  fill
-                  className="object-contain"
-                  priority={index < 4}
-                />
+            const inner = (
+              <div className="carousel-logo flex items-center justify-center w-48 h-24 flex-shrink-0">
+                {logoUrl ? (
+                  <Image
+                    src={logoUrl}
+                    alt={logo.alt || client.name}
+                    width={192}
+                    height={96}
+                    className="object-contain w-full h-full"
+                    priority={index < clients.length}
+                  />
+                ) : (
+                  <span className="text-white/30 text-xs font-light tracking-widest uppercase">
+                    {client.name}
+                  </span>
+                )}
               </div>
-            ) : (
-              <div className="text-gray-400 text-sm font-light">{client.name}</div>
             )
 
             return (
-              <div
-                key={client.id || index}
-                className="flex items-center justify-center group w-full client-logo-animate"
-                style={{
-                  animationDelay: `${index * 150}ms`,
-                }}
-              >
+              <div key={`${client.id ?? index}-${index}`} className="flex-shrink-0">
                 {hasWebsite ? (
                   <a
                     href={client.website}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-full cursor-pointer"
-                    aria-label={`Visit ${client.name} website`}
+                    aria-label={`Visit ${client.name}`}
+                    className="block"
                   >
-                    {logoContent}
+                    {inner}
                   </a>
                 ) : (
-                  logoContent
+                  inner
                 )}
               </div>
             )
           })}
         </div>
-        <style jsx>{`
-          .client-logo-animate {
-            opacity: 0;
-            animation: float-in 1s cubic-bezier(0.16, 1, 0.3, 1) forwards,
-                       float 6s ease-in-out infinite 1s;
-            will-change: transform;
-          }
-          @keyframes float-in {
-            0% {
-              opacity: 0;
-              transform: translateY(-30px) scale(0.95);
-            }
-            100% {
-              opacity: 1;
-              transform: translateY(0) scale(1);
-            }
-          }
-          @keyframes float {
-            0%, 100% {
-              transform: translateY(0px) rotate(0deg);
-            }
-            25% {
-              transform: translateY(-8px) rotate(1deg);
-            }
-            50% {
-              transform: translateY(-12px) rotate(0deg);
-            }
-            75% {
-              transform: translateY(-6px) rotate(-1deg);
-            }
-          }
-        `}</style>
       </div>
+
+      <style jsx>{`
+        .carousel-track {
+          animation: marquee 40s linear infinite;
+        }
+
+        /* Pause on hover of the whole section */
+        section:hover .carousel-track {
+          animation-play-state: paused;
+        }
+
+        @keyframes marquee {
+          0% {
+            transform: translateX(0);
+          }
+          100% {
+            /* Move by 25% — one full original set (4 copies = 25% each) */
+            transform: translateX(-25%);
+          }
+        }
+
+        .carousel-logo {
+          filter: grayscale(1) brightness(0.5);
+          transition: filter 0.4s ease, transform 0.3s ease;
+        }
+
+        .carousel-logo:hover {
+          filter: grayscale(0) brightness(1);
+          transform: scale(1.08);
+        }
+      `}</style>
     </section>
   )
 }

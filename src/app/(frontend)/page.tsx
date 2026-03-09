@@ -2,8 +2,8 @@ import type { Metadata } from 'next'
 import AnimatedBackground from "@/components/layout/animated-background"
 import ScrollReveal from "@/components/layout/scroll-reveal"
 import HeroSection from "@/components/sections/HeroSection"
-import ClientsSection from "@/components/sections/ClientsSection"
 import ServicesGrid from "@/components/sections/ServicesGrid"
+import RenderBlocks from "@/components/blocks/RenderBlocks"
 import Link from "next/link"
 import { ArrowRight } from "lucide-react"
 import { getPayload } from "payload"
@@ -52,16 +52,31 @@ export const metadata: Metadata = {
 }
 
 export default async function HomePage() {
-  // Fetch clients from Payload
   const payload = await getPayload({ config })
 
+  // Fetch clients for the fallback hero (used when no CMS page exists)
   const clientsData = await payload.find({
     collection: 'clients' as any,
     sort: 'displayOrder',
     limit: 12,
   })
-
   const clients = clientsData.docs
+
+  // Try to fetch the CMS-managed home page
+  let homePage: any = null
+  try {
+    const { docs } = await payload.find({
+      collection: 'pages' as any,
+      where: { slug: { equals: 'home' } },
+      depth: 2,
+      limit: 1,
+      draft: process.env.NODE_ENV === 'development',
+      overrideAccess: true, // public page
+    })
+    homePage = docs[0] ?? null
+  } catch {
+    // Pages collection may not exist yet or no home page created
+  }
 
   // Breadcrumb schema for homepage
   const breadcrumbSchema = {
@@ -77,6 +92,8 @@ export default async function HomePage() {
     ]
   }
 
+  const hasCmsLayout = homePage?.layout && Array.isArray(homePage.layout) && homePage.layout.length > 0
+
   return (
     <div className="min-h-screen bg-black relative overflow-hidden">
       {/* Breadcrumb Schema */}
@@ -87,68 +104,73 @@ export default async function HomePage() {
 
       <AnimatedBackground />
 
-      {/* Hero Section */}
-      <HeroSection />
+      {hasCmsLayout ? (
+        // CMS-managed layout
+        <RenderBlocks blocks={homePage.layout} />
+      ) : (
+        // Fallback: hardcoded sections (shown until a CMS home page is created)
+        <>
+          {/* Hero Section */}
+          <HeroSection clients={clients} />
 
-      {/* Our Work Section - Clients */}
-      <ClientsSection clients={clients} />
+          {/* Capabilities Section */}
+          <section className="py-40 px-8 relative z-10">
+            <div className="max-w-7xl mx-auto">
+              <ScrollReveal>
+                <div className="text-center mb-32">
+                  <p className="text-[10px] tracking-[0.4em] uppercase text-white/15 font-light mb-5">
+                    Capabilities
+                  </p>
+                  <h2 className="text-4xl md:text-5xl font-extralight mb-6 tracking-tight">
+                    Tailored <span className="gradient-text font-light">solutions</span> for scaling businesses
+                  </h2>
+                  <div className="mx-auto w-6 h-px bg-cyan-400/40 mb-8" />
+                  <p className="text-lg text-gray-400 max-w-2xl mx-auto font-light leading-relaxed">
+                    Fixed-price tiers, fast delivery, and modern tech. Choose Launch, Scale, or Enterprise.
+                  </p>
+                </div>
+              </ScrollReveal>
 
-      {/* Capabilities Section */}
-      <section className="py-40 px-8 relative z-10">
-        <div className="max-w-7xl mx-auto">
-          <ScrollReveal>
-            <div className="text-center mb-32">
-              <p className="text-[10px] tracking-[0.4em] uppercase text-white/15 font-light mb-5">
-                Capabilities
-              </p>
-              <h2 className="text-4xl md:text-5xl font-extralight mb-6 tracking-tight">
-                Tailored <span className="gradient-text font-light">solutions</span> for scaling businesses
-              </h2>
-              <div className="mx-auto w-6 h-px bg-cyan-400/40 mb-8" />
-              <p className="text-lg text-gray-400 max-w-2xl mx-auto font-light leading-relaxed">
-                Fixed-price tiers, fast delivery, and modern tech. Choose Launch, Scale, or Enterprise.
-              </p>
+              <ServicesGrid />
             </div>
-          </ScrollReveal>
+          </section>
 
-          <ServicesGrid />
-        </div>
-      </section>
-
-      {/* Call to Action */}
-      <section className="py-40 px-8 relative z-10">
-        <div className="max-w-4xl mx-auto text-center">
-          <ScrollReveal>
-            <p className="text-[10px] tracking-[0.4em] uppercase text-white/15 font-light mb-5">
-              Get Started
-            </p>
-            <h2 className="text-4xl md:text-5xl font-extralight mb-6 tracking-tight">
-              Ready to launch your <span className="gradient-text font-light">next project</span>?
-            </h2>
-            <div className="mx-auto w-6 h-px bg-cyan-400/40 mb-8" />
-            <p className="text-lg text-gray-400 mb-16 font-light leading-relaxed max-w-2xl mx-auto">
-              No opaque quotes. No lengthy sales cycles. Just transparent pricing, fast delivery, and direct developer access.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
-              <Link
-                href="/contact"
-                className="inline-flex items-center gap-4 px-12 py-5 bg-gradient-to-r from-blue-600/20 to-cyan-500/20 border border-cyan-400/30 rounded-md text-base font-light text-cyan-400 hover:from-blue-600/30 hover:to-cyan-500/30 transition-all duration-500 magnetic interactive"
-              >
-                Start Your Project <ArrowRight size={18} />
-              </Link>
-              <Link
-                href="/project"
-                className="inline-flex items-center gap-2 px-12 py-5 bg-white/[0.03] border border-white/[0.08] rounded-md text-base font-light text-white/70 hover:bg-white/[0.06] hover:border-white/[0.14] hover:text-white transition-all duration-500 magnetic interactive"
-              >
-                View Project Tiers
-              </Link>
+          {/* Call to Action */}
+          <section className="py-40 px-8 relative z-10">
+            <div className="max-w-4xl mx-auto text-center">
+              <ScrollReveal>
+                <p className="text-[10px] tracking-[0.4em] uppercase text-white/15 font-light mb-5">
+                  Get Started
+                </p>
+                <h2 className="text-4xl md:text-5xl font-extralight mb-6 tracking-tight">
+                  Ready to launch your <span className="gradient-text font-light">next project</span>?
+                </h2>
+                <div className="mx-auto w-6 h-px bg-cyan-400/40 mb-8" />
+                <p className="text-lg text-gray-400 mb-16 font-light leading-relaxed max-w-2xl mx-auto">
+                  No opaque quotes. No lengthy sales cycles. Just transparent pricing, fast delivery, and direct developer access.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
+                  <Link
+                    href="/contact"
+                    className="inline-flex items-center gap-4 px-12 py-5 bg-gradient-to-r from-blue-600/20 to-cyan-500/20 border border-cyan-400/30 rounded-md text-base font-light text-cyan-400 hover:from-blue-600/30 hover:to-cyan-500/30 transition-all duration-500 magnetic interactive"
+                  >
+                    Start Your Project <ArrowRight size={18} />
+                  </Link>
+                  <Link
+                    href="/project"
+                    className="inline-flex items-center gap-2 px-12 py-5 bg-white/[0.03] border border-white/[0.08] rounded-md text-base font-light text-white/70 hover:bg-white/[0.06] hover:border-white/[0.14] hover:text-white transition-all duration-500 magnetic interactive"
+                  >
+                    View Project Tiers
+                  </Link>
+                </div>
+                <p className="text-[10px] tracking-[0.3em] uppercase text-white/15 font-light">
+                  3–21 Day Delivery · Fixed Pricing · Direct Developer Access
+                </p>
+              </ScrollReveal>
             </div>
-            <p className="text-[10px] tracking-[0.3em] uppercase text-white/15 font-light">
-              3–21 Day Delivery · Fixed Pricing · Direct Developer Access
-            </p>
-          </ScrollReveal>
-        </div>
-      </section>
+          </section>
+        </>
+      )}
 
       {/* Footer is now in the layout */}
     </div>

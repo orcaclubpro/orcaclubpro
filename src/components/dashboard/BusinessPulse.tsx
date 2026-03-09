@@ -92,8 +92,8 @@ export function BusinessPulse({ weeklyRevenue, orderPipeline, projectStatus, kpi
       {/* KPI row */}
       <div className="grid grid-cols-4 gap-3">
         {kpiItems.map((k) => (
-          <div key={k.label} className="space-y-0.5">
-            <p className="text-xs uppercase tracking-widest text-gray-300 font-semibold">{k.label}</p>
+          <div key={k.label} className="flex-1 space-y-1 p-3 rounded-lg bg-white/[0.02] border border-white/[0.04] min-w-0">
+            <p className="text-[9px] uppercase tracking-widest text-gray-400 font-semibold truncate">{k.label}</p>
             <p className={`text-xl font-bold tabular-nums tracking-tight ${k.accent ? 'text-intelligence-cyan' : 'text-white'}`}>
               {k.value}
             </p>

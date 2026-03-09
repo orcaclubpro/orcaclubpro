@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { ChevronLeft, ChevronRight, Zap, ArrowRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Zap, ArrowRight, TrendingUp, FolderKanban, Building2 } from 'lucide-react'
 import Link from 'next/link'
 import { DashboardGreeting } from '@/components/dashboard/DashboardGreeting'
 import { AnalyticsSidebar } from '@/components/dashboard/AnalyticsSidebar'
@@ -95,6 +95,7 @@ function SprintCarousel({ sprints, username }: { sprints: ActiveSprint[]; userna
       {/* Section header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
+          <div className="w-px h-4 bg-[#67e8f9]/40 rounded-full shrink-0" />
           <Zap className="size-3 text-[#67e8f9]/40 shrink-0" />
           <p className="text-[10px] font-semibold text-white/40 uppercase tracking-[0.3em]">
             Active Sprints
@@ -325,7 +326,7 @@ export function AdminHomeView({
             <div className="flex flex-wrap gap-2 mt-5 lg:hidden">
               {pulseKpis.revenue30d > 0 && (
                 <div className="flex items-center gap-1.5 bg-white/[0.04] border border-white/[0.08] rounded-full px-3 py-1.5">
-                  <span className="size-1.5 rounded-full bg-green-400 shrink-0" />
+                  <TrendingUp className="size-2.5 text-emerald-400 shrink-0" />
                   <span className="text-xs text-white/60 tabular-nums">
                     {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(pulseKpis.revenue30d)}
                     <span className="text-white/30 ml-1">30d</span>
@@ -333,14 +334,14 @@ export function AdminHomeView({
                 </div>
               )}
               <div className="flex items-center gap-1.5 bg-white/[0.04] border border-white/[0.08] rounded-full px-3 py-1.5">
-                <span className="size-1.5 rounded-full bg-cyan-400 shrink-0" />
+                <FolderKanban className="size-2.5 text-cyan-400 shrink-0" />
                 <span className="text-xs text-white/60 tabular-nums">
                   {pulseKpis.activeProjects} active project{pulseKpis.activeProjects !== 1 ? 's' : ''}
                 </span>
               </div>
               {pulseKpis.activeClients > 0 && (
                 <div className="flex items-center gap-1.5 bg-white/[0.04] border border-white/[0.08] rounded-full px-3 py-1.5">
-                  <span className="size-1.5 rounded-full bg-violet-400 shrink-0" />
+                  <Building2 className="size-2.5 text-violet-400 shrink-0" />
                   <span className="text-xs text-white/60 tabular-nums">
                     {pulseKpis.activeClients} client{pulseKpis.activeClients !== 1 ? 's' : ''}
                   </span>
@@ -378,10 +379,13 @@ export function AdminHomeView({
             {/* Shared header: title + range picker */}
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-[10px] font-semibold text-white/40 uppercase tracking-[0.3em]">
-                  Schedule
-                </p>
-                <p className="text-[9px] text-white/20 mt-0.5 hidden sm:block">Swipe to browse</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-px h-4 bg-[#67e8f9]/40 rounded-full shrink-0" />
+                  <p className="text-[10px] font-semibold text-white/40 uppercase tracking-[0.3em]">
+                    Schedule
+                  </p>
+                </div>
+                <p className="text-[9px] text-white/20 mt-0.5 hidden sm:block pl-[19px]">Swipe to browse</p>
               </div>
               <div className="flex items-center p-1 bg-white/[0.04] rounded-lg border border-white/[0.08]">
                 {(['week', 'month', 'year'] as Range[]).map((r) => (

@@ -1,8 +1,6 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import Image from "next/image"
-import Link from "next/link"
 
 interface DynamicGreetingProps {
   className?: string
@@ -67,8 +65,6 @@ export default function DynamicGreeting({ className = "" }: DynamicGreetingProps
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [currentLanguageIndex, setCurrentLanguageIndex] = useState(0)
   const [timeOfDay, setTimeOfDay] = useState<'morning' | 'afternoon' | 'evening'>('morning')
-  const [logoVisible, setLogoVisible] = useState(false)
-
   const determineTimeOfDay = (): 'morning' | 'afternoon' | 'evening' => {
     const hour = new Date().getHours()
     
@@ -120,17 +116,11 @@ export default function DynamicGreeting({ className = "" }: DynamicGreetingProps
     setGreetingContent(initialGreeting)
     setMounted(true)
 
-    // Staggered animation sequence for brand impact
-    const logoTimer = setTimeout(() => {
-      setLogoVisible(true)
-    }, 200)
-
     const textTimer = setTimeout(() => {
       setIsVisible(true)
     }, 600)
 
     return () => {
-      clearTimeout(logoTimer)
       clearTimeout(textTimer)
     }
   }, [])
@@ -167,32 +157,16 @@ export default function DynamicGreeting({ className = "" }: DynamicGreetingProps
   if (!mounted) return null
 
   return (
-    <div className={`flex flex-col items-center justify-start pt-16 pb-16 w-full ${className}`}>
-      <div className="flex flex-col items-center text-center space-y-4 max-w-4xl mx-auto px-8">
-        
-        {/* Logo - Top Center */}
-        <div className={`transition-all duration-1000 ease-out ${
-          logoVisible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-[-30px] scale-95'
-        }`}>
-          <Link href="/about" className="group transition-all duration-300 hover:scale-105 cursor-pointer">
-            <Image
-              src="/orcaclubpro.png"
-              alt="ORCACLUB Pro"
-              width={200}
-              height={200}
-              className="w-24 h-24 md:w-32 md:h-32 lg:w-40 lg:h-40 object-contain group-hover:opacity-80 transition-opacity duration-300"
-              priority
-            />
-          </Link>
-        </div>
+    <div className={`flex flex-col items-center w-full ${className}`}>
+      <div className="flex flex-col items-center text-center space-y-3 max-w-4xl mx-auto px-8">
 
         {/* Dynamic Greeting Text - Centered */}
         <div className="flex flex-col items-center">
-          <div 
+          <div
             className={`text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-light tracking-tighter leading-tight transition-all duration-700 ease-in-out whitespace-nowrap ${
               isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-[-60px]'
             }`}
-            style={{ 
+            style={{
               transitionDelay: isTransitioning ? '0ms' : '300ms',
               fontWeight: '300'
             }}
@@ -212,15 +186,6 @@ export default function DynamicGreeting({ className = "" }: DynamicGreetingProps
         <div className={`w-24 h-px bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent transition-all duration-1000 ${
           isVisible ? 'opacity-60 scale-x-100' : 'opacity-0 scale-x-0'
         }`} style={{ transitionDelay: '600ms' }}></div>
-
-        {/* Brand Signature - Bottom Center */}
-        <div className={`transition-all duration-800 ease-out ${
-          isVisible ? 'opacity-60 translate-y-0' : 'opacity-0 translate-y-[20px]'
-        }`} style={{ transitionDelay: '750ms' }}>
-          <span className="inline-block text-xs md:text-sm font-medium text-gray-400 tracking-[0.2em] uppercase transition-all duration-300 hover:opacity-100 hover:text-cyan-300 hover:tracking-[0.3em] cursor-default">
-            by Chance Noonan
-          </span>
-        </div>
       </div>
     </div>
   )

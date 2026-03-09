@@ -73,6 +73,8 @@ export interface Config {
     categories: Category;
     tags: Tag;
     posts: Post;
+    solutions: Solution;
+    pages: Page;
     users: User;
     'client-accounts': ClientAccount;
     orders: Order;
@@ -102,6 +104,8 @@ export interface Config {
     categories: CategoriesSelect<false> | CategoriesSelect<true>;
     tags: TagsSelect<false> | TagsSelect<true>;
     posts: PostsSelect<false> | PostsSelect<true>;
+    solutions: SolutionsSelect<false> | SolutionsSelect<true>;
+    pages: PagesSelect<false> | PagesSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
     'client-accounts': ClientAccountsSelect<false> | ClientAccountsSelect<true>;
     orders: OrdersSelect<false> | OrdersSelect<true>;
@@ -404,6 +408,14 @@ export interface Post {
    * Estimated read time in minutes
    */
   readTime?: number | null;
+  meta?: {
+    title?: string | null;
+    description?: string | null;
+    /**
+     * Maximum upload file size: 12MB. Recommended file size for images is <500KB.
+     */
+    image?: (string | null) | Media;
+  };
   updatedAt: string;
   createdAt: string;
   _status?: ('draft' | 'published') | null;
@@ -1153,6 +1165,300 @@ export interface Task {
   createdAt: string;
 }
 /**
+ * SEO-driven solution pages with flexible content blocks
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "solutions".
+ */
+export interface Solution {
+  id: string;
+  title: string;
+  /**
+   * URL-friendly identifier (auto-generated from title)
+   */
+  slug: string;
+  /**
+   * Short summary shown on the solutions listing page
+   */
+  description?: string | null;
+  /**
+   * Add content blocks to build the page
+   */
+  layout?: ArticleBlock[] | null;
+  meta?: {
+    /**
+     * Overrides page title in search results (50–60 chars recommended)
+     */
+    title?: string | null;
+    /**
+     * Shown in search results (150–160 chars recommended)
+     */
+    description?: string | null;
+    /**
+     * Open Graph image for social sharing
+     */
+    image?: (string | null) | Media;
+    /**
+     * Prevent search engines from indexing this page
+     */
+    noIndex?: boolean | null;
+  };
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "ArticleBlock".
+ */
+export interface ArticleBlock {
+  content: {
+    root: {
+      type: string;
+      children: {
+        type: string;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  };
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'article';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "pages".
+ */
+export interface Page {
+  id: string;
+  title: string;
+  /**
+   * URL slug. Use "home" for the homepage.
+   */
+  slug: string;
+  layout?: (HeroBlock | CapabilitiesBlock | CtaBlock | ContactFormBlock | OrcaclubCarouselBlock)[] | null;
+  meta?: {
+    title?: string | null;
+    description?: string | null;
+    /**
+     * Maximum upload file size: 12MB. Recommended file size for images is <500KB.
+     */
+    image?: (string | null) | Media;
+  };
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "HeroBlock".
+ */
+export interface HeroBlock {
+  /**
+   * Short tagline shown below the greeting
+   */
+  subheading?: string | null;
+  /**
+   * Label for the primary CTA button
+   */
+  primaryButtonLabel?: string | null;
+  /**
+   * URL for the primary CTA button
+   */
+  primaryButtonHref?: string | null;
+  /**
+   * Label for the secondary CTA button
+   */
+  secondaryButtonLabel?: string | null;
+  /**
+   * URL for the secondary CTA button
+   */
+  secondaryButtonHref?: string | null;
+  /**
+   * Whether to show the client logo marquee at the bottom of the hero
+   */
+  showClientsCarousel?: boolean | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'hero';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "CapabilitiesBlock".
+ */
+export interface CapabilitiesBlock {
+  /**
+   * Small eyebrow label above the heading
+   */
+  label?: string | null;
+  /**
+   * Section heading. "solutions" renders as gradient text in the renderer.
+   */
+  heading?: string | null;
+  /**
+   * Descriptive paragraph below the heading
+   */
+  subheading?: string | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'capabilities';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "CtaBlock".
+ */
+export interface CtaBlock {
+  /**
+   * Small eyebrow label above the heading
+   */
+  label?: string | null;
+  /**
+   * Section heading
+   */
+  heading?: string | null;
+  /**
+   * Descriptive paragraph below the heading
+   */
+  subheading?: string | null;
+  /**
+   * Label for the primary CTA button
+   */
+  primaryButtonLabel?: string | null;
+  /**
+   * URL for the primary CTA button
+   */
+  primaryButtonHref?: string | null;
+  /**
+   * Label for the secondary CTA button
+   */
+  secondaryButtonLabel?: string | null;
+  /**
+   * URL for the secondary CTA button
+   */
+  secondaryButtonHref?: string | null;
+  /**
+   * Small tagline shown below the buttons
+   */
+  tagline?: string | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'cta';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "ContactFormBlock".
+ */
+export interface ContactFormBlock {
+  /**
+   * Large gothic heading on the left panel.
+   */
+  heading?: string | null;
+  /**
+   * Small uppercase label at the bottom-left of the panel.
+   */
+  tagline?: string | null;
+  contactEmail?: string | null;
+  contactLocation?: string | null;
+  contactPhone?: string | null;
+  step1Title?: string | null;
+  step1Sub?: string | null;
+  step2Title?: string | null;
+  step2Sub?: string | null;
+  step3Title?: string | null;
+  step3Sub?: string | null;
+  /**
+   * The clickable service pills on step 2. Value is sent to the API.
+   */
+  services?:
+    | {
+        /**
+         * Displayed label
+         */
+        label: string;
+        /**
+         * URL-safe identifier (e.g. web-design)
+         */
+        value: string;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Show the "Book a Call" option in step 3. Disable to make "Send a Message" the only option.
+   */
+  showBookingOption?: boolean | null;
+  footerLinkLabel?: string | null;
+  footerLinkHref?: string | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'contactForm';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "OrcaclubCarouselBlock".
+ */
+export interface OrcaclubCarouselBlock {
+  /**
+   * Small uppercase label displayed above the carousel.
+   */
+  sectionLabel?: string | null;
+  autoPlay?: boolean | null;
+  /**
+   * Milliseconds between auto-advances (minimum 2000).
+   */
+  autoPlayInterval?: number | null;
+  /**
+   * Add slides for events, news, merchandise drops, and announcements.
+   */
+  slides: {
+    /**
+     * Horizontal = wide cinematic card. Vertical = centered portrait card (best for product shots, posters).
+     */
+    layout: 'horizontal' | 'vertical';
+    category: 'event' | 'news' | 'merchandise' | 'announcement';
+    /**
+     * First image is the primary slide image. Additional images appear in the gallery grid.
+     */
+    images: {
+      image: string | Media;
+      /**
+       * Optional caption shown on hover in the gallery grid.
+       */
+      caption?: string | null;
+      id?: string | null;
+    }[];
+    /**
+     * Small label above title — e.g. "Limited Drop", "March 2026".
+     */
+    eyebrow?: string | null;
+    /**
+     * Main headline. 3–6 words for maximum impact.
+     */
+    title: string;
+    /**
+     * Supporting copy beneath the title. 1–2 sentences.
+     */
+    subtitle?: string | null;
+    /**
+     * Button label — e.g. "Shop Now", "Learn More", "Register".
+     */
+    ctaLabel?: string | null;
+    /**
+     * URL the CTA button links to.
+     */
+    ctaHref?: string | null;
+    id?: string | null;
+  }[];
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'orcaclubCarousel';
+}
+/**
  * Tracks processed Stripe webhook events
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1493,6 +1799,14 @@ export interface PayloadLockedDocument {
         value: string | Post;
       } | null)
     | ({
+        relationTo: 'solutions';
+        value: string | Solution;
+      } | null)
+    | ({
+        relationTo: 'pages';
+        value: string | Page;
+      } | null)
+    | ({
         relationTo: 'users';
         value: string | User;
       } | null)
@@ -1706,9 +2020,177 @@ export interface PostsSelect<T extends boolean = true> {
   tags?: T;
   publishedDate?: T;
   readTime?: T;
+  meta?:
+    | T
+    | {
+        title?: T;
+        description?: T;
+        image?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
   _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "solutions_select".
+ */
+export interface SolutionsSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  description?: T;
+  layout?:
+    | T
+    | {
+        article?: T | ArticleBlockSelect<T>;
+      };
+  meta?:
+    | T
+    | {
+        title?: T;
+        description?: T;
+        image?: T;
+        noIndex?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "ArticleBlock_select".
+ */
+export interface ArticleBlockSelect<T extends boolean = true> {
+  content?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "pages_select".
+ */
+export interface PagesSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  layout?:
+    | T
+    | {
+        hero?: T | HeroBlockSelect<T>;
+        capabilities?: T | CapabilitiesBlockSelect<T>;
+        cta?: T | CtaBlockSelect<T>;
+        contactForm?: T | ContactFormBlockSelect<T>;
+        orcaclubCarousel?: T | OrcaclubCarouselBlockSelect<T>;
+      };
+  meta?:
+    | T
+    | {
+        title?: T;
+        description?: T;
+        image?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "HeroBlock_select".
+ */
+export interface HeroBlockSelect<T extends boolean = true> {
+  subheading?: T;
+  primaryButtonLabel?: T;
+  primaryButtonHref?: T;
+  secondaryButtonLabel?: T;
+  secondaryButtonHref?: T;
+  showClientsCarousel?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "CapabilitiesBlock_select".
+ */
+export interface CapabilitiesBlockSelect<T extends boolean = true> {
+  label?: T;
+  heading?: T;
+  subheading?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "CtaBlock_select".
+ */
+export interface CtaBlockSelect<T extends boolean = true> {
+  label?: T;
+  heading?: T;
+  subheading?: T;
+  primaryButtonLabel?: T;
+  primaryButtonHref?: T;
+  secondaryButtonLabel?: T;
+  secondaryButtonHref?: T;
+  tagline?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "ContactFormBlock_select".
+ */
+export interface ContactFormBlockSelect<T extends boolean = true> {
+  heading?: T;
+  tagline?: T;
+  contactEmail?: T;
+  contactLocation?: T;
+  contactPhone?: T;
+  step1Title?: T;
+  step1Sub?: T;
+  step2Title?: T;
+  step2Sub?: T;
+  step3Title?: T;
+  step3Sub?: T;
+  services?:
+    | T
+    | {
+        label?: T;
+        value?: T;
+        id?: T;
+      };
+  showBookingOption?: T;
+  footerLinkLabel?: T;
+  footerLinkHref?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "OrcaclubCarouselBlock_select".
+ */
+export interface OrcaclubCarouselBlockSelect<T extends boolean = true> {
+  sectionLabel?: T;
+  autoPlay?: T;
+  autoPlayInterval?: T;
+  slides?:
+    | T
+    | {
+        layout?: T;
+        category?: T;
+        images?:
+          | T
+          | {
+              image?: T;
+              caption?: T;
+              id?: T;
+            };
+        eyebrow?: T;
+        title?: T;
+        subtitle?: T;
+        ctaLabel?: T;
+        ctaHref?: T;
+        id?: T;
+      };
+  id?: T;
+  blockName?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

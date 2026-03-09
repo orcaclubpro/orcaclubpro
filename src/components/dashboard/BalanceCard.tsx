@@ -81,7 +81,7 @@ export function BalanceCard({ orders, activeProjectCount, mostRecentOrder }: Bal
   return (
     <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-gradient-to-b from-[#141414] to-[#0e0e0e] p-6 sm:p-7">
       {pendingAmount > 0 && (
-        <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-amber-400/[0.06] blur-3xl pointer-events-none" />
+        <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-amber-400/[0.06] blur-3xl pointer-events-none animate-pulse" />
       )}
 
       <div className="relative z-10">

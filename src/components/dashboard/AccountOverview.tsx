@@ -144,7 +144,14 @@ export function AccountOverview({
             <div
               key={index}
               className="group relative overflow-hidden rounded-xl border border-white/[0.08] bg-[#1c1c1c] backdrop-blur-md p-6 hover:border-white/[0.14] hover:bg-[#242424] transition-all duration-500 hover:scale-[1.01] fluid-enter"
-              style={{ animationDelay: `${index * 100}ms` }}
+              style={{
+                animationDelay: `${index * 100}ms`,
+                borderLeft: index === 0
+                  ? '2px solid rgba(245,158,11,0.35)'
+                  : index === 1
+                  ? '2px solid rgba(103,232,249,0.25)'
+                  : '2px solid rgba(59,130,246,0.25)',
+              }}
             >
               {/* Subtle glow effect */}
               <div className={`absolute top-0 right-0 w-24 h-24 blur-3xl opacity-0 group-hover:opacity-[0.08] transition-opacity duration-500 ${
@@ -157,7 +164,7 @@ export function AccountOverview({
 
               <div className="relative z-10">
                 <div className="flex items-start justify-between mb-8">
-                  <div className="p-2.5 rounded-lg bg-[#1c1c1c] border border-white/[0.10] transition-transform duration-300 group-hover:scale-105">
+                  <div className="p-2.5 rounded-lg bg-[#1c1c1c] border border-white/[0.10] transition-all duration-300 group-hover:scale-105 group-hover:shadow-[0_0_12px_rgba(103,232,249,0.15)]">
                     <Icon className={`size-5 ${stat.color}`} />
                   </div>
                   {stat.showAlert && (

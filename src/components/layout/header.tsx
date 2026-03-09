@@ -128,6 +128,9 @@ export function Header({ user }: { user?: HeaderUser | null } = {}) {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex md:gap-x-8 items-center">
+            {/* Solutions */}
+            <NavLink href="/solutions" active={isActive('/solutions')}>Solutions</NavLink>
+
             {/* Packages */}
             <NavLink href="/packages" active={isActive('/packages')}>Packages</NavLink>
 
@@ -341,10 +344,11 @@ export function Header({ user }: { user?: HeaderUser | null } = {}) {
             {/* Nav Links */}
             <div className="px-4 py-6 space-y-1">
               {[
-                { name: 'Packages', href: '/packages' },
-                { name: 'Services', href: '/services' },
-                { name: 'Contact',  href: '/contact' },
-                { name: 'About',    href: '/about' },
+                { name: 'Solutions', href: '/solutions' },
+                { name: 'Packages',  href: '/packages' },
+                { name: 'Services',  href: '/services' },
+                { name: 'Contact',   href: '/contact' },
+                { name: 'About',     href: '/about' },
               ].map((item) => (
                 <Link
                   key={item.name}

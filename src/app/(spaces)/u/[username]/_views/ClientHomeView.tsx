@@ -12,7 +12,7 @@ import {
   type ClientOrderSummary,
   type ScheduledPackage,
 } from '@/lib/dashboard/utils'
-import { Receipt, ArrowRight, CalendarDays } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -91,6 +91,7 @@ export function ClientHomeView({
     amount: o.amount ?? 0,
     status: o.status ?? 'pending',
     createdAt: o.createdAt,
+    stripeInvoiceUrl: o.stripeInvoiceUrl ?? null,
   }))
 
   const ordersForCard: OrderSummary[] = orders.map((o: any) => ({
@@ -125,6 +126,7 @@ export function ClientHomeView({
           <DashboardGreeting
             firstName={user.firstName}
             size="large"
+            meta={new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date())}
             subtitle={
               activeProjectCount > 0
                 ? `${activeProjectCount} active project${activeProjectCount !== 1 ? 's' : ''} · ${clientProjects.length} total`
@@ -136,8 +138,8 @@ export function ClientHomeView({
         {/* PaymentSchedule — second in DOM → above BalanceCard on mobile, col 3 on desktop */}
         {hasSchedule && (
           <div className="lg:order-3 space-y-3">
-            <div className="flex items-center gap-2">
-              <CalendarDays className="size-4 text-gray-600" />
+            <div className="flex items-center gap-3">
+              <div className="w-px h-4 bg-[#67e8f9]/40 rounded-full shrink-0" />
               <h2 className="text-sm font-semibold text-white">Payment Schedule</h2>
             </div>
             <PaymentScheduleCard
@@ -163,9 +165,12 @@ export function ClientHomeView({
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-semibold text-white">Active Projects</h2>
+            <div className="flex items-center gap-3">
+              <div className="w-px h-4 bg-[#67e8f9]/40 rounded-full shrink-0" />
+              <h2 className="text-sm font-semibold text-white">Active Projects</h2>
+            </div>
             {clientProjects.length > 0 && (
-              <p className="text-xs text-gray-600 mt-0.5">
+              <p className="text-xs text-gray-600 mt-0.5 ml-4">
                 {activeProjectCount} active · {clientProjects.length} total
               </p>
             )}
@@ -182,8 +187,8 @@ export function ClientHomeView({
       {/* ── INVOICES ─────────────────────────────────────────────────────── */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Receipt className="size-4 text-gray-600" />
+          <div className="flex items-center gap-3">
+            <div className="w-px h-4 bg-[#67e8f9]/40 rounded-full shrink-0" />
             <h2 className="text-sm font-semibold text-white">Invoices</h2>
           </div>
           <Link

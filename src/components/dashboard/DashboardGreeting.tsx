@@ -52,9 +52,10 @@ interface DashboardGreetingProps {
   firstName?: string | null
   subtitle?: string
   size?: 'default' | 'large'
+  meta?: string
 }
 
-export function DashboardGreeting({ firstName, subtitle, size = 'default' }: DashboardGreetingProps) {
+export function DashboardGreeting({ firstName, subtitle, size = 'default', meta }: DashboardGreetingProps) {
   const headingClass = size === 'large'
     ? 'text-5xl lg:text-6xl font-extralight text-white tracking-tight'
     : 'text-3xl font-extralight text-white tracking-tight'
@@ -100,6 +101,9 @@ export function DashboardGreeting({ firstName, subtitle, size = 'default' }: Das
     // SSR fallback — static, no flash
     return (
       <div>
+        {meta && (
+          <p className="text-[10px] uppercase tracking-[0.25em] text-white/25 mb-2 select-none">{meta}</p>
+        )}
         <h1 className={headingClass}>
           Good{' '}
           <span className="gradient-text">
@@ -114,6 +118,9 @@ export function DashboardGreeting({ firstName, subtitle, size = 'default' }: Das
 
   return (
     <div>
+      {meta && (
+        <p className="text-[10px] uppercase tracking-[0.25em] text-white/25 mb-2 select-none">{meta}</p>
+      )}
       <div
         className="transition-all duration-500 ease-in-out"
         style={{

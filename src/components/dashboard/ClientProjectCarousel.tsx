@@ -3,6 +3,7 @@
 import { useRef } from 'react'
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight, Calendar, DollarSign, ArrowRight } from 'lucide-react'
+import { PROJECT_STATUS_CFG } from '@/lib/dashboard/utils'
 
 interface CarouselProject {
   id: string
@@ -20,44 +21,6 @@ interface ClientProjectCarouselProps {
   username: string
 }
 
-const statusConfig: Record<string, { dot: string; label: string; color: string; bg: string; border: string }> = {
-  pending: {
-    dot: 'bg-yellow-400',
-    label: 'Pending',
-    color: 'text-yellow-400',
-    bg: 'bg-yellow-400/10',
-    border: 'border-yellow-400/20',
-  },
-  'in-progress': {
-    dot: 'bg-cyan-400',
-    label: 'In Progress',
-    color: 'text-cyan-400',
-    bg: 'bg-cyan-400/10',
-    border: 'border-cyan-400/20',
-  },
-  'on-hold': {
-    dot: 'bg-orange-400',
-    label: 'On Hold',
-    color: 'text-orange-400',
-    bg: 'bg-orange-400/10',
-    border: 'border-orange-400/20',
-  },
-  completed: {
-    dot: 'bg-green-400',
-    label: 'Completed',
-    color: 'text-green-400',
-    bg: 'bg-green-400/10',
-    border: 'border-green-400/20',
-  },
-  cancelled: {
-    dot: 'bg-red-400',
-    label: 'Cancelled',
-    color: 'text-red-400',
-    bg: 'bg-red-400/10',
-    border: 'border-red-400/20',
-  },
-}
-
 function fmt(d: string | null | undefined) {
   if (!d) return null
   return new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(new Date(d))
@@ -69,7 +32,7 @@ function fmtCurrency(amount: number | null | undefined, currency = 'USD') {
 }
 
 function ProjectCard({ project, username }: { project: CarouselProject; username: string }) {
-  const status = statusConfig[project.status] ?? statusConfig.pending
+  const status = PROJECT_STATUS_CFG[project.status as keyof typeof PROJECT_STATUS_CFG] ?? PROJECT_STATUS_CFG.pending
   const startFmt = fmt(project.startDate)
   const endFmt = fmt(project.projectedEndDate)
   const budget = fmtCurrency(project.budgetAmount, project.currency ?? 'USD')
@@ -78,13 +41,13 @@ function ProjectCard({ project, username }: { project: CarouselProject; username
     <div className="relative flex flex-col shrink-0 w-[calc(100vw-3rem)] sm:w-80 lg:w-72 xl:w-80 rounded-2xl border border-white/[0.08] bg-gradient-to-b from-[#181818] to-[#111] overflow-hidden group hover:border-white/[0.14] transition-all duration-300">
 
       {/* Top accent stripe based on status */}
-      <div className={`h-0.5 w-full ${status.dot}`} />
+      <div className={`h-0.5 w-full ${status.stripe}`} />
 
       <div className="flex flex-col flex-1 p-5 gap-4">
 
         {/* Status badge */}
         <div className="flex items-center gap-2">
-          <span className={`inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full border font-medium ${status.color} ${status.bg} ${status.border}`}>
+          <span className={`inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full font-medium ${status.badgeClasses}`}>
             <span className={`size-1.5 rounded-full ${status.dot}`} />
             {status.label}
           </span>
@@ -123,6 +86,29 @@ function ProjectCard({ project, username }: { project: CarouselProject; username
             </div>
           )}
         </div>
+
+        {/* Timeline progress bar */}
+        {(project.startDate || project.projectedEndDate) && (() => {
+          const start = project.startDate ? new Date(project.startDate).getTime() : Date.now()
+          const end = project.projectedEndDate ? new Date(project.projectedEndDate).getTime() : Date.now()
+          const now = Date.now()
+          const pct = end > start ? Math.min(100, Math.max(0, Math.round(((now - start) / (end - start)) * 100))) : 0
+          const statusCfg = PROJECT_STATUS_CFG[project.status as keyof typeof PROJECT_STATUS_CFG] ?? PROJECT_STATUS_CFG.pending
+          return (
+            <div className="space-y-1 pt-2 border-t border-white/[0.04]">
+              <div className="flex justify-between text-[9px] text-gray-600">
+                <span>Timeline</span>
+                <span>{pct}%</span>
+              </div>
+              <div className="h-0.5 rounded-full bg-white/[0.06] overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${statusCfg.stripe}`}
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+            </div>
+          )
+        })()}
 
         {/* View link */}
         <Link

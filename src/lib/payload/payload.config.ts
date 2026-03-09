@@ -1,4 +1,5 @@
 import sharp from 'sharp'
+import { seoPlugin } from '@payloadcms/plugin-seo'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import { mongooseAdapter } from '@payloadcms/db-mongodb'
 import { nodemailerAdapter } from '@payloadcms/email-nodemailer'
@@ -24,6 +25,8 @@ import Files from './collections/Files'
 import Packages from './collections/Packages'
 import Credentials from './collections/Credentials'
 import { Timelines } from './collections/Timelines'
+import Solutions from './collections/Solutions'
+import { Pages } from './collections/Pages'
 
 // Helper function to format strings as URL-friendly slugs
 const formatSlug = (val: string): string =>
@@ -908,7 +911,7 @@ export default buildConfig({
   editor: lexicalEditor(),
 
   // Define and configure your collections in this array
-  collections: [Media, Clients, Leads, Categories, Tags, Posts, Users, ClientAccounts, Orders, Packages, WebhookEvents, Projects, Tasks, Sprints, Files, Credentials, Timelines],
+  collections: [Media, Clients, Leads, Categories, Tags, Posts, Solutions, Pages, Users, ClientAccounts, Orders, Packages, WebhookEvents, Projects, Tasks, Sprints, Files, Credentials, Timelines],
 
   // Your Payload secret - should be a complex and secure string, unguessable
   secret: process.env.PAYLOAD_SECRET || 'your-secret-here',
@@ -980,4 +983,16 @@ export default buildConfig({
   // This is optional - if you don't need to do these things,
   // you don't need it!
   sharp,
+  plugins: [
+    seoPlugin({
+      // 'pages' SEO fields are handled manually via the named 'meta' tab
+      // in the Pages collection — so we only auto-inject for posts here.
+      collections: ['posts'],
+      uploadsCollection: 'media',
+      generateTitle: ({ doc }: { doc: any }) => `ORCACLUB — ${doc?.title ?? ''}`,
+      generateDescription: ({ doc }: { doc: any }) => doc?.excerpt ?? '',
+      generateURL: ({ doc }: { doc: any }) =>
+        doc?.slug ? `https://orcaclub.pro/sonar/${doc.slug}` : 'https://orcaclub.pro',
+    }),
+  ],
 })

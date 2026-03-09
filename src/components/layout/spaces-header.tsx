@@ -43,13 +43,13 @@ export function SpacesHeader({ user, showTips }: SpacesHeaderProps) {
             >
               SPACES
             </Link>
-            <span className="text-gray-700 select-none shrink-0">/</span>
+            <span className="text-gray-500 select-none shrink-0">/</span>
             <span className={`text-sm font-semibold text-white truncate animate-in fade-in duration-200 ${subtitle ? 'max-w-[120px] sm:max-w-[200px]' : 'max-w-[180px] sm:max-w-[320px]'}`}>
               {title}
             </span>
             {subtitle && (
               <>
-                <span className="text-gray-700 select-none shrink-0">/</span>
+                <span className="text-gray-500 select-none shrink-0">/</span>
                 <span className="text-sm font-semibold text-white truncate max-w-[120px] sm:max-w-[200px] animate-in fade-in duration-200">
                   {subtitle}
                 </span>
@@ -57,12 +57,24 @@ export function SpacesHeader({ user, showTips }: SpacesHeaderProps) {
             )}
           </div>
         ) : (
-          <Link
-            href={homeHref}
-            className="focus:outline-none focus-visible:ring-1 focus-visible:ring-intelligence-cyan/50 rounded-lg transition-all duration-300"
-          >
-            <span className="text-xl font-bold gradient-text tracking-widest">SPACES</span>
-          </Link>
+          <div className="flex items-center">
+            <Link
+              href={homeHref}
+              className="focus:outline-none focus-visible:ring-1 focus-visible:ring-intelligence-cyan/50 rounded-lg transition-all duration-300"
+            >
+              <span className="text-xl font-bold gradient-text tracking-widest">SPACES</span>
+            </Link>
+            {user?.role === 'client' && (
+              <span className="hidden sm:inline-flex items-center text-[9px] font-semibold tracking-[0.2em] uppercase px-2 py-0.5 rounded-full border border-[#67e8f9]/20 text-[#67e8f9]/50 ml-2 select-none">
+                Client Portal
+              </span>
+            )}
+            {(user?.role === 'admin' || user?.role === 'user') && (
+              <span className="hidden sm:inline-flex items-center text-[9px] font-semibold tracking-[0.2em] uppercase px-2 py-0.5 rounded-full border border-white/[0.10] text-white/25 ml-2 select-none">
+                Spaces
+              </span>
+            )}
+          </div>
         )}
 
         {/* Right side actions */}

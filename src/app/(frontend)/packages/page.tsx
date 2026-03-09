@@ -196,35 +196,38 @@ export default function PackagesPage() {
   const maintenanceTiers: MaintenanceTierProps[] = [
     {
       name: "ESSENTIAL CARE",
-      price: "$300/month",
+      price: "$500/month",
       features: [
         "Security Updates",
         "Weekly Backups",
         "Plugin/Dependency Updates",
-        "30-min Response Time (Critical)",
-        "Up to 1 Hour Changes/Month"
+        "10 Hours Allotted/Month",
+        "Bug Fixes & Minor Changes",
       ]
     },
     {
       name: "GROWTH CARE",
-      price: "$600/month",
+      price: "$1,000–$2,000/month",
       features: [
         "Everything in Essential",
-        "SEO Monitoring",
-        "Monthly Analytics Reports",
-        "Performance Monitoring",
-        "Up to 3 Hours Changes/Month"
+        "20–30 Hours Allotted/Month",
+        "SEO Blog Content",
+        "Active SEO Research",
+        "Bug Fixes & Optimizations",
+        "Ideal for businesses actively growing",
       ],
       highlighted: true
     },
     {
-      name: "PARTNER CARE",
-      price: "$1,200/month",
+      name: "ENTERPRISE CARE",
+      price: "$3,000/month",
       features: [
         "Everything in Growth",
-        "Priority Support (1-hour response)",
-        "Monthly Strategy Consultation",
-        "Up to 6 Hours Changes/Month"
+        "40+ Hours Allotted/Month",
+        "Marketing Advisory",
+        "Analytics Services",
+        "SEO & Click Generation",
+        "General Online Advisory",
       ]
     }
   ]
@@ -248,7 +251,7 @@ export default function PackagesPage() {
     },
     {
       question: "What happens after launch?",
-      answer: "You receive full account transfers, documentation, and training. Your site is 100% yours. We offer optional monthly maintenance packages (Essential, Growth, or Partner Care) starting at $300/month if you want ongoing support, updates, and optimizations."
+      answer: "You receive full account transfers, documentation, and training. Your site is 100% yours. We offer optional monthly maintenance packages — Essential Care ($500/mo), Growth Care ($1,000–$2,000/mo), and Enterprise Care ($3,000/mo) — if you want ongoing support, SEO, and growth advisory. Retainer discounts apply for 3, 6, and 12-month commitments."
     },
     {
       question: "How fast can you start?",
@@ -367,35 +370,82 @@ export default function PackagesPage() {
       <AnimatedBackground />
 
       {/* SECTION 1: HERO */}
-      <section className="relative z-10 pt-32 pb-20 px-6">
-        <div className="max-w-5xl mx-auto text-center">
-          <ScrollReveal>
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-400/10 border border-cyan-400/30 mb-6">
-              <Shield className="w-4 h-4 text-cyan-400" />
-              <span className="text-sm text-cyan-400 font-light">Transparent Pricing</span>
+      <section className="relative z-10 pt-32 pb-28 px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-20 items-start">
+
+            {/* Left — Headline + CTA */}
+            <ScrollReveal>
+              <p className="text-[10px] tracking-[0.4em] uppercase text-cyan-400/60 font-light mb-8">
+                Package-based pricing
+              </p>
+              <h1 className="text-5xl md:text-6xl xl:text-[4.25rem] font-extralight text-white mb-8 leading-[1.08] tracking-tight">
+                Pricing based on<br />
+                <span className="gradient-text font-light">what you need.</span>
+              </h1>
+              <p className="text-lg text-gray-400 font-light leading-relaxed mb-12 max-w-md">
+                Get your business started with one of our quick launch packages — designed for speed, built for ownership.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 items-start">
+                <Link
+                  href="/consultations"
+                  className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-cyan-500/80 to-cyan-400/80 text-black font-semibold rounded-full hover:from-cyan-400 hover:to-cyan-300 transition-all duration-300 text-sm shadow-lg shadow-cyan-900/20"
+                >
+                  Get a free consultation
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+                <Link
+                  href="#comparison"
+                  className="inline-flex items-center gap-3 px-8 py-4 border border-white/10 text-gray-400 font-light rounded-full hover:border-white/20 hover:text-white transition-all duration-300 text-sm"
+                >
+                  Compare packages
+                </Link>
+              </div>
+              <p className="mt-8 text-xs text-gray-600 font-light tracking-wide">
+                3–21 day delivery &nbsp;·&nbsp; No hidden fees &nbsp;·&nbsp; Full ownership transfer
+              </p>
+            </ScrollReveal>
+
+            {/* Right — Value Props */}
+            <div className="lg:pt-16">
+              {[
+                {
+                  num: "01",
+                  Icon: Zap,
+                  title: "Quick Launch",
+                  desc: "2–6 week delivery time. From signed contract to live production — faster than any agency you've worked with.",
+                },
+                {
+                  num: "02",
+                  Icon: Package,
+                  title: "Full Ownership Transfer",
+                  desc: "Every asset, credential, and line of code is yours on delivery. No lock-in, no recurring platform fees.",
+                },
+                {
+                  num: "03",
+                  Icon: FileCheck,
+                  title: "Transparent Package Models",
+                  desc: "Comprehensive reporting, timeline documents, professional NDAs and service level agreements on every project.",
+                },
+              ].map((item, i) => (
+                <ScrollReveal key={item.num} delay={i * 80}>
+                  <div className="group flex gap-5 py-6 border-b border-white/[0.06] last:border-0 cursor-default">
+                    <span className="text-[10px] font-mono text-cyan-400/35 tracking-widest pt-1 flex-shrink-0 w-6">
+                      {item.num}
+                    </span>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2.5 mb-2">
+                        <item.Icon className="w-3.5 h-3.5 text-cyan-400/60 flex-shrink-0" />
+                        <h3 className="text-sm font-medium text-white tracking-wide">{item.title}</h3>
+                      </div>
+                      <p className="text-sm text-gray-500 font-light leading-relaxed">{item.desc}</p>
+                    </div>
+                  </div>
+                </ScrollReveal>
+              ))}
             </div>
-            <h1 className="text-5xl md:text-7xl font-extralight mb-6 tracking-tight">
-              Clear Pricing, <span className="gradient-text font-light">No Surprises</span>
-            </h1>
-            <p className="text-xl md:text-2xl text-gray-300 font-light mb-8 max-w-3xl mx-auto leading-relaxed">
-              Fixed-price web development packages designed to get you exactly what you need. Choose your tier, launch in days.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <Link
-                href="#comparison"
-                className="inline-flex items-center gap-3 px-10 py-5 bg-gradient-to-r from-cyan-400/20 to-blue-500/20 border border-cyan-400/40 rounded-full text-lg font-medium text-cyan-400 hover:bg-gradient-to-r hover:from-cyan-400/30 hover:to-blue-500/30 hover:border-cyan-400/60 transition-all duration-300"
-              >
-                Compare Packages <ArrowRight className="w-5 h-5" />
-              </Link>
-              <BookingModal
-                triggerText="Free Consultation"
-                triggerClassName="px-10 py-5 bg-white/5 border border-white/20 rounded-full text-lg font-medium text-white hover:bg-white/10 hover:border-white/30 transition-all duration-300"
-              />
-            </div>
-            <p className="mt-6 text-sm text-gray-500 font-light">
-              50+ projects delivered | 3-21 day delivery | No hidden fees
-            </p>
-          </ScrollReveal>
+
+          </div>
         </div>
       </section>
 
@@ -553,11 +603,25 @@ export default function PackagesPage() {
             ))}
           </div>
 
+          {/* Retainer Discounts */}
           <ScrollReveal>
-            <div className="text-center p-6 rounded-xl bg-gradient-to-r from-cyan-400/10 to-blue-500/10 border border-cyan-400/30">
-              <p className="text-sm text-cyan-400 font-medium">
-                Save 15% when bundled with any project tier
-              </p>
+            <div className="mt-4 rounded-2xl border border-white/[0.07] overflow-hidden">
+              <div className="px-6 py-4 border-b border-white/[0.07] bg-white/[0.02]">
+                <p className="text-xs tracking-[0.3em] uppercase text-white/30 font-light">Retainer discounts</p>
+              </div>
+              <div className="grid grid-cols-3 divide-x divide-white/[0.07]">
+                {[
+                  { term: "3 Months", discount: "5% off", sub: "Quarterly commitment" },
+                  { term: "6 Months", discount: "10% off", sub: "Semi-annual commitment" },
+                  { term: "12 Months", discount: "15% off", sub: "Annual commitment" },
+                ].map((row) => (
+                  <div key={row.term} className="px-6 py-5 text-center hover:bg-white/[0.02] transition-colors duration-200">
+                    <p className="text-xl font-light text-cyan-400 mb-1">{row.discount}</p>
+                    <p className="text-sm text-white font-light mb-1">{row.term}</p>
+                    <p className="text-xs text-gray-600 font-light">{row.sub}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </ScrollReveal>
         </div>
