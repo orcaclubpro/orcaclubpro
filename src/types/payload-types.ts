@@ -1006,9 +1006,29 @@ export interface File {
    */
   description?: string | null;
   /**
-   * Upload a file or document
+   * Upload a file or document (optional for generated documents)
    */
-  file: string | Media;
+  file?: (string | null) | Media;
+  /**
+   * Template type for generated documents
+   */
+  documentTemplate?: ('nda' | 'sow') | null;
+  /**
+   * Branding used when document was generated
+   */
+  documentBrand?: ('personal' | 'orcaclub') | null;
+  /**
+   * Stored form data for regenerating this document
+   */
+  documentData?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
   /**
    * Project this file belongs to (optional)
    */
@@ -2483,6 +2503,9 @@ export interface FilesSelect<T extends boolean = true> {
   fileType?: T;
   description?: T;
   file?: T;
+  documentTemplate?: T;
+  documentBrand?: T;
+  documentData?: T;
   project?: T;
   sprint?: T;
   version?: T;

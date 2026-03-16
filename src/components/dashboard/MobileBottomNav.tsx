@@ -2,7 +2,7 @@
 
 import { useRef, useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, FolderKanban, Building2, CheckSquare, Receipt, Package, ChevronLeft, Search, KeyRound, CalendarRange } from 'lucide-react'
+import { LayoutDashboard, FolderKanban, Building2, CheckSquare, Receipt, Package, ChevronLeft, Search, KeyRound, CalendarRange, Files } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { useTabContext } from '@/app/(spaces)/TabContext'
@@ -53,6 +53,7 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
         { href: `/u/${username}?tab=clients`, label: 'Clients', icon: Building2, tab: 'clients' },
         { href: `/u/${username}?tab=tasks`, label: 'Tasks', icon: CheckSquare, tab: 'tasks' },
         { href: `/u/${username}?tab=timelines`, label: 'Timelines', icon: CalendarRange, tab: 'timelines' },
+        { href: `/u/${username}?tab=files`, label: 'Files', icon: Files, tab: 'files' },
       ]
 
   const isActive = (tab: string) => {
@@ -97,13 +98,14 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
                 }
               }}
               className={cn(
-                'relative flex flex-col items-center gap-1.5 px-3.5 py-2.5 rounded-xl transition-all duration-200 active:scale-95 flex-1 cursor-pointer',
+                'relative flex flex-col items-center gap-1.5 py-2.5 rounded-xl transition-all duration-200 active:scale-95 flex-1 cursor-pointer',
+                isClient ? 'px-3' : 'px-2',
                 active ? 'bg-white/10' : 'hover:bg-white/[0.06]',
               )}
             >
               <div className="relative">
                 <Icon
-                  className={cn('size-5 transition-all duration-200', active ? 'text-white' : 'text-white/40')}
+                  className={cn('transition-all duration-200', isClient ? 'size-5' : 'size-4', active ? 'text-white' : 'text-white/40')}
                 />
                 {item.tab === 'packages' && isClient && packageCount > 0 && (
                   <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] rounded-full bg-red-500 text-white text-[8px] font-bold flex items-center justify-center px-0.5 leading-none shadow-sm">

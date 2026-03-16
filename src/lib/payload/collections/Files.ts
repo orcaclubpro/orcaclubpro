@@ -18,7 +18,7 @@ export const Files: CollectionConfig = {
   slug: 'files',
   admin: {
     useAsTitle: 'name',
-    defaultColumns: ['name', 'fileType', 'project', 'sprint', 'createdAt'],
+    defaultColumns: ['name', 'fileType', 'documentTemplate', 'project', 'sprint', 'createdAt'],
     group: 'Project Management',
     description: 'Manage documents and files linked to projects and sprints',
   },
@@ -99,9 +99,44 @@ export const Files: CollectionConfig = {
       name: 'file',
       type: 'upload',
       relationTo: 'media',
-      required: true,
       admin: {
-        description: 'Upload a file or document',
+        description: 'Upload a file or document (optional for generated documents)',
+      },
+    },
+
+    // ============================================================================
+    // GENERATED DOCUMENT
+    // ============================================================================
+
+    {
+      name: 'documentTemplate',
+      type: 'select',
+      options: [
+        { label: 'NDA', value: 'nda' },
+        { label: 'Scope of Work', value: 'sow' },
+      ],
+      admin: {
+        description: 'Template type for generated documents',
+      },
+    },
+
+    {
+      name: 'documentBrand',
+      type: 'select',
+      options: [
+        { label: 'Personal (Chance Noonan)', value: 'personal' },
+        { label: 'ORCACLUB', value: 'orcaclub' },
+      ],
+      admin: {
+        description: 'Branding used when document was generated',
+      },
+    },
+
+    {
+      name: 'documentData',
+      type: 'json',
+      admin: {
+        description: 'Stored form data for regenerating this document',
       },
     },
 
