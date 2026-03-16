@@ -5,15 +5,12 @@ import { createPortal } from 'react-dom'
 import {
   FileText, FilePen, Search, Trash2, ExternalLink, Plus,
   Loader2, X, ChevronDown, FolderOpen, FileCheck,
-  Building2, User, Printer, Save, RefreshCw,
+  Building2, User, Download, Save, RefreshCw,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createDocument, deleteFileRecord } from '@/actions/files'
-import {
-  buildPersonalNdaHtml, buildOrcaclubNdaHtml,
-  buildPersonalSowHtml, buildOrcaclubSowHtml,
-} from '@/lib/document-generators'
 import type { NdaFormData, SowFormData } from '@/lib/document-generators'
+import { buildPersonalNdaPdf, buildOrcaclubNdaPdf, buildPersonalSowPdf, buildOrcaclubSowPdf } from '@/lib/pdf-generators'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -64,7 +61,10 @@ const defaultSow = (): SowFormData => ({
   billingCycle: 'Monthly',
   contractTerm: '3 months',
   netDays: '30',
-  depositPct: '50',
+  paymentSchedule: [
+    { label: 'Deposit', pct: '50', note: 'Due before work begins' },
+    { label: 'Final Payment', pct: '50', note: 'Due upon project completion' },
+  ],
   lateFee: '1.5',
   revisionRounds: '2',
   revisionRate: '',
@@ -233,19 +233,19 @@ export function FilesView({ allFiles, allProjects, allSprints }: FilesViewProps)
     setSaveSuccess(false)
   }
 
-  function handlePrint() {
-    const html = docType === 'nda'
-      ? (brand === 'personal' ? buildPersonalNdaHtml(ndaForm) : buildOrcaclubNdaHtml(ndaForm))
-      : (brand === 'personal' ? buildPersonalSowHtml(sowForm) : buildOrcaclubSowHtml(sowForm))
-
-    const win = window.open('', '_blank', 'width=900,height=700')
-    if (!win) { alert('Please allow popups to generate the PDF.'); return }
-    win.document.write(html)
-    // Clear the title so the browser print header shows nothing on the left
-    win.document.title = ''
-    win.document.close()
-    win.focus()
-    setTimeout(() => { try { win.print() } catch { /* noop */ } }, 700)
+  async function handleDownload() {
+    const bytes = docType === 'nda'
+      ? (brand === 'personal' ? await buildPersonalNdaPdf(ndaForm) : await buildOrcaclubNdaPdf(ndaForm))
+      : (brand === 'personal' ? await buildPersonalSowPdf(sowForm) : await buildOrcaclubSowPdf(sowForm))
+    const blob = new Blob([new Uint8Array(bytes)], { type: 'application/pdf' })
+    const url  = URL.createObjectURL(blob)
+    const a    = document.createElement('a')
+    a.href     = url
+    a.download = docType === 'nda'
+      ? `NDA_${(ndaForm.clientName || 'Client').replace(/\s+/g, '_')}.pdf`
+      : `SOW_${(sowForm.projectName || sowForm.clientName || 'Project').replace(/\s+/g, '_')}.pdf`
+    a.click()
+    setTimeout(() => URL.revokeObjectURL(url), 2000)
   }
 
   function handleSave() {
@@ -691,10 +691,66 @@ export function FilesView({ allFiles, allProjects, allSprints }: FilesViewProps)
                   </div>
 
                   <div className="space-y-3">
-                    <SectionLabel>Payment &amp; Revision Terms</SectionLabel>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <SectionLabel>Payment Schedule</SectionLabel>
+                        <button
+                          onClick={() => setSowForm(f => ({ ...f, paymentSchedule: [...f.paymentSchedule, { label: '', pct: '', note: '' }] }))}
+                          className="text-[10px] text-[var(--space-accent)] hover:underline"
+                        >+ Add Payment</button>
+                      </div>
+                      <p className="text-[10px] text-[#5A5A5A] mb-2">Percentages should add up to 100%</p>
+                      <div className="grid grid-cols-[1fr_56px_1fr_28px] gap-1.5 mb-1.5">
+                        <span className="text-[10px] text-[#5A5A5A] font-semibold uppercase tracking-widest">Payment Label</span>
+                        <span className="text-[10px] text-[#5A5A5A] font-semibold uppercase tracking-widest text-right">%</span>
+                        <span className="text-[10px] text-[#5A5A5A] font-semibold uppercase tracking-widest">Trigger / Note</span>
+                        <span />
+                      </div>
+                      {sowForm.paymentSchedule.map((entry, i) => (
+                        <div key={i} className="grid grid-cols-[1fr_56px_1fr_28px] gap-1.5 mb-1.5 items-center">
+                          <FormInput
+                            value={entry.label}
+                            onChange={v => setSowForm(f => ({ ...f, paymentSchedule: f.paymentSchedule.map((e, j) => j === i ? { ...e, label: v } : e) }))}
+                            placeholder="e.g. Deposit"
+                          />
+                          <FormInput
+                            value={entry.pct}
+                            onChange={v => setSowForm(f => ({ ...f, paymentSchedule: f.paymentSchedule.map((e, j) => j === i ? { ...e, pct: v } : e) }))}
+                            placeholder="50"
+                            className="text-right"
+                          />
+                          <FormInput
+                            value={entry.note}
+                            onChange={v => setSowForm(f => ({ ...f, paymentSchedule: f.paymentSchedule.map((e, j) => j === i ? { ...e, note: v } : e) }))}
+                            placeholder="e.g. Due before work begins"
+                          />
+                          {sowForm.paymentSchedule.length > 1 ? (
+                            <button
+                              onClick={() => setSowForm(f => ({ ...f, paymentSchedule: f.paymentSchedule.filter((_, j) => j !== i) }))}
+                              className="text-[#5A5A5A] hover:text-red-400 transition-colors justify-self-center"
+                            ><X className="size-3.5" /></button>
+                          ) : <span />}
+                        </div>
+                      ))}
+                      {/* Progress bar */}
+                      {(() => {
+                        const totalPct = sowForm.paymentSchedule.reduce((s, e) => s + (parseFloat(e.pct) || 0), 0)
+                        const barColor = totalPct === 100 ? 'bg-[var(--space-accent)]' : totalPct > 100 ? 'bg-red-400' : 'bg-blue-400'
+                        return (
+                          <div className="flex items-center gap-2 mt-1">
+                            <div className="flex-1 h-1.5 bg-[#222] rounded-full overflow-hidden">
+                              <div className={cn('h-full rounded-full transition-all', barColor)} style={{ width: `${Math.min(totalPct, 100)}%` }} />
+                            </div>
+                            <span className={cn('text-[10px] font-semibold shrink-0', totalPct === 100 ? 'text-[var(--space-accent)]' : totalPct > 100 ? 'text-red-400' : 'text-[#5A5A5A]')}>
+                              {totalPct}% of total
+                            </span>
+                          </div>
+                        )
+                      })()}
+                    </div>
+                    <SectionLabel>Terms</SectionLabel>
+                    <div className="grid grid-cols-3 gap-3">
                       <FieldGroup label="Net Days"><FormInput value={sowForm.netDays} onChange={v => setSowForm(f => ({ ...f, netDays: v }))} placeholder="30" /></FieldGroup>
-                      <FieldGroup label="Deposit %"><FormInput value={sowForm.depositPct} onChange={v => setSowForm(f => ({ ...f, depositPct: v }))} placeholder="50" /></FieldGroup>
                       <FieldGroup label="Late Fee %/mo"><FormInput value={sowForm.lateFee} onChange={v => setSowForm(f => ({ ...f, lateFee: v }))} placeholder="1.5" /></FieldGroup>
                       <FieldGroup label="Revision Rounds"><FormInput value={sowForm.revisionRounds} onChange={v => setSowForm(f => ({ ...f, revisionRounds: v }))} placeholder="2" /></FieldGroup>
                     </div>
@@ -732,7 +788,7 @@ export function FilesView({ allFiles, allProjects, allSprints }: FilesViewProps)
               {saveSuccess && (
                 <div className="flex items-center gap-2 text-sm text-green-400 bg-green-400/10 border border-green-400/20 rounded-xl px-4 py-3">
                   <FileCheck className="size-4 shrink-0" />
-                  Document saved to Files. You can still print it below.
+                  Document saved to Files. You can still download it below.
                 </div>
               )}
             </div>
@@ -740,11 +796,11 @@ export function FilesView({ allFiles, allProjects, allSprints }: FilesViewProps)
             {/* Modal footer */}
             <div className="flex gap-2 px-5 py-4 border-t border-[#1A1A1A] shrink-0">
               <button
-                onClick={handlePrint}
+                onClick={handleDownload}
                 className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#181818] border border-[#282828] text-sm font-medium text-[#E0E0E0] hover:bg-[#222] transition-colors flex-1 justify-center"
               >
-                <Printer className="size-3.5" />
-                Print / Save PDF
+                <Download className="size-3.5" />
+                Download Fillable PDF
               </button>
               <button
                 onClick={handleSave}

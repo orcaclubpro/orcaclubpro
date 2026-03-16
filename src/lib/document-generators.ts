@@ -18,6 +18,12 @@ export interface SowLineItem {
   amount: string
 }
 
+export interface SowPaymentEntry {
+  label: string
+  pct: string
+  note: string
+}
+
 export interface SowFormData {
   providerContact: string
   clientName: string
@@ -33,7 +39,7 @@ export interface SowFormData {
   billingCycle: string
   contractTerm: string
   netDays: string
-  depositPct: string
+  paymentSchedule: SowPaymentEntry[]
   lateFee: string
   revisionRounds: string
   revisionRate: string
@@ -151,10 +157,17 @@ tr{page-break-inside:avoid;break-inside:avoid}
 <h2>8. No License; No Warranty</h2>
 <p>Nothing in this Agreement grants any right, license, or interest in any intellectual property of the other Party. All Confidential Information is provided AS IS without warranty of any kind.</p>
 <hr class="thin">
-<h2>9. Remedies</h2>
+<h2>9. Portfolio &amp; Public Work</h2>
+<ul>
+<li>Service Provider may identify Client by name and display or reference any publicly published work product (including live websites, advertisements, social media content, and marketing materials) in Service Provider's portfolio, case studies, or promotional materials without prior written consent from Client.</li>
+<li>The portfolio right established in this section applies only to work that is publicly visible and accessible; any non-public or confidential work remains subject to the confidentiality obligations of this Agreement.</li>
+<li>Client may, at any time, submit a written request that Service Provider refrain from referencing Client's name or non-public project details in future promotional materials. Such a request is not retroactive and does not apply to publicly accessible work already in Service Provider's portfolio.</li>
+</ul>
+<hr class="thin">
+<h2>10. Remedies</h2>
 <p>Each Party acknowledges that a breach may cause irreparable harm and that the Disclosing Party shall be entitled to seek equitable relief, including injunction and specific performance, in addition to all other remedies available at law or in equity.</p>
 <hr class="thin">
-<h2>10. General Provisions</h2>
+<h2>11. General Provisions</h2>
 <p><strong>Governing Law:</strong> State of California. <strong>Severability:</strong> Invalid provisions shall be severed; remaining provisions continue in full force. <strong>No Waiver:</strong> Failure to enforce shall not constitute waiver. <strong>Electronic Signatures:</strong> Valid and binding to the same extent as original signatures. <strong>Independent Contractor:</strong> Nothing herein creates an employment, partnership, or agency relationship.</p>
 <div class="sig-section">
 <hr class="thick">
@@ -285,10 +298,17 @@ tr{page-break-inside:avoid;break-inside:avoid}
 <h2>6. No License; No Warranty</h2>
 <p>Nothing in this Agreement grants any right, license, or interest in any intellectual property of the other Party. All Confidential Information is provided AS IS without warranty of any kind.</p>
 <hr class="thin">
-<h2>7. Remedies</h2>
+<h2>7. Portfolio &amp; Public Work</h2>
+<ul>
+<li>ORCACLUB may identify Client by name and display or reference any publicly published work product (including live websites, advertisements, social media content, and marketing materials) in ORCACLUB's portfolio, case studies, or promotional materials without prior written consent from Client.</li>
+<li>The portfolio right established in this section applies only to work that is publicly visible and accessible; any non-public or confidential work remains subject to the confidentiality obligations of this Agreement.</li>
+<li>Client may, at any time, submit a written request that ORCACLUB refrain from referencing Client's name or non-public project details in future promotional materials. Such a request is not retroactive and does not apply to publicly accessible work already in ORCACLUB's portfolio.</li>
+</ul>
+<hr class="thin">
+<h2>8. Remedies</h2>
 <p>Each Party acknowledges that a breach may cause irreparable harm and that the Disclosing Party shall be entitled to seek equitable relief, including injunction and specific performance, in addition to all other remedies available at law or in equity.</p>
 <hr class="thin">
-<h2>8. General Provisions</h2>
+<h2>9. General Provisions</h2>
 <p><strong>Governing Law:</strong> State of California. <strong>Severability:</strong> Invalid provisions shall be severed; remaining provisions continue in full force. <strong>No Waiver:</strong> Failure to enforce shall not constitute waiver. <strong>Electronic Signatures:</strong> Valid and binding to the same extent as original signatures. <strong>Independent Contractor:</strong> Nothing herein creates an employment, partnership, or agency relationship.</p>
 <div class="sig-section">
 <hr class="thick">
@@ -365,6 +385,16 @@ export function buildPersonalSowHtml(d: SowFormData): string {
   const dt = fmtDate(d.effectiveDate)
   const NAVY = '#1F4E79'
 
+  const baseTotal = d.pricingType === 'retainer'
+    ? d.retainerItems.reduce((s, i) => s + fmtAmt(i.amount), 0)
+    : d.projectItems.reduce((s, i) => s + fmtAmt(i.amount), 0)
+
+  const paySchedRows = (d.paymentSchedule || []).map(e => {
+    const pct = parseFloat(e.pct) || 0
+    const amt = (baseTotal * pct / 100).toFixed(2)
+    return `<tr><td style="padding:5pt 8pt;border-bottom:.5pt solid #D0DDE8">${e.label || '—'}</td><td style="padding:5pt 8pt;border-bottom:.5pt solid #D0DDE8;text-align:right">${pct}%</td><td style="padding:5pt 8pt;border-bottom:.5pt solid #D0DDE8;text-align:right">$${amt}</td><td style="padding:5pt 8pt;border-bottom:.5pt solid #D0DDE8">${e.note || '—'}</td></tr>`
+  }).join('')
+
   const scopeItems = d.scopeItems.filter(i => i.trim()).map((i, n) => `<li>${i}</li>`).join('')
   const mileRows = d.milestones.filter(m => m.name.trim()).map(m => {
     const mdt = m.date ? new Date(m.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'
@@ -438,9 +468,12 @@ ${mileRows ? `<table class="mt"><tr><th>Milestone / Phase</th><th>Due Date</th><
 ${pricingHtml}
 <hr class="thin">
 <h2>6. Payment Terms</h2>
+${paySchedRows ? `<table style="width:100%;border-collapse:collapse;margin:6pt 0;font-size:10.5pt">
+  <tr><th style="background:#f0f0f0;padding:5pt 8pt;text-align:left;font-family:Arial,sans-serif;font-size:9pt;color:${NAVY}">Payment</th><th style="background:#f0f0f0;padding:5pt 8pt;text-align:right;font-family:Arial,sans-serif;font-size:9pt;color:${NAVY};width:60px">%</th><th style="background:#f0f0f0;padding:5pt 8pt;text-align:right;font-family:Arial,sans-serif;font-size:9pt;color:${NAVY};width:90px">Amount</th><th style="background:#f0f0f0;padding:5pt 8pt;text-align:left;font-family:Arial,sans-serif;font-size:9pt;color:${NAVY}">Trigger / Note</th></tr>
+  ${paySchedRows}
+</table>` : ''}
 <ul>
 <li>Invoices are due within <strong>${d.netDays || '30'}</strong> days of issue.</li>
-<li>A <strong>${d.depositPct || '50'}%</strong> deposit is required before work begins on project-based engagements.</li>
 <li>Late payments are subject to a <strong>${d.lateFee || '1.5'}%</strong> monthly fee after the due date.</li>
 <li>Work may be paused or withheld if an invoice remains unpaid beyond 14 days past due.</li>
 </ul>
@@ -461,7 +494,9 @@ ${pricingHtml}
 <ul>
 <li>All deliverables become the property of Client upon receipt of full payment.</li>
 <li>Until full payment is received, all work product remains the intellectual property of Chance Noonan.</li>
-<li>Service Provider retains the right to reference this engagement in a professional portfolio unless Client requests otherwise in writing.</li>
+<li>Service Provider retains the right to display or reference any publicly visible work product in portfolio materials, case studies, or promotional content without prior written consent.</li>
+<li>The portfolio right applies only to publicly visible and accessible work; non-public work remains confidential under any applicable agreement.</li>
+<li>Client may request in writing that Service Provider refrain from referencing Client's name or non-public project details in future materials. Such a request is not retroactive and does not apply to publicly accessible work already displayed.</li>
 <li>Third-party tools or assets incorporated into deliverables remain subject to their respective licenses.</li>
 </ul>
 <hr class="thin">
@@ -509,6 +544,16 @@ ${pricingHtml}
 export function buildOrcaclubSowHtml(d: SowFormData): string {
   const dt = fmtDate(d.effectiveDate)
   const CYAN = '#67e8f9'
+
+  const baseTotal = d.pricingType === 'retainer'
+    ? d.retainerItems.reduce((s, i) => s + fmtAmt(i.amount), 0)
+    : d.projectItems.reduce((s, i) => s + fmtAmt(i.amount), 0)
+
+  const paySchedRows = (d.paymentSchedule || []).map(e => {
+    const pct = parseFloat(e.pct) || 0
+    const amt = (baseTotal * pct / 100).toFixed(2)
+    return `<tr><td style="padding:5pt 8pt;border-bottom:.5pt solid #eee">${e.label || '—'}</td><td style="padding:5pt 8pt;border-bottom:.5pt solid #eee;text-align:right">${pct}%</td><td style="padding:5pt 8pt;border-bottom:.5pt solid #eee;text-align:right">$${amt}</td><td style="padding:5pt 8pt;border-bottom:.5pt solid #eee">${e.note || '—'}</td></tr>`
+  }).join('')
 
   const scopeItems = d.scopeItems.filter(i => i.trim()).map(i => `<li>${i}</li>`).join('')
   const mileRows = d.milestones.filter(m => m.name.trim()).map(m => {
@@ -598,9 +643,12 @@ ${mileRows ? `<table style="width:100%;border-collapse:collapse;margin:7pt 0;fon
 ${pricingHtml}
 <hr class="thin">
 <h2>6. Payment Terms</h2>
+${paySchedRows ? `<table style="width:100%;border-collapse:collapse;margin:6pt 0;font-size:10.5pt">
+  <tr><th style="background:#f0f0f0;padding:5pt 8pt;text-align:left;font-family:Arial,sans-serif;font-size:9pt;color:#333">Payment</th><th style="background:#f0f0f0;padding:5pt 8pt;text-align:right;font-family:Arial,sans-serif;font-size:9pt;color:#333;width:60px">%</th><th style="background:#f0f0f0;padding:5pt 8pt;text-align:right;font-family:Arial,sans-serif;font-size:9pt;color:#333;width:90px">Amount</th><th style="background:#f0f0f0;padding:5pt 8pt;text-align:left;font-family:Arial,sans-serif;font-size:9pt;color:#333">Trigger / Note</th></tr>
+  ${paySchedRows}
+</table>` : ''}
 <ul>
 <li>Invoices are due within <strong>${d.netDays || '30'}</strong> days of issue.</li>
-<li>A <strong>${d.depositPct || '50'}%</strong> deposit is required before work begins on project-based engagements.</li>
 <li>Late payments are subject to a <strong>${d.lateFee || '1.5'}%</strong> monthly fee after the due date.</li>
 <li>Work may be paused or withheld if an invoice remains unpaid beyond 14 days past due.</li>
 </ul>
@@ -621,7 +669,9 @@ ${pricingHtml}
 <ul>
 <li>All deliverables become the property of Client upon receipt of full payment.</li>
 <li>Until full payment is received, all work product remains the intellectual property of ORCACLUB.</li>
-<li>ORCACLUB retains the right to reference this engagement in a professional portfolio unless Client requests otherwise in writing.</li>
+<li>ORCACLUB retains the right to display or reference any publicly visible work product in portfolio materials, case studies, or promotional content without prior written consent.</li>
+<li>The portfolio right applies only to publicly visible and accessible work; non-public work remains confidential under any applicable agreement.</li>
+<li>Client may request in writing that ORCACLUB refrain from referencing Client's name or non-public project details in future materials. Such a request is not retroactive and does not apply to publicly accessible work already displayed.</li>
 <li>Third-party tools or assets incorporated into deliverables remain subject to their respective licenses.</li>
 </ul>
 <hr class="thin">
@@ -630,6 +680,7 @@ ${pricingHtml}
 <li>Either party may terminate this Agreement with 14 days written notice.</li>
 <li>Client is responsible for payment of all work completed up to the termination date.</li>
 <li>Deposits are non-refundable once work has commenced.</li>
+<li>Service Provider reserves the right to terminate immediately if payment obligations are not met.</li>
 </ul>
 <hr class="thin">
 <h2>11. Limitation of Liability</h2>

@@ -680,6 +680,7 @@ export async function sendScheduledPayment(
   packageId: string,
   entryId: string,
   projectId?: string,
+  skipEmail?: boolean,
 ) {
   let finalizedInvoice: any = null
   let stripe: ReturnType<typeof getStripe> | null = null
@@ -791,18 +792,20 @@ export async function sendScheduledPayment(
 
     revalidatePath(`/u/${user.username}/clients`)
 
-    // Non-blocking: send "New Invoice" email to client
-    ;(async () => {
-      try {
-        const clientUsername = await getClientUsername(payload, clientAccountId)
-        const proposalPrintUrl = clientUsername
-          ? `${APP_BASE}/u/${clientUsername}/packages/${packageId}/print`
-          : undefined
-        await sendGenericInvoiceEmail(payload, order.id, user.id, proposalPrintUrl)
-      } catch (e) {
-        console.error('[sendScheduledPayment] Invoice email failed:', e)
-      }
-    })()
+    // Non-blocking: send "New Invoice" email to client (skipped if skipEmail is true)
+    if (!skipEmail) {
+      ;(async () => {
+        try {
+          const clientUsername = await getClientUsername(payload, clientAccountId)
+          const proposalPrintUrl = clientUsername
+            ? `${APP_BASE}/u/${clientUsername}/packages/${packageId}/print`
+            : undefined
+          await sendGenericInvoiceEmail(payload, order.id, user.id, proposalPrintUrl)
+        } catch (e) {
+          console.error('[sendScheduledPayment] Invoice email failed:', e)
+        }
+      })()
+    }
 
     return {
       success: true,

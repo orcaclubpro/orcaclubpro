@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
-import { Loader2, Receipt, CheckCircle2, ExternalLink, CalendarDays, Trash2 } from 'lucide-react'
+import { Loader2, Receipt, CheckCircle2, ExternalLink, CalendarDays, Trash2, ChevronDown, FilePlus } from 'lucide-react'
 import { sendScheduledPayment, removeScheduleEntry } from '@/actions/packages'
 
 interface ScheduledEntry {
@@ -40,7 +41,7 @@ function fmtEntryDate(iso: string) {
 type Timeframe = '30' | '60' | '90' | 'all'
 
 function isWithinDays(dueDate: string | null | undefined, days: number): boolean {
-  if (!dueDate) return true // no due date → always show
+  if (!dueDate) return true
   const parts = dueDate.split('T')[0].split('-').map(Number)
   if (parts.length !== 3 || parts.some(isNaN)) return true
   const due = new Date(parts[0], parts[1] - 1, parts[2])
@@ -62,13 +63,25 @@ export function ScheduledPaymentsSection({ packages, username }: ScheduledPaymen
   const [sendingEntryId, setSendingEntryId] = useState<string | null>(null)
   const [removingEntryId, setRemovingEntryId] = useState<string | null>(null)
   const [entryResults, setEntryResults] = useState<Record<string, { url: string } | { error: string }>>({})
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null)
+  const [mounted, setMounted] = useState(false)
 
-  // Filter packages that have uninvoiced schedule entries, with timeframe filter applied
+  useEffect(() => { setMounted(true) }, [])
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    if (!openMenuId) return
+    const close = () => { setOpenMenuId(null); setMenuPos(null) }
+    document.addEventListener('click', close)
+    return () => document.removeEventListener('click', close)
+  }, [openMenuId])
+
   const scheduledPackages = packages
     .map((pkg) => ({
       ...pkg,
       pendingEntries: (pkg.paymentSchedule ?? []).filter((e) => {
-        if (e.orderId) return false // already invoiced
+        if (e.orderId) return false
         if (timeframe === 'all') return true
         return isWithinDays(e.dueDate, parseInt(timeframe))
       }),
@@ -77,7 +90,6 @@ export function ScheduledPaymentsSection({ packages, username }: ScheduledPaymen
 
   const totalPending = scheduledPackages.reduce((s, p) => s + p.pendingEntries.length, 0)
 
-  // Also compute raw count (all, ignoring timeframe filter) to decide if we show the section at all
   const totalUnvoiced = packages.reduce(
     (s, pkg) => s + (pkg.paymentSchedule ?? []).filter((e) => !e.orderId).length,
     0,
@@ -85,9 +97,23 @@ export function ScheduledPaymentsSection({ packages, username }: ScheduledPaymen
 
   if (totalUnvoiced === 0) return null
 
-  const handleSend = async (pkgId: string, entryId: string) => {
+  const handleToggleMenu = (e: React.MouseEvent<HTMLButtonElement>, entryId: string) => {
+    e.stopPropagation()
+    if (openMenuId === entryId) {
+      setOpenMenuId(null)
+      setMenuPos(null)
+    } else {
+      const rect = e.currentTarget.getBoundingClientRect()
+      setMenuPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right })
+      setOpenMenuId(entryId)
+    }
+  }
+
+  const handleSend = async (pkgId: string, entryId: string, skipEmail = false) => {
+    setOpenMenuId(null)
+    setMenuPos(null)
     setSendingEntryId(entryId)
-    const result = await sendScheduledPayment(pkgId, entryId)
+    const result = await sendScheduledPayment(pkgId, entryId, undefined, skipEmail)
     setSendingEntryId(null)
     if (result.success && result.invoiceUrl) {
       setEntryResults((prev) => ({ ...prev, [entryId]: { url: result.invoiceUrl as string } }))
@@ -106,7 +132,7 @@ export function ScheduledPaymentsSection({ packages, username }: ScheduledPaymen
 
   return (
     <div className="space-y-3">
-      {/* Header row with title + timeframe pills */}
+      {/* Header */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-baseline gap-3">
           <h3 className="text-sm font-semibold text-[#F0F0F0]">Scheduled Payments</h3>
@@ -114,7 +140,6 @@ export function ScheduledPaymentsSection({ packages, username }: ScheduledPaymen
             {totalPending} pending{timeframe !== 'all' && ` · next ${timeframe}d`}
           </span>
         </div>
-        {/* Timeframe filter pills */}
         <div className="flex items-center rounded-lg border border-[#404040] overflow-hidden">
           {TIMEFRAME_OPTS.map((opt, i, arr) => (
             <button
@@ -143,14 +168,12 @@ export function ScheduledPaymentsSection({ packages, username }: ScheduledPaymen
         <div className="rounded-xl border border-[#404040] bg-[#252525] overflow-hidden divide-y divide-[#333333]">
           {scheduledPackages.map((pkg) => (
             <div key={pkg.id}>
-              {/* Package name row */}
               <div className="px-5 py-2.5 bg-[#252525]">
                 <span className="text-[10px] text-[#6B6B6B] uppercase tracking-widest font-semibold">
                   {pkg.name}
                 </span>
               </div>
 
-              {/* Entry rows */}
               {pkg.pendingEntries.map((entry) => {
                 const entryResult = entryResults[entry.id]
                 return (
@@ -187,18 +210,29 @@ export function ScheduledPaymentsSection({ packages, username }: ScheduledPaymen
                               {entryResult.error}
                             </span>
                           )}
-                          <button
-                            type="button"
-                            disabled={sendingEntryId === entry.id || removingEntryId === entry.id}
-                            onClick={() => handleSend(pkg.id, entry.id)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[var(--space-accent)] border border-[rgba(139,156,182,0.20)] bg-[rgba(139,156,182,0.06)] rounded-lg hover:bg-[rgba(139,156,182,0.10)] disabled:opacity-50 transition-all"
-                          >
-                            {sendingEntryId === entry.id
-                              ? <Loader2 className="size-3.5 animate-spin" />
-                              : <Receipt className="size-3.5" />
-                            }
-                            {sendingEntryId === entry.id ? 'Sending…' : 'Send Invoice'}
-                          </button>
+                          {/* Split invoice button */}
+                          <div className="flex items-stretch">
+                            <button
+                              type="button"
+                              disabled={sendingEntryId === entry.id || removingEntryId === entry.id}
+                              onClick={() => handleSend(pkg.id, entry.id, false)}
+                              className="flex items-center gap-1.5 pl-3 pr-2.5 py-1.5 text-xs font-medium text-[var(--space-accent)] border border-[rgba(139,156,182,0.20)] bg-[rgba(139,156,182,0.06)] rounded-l-lg hover:bg-[rgba(139,156,182,0.10)] disabled:opacity-50 transition-all"
+                            >
+                              {sendingEntryId === entry.id
+                                ? <Loader2 className="size-3.5 animate-spin" />
+                                : <Receipt className="size-3.5" />
+                              }
+                              {sendingEntryId === entry.id ? 'Sending…' : 'Send Invoice'}
+                            </button>
+                            <button
+                              type="button"
+                              disabled={sendingEntryId === entry.id || removingEntryId === entry.id}
+                              onClick={(e) => handleToggleMenu(e, entry.id)}
+                              className="flex items-center px-1.5 py-1.5 text-[var(--space-accent)] border border-l-0 border-[rgba(139,156,182,0.20)] bg-[rgba(139,156,182,0.06)] rounded-r-lg hover:bg-[rgba(139,156,182,0.10)] disabled:opacity-50 transition-all"
+                            >
+                              <ChevronDown className={`size-3 transition-transform ${openMenuId === entry.id ? 'rotate-180' : ''}`} />
+                            </button>
+                          </div>
                           <button
                             type="button"
                             disabled={sendingEntryId === entry.id || removingEntryId === entry.id}
@@ -220,6 +254,46 @@ export function ScheduledPaymentsSection({ packages, username }: ScheduledPaymen
             </div>
           ))}
         </div>
+      )}
+
+      {/* Dropdown portal — renders at body level to escape overflow:hidden */}
+      {mounted && openMenuId && menuPos && createPortal(
+        <div
+          style={{ position: 'fixed', top: menuPos.top, right: menuPos.right, zIndex: 9999 }}
+          className="min-w-[180px] rounded-xl border border-[#333] bg-[#1A1A1A] shadow-2xl overflow-hidden"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            onClick={() => {
+              const pkg = scheduledPackages.find(p => p.pendingEntries.some(e => e.id === openMenuId))
+              if (pkg) handleSend(pkg.id, openMenuId, false)
+            }}
+            className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs text-[#D0D0D0] hover:bg-[#242424] transition-colors text-left"
+          >
+            <Receipt className="size-3.5 text-[var(--space-accent)] shrink-0" />
+            <div>
+              <div className="font-medium">Send Invoice</div>
+              <div className="text-[10px] text-[#5A5A5A] mt-0.5">Creates order + emails client</div>
+            </div>
+          </button>
+          <div className="h-px bg-[#252525]" />
+          <button
+            type="button"
+            onClick={() => {
+              const pkg = scheduledPackages.find(p => p.pendingEntries.some(e => e.id === openMenuId))
+              if (pkg) handleSend(pkg.id, openMenuId, true)
+            }}
+            className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs text-[#D0D0D0] hover:bg-[#242424] transition-colors text-left"
+          >
+            <FilePlus className="size-3.5 text-[#8A8A8A] shrink-0" />
+            <div>
+              <div className="font-medium">Create Invoice</div>
+              <div className="text-[10px] text-[#5A5A5A] mt-0.5">Creates order, no email sent</div>
+            </div>
+          </button>
+        </div>,
+        document.body,
       )}
     </div>
   )
