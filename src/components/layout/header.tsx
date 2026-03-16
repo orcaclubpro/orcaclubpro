@@ -36,7 +36,7 @@ const packages = [
 ]
 
 const quickLinks = [
-  { name: "All Packages",     href: "/packages" },
+  { name: "All Pricing",      href: "/packages" },
   { name: "Our Work",         href: "/portfolio" },
   { name: "About",            href: "/about" },
   { name: "Meet the Founder", href: "/founder" },
@@ -131,8 +131,11 @@ export function Header({ user }: { user?: HeaderUser | null } = {}) {
             {/* Solutions */}
             <NavLink href="/solutions" active={isActive('/solutions')}>Solutions</NavLink>
 
-            {/* Packages */}
-            <NavLink href="/packages" active={isActive('/packages')}>Packages</NavLink>
+            {/* Project */}
+            <NavLink href="/project" active={isActive('/project')}>Project</NavLink>
+
+            {/* Pricing */}
+            <NavLink href="/packages" active={isActive('/packages')}>Pricing</NavLink>
 
             {/* Contact */}
             <NavLink href="/contact" active={isActive('/contact')}>Contact</NavLink>
@@ -265,9 +268,9 @@ export function Header({ user }: { user?: HeaderUser | null } = {}) {
                   </Link>
                 </div>
 
-                {/* Packages */}
+                {/* Pricing */}
                 <div className="col-span-4">
-                  <p className="text-[10px] tracking-[0.35em] uppercase text-white/20 font-light mb-5">Packages</p>
+                  <p className="text-[10px] tracking-[0.35em] uppercase text-white/20 font-light mb-5">Pricing</p>
                   <div className="space-y-2 mb-6">
                     {packages.map((pkg) => (
                       <Link
@@ -345,7 +348,8 @@ export function Header({ user }: { user?: HeaderUser | null } = {}) {
             <div className="px-4 py-6 space-y-1">
               {[
                 { name: 'Solutions', href: '/solutions' },
-                { name: 'Packages',  href: '/packages' },
+                { name: 'Project',   href: '/project' },
+                { name: 'Pricing',   href: '/packages' },
                 { name: 'Services',  href: '/services' },
                 { name: 'Contact',   href: '/contact' },
                 { name: 'About',     href: '/about' },

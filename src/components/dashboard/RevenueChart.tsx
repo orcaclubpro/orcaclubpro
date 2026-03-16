@@ -69,7 +69,7 @@ function DeltaBadge({ current, prev }: { current: number; prev: number }) {
 
   if (isNew && current > 0) {
     return (
-      <span className="text-[9px] font-semibold tracking-wide" style={{ color: '#67e8f9' }}>
+      <span className="text-[9px] font-semibold tracking-wide" style={{ color: 'var(--space-accent)' }}>
         new
       </span>
     )
@@ -78,7 +78,7 @@ function DeltaBadge({ current, prev }: { current: number; prev: number }) {
 
   const Icon = pct === 0 ? Minus : isUp ? TrendingUp : TrendingDown
   const color = pct === 0
-    ? 'rgba(255,255,255,0.25)'
+    ? 'rgba(255,255,255,0.08)'
     : isUp
       ? '#4ade80'
       : '#f87171'
@@ -162,14 +162,14 @@ export function RevenueChart({
   const pendingFrac = cur.total > 0 ? cur.pendingAmt / cur.total : 0
 
   return (
-    <div className="rounded-xl border border-white/[0.10] bg-[#0a0a0a] overflow-hidden relative">
+    <div className="rounded-xl border border-[#404040] bg-[#252525] overflow-hidden relative">
 
       {/* ── Info button — opens projected revenue in analytics panel ──────── */}
       {onInfo && pendingCount > 0 && (
         <button
           onClick={onInfo}
           title={`${pendingCount} pending invoice${pendingCount !== 1 ? 's' : ''} · view projected revenue`}
-          className="absolute top-3 right-3 z-10 flex items-center justify-center size-6 rounded-full border border-white/[0.08] text-amber-400/50 hover:border-amber-400/40 hover:text-amber-400/90 hover:bg-amber-400/[0.05] transition-all duration-150"
+          className="absolute top-3 right-3 z-10 flex items-center justify-center size-6 rounded-full border border-[#404040] text-amber-400/50 hover:border-amber-400/40 hover:text-amber-400/90 hover:bg-amber-400/[0.05] transition-all duration-150"
         >
           <Info className="size-3" />
         </button>
@@ -183,7 +183,7 @@ export function RevenueChart({
             <svg width={CX * 2} height={CY * 2}>
               <defs>
                 <linearGradient id="emptyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%"   stopColor="#67e8f9" stopOpacity="0.85" />
+                  <stop offset="0%"   stopColor="#1E3A6E" stopOpacity="0.85" />
                   <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.85" />
                 </linearGradient>
               </defs>
@@ -192,7 +192,7 @@ export function RevenueChart({
               <circle
                 cx={CX} cy={CY} r={R}
                 fill="none"
-                stroke="rgba(255,255,255,0.05)"
+                stroke="rgba(255,255,255,0.03)"
                 strokeWidth={SW}
               />
 
@@ -202,11 +202,11 @@ export function RevenueChart({
                   fill="none"
                   stroke="url(#emptyGrad)"
                   strokeWidth={SW}
-                  style={{ filter: 'drop-shadow(0 0 12px rgba(103,232,249,0.35))' }}
+                  style={{ filter: 'drop-shadow(0 0 12px rgba(139,156,182,0.22))' }}
                 />
               ) : (
                 <>
-                  <Arc value={cur.paidAmt}      total={cur.total} startFrac={0}                       color="#67e8f9" glow="rgba(103,232,249,0.4)" />
+                  <Arc value={cur.paidAmt}      total={cur.total} startFrac={0}                       color="#1E3A6E" glow="rgba(139,156,182,0.25)" />
                   <Arc value={cur.pendingAmt}    total={cur.total} startFrac={paidFrac}                color="#fbbf24" glow="rgba(251,191,36,0.3)" />
                   <Arc value={cur.cancelledAmt}  total={cur.total} startFrac={paidFrac + pendingFrac}  color="rgba(248,113,113,0.45)" />
                 </>
@@ -217,10 +217,10 @@ export function RevenueChart({
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
               {cur.total > 0 ? (
                 <>
-                  <p className="text-[28px] font-black tabular-nums leading-none" style={{ color: '#67e8f9' }}>
+                  <p className="text-[28px] font-black tabular-nums leading-none" style={{ color: 'var(--space-accent)' }}>
                     {cur.collectRate}%
                   </p>
-                  <p className="text-[9px] uppercase tracking-[0.2em] text-white/30 mt-1">
+                  <p className="text-[9px] uppercase tracking-[0.2em] text-[#4A4A4A] mt-1">
                     collected
                   </p>
                   <div className="mt-1.5">
@@ -228,17 +228,17 @@ export function RevenueChart({
                   </div>
                 </>
               ) : (
-                <p className="text-[10px] uppercase tracking-wider text-white/30">No data</p>
+                <p className="text-[10px] uppercase tracking-wider text-[#4A4A4A]">No data</p>
               )}
             </div>
           </div>
 
           {/* Breakdown */}
           <div className="flex-1 min-w-0">
-            <p className="text-[11px] tracking-[0.3em] uppercase font-semibold text-white/40 mb-1">
+            <p className="text-[11px] tracking-[0.3em] uppercase font-semibold text-[#6B6B6B] mb-1">
               Revenue
             </p>
-            <p className="text-[10px] text-white/25 mb-5">{RANGE_LABEL[range]}</p>
+            <p className="text-[10px] text-[#4A4A4A] mb-5">{RANGE_LABEL[range]}</p>
 
             <div className="space-y-3.5">
 
@@ -247,17 +247,17 @@ export function RevenueChart({
                 <div className="flex items-center gap-3">
                   <div
                     className="size-3 rounded-full shrink-0"
-                    style={{ background: '#67e8f9', boxShadow: '0 0 8px rgba(103,232,249,0.55)' }}
+                    style={{ background: 'var(--space-accent)', boxShadow: '0 0 8px rgba(139,156,182,0.45)' }}
                   />
                   <div>
-                    <p className="text-[12px] font-medium text-white/70 leading-none">Collected</p>
+                    <p className="text-[12px] font-medium text-[#6B6B6B] leading-none">Collected</p>
                     {cur.paidCt > 0 && (
-                      <p className="text-[10px] text-white/25 mt-0.5">{cur.paidCt} order{cur.paidCt !== 1 ? 's' : ''}</p>
+                      <p className="text-[10px] text-[#4A4A4A] mt-0.5">{cur.paidCt} order{cur.paidCt !== 1 ? 's' : ''}</p>
                     )}
                   </div>
                 </div>
                 <div className="text-right shrink-0">
-                  <p className="text-[14px] font-bold tabular-nums leading-none" style={{ color: '#67e8f9' }}>
+                  <p className="text-[14px] font-bold tabular-nums leading-none" style={{ color: 'var(--space-accent)' }}>
                     {fmt(cur.paidAmt)}
                   </p>
                   <div className="flex justify-end mt-0.5">
@@ -274,9 +274,9 @@ export function RevenueChart({
                     style={{ boxShadow: '0 0 7px rgba(251,191,36,0.45)' }}
                   />
                   <div>
-                    <p className="text-[12px] font-medium text-white/70 leading-none">Pending</p>
+                    <p className="text-[12px] font-medium text-[#6B6B6B] leading-none">Pending</p>
                     {cur.pendingCt > 0 && (
-                      <p className="text-[10px] text-white/25 mt-0.5">{cur.pendingCt} order{cur.pendingCt !== 1 ? 's' : ''}</p>
+                      <p className="text-[10px] text-[#4A4A4A] mt-0.5">{cur.pendingCt} order{cur.pendingCt !== 1 ? 's' : ''}</p>
                     )}
                   </div>
                 </div>
@@ -296,9 +296,9 @@ export function RevenueChart({
                   <div className="flex items-center gap-3">
                     <div className="size-3 rounded-full shrink-0" style={{ background: 'rgba(248,113,113,0.45)' }} />
                     <div>
-                      <p className="text-[12px] font-medium text-white/40 leading-none">Cancelled</p>
+                      <p className="text-[12px] font-medium text-[#4A4A4A] leading-none">Cancelled</p>
                       {cur.cancelledCt > 0 && (
-                        <p className="text-[10px] text-white/20 mt-0.5">{cur.cancelledCt} order{cur.cancelledCt !== 1 ? 's' : ''}</p>
+                        <p className="text-[10px] text-[#4A4A4A] mt-0.5">{cur.cancelledCt} order{cur.cancelledCt !== 1 ? 's' : ''}</p>
                       )}
                     </div>
                   </div>
@@ -314,17 +314,17 @@ export function RevenueChart({
               )}
 
               {/* Pipeline total */}
-              <div className="pt-3.5 border-t border-white/[0.07] flex items-center justify-between gap-4">
+              <div className="pt-3.5 border-t border-[#404040] flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.2em] text-white/30 leading-none">Pipeline</p>
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-[#4A4A4A] leading-none">Pipeline</p>
                   {prev.total > 0 && (
-                    <p className="text-[9px] text-white/20 mt-0.5">
+                    <p className="text-[9px] text-[#4A4A4A] mt-0.5">
                       prev. {fmt(prev.total)}
                     </p>
                   )}
                 </div>
                 <div className="text-right">
-                  <p className="text-[18px] font-black text-white tabular-nums leading-none">{fmt(cur.total)}</p>
+                  <p className="text-[18px] font-black text-[#F0F0F0] tabular-nums leading-none">{fmt(cur.total)}</p>
                   <div className="flex justify-end mt-0.5">
                     <DeltaBadge current={cur.total} prev={prev.total} />
                   </div>

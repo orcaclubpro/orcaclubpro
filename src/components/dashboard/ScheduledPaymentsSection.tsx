@@ -109,13 +109,13 @@ export function ScheduledPaymentsSection({ packages, username }: ScheduledPaymen
       {/* Header row with title + timeframe pills */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-baseline gap-3">
-          <h3 className="text-sm font-semibold text-white">Scheduled Payments</h3>
+          <h3 className="text-sm font-semibold text-[#F0F0F0]">Scheduled Payments</h3>
           <span className="text-xs text-gray-600 tabular-nums">
             {totalPending} pending{timeframe !== 'all' && ` · next ${timeframe}d`}
           </span>
         </div>
         {/* Timeframe filter pills */}
-        <div className="flex items-center rounded-lg border border-white/[0.08] overflow-hidden">
+        <div className="flex items-center rounded-lg border border-[#404040] overflow-hidden">
           {TIMEFRAME_OPTS.map((opt, i, arr) => (
             <button
               key={opt.value}
@@ -123,9 +123,9 @@ export function ScheduledPaymentsSection({ packages, username }: ScheduledPaymen
               onClick={() => setTimeframe(opt.value)}
               className={[
                 'px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide transition-all',
-                i < arr.length - 1 ? 'border-r border-white/[0.08]' : '',
+                i < arr.length - 1 ? 'border-r border-[#404040]' : '',
                 timeframe === opt.value
-                  ? 'bg-[#67e8f9]/[0.12] text-[#67e8f9]'
+                  ? 'bg-[rgba(139,156,182,0.10)] text-[var(--space-accent)]'
                   : 'text-gray-600 hover:text-gray-400',
               ].join(' ')}
             >
@@ -136,16 +136,16 @@ export function ScheduledPaymentsSection({ packages, username }: ScheduledPaymen
       </div>
 
       {scheduledPackages.length === 0 ? (
-        <div className="rounded-xl border border-white/[0.06] bg-[#1c1c1c] px-5 py-4 text-xs text-gray-600">
+        <div className="rounded-xl border border-[#404040] bg-[#252525] px-5 py-4 text-xs text-[#6B6B6B]">
           No scheduled payments due within {timeframe} days.
         </div>
       ) : (
-        <div className="rounded-xl border border-white/[0.08] bg-[#1c1c1c] overflow-hidden divide-y divide-white/[0.05]">
+        <div className="rounded-xl border border-[#404040] bg-[#252525] overflow-hidden divide-y divide-[#333333]">
           {scheduledPackages.map((pkg) => (
             <div key={pkg.id}>
               {/* Package name row */}
-              <div className="px-5 py-2.5 bg-white/[0.02]">
-                <span className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">
+              <div className="px-5 py-2.5 bg-[#252525]">
+                <span className="text-[10px] text-[#6B6B6B] uppercase tracking-widest font-semibold">
                   {pkg.name}
                 </span>
               </div>
@@ -156,8 +156,8 @@ export function ScheduledPaymentsSection({ packages, username }: ScheduledPaymen
                 return (
                   <div key={entry.id} className="flex items-center gap-4 px-5 py-3">
                     <div className="flex-1 min-w-0 flex items-center gap-4 flex-wrap">
-                      <span className="text-sm text-gray-300 font-medium">{entry.label}</span>
-                      <span className="text-sm text-white tabular-nums font-mono shrink-0">
+                      <span className="text-sm text-[#A0A0A0] font-medium">{entry.label}</span>
+                      <span className="text-sm text-[#F0F0F0] tabular-nums font-mono shrink-0">
                         {fmt(entry.amount)}
                       </span>
                       {entry.dueDate && (
@@ -191,7 +191,7 @@ export function ScheduledPaymentsSection({ packages, username }: ScheduledPaymen
                             type="button"
                             disabled={sendingEntryId === entry.id || removingEntryId === entry.id}
                             onClick={() => handleSend(pkg.id, entry.id)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#67e8f9] border border-[#67e8f9]/30 bg-[#67e8f9]/[0.06] rounded-lg hover:bg-[#67e8f9]/[0.14] disabled:opacity-50 transition-all"
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[var(--space-accent)] border border-[rgba(139,156,182,0.20)] bg-[rgba(139,156,182,0.06)] rounded-lg hover:bg-[rgba(139,156,182,0.10)] disabled:opacity-50 transition-all"
                           >
                             {sendingEntryId === entry.id
                               ? <Loader2 className="size-3.5 animate-spin" />

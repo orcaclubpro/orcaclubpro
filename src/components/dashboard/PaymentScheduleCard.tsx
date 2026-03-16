@@ -43,7 +43,7 @@ export function PaymentScheduleCard({
   if (scheduledPkgs.length === 0) return null
 
   return (
-    <div className="rounded-xl border border-white/[0.08] bg-[#0f0f0f] overflow-hidden divide-y divide-white/[0.05]">
+    <div className="rounded-xl border border-[#404040] bg-[#252525] overflow-hidden divide-y divide-[#333333]">
       {scheduledPkgs.map((pkg) => {
         const entries = maxEntries ? pkg.upcoming.slice(0, maxEntries) : pkg.upcoming
         const pkgHref = getPackageHref?.(pkg.id)
@@ -51,14 +51,17 @@ export function PaymentScheduleCard({
         return (
           <div key={pkg.id}>
             {/* Package header */}
-            <div className="flex items-center justify-between px-4 py-2.5 bg-white/[0.015]">
-              <span className="text-[9px] font-bold uppercase tracking-widest text-gray-500">
+            <div className="flex items-center justify-between px-4 py-2.5 bg-[rgba(255,255,255,0.02)]">
+              <span className="text-[9px] font-bold uppercase tracking-widest text-[#6B6B6B]">
                 {pkg.name}
               </span>
               {pkgHref && (
                 <Link
                   href={pkgHref}
-                  className="text-[9px] text-[#67e8f9]/40 hover:text-[#67e8f9]/80 transition-colors ml-2 shrink-0"
+                  className="text-[9px] transition-colors ml-2 shrink-0 text-[#4A4A4A] hover:text-[#6B6B6B]"
+                  style={{ color: 'rgba(139,156,182,0.25)' }}
+                  onMouseEnter={e => (e.currentTarget.style.color = 'rgba(139,156,182,0.70)')}
+                  onMouseLeave={e => (e.currentTarget.style.color = 'rgba(139,156,182,0.25)')}
                 >
                   View →
                 </Link>
@@ -71,14 +74,14 @@ export function PaymentScheduleCard({
               return (
                 <div key={entry.id} className="flex items-center gap-3 px-4 py-3">
                   <div className={`size-1.5 rounded-full shrink-0 ${
-                    soon ? 'bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.4)]' : 'bg-[#67e8f9]/30'
+                    soon ? 'bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.4)]' : 'bg-[rgba(139,156,182,0.20)]'
                   }`} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-gray-300 truncate leading-snug">
+                    <p className="text-xs font-medium text-[#A0A0A0] truncate leading-snug">
                       {entry.label}
                     </p>
                     {entry.dueDate && (
-                      <p className={`text-[10px] mt-0.5 flex items-center gap-1 ${soon ? 'text-amber-400' : 'text-gray-600'}`}>
+                      <p className={`text-[10px] mt-0.5 flex items-center gap-1 ${soon ? 'text-amber-400' : 'text-[#4A4A4A]'}`}>
                         <CalendarDays className="size-3 shrink-0" />
                         Due {fmtScheduleDate(entry.dueDate)}
                         {soon && (
@@ -89,7 +92,7 @@ export function PaymentScheduleCard({
                       </p>
                     )}
                   </div>
-                  <span className="text-xs font-semibold tabular-nums text-[#67e8f9] shrink-0">
+                  <span className="text-xs font-semibold tabular-nums shrink-0" style={{ color: 'var(--space-accent)' }}>
                     {fmtCurrency(entry.amount)}
                   </span>
                 </div>
@@ -100,10 +103,10 @@ export function PaymentScheduleCard({
       })}
 
       {footerLink && (
-        <div className="px-4 py-2.5 bg-white/[0.01]">
+        <div className="px-4 py-2.5 bg-[rgba(255,255,255,0.02)]">
           <Link
             href={footerLink.href}
-            className="text-[10px] text-gray-600 hover:text-gray-400 transition-colors flex items-center gap-1"
+            className="text-[10px] text-[#4A4A4A] hover:text-[#6B6B6B] transition-colors flex items-center gap-1"
           >
             {footerLink.label}
             <ArrowRight className="size-2.5" />

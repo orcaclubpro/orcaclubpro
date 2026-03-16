@@ -26,8 +26,8 @@ export function TasksSection({ projectId, tasks }: TasksSectionProps) {
     <div className="space-y-6">
       {/* Stats Bar */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="relative overflow-hidden rounded-lg border border-white/[0.08] bg-white/[0.03] backdrop-blur-md p-4">
-          <div className="absolute top-0 right-0 w-16 h-16 bg-intelligence-cyan/[0.05] rounded-full blur-2xl" />
+        <div className="relative overflow-hidden rounded-lg border border-[#404040] bg-[#252525] p-4">
+          <div className="absolute top-0 right-0 w-16 h-16 bg-[rgba(139,156,182,0.04)] rounded-full blur-2xl" />
           <div className="relative z-10">
             <p className="text-xs text-gray-500 uppercase tracking-wider font-medium mb-1">
               Total Tasks
@@ -36,7 +36,7 @@ export function TasksSection({ projectId, tasks }: TasksSectionProps) {
           </div>
         </div>
 
-        <div className="relative overflow-hidden rounded-lg border border-white/[0.08] bg-white/[0.03] backdrop-blur-md p-4">
+        <div className="relative overflow-hidden rounded-lg border border-[#404040] bg-[#252525] p-4">
           <div className="absolute top-0 right-0 w-16 h-16 bg-green-400/[0.05] rounded-full blur-2xl" />
           <div className="relative z-10">
             <p className="text-xs text-gray-500 uppercase tracking-wider font-medium mb-1">
@@ -46,7 +46,7 @@ export function TasksSection({ projectId, tasks }: TasksSectionProps) {
           </div>
         </div>
 
-        <div className="relative overflow-hidden rounded-lg border border-white/[0.08] bg-white/[0.03] backdrop-blur-md p-4">
+        <div className="relative overflow-hidden rounded-lg border border-[#404040] bg-[#252525] p-4">
           <div className="absolute top-0 right-0 w-16 h-16 bg-blue-400/[0.05] rounded-full blur-2xl" />
           <div className="relative z-10">
             <p className="text-xs text-gray-500 uppercase tracking-wider font-medium mb-1">
@@ -56,7 +56,7 @@ export function TasksSection({ projectId, tasks }: TasksSectionProps) {
           </div>
         </div>
 
-        <div className="relative overflow-hidden rounded-lg border border-white/[0.08] bg-white/[0.03] backdrop-blur-md p-4">
+        <div className="relative overflow-hidden rounded-lg border border-[#404040] bg-[#252525] p-4">
           <div className="absolute top-0 right-0 w-16 h-16 bg-yellow-400/[0.05] rounded-full blur-2xl" />
           <div className="relative z-10">
             <p className="text-xs text-gray-500 uppercase tracking-wider font-medium mb-1">
@@ -71,7 +71,7 @@ export function TasksSection({ projectId, tasks }: TasksSectionProps) {
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-lg bg-white/[0.04] border border-white/[0.08]">
-            <ListTodo className="size-5 text-intelligence-cyan" />
+            <ListTodo className="size-5 text-[var(--space-accent)]" />
           </div>
           <div>
             <h2 className="text-2xl font-semibold text-white">Tasks</h2>
@@ -80,7 +80,7 @@ export function TasksSection({ projectId, tasks }: TasksSectionProps) {
         </div>
         <Button
           onClick={() => setIsCreateOpen(true)}
-          className="bg-intelligence-cyan text-black hover:bg-intelligence-cyan/90 font-medium shadow-lg shadow-intelligence-cyan/10 hover:shadow-intelligence-cyan/20 transition-all duration-300"
+          className="bg-[var(--space-accent)] text-white hover:bg-[var(--space-accent)]/90 font-medium transition-all duration-300"
         >
           <Plus className="size-4 mr-2" />
           Create Task
@@ -89,19 +89,19 @@ export function TasksSection({ projectId, tasks }: TasksSectionProps) {
 
       {/* Task Lists by Priority */}
       {totalTasks === 0 ? (
-        <div className="relative overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-12 text-center">
+        <div className="relative overflow-hidden rounded-xl border border-[#404040] bg-[#1C1C1C] p-12 text-center">
           <div className="relative z-10">
-            <div className="inline-flex p-5 rounded-xl bg-white/[0.03] border border-white/[0.06] mb-6">
-              <Inbox className="size-10 text-gray-500" />
+            <div className="inline-flex p-5 rounded-xl bg-[#2D2D2D] border border-[#404040] mb-6">
+              <Inbox className="size-10 text-[#6B6B6B]" />
             </div>
-            <h3 className="text-xl font-semibold text-white mb-2">No Tasks Yet</h3>
-            <p className="text-gray-400 text-sm max-w-md mx-auto mb-6">
+            <h3 className="text-xl font-semibold text-[#F0F0F0] mb-2">No Tasks Yet</h3>
+            <p className="text-[#6B6B6B] text-sm max-w-md mx-auto mb-6">
               Get started by creating your first task for this project.
             </p>
             <Button
               onClick={() => setIsCreateOpen(true)}
               variant="outline"
-              className="bg-white/[0.03] border-white/[0.08] hover:bg-white/[0.05]"
+              className="bg-[#252525] border-[#404040] hover:bg-[#2D2D2D]"
             >
               <Plus className="size-4 mr-2" />
               Create First Task

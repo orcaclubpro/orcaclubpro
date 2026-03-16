@@ -82,7 +82,7 @@ export default async function ProjectDetailPage({
 
   return (
     <>
-      <div className="sticky top-[49px] z-10 bg-[#080808] border-b border-white/[0.08] px-6">
+      <div className="sticky top-[49px] z-10 bg-[#252525] border-b border-[#404040] px-6">
         <ProjectTabNav activeTab={activeTab} basePath={basePath} />
       </div>
 

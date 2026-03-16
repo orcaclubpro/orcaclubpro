@@ -91,7 +91,7 @@ export function CreateMilestoneModal({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="bg-[#0a0a0a] border-white/[0.08] sm:max-w-[520px] p-0 overflow-hidden gap-0">
+      <DialogContent className="bg-[#252525] border-[#404040] sm:max-w-[520px] p-0 overflow-hidden gap-0">
         <DialogTitle className="sr-only">New Milestone</DialogTitle>
         <DialogDescription className="sr-only">Create a new milestone step by step</DialogDescription>
 
@@ -104,10 +104,10 @@ export function CreateMilestoneModal({
                   className={cn(
                     'size-6 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 transition-all duration-300',
                     step === i + 1
-                      ? 'bg-green-400 text-black ring-4 ring-green-400/[0.15]'
+                      ? 'bg-green-400 text-[#F0F0F0] ring-4 ring-green-400/[0.15]'
                       : i + 1 < step
                       ? 'bg-green-400/20 text-green-400'
-                      : 'bg-white/[0.05] text-gray-600'
+                      : 'bg-[rgba(255,255,255,0.06)] text-[#6B6B6B]'
                   )}
                 >
                   {i + 1 < step ? '✓' : i + 1}
@@ -116,7 +116,7 @@ export function CreateMilestoneModal({
                   <div
                     className={cn(
                       'flex-1 h-px mx-2 transition-all duration-500',
-                      i + 1 < step ? 'bg-green-400/40' : 'bg-white/[0.08]'
+                      i + 1 < step ? 'bg-green-400/40' : 'bg-[#333333]'
                     )}
                   />
                 )}
@@ -129,7 +129,7 @@ export function CreateMilestoneModal({
                 key={i}
                 className={cn(
                   'flex-1 last:flex-none text-[10px] font-medium transition-colors duration-300',
-                  step === i + 1 ? 'text-gray-400' : i + 1 < step ? 'text-gray-600' : 'text-gray-700'
+                  step === i + 1 ? 'text-[#6B6B6B]' : i + 1 < step ? 'text-[#6B6B6B]' : 'text-[#6B6B6B]'
                 )}
               >
                 {label}
@@ -145,8 +145,8 @@ export function CreateMilestoneModal({
           {step === 1 && (
             <div className="space-y-5">
               <div>
-                <h2 className="text-xl font-semibold text-white mb-1.5">Name this milestone</h2>
-                <p className="text-sm text-gray-500">Give it a clear, meaningful name that marks a real deliverable.</p>
+                <h2 className="text-xl font-semibold text-[#F0F0F0] mb-1.5">Name this milestone</h2>
+                <p className="text-sm text-[#6B6B6B]">Give it a clear, meaningful name that marks a real deliverable.</p>
               </div>
               <Input
                 autoFocus
@@ -154,7 +154,7 @@ export function CreateMilestoneModal({
                 onChange={(e) => setTitle(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') goNext() }}
                 placeholder="Beta Launch, Design Handoff, v1.0..."
-                className="bg-transparent border-0 border-b border-white/[0.12] rounded-none px-0 text-xl font-semibold text-white placeholder:text-gray-700 focus-visible:ring-0 focus-visible:border-green-400/60 h-auto py-3 transition-colors"
+                className="bg-transparent border-0 border-b border-[#404040] rounded-none px-0 text-xl font-semibold text-[#F0F0F0] placeholder:text-[#6B6B6B] focus-visible:ring-0 focus-visible:border-green-400/60 h-auto py-3 transition-colors"
               />
             </div>
           )}
@@ -163,14 +163,14 @@ export function CreateMilestoneModal({
           {step === 2 && (
             <div className="space-y-5">
               <div>
-                <h2 className="text-xl font-semibold text-white mb-1.5">When is it due?</h2>
-                <p className="text-sm text-gray-500">
+                <h2 className="text-xl font-semibold text-[#F0F0F0] mb-1.5">When is it due?</h2>
+                <p className="text-sm text-[#6B6B6B]">
                   Target date for{' '}
-                  <span className="text-gray-300">&ldquo;{title}&rdquo;</span>.
+                  <span className="text-[#A0A0A0]">&ldquo;{title}&rdquo;</span>.
                 </p>
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs text-gray-500 flex items-center gap-1.5">
+                <label className="text-xs text-[#6B6B6B] flex items-center gap-1.5">
                   <Calendar className="size-3" /> Target Date
                 </label>
                 <Input
@@ -179,7 +179,7 @@ export function CreateMilestoneModal({
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter' && date) goNext() }}
-                  className="bg-white/[0.02] border-white/[0.08] text-white focus:border-green-400/40 text-sm [color-scheme:dark]"
+                  className="bg-[rgba(255,255,255,0.06)] border-[#404040] text-[#F0F0F0] focus:border-green-400/40 text-sm [color-scheme:light]"
                 />
               </div>
               {date && (
@@ -195,11 +195,11 @@ export function CreateMilestoneModal({
           {step === 3 && (
             <div className="space-y-4">
               <div>
-                <h2 className="text-xl font-semibold text-white mb-1.5">Any notes?</h2>
-                <p className="text-sm text-gray-500">
+                <h2 className="text-xl font-semibold text-[#F0F0F0] mb-1.5">Any notes?</h2>
+                <p className="text-sm text-[#6B6B6B]">
                   Describe what reaching{' '}
-                  <span className="text-gray-300">&ldquo;{title}&rdquo;</span> means.{' '}
-                  <span className="text-gray-600">Optional.</span>
+                  <span className="text-[#A0A0A0]">&ldquo;{title}&rdquo;</span> means.{' '}
+                  <span className="text-[#6B6B6B]">Optional.</span>
                 </p>
               </div>
               <Textarea
@@ -208,23 +208,23 @@ export function CreateMilestoneModal({
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="What needs to be delivered? What does success look like?"
                 rows={3}
-                className="bg-white/[0.02] border-white/[0.08] text-white placeholder:text-gray-700 focus:border-green-400/30 resize-none text-sm leading-relaxed"
+                className="bg-[rgba(255,255,255,0.06)] border-[#404040] text-[#F0F0F0] placeholder:text-[#6B6B6B] focus:border-green-400/30 resize-none text-sm leading-relaxed"
               />
 
               {/* Preview card */}
-              <div className="relative overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.02] p-4">
+              <div className="relative overflow-hidden rounded-xl border border-[#404040] bg-[rgba(255,255,255,0.06)] p-4">
                 <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-green-400/50 via-green-400/20 to-transparent" />
                 <p className="text-[10px] tracking-[0.25em] uppercase text-green-400/50 mb-3">Preview</p>
                 <div className="flex items-start gap-3">
-                  <div className="mt-1 size-3 rounded-full border-2 border-gray-500 shrink-0" />
+                  <div className="mt-1 size-3 rounded-full border-2 border-[#555555] shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-white">{title}</p>
+                    <p className="text-sm font-semibold text-[#F0F0F0]">{title}</p>
                     <div className="flex items-center gap-1.5 mt-1">
-                      <Calendar className="size-3 text-gray-600 shrink-0" />
-                      <span className="text-xs text-gray-400">{fmtFull(date)}</span>
+                      <Calendar className="size-3 text-[#6B6B6B] shrink-0" />
+                      <span className="text-xs text-[#6B6B6B]">{fmtFull(date)}</span>
                     </div>
                     {description.trim() && (
-                      <p className="text-xs text-gray-500 mt-2 leading-relaxed border-t border-white/[0.06] pt-2">
+                      <p className="text-xs text-[#6B6B6B] mt-2 leading-relaxed border-t border-[#404040] pt-2">
                         {description}
                       </p>
                     )}
@@ -244,13 +244,13 @@ export function CreateMilestoneModal({
         )}
 
         {/* Footer nav */}
-        <div className="flex items-center justify-between px-8 py-6 mt-2 border-t border-white/[0.06]">
+        <div className="flex items-center justify-between px-8 py-6 mt-2 border-t border-[#404040]">
           {step > 1 ? (
             <button
               type="button"
               onClick={goBack}
               disabled={isLoading}
-              className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-300 transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 text-sm text-[#6B6B6B] hover:text-[#A0A0A0] transition-colors disabled:opacity-50"
             >
               <ChevronLeft className="size-4" /> Back
             </button>
@@ -261,7 +261,7 @@ export function CreateMilestoneModal({
           {step < 3 ? (
             <Button
               onClick={goNext}
-              className="bg-white/[0.06] border border-white/[0.10] hover:bg-white/[0.10] text-white font-medium"
+              className="bg-[rgba(255,255,255,0.06)] border border-[#404040] hover:bg-[rgba(255,255,255,0.06)] text-[#F0F0F0] font-medium"
             >
               Next <ChevronRight className="size-4 ml-1" />
             </Button>
@@ -269,7 +269,7 @@ export function CreateMilestoneModal({
             <Button
               onClick={handleSubmit}
               disabled={isLoading || !title.trim() || !date}
-              className="bg-green-400 text-black hover:bg-green-400/90 font-semibold disabled:opacity-40"
+              className="bg-green-400 text-[#F0F0F0] hover:bg-green-400/90 font-semibold disabled:opacity-40"
             >
               {isLoading
                 ? <><Loader2 className="size-4 mr-2 animate-spin" />Adding...</>

@@ -27,84 +27,71 @@ export default async function LoginPage({
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden">
+    <div className="relative h-screen overflow-hidden">
       <AnimatedBackground />
 
-      {/* Full-screen two-panel layout above animated background */}
-      <div className="relative z-10 flex min-h-screen">
+      <div className="relative z-10 flex h-screen">
 
         {/* ── LEFT PANEL ── transparent over animated background */}
-        <div className="hidden lg:flex flex-col w-[55%] px-16 py-16">
-          {/* Brand wordmark */}
-          <div>
-            <Link href="/">
-              <span className="text-sm font-light tracking-[0.35em] uppercase text-white/50">
-                ORCA<span className="text-[#67e8f9]/60">CLUB</span>
-              </span>
-            </Link>
-          </div>
-
-          {/* Animated greeting — gothic tag + Welcome back. */}
+        <div className="hidden lg:flex flex-col w-[50%] px-16 py-14">
           <div className="flex-1 flex items-center justify-center">
             <LoginGreeting />
           </div>
-
-          {/* Bottom label */}
           <div className="flex items-center gap-4">
             <div className="h-px w-8 bg-white/15" />
-            <span className="text-[10px] tracking-[0.4em] uppercase text-white/25 font-light">
-              Secure Access
-            </span>
+            <span className="text-[10px] tracking-[0.4em] uppercase text-white/25 font-light">Secure Access</span>
           </div>
         </div>
 
-        {/* ── RIGHT PANEL ── frosted glass card */}
-        <div className="flex-1 flex items-center justify-center px-6 py-16">
-          <div
-            className="w-full max-w-[400px] rounded-2xl p-8 lg:p-10"
-            style={{
-              background: 'rgba(8, 8, 12, 0.75)',
-              backdropFilter: 'blur(24px) saturate(1.2)',
-              border: '1px solid rgba(255,255,255,0.10)',
-            }}
-          >
-            {/* Mobile brand */}
-            <div className="lg:hidden mb-8">
-              <Link href="/">
-                <span className="text-sm font-light tracking-[0.35em] uppercase text-white/50">
-                  ORCA<span className="text-[#67e8f9]/60">CLUB</span>
-                </span>
-              </Link>
-            </div>
+        {/* ── RIGHT PANEL ── full-height frosted glass */}
+        <div
+          className="flex-1 flex flex-col overflow-hidden"
+          style={{
+            background: 'rgba(8, 8, 12, 0.70)',
+            backdropFilter: 'blur(28px) saturate(1.2)',
+            borderLeft: '1px solid rgba(255,255,255,0.07)',
+          }}
+        >
+          {/* Mobile header */}
+          <div className="lg:hidden px-6 pt-8 pb-5 flex-shrink-0 border-b border-white/[0.07]">
+            <h1 className="text-xl font-semibold text-white mb-1">Welcome back.</h1>
+            <p className="text-xs text-white/35 font-light">Secure access to your client portal</p>
+          </div>
 
-            {/* Heading */}
-            <div className="mb-8">
-              <p className="text-xs tracking-[0.4em] uppercase text-white/30 font-light mb-3">
-                Secure Access
-              </p>
-              <h2 className="text-4xl font-bold tracking-widest gradient-text">
-                SPACES
-              </h2>
-              <div className="mt-4 w-8 h-px bg-[#67e8f9]/40" />
-            </div>
+          {/* Form area */}
+          <div className="flex-1 overflow-y-auto flex flex-col items-center px-6 lg:px-10 py-8 lg:py-12">
+            <div className="w-full max-w-[420px]">
 
-            {/* Login form — all logic preserved inside */}
-            <LoginForm callbackUrl={callbackUrl} />
+              <div className="mb-8">
+                <h2 className="text-3xl font-light text-white tracking-wide">Sign in.</h2>
+                <p className="text-base text-white/40 mt-2 font-light">Access your projects, orders, and files.</p>
+                <div className="mt-4 w-8 h-px bg-[#67e8f9]/30" />
+              </div>
 
-            {/* Footer */}
-            <div className="mt-8 pt-6 border-t border-white/[0.07]">
-              <p className="text-xs text-white/25 font-light">
-                Need access?{' '}
+              <LoginForm callbackUrl={callbackUrl} />
+
+              <div className="mt-8 pt-5 border-t border-white/[0.07] space-y-4">
                 <Link
                   href="/contact"
-                  className="text-[#67e8f9]/60 hover:text-[#67e8f9] transition-colors duration-200"
+                  className="block w-full py-3 rounded-xl text-sm font-semibold text-center text-black bg-white hover:bg-white/90 transition-all duration-200"
                 >
-                  Contact us
+                  Get Access
                 </Link>
-              </p>
+                <p className="text-xs text-white/25 font-light">
+                  New to ORCACLUB?{' '}
+                  <Link
+                    href="/contact"
+                    className="text-[#67e8f9]/60 hover:text-[#67e8f9] transition-colors duration-200"
+                  >
+                    Start a project
+                  </Link>
+                </p>
+              </div>
+
             </div>
           </div>
         </div>
+
       </div>
     </div>
   )

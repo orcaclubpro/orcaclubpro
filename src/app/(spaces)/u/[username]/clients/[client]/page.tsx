@@ -224,7 +224,7 @@ export default async function ClientDetailPage({
   return (
     <>
       {/* ── Sticky tab nav ──────────────────────────────────────────────────── */}
-      <div className="sticky top-[49px] z-10 bg-[#080808] border-b border-white/[0.08] px-6 lg:px-10">
+      <div className="sticky top-[49px] z-10 bg-[#252525] border-b border-[#404040] px-6 lg:px-10">
         <ClientTabNav activeTab={activeTab} basePath={`/u/${username}/clients/${clientId}`} />
       </div>
 
@@ -269,7 +269,7 @@ export default async function ClientDetailPage({
                 <p className="text-sm text-amber-400 font-medium">
                   {fmt(clientAccount.accountBalance ?? 0)} outstanding
                 </p>
-                <span className="text-gray-700 text-xs">
+                <span className="text-[#4A4A4A] text-xs">
                   · {pendingOrders.length} pending{' '}
                   {pendingOrders.length === 1 ? 'order' : 'orders'}
                 </span>
@@ -297,7 +297,7 @@ export default async function ClientDetailPage({
                   sub: `${pendingOrders.length} pending`,
                   icon: DollarSign,
                   color:
-                    (clientAccount.accountBalance ?? 0) > 0 ? 'text-amber-400' : 'text-gray-600',
+                    (clientAccount.accountBalance ?? 0) > 0 ? 'text-amber-400' : 'text-[#4A4A4A]',
                 },
                 {
                   label: 'Projects',
@@ -311,23 +311,26 @@ export default async function ClientDetailPage({
                   value: String(orders.length),
                   sub: 'all time',
                   icon: ShoppingCart,
-                  color: 'text-[#67e8f9]',
+                  color: '',
                 },
               ].map((stat) => (
                 <div
                   key={stat.label}
-                  className="rounded-xl border border-white/[0.08] bg-[#1c1c1c] px-5 py-4"
+                  className="rounded-xl border border-[#404040] bg-[#252525] px-5 py-4"
                 >
                   <div className="flex items-center gap-1.5 mb-2">
-                    <stat.icon className={`size-3 ${stat.color}`} />
-                    <p className="text-[10px] text-gray-600 uppercase tracking-widest font-semibold">
+                    <stat.icon
+                      className={`size-3 ${stat.color}`}
+                      style={stat.label === 'Orders' ? { color: 'var(--space-accent)' } : undefined}
+                    />
+                    <p className="text-[10px] text-[#4A4A4A] uppercase tracking-widest font-semibold">
                       {stat.label}
                     </p>
                   </div>
-                  <p className="text-xl font-bold text-white tabular-nums font-mono">
+                  <p className="text-xl font-bold text-[#F0F0F0] tabular-nums font-mono">
                     {stat.value}
                   </p>
-                  <p className="text-[11px] text-gray-600 mt-0.5">{stat.sub}</p>
+                  <p className="text-[11px] text-[#4A4A4A] mt-0.5">{stat.sub}</p>
                 </div>
               ))}
             </div>
@@ -348,14 +351,14 @@ export default async function ClientDetailPage({
           <section className="space-y-4">
             <div className="flex items-baseline justify-between gap-4">
               <div className="flex items-baseline gap-3">
-                <h2 className="text-base font-semibold text-white">Projects</h2>
-                <span className="text-xs text-gray-600 tabular-nums">{projects.length}</span>
+                <h2 className="text-base font-semibold text-[#F0F0F0]">Projects</h2>
+                <span className="text-xs text-[#4A4A4A] tabular-nums">{projects.length}</span>
               </div>
               <CreateProjectModal clientId={clientId} clientName={clientAccount.name} />
             </div>
 
             {projects.length > 0 ? (
-              <div className="rounded-xl border border-white/[0.08] bg-[#1c1c1c] overflow-hidden divide-y divide-white/[0.06]">
+              <div className="rounded-xl border border-[#404040] bg-[#252525] overflow-hidden divide-y divide-[#333333]">
                 {projects.map((project) => (
                   <ProjectRow
                     key={project.id}
@@ -381,8 +384,8 @@ export default async function ClientDetailPage({
           <section className="space-y-6">
             <div className="flex items-baseline justify-between gap-4">
               <div className="flex items-baseline gap-3">
-                <h2 className="text-base font-semibold text-white">Orders</h2>
-                <span className="text-xs text-gray-600 tabular-nums">{orders.length}</span>
+                <h2 className="text-base font-semibold text-[#F0F0F0]">Orders</h2>
+                <span className="text-xs text-[#4A4A4A] tabular-nums">{orders.length}</span>
               </div>
               {orders.length > 0 && (
                 <div className="flex items-center gap-4 text-xs">
@@ -485,9 +488,9 @@ function ProjectRow({
   fmt: (n: number) => string
 }) {
   const cfg = STATUS_CFG[project.status] ?? {
-    color: 'text-gray-400',
-    bg: 'bg-gray-400/10',
-    border: 'border-gray-400/20',
+    color: 'text-[#6B6B6B]',
+    bg: 'bg-[#2D2D2D]',
+    border: 'border-[#404040]',
     icon: Package,
     label: project.status,
   }
@@ -496,12 +499,12 @@ function ProjectRow({
   const totalMilestones = project.milestones?.length ?? 0
 
   return (
-    <div className="relative flex items-center group hover:bg-white/[0.05] transition-colors">
+    <div className="relative flex items-center group hover:bg-[#2D2D2D] transition-colors">
       <Link
         href={`/u/${username}/projects/${project.id}`}
         className="flex-1 flex items-center gap-4 px-5 py-4 min-w-0"
       >
-        <div className="absolute left-0 top-0 h-full w-[2px] bg-[#67e8f9] opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+        <div className="absolute left-0 top-0 h-full w-[2px] opacity-0 group-hover:opacity-100 transition-opacity duration-200" style={{ background: 'var(--space-accent)' }} />
 
         <div
           className={`size-8 rounded-lg ${cfg.bg} border ${cfg.border} flex items-center justify-center shrink-0`}
@@ -511,7 +514,7 @@ function ProjectRow({
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-            <span className="text-sm font-semibold text-white group-hover:text-[#67e8f9] transition-colors duration-150">
+            <span className="text-sm font-semibold text-[#F0F0F0] transition-colors duration-150" style={{ color: undefined }}>
               {project.name}
             </span>
             <Badge
@@ -522,11 +525,11 @@ function ProjectRow({
             </Badge>
           </div>
           {project.description && (
-            <p className="text-xs text-gray-600 truncate">{project.description}</p>
+            <p className="text-xs text-[#4A4A4A] truncate">{project.description}</p>
           )}
         </div>
 
-        <div className="hidden sm:flex items-center gap-5 shrink-0 text-xs text-gray-600">
+        <div className="hidden sm:flex items-center gap-5 shrink-0 text-xs text-[#4A4A4A]">
           {project.projectedEndDate && (
             <span className="flex items-center gap-1">
               <Calendar className="size-3" />
@@ -539,13 +542,13 @@ function ProjectRow({
             </span>
           )}
           {project.budgetAmount && (
-            <span className="font-mono tabular-nums text-gray-500">
+            <span className="font-mono tabular-nums text-[#6B6B6B]">
               {fmt(project.budgetAmount)}
             </span>
           )}
         </div>
 
-        <ChevronRight className="size-4 text-gray-700 group-hover:text-[#67e8f9] group-hover:translate-x-0.5 transition-all duration-150 shrink-0" />
+        <ChevronRight className="size-4 text-[#4A4A4A] group-hover:translate-x-0.5 transition-all duration-150 shrink-0" style={{ color: undefined }} />
       </Link>
       <div className="pr-3 shrink-0">
         <ProjectRowActions project={project} username={username} />
@@ -566,13 +569,13 @@ function EmptyState({
   action?: React.ReactNode
 }) {
   return (
-    <div className="relative overflow-hidden rounded-xl border border-white/[0.08] bg-[#1c1c1c]">
+    <div className="relative overflow-hidden rounded-xl border border-[#404040] bg-[#252525]">
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div className="size-48 rounded-full bg-[#67e8f9]/[0.02] blur-3xl" />
+        <div className="size-48 rounded-full bg-[rgba(255,255,255,0.01)] blur-3xl" />
       </div>
       <div className="relative z-10 flex flex-col items-center text-center py-12 px-6">
-        <h3 className="text-sm font-semibold text-white mb-1">{title}</h3>
-        <p className="text-gray-600 text-xs max-w-xs mb-5">{description}</p>
+        <h3 className="text-sm font-semibold text-[#F0F0F0] mb-1">{title}</h3>
+        <p className="text-[#4A4A4A] text-xs max-w-xs mb-5">{description}</p>
         {action}
       </div>
     </div>

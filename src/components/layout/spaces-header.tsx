@@ -5,6 +5,7 @@ import { LogOut } from "lucide-react"
 import { logoutAction } from "@/actions/auth"
 import { UserSettingsModal } from "@/components/dashboard/UserSettingsModal"
 import { WelcomeInfoButton } from "@/components/dashboard/WelcomeInfoButton"
+import { ThemeSwitcher } from "@/components/dashboard/ThemeSwitcher"
 import { useHeaderTitle } from "@/app/(spaces)/HeaderTitleContext"
 
 interface SpacesHeaderProps {
@@ -31,64 +32,55 @@ export function SpacesHeader({ user, showTips }: SpacesHeaderProps) {
   const { title, subtitle } = useHeaderTitle()
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 h-16 bg-white/[0.02] backdrop-blur-md border-b border-white/[0.06]">
+    <header className="fixed top-0 left-0 right-0 z-50 h-16 border-b border-white/[0.06] bg-[#222222]">
       <nav className="flex h-full w-full items-center justify-between px-6 lg:px-10" aria-label="Global">
 
         {/* Logo / breadcrumb */}
-        {title ? (
-          <div className="flex items-center gap-2 min-w-0">
-            <Link
-              href={homeHref}
-              className="text-sm font-semibold gradient-text tracking-widest shrink-0 focus:outline-none hover:opacity-80 transition-opacity"
-            >
-              SPACES
-            </Link>
-            <span className="text-gray-500 select-none shrink-0">/</span>
-            <span className={`text-sm font-semibold text-white truncate animate-in fade-in duration-200 ${subtitle ? 'max-w-[120px] sm:max-w-[200px]' : 'max-w-[180px] sm:max-w-[320px]'}`}>
-              {title}
-            </span>
-            {subtitle && (
-              <>
-                <span className="text-gray-500 select-none shrink-0">/</span>
-                <span className="text-sm font-semibold text-white truncate max-w-[120px] sm:max-w-[200px] animate-in fade-in duration-200">
-                  {subtitle}
-                </span>
-              </>
-            )}
-          </div>
-        ) : (
-          <div className="flex items-center">
-            <Link
-              href={homeHref}
-              className="focus:outline-none focus-visible:ring-1 focus-visible:ring-intelligence-cyan/50 rounded-lg transition-all duration-300"
-            >
-              <span className="text-xl font-bold gradient-text tracking-widest">SPACES</span>
-            </Link>
-            {user?.role === 'client' && (
-              <span className="hidden sm:inline-flex items-center text-[9px] font-semibold tracking-[0.2em] uppercase px-2 py-0.5 rounded-full border border-[#67e8f9]/20 text-[#67e8f9]/50 ml-2 select-none">
-                Client Portal
+        <div className="flex items-center gap-3 min-w-0">
+          <Link
+            href={homeHref}
+            className="text-sm font-bold tracking-[0.2em] shrink-0 text-white focus:outline-none hover:opacity-70 transition-opacity"
+          >
+            SPACES
+          </Link>
+
+          {/* Vertical divider */}
+          <div className="w-px h-4 bg-white/20 shrink-0" />
+
+          {/* ThemeSwitcher sits right next to SPACES */}
+          <ThemeSwitcher />
+
+          {/* Breadcrumb — only when on a sub-page */}
+          {title && (
+            <>
+              <div className="w-px h-4 bg-white/20 shrink-0" />
+              <span className="text-white/40 select-none shrink-0 text-xs">/</span>
+              <span className={`text-sm font-medium text-white/70 truncate animate-in fade-in duration-200 ${subtitle ? 'max-w-[120px] sm:max-w-[200px]' : 'max-w-[180px] sm:max-w-[320px]'}`}>
+                {title}
               </span>
-            )}
-            {(user?.role === 'admin' || user?.role === 'user') && (
-              <span className="hidden sm:inline-flex items-center text-[9px] font-semibold tracking-[0.2em] uppercase px-2 py-0.5 rounded-full border border-white/[0.10] text-white/25 ml-2 select-none">
-                Spaces
-              </span>
-            )}
-          </div>
-        )}
+              {subtitle && (
+                <>
+                  <span className="text-white/40 select-none shrink-0 text-xs">/</span>
+                  <span className="text-sm font-medium text-white/70 truncate max-w-[120px] sm:max-w-[200px] animate-in fade-in duration-200">
+                    {subtitle}
+                  </span>
+                </>
+              )}
+            </>
+          )}
+        </div>
 
         {/* Right side actions */}
         {user && (
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2">
 
-            {/* Welcome info — clients only, portal-rendered so backdrop-filter can't trap it */}
             {isClient && (
               <WelcomeInfoButton firstName={user.firstName} showTips={showTips} />
             )}
 
             <button
               onClick={handleLogout}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-400 hover:text-gray-200 hover:bg-white/[0.03] transition-all duration-300 focus:outline-none focus-visible:ring-1 focus-visible:ring-intelligence-cyan/50"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium text-white/50 hover:text-white hover:bg-white/[0.08] transition-all duration-200 focus:outline-none"
               aria-label="Logout"
             >
               <LogOut className="h-4 w-4" />

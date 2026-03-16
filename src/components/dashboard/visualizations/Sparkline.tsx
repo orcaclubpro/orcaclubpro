@@ -10,7 +10,7 @@ interface SparklineProps {
 
 export function Sparkline({
   data,
-  color = 'rgb(103, 232, 249)', // intelligence-cyan
+  color = 'rgb(30, 58, 110)', // ink blue
   height = 24,
   width = 100,
   showDot = true,

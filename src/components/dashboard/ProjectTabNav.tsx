@@ -60,7 +60,7 @@ export function ProjectTabNav({ activeTab, basePath }: ProjectTabNavProps) {
       ))}
       {/* Sliding active indicator */}
       <div
-        className="absolute bottom-0 h-0.5 bg-intelligence-cyan rounded-full pointer-events-none"
+        className="absolute bottom-0 h-0.5 bg-[var(--space-accent)] rounded-full pointer-events-none"
         style={{
           left: indicatorStyle.left,
           width: indicatorStyle.width,

@@ -102,17 +102,17 @@ export function NewClientModal({ username }: { username: string }) {
     <>
       <Button
         onClick={() => setOpen(true)}
-        className="bg-intelligence-cyan hover:bg-intelligence-cyan/90 text-black font-semibold gap-2"
+        className="bg-[var(--space-accent)] hover:bg-[var(--space-accent)]/90 text-white font-semibold gap-2"
       >
         <Plus className="size-4" />
         New Client Account
       </Button>
 
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="bg-[#111] border border-white/[0.10] text-white max-w-md">
+        <DialogContent className="bg-[#1C1C1C] border border-[#404040] text-[#F0F0F0] max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-white">New Client Account</DialogTitle>
-            <DialogDescription className="text-gray-400 text-sm">
+            <DialogTitle className="text-xl font-bold text-[#F0F0F0]">New Client Account</DialogTitle>
+            <DialogDescription className="text-[#6B6B6B] text-sm">
               Creates a Stripe customer and a linked client account.
             </DialogDescription>
           </DialogHeader>
@@ -121,12 +121,12 @@ export function NewClientModal({ username }: { username: string }) {
             <div className="py-4 flex flex-col items-center gap-4 text-center">
               <CheckCircle className="size-12 text-green-500" />
               <div>
-                <p className="font-semibold text-white text-lg">
+                <p className="font-semibold text-[#F0F0F0] text-lg">
                   {result.action === 'updated' ? 'Account Updated' : 'Account Created'}
                 </p>
-                <p className="text-gray-400 text-sm mt-1">{result.message}</p>
+                <p className="text-[#6B6B6B] text-sm mt-1">{result.message}</p>
                 {result.emailSent && form.email && (
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-[#6B6B6B] mt-1">
                     A setup email was sent to {form.email}
                   </p>
                 )}
@@ -135,12 +135,12 @@ export function NewClientModal({ username }: { username: string }) {
                 <Button
                   variant="outline"
                   onClick={() => handleOpenChange(false)}
-                  className="border-white/20 text-white hover:bg-white/5"
+                  className="border-[#404040] text-[#F0F0F0] hover:bg-[#2D2D2D]"
                 >
                   Close
                 </Button>
                 <Button
-                  className="bg-intelligence-cyan hover:bg-intelligence-cyan/90 text-black font-semibold"
+                  className="bg-[var(--space-accent)] hover:bg-[var(--space-accent)]/90 text-white font-semibold"
                   onClick={() => {
                     setOpen(false)
                     router.push(`/u/${username}/clients/${result.id}`)
@@ -154,7 +154,7 @@ export function NewClientModal({ username }: { username: string }) {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="firstName" className="text-gray-300 text-sm">
+                  <Label htmlFor="firstName" className="text-[#A0A0A0] text-sm">
                     First Name <span className="text-red-400">*</span>
                   </Label>
                   <Input
@@ -164,11 +164,11 @@ export function NewClientModal({ username }: { username: string }) {
                     onChange={handleChange}
                     required
                     placeholder="Jane"
-                    className="bg-white/5 border-white/10 text-white placeholder:text-gray-600 focus-visible:ring-intelligence-cyan/50"
+                    className="bg-[rgba(255,255,255,0.06)] border-[#404040] text-[#F0F0F0] placeholder:text-[#6B6B6B] focus-visible:ring-[rgba(139,156,182,0.30)]"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="lastName" className="text-gray-300 text-sm">
+                  <Label htmlFor="lastName" className="text-[#A0A0A0] text-sm">
                     Last Name <span className="text-red-400">*</span>
                   </Label>
                   <Input
@@ -178,13 +178,13 @@ export function NewClientModal({ username }: { username: string }) {
                     onChange={handleChange}
                     required
                     placeholder="Doe"
-                    className="bg-white/5 border-white/10 text-white placeholder:text-gray-600 focus-visible:ring-intelligence-cyan/50"
+                    className="bg-[rgba(255,255,255,0.06)] border-[#404040] text-[#F0F0F0] placeholder:text-[#6B6B6B] focus-visible:ring-[rgba(139,156,182,0.30)]"
                   />
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="name" className="text-gray-300 text-sm">
+                <Label htmlFor="name" className="text-[#A0A0A0] text-sm">
                   Display Name <span className="text-red-400">*</span>
                 </Label>
                 <Input
@@ -194,12 +194,12 @@ export function NewClientModal({ username }: { username: string }) {
                   onChange={handleChange}
                   required
                   placeholder="Jane Doe"
-                  className="bg-white/5 border-white/10 text-white placeholder:text-gray-600 focus-visible:ring-intelligence-cyan/50"
+                  className="bg-[rgba(255,255,255,0.06)] border-[#404040] text-[#F0F0F0] placeholder:text-[#6B6B6B] focus-visible:ring-[rgba(139,156,182,0.30)]"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="email" className="text-gray-300 text-sm">
+                <Label htmlFor="email" className="text-[#A0A0A0] text-sm">
                   Email
                 </Label>
                 <Input
@@ -209,12 +209,12 @@ export function NewClientModal({ username }: { username: string }) {
                   value={form.email}
                   onChange={handleChange}
                   placeholder="jane@example.com"
-                  className="bg-white/5 border-white/10 text-white placeholder:text-gray-600 focus-visible:ring-intelligence-cyan/50"
+                  className="bg-[rgba(255,255,255,0.06)] border-[#404040] text-[#F0F0F0] placeholder:text-[#6B6B6B] focus-visible:ring-[rgba(139,156,182,0.30)]"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="company" className="text-gray-300 text-sm">
+                <Label htmlFor="company" className="text-[#A0A0A0] text-sm">
                   Company
                 </Label>
                 <Input
@@ -223,7 +223,7 @@ export function NewClientModal({ username }: { username: string }) {
                   value={form.company}
                   onChange={handleChange}
                   placeholder="Acme Corp"
-                  className="bg-white/5 border-white/10 text-white placeholder:text-gray-600 focus-visible:ring-intelligence-cyan/50"
+                  className="bg-[rgba(255,255,255,0.06)] border-[#404040] text-[#F0F0F0] placeholder:text-[#6B6B6B] focus-visible:ring-[rgba(139,156,182,0.30)]"
                 />
               </div>
 
@@ -240,14 +240,14 @@ export function NewClientModal({ username }: { username: string }) {
                   variant="outline"
                   onClick={() => handleOpenChange(false)}
                   disabled={loading}
-                  className="border-white/20 text-white hover:bg-white/5"
+                  className="border-[#404040] text-[#F0F0F0] hover:bg-[#2D2D2D]"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="bg-intelligence-cyan hover:bg-intelligence-cyan/90 text-black font-semibold"
+                  className="bg-[var(--space-accent)] hover:bg-[var(--space-accent)]/90 text-white font-semibold"
                 >
                   {loading ? (
                     <>

@@ -124,14 +124,14 @@ export function CreateProjectModal({
     <>
       <Button
         onClick={() => setOpen(true)}
-        className="bg-[#67e8f9] hover:bg-[#67e8f9]/90 text-black font-semibold gap-2"
+        className="bg-[var(--space-accent)] hover:bg-[var(--space-accent)]/90 text-black font-semibold gap-2"
       >
         <Plus className="size-4" />
         Create Project
       </Button>
 
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="bg-[#111] border border-white/[0.10] text-white p-0 overflow-hidden sm:max-w-[560px] gap-0">
+        <DialogContent className="bg-[#1C1C1C] border border-[#404040] text-[#F0F0F0] p-0 overflow-hidden sm:max-w-[560px] gap-0">
           <DialogTitle className="sr-only">Create Project</DialogTitle>
 
           {/* ── Success state ── */}
@@ -141,14 +141,14 @@ export function CreateProjectModal({
                 <Check className="size-8 text-emerald-400" strokeWidth={2.5} />
               </div>
               <div>
-                <p className="text-xl font-bold text-white mb-1">Project created</p>
-                <p className="text-gray-500 text-sm">
-                  <span className="text-gray-300 font-medium">{created}</span> is ready to go.
+                <p className="text-xl font-bold text-[#F0F0F0] mb-1">Project created</p>
+                <p className="text-[#6B6B6B] text-sm">
+                  <span className="text-[#A0A0A0] font-medium">{created}</span> is ready to go.
                 </p>
               </div>
               <Button
                 onClick={() => handleOpenChange(false)}
-                className="bg-[#67e8f9] hover:bg-[#67e8f9]/90 text-black font-semibold mt-2"
+                className="bg-[var(--space-accent)] hover:bg-[var(--space-accent)]/90 text-black font-semibold mt-2"
               >
                 Done
               </Button>
@@ -156,7 +156,7 @@ export function CreateProjectModal({
           ) : (
             <>
               {/* ── Step indicator ── */}
-              <div className="px-8 pt-8 pb-6 border-b border-white/[0.06]">
+              <div className="px-8 pt-8 pb-6 border-b border-[#404040]">
                 <div className="flex items-center gap-0">
                   {STEPS.map((s, i) => {
                     const done    = step > s.num
@@ -169,22 +169,23 @@ export function CreateProjectModal({
                           <div
                             className={`size-9 rounded-xl flex items-center justify-center border transition-all duration-300 ${
                               done
-                                ? 'bg-[#67e8f9]/15 border-[#67e8f9]/30'
+                                ? 'bg-[rgba(139,156,182,0.06)] border-[rgba(139,156,182,0.15)]'
                                 : current
-                                  ? 'bg-[#67e8f9]/10 border-[#67e8f9]/40'
-                                  : 'bg-white/[0.03] border-white/[0.08]'
+                                  ? 'bg-[rgba(139,156,182,0.06)] border-[rgba(139,156,182,0.15)]'
+                                  : 'bg-[rgba(255,255,255,0.02)] border-[#404040]'
                             }`}
                           >
                             {done ? (
-                              <Check className="size-4 text-[#67e8f9]" strokeWidth={2.5} />
+                              <Check className="size-4" style={{ color: 'var(--space-accent)' }} strokeWidth={2.5} />
                             ) : (
-                              <Icon className={`size-4 ${current ? 'text-[#67e8f9]' : 'text-gray-700'}`} />
+                              <Icon className={`size-4 ${current ? '' : 'text-[#4A4A4A]'}`} style={current ? { color: 'var(--space-accent)' } : undefined} />
                             )}
                           </div>
                           <span
                             className={`text-[10px] uppercase tracking-wider font-semibold transition-colors duration-200 ${
-                              current ? 'text-[#67e8f9]' : done ? 'text-gray-500' : 'text-gray-700'
+                              done ? 'text-[#4A4A4A]' : 'text-[#4A4A4A]'
                             }`}
+                            style={current ? { color: 'var(--space-accent)' } : undefined}
                           >
                             {s.label}
                           </span>
@@ -193,7 +194,7 @@ export function CreateProjectModal({
                         {i < STEPS.length - 1 && (
                           <div
                             className={`h-[1px] w-12 mx-3 mb-5 transition-all duration-300 ${
-                              step > s.num ? 'bg-[#67e8f9]/30' : 'bg-white/[0.06]'
+                              step > s.num ? 'bg-[rgba(139,156,182,0.20)]' : 'bg-[#333333]'
                             }`}
                           />
                         )}
@@ -210,57 +211,57 @@ export function CreateProjectModal({
                 {step === 1 && (
                   <div className="space-y-5 animate-in fade-in-0 slide-in-from-bottom-2 duration-300">
                     <div>
-                      <p className="text-xs uppercase tracking-widest text-gray-600 font-semibold mb-1">Step 1</p>
-                      <h3 className="text-xl font-bold text-white">What are we building?</h3>
+                      <p className="text-xs uppercase tracking-widest text-[#4A4A4A] font-semibold mb-1">Step 1</p>
+                      <h3 className="text-xl font-bold text-[#F0F0F0]">What are we building?</h3>
                     </div>
                     {clientId ? (
                       /* Pre-selected client (e.g. from client detail page) */
-                      <div className="flex items-center gap-2 rounded-lg border border-[#67e8f9]/[0.15] bg-[#67e8f9]/[0.06] px-3 py-2">
-                        <User className="size-3.5 text-[#67e8f9]/70 shrink-0" />
-                        <span className="text-xs text-gray-400">Client:</span>
-                        <span className="text-xs font-medium text-[#67e8f9]">{clientName ?? 'Selected'}</span>
+                      <div className="flex items-center gap-2 rounded-lg border border-[rgba(139,156,182,0.15)] bg-[rgba(139,156,182,0.06)] px-3 py-2">
+                        <User className="size-3.5 shrink-0" style={{ color: 'var(--space-accent)', opacity: 0.7 }} />
+                        <span className="text-xs text-[#6B6B6B]">Client:</span>
+                        <span className="text-xs font-medium" style={{ color: 'var(--space-accent)' }}>{clientName ?? 'Selected'}</span>
                       </div>
                     ) : clients && clients.length > 0 ? (
                       /* Client selector (e.g. from projects page) */
                       <div className="space-y-1.5">
-                        <Label className="text-gray-400 text-sm">
-                          Client <span className="text-gray-700 text-xs font-normal">(optional)</span>
+                        <Label className="text-[#6B6B6B] text-sm">
+                          Client <span className="text-[#4A4A4A] text-xs font-normal">(optional)</span>
                         </Label>
                         <div className="relative">
                           <select
                             value={selectedClientId}
                             onChange={(e) => setSelectedClientId(e.target.value)}
-                            className="w-full appearance-none bg-white/[0.04] border border-white/[0.08] text-white rounded-md h-11 px-3 pr-8 text-sm focus:outline-none focus:ring-1 focus:ring-[#67e8f9]/30"
+                            className="w-full appearance-none bg-[#2D2D2D] border border-[#404040] text-[#F0F0F0] rounded-md h-11 px-3 pr-8 text-sm focus:outline-none focus:ring-1 focus:ring-[rgba(139,156,182,0.20)]"
                           >
-                            <option value="" className="bg-[#111] text-gray-400">No client</option>
+                            <option value="" className="bg-[#1C1C1C] text-[#6B6B6B]">No client</option>
                             {clients.map((c) => (
-                              <option key={c.id} value={c.id} className="bg-[#111] text-white">{c.name}</option>
+                              <option key={c.id} value={c.id} className="bg-[#1C1C1C] text-[#F0F0F0]">{c.name}</option>
                             ))}
                           </select>
-                          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 size-4 text-gray-600 pointer-events-none" />
+                          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 size-4 text-[#4A4A4A] pointer-events-none" />
                         </div>
                       </div>
                     ) : null}
                     <div className="space-y-4">
                       <div className="space-y-1.5">
-                        <Label className="text-gray-400 text-sm">Project name <span className="text-[#67e8f9]">*</span></Label>
+                        <Label className="text-[#6B6B6B] text-sm">Project name <span style={{ color: 'var(--space-accent)' }}>*</span></Label>
                         <Input
                           value={form.name}
                           onChange={(e) => set('name', e.target.value)}
                           placeholder="e.g. Brand Identity Redesign"
-                          className="bg-white/[0.04] border-white/[0.08] text-white placeholder:text-gray-700 text-base h-11 focus-visible:ring-[#67e8f9]/30"
+                          className="bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] placeholder:text-[#4A4A4A] text-base h-11 focus-visible:ring-[rgba(139,156,182,0.20)]"
                           autoFocus
                           onKeyDown={(e) => e.key === 'Enter' && canAdvance() && advance()}
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-gray-400 text-sm">Description <span className="text-gray-700 text-xs font-normal">(optional)</span></Label>
+                        <Label className="text-[#6B6B6B] text-sm">Description <span className="text-[#4A4A4A] text-xs font-normal">(optional)</span></Label>
                         <Textarea
                           value={form.description}
                           onChange={(e) => set('description', e.target.value)}
                           placeholder="A brief overview of the project scope and goals..."
                           rows={3}
-                          className="bg-white/[0.04] border-white/[0.08] text-white placeholder:text-gray-700 resize-none focus-visible:ring-[#67e8f9]/30"
+                          className="bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] placeholder:text-[#4A4A4A] resize-none focus-visible:ring-[rgba(139,156,182,0.20)]"
                         />
                       </div>
                     </div>
@@ -271,33 +272,33 @@ export function CreateProjectModal({
                 {step === 2 && (
                   <div className="space-y-5 animate-in fade-in-0 slide-in-from-bottom-2 duration-300">
                     <div>
-                      <p className="text-xs uppercase tracking-widest text-gray-600 font-semibold mb-1">Step 2</p>
-                      <h3 className="text-xl font-bold text-white">When does it happen?</h3>
+                      <p className="text-xs uppercase tracking-widest text-[#4A4A4A] font-semibold mb-1">Step 2</p>
+                      <h3 className="text-xl font-bold text-[#F0F0F0]">When does it happen?</h3>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <Label className="text-gray-400 text-sm">Start date <span className="text-gray-700 text-xs font-normal">(optional)</span></Label>
+                        <Label className="text-[#6B6B6B] text-sm">Start date <span className="text-[#4A4A4A] text-xs font-normal">(optional)</span></Label>
                         <Input
                           type="date"
                           value={form.startDate}
                           onChange={(e) => set('startDate', e.target.value)}
-                          className="bg-white/[0.04] border-white/[0.08] text-white h-11 focus-visible:ring-[#67e8f9]/30 [color-scheme:dark]"
+                          className="bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] h-11 focus-visible:ring-[rgba(139,156,182,0.20)] [color-scheme:light]"
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-gray-400 text-sm">Target end date <span className="text-gray-700 text-xs font-normal">(optional)</span></Label>
+                        <Label className="text-[#6B6B6B] text-sm">Target end date <span className="text-[#4A4A4A] text-xs font-normal">(optional)</span></Label>
                         <Input
                           type="date"
                           value={form.projectedEndDate}
                           onChange={(e) => set('projectedEndDate', e.target.value)}
                           min={form.startDate || undefined}
-                          className="bg-white/[0.04] border-white/[0.08] text-white h-11 focus-visible:ring-[#67e8f9]/30 [color-scheme:dark]"
+                          className="bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] h-11 focus-visible:ring-[rgba(139,156,182,0.20)] [color-scheme:light]"
                         />
                       </div>
                     </div>
                     {form.startDate && form.projectedEndDate && (
-                      <div className="flex items-center gap-2 rounded-lg bg-[#67e8f9]/[0.05] border border-[#67e8f9]/[0.12] px-4 py-3 text-sm text-[#67e8f9]/80 animate-in fade-in-0 duration-300">
-                        <Calendar className="size-4 shrink-0 text-[#67e8f9]/60" />
+                      <div className="flex items-center gap-2 rounded-lg bg-[rgba(139,156,182,0.06)] border border-[rgba(139,156,182,0.15)] px-4 py-3 text-sm animate-in fade-in-0 duration-300" style={{ color: 'var(--space-accent)', opacity: 0.8 }}>
+                        <Calendar className="size-4 shrink-0" style={{ color: 'var(--space-accent)', opacity: 0.6 }} />
                         <span>
                           {Math.ceil(
                             (new Date(form.projectedEndDate).getTime() - new Date(form.startDate).getTime()) /
@@ -314,15 +315,15 @@ export function CreateProjectModal({
                 {step === 3 && (
                   <div className="space-y-5 animate-in fade-in-0 slide-in-from-bottom-2 duration-300">
                     <div>
-                      <p className="text-xs uppercase tracking-widest text-gray-600 font-semibold mb-1">Step 3</p>
-                      <h3 className="text-xl font-bold text-white">What's the budget?</h3>
+                      <p className="text-xs uppercase tracking-widest text-[#4A4A4A] font-semibold mb-1">Step 3</p>
+                      <h3 className="text-xl font-bold text-[#F0F0F0]">What's the budget?</h3>
                     </div>
                     <div className="space-y-4">
                       <div className="space-y-1.5">
-                        <Label className="text-gray-400 text-sm">Budget amount <span className="text-gray-700 text-xs font-normal">(optional)</span></Label>
+                        <Label className="text-[#6B6B6B] text-sm">Budget amount <span className="text-[#4A4A4A] text-xs font-normal">(optional)</span></Label>
                         <div className="flex gap-2">
                           {/* Currency picker */}
-                          <div className="flex rounded-lg border border-white/[0.08] overflow-hidden">
+                          <div className="flex rounded-lg border border-[#404040] overflow-hidden">
                             {(['USD', 'EUR', 'GBP'] as const).map((c) => (
                               <button
                                 key={c}
@@ -330,8 +331,8 @@ export function CreateProjectModal({
                                 onClick={() => set('currency', c)}
                                 className={`px-3 py-2 text-sm font-mono transition-colors ${
                                   form.currency === c
-                                    ? 'bg-[#67e8f9]/10 text-[#67e8f9]'
-                                    : 'text-gray-600 hover:text-gray-400 bg-white/[0.02]'
+                                    ? 'bg-[rgba(139,156,182,0.06)] text-[#1E3A6E]'
+                                    : 'text-[#4A4A4A] hover:text-[#6B6B6B] bg-[rgba(255,255,255,0.02)]'
                                 }`}
                               >
                                 {CURRENCY_SYMBOLS[c]}
@@ -347,14 +348,14 @@ export function CreateProjectModal({
                               value={form.budget}
                               onChange={(e) => set('budget', e.target.value)}
                               placeholder="0"
-                              className="bg-white/[0.04] border-white/[0.08] text-white h-11 text-base font-mono focus-visible:ring-[#67e8f9]/30 pl-4"
+                              className="bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] h-11 text-base font-mono focus-visible:ring-[rgba(139,156,182,0.20)] pl-4"
                             />
                           </div>
                         </div>
                       </div>
                       {form.budget && Number(form.budget) > 0 && (
-                        <div className="flex items-center gap-2 rounded-lg bg-[#67e8f9]/[0.05] border border-[#67e8f9]/[0.12] px-4 py-3 text-sm text-[#67e8f9]/80 animate-in fade-in-0 duration-300">
-                          <DollarSign className="size-4 shrink-0 text-[#67e8f9]/60" />
+                        <div className="flex items-center gap-2 rounded-lg bg-[rgba(139,156,182,0.06)] border border-[rgba(139,156,182,0.15)] px-4 py-3 text-sm animate-in fade-in-0 duration-300" style={{ color: 'var(--space-accent)', opacity: 0.8 }}>
+                          <DollarSign className="size-4 shrink-0" style={{ color: 'var(--space-accent)', opacity: 0.6 }} />
                           <span className="font-mono font-semibold">
                             {new Intl.NumberFormat('en-US', {
                               style: 'currency',
@@ -362,7 +363,7 @@ export function CreateProjectModal({
                               minimumFractionDigits: 0,
                             }).format(Number(form.budget))}
                           </span>
-                          <span className="text-gray-600">project budget</span>
+                          <span className="text-[#4A4A4A]">project budget</span>
                         </div>
                       )}
                     </div>
@@ -378,8 +379,8 @@ export function CreateProjectModal({
               </div>
 
               {/* ── Footer ── */}
-              <div className="flex items-center justify-between gap-4 px-8 py-5 border-t border-white/[0.06] bg-white/[0.01]">
-                <span className="text-[10px] uppercase tracking-widest text-gray-700 font-semibold tabular-nums">
+              <div className="flex items-center justify-between gap-4 px-8 py-5 border-t border-[#404040] bg-[rgba(255,255,255,0.02)]">
+                <span className="text-[10px] uppercase tracking-widest text-[#4A4A4A] font-semibold tabular-nums">
                   {String(step).padStart(2, '0')} / 03
                 </span>
                 <div className="flex items-center gap-2">
@@ -389,7 +390,7 @@ export function CreateProjectModal({
                       variant="ghost"
                       onClick={back}
                       disabled={loading}
-                      className="text-gray-500 hover:text-white hover:bg-white/[0.05] gap-1.5"
+                      className="text-[#6B6B6B] hover:text-[#F0F0F0] hover:bg-[#2D2D2D] gap-1.5"
                     >
                       <ArrowLeft className="size-4" />
                       Back
@@ -399,7 +400,7 @@ export function CreateProjectModal({
                       type="button"
                       variant="ghost"
                       onClick={() => handleOpenChange(false)}
-                      className="text-gray-500 hover:text-white hover:bg-white/[0.05]"
+                      className="text-[#6B6B6B] hover:text-[#F0F0F0] hover:bg-[#2D2D2D]"
                     >
                       Cancel
                     </Button>
@@ -407,7 +408,7 @@ export function CreateProjectModal({
                   <Button
                     onClick={advance}
                     disabled={!canAdvance() || loading}
-                    className="bg-[#67e8f9] hover:bg-[#67e8f9]/90 text-black font-semibold gap-1.5 min-w-[120px]"
+                    className="bg-[var(--space-accent)] hover:bg-[var(--space-accent)]/90 text-black font-semibold gap-1.5 min-w-[120px]"
                   >
                     {loading ? (
                       <>

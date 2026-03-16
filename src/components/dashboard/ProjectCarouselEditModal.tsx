@@ -22,8 +22,8 @@ export function ProjectCarouselEditModal({ project, large }: { project: Serializ
         type="button"
         onClick={() => setOpen(true)}
         className={large
-          ? "flex items-center gap-2.5 bg-[#1c1c1c] hover:bg-[#242424] border border-white/[0.14] hover:border-white/[0.24] text-white/75 hover:text-white font-bold rounded-full px-5 py-2 text-sm transition-all duration-200"
-          : "flex items-center gap-1.5 text-xs text-white/45 hover:text-white/75 bg-white/[0.03] hover:bg-white/[0.07] border border-white/[0.07] hover:border-white/[0.18] rounded-lg px-3.5 py-2.5 transition-all duration-150"
+          ? "flex items-center gap-2.5 bg-[#252525] hover:bg-[#2D2D2D] border border-[#404040] hover:border-[#404040] text-[#A0A0A0] hover:text-[#F0F0F0] font-bold rounded-full px-5 py-2 text-sm transition-all duration-200"
+          : "flex items-center gap-1.5 text-xs text-[#6B6B6B] hover:text-[#A0A0A0] bg-[#252525] hover:bg-[#2D2D2D] border border-[#404040] hover:border-[#404040] rounded-lg px-3.5 py-2.5 transition-all duration-150"
         }
       >
         <Settings className={large ? "size-4" : "size-3.5"} />

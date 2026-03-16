@@ -42,7 +42,7 @@ const BADGE_COLORS = [
   { bg: 'bg-orange-400/10',  border: 'border-orange-400/20',  text: 'text-orange-400'  },
   { bg: 'bg-pink-400/10',    border: 'border-pink-400/20',    text: 'text-pink-400'    },
   { bg: 'bg-amber-400/10',   border: 'border-amber-400/20',   text: 'text-amber-400'   },
-  { bg: 'bg-[#67e8f9]/10',   border: 'border-[#67e8f9]/20',   text: 'text-[#67e8f9]'   },
+  { bg: 'bg-[rgba(139,156,182,0.10)]', border: 'border-[rgba(139,156,182,0.15)]', text: 'text-[#1E3A6E]' },
   { bg: 'bg-red-400/10',     border: 'border-red-400/20',     text: 'text-red-400'     },
 ]
 
@@ -82,9 +82,9 @@ function CopyButton({ value }: { value: string }) {
         setCopied(true)
         setTimeout(() => setCopied(false), 1500)
       }}
-      className="size-6 flex items-center justify-center rounded text-gray-600 hover:text-gray-300 hover:bg-white/[0.06] transition-all"
+      className="size-6 flex items-center justify-center rounded text-[#4A4A4A] hover:text-[#A0A0A0] hover:bg-[#2D2D2D] transition-all"
     >
-      {copied ? <Check className="size-3 text-[#67e8f9]" /> : <Copy className="size-3" />}
+      {copied ? <Check className="size-3 text-emerald-500" /> : <Copy className="size-3" />}
     </button>
   )
 }
@@ -96,21 +96,21 @@ function SecretRow({ label, value }: { label: string; value: string }) {
 
   return (
     <div className="flex items-center gap-2 group/row py-1">
-      <span className="text-[11px] text-gray-500 flex-[0_0_auto] max-w-[40%] truncate font-mono">
+      <span className="text-[11px] text-[#6B6B6B] flex-[0_0_auto] max-w-[40%] truncate font-mono">
         {label}
       </span>
-      <span className="text-[11px] text-gray-700 shrink-0">:</span>
+      <span className="text-[11px] text-[#4A4A4A] shrink-0">:</span>
       <span
         className={cn(
-          'text-[12px] font-mono text-gray-300 flex-1 min-w-0 truncate',
-          !revealed && 'tracking-[0.2em] text-gray-500',
+          'text-[12px] font-mono text-[#A0A0A0] flex-1 min-w-0 truncate',
+          !revealed && 'tracking-[0.2em] text-[#6B6B6B]',
         )}
       >
         {revealed ? value : '••••••••'}
       </span>
       <button
         onClick={() => setRevealed((v) => !v)}
-        className="opacity-0 group-hover/row:opacity-100 transition-opacity size-5 flex items-center justify-center text-gray-600 hover:text-gray-300 shrink-0"
+        className="opacity-0 group-hover/row:opacity-100 transition-opacity size-5 flex items-center justify-center text-[#4A4A4A] hover:text-[#A0A0A0] shrink-0"
       >
         {revealed ? <EyeOff className="size-3" /> : <Eye className="size-3" />}
       </button>
@@ -197,57 +197,57 @@ function CredentialEditModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#0d0d0d] border-white/[0.08] sm:max-w-[480px] p-0 overflow-hidden gap-0">
+      <DialogContent className="bg-[#1C1C1C] border-[#404040] sm:max-w-[480px] p-0 overflow-hidden gap-0">
         <DialogTitle className="sr-only">Edit Credential</DialogTitle>
         <DialogDescription className="sr-only">Update this credential</DialogDescription>
 
-        <div className="px-6 py-5 border-b border-white/[0.06]">
+        <div className="px-6 py-5 border-b border-[#404040]">
           <div className="flex items-center gap-3">
-            <div className="size-8 rounded-lg bg-[#67e8f9]/[0.08] border border-[#67e8f9]/[0.15] flex items-center justify-center">
-              <KeyRound className="size-4 text-[#67e8f9]" />
+            <div className="size-8 rounded-lg bg-[rgba(139,156,182,0.06)] border border-[rgba(139,156,182,0.10)] flex items-center justify-center">
+              <KeyRound className="size-4 text-[#1E3A6E]" />
             </div>
-            <h2 className="text-base font-semibold text-white">Edit Credential</h2>
+            <h2 className="text-base font-semibold text-[#F0F0F0]">Edit Credential</h2>
           </div>
         </div>
 
         <div className="px-6 py-5 space-y-4 max-h-[60vh] overflow-y-auto">
           <div className="space-y-1.5">
-            <Label className="text-xs text-gray-400">Title <span className="text-red-400">*</span></Label>
+            <Label className="text-xs text-[#6B6B6B]">Title <span className="text-red-400">*</span></Label>
             <Input autoFocus value={form.title} onChange={(e) => setField('title', e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
               placeholder="WordPress Admin, AWS Console…"
-              className="bg-white/[0.03] border-white/[0.08] focus:border-[#67e8f9]/40 text-sm text-white" />
+              className="bg-[#252525] border-[#404040] focus:border-[#404040] text-sm text-[#F0F0F0]" />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs text-gray-400">Website URL</Label>
+            <Label className="text-xs text-[#6B6B6B]">Website URL</Label>
             <Input value={form.website} onChange={(e) => setField('website', e.target.value)}
               placeholder="https://example.com"
-              className="bg-white/[0.03] border-white/[0.08] focus:border-[#67e8f9]/40 text-sm text-white" />
+              className="bg-[#252525] border-[#404040] focus:border-[#404040] text-sm text-[#F0F0F0]" />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs text-gray-400">Username / Email</Label>
+            <Label className="text-xs text-[#6B6B6B]">Username / Email</Label>
             <Input value={form.username} onChange={(e) => setField('username', e.target.value)}
               placeholder="admin@example.com" autoComplete="off"
-              className="bg-white/[0.03] border-white/[0.08] focus:border-[#67e8f9]/40 text-sm text-white" />
+              className="bg-[#252525] border-[#404040] focus:border-[#404040] text-sm text-[#F0F0F0]" />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs text-gray-400">Password</Label>
+            <Label className="text-xs text-[#6B6B6B]">Password</Label>
             <div className="relative">
               <Input value={form.password} onChange={(e) => setField('password', e.target.value)}
                 type={form.showPassword ? 'text' : 'password'}
                 placeholder="••••••••" autoComplete="new-password"
-                className="bg-white/[0.03] border-white/[0.08] focus:border-[#67e8f9]/40 text-sm text-white pr-10 font-mono" />
+                className="bg-[#252525] border-[#404040] focus:border-[#404040] text-sm text-[#F0F0F0] pr-10 font-mono" />
               <button type="button" onClick={() => setField('showPassword', !form.showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors">
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#4A4A4A] hover:text-[#6B6B6B] transition-colors">
                 {form.showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
               </button>
             </div>
           </div>
-          <div className="space-y-2 border-t border-white/[0.06] pt-4">
+          <div className="space-y-2 border-t border-[#404040] pt-4">
             <div className="flex items-center justify-between">
-              <Label className="text-xs text-gray-400">Secrets</Label>
+              <Label className="text-xs text-[#6B6B6B]">Secrets</Label>
               <button type="button" onClick={addSecret}
-                className="flex items-center gap-1 text-xs text-[#67e8f9] hover:text-[#67e8f9]/70 transition-colors">
+                className="flex items-center gap-1 text-xs text-[#1E3A6E] hover:text-[#1E3A6E]/70 transition-colors">
                 <Plus className="size-3" /> Add secret
               </button>
             </div>
@@ -257,12 +257,12 @@ function CredentialEditModal({
                   <div key={i} className="flex gap-2">
                     <Input value={secret.key} onChange={(e) => updateSecret(i, 'key', e.target.value)}
                       placeholder="KEY_NAME"
-                      className="bg-white/[0.03] border-white/[0.08] focus:border-[#67e8f9]/40 text-xs flex-[2] font-mono text-white" />
+                      className="bg-[#252525] border-[#404040] focus:border-[#404040] text-xs flex-[2] font-mono text-[#F0F0F0]" />
                     <Input value={secret.value} onChange={(e) => updateSecret(i, 'value', e.target.value)}
                       placeholder="value…"
-                      className="bg-white/[0.03] border-white/[0.08] focus:border-[#67e8f9]/40 text-xs flex-[3] font-mono text-white" />
+                      className="bg-[#252525] border-[#404040] focus:border-[#404040] text-xs flex-[3] font-mono text-[#F0F0F0]" />
                     <button type="button" onClick={() => removeSecret(i)}
-                      className="size-9 flex items-center justify-center text-gray-600 hover:text-red-400 transition-colors shrink-0">
+                      className="size-9 flex items-center justify-center text-[#4A4A4A] hover:text-red-400 transition-colors shrink-0">
                       <X className="size-3.5" />
                     </button>
                   </div>
@@ -278,11 +278,11 @@ function CredentialEditModal({
           </div>
         )}
 
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-white/[0.06]">
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[#404040]">
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={isPending}
-            className="text-gray-400 hover:text-gray-200">Cancel</Button>
+            className="text-[#6B6B6B] hover:text-[#A0A0A0]">Cancel</Button>
           <Button onClick={handleSubmit} disabled={isPending || !form.title.trim()}
-            className="bg-[#67e8f9] text-black hover:bg-[#67e8f9]/90 font-semibold disabled:opacity-40">
+            className="bg-[#333333] text-[#F0F0F0] hover:bg-[#404040] font-semibold disabled:opacity-40">
             {isPending ? <><Loader2 className="size-4 mr-2 animate-spin" />Saving…</> : 'Save Changes'}
           </Button>
         </div>
@@ -311,9 +311,9 @@ function CredentialCard({
       : ''
 
   return (
-    <div className="group relative rounded-lg border border-white/[0.08] bg-[#111111] hover:border-white/[0.13] transition-all duration-150 overflow-hidden">
+    <div className="group relative rounded-lg border border-[#404040] bg-[#1C1C1C] hover:border-[#404040] transition-all duration-150 overflow-hidden">
       {/* Left accent bar */}
-      <div className="absolute left-0 inset-y-0 w-[2px] bg-gradient-to-b from-transparent via-[#67e8f9]/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+      <div className="absolute left-0 inset-y-0 w-[2px] bg-gradient-to-b from-transparent via-[#1E3A6E]/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
 
       <div className="p-4">
         {/* Top row: badge | title + link */}
@@ -330,7 +330,7 @@ function CredentialCard({
           </div>
 
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-white truncate leading-tight">
+            <p className="text-sm font-semibold text-[#F0F0F0] truncate leading-tight">
               {credential.title}
             </p>
             {credential.website ? (
@@ -342,14 +342,14 @@ function CredentialCard({
                 }
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1 text-[11px] text-gray-600 hover:text-[#67e8f9] transition-colors mt-0.5"
+                className="flex items-center gap-1 text-[11px] text-[#4A4A4A] hover:text-[#F0F0F0] transition-colors mt-0.5"
                 onClick={(e) => e.stopPropagation()}
               >
                 <Globe className="size-2.5 shrink-0" />
                 <span className="truncate">{credential.website}</span>
               </a>
             ) : projectName ? (
-              <span className="inline-flex items-center gap-1 text-[11px] text-gray-500 font-medium mt-0.5">
+              <span className="inline-flex items-center gap-1 text-[11px] text-[#6B6B6B] font-medium mt-0.5">
                 <FolderKanban className="size-3" />
                 {projectName}
               </span>
@@ -359,7 +359,7 @@ function CredentialCard({
           {onEdit && (
             <button
               onClick={onEdit}
-              className="size-6 flex items-center justify-center rounded text-gray-600 hover:text-gray-200 hover:bg-white/[0.06] transition-colors opacity-0 group-hover:opacity-100 shrink-0"
+              className="size-6 flex items-center justify-center rounded text-[#4A4A4A] hover:text-[#A0A0A0] hover:bg-[#2D2D2D] transition-colors opacity-0 group-hover:opacity-100 shrink-0"
             >
               <Pencil className="size-3" />
             </button>
@@ -369,7 +369,7 @@ function CredentialCard({
         {/* Project badge (shown below website if website also present) */}
         {credential.website && projectName && (
           <div className="mt-1.5 ml-10">
-            <span className="inline-flex items-center gap-1 text-[11px] text-gray-500 font-medium">
+            <span className="inline-flex items-center gap-1 text-[11px] text-[#6B6B6B] font-medium">
               <FolderKanban className="size-3" />
               {projectName}
             </span>
@@ -377,13 +377,13 @@ function CredentialCard({
         )}
 
         {/* Divider */}
-        {hasCredentials && <div className="h-px bg-white/[0.05] my-2.5" />}
+        {hasCredentials && <div className="h-px bg-[#333333] my-2.5" />}
 
         {/* Username row */}
         {credential.username && (
           <div className="flex items-center gap-2 group/row py-1.5">
-            <User2 className="size-3.5 text-gray-600 shrink-0" />
-            <span className="flex-1 font-mono text-[13px] text-gray-300 min-w-0 truncate">
+            <User2 className="size-3.5 text-[#4A4A4A] shrink-0" />
+            <span className="flex-1 font-mono text-[13px] text-[#A0A0A0] min-w-0 truncate">
               {credential.username}
             </span>
             <CopyButton value={credential.username} />
@@ -393,18 +393,18 @@ function CredentialCard({
         {/* Password row */}
         {credential.password && (
           <div className="flex items-center gap-2 group/row py-1.5">
-            <Lock className="size-3.5 text-gray-600 shrink-0" />
+            <Lock className="size-3.5 text-[#4A4A4A] shrink-0" />
             <span
               className={cn(
                 'flex-1 font-mono text-[13px] min-w-0 truncate',
-                showPassword ? 'text-gray-300' : 'tracking-[0.2em] text-gray-500',
+                showPassword ? 'text-[#A0A0A0]' : 'tracking-[0.2em] text-[#6B6B6B]',
               )}
             >
               {showPassword ? credential.password : '••••••••'}
             </span>
             <button
               onClick={() => setShowPassword((v) => !v)}
-              className="opacity-0 group-hover/row:opacity-100 transition-opacity size-5 flex items-center justify-center text-gray-600 hover:text-gray-300"
+              className="opacity-0 group-hover/row:opacity-100 transition-opacity size-5 flex items-center justify-center text-[#4A4A4A] hover:text-[#A0A0A0]"
             >
               {showPassword ? <EyeOff className="size-3" /> : <Eye className="size-3" />}
             </button>
@@ -417,7 +417,7 @@ function CredentialCard({
           <div>
             <button
               onClick={() => setShowSecrets((v) => !v)}
-              className="flex items-center gap-1.5 text-[11px] text-gray-600 hover:text-gray-400 transition-colors mt-2.5"
+              className="flex items-center gap-1.5 text-[11px] text-[#4A4A4A] hover:text-[#6B6B6B] transition-colors mt-2.5"
             >
               {showSecrets ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
               <span>
@@ -425,7 +425,7 @@ function CredentialCard({
               </span>
             </button>
             {showSecrets && (
-              <div className="rounded-md bg-white/[0.02] border border-white/[0.05] px-3 py-1.5 mt-1.5 space-y-1">
+              <div className="rounded-md bg-[#252525] border border-[#404040] px-3 py-1.5 mt-1.5 space-y-1">
                 {secrets.map((secret, i) => (
                   <SecretRow key={i} label={secret.key} value={secret.value} />
                 ))}
@@ -463,12 +463,12 @@ function VaultLockGate({ onUnlock }: { onUnlock: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center py-20 gap-6">
       <div className="flex flex-col items-center gap-3">
-        <div className="size-14 rounded-2xl bg-white/[0.03] border border-white/[0.07] flex items-center justify-center">
-          <Lock className="size-6 text-gray-500" />
+        <div className="size-14 rounded-2xl bg-[#252525] border border-[#404040] flex items-center justify-center">
+          <Lock className="size-6 text-[#4A4A4A]" />
         </div>
         <div className="text-center">
-          <p className="text-sm font-semibold text-white">Vault Locked</p>
-          <p className="text-xs text-gray-500 mt-1">Enter your account password to access stored credentials.</p>
+          <p className="text-sm font-semibold text-[#F0F0F0]">Vault Locked</p>
+          <p className="text-xs text-[#4A4A4A] mt-1">Enter your account password to access stored credentials.</p>
         </div>
       </div>
 
@@ -482,12 +482,12 @@ function VaultLockGate({ onUnlock }: { onUnlock: () => void }) {
             placeholder="Account password"
             autoFocus
             autoComplete="current-password"
-            className="bg-white/[0.03] border-white/[0.08] focus:border-[#67e8f9]/40 text-sm text-white pr-10 font-mono"
+            className="bg-[#252525] border-[#404040] focus:border-[#404040] text-sm text-[#F0F0F0] pr-10 font-mono"
           />
           <button
             type="button"
             onClick={() => setShow((v) => !v)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-[#4A4A4A] hover:text-[#6B6B6B] transition-colors"
           >
             {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
           </button>
@@ -500,7 +500,7 @@ function VaultLockGate({ onUnlock }: { onUnlock: () => void }) {
         <Button
           onClick={handleUnlock}
           disabled={!password || loading}
-          className="w-full bg-[#67e8f9] text-black hover:bg-[#67e8f9]/90 font-semibold disabled:opacity-40"
+          className="w-full bg-[#333333] text-[#F0F0F0] hover:bg-[#404040] font-semibold disabled:opacity-40"
         >
           {loading
             ? <><Loader2 className="size-4 mr-2 animate-spin" /> Verifying…</>
@@ -531,17 +531,17 @@ function ProjectGroup({
         onClick={() => setCollapsed((v) => !v)}
         className="flex items-center gap-2 w-full group"
       >
-        <FolderKanban className="size-3.5 text-gray-500 shrink-0" />
-        <span className="text-xs font-semibold text-gray-400 group-hover:text-gray-300 transition-colors truncate">
+        <FolderKanban className="size-3.5 text-[#4A4A4A] shrink-0" />
+        <span className="text-xs font-semibold text-[#6B6B6B] group-hover:text-[#A0A0A0] transition-colors truncate">
           {projectName}
         </span>
-        <span className="text-[10px] text-gray-600 font-mono tabular-nums bg-white/[0.04] border border-white/[0.06] rounded px-1.5 py-0.5 shrink-0">
+        <span className="text-[10px] text-[#4A4A4A] font-mono tabular-nums bg-[#252525] border border-[#404040] rounded px-1.5 py-0.5 shrink-0">
           {credentials.length}
         </span>
-        <div className="flex-1 h-px bg-white/[0.05]" />
+        <div className="flex-1 h-px bg-[#333333]" />
         {collapsed
-          ? <ChevronDown className="size-3 text-gray-600 shrink-0" />
-          : <ChevronUp className="size-3 text-gray-600 shrink-0" />
+          ? <ChevronDown className="size-3 text-[#4A4A4A] shrink-0" />
+          : <ChevronUp className="size-3 text-[#4A4A4A] shrink-0" />
         }
       </button>
 
@@ -588,12 +588,12 @@ export function ClientCredentialsTab({ credentials }: ClientCredentialsTabProps)
     <div className="space-y-5">
       {/* Header + floating sort nav */}
       <div className="flex items-center gap-3 flex-wrap">
-        <h2 className="text-base font-semibold text-white">Accounts</h2>
-        <span className="text-[11px] text-gray-600 font-mono tabular-nums bg-white/[0.04] border border-white/[0.06] rounded px-1.5 py-0.5">
+        <h2 className="text-base font-semibold text-[#F0F0F0]">Accounts</h2>
+        <span className="text-[11px] text-[#4A4A4A] font-mono tabular-nums bg-[#252525] border border-[#404040] rounded px-1.5 py-0.5">
           {credentials.length}
         </span>
         {unlocked && (
-          <span className="flex items-center gap-1 text-[10px] text-emerald-400/70 font-medium ml-1">
+          <span className="flex items-center gap-1 text-[10px] text-emerald-500/70 font-medium ml-1">
             <ShieldCheck className="size-3" /> Unlocked
           </span>
         )}
@@ -602,8 +602,8 @@ export function ClientCredentialsTab({ credentials }: ClientCredentialsTabProps)
           <div
             className="ml-auto flex items-center p-1 rounded-xl gap-0.5"
             style={{
-              background: 'rgba(255,255,255,0.03)',
-              border: '1px solid rgba(255,255,255,0.07)',
+              background: '#252525',
+              border: '1px solid #333333',
             }}
           >
             <button
@@ -611,8 +611,8 @@ export function ClientCredentialsTab({ credentials }: ClientCredentialsTabProps)
               className={cn(
                 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all duration-150',
                 view === 'all'
-                  ? 'bg-white/[0.08] text-white'
-                  : 'text-gray-500 hover:text-gray-300',
+                  ? 'bg-[#2D2D2D] text-[#F0F0F0]'
+                  : 'text-[#4A4A4A] hover:text-[#6B6B6B]',
               )}
             >
               <LayoutGrid className="size-3" />
@@ -623,8 +623,8 @@ export function ClientCredentialsTab({ credentials }: ClientCredentialsTabProps)
               className={cn(
                 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all duration-150',
                 view === 'by-project'
-                  ? 'bg-white/[0.08] text-white'
-                  : 'text-gray-500 hover:text-gray-300',
+                  ? 'bg-[#2D2D2D] text-[#F0F0F0]'
+                  : 'text-[#4A4A4A] hover:text-[#6B6B6B]',
               )}
             >
               <FolderKanban className="size-3" />
@@ -639,11 +639,11 @@ export function ClientCredentialsTab({ credentials }: ClientCredentialsTabProps)
         <VaultLockGate onUnlock={() => setUnlocked(true)} />
       ) : credentials.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
-          <div className="size-10 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mb-3">
-            <Lock className="size-5 text-gray-600" />
+          <div className="size-10 rounded-xl bg-[#252525] border border-[#404040] flex items-center justify-center mb-3">
+            <Lock className="size-5 text-[#4A4A4A]" />
           </div>
-          <p className="text-sm font-medium text-gray-400">No accounts stored yet</p>
-          <p className="text-xs text-gray-600 mt-1">
+          <p className="text-sm font-medium text-[#6B6B6B]">No accounts stored yet</p>
+          <p className="text-xs text-[#4A4A4A] mt-1">
             Credentials added to this client&apos;s projects will appear here.
           </p>
         </div>

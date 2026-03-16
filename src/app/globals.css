@@ -114,16 +114,16 @@
   --sidebar-border: hsl(220 13% 91%);
   --sidebar-ring: hsl(217.2 91.2% 59.8%);
 
-  /* SPACES dashboard theme variables — defaults to Void (intelligence cyan) */
-  --space-accent: #67e8f9;
-  --space-accent-rgb: 103, 232, 249;
-  --space-accent-dim: #22d3ee;
-  --space-accent-glow: rgba(103, 232, 249, 0.45);
-  --space-accent-soft: rgba(103, 232, 249, 0.06);
-  --space-bg-base: #000000;
-  --space-bg-surface: rgba(255,255,255,0.03);
-  --space-nav-bg: rgba(6, 6, 10, 0.82);
-  --space-border: rgba(255,255,255,0.08);
+  /* SPACES dashboard theme variables — Charcoal Studio */
+  --space-accent: #8B9CB6;
+  --space-accent-rgb: 139, 156, 182;
+  --space-accent-dim: #6B7F9A;
+  --space-accent-glow: rgba(139, 156, 182, 0.20);
+  --space-accent-soft: rgba(139, 156, 182, 0.08);
+  --space-bg-base: #1C1C1C;
+  --space-bg-surface: rgba(255, 255, 255, 0.04);
+  --space-nav-bg: rgba(34, 34, 34, 0.96);
+  --space-border: rgba(255, 255, 255, 0.08);
 }
 
 * {
@@ -131,6 +131,7 @@
 }
 
 html {
+  font-size: 22px;
   scroll-behavior: smooth;
   /* Always reserve scrollbar gutter to prevent layout shift when modals open */
   overflow-y: scroll;
@@ -161,7 +162,7 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(to bottom, #67e8f9, #3b82f6);
+  background: linear-gradient(to bottom, #1E3A6E, #2B4A8A);
   border-radius: 1px;
 }
 
@@ -382,9 +383,9 @@ body {
   animation: textReveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Gradient text animation */
+/* Gradient text — light on dark charcoal */
 .gradient-text {
-  background: linear-gradient(45deg, #67e8f9, #3b82f6, #1e40af, #67e8f9);
+  background: linear-gradient(120deg, #F0F0F0 0%, #8B9CB6 50%, #F0F0F0 100%);
   background-size: 300% 300%;
   background-clip: text;
   -webkit-background-clip: text;
@@ -392,15 +393,15 @@ body {
   animation: gradientShift 4s ease-in-out infinite;
 }
 
-/* Wave text animation - ocean-like flowing effect */
+/* Wave text — light on dark charcoal */
 .wave-text {
   background: linear-gradient(
     110deg,
-    #67e8f9 0%,
-    #3b82f6 25%,
-    #1e40af 50%,
-    #3b82f6 75%,
-    #67e8f9 100%
+    #F0F0F0 0%,
+    #A0B4C8 25%,
+    #8B9CB6 50%,
+    #A0B4C8 75%,
+    #F0F0F0 100%
   );
   background-size: 200% 200%;
   background-clip: text;
@@ -583,7 +584,7 @@ body {
   left: 0;
   width: 0;
   height: 2px;
-  background: linear-gradient(90deg, #67e8f9, #3b82f6);
+  background: linear-gradient(90deg, #1E3A6E, #2B4A8A);
   transition: width 0.3s ease-out;
 }
 

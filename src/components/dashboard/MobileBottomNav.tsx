@@ -75,12 +75,9 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
         ref={navRef}
         className="pointer-events-auto flex items-center gap-1 p-1.5 rounded-2xl max-w-[calc(100vw-1.5rem)]"
         style={{ opacity: 0,
-          background: 'var(--space-nav-bg)',
-          backdropFilter: 'blur(28px) saturate(180%)',
-          WebkitBackdropFilter: 'blur(28px) saturate(180%)',
+          background: '#222222',
           border: '1px solid var(--space-border)',
-          boxShadow:
-            '0 -1px 0 rgba(255,255,255,0.04) inset, 0 8px 40px rgba(0,0,0,0.9), 0 2px 8px rgba(0,0,0,0.6)',
+          boxShadow: '0 4px 24px rgba(0,0,0,0.30), 0 1px 4px rgba(0,0,0,0.20)',
         }}
       >
         {links.map((item) => {
@@ -101,14 +98,12 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
               }}
               className={cn(
                 'relative flex flex-col items-center gap-1.5 px-3.5 py-2.5 rounded-xl transition-all duration-200 active:scale-95 flex-1 cursor-pointer',
-                active ? 'bg-white/[0.06]' : 'hover:bg-white/[0.03]',
+                active ? 'bg-white/10' : 'hover:bg-white/[0.06]',
               )}
-              style={active ? { boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05), inset 0 0 20px var(--space-accent-soft)' } : undefined}
             >
               <div className="relative">
                 <Icon
-                  className={cn('size-5 transition-all duration-200', !active && 'text-gray-500')}
-                  style={active ? { color: 'var(--space-accent)', filter: 'drop-shadow(0 0 6px var(--space-accent-glow))' } : undefined}
+                  className={cn('size-5 transition-all duration-200', active ? 'text-white' : 'text-white/40')}
                 />
                 {item.tab === 'packages' && isClient && packageCount > 0 && (
                   <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] rounded-full bg-red-500 text-white text-[8px] font-bold flex items-center justify-center px-0.5 leading-none shadow-sm">
@@ -116,13 +111,9 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
                   </span>
                 )}
               </div>
-              <span className={cn('text-[10px] font-semibold uppercase tracking-widest transition-colors duration-200 leading-none', active ? 'text-gray-300' : 'text-gray-400')}>
+              <span className={cn('text-[10px] font-semibold uppercase tracking-widest transition-colors duration-200 leading-none', active ? 'text-white' : 'text-white/40')}>
                 {item.label}
               </span>
-              {active && (
-                <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 h-px w-5 rounded-full"
-                  style={{ background: 'linear-gradient(to right, transparent, var(--space-accent-glow), transparent)' }} />
-              )}
             </a>
           )
         })}
@@ -130,14 +121,14 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
         {/* Search button — admin/user only */}
         {!isClient && (
           <>
-            <div className="w-px h-5 bg-white/[0.07] self-center mx-0.5" />
+            <div className="w-px h-5 bg-white/10 self-center mx-0.5" />
             <button
               onClick={() => document.dispatchEvent(new CustomEvent('orcaclub:open-search'))}
-              className="relative flex flex-col items-center gap-1.5 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-95 min-w-[52px] hover:bg-white/[0.03] cursor-pointer"
+              className="relative flex flex-col items-center gap-1.5 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-95 min-w-[52px] hover:bg-white/[0.06] cursor-pointer"
               aria-label="Open search"
             >
-              <Search className="size-5 text-gray-400" />
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 leading-none">
+              <Search className="size-5 text-white/40" />
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-white/40 leading-none">
                 Search
               </span>
             </button>
@@ -147,16 +138,16 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
         {/* Back circle — shows on project or client detail pages */}
         {onDetailPage && (
           <>
-            <div className="w-px h-6 bg-white/[0.08] mx-1 self-center" />
+            <div className="w-px h-6 bg-white/10 mx-1 self-center" />
             <button
               onClick={() => {
                 if (onProjectPage) router.push(`/u/${username}?tab=projects`)
                 else if (onClientPage) router.push(`/u/${username}?tab=clients`)
               }}
-              className="flex flex-col items-center justify-center size-9 rounded-full bg-white/[0.05] border border-white/[0.10] hover:border-intelligence-cyan/30 hover:bg-intelligence-cyan/[0.08] active:scale-95 transition-all duration-200"
+              className="flex flex-col items-center justify-center size-9 rounded-full bg-white/[0.08] border border-white/20 hover:border-white/40 hover:bg-white/10 active:scale-95 transition-all duration-200"
               aria-label="Go back"
             >
-              <ChevronLeft className="size-4 text-gray-400" />
+              <ChevronLeft className="size-4 text-white/40" />
             </button>
           </>
         )}

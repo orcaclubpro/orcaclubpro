@@ -37,14 +37,14 @@ import type { Sprint, Task, User } from '@/types/payload-types'
 
 const SPRINT_STATUS = {
   pending:       { label: 'Planned',     dot: 'bg-gray-500',          text: 'text-gray-400',          bg: 'bg-gray-500/10',          border: 'border-gray-500/20'          },
-  'in-progress': { label: 'In Progress', dot: 'bg-intelligence-cyan', text: 'text-intelligence-cyan', bg: 'bg-intelligence-cyan/10', border: 'border-intelligence-cyan/20' },
+  'in-progress': { label: 'In Progress', dot: 'bg-[var(--space-accent)]', text: 'text-[var(--space-accent)]', bg: 'bg-[rgba(139,156,182,0.10)]', border: 'border-[rgba(139,156,182,0.15)]' },
   delayed:       { label: 'Delayed',     dot: 'bg-orange-400',        text: 'text-orange-400',        bg: 'bg-orange-400/10',        border: 'border-orange-400/20'        },
   finished:      { label: 'Finished',    dot: 'bg-green-400',         text: 'text-green-400',         bg: 'bg-green-400/10',         border: 'border-green-400/20'         },
 } as const
 
 const TASK_STATUS = {
   pending:       { dot: 'bg-gray-500',          label: 'Pending',     ring: 'ring-gray-500/30'    },
-  'in-progress': { dot: 'bg-intelligence-cyan', label: 'In Progress', ring: 'ring-intelligence-cyan/30' },
+  'in-progress': { dot: 'bg-[var(--space-accent)]', label: 'In Progress', ring: 'ring-[rgba(139,156,182,0.20)]' },
   completed:     { dot: 'bg-green-400',         label: 'Done',        ring: 'ring-green-400/30'   },
   cancelled:     { dot: 'bg-red-400/60',        label: 'Cancelled',   ring: 'ring-red-400/30'     },
 } as const
@@ -150,7 +150,7 @@ function ProgressRing({
   const offset = circumference - (progress / 100) * circumference
 
   const colorMap: Record<string, string> = {
-    'bg-intelligence-cyan': 'rgb(103, 232, 249)',
+    'bg-[var(--space-accent)]': 'rgb(30, 58, 110)',
     'bg-green-400':         'rgb(74, 222, 128)',
     'bg-orange-400':        'rgb(251, 146, 60)',
     'bg-gray-500':          'rgb(107, 114, 128)',
@@ -160,7 +160,7 @@ function ProgressRing({
   return (
     <div className="relative inline-flex items-center justify-center">
       <svg width={size} height={size} className="transform -rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth={strokeWidth} />
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={strokeWidth} />
         <circle
           cx={size / 2} cy={size / 2} r={radius} fill="none"
           stroke={stroke} strokeWidth={strokeWidth}
@@ -169,7 +169,7 @@ function ProgressRing({
           className="transition-all duration-700"
         />
       </svg>
-      <span className="absolute text-base font-bold text-white tabular-nums">{Math.round(progress)}%</span>
+      <span className="absolute text-base font-bold text-[#F0F0F0] tabular-nums">{Math.round(progress)}%</span>
     </div>
   )
 }
@@ -229,14 +229,14 @@ function TaskCard({
   // Inline edit mode
   if (isEditing && !readOnly) {
     return (
-      <div className="px-4 py-3 bg-white/[0.025] border-b border-white/[0.04] last:border-0 space-y-2.5">
+      <div className="px-4 py-3 bg-[#2D2D2D] border-b border-[#404040] last:border-0 space-y-2.5">
         <div className="flex items-center gap-2">
           <Input
             ref={editInputRef}
             value={editTaskTitle}
             onChange={(e) => onEditTitleChange(e.target.value)}
             placeholder="Task title…"
-            className="flex-1 bg-white/[0.04] border-white/[0.10] text-white placeholder:text-gray-600 focus:border-intelligence-cyan/40 h-7 text-sm"
+            className="flex-1 bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] placeholder:text-[#4A4A4A] focus:border-[rgba(139,156,182,0.25)] h-7 text-sm"
             onKeyDown={(e) => {
               if (e.key === 'Enter') onEditSave(task)
               if (e.key === 'Escape') onEditCancel()
@@ -246,7 +246,7 @@ function TaskCard({
             type="button"
             onClick={() => onEditSave(task)}
             disabled={isPending || !editTaskTitle.trim()}
-            className="p-1.5 rounded-lg bg-intelligence-cyan/10 text-intelligence-cyan hover:bg-intelligence-cyan/20 transition-colors disabled:opacity-40"
+            className="p-1.5 rounded-lg bg-[rgba(139,156,182,0.06)] text-[var(--space-accent)] hover:bg-[rgba(139,156,182,0.10)] transition-colors disabled:opacity-40"
             title="Save"
           >
             <Check className="size-3.5" />
@@ -254,7 +254,7 @@ function TaskCard({
           <button
             type="button"
             onClick={onEditCancel}
-            className="p-1.5 rounded-lg text-gray-600 hover:text-gray-400 hover:bg-white/[0.04] transition-colors"
+            className="p-1.5 rounded-lg text-[#4A4A4A] hover:text-[#6B6B6B] hover:bg-[#2D2D2D] transition-colors"
             title="Cancel"
           >
             <X className="size-3.5" />
@@ -265,7 +265,7 @@ function TaskCard({
           onChange={(e) => onEditDescriptionChange(e.target.value)}
           placeholder="Description (optional)…"
           rows={2}
-          className="w-full bg-white/[0.03] border-white/[0.08] text-gray-300 placeholder:text-gray-700 focus:border-intelligence-cyan/30 resize-none text-xs leading-relaxed"
+          className="w-full bg-[#252525] border-[#404040] text-[#A0A0A0] placeholder:text-[#4A4A4A] focus:border-[rgba(139,156,182,0.20)] resize-none text-xs leading-relaxed"
         />
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex gap-1">
@@ -278,7 +278,7 @@ function TaskCard({
                   'text-[10px] font-medium px-2 py-0.5 rounded-full border transition-colors capitalize',
                   editTaskPriority === p
                     ? cn(PRIORITY[p].text, 'border-current bg-current/10')
-                    : 'text-gray-600 border-white/[0.08] hover:border-white/20',
+                    : 'text-[#4A4A4A] border-[#404040] hover:border-[#404040]',
                 )}
               >
                 {PRIORITY[p].label}
@@ -289,7 +289,7 @@ function TaskCard({
             type="date"
             value={editTaskDueDate}
             onChange={(e) => onEditDueDateChange(e.target.value)}
-            className="ml-auto text-[11px] text-gray-500 bg-transparent border border-white/[0.08] rounded px-2 py-0.5 focus:outline-none focus:border-white/20"
+            className="ml-auto text-[11px] text-[#6B6B6B] bg-transparent border border-[#404040] rounded px-2 py-0.5 focus:outline-none focus:border-[#404040]"
           />
         </div>
       </div>
@@ -298,9 +298,9 @@ function TaskCard({
 
   return (
     <div className={cn(
-      'group flex items-center gap-3 px-4 py-3 transition-colors border-b border-white/[0.04] last:border-0',
+      'group flex items-center gap-3 px-4 py-3 transition-colors border-b border-[#404040] last:border-0',
       isPending && 'opacity-60',
-      isDone ? 'hover:bg-white/[0.01]' : 'hover:bg-white/[0.02]',
+      isDone ? 'hover:bg-[#252525]' : 'hover:bg-[#2D2D2D]',
     )}>
       {/* Circle toggle button */}
       {!readOnly ? (
@@ -318,18 +318,18 @@ function TaskCard({
             </div>
           ) : isInProgress ? (
             // Hollow circle with inner pulse dot
-            <div className="size-5 rounded-full border-2 border-intelligence-cyan/50 hover:border-intelligence-cyan/80 hover:bg-intelligence-cyan/[0.06] transition-all cursor-pointer flex items-center justify-center">
-              <div className="size-2 rounded-full bg-intelligence-cyan/70 animate-pulse" />
+            <div className="size-5 rounded-full border-2 border-[rgba(139,156,182,0.30)] hover:border-[rgba(139,156,182,0.70)] hover:bg-[rgba(139,156,182,0.06)] transition-all cursor-pointer flex items-center justify-center">
+              <div className="size-2 rounded-full bg-[var(--space-accent)] opacity-70 animate-pulse" />
             </div>
           ) : (
             // Hollow circle (pending)
-            <div className="size-5 rounded-full border-2 border-white/[0.15] hover:border-green-400/70 hover:bg-green-400/[0.06] transition-all cursor-pointer" />
+            <div className="size-5 rounded-full border-2 border-[#404040] hover:border-green-400/70 hover:bg-green-400/[0.06] transition-all cursor-pointer" />
           )}
         </button>
       ) : (
         <div className={cn(
           'size-5 shrink-0 rounded-full border-2',
-          isDone ? 'bg-green-400/80 border-green-400/80 flex items-center justify-center' : 'border-white/[0.15]',
+          isDone ? 'bg-green-400/80 border-green-400/80 flex items-center justify-center' : 'border-[#404040]',
         )}>
           {isDone && <Check className="size-2.5 text-black stroke-[3]" />}
         </div>
@@ -338,7 +338,7 @@ function TaskCard({
       {/* Title */}
       <span className={cn(
         'flex-1 min-w-0 text-sm truncate',
-        isDone ? 'text-gray-600 line-through decoration-gray-700/60' : 'text-gray-200',
+        isDone ? 'text-[#4A4A4A] line-through decoration-[#555555]/60' : 'text-[#A0A0A0]',
       )}>
         {task.title}
       </span>
@@ -357,7 +357,7 @@ function TaskCard({
       {task.dueDate && !isDone && (
         <span className={cn(
           'flex items-center gap-1 text-[11px] tabular-nums shrink-0',
-          isOverdue ? 'text-red-400' : 'text-gray-600',
+          isOverdue ? 'text-red-400' : 'text-[#4A4A4A]',
         )}>
           {isOverdue && <AlertCircle className="size-2.5" />}
           {fmtDateShort(task.dueDate)}
@@ -366,7 +366,7 @@ function TaskCard({
 
       {/* Assignee initials */}
       {initials && !isDone && (
-        <span className="shrink-0 size-5 rounded-full bg-white/[0.08] border border-white/[0.12] flex items-center justify-center text-[9px] font-semibold text-gray-400">
+        <span className="shrink-0 size-5 rounded-full bg-[#2D2D2D] border border-[#404040] flex items-center justify-center text-[9px] font-semibold text-[#6B6B6B]">
           {initials}
         </span>
       )}
@@ -379,7 +379,7 @@ function TaskCard({
             onClick={() => onRemoveFromSprint(task)}
             disabled={isPending}
             title="Remove from sprint"
-            className="p-1.5 rounded-lg text-gray-700 hover:text-red-400 hover:bg-red-400/10 transition-colors"
+            className="p-1.5 rounded-lg text-[#4A4A4A] hover:text-red-400 hover:bg-red-400/10 transition-colors"
           >
             <X className="size-3" />
           </button>
@@ -388,7 +388,7 @@ function TaskCard({
             onClick={() => onEditStart(task)}
             disabled={isPending}
             title="Edit task"
-            className="p-1.5 rounded-lg text-gray-700 hover:text-gray-300 hover:bg-white/[0.06] transition-colors"
+            className="p-1.5 rounded-lg text-[#4A4A4A] hover:text-[#A0A0A0] hover:bg-[#2D2D2D] transition-colors"
           >
             <Pencil className="size-3" />
           </button>
@@ -461,9 +461,9 @@ function InlineTaskCreate({
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="flex items-center gap-2 px-4 py-3 w-full text-left text-sm text-gray-600 hover:text-gray-400 hover:bg-white/[0.02] transition-colors border-t border-white/[0.04]"
+        className="flex items-center gap-2 px-4 py-3 w-full text-left text-sm text-[#4A4A4A] hover:text-[#6B6B6B] hover:bg-[#252525] transition-colors border-t border-[#404040]"
       >
-        <Plus className="size-3.5 text-gray-700" />
+        <Plus className="size-3.5 text-[#4A4A4A]" />
         <span>Add task</span>
       </button>
     )
@@ -473,14 +473,14 @@ function InlineTaskCreate({
     <form
       onSubmit={handleSubmit}
       onKeyDown={handleKeyDown}
-      className="border-t border-white/[0.06] px-4 py-4 space-y-2.5 bg-white/[0.01]"
+      className="border-t border-[#404040] px-4 py-4 space-y-2.5 bg-[#252525]"
     >
       <Input
         ref={inputRef}
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         placeholder="Task title…"
-        className="bg-white/[0.04] border-white/[0.10] text-white placeholder:text-gray-600 focus:border-intelligence-cyan/40 h-8 text-sm"
+        className="bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] placeholder:text-[#4A4A4A] focus:border-[rgba(139,156,182,0.25)] h-8 text-sm"
         disabled={isPending}
       />
 
@@ -490,7 +490,7 @@ function InlineTaskCreate({
         placeholder="Description (optional)…"
         rows={2}
         disabled={isPending}
-        className="bg-white/[0.03] border-white/[0.08] text-gray-300 placeholder:text-gray-700 focus:border-intelligence-cyan/30 resize-none text-xs leading-relaxed"
+        className="bg-[#252525] border-[#404040] text-[#A0A0A0] placeholder:text-[#4A4A4A] focus:border-[rgba(139,156,182,0.20)] resize-none text-xs leading-relaxed"
       />
 
       <div className="flex items-center gap-2 flex-wrap">
@@ -504,7 +504,7 @@ function InlineTaskCreate({
                 'text-[10px] font-medium px-2 py-0.5 rounded-full border transition-colors capitalize',
                 priority === p
                   ? cn(PRIORITY[p].text, 'border-current bg-current/10')
-                  : 'text-gray-600 border-white/[0.08] hover:border-white/20',
+                  : 'text-[#4A4A4A] border-[#404040] hover:border-[#404040]',
               )}
             >
               {PRIORITY[p].label}
@@ -517,7 +517,7 @@ function InlineTaskCreate({
           value={dueDate}
           onChange={(e) => setDueDate(e.target.value)}
           disabled={isPending}
-          className="ml-auto text-[11px] text-gray-500 bg-transparent border border-white/[0.08] rounded px-2 py-0.5 focus:outline-none focus:border-white/20"
+          className="ml-auto text-[11px] text-[#6B6B6B] bg-transparent border border-[#404040] rounded px-2 py-0.5 focus:outline-none focus:border-[#404040]"
         />
       </div>
 
@@ -528,14 +528,14 @@ function InlineTaskCreate({
           type="submit"
           size="sm"
           disabled={isPending || !title.trim()}
-          className="h-7 text-xs bg-intelligence-cyan text-black hover:bg-intelligence-cyan/90 font-medium px-3"
+          className="h-7 text-xs bg-[var(--space-accent)] text-black hover:bg-[var(--space-accent)]/90 font-medium px-3"
         >
           {isPending ? <Loader2 className="size-3 animate-spin" /> : 'Add'}
         </Button>
         <button
           type="button"
           onClick={() => { setIsOpen(false); setTitle(''); setDescription(''); setError(null) }}
-          className="h-7 text-xs text-gray-600 hover:text-gray-400 px-2 transition-colors"
+          className="h-7 text-xs text-[#4A4A4A] hover:text-[#6B6B6B] px-2 transition-colors"
         >
           Cancel
         </button>
@@ -594,8 +594,8 @@ function BacklogPicker({
         className={cn(
           'flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border transition-all',
           isOpen
-            ? 'text-gray-300 bg-white/[0.06] border-white/[0.12]'
-            : 'text-gray-500 hover:text-gray-300 border-white/[0.08] hover:border-white/[0.14] hover:bg-white/[0.04]',
+            ? 'text-[#A0A0A0] bg-[#2D2D2D] border-[#404040]'
+            : 'text-[#6B6B6B] hover:text-[#A0A0A0] border-[#404040] hover:border-[#404040] hover:bg-[#2D2D2D]',
         )}
       >
         <Inbox className="size-3.5" />
@@ -604,19 +604,19 @@ function BacklogPicker({
       </button>
 
       {isOpen && (
-        <div className="absolute top-full right-0 mt-2 w-72 bg-[#111] border border-white/[0.10] rounded-xl shadow-2xl z-50 overflow-hidden">
-          <div className="px-3 py-2 border-b border-white/[0.06]">
+        <div className="absolute top-full right-0 mt-2 w-72 bg-[#1C1C1C] border border-[#404040] rounded-xl shadow-2xl z-50 overflow-hidden">
+          <div className="px-3 py-2 border-b border-[#404040]">
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search tasks…"
-              className="h-7 text-xs bg-white/[0.04] border-white/[0.08] text-white placeholder:text-gray-600"
+              className="h-7 text-xs bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] placeholder:text-[#4A4A4A]"
               autoFocus
             />
           </div>
           <div className="max-h-56 overflow-y-auto">
             {filtered.length === 0 ? (
-              <p className="px-3 py-4 text-xs text-gray-600 text-center">No matching tasks</p>
+              <p className="px-3 py-4 text-xs text-[#4A4A4A] text-center">No matching tasks</p>
             ) : (
               filtered.slice(0, 20).map((task) => (
                 <button
@@ -624,10 +624,10 @@ function BacklogPicker({
                   type="button"
                   onClick={() => handleAdd(task)}
                   disabled={isPending}
-                  className="w-full flex items-center gap-2.5 px-3 py-2.5 text-left hover:bg-white/[0.04] transition-colors border-b border-white/[0.04] last:border-0"
+                  className="w-full flex items-center gap-2.5 px-3 py-2.5 text-left hover:bg-[#2D2D2D] transition-colors border-b border-[#404040] last:border-0"
                 >
-                  <div className="size-1.5 rounded-full bg-gray-600 shrink-0" />
-                  <span className="text-sm text-gray-300 truncate flex-1">{task.title}</span>
+                  <div className="size-1.5 rounded-full bg-[#555555] shrink-0" />
+                  <span className="text-sm text-[#A0A0A0] truncate flex-1">{task.title}</span>
                   {task.priority && (
                     <span className={cn('text-[10px] shrink-0', PRIORITY[task.priority as keyof typeof PRIORITY]?.text)}>
                       {PRIORITY[task.priority as keyof typeof PRIORITY]?.label}
@@ -657,12 +657,12 @@ function SidebarStat({
   valueClass?: string
 }) {
   return (
-    <div className="flex flex-col gap-1 px-3 py-2.5 rounded-lg bg-white/[0.025] border border-white/[0.06]">
-      <div className="flex items-center gap-1 text-gray-600">
+    <div className="flex flex-col gap-1 px-3 py-2.5 rounded-lg bg-[#2D2D2D] border border-[#404040]">
+      <div className="flex items-center gap-1 text-[#4A4A4A]">
         <Icon className="size-2.5" />
         <span className="text-[9px] font-semibold uppercase tracking-widest">{label}</span>
       </div>
-      <span className={cn('text-base font-bold text-white tabular-nums leading-none', valueClass)}>
+      <span className={cn('text-base font-bold text-[#F0F0F0] tabular-nums leading-none', valueClass)}>
         {value}
       </span>
     </div>
@@ -892,18 +892,18 @@ export function SprintDetailView({
 
       {/* ── Sidebar (desktop) ─────────────────────────────────────────── */}
       <aside className={cn(
-        'hidden lg:flex flex-col shrink-0 border-r border-white/[0.08] bg-[#1c1c1c]/40 sticky top-[49px] self-start h-[calc((100vh-64px)/1.3)] overflow-hidden transition-[width] duration-300 ease-in-out',
+        'hidden lg:flex flex-col shrink-0 border-r border-[#404040] bg-[#2D2D2D] sticky top-[49px] self-start h-[calc((100vh-64px)/1.3)] overflow-hidden transition-[width] duration-300 ease-in-out',
         sidebarCollapsed ? 'w-12' : 'w-72 xl:w-80',
       )}>
         {/* Top bar: back nav + collapse toggle */}
         <div className={cn(
-          'flex items-center shrink-0 pt-3 pb-2 border-b border-white/[0.06]',
+          'flex items-center shrink-0 pt-3 pb-2 border-b border-[#404040]',
           sidebarCollapsed ? 'justify-center px-3' : 'justify-between px-4',
         )}>
           {!sidebarCollapsed && (
             <Link
               href={`/u/${username}/projects/${projectId}?tab=sprints`}
-              className="inline-flex items-center gap-1.5 text-xs text-gray-600 hover:text-gray-300 transition-colors"
+              className="inline-flex items-center gap-1.5 text-xs text-[#4A4A4A] hover:text-[#A0A0A0] transition-colors"
             >
               <ArrowLeft className="size-3.5" />
               Back
@@ -912,7 +912,7 @@ export function SprintDetailView({
           <button
             type="button"
             onClick={() => setSidebarCollapsed((v) => !v)}
-            className="p-1.5 rounded-md text-gray-600 hover:text-gray-300 hover:bg-white/[0.05] transition-colors"
+            className="p-1.5 rounded-md text-[#4A4A4A] hover:text-[#A0A0A0] hover:bg-[#2D2D2D] transition-colors"
             title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             {sidebarCollapsed
@@ -928,7 +928,7 @@ export function SprintDetailView({
 
                 {/* Sprint name */}
                 <div>
-                  <h2 className="text-xl font-bold gradient-text leading-tight break-words">{sprint.name}</h2>
+                  <h2 className="text-xl font-bold text-[#1E3A6E] leading-tight break-words">{sprint.name}</h2>
 
                   {/* Status badge */}
                   <div className="mt-2">
@@ -950,12 +950,12 @@ export function SprintDetailView({
                     strokeWidth={5}
                     colorClass={statusCfg.dot}
                   />
-                  <p className="text-xs text-gray-500 tabular-nums">
+                  <p className="text-xs text-[#6B6B6B] tabular-nums">
                     {completedCount} of {totalCount} tasks
                   </p>
                   {/* Progress bar */}
                   {totalCount > 0 && (
-                    <div className="w-full h-0.5 bg-white/[0.04] rounded-full overflow-hidden">
+                    <div className="w-full h-0.5 bg-[#333333] rounded-full overflow-hidden">
                       <div
                         className={cn('h-full transition-all duration-700', statusCfg.dot)}
                         style={{ width: `${progress}%`, opacity: 0.7 }}
@@ -966,14 +966,14 @@ export function SprintDetailView({
 
                 {/* Description */}
                 {sprint.description && !editOpen && (
-                  <p className="text-xs text-gray-500 leading-relaxed">{sprint.description}</p>
+                  <p className="text-xs text-[#6B6B6B] leading-relaxed">{sprint.description}</p>
                 )}
 
                 {/* Goal */}
                 {sprint.goalDescription && !editOpen && (
                   <div className="flex items-start gap-2 py-0.5">
-                    <Target className="size-3.5 text-gray-600 mt-0.5 shrink-0" />
-                    <p className="text-xs text-gray-400 leading-relaxed">{sprint.goalDescription}</p>
+                    <Target className="size-3.5 text-[#4A4A4A] mt-0.5 shrink-0" />
+                    <p className="text-xs text-[#6B6B6B] leading-relaxed">{sprint.goalDescription}</p>
                   </div>
                 )}
 
@@ -983,13 +983,13 @@ export function SprintDetailView({
                     icon={TrendingUp}
                     label="Active"
                     value={inProgressCount}
-                    valueClass={inProgressCount > 0 ? 'text-intelligence-cyan' : 'text-gray-500'}
+                    valueClass={inProgressCount > 0 ? 'text-[var(--space-accent)]' : 'text-[#4A4A4A]'}
                   />
                   <SidebarStat
                     icon={AlertCircle}
                     label="Overdue"
                     value={overdueTaskCount}
-                    valueClass={overdueTaskCount > 0 ? 'text-red-400' : 'text-gray-500'}
+                    valueClass={overdueTaskCount > 0 ? 'text-red-400' : 'text-[#4A4A4A]'}
                   />
                   {duration !== null && (
                     <SidebarStat
@@ -1003,17 +1003,17 @@ export function SprintDetailView({
                       icon={Clock}
                       label={isOverdue ? 'Overdue' : 'Days left'}
                       value={isOverdue ? `${Math.abs(daysLeft)}d` : `${daysLeft}d`}
-                      valueClass={isOverdue ? 'text-red-400' : daysLeft < 7 ? 'text-orange-400' : 'text-white'}
+                      valueClass={isOverdue ? 'text-red-400' : daysLeft < 7 ? 'text-orange-400' : 'text-[#F0F0F0]'}
                     />
                   )}
                 </div>
 
                 {/* Date range */}
                 {(sprint.startDate || sprint.endDate) && (
-                  <div className="flex items-center gap-1.5 text-xs text-gray-600">
+                  <div className="flex items-center gap-1.5 text-xs text-[#4A4A4A]">
                     <Calendar className="size-3.5 shrink-0" />
                     <span className="tabular-nums">{fmtDate(sprint.startDate)}</span>
-                    <span className="text-gray-700">→</span>
+                    <span className="text-[#4A4A4A]">→</span>
                     <span className="tabular-nums">{fmtDate(sprint.endDate)}</span>
                   </div>
                 )}
@@ -1044,8 +1044,8 @@ export function SprintDetailView({
                       className={cn(
                         'flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border w-full justify-center transition-all',
                         editOpen
-                          ? 'text-gray-300 bg-white/[0.06] border-white/[0.12]'
-                          : 'text-gray-500 hover:text-gray-300 border-white/[0.08] hover:border-white/[0.14] hover:bg-white/[0.04]',
+                          ? 'text-[#A0A0A0] bg-[#2D2D2D] border-[#404040]'
+                          : 'text-[#6B6B6B] hover:text-[#A0A0A0] border-[#404040] hover:border-[#404040] hover:bg-[#2D2D2D]',
                       )}
                     >
                       <Pencil className="size-3" />
@@ -1056,58 +1056,58 @@ export function SprintDetailView({
                     {editOpen && (
                       <form
                         onSubmit={handleSaveEdit}
-                        className="rounded-xl border border-white/[0.10] bg-white/[0.02] p-4 space-y-3 animate-in fade-in slide-in-from-top-1 duration-150"
+                        className="rounded-xl border border-[#404040] bg-[#252525] p-4 space-y-3 animate-in fade-in slide-in-from-top-1 duration-150"
                       >
                         <div className="space-y-1.5">
-                          <Label className="text-[10px] text-gray-500 uppercase tracking-wider">Sprint Name</Label>
+                          <Label className="text-[10px] text-[#6B6B6B] uppercase tracking-wider">Sprint Name</Label>
                           <Input
                             value={editName}
                             onChange={(e) => setEditName(e.target.value)}
                             placeholder="Sprint name"
                             autoFocus
-                            className="bg-white/[0.03] border-white/[0.08] text-white placeholder:text-gray-600 focus:border-intelligence-cyan/40 h-8 text-sm"
+                            className="bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] placeholder:text-[#4A4A4A] focus:border-[rgba(139,156,182,0.25)] h-8 text-sm"
                           />
                         </div>
 
                         <div className="space-y-1.5">
-                          <Label className="text-[10px] text-gray-500 uppercase tracking-wider">Description</Label>
+                          <Label className="text-[10px] text-[#6B6B6B] uppercase tracking-wider">Description</Label>
                           <Textarea
                             value={editDescription}
                             onChange={(e) => setEditDescription(e.target.value)}
                             placeholder="Sprint description…"
                             rows={2}
-                            className="bg-white/[0.03] border-white/[0.08] text-white placeholder:text-gray-600 focus:border-intelligence-cyan/40 resize-none text-sm"
+                            className="bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] placeholder:text-[#4A4A4A] focus:border-[rgba(139,156,182,0.25)] resize-none text-sm"
                           />
                         </div>
 
                         <div className="space-y-1.5">
-                          <Label className="text-[10px] text-gray-500 uppercase tracking-wider">Start Date</Label>
+                          <Label className="text-[10px] text-[#6B6B6B] uppercase tracking-wider">Start Date</Label>
                           <Input
                             type="date"
                             value={editStartDate}
                             onChange={(e) => setEditStartDate(e.target.value)}
-                            className="bg-white/[0.03] border-white/[0.08] text-white focus:border-intelligence-cyan/40 h-8 text-sm"
+                            className="bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] focus:border-[rgba(139,156,182,0.25)] h-8 text-sm"
                           />
                         </div>
 
                         <div className="space-y-1.5">
-                          <Label className="text-[10px] text-gray-500 uppercase tracking-wider">End Date</Label>
+                          <Label className="text-[10px] text-[#6B6B6B] uppercase tracking-wider">End Date</Label>
                           <Input
                             type="date"
                             value={editEndDate}
                             onChange={(e) => setEditEndDate(e.target.value)}
-                            className="bg-white/[0.03] border-white/[0.08] text-white focus:border-intelligence-cyan/40 h-8 text-sm"
+                            className="bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] focus:border-[rgba(139,156,182,0.25)] h-8 text-sm"
                           />
                         </div>
 
                         <div className="space-y-1.5">
-                          <Label className="text-[10px] text-gray-500 uppercase tracking-wider">Goal</Label>
+                          <Label className="text-[10px] text-[#6B6B6B] uppercase tracking-wider">Goal</Label>
                           <Textarea
                             value={editGoal}
                             onChange={(e) => setEditGoal(e.target.value)}
                             placeholder="Sprint goal…"
                             rows={2}
-                            className="bg-white/[0.03] border-white/[0.08] text-white placeholder:text-gray-600 focus:border-intelligence-cyan/40 resize-none text-sm"
+                            className="bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] placeholder:text-[#4A4A4A] focus:border-[rgba(139,156,182,0.25)] resize-none text-sm"
                           />
                         </div>
 
@@ -1118,14 +1118,14 @@ export function SprintDetailView({
                             type="submit"
                             size="sm"
                             disabled={isPending || !editName.trim()}
-                            className="flex-1 bg-intelligence-cyan text-black hover:bg-intelligence-cyan/90 font-medium h-7 text-xs"
+                            className="flex-1 bg-[var(--space-accent)] text-black hover:bg-[var(--space-accent)]/90 font-medium h-7 text-xs"
                           >
                             {isPending ? <Loader2 className="size-3 animate-spin" /> : 'Save'}
                           </Button>
                           <button
                             type="button"
                             onClick={() => { setEditOpen(false); setEditError(null) }}
-                            className="h-7 text-xs text-gray-600 hover:text-gray-400 px-2 transition-colors"
+                            className="h-7 text-xs text-[#4A4A4A] hover:text-[#6B6B6B] px-2 transition-colors"
                           >
                             Cancel
                           </button>
@@ -1139,7 +1139,7 @@ export function SprintDetailView({
                         type="button"
                         onClick={() => handleStatusChange(transitions[0].value)}
                         disabled={isPending}
-                        className="w-full h-10 text-sm font-semibold rounded-lg bg-white text-black hover:bg-gray-100 transition-all disabled:opacity-50"
+                        className="w-full h-10 text-sm font-semibold rounded-lg bg-[#333333] text-[#FFFFFF] hover:bg-[#404040] transition-all disabled:opacity-50"
                       >
                         {transitions[0].label}
                       </button>
@@ -1150,21 +1150,21 @@ export function SprintDetailView({
                         <button
                           type="button"
                           onClick={(e) => { e.stopPropagation(); setStatusMenuOpen((v) => !v) }}
-                          className="flex items-center gap-1.5 w-full h-10 px-3 rounded-lg bg-white text-black text-sm font-semibold justify-center hover:bg-gray-100 transition-all"
+                          className="flex items-center gap-1.5 w-full h-10 px-3 rounded-lg bg-[#333333] text-[#FFFFFF] text-sm font-semibold justify-center hover:bg-[#404040] transition-all"
                         >
                           {transitions[0].label}
                           <ChevronDown className={cn('size-3.5 transition-transform ml-auto', statusMenuOpen && 'rotate-180')} />
                         </button>
 
                         {statusMenuOpen && (
-                          <div className="absolute bottom-full left-0 mb-1.5 bg-[#111] border border-white/[0.10] rounded-xl shadow-2xl z-50 overflow-hidden min-w-full">
+                          <div className="absolute bottom-full left-0 mb-1.5 bg-[#1C1C1C] border border-[#404040] rounded-xl shadow-2xl z-50 overflow-hidden min-w-full">
                             {transitions.map((t) => (
                               <button
                                 key={t.value}
                                 type="button"
                                 onClick={() => handleStatusChange(t.value)}
                                 disabled={isPending}
-                                className="w-full px-4 py-2.5 text-left text-sm text-gray-300 hover:bg-white/[0.05] hover:text-white transition-colors flex items-center gap-2"
+                                className="w-full px-4 py-2.5 text-left text-sm text-[#A0A0A0] hover:bg-[#2D2D2D] hover:text-[#F0F0F0] transition-colors flex items-center gap-2"
                               >
                                 <div className={cn('size-1.5 rounded-full', SPRINT_STATUS[t.value as keyof typeof SPRINT_STATUS]?.dot)} />
                                 {t.label}
@@ -1176,13 +1176,13 @@ export function SprintDetailView({
                     )}
 
                     {/* Delete */}
-                    <div className="relative pt-1 border-t border-white/[0.04]">
+                    <div className="relative pt-1 border-t border-[#404040]">
                       <div className="relative">
                         <button
                           type="button"
                           onClick={(e) => { e.stopPropagation(); setDeleteMenuOpen((v) => !v) }}
                           disabled={isDeleting}
-                          className="flex items-center gap-1.5 text-xs text-gray-700 hover:text-red-400/70 transition-colors py-1"
+                          className="flex items-center gap-1.5 text-xs text-[#4A4A4A] hover:text-red-400/70 transition-colors py-1"
                         >
                           {isDeleting
                             ? <Loader2 className="size-3 animate-spin" />
@@ -1192,7 +1192,7 @@ export function SprintDetailView({
                         </button>
 
                         {deleteMenuOpen && (
-                          <div className="absolute bottom-full left-0 mb-1.5 bg-[#111] border border-white/[0.10] rounded-xl shadow-2xl z-50 overflow-hidden min-w-[150px]">
+                          <div className="absolute bottom-full left-0 mb-1.5 bg-[#1C1C1C] border border-[#404040] rounded-xl shadow-2xl z-50 overflow-hidden min-w-[150px]">
                             <button
                               type="button"
                               onClick={(e) => { e.stopPropagation(); handleDelete() }}
@@ -1218,7 +1218,7 @@ export function SprintDetailView({
         <div className="lg:hidden px-5 pt-5 pb-3 shrink-0">
           <Link
             href={`/u/${username}/projects/${projectId}?tab=sprints`}
-            className="inline-flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-300 transition-colors"
+            className="inline-flex items-center gap-1.5 text-sm text-[#4A4A4A] hover:text-[#A0A0A0] transition-colors"
           >
             <ArrowLeft className="size-3.5" />
             Back to Sprints
@@ -1229,16 +1229,16 @@ export function SprintDetailView({
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
             {/* ── Column: Ongoing ───────────────────────────────────── */}
-            <div className="rounded-xl border border-white/[0.08] bg-[#0d0d0d] overflow-hidden flex flex-col">
+            <div className="rounded-xl border border-[#404040] bg-[#252525] overflow-hidden flex flex-col">
               {/* Column header */}
-              <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06] bg-white/[0.01] shrink-0">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-[#404040] bg-[#2D2D2D] shrink-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-gray-300 tracking-wide">Ongoing</span>
+                  <span className="text-xs font-semibold text-[#A0A0A0] tracking-wide">Ongoing</span>
                   <span className={cn(
                     'text-[10px] tabular-nums px-1.5 py-0.5 rounded-full font-medium',
                     ongoingTasks.length > 0
-                      ? 'bg-intelligence-cyan/10 text-intelligence-cyan/80 border border-intelligence-cyan/20'
-                      : 'bg-white/[0.04] text-gray-700 border border-white/[0.07]',
+                      ? 'bg-[rgba(139,156,182,0.06)] text-[var(--space-accent)] border border-[rgba(139,156,182,0.15)]'
+                      : 'bg-[#2D2D2D] text-[#4A4A4A] border border-[#404040]',
                   )}>
                     {ongoingTasks.length}
                   </span>
@@ -1253,15 +1253,15 @@ export function SprintDetailView({
               </div>
 
               {/* Task list */}
-              <div className="flex-1 overflow-y-auto divide-y divide-white/[0.04]">
+              <div className="flex-1 overflow-y-auto divide-y divide-[#333333]">
                 {ongoingTasks.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-center px-4">
-                    <div className="inline-flex p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] mb-3">
-                      <Flag className="size-4 text-gray-700" />
+                    <div className="inline-flex p-3 rounded-xl bg-[#2D2D2D] border border-[#404040] mb-3">
+                      <Flag className="size-4 text-[#4A4A4A]" />
                     </div>
-                    <p className="text-sm text-gray-600 font-medium">No ongoing tasks</p>
+                    <p className="text-sm text-[#4A4A4A] font-medium">No ongoing tasks</p>
                     {!readOnly && (
-                      <p className="text-xs text-gray-700 mt-1">Add a task below or pull from the backlog</p>
+                      <p className="text-xs text-[#4A4A4A] mt-1">Add a task below or pull from the backlog</p>
                     )}
                   </div>
                 ) : (
@@ -1288,16 +1288,16 @@ export function SprintDetailView({
             </div>
 
             {/* ── Column: Finished ──────────────────────────────────── */}
-            <div className="rounded-xl border border-white/[0.08] bg-[#0b0b0b] overflow-hidden flex flex-col">
+            <div className="rounded-xl border border-[#404040] bg-[#252525] overflow-hidden flex flex-col">
               {/* Column header */}
-              <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06] bg-white/[0.005] shrink-0">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-[#404040] bg-[#252525] shrink-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-gray-500 tracking-wide">Finished</span>
+                  <span className="text-xs font-semibold text-[#6B6B6B] tracking-wide">Finished</span>
                   <span className={cn(
                     'text-[10px] tabular-nums px-1.5 py-0.5 rounded-full font-medium',
                     doneTasks.length > 0
                       ? 'bg-green-400/10 text-green-400/70 border border-green-400/20'
-                      : 'bg-white/[0.04] text-gray-700 border border-white/[0.07]',
+                      : 'bg-[#2D2D2D] text-[#4A4A4A] border border-[#404040]',
                   )}>
                     {doneTasks.length}
                   </span>
@@ -1311,14 +1311,14 @@ export function SprintDetailView({
               </div>
 
               {/* Task list */}
-              <div className="flex-1 overflow-y-auto divide-y divide-white/[0.04]">
+              <div className="flex-1 overflow-y-auto divide-y divide-[#333333]">
                 {doneTasks.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-center px-4">
-                    <div className="inline-flex p-3 rounded-xl bg-white/[0.02] border border-white/[0.05] mb-3">
-                      <CheckCircle2 className="size-4 text-gray-800" />
+                    <div className="inline-flex p-3 rounded-xl bg-[#2D2D2D] border border-[#404040] mb-3">
+                      <CheckCircle2 className="size-4 text-[#4A4A4A]" />
                     </div>
-                    <p className="text-sm text-gray-700 font-medium">No finished tasks</p>
-                    <p className="text-xs text-gray-800 mt-1">Completed tasks appear here</p>
+                    <p className="text-sm text-[#4A4A4A] font-medium">No finished tasks</p>
+                    <p className="text-xs text-[#4A4A4A] mt-1">Completed tasks appear here</p>
                   </div>
                 ) : (
                   doneTasks.map((task) => (

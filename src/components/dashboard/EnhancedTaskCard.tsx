@@ -80,7 +80,7 @@ export function EnhancedTaskCard({ task }: EnhancedTaskCardProps) {
 
   return (
     <div
-      className={`relative overflow-hidden rounded-xl border ${priorityConfig.border} ${priorityConfig.bg} backdrop-blur-md p-5 hover:border-white/[0.12] transition-all duration-300`}
+      className={`relative overflow-hidden rounded-xl border ${priorityConfig.border} ${priorityConfig.bg} p-5 hover:border-[#404040] transition-all duration-300`}
     >
       <div className="absolute top-0 right-0 w-32 h-32 ${priorityConfig.color} opacity-5 rounded-full blur-3xl" />
 
@@ -89,7 +89,7 @@ export function EnhancedTaskCard({ task }: EnhancedTaskCardProps) {
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="flex-1 space-y-2">
             <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="text-lg font-semibold text-white">{task.title}</h3>
+              <h3 className="text-lg font-semibold text-[#F0F0F0]">{task.title}</h3>
 
               {/* Priority Badge */}
               <Badge
@@ -199,7 +199,7 @@ export function EnhancedTaskCard({ task }: EnhancedTaskCardProps) {
             {descriptionText.length > 150 && (
               <button
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="text-xs text-intelligence-cyan hover:text-intelligence-cyan/80 mt-2 flex items-center gap-1 transition-colors"
+                className="text-xs text-[var(--space-accent)] hover:text-[rgba(139,156,182,0.70)] mt-2 flex items-center gap-1 transition-colors"
               >
                 {isExpanded ? (
                   <>

@@ -55,7 +55,7 @@ export function HeroTabCard({ revenue, projects }: HeroTabCardProps) {
       : 0
 
   const statuses = [
-    { label: 'In Progress', count: projects.active,    color: 'bg-intelligence-cyan', text: 'text-intelligence-cyan' },
+    { label: 'In Progress', count: projects.active,    color: 'bg-[var(--space-accent)]', text: 'text-[var(--space-accent)]' },
     { label: 'Pending',     count: projects.pending,   color: 'bg-gray-500',           text: 'text-gray-400' },
     { label: 'Completed',   count: projects.completed, color: 'bg-blue-400',           text: 'text-blue-400' },
     { label: 'On Hold',     count: projects.onHold,    color: 'bg-yellow-400',         text: 'text-yellow-400' },
@@ -77,23 +77,23 @@ export function HeroTabCard({ revenue, projects }: HeroTabCardProps) {
       ? 'text-green-400'
       : projects.onHold > 0
         ? 'text-yellow-400'
-        : 'text-gray-500'
+        : 'text-[#6B6B6B]'
 
   return (
     <div
-      className="relative overflow-hidden rounded-2xl border border-cyan-400/20
+      className="relative overflow-hidden rounded-2xl border border-[rgba(139,156,182,0.15)]
                  bg-gradient-to-br from-[#06181d] via-[#091c22] to-[#060c0e]
                  p-6 sm:p-8 flex flex-col min-h-[230px] sm:min-h-[260px]"
     >
       {/* Glows */}
-      <div className="absolute -top-16 -right-16 w-64 h-64 rounded-full bg-intelligence-cyan/[0.15] blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-8 -left-8 w-40 h-40 rounded-full bg-cyan-900/25 blur-2xl pointer-events-none" />
+      <div className="absolute -top-16 -right-16 w-64 h-64 rounded-full bg-[var(--space-accent)]/[0.15] blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-8 -left-8 w-40 h-40 rounded-full bg-[rgba(139,156,182,0.10)] blur-2xl pointer-events-none" />
       {/* Grid texture */}
       <div
         className="absolute inset-0 opacity-[0.04] pointer-events-none"
         style={{
           backgroundImage:
-            'linear-gradient(rgba(103,232,249,1) 1px, transparent 1px), linear-gradient(90deg, rgba(103,232,249,1) 1px, transparent 1px)',
+            'linear-gradient(rgba(139,156,182,0.10) 1px, transparent 1px), linear-gradient(90deg, rgba(139,156,182,0.10) 1px, transparent 1px)',
           backgroundSize: '40px 40px',
         }}
       />
@@ -102,15 +102,15 @@ export function HeroTabCard({ revenue, projects }: HeroTabCardProps) {
 
         {/* ── Tab switcher ── */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-0.5 bg-black/30 border border-white/[0.1] rounded-lg p-0.5">
+          <div className="flex items-center gap-0.5 bg-[rgba(255,255,255,0.06)] border border-[#404040] rounded-lg p-0.5">
             {(['projects', 'revenue'] as const).map(t => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
                 className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all duration-200 ${
                   tab === t
-                    ? 'bg-intelligence-cyan text-black shadow-sm'
-                    : 'text-gray-500 hover:text-gray-200'
+                    ? 'bg-[var(--space-accent)] text-white shadow-sm'
+                    : 'text-[#6B6B6B] hover:text-[#A0A0A0]'
                 }`}
               >
                 {t === 'projects' ? 'Projects' : 'Revenue'}
@@ -131,12 +131,12 @@ export function HeroTabCard({ revenue, projects }: HeroTabCardProps) {
 
             {/* Big active count */}
             <div className="flex items-end gap-3 animate-in fade-in zoom-in-95 duration-300">
-              <p className="text-4xl sm:text-5xl lg:text-6xl font-black text-intelligence-cyan tracking-tight tabular-nums
-                            [text-shadow:0_0_40px_rgba(103,232,249,0.25)]">
+              <p className="text-4xl sm:text-5xl lg:text-6xl font-black text-[var(--space-accent)] tracking-tight tabular-nums
+                            [text-shadow:0_0_40px_rgba(139,156,182,0.10)]">
                 {projects.active}
               </p>
               <div className="pb-1.5">
-                <p className="text-xs text-gray-400 font-medium leading-none mb-1">active</p>
+                <p className="text-xs text-[#6B6B6B] font-medium leading-none mb-1">active</p>
                 <p className={`text-[10px] font-semibold ${healthColor}`}>{healthLabel}</p>
               </div>
             </div>
@@ -150,10 +150,10 @@ export function HeroTabCard({ revenue, projects }: HeroTabCardProps) {
                     className={`flex items-center gap-2.5 animate-in fade-in slide-in-from-left-2 duration-300 ${DELAY[Math.min(i, 3)]}`}
                     style={{ animationFillMode: 'both' }}
                   >
-                    <span className="text-[9px] text-gray-600 uppercase tracking-wider w-[76px] shrink-0">
+                    <span className="text-[9px] text-[#6B6B6B] uppercase tracking-wider w-[76px] shrink-0">
                       {s.label}
                     </span>
-                    <div className="flex-1 h-1 bg-white/[0.06] rounded-full overflow-hidden">
+                    <div className="flex-1 h-1 bg-[rgba(255,255,255,0.06)] rounded-full overflow-hidden">
                       <div
                         className={`h-full ${s.color} rounded-full transition-all duration-700`}
                         style={{ width: `${Math.max((s.count / maxCount) * 100, 6)}%` }}
@@ -169,38 +169,38 @@ export function HeroTabCard({ revenue, projects }: HeroTabCardProps) {
 
             {/* Footer: total · tasks done · sprints · milestone % */}
             <div
-              className="flex items-center gap-4 sm:gap-6 pt-4 border-t border-white/[0.07] animate-in fade-in duration-500 delay-200"
+              className="flex items-center gap-4 sm:gap-6 pt-4 border-t border-[#404040] animate-in fade-in duration-500 delay-200"
               style={{ animationFillMode: 'both' }}
             >
               <div>
-                <p className="text-[9px] text-gray-600 uppercase tracking-wider font-semibold">Total</p>
-                <p className="text-lg sm:text-xl font-bold text-white tabular-nums mt-0.5">{projects.total}</p>
+                <p className="text-[9px] text-[#6B6B6B] uppercase tracking-wider font-semibold">Total</p>
+                <p className="text-lg sm:text-xl font-bold text-[#F0F0F0] tabular-nums mt-0.5">{projects.total}</p>
               </div>
 
               {projects.tasksCompleted > 0 && (
                 <div className="flex items-center gap-1.5">
                   <CheckCircle2 className="size-3 text-green-400 shrink-0" />
                   <div>
-                    <p className="text-[9px] text-gray-600 uppercase tracking-wider font-semibold">Tasks</p>
-                    <p className="text-lg sm:text-xl font-bold text-white tabular-nums mt-0.5">{projects.tasksCompleted}</p>
+                    <p className="text-[9px] text-[#6B6B6B] uppercase tracking-wider font-semibold">Tasks</p>
+                    <p className="text-lg sm:text-xl font-bold text-[#F0F0F0] tabular-nums mt-0.5">{projects.tasksCompleted}</p>
                   </div>
                 </div>
               )}
 
               {projects.sprintsCompleted > 0 && (
                 <div className="flex items-center gap-1.5">
-                  <Zap className="size-3 text-intelligence-cyan shrink-0" />
+                  <Zap className="size-3 text-[var(--space-accent)] shrink-0" />
                   <div>
-                    <p className="text-[9px] text-gray-600 uppercase tracking-wider font-semibold">Sprints</p>
-                    <p className="text-lg sm:text-xl font-bold text-white tabular-nums mt-0.5">{projects.sprintsCompleted}</p>
+                    <p className="text-[9px] text-[#6B6B6B] uppercase tracking-wider font-semibold">Sprints</p>
+                    <p className="text-lg sm:text-xl font-bold text-[#F0F0F0] tabular-nums mt-0.5">{projects.sprintsCompleted}</p>
                   </div>
                 </div>
               )}
 
               {projects.totalMilestones > 0 && (
                 <div>
-                  <p className="text-[9px] text-gray-600 uppercase tracking-wider font-semibold">Progress</p>
-                  <p className="text-lg sm:text-xl font-bold text-intelligence-cyan tabular-nums mt-0.5">
+                  <p className="text-[9px] text-[#6B6B6B] uppercase tracking-wider font-semibold">Progress</p>
+                  <p className="text-lg sm:text-xl font-bold text-[var(--space-accent)] tabular-nums mt-0.5">
                     {milestonePercent}%
                   </p>
                 </div>
@@ -214,12 +214,12 @@ export function HeroTabCard({ revenue, projects }: HeroTabCardProps) {
           <div key="revenue" className="flex-1 flex flex-col gap-4 animate-in fade-in duration-200">
 
             <div className="flex-1">
-              <p className="text-[9px] text-gray-600 tracking-wider animate-in fade-in duration-300">
+              <p className="text-[9px] text-[#6B6B6B] tracking-wider animate-in fade-in duration-300">
                 {revenue.windowStartLabel} – Today · {revenue.timeframeLabel}
               </p>
 
-              <p className="text-4xl sm:text-5xl lg:text-6xl font-black text-intelligence-cyan tracking-tight tabular-nums mt-2
-                            [text-shadow:0_0_40px_rgba(103,232,249,0.25)]
+              <p className="text-4xl sm:text-5xl lg:text-6xl font-black text-[var(--space-accent)] tracking-tight tabular-nums mt-2
+                            [text-shadow:0_0_40px_rgba(139,156,182,0.10)]
                             animate-in fade-in zoom-in-95 duration-300">
                 {fmt(revenue.windowRevenue)}
               </p>
@@ -231,7 +231,7 @@ export function HeroTabCard({ revenue, projects }: HeroTabCardProps) {
                       <TrendingUp className="size-3 text-green-400" />
                       <span className="text-xs text-green-400 font-medium">+{revenue.windowChange.toFixed(0)}%</span>
                     </div>
-                    <span className="text-xs text-gray-600">{revenue.compLabel}</span>
+                    <span className="text-xs text-[#6B6B6B]">{revenue.compLabel}</span>
                   </>
                 ) : revenue.windowChange < 0 ? (
                   <>
@@ -239,15 +239,15 @@ export function HeroTabCard({ revenue, projects }: HeroTabCardProps) {
                       <TrendingDown className="size-3 text-red-400" />
                       <span className="text-xs text-red-400 font-medium">{revenue.windowChange.toFixed(0)}%</span>
                     </div>
-                    <span className="text-xs text-gray-600">{revenue.compLabel}</span>
+                    <span className="text-xs text-[#6B6B6B]">{revenue.compLabel}</span>
                   </>
                 ) : (
                   <>
-                    <div className="flex items-center gap-1 bg-white/[0.05] border border-white/[0.08] rounded-full px-2.5 py-0.5">
-                      <Minus className="size-3 text-gray-500" />
-                      <span className="text-xs text-gray-500 font-medium">—</span>
+                    <div className="flex items-center gap-1 bg-[rgba(255,255,255,0.06)] border border-[#404040] rounded-full px-2.5 py-0.5">
+                      <Minus className="size-3 text-[#6B6B6B]" />
+                      <span className="text-xs text-[#6B6B6B] font-medium">—</span>
                     </div>
-                    <span className="text-xs text-gray-600">no prior data</span>
+                    <span className="text-xs text-[#6B6B6B]">no prior data</span>
                   </>
                 )}
               </div>
@@ -255,22 +255,22 @@ export function HeroTabCard({ revenue, projects }: HeroTabCardProps) {
 
             {/* Revenue footer */}
             <div
-              className="flex items-center gap-5 sm:gap-8 pt-4 border-t border-white/[0.07] animate-in fade-in duration-500 delay-150"
+              className="flex items-center gap-5 sm:gap-8 pt-4 border-t border-[#404040] animate-in fade-in duration-500 delay-150"
               style={{ animationFillMode: 'both' }}
             >
               <div>
-                <p className="text-[9px] text-gray-600 uppercase tracking-wider font-semibold">Orders</p>
-                <p className="text-lg sm:text-xl font-bold text-white tabular-nums mt-0.5">{revenue.windowOrderCount}</p>
+                <p className="text-[9px] text-[#6B6B6B] uppercase tracking-wider font-semibold">Orders</p>
+                <p className="text-lg sm:text-xl font-bold text-[#F0F0F0] tabular-nums mt-0.5">{revenue.windowOrderCount}</p>
               </div>
               {revenue.windowPendingCount > 0 && (
                 <div>
-                  <p className="text-[9px] text-gray-600 uppercase tracking-wider font-semibold">Pending</p>
+                  <p className="text-[9px] text-[#6B6B6B] uppercase tracking-wider font-semibold">Pending</p>
                   <p className="text-lg sm:text-xl font-bold text-amber-400 tabular-nums mt-0.5">{revenue.windowPendingCount}</p>
                 </div>
               )}
               <div>
-                <p className="text-[9px] text-gray-600 uppercase tracking-wider font-semibold">Active Projects</p>
-                <p className="text-lg sm:text-xl font-bold text-white tabular-nums mt-0.5">{revenue.activeProjects}</p>
+                <p className="text-[9px] text-[#6B6B6B] uppercase tracking-wider font-semibold">Active Projects</p>
+                <p className="text-lg sm:text-xl font-bold text-[#F0F0F0] tabular-nums mt-0.5">{revenue.activeProjects}</p>
               </div>
             </div>
           </div>

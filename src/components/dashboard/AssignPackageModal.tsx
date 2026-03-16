@@ -94,37 +94,37 @@ export function AssignPackageModal({ clientId }: AssignPackageModalProps) {
         size="sm"
         variant="outline"
         onClick={handleOpen}
-        className="gap-1.5 h-8 text-xs border-white/[0.12] bg-white/[0.03] text-gray-300 hover:bg-white/[0.06] hover:text-white"
+        className="gap-1.5 h-8 text-xs border-[#404040] bg-[#252525] text-[#A0A0A0] hover:bg-[#2D2D2D] hover:text-[#F0F0F0]"
       >
         <Plus className="size-3.5" />
         Assign Package
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-md bg-[#111] border border-white/[0.12] text-white p-0 overflow-hidden">
-          <div className="px-6 pt-6 pb-4 border-b border-white/[0.08]">
-            <DialogTitle className="text-base font-semibold text-white">Assign Package</DialogTitle>
-            <p className="text-xs text-gray-500 mt-1">Select a package and optionally rename this proposal.</p>
+        <DialogContent className="sm:max-w-md bg-[#1C1C1C] border border-[#404040] text-[#F0F0F0] p-0 overflow-hidden">
+          <div className="px-6 pt-6 pb-4 border-b border-[#404040]">
+            <DialogTitle className="text-base font-semibold text-[#F0F0F0]">Assign Package</DialogTitle>
+            <p className="text-xs text-[#4A4A4A] mt-1">Select a package and optionally rename this proposal.</p>
           </div>
 
           <div className="px-6 py-5 space-y-4">
             {loading ? (
               <div className="flex items-center justify-center py-8">
-                <Loader2 className="size-5 text-gray-500 animate-spin" />
+                <Loader2 className="size-5 text-[#4A4A4A] animate-spin" />
               </div>
             ) : templates.length === 0 ? (
               <div className="flex flex-col items-center gap-2 py-8 text-center">
-                <div className="p-3 rounded-xl bg-white/[0.04] border border-white/[0.08]">
-                  <Package className="size-5 text-gray-500" />
+                <div className="p-3 rounded-xl bg-[#252525] border border-[#404040]">
+                  <Package className="size-5 text-[#4A4A4A]" />
                 </div>
-                <p className="text-sm text-gray-400">No packages available</p>
-                <p className="text-xs text-gray-600">Create a package in the admin panel first.</p>
+                <p className="text-sm text-[#6B6B6B]">No packages available</p>
+                <p className="text-xs text-[#4A4A4A]">Create a package in the admin panel first.</p>
               </div>
             ) : (
               <>
                 {/* Template picker */}
                 <div className="space-y-2">
-                  <Label className="text-xs text-gray-400">Select package</Label>
+                  <Label className="text-xs text-[#6B6B6B]">Select package</Label>
                   <div className="space-y-1.5 max-h-48 overflow-y-auto">
                     {templates.map((t) => {
                       const lineCount = t.lineItems?.length ?? 0
@@ -135,15 +135,15 @@ export function AssignPackageModal({ clientId }: AssignPackageModalProps) {
                           onClick={() => setSelectedId(t.id)}
                           className={`w-full text-left px-4 py-3 rounded-lg border transition-all duration-150 ${
                             selectedId === t.id
-                              ? 'border-intelligence-cyan/50 bg-intelligence-cyan/[0.06] text-white'
-                              : 'border-white/[0.08] bg-white/[0.02] text-gray-300 hover:bg-white/[0.05] hover:border-white/[0.15]'
+                              ? 'border-[rgba(139,156,182,0.15)] bg-[rgba(139,156,182,0.06)] text-[#F0F0F0]'
+                              : 'border-[#404040] bg-[#252525] text-[#A0A0A0] hover:bg-[#2D2D2D] hover:border-[#404040]'
                           }`}
                         >
                           <div className="font-medium text-sm">{t.name}</div>
                           {t.description && (
-                            <div className="text-xs text-gray-500 mt-0.5 truncate">{t.description}</div>
+                            <div className="text-xs text-[#4A4A4A] mt-0.5 truncate">{t.description}</div>
                           )}
-                          <div className="text-[10px] text-gray-600 mt-1">{lineCount} line {lineCount === 1 ? 'item' : 'items'}</div>
+                          <div className="text-[10px] text-[#4A4A4A] mt-1">{lineCount} line {lineCount === 1 ? 'item' : 'items'}</div>
                         </button>
                       )
                     })}
@@ -153,14 +153,14 @@ export function AssignPackageModal({ clientId }: AssignPackageModalProps) {
                 {/* Proposal name — shown once a template is picked */}
                 {selectedId && (
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-gray-400">Proposal name</Label>
+                    <Label className="text-xs text-[#6B6B6B]">Proposal name</Label>
                     <Input
                       value={proposalName}
                       onChange={e => setProposalName(e.target.value)}
                       placeholder="Enter a name for this proposal…"
-                      className="bg-white/[0.04] border-white/[0.1] text-white placeholder:text-gray-600 focus-visible:ring-0 focus-visible:border-[#67e8f9]/40 h-9 text-sm"
+                      className="bg-[#252525] border-[#404040] text-[#F0F0F0] placeholder:text-[#4A4A4A] focus-visible:ring-0 focus-visible:border-[rgba(139,156,182,0.15)] h-9 text-sm"
                     />
-                    <p className="text-[10px] text-gray-700">
+                    <p className="text-[10px] text-[#4A4A4A]">
                       Defaults to the template name. Rename to personalise for this client.
                     </p>
                   </div>
@@ -175,13 +175,13 @@ export function AssignPackageModal({ clientId }: AssignPackageModalProps) {
             )}
           </div>
 
-          <div className="px-6 py-4 border-t border-white/[0.08] flex items-center justify-end gap-2">
+          <div className="px-6 py-4 border-t border-[#404040] flex items-center justify-end gap-2">
             <Button
               size="sm"
               variant="ghost"
               onClick={() => setOpen(false)}
               disabled={submitting}
-              className="text-gray-400 hover:text-gray-200 hover:bg-white/[0.04]"
+              className="text-[#6B6B6B] hover:text-[#A0A0A0] hover:bg-[#2D2D2D]"
             >
               Cancel
             </Button>
@@ -189,7 +189,7 @@ export function AssignPackageModal({ clientId }: AssignPackageModalProps) {
               size="sm"
               onClick={handleSubmit}
               disabled={!selectedId || submitting || loading}
-              className="bg-intelligence-cyan text-black hover:bg-intelligence-cyan/90 font-medium gap-1.5"
+              className="bg-[var(--space-accent)] text-black hover:bg-[var(--space-accent)]/90 font-medium gap-1.5"
             >
               {submitting && <Loader2 className="size-3.5 animate-spin" />}
               Assign Package

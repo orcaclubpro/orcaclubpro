@@ -76,32 +76,32 @@ export function CreateSprintSheet({ projectId, open, onOpenChange }: CreateSprin
 
   return (
     <Sheet open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v) }}>
-      <SheetContent className="bg-[#080808] border-white/[0.08] w-full sm:max-w-md p-0 flex flex-col gap-0 overflow-hidden">
+      <SheetContent className="bg-[#1C1C1C] border-[#404040] w-full sm:max-w-md p-0 flex flex-col gap-0 overflow-hidden">
 
-        {/* Cyan top accent */}
-        <div className="h-px bg-gradient-to-r from-transparent via-intelligence-cyan/60 to-transparent shrink-0" />
+        {/* Top accent */}
+        <div className="h-px bg-gradient-to-r from-transparent via-[rgba(139,156,182,0.50)] to-transparent shrink-0" />
 
         {/* Corner SVG */}
         <div className="absolute top-0 right-0 pointer-events-none select-none" aria-hidden="true">
           <svg width="80" height="80" viewBox="0 0 80 80" fill="none" className="opacity-[0.04]">
-            <path d="M80 0 L80 80 L0 80" stroke="white" strokeWidth="1" />
-            <path d="M80 24 L80 80 L24 80" stroke="white" strokeWidth="0.5" />
+            <path d="M80 0 L80 80 L0 80" stroke="#333333" strokeWidth="1" />
+            <path d="M80 24 L80 80 L24 80" stroke="#333333" strokeWidth="0.5" />
           </svg>
         </div>
 
         {/* Header */}
-        <div className="px-7 pt-7 pb-6 border-b border-white/[0.06] shrink-0">
-          <p className="text-[10px] tracking-[0.35em] uppercase text-white/20 font-light mb-4">New Sprint</p>
+        <div className="px-7 pt-7 pb-6 border-b border-[#404040] shrink-0">
+          <p className="text-[10px] tracking-[0.35em] uppercase text-[#6B6B6B] font-light mb-4">New Sprint</p>
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-intelligence-cyan/10 border border-intelligence-cyan/20">
-              <Zap className="size-4 text-intelligence-cyan" />
+            <div className="p-2.5 rounded-xl bg-[rgba(139,156,182,0.10)] border border-[rgba(139,156,182,0.15)]">
+              <Zap className="size-4 text-[var(--space-accent)]" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-white leading-snug">Create a Sprint</h2>
-              <p className="text-xs text-gray-500 mt-0.5">Group tasks over a focused time period</p>
+              <h2 className="text-lg font-semibold text-[#F0F0F0] leading-snug">Create a Sprint</h2>
+              <p className="text-xs text-[#6B6B6B] mt-0.5">Group tasks over a focused time period</p>
             </div>
           </div>
-          <div className="mt-5 w-6 h-px bg-intelligence-cyan/40" />
+          <div className="mt-5 w-6 h-px bg-[rgba(139,156,182,0.25)]" />
         </div>
 
         {/* Scrollable form body */}
@@ -110,7 +110,7 @@ export function CreateSprintSheet({ projectId, open, onOpenChange }: CreateSprin
 
             {/* Sprint Name */}
             <div className="space-y-1.5">
-              <label className="text-xs text-gray-400 font-medium tracking-wide">Sprint Name</label>
+              <label className="text-xs text-[#6B6B6B] font-medium tracking-wide">Sprint Name</label>
               <input
                 value={name}
                 onChange={(e) => { setName(e.target.value); clearField('name') }}
@@ -118,9 +118,9 @@ export function CreateSprintSheet({ projectId, open, onOpenChange }: CreateSprin
                 disabled={isLoading}
                 autoFocus
                 className={cn(
-                  'w-full bg-white/[0.03] border rounded-lg px-4 py-2.5 text-white placeholder:text-gray-600 text-sm outline-none transition-all duration-200',
-                  'focus:bg-white/[0.05] focus:ring-1 focus:ring-intelligence-cyan/25 focus:border-intelligence-cyan/40',
-                  fieldErrors.name ? 'border-red-400/50' : 'border-white/[0.08]',
+                  'w-full bg-[rgba(255,255,255,0.06)] border rounded-lg px-4 py-2.5 text-[#F0F0F0] placeholder:text-[#6B6B6B] text-sm outline-none transition-all duration-200',
+                  'focus:bg-[rgba(255,255,255,0.06)] focus:ring-1 focus:ring-[rgba(139,156,182,0.18)] focus:border-[rgba(139,156,182,0.25)]',
+                  fieldErrors.name ? 'border-red-400/50' : 'border-[#404040]',
                 )}
               />
               {fieldErrors.name && <p className="text-xs text-red-400">{fieldErrors.name}</p>}
@@ -128,20 +128,20 @@ export function CreateSprintSheet({ projectId, open, onOpenChange }: CreateSprin
 
             {/* Duration */}
             <div className="space-y-1.5">
-              <label className="text-xs text-gray-400 font-medium tracking-wide">Duration</label>
+              <label className="text-xs text-[#6B6B6B] font-medium tracking-wide">Duration</label>
               <div className="flex items-start gap-2">
                 {/* Start */}
                 <div className="flex-1 space-y-1">
-                  <p className="text-[10px] text-gray-600 uppercase tracking-widest">Start</p>
+                  <p className="text-[10px] text-[#6B6B6B] uppercase tracking-widest">Start</p>
                   <input
                     type="date"
                     value={startDate}
                     onChange={(e) => { setStartDate(e.target.value); clearField('startDate') }}
                     disabled={isLoading}
                     className={cn(
-                      'w-full bg-white/[0.03] border rounded-lg px-3 py-2.5 text-white text-sm outline-none transition-all duration-200 [color-scheme:dark]',
-                      'focus:bg-white/[0.05] focus:border-intelligence-cyan/40',
-                      fieldErrors.startDate ? 'border-red-400/50' : 'border-white/[0.08]',
+                      'w-full bg-[rgba(255,255,255,0.06)] border rounded-lg px-3 py-2.5 text-[#F0F0F0] text-sm outline-none transition-all duration-200 [color-scheme:light]',
+                      'focus:bg-[rgba(255,255,255,0.06)] focus:border-[rgba(139,156,182,0.25)]',
+                      fieldErrors.startDate ? 'border-red-400/50' : 'border-[#404040]',
                     )}
                   />
                 </div>
@@ -149,26 +149,26 @@ export function CreateSprintSheet({ projectId, open, onOpenChange }: CreateSprin
                 {/* Middle connector */}
                 <div className="flex flex-col items-center pt-6 px-1 shrink-0">
                   {days ? (
-                    <div className="px-2 py-1 rounded-md bg-intelligence-cyan/10 border border-intelligence-cyan/20 whitespace-nowrap">
-                      <span className="text-[10px] font-semibold text-intelligence-cyan">{days}d</span>
+                    <div className="px-2 py-1 rounded-md bg-[rgba(139,156,182,0.10)] border border-[rgba(139,156,182,0.15)] whitespace-nowrap">
+                      <span className="text-[10px] font-semibold text-[var(--space-accent)]">{days}d</span>
                     </div>
                   ) : (
-                    <ArrowRight className="size-3.5 text-gray-700 mt-1" />
+                    <ArrowRight className="size-3.5 text-[#6B6B6B] mt-1" />
                   )}
                 </div>
 
                 {/* End */}
                 <div className="flex-1 space-y-1">
-                  <p className="text-[10px] text-gray-600 uppercase tracking-widest">End</p>
+                  <p className="text-[10px] text-[#6B6B6B] uppercase tracking-widest">End</p>
                   <input
                     type="date"
                     value={endDate}
                     onChange={(e) => { setEndDate(e.target.value); clearField('endDate') }}
                     disabled={isLoading}
                     className={cn(
-                      'w-full bg-white/[0.03] border rounded-lg px-3 py-2.5 text-white text-sm outline-none transition-all duration-200 [color-scheme:dark]',
-                      'focus:bg-white/[0.05] focus:border-intelligence-cyan/40',
-                      fieldErrors.endDate ? 'border-red-400/50' : 'border-white/[0.08]',
+                      'w-full bg-[rgba(255,255,255,0.06)] border rounded-lg px-3 py-2.5 text-[#F0F0F0] text-sm outline-none transition-all duration-200 [color-scheme:light]',
+                      'focus:bg-[rgba(255,255,255,0.06)] focus:border-[rgba(139,156,182,0.25)]',
+                      fieldErrors.endDate ? 'border-red-400/50' : 'border-[#404040]',
                     )}
                   />
                 </div>
@@ -181,8 +181,8 @@ export function CreateSprintSheet({ projectId, open, onOpenChange }: CreateSprin
             {/* Goal */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <label className="text-xs text-gray-400 font-medium tracking-wide">Sprint Goal</label>
-                <span className="text-[10px] text-gray-600">Optional</span>
+                <label className="text-xs text-[#6B6B6B] font-medium tracking-wide">Sprint Goal</label>
+                <span className="text-[10px] text-[#6B6B6B]">Optional</span>
               </div>
               <textarea
                 value={goalDescription}
@@ -190,24 +190,24 @@ export function CreateSprintSheet({ projectId, open, onOpenChange }: CreateSprin
                 placeholder="What should this sprint accomplish?"
                 rows={3}
                 disabled={isLoading}
-                className="w-full bg-white/[0.03] border border-white/[0.08] rounded-lg px-4 py-2.5 text-white placeholder:text-gray-600 text-sm outline-none transition-all duration-200 resize-none focus:bg-white/[0.05] focus:ring-1 focus:ring-intelligence-cyan/25 focus:border-intelligence-cyan/40"
+                className="w-full bg-[rgba(255,255,255,0.06)] border border-[#404040] rounded-lg px-4 py-2.5 text-[#F0F0F0] placeholder:text-[#6B6B6B] text-sm outline-none transition-all duration-200 resize-none focus:bg-[rgba(255,255,255,0.06)] focus:ring-1 focus:ring-[rgba(139,156,182,0.18)] focus:border-[rgba(139,156,182,0.25)]"
               />
             </div>
 
             {/* Live preview */}
             {showPreview && (
-              <div className="relative overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.02] p-4 animate-in fade-in slide-in-from-bottom-1 duration-200">
-                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-intelligence-cyan/50 via-intelligence-cyan/20 to-transparent" />
-                <p className="text-[10px] tracking-[0.25em] uppercase text-intelligence-cyan/50 mb-3">Preview</p>
-                <p className="text-sm font-semibold text-white truncate">{name}</p>
+              <div className="relative overflow-hidden rounded-xl border border-[#404040] bg-[rgba(255,255,255,0.06)] p-4 animate-in fade-in slide-in-from-bottom-1 duration-200">
+                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-[rgba(139,156,182,0.30)] via-[rgba(139,156,182,0.15)] to-transparent" />
+                <p className="text-[10px] tracking-[0.25em] uppercase text-[rgba(139,156,182,0.30)] mb-3">Preview</p>
+                <p className="text-sm font-semibold text-[#F0F0F0] truncate">{name}</p>
                 <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                  <Calendar className="size-3 text-gray-600 shrink-0" />
-                  <span className="text-xs text-gray-400">{fmtShort(startDate)} → {fmtShort(endDate)}</span>
-                  <span className="text-gray-700">·</span>
-                  <span className="text-xs font-medium text-intelligence-cyan">{days}-day sprint</span>
+                  <Calendar className="size-3 text-[#6B6B6B] shrink-0" />
+                  <span className="text-xs text-[#6B6B6B]">{fmtShort(startDate)} → {fmtShort(endDate)}</span>
+                  <span className="text-[#6B6B6B]">·</span>
+                  <span className="text-xs font-medium text-[var(--space-accent)]">{days}-day sprint</span>
                 </div>
                 {goalDescription.trim() && (
-                  <p className="text-xs text-gray-500 mt-2 leading-relaxed border-t border-white/[0.06] pt-2">
+                  <p className="text-xs text-[#6B6B6B] mt-2 leading-relaxed border-t border-[#404040] pt-2">
                     {goalDescription}
                   </p>
                 )}
@@ -223,11 +223,11 @@ export function CreateSprintSheet({ projectId, open, onOpenChange }: CreateSprin
           </div>
 
           {/* Sticky footer */}
-          <div className="shrink-0 px-7 pb-7 pt-4 border-t border-white/[0.06] bg-[#080808]">
+          <div className="shrink-0 px-7 pb-7 pt-4 border-t border-[#404040] bg-[#1C1C1C]">
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-intelligence-cyan text-black font-semibold py-3 rounded-xl hover:bg-intelligence-cyan/90 active:scale-[0.99] transition-all duration-200 shadow-lg shadow-intelligence-cyan/10 hover:shadow-intelligence-cyan/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
+              className="w-full bg-[var(--space-accent)] text-[#F0F0F0] font-semibold py-3 rounded-xl hover:bg-[var(--space-accent)]/90 active:scale-[0.99] transition-all duration-200 shadow-lg shadow-[rgba(139,156,182,0.10)] hover:shadow-[rgba(139,156,182,0.15)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
             >
               {isLoading ? (
                 <><Loader2 className="size-4 animate-spin" />Creating sprint...</>

@@ -92,8 +92,8 @@ function formatDisplayDate(isoDate: string): string {
 function statusStyle(status?: string) {
   switch (status) {
     case 'accepted': return 'text-emerald-400 border-emerald-400/25 bg-emerald-400/10'
-    case 'sent':     return 'text-[#67e8f9] border-[#67e8f9]/25 bg-[#67e8f9]/10'
-    default:         return 'text-gray-500 border-white/10 bg-white/[0.04]'
+    case 'sent':     return 'text-[var(--space-accent)] border-[rgba(139,156,182,0.18)] bg-[rgba(139,156,182,0.10)]'
+    default:         return 'text-[#4A4A4A] border-[#404040] bg-[rgba(255,255,255,0.02)]'
   }
 }
 
@@ -138,7 +138,7 @@ function SignaturePad({
     if (!ctx) return
 
     ctx.fillStyle = 'transparent'
-    ctx.strokeStyle = '#e2e8f0'
+    ctx.strokeStyle = '#A0A0A0'
     ctx.lineWidth = 2
     ctx.lineCap = 'round'
     ctx.lineJoin = 'round'
@@ -194,14 +194,14 @@ function SignaturePad({
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
-        <p className="text-[9px] font-bold tracking-[0.22em] uppercase text-gray-500">Draw Signature <span className="text-gray-700 normal-case tracking-normal font-normal">(optional)</span></p>
+        <p className="text-[9px] font-bold tracking-[0.22em] uppercase text-[#4A4A4A]">Draw Signature <span className="text-[#4A4A4A] normal-case tracking-normal font-normal">(optional)</span></p>
         {hasSignature && (
-          <button type="button" onClick={clear} className="text-[9px] text-gray-600 hover:text-gray-400 transition-colors uppercase tracking-widest">
+          <button type="button" onClick={clear} className="text-[9px] text-[#4A4A4A] hover:text-[#6B6B6B] transition-colors uppercase tracking-widest">
             Clear
           </button>
         )}
       </div>
-      <div className="relative rounded-xl border border-white/[0.10] bg-white/[0.02] overflow-hidden" style={{ height: 100 }}>
+      <div className="relative rounded-xl border border-[#404040] bg-[#252525] overflow-hidden" style={{ height: 100 }}>
         <canvas
           ref={canvasRef}
           width={600}
@@ -211,11 +211,11 @@ function SignaturePad({
         />
         {!hasSignature && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <p className="text-xs text-gray-700 italic">Draw your signature here</p>
+            <p className="text-xs text-[#4A4A4A] italic">Draw your signature here</p>
           </div>
         )}
         {/* Baseline */}
-        <div className="absolute bottom-6 left-8 right-8 border-b border-dashed border-white/[0.08] pointer-events-none" />
+        <div className="absolute bottom-6 left-8 right-8 border-b border-dashed border-[#404040] pointer-events-none" />
       </div>
     </div>
   )
@@ -289,19 +289,19 @@ function PackageModal({
   return (
     <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center p-0 sm:p-4 pb-20 sm:pb-0">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-[#000000]/60" onClick={onClose} />
 
       {/* Panel */}
       <div
-        className="relative z-10 w-full sm:max-w-[580px] max-h-[calc(92vh-80px)] sm:max-h-[88vh] flex flex-col rounded-t-3xl sm:rounded-2xl border border-white/[0.10] overflow-hidden"
-        style={{ background: 'linear-gradient(160deg, #141414 0%, #0d0d0d 100%)' }}
+        className="relative z-10 w-full sm:max-w-[580px] max-h-[calc(92vh-80px)] sm:max-h-[88vh] flex flex-col rounded-t-3xl sm:rounded-2xl border border-[#404040] overflow-hidden"
+        style={{ background: '#1C1C1C' }}
       >
-        {/* Top cyan line */}
-        <div className="h-px bg-gradient-to-r from-transparent via-[#67e8f9]/50 to-transparent shrink-0" />
+        {/* Top accent line */}
+        <div className="h-px bg-gradient-to-r from-transparent via-[var(--space-accent)]/30 to-transparent shrink-0" />
 
         {/* Mobile handle */}
         <div className="flex justify-center pt-3 pb-1 shrink-0 sm:hidden">
-          <div className="w-9 h-1 rounded-full bg-white/[0.15]" />
+          <div className="w-9 h-1 rounded-full bg-[#333333]" />
         </div>
 
         {/* Scrollable body */}
@@ -315,8 +315,8 @@ function PackageModal({
                   <ShieldCheck className="size-7 text-emerald-400" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-white mb-1.5">Agreement Signed</h2>
-                  <p className="text-sm text-gray-400 leading-relaxed max-w-xs mx-auto">
+                  <h2 className="text-xl font-bold text-[#F0F0F0] mb-1.5">Agreement Signed</h2>
+                  <p className="text-sm text-[#6B6B6B] leading-relaxed max-w-xs mx-auto">
                     Your electronic signature has been recorded. A confirmation with your certificate hash has been sent to your email.
                   </p>
                 </div>
@@ -327,12 +327,12 @@ function PackageModal({
                 <div className="rounded-xl border border-emerald-400/20 bg-emerald-400/[0.04] p-4 space-y-2">
                   <p className="text-[9px] font-bold uppercase tracking-[0.22em] text-emerald-400/80 mb-3">Signature Record</p>
                   <div className="grid grid-cols-2 gap-2 text-xs">
-                    <span className="text-gray-600">Signed by</span>
-                    <span className="text-gray-300 text-right font-medium">{pkg.clientSignature.typedName}</span>
-                    <span className="text-gray-600">Email</span>
-                    <span className="text-gray-300 text-right">{pkg.clientSignature.signedByEmail}</span>
-                    <span className="text-gray-600">Date</span>
-                    <span className="text-gray-300 text-right">
+                    <span className="text-[#4A4A4A]">Signed by</span>
+                    <span className="text-[#A0A0A0] text-right font-medium">{pkg.clientSignature.typedName}</span>
+                    <span className="text-[#4A4A4A]">Email</span>
+                    <span className="text-[#A0A0A0] text-right">{pkg.clientSignature.signedByEmail}</span>
+                    <span className="text-[#4A4A4A]">Date</span>
+                    <span className="text-[#A0A0A0] text-right">
                       {new Date(pkg.clientSignature.signedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                     </span>
                   </div>
@@ -341,10 +341,11 @@ function PackageModal({
 
               {invoiceUrls.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-[9px] font-bold uppercase tracking-[0.22em] text-gray-500">Your Invoices</p>
+                  <p className="text-[9px] font-bold uppercase tracking-[0.22em] text-[#4A4A4A]">Your Invoices</p>
                   {invoiceUrls.map((url, i) => (
                     <a key={i} href={url} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-[#67e8f9]/20 bg-[#67e8f9]/[0.04] text-sm text-[#67e8f9] hover:bg-[#67e8f9]/[0.08] transition-all">
+                      className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-[rgba(139,156,182,0.15)] bg-[rgba(139,156,182,0.06)] text-sm hover:bg-[rgba(139,156,182,0.10)] transition-all"
+                      style={{ color: 'var(--space-accent)' }}>
                       <ExternalLink className="size-3.5 shrink-0" />
                       View Invoice {invoiceUrls.length > 1 ? `#${i + 1}` : ''}
                     </a>
@@ -360,24 +361,24 @@ function PackageModal({
               {/* Header */}
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-[9px] font-bold tracking-[0.32em] uppercase text-[#67e8f9]/80 mb-2">Sign Agreement</p>
-                  <h2 className="text-lg font-bold text-white leading-tight">{pkg.name}</h2>
+                  <p className="text-[9px] font-bold tracking-[0.32em] uppercase mb-2" style={{ color: 'var(--space-accent)' }}>Sign Agreement</p>
+                  <h2 className="text-lg font-bold text-[#F0F0F0] leading-tight">{pkg.name}</h2>
                 </div>
-                <button onClick={onClose} className="size-8 rounded-lg border border-white/[0.08] flex items-center justify-center text-gray-500 hover:text-white hover:border-white/20 transition-all shrink-0">
+                <button onClick={onClose} className="size-8 rounded-lg border border-[#404040] flex items-center justify-center text-[#4A4A4A] hover:text-[#F0F0F0] hover:border-[#404040] transition-all shrink-0">
                   <X className="size-3.5" />
                 </button>
               </div>
 
               {/* Amount to authorize */}
               {pendingTotal > 0 && (
-                <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-white/[0.06] bg-white/[0.02]">
+                <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-[#404040] bg-[#252525]">
                   <div className="flex-1">
-                    <p className="text-[9px] text-gray-600 uppercase tracking-widest font-semibold mb-0.5">Total authorized</p>
-                    <p className="text-lg font-bold text-white tabular-nums font-mono">{fmt(pendingTotal)}</p>
+                    <p className="text-[9px] text-[#4A4A4A] uppercase tracking-widest font-semibold mb-0.5">Total authorized</p>
+                    <p className="text-lg font-bold text-[#F0F0F0] tabular-nums font-mono">{fmt(pendingTotal)}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-[9px] text-gray-600 uppercase tracking-widest font-semibold mb-0.5">Proposal</p>
-                    <p className="text-xs text-gray-400">{pkg.name}</p>
+                    <p className="text-[9px] text-[#4A4A4A] uppercase tracking-widest font-semibold mb-0.5">Proposal</p>
+                    <p className="text-xs text-[#6B6B6B]">{pkg.name}</p>
                   </div>
                 </div>
               )}
@@ -385,7 +386,7 @@ function PackageModal({
               {/* ESIGN Disclosure */}
               <div className="rounded-xl border border-amber-400/20 bg-amber-400/[0.04] p-4">
                 <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-amber-400/80 mb-2">Electronic Signature Disclosure</p>
-                <p className="text-xs text-gray-400 leading-relaxed whitespace-pre-line">{CONSENT_DISCLOSURE}</p>
+                <p className="text-xs text-[#6B6B6B] leading-relaxed whitespace-pre-line">{CONSENT_DISCLOSURE}</p>
               </div>
 
               {/* Canvas signature pad */}
@@ -393,8 +394,8 @@ function PackageModal({
 
               {/* Typed name */}
               <div className="space-y-1.5">
-                <label className="text-[9px] font-bold tracking-[0.22em] uppercase text-gray-500">
-                  Type Your Full Legal Name <span className="text-[#67e8f9]/80">*</span>
+                <label className="text-[9px] font-bold tracking-[0.22em] uppercase text-[#4A4A4A]">
+                  Type Your Full Legal Name <span style={{ color: 'var(--space-accent)', opacity: 0.8 }}>*</span>
                 </label>
                 <input
                   type="text"
@@ -402,10 +403,10 @@ function PackageModal({
                   onChange={e => setTypedName(e.target.value)}
                   placeholder="e.g. Jane Smith"
                   autoComplete="name"
-                  className="w-full px-4 py-3 text-sm bg-white/[0.04] border border-white/[0.12] rounded-xl text-white placeholder-gray-700 focus:outline-none focus:border-[#67e8f9]/40 focus:bg-white/[0.06] transition-all"
+                  className="w-full px-4 py-3 text-sm bg-[#252525] border border-[#404040] rounded-xl text-[#F0F0F0] placeholder-[#555555] focus:outline-none focus:border-[rgba(139,156,182,0.20)] focus:bg-[#1C1C1C] transition-all"
                   style={{ fontFamily: 'Georgia, serif', fontSize: 15 }}
                 />
-                <p className="text-[10px] text-gray-700">This constitutes your legal electronic signature</p>
+                <p className="text-[10px] text-[#4A4A4A]">This constitutes your legal electronic signature</p>
               </div>
 
               {/* Consent checkbox */}
@@ -414,16 +415,16 @@ function PackageModal({
                   className={cn(
                     'mt-0.5 size-4 rounded border-2 flex items-center justify-center shrink-0 transition-all',
                     consentChecked
-                      ? 'bg-[#67e8f9]/20 border-[#67e8f9]/70'
-                      : 'border-white/[0.22] group-hover:border-white/40',
+                      ? 'bg-[rgba(139,156,182,0.10)] border-[rgba(139,156,182,0.30)]'
+                      : 'border-[#404040] group-hover:border-[#404040]',
                   )}
                   onClick={() => setConsentChecked(v => !v)}
                 >
-                  {consentChecked && <Check className="size-2.5 text-[#67e8f9]" />}
+                  {consentChecked && <Check className="size-2.5" style={{ color: 'var(--space-accent)' }} />}
                 </div>
-                <span className="text-xs text-gray-400 leading-relaxed" onClick={() => setConsentChecked(v => !v)}>
+                <span className="text-xs text-[#6B6B6B] leading-relaxed" onClick={() => setConsentChecked(v => !v)}>
                   I agree to sign this agreement electronically, have read the{' '}
-                  <Link href={`/u/${username}/packages/${pkg.id}/print`} target="_blank" className="text-[#67e8f9] hover:underline">
+                  <Link href={`/u/${username}/packages/${pkg.id}/print`} target="_blank" className="hover:underline" style={{ color: 'var(--space-accent)' }}>
                     full proposal and service terms
                   </Link>
                   , and consent to receive records electronically.
@@ -445,12 +446,12 @@ function PackageModal({
               {/* Header */}
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <p className="text-[9px] font-bold tracking-[0.32em] uppercase text-[#67e8f9]/80 mb-2">
+                  <p className="text-[9px] font-bold tracking-[0.32em] uppercase mb-2" style={{ color: 'var(--space-accent)' }}>
                     Service Package
                   </p>
-                  <h2 className="text-xl font-bold text-white leading-tight">{pkg.name}</h2>
+                  <h2 className="text-xl font-bold text-[#F0F0F0] leading-tight">{pkg.name}</h2>
                   {pkg.description && (
-                    <p className="text-sm text-gray-400 mt-2 leading-relaxed">{pkg.description}</p>
+                    <p className="text-sm text-[#6B6B6B] mt-2 leading-relaxed">{pkg.description}</p>
                   )}
                 </div>
                 <div className="flex flex-col items-end gap-2 shrink-0">
@@ -461,7 +462,7 @@ function PackageModal({
                   )}
                   <button
                     onClick={onClose}
-                    className="size-8 rounded-lg border border-white/[0.08] flex items-center justify-center text-gray-500 hover:text-white hover:border-white/20 transition-all"
+                    className="size-8 rounded-lg border border-[#404040] flex items-center justify-center text-[#4A4A4A] hover:text-[#F0F0F0] hover:border-[#404040] transition-all"
                   >
                     <X className="size-3.5" />
                   </button>
@@ -470,29 +471,29 @@ function PackageModal({
 
               {/* Pricing summary */}
               {(oneTime > 0 || monthly > 0 || annual > 0) && (
-                <div className="flex items-end gap-6 flex-wrap p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                <div className="flex items-end gap-6 flex-wrap p-4 rounded-xl bg-[#252525] border border-[#404040]">
                   {oneTime > 0 && (
                     <div>
-                      <p className="text-2xl font-bold text-white tabular-nums">{fmt(oneTime)}</p>
-                      <p className="text-[9px] text-gray-300 mt-1 uppercase tracking-[0.18em]">one-time</p>
+                      <p className="text-2xl font-bold text-[#F0F0F0] tabular-nums">{fmt(oneTime)}</p>
+                      <p className="text-[9px] text-[#A0A0A0] mt-1 uppercase tracking-[0.18em]">one-time</p>
                     </div>
                   )}
                   {monthly > 0 && (
                     <div>
                       <div className="flex items-baseline gap-0.5">
-                        <p className="text-2xl font-bold text-white tabular-nums">{fmt(monthly)}</p>
-                        <p className="text-sm text-gray-500">/mo</p>
+                        <p className="text-2xl font-bold text-[#F0F0F0] tabular-nums">{fmt(monthly)}</p>
+                        <p className="text-sm text-[#4A4A4A]">/mo</p>
                       </div>
-                      <p className="text-[9px] text-gray-300 mt-1 uppercase tracking-[0.18em]">monthly</p>
+                      <p className="text-[9px] text-[#A0A0A0] mt-1 uppercase tracking-[0.18em]">monthly</p>
                     </div>
                   )}
                   {annual > 0 && (
                     <div>
                       <div className="flex items-baseline gap-0.5">
-                        <p className="text-2xl font-bold text-white tabular-nums">{fmt(annual)}</p>
-                        <p className="text-sm text-gray-500">/yr</p>
+                        <p className="text-2xl font-bold text-[#F0F0F0] tabular-nums">{fmt(annual)}</p>
+                        <p className="text-sm text-[#4A4A4A]">/yr</p>
                       </div>
-                      <p className="text-[9px] text-gray-300 mt-1 uppercase tracking-[0.18em]">annually</p>
+                      <p className="text-[9px] text-[#A0A0A0] mt-1 uppercase tracking-[0.18em]">annually</p>
                     </div>
                   )}
                 </div>
@@ -500,15 +501,15 @@ function PackageModal({
 
               {/* Cover message */}
               {pkg.coverMessage && (
-                <div className="px-4 py-3.5 rounded-xl border-l-2 border-[#67e8f9]/30 bg-[#67e8f9]/[0.025]">
-                  <p className="text-sm text-gray-400 leading-relaxed whitespace-pre-wrap">{pkg.coverMessage}</p>
+                <div className="px-4 py-3.5 rounded-xl border-l-2 border-[rgba(139,156,182,0.20)] bg-[rgba(255,255,255,0.03)]">
+                  <p className="text-sm text-[#6B6B6B] leading-relaxed whitespace-pre-wrap">{pkg.coverMessage}</p>
                 </div>
               )}
 
               {/* Included services */}
               {lineItems.length > 0 && (
                 <div>
-                  <p className="text-[9px] font-bold tracking-[0.25em] uppercase gradient-text mb-2.5">
+                  <p className="text-[9px] font-bold tracking-[0.25em] uppercase text-[#1E3A6E] mb-2.5">
                     What&apos;s Included &middot; {lineItems.length}
                   </p>
                   <div className="space-y-1.5">
@@ -521,30 +522,30 @@ function PackageModal({
                       return (
                         <div
                           key={i}
-                          className="flex items-start gap-3 px-3.5 py-3 rounded-xl bg-white/[0.025] border border-white/[0.05]"
+                          className="flex items-start gap-3 px-3.5 py-3 rounded-xl bg-[#2D2D2D] border border-[#404040]"
                         >
-                          <div className="mt-0.5 size-4 rounded-full bg-[#67e8f9]/15 border border-[#67e8f9]/30 flex items-center justify-center shrink-0">
-                            <Check className="size-2.5 text-[#67e8f9]" />
+                          <div className="mt-0.5 size-4 rounded-full bg-[rgba(139,156,182,0.06)] border border-[rgba(139,156,182,0.15)] flex items-center justify-center shrink-0">
+                            <Check className="size-2.5" style={{ color: 'var(--space-accent)' }} />
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-baseline justify-between gap-2">
-                              <p className="text-sm font-semibold text-white leading-snug">{item.name}</p>
+                              <p className="text-sm font-semibold text-[#F0F0F0] leading-snug">{item.name}</p>
                               <div className="flex flex-col items-end gap-0.5 shrink-0">
                                 {hasDiscount && (
-                                  <span className="text-xs text-gray-300 line-through tabular-nums font-mono">
+                                  <span className="text-xs text-[#A0A0A0] line-through tabular-nums font-mono">
                                     {fmt(baseTotal)}
                                   </span>
                                 )}
-                                <span className={cn('text-sm font-bold tabular-nums font-mono', hasDiscount ? 'text-[#67e8f9]' : 'text-white')}>
+                                <span className={cn('text-sm font-bold tabular-nums font-mono', hasDiscount ? '' : 'text-[#F0F0F0]')} style={hasDiscount ? { color: 'var(--space-accent)' } : {}}>
                                   {fmt(adjustedTotal)}
                                   {item.isRecurring && (
-                                    <span className="text-xs font-normal text-gray-500">/{item.recurringInterval === 'year' ? 'yr' : 'mo'}</span>
+                                    <span className="text-xs font-normal text-[#4A4A4A]">/{item.recurringInterval === 'year' ? 'yr' : 'mo'}</span>
                                   )}
                                 </span>
                               </div>
                             </div>
                             {item.description && (
-                              <p className="text-xs text-gray-300 mt-1 leading-relaxed">{item.description}</p>
+                              <p className="text-xs text-[#A0A0A0] mt-1 leading-relaxed">{item.description}</p>
                             )}
                           </div>
                         </div>
@@ -558,8 +559,8 @@ function PackageModal({
               {schedule.length > 0 && (
                 <div>
                   <div className="flex items-center gap-2 mb-2.5">
-                    <CalendarDays className="size-3.5 text-gray-600" />
-                    <p className="text-[9px] font-bold tracking-[0.25em] uppercase text-gray-500">
+                    <CalendarDays className="size-3.5 text-[#4A4A4A]" />
+                    <p className="text-[9px] font-bold tracking-[0.25em] uppercase text-[#4A4A4A]">
                       Payment Schedule
                     </p>
                   </div>
@@ -572,17 +573,17 @@ function PackageModal({
                           className={cn(
                             'flex items-center gap-3 px-3.5 py-2.5 rounded-xl border',
                             isInvoiced
-                              ? 'bg-white/[0.015] border-white/[0.04]'
-                              : 'bg-white/[0.025] border-white/[0.05]',
+                              ? 'bg-[rgba(255,255,255,0.02)] border-[#404040]'
+                              : 'bg-[#2D2D2D] border-[#404040]',
                           )}
                         >
-                          <div className={`size-1.5 rounded-full shrink-0 ${isInvoiced ? 'bg-emerald-400' : 'bg-[#67e8f9]/50'}`} />
+                          <div className={`size-1.5 rounded-full shrink-0 ${isInvoiced ? 'bg-emerald-400' : ''}`} style={!isInvoiced ? { background: 'var(--space-accent)', opacity: 0.5 } : {}} />
                           <div className="flex-1 min-w-0">
-                            <p className={cn('text-sm font-medium', isInvoiced ? 'text-gray-500' : 'text-gray-300')}>
+                            <p className={cn('text-sm font-medium', isInvoiced ? 'text-[#4A4A4A]' : 'text-[#A0A0A0]')}>
                               {entry.label}
                             </p>
                             {entry.dueDate && (
-                              <p className={cn('text-[10px] mt-0.5', isInvoiced ? 'text-gray-700' : 'text-gray-600')}>
+                              <p className={cn('text-[10px] mt-0.5', isInvoiced ? 'text-[#4A4A4A]' : 'text-[#4A4A4A]')}>
                                 Due {formatDisplayDate(entry.dueDate)}
                               </p>
                             )}
@@ -593,7 +594,7 @@ function PackageModal({
                                 Invoiced
                               </span>
                             )}
-                            <span className={cn('text-sm font-bold tabular-nums font-mono', isInvoiced ? 'text-gray-500' : 'text-white')}>
+                            <span className={cn('text-sm font-bold tabular-nums font-mono', isInvoiced ? 'text-[#4A4A4A]' : 'text-[#F0F0F0]')}>
                               {fmt(entry.amount)}
                             </span>
                           </div>
@@ -601,9 +602,9 @@ function PackageModal({
                       )
                     })}
                     {/* Schedule total */}
-                    <div className="flex items-center justify-between px-3.5 py-2 rounded-lg bg-white/[0.01]">
-                      <span className="text-[10px] text-gray-600 font-semibold uppercase tracking-widest">Total</span>
-                      <span className="text-sm font-bold text-white tabular-nums font-mono">
+                    <div className="flex items-center justify-between px-3.5 py-2 rounded-lg bg-[#252525]">
+                      <span className="text-[10px] text-[#4A4A4A] font-semibold uppercase tracking-widest">Total</span>
+                      <span className="text-sm font-bold text-[#F0F0F0] tabular-nums font-mono">
                         {fmt(schedule.reduce((s, e) => s + e.amount, 0))}
                       </span>
                     </div>
@@ -613,7 +614,7 @@ function PackageModal({
 
               {/* Empty state */}
               {lineItems.length === 0 && schedule.length === 0 && (
-                <p className="text-xs text-gray-300 italic py-1">
+                <p className="text-xs text-[#A0A0A0] italic py-1">
                   Your team is still configuring this package. Check back soon.
                 </p>
               )}
@@ -623,7 +624,7 @@ function PackageModal({
                 href={`/u/${username}/packages/${pkg.id}/print`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="sm:hidden flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-300 transition-colors"
+                className="sm:hidden flex items-center gap-1.5 text-sm text-[#4A4A4A] hover:text-[#6B6B6B] transition-colors"
               >
                 <FileText className="size-3.5" />
                 Full Package
@@ -635,14 +636,14 @@ function PackageModal({
         </div>
 
         {/* Footer */}
-        <div className="shrink-0 border-t border-white/[0.07] bg-black/20">
+        <div className="shrink-0 border-t border-[#404040] bg-[#252525]">
           {step === 'signed' ? (
             <div className="flex items-center gap-3 px-6 py-4">
               <Link
                 href={`/u/${username}/packages/${pkg.id}/print`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 px-4 py-2 text-sm rounded-xl border border-white/[0.08] text-gray-400 hover:text-white hover:border-white/20 transition-all"
+                className="flex items-center gap-2 px-4 py-2 text-sm rounded-xl border border-[#404040] text-[#6B6B6B] hover:text-[#F0F0F0] hover:border-[#404040] transition-all"
               >
                 <FileText className="size-3.5" />
                 View Signed Contract
@@ -650,7 +651,7 @@ function PackageModal({
               <div className="flex-1" />
               <button
                 onClick={onClose}
-                className="px-5 py-2 text-sm font-semibold text-white bg-white/[0.06] border border-white/[0.12] rounded-xl hover:bg-white/[0.10] transition-all"
+                className="px-5 py-2 text-sm font-semibold text-[#F0F0F0] bg-[#2D2D2D] border border-[#404040] rounded-xl hover:bg-[#E5E1D9] transition-all"
               >
                 Done
               </button>
@@ -659,7 +660,7 @@ function PackageModal({
             <div className="flex items-center gap-3 px-6 py-4">
               <button
                 onClick={() => { setStep('details'); setSignError(null) }}
-                className="px-4 py-2 text-sm text-gray-500 hover:text-white transition-colors rounded-lg hover:bg-white/[0.04]"
+                className="px-4 py-2 text-sm text-[#4A4A4A] hover:text-[#F0F0F0] transition-colors rounded-lg hover:bg-[#2D2D2D]"
               >
                 Back
               </button>
@@ -667,7 +668,8 @@ function PackageModal({
               <button
                 onClick={handleSign}
                 disabled={signing || !isSignValid}
-                className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-xl bg-[#67e8f9]/[0.12] border border-[#67e8f9]/30 text-[#67e8f9] hover:bg-[#67e8f9]/[0.20] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-xl bg-[rgba(139,156,182,0.10)] border border-[rgba(139,156,182,0.18)] hover:bg-[rgba(139,156,182,0.12)] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                style={{ color: 'var(--space-accent)' }}
               >
                 {signing
                   ? <><Loader2 className="size-3.5 animate-spin" /> Signing…</>
@@ -679,7 +681,7 @@ function PackageModal({
             <div className="flex items-center gap-3 px-6 py-4">
               <button
                 onClick={onClose}
-                className="px-4 py-2 text-sm text-gray-500 hover:text-white transition-colors rounded-lg hover:bg-white/[0.04]"
+                className="px-4 py-2 text-sm text-[#4A4A4A] hover:text-[#F0F0F0] transition-colors rounded-lg hover:bg-[#2D2D2D]"
               >
                 Close
               </button>
@@ -688,7 +690,7 @@ function PackageModal({
                 href={`/u/${username}/packages/${pkg.id}/print`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hidden sm:flex items-center gap-2 px-4 py-2 text-sm rounded-xl border border-white/[0.08] text-gray-400 hover:text-white hover:border-white/20 transition-all"
+                className="hidden sm:flex items-center gap-2 px-4 py-2 text-sm rounded-xl border border-[#404040] text-[#6B6B6B] hover:text-[#F0F0F0] hover:border-[#404040] transition-all"
               >
                 <FileText className="size-3.5" />
                 Full Package
@@ -697,7 +699,8 @@ function PackageModal({
               {canSign && (
                 <button
                   onClick={() => setStep('sign')}
-                  className="flex items-center gap-2 px-5 py-2 text-sm font-semibold rounded-xl bg-[#67e8f9]/[0.10] border border-[#67e8f9]/25 text-[#67e8f9] hover:bg-[#67e8f9]/[0.18] hover:border-[#67e8f9]/40 transition-all duration-200"
+                  className="flex items-center gap-2 px-5 py-2 text-sm font-semibold rounded-xl bg-[rgba(139,156,182,0.10)] border border-[rgba(139,156,182,0.18)] hover:bg-[rgba(139,156,182,0.12)] hover:border-[rgba(139,156,182,0.22)] transition-all duration-200"
+                  style={{ color: 'var(--space-accent)' }}
                 >
                   <PenLine className="size-3.5" />
                   Review & Sign
@@ -802,12 +805,12 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
     return (
       <div className="flex items-center justify-center min-h-[60vh] px-6">
         <div className="text-center max-w-xs">
-          <div className="inline-flex p-5 rounded-2xl bg-white/[0.03] border border-white/[0.06] mb-6 relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-[#67e8f9]/5 to-transparent" />
-            <Sparkles className="size-8 text-gray-600 relative z-10" />
+          <div className="inline-flex p-5 rounded-2xl bg-[#2D2D2D] border border-[#404040] mb-6 relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-[rgba(255,255,255,0.03)] to-transparent" />
+            <Sparkles className="size-8 text-[#4A4A4A] relative z-10" />
           </div>
-          <h3 className="text-lg font-semibold text-white mb-2">Your packages are on the way</h3>
-          <p className="text-sm text-gray-500 leading-relaxed">
+          <h3 className="text-lg font-semibold text-[#F0F0F0] mb-2">Your packages are on the way</h3>
+          <p className="text-sm text-[#4A4A4A] leading-relaxed">
             Your team is curating custom service packages for you. They&apos;ll appear here once ready.
           </p>
         </div>
@@ -829,14 +832,14 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
         {/* Header */}
         <div className="px-6 lg:px-10 pt-8 pb-6 flex items-end justify-between">
           <div>
-            <p className="text-[9px] font-bold tracking-[0.32em] uppercase text-[#67e8f9]/80 mb-1.5">
+            <p className="text-[9px] font-bold tracking-[0.32em] uppercase mb-1.5" style={{ color: 'var(--space-accent)' }}>
               Service Packages
             </p>
-            <h2 className="text-xl font-bold text-white tracking-tight">Your Packages</h2>
+            <h2 className="text-xl font-bold text-[#F0F0F0] tracking-tight">Your Packages</h2>
           </div>
           {total > 1 && (
-            <span className="text-sm font-mono text-gray-300 tabular-nums">
-              {pad(activeIdx + 1)}<span className="text-gray-700 mx-1">/</span>{pad(total)}
+            <span className="text-sm font-mono text-[#A0A0A0] tabular-nums">
+              {pad(activeIdx + 1)}<span className="text-[#4A4A4A] mx-1">/</span>{pad(total)}
             </span>
           )}
         </div>
@@ -866,22 +869,22 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                   <div
                     className={cn(
                       'relative rounded-2xl border overflow-hidden transition-all duration-500',
-                      isActive ? 'border-[#67e8f9]/[0.18]' : 'border-white/[0.06]',
+                      isActive ? 'border-[rgba(139,156,182,0.12)]' : 'border-[#404040]',
                     )}
-                    style={{ background: 'linear-gradient(155deg, #181818 0%, #0e0e0e 60%, #121212 100%)' }}
+                    style={{ background: '#252525' }}
                   >
-                    {/* Top cyan line */}
+                    {/* Top accent line */}
                     <div className={cn(
                       'h-px transition-all duration-700',
                       isActive
-                        ? 'bg-gradient-to-r from-transparent via-[#67e8f9]/60 to-transparent'
-                        : 'bg-gradient-to-r from-transparent via-white/[0.05] to-transparent',
+                        ? 'bg-gradient-to-r from-transparent via-[var(--space-accent)]/30 to-transparent'
+                        : 'bg-gradient-to-r from-transparent via-[#333333] to-transparent',
                     )} />
 
                     <div className="p-5 sm:p-8 lg:p-10">
                       {/* Eyebrow + status */}
                       <div className="flex items-center justify-between mb-5 lg:mb-8">
-                        <p className="text-[9px] font-bold tracking-[0.32em] uppercase text-[#67e8f9]/80">
+                        <p className="text-[9px] font-bold tracking-[0.32em] uppercase" style={{ color: 'var(--space-accent)' }}>
                           Service Package
                         </p>
                         {pkg.status && pkg.status !== 'draft' && (
@@ -895,12 +898,12 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                       </div>
 
                       {/* Name */}
-                      <h3 className="text-2xl sm:text-3xl lg:text-[2.5rem] font-bold text-white leading-tight tracking-tight mb-4">
+                      <h3 className="text-2xl sm:text-3xl lg:text-[2.5rem] font-bold text-[#F0F0F0] leading-tight tracking-tight mb-4">
                         {pkg.name}
                       </h3>
 
                       {pkg.description && (
-                        <p className="text-sm text-gray-400 leading-relaxed mb-5 lg:mb-8 max-w-xl">
+                        <p className="text-sm text-[#6B6B6B] leading-relaxed mb-5 lg:mb-8 max-w-xl">
                           {pkg.description}
                         </p>
                       )}
@@ -910,26 +913,26 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                         <div className="flex items-end gap-8 flex-wrap mb-8">
                           {oneTime > 0 && (
                             <div>
-                              <p className="text-3xl sm:text-4xl font-bold text-white tabular-nums tracking-tight">{fmt(oneTime)}</p>
-                              <p className="text-[9px] text-gray-300 mt-1.5 uppercase tracking-[0.2em]">one-time</p>
+                              <p className="text-3xl sm:text-4xl font-bold text-[#F0F0F0] tabular-nums tracking-tight">{fmt(oneTime)}</p>
+                              <p className="text-[9px] text-[#A0A0A0] mt-1.5 uppercase tracking-[0.2em]">one-time</p>
                             </div>
                           )}
                           {monthly > 0 && (
                             <div>
                               <div className="flex items-baseline gap-1">
-                                <p className="text-3xl sm:text-4xl font-bold text-white tabular-nums tracking-tight">{fmt(monthly)}</p>
-                                <p className="text-xl text-gray-300 font-normal">/mo</p>
+                                <p className="text-3xl sm:text-4xl font-bold text-[#F0F0F0] tabular-nums tracking-tight">{fmt(monthly)}</p>
+                                <p className="text-xl text-[#A0A0A0] font-normal">/mo</p>
                               </div>
-                              <p className="text-[9px] text-gray-300 mt-1.5 uppercase tracking-[0.2em]">monthly</p>
+                              <p className="text-[9px] text-[#A0A0A0] mt-1.5 uppercase tracking-[0.2em]">monthly</p>
                             </div>
                           )}
                           {annual > 0 && (
                             <div>
                               <div className="flex items-baseline gap-1">
-                                <p className="text-3xl sm:text-4xl font-bold text-white tabular-nums tracking-tight">{fmt(annual)}</p>
-                                <p className="text-xl text-gray-300 font-normal">/yr</p>
+                                <p className="text-3xl sm:text-4xl font-bold text-[#F0F0F0] tabular-nums tracking-tight">{fmt(annual)}</p>
+                                <p className="text-xl text-[#A0A0A0] font-normal">/yr</p>
                               </div>
-                              <p className="text-[9px] text-gray-300 mt-1.5 uppercase tracking-[0.2em]">annually</p>
+                              <p className="text-[9px] text-[#A0A0A0] mt-1.5 uppercase tracking-[0.2em]">annually</p>
                             </div>
                           )}
                         </div>
@@ -942,22 +945,22 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                             {Array.from({ length: Math.min(6, lineItems.length) }).map((_, j) => (
                               <div
                                 key={j}
-                                className="size-6 rounded-full bg-[#67e8f9]/15 border-2 flex items-center justify-center"
-                                style={{ borderColor: '#0e0e0e' }}
+                                className="size-6 rounded-full bg-[rgba(139,156,182,0.06)] border-2 flex items-center justify-center"
+                                style={{ borderColor: '#404040' }}
                               >
-                                <Check className="size-3 text-[#67e8f9]" />
+                                <Check className="size-3" style={{ color: 'var(--space-accent)' }} />
                               </div>
                             ))}
                             {lineItems.length > 6 && (
                               <div
-                                className="size-6 rounded-full bg-white/[0.08] border-2 flex items-center justify-center"
-                                style={{ borderColor: '#0e0e0e' }}
+                                className="size-6 rounded-full bg-[#2D2D2D] border-2 flex items-center justify-center"
+                                style={{ borderColor: '#404040' }}
                               >
-                                <span className="text-[9px] text-gray-400 font-bold">+{lineItems.length - 6}</span>
+                                <span className="text-[9px] text-[#6B6B6B] font-bold">+{lineItems.length - 6}</span>
                               </div>
                             )}
                           </div>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-[#4A4A4A]">
                             {lineItems.length} service{lineItems.length !== 1 ? 's' : ''} included
                           </p>
                         </div>
@@ -968,7 +971,7 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                         {/* View Details — primary action */}
                         <button
                           onClick={() => setModalPkg(pkg)}
-                          className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-2.5 rounded-xl text-sm font-semibold bg-white/[0.08] border border-white/[0.18] text-white hover:bg-white/[0.13] hover:border-white/30 transition-all duration-200"
+                          className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-2.5 rounded-xl text-sm font-semibold bg-[#2D2D2D] border border-[#404040] text-[#F0F0F0] hover:bg-[#E5E1D9] hover:border-[#404040] transition-all duration-200"
                         >
                           View Details
                         </button>
@@ -977,7 +980,8 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                         {canSign ? (
                           <button
                             onClick={() => setModalPkg(pkg)}
-                            className="flex items-center justify-center gap-2 w-full sm:w-auto px-5 py-2.5 rounded-xl text-sm font-semibold bg-[#67e8f9]/[0.10] border border-[#67e8f9]/25 text-[#67e8f9] hover:bg-[#67e8f9]/[0.18] hover:border-[#67e8f9]/40 transition-all duration-200"
+                            className="flex items-center justify-center gap-2 w-full sm:w-auto px-5 py-2.5 rounded-xl text-sm font-semibold bg-[rgba(139,156,182,0.10)] border border-[rgba(139,156,182,0.18)] hover:bg-[rgba(139,156,182,0.12)] hover:border-[rgba(139,156,182,0.22)] transition-all duration-200"
+                            style={{ color: 'var(--space-accent)' }}
                           >
                             <PenLine className="size-3.5" />
                             Review & Sign
@@ -996,7 +1000,7 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                             href={`/u/${username}/packages/${pkg.id}/print`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-300 transition-colors"
+                            className="flex items-center gap-1.5 text-sm text-[#4A4A4A] hover:text-[#6B6B6B] transition-colors"
                           >
                             <FileText className="size-3.5" />
                             Full Package
@@ -1009,7 +1013,7 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                               href={`/u/${username}/packages/${pkg.id}/print`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-300 transition-colors"
+                              className="flex items-center gap-1.5 text-sm text-[#4A4A4A] hover:text-[#6B6B6B] transition-colors"
                             >
                               <ScrollText className="size-3.5" />
                               View Contract
@@ -1026,7 +1030,7 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                               'flex items-center gap-1.5 text-sm transition-colors',
                               emailSentIds.has(pkg.id)
                                 ? 'text-emerald-400'
-                                : 'text-gray-500 hover:text-gray-300',
+                                : 'text-[#4A4A4A] hover:text-[#6B6B6B]',
                             )}
                           >
                             {emailingId === pkg.id
@@ -1042,16 +1046,17 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
 
                           {/* Popup */}
                           {emailPopupId === pkg.id && (
-                            <div className="absolute bottom-full right-0 mb-2 min-w-max max-w-[calc(100vw-3rem)] rounded-xl bg-[#111] border border-white/[0.12] shadow-xl p-3 z-50">
-                              <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">Email me</p>
+                            <div className="absolute bottom-full right-0 mb-2 min-w-max max-w-[calc(100vw-3rem)] rounded-xl bg-[#1C1C1C] border border-[#404040] shadow-[0_4px_24px_rgba(255,255,255,0.06)] p-3 z-50">
+                              <p className="text-xs font-semibold text-[#6B6B6B] mb-2 uppercase tracking-wide">Email me</p>
                               <label className="flex items-center gap-2 py-1 cursor-pointer select-none">
                                 <input
                                   type="checkbox"
                                   checked={emailOptPkg}
                                   onChange={e => setEmailOptPkg(e.target.checked)}
-                                  className="accent-[#67e8f9] size-3.5"
+                                  className="size-3.5"
+                                  style={{ accentColor: 'var(--space-accent)' }}
                                 />
-                                <span className="text-sm text-gray-300">Package proposal</span>
+                                <span className="text-sm text-[#A0A0A0]">Package proposal</span>
                               </label>
                               {bothSigned && (
                                 <label className="flex items-center gap-2 py-1 cursor-pointer select-none">
@@ -1059,15 +1064,16 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                                     type="checkbox"
                                     checked={emailOptContract}
                                     onChange={e => setEmailOptContract(e.target.checked)}
-                                    className="accent-[#67e8f9] size-3.5"
+                                    className="size-3.5"
+                                    style={{ accentColor: 'var(--space-accent)' }}
                                   />
-                                  <span className="text-sm text-gray-300">Signed contract</span>
+                                  <span className="text-sm text-[#A0A0A0]">Signed contract</span>
                                 </label>
                               )}
                               <button
                                 onClick={() => handleEmailSend(pkg)}
                                 disabled={!emailOptPkg && !emailOptContract}
-                                className="mt-2 w-full px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/[0.08] border border-white/[0.12] text-white hover:bg-white/[0.12] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                className="mt-2 w-full px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#2D2D2D] border border-[#404040] text-[#F0F0F0] hover:bg-[#E5E1D9] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                               >
                                 Send
                               </button>
@@ -1095,9 +1101,10 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                 className={cn(
                   'size-9 rounded-xl border flex items-center justify-center transition-all duration-200',
                   activeIdx === 0
-                    ? 'border-white/[0.04] text-gray-700 cursor-not-allowed'
-                    : 'border-white/[0.10] text-gray-400 hover:border-[#67e8f9]/35 hover:text-[#67e8f9] hover:bg-[#67e8f9]/[0.05]',
+                    ? 'border-[#404040] text-[#4A4A4A] cursor-not-allowed'
+                    : 'border-[#404040] text-[#6B6B6B] hover:border-[rgba(139,156,182,0.18)] hover:bg-[rgba(139,156,182,0.04)]',
                 )}
+                style={activeIdx !== 0 ? { } : {}}
               >
                 <ChevronLeft className="size-4" />
               </button>
@@ -1107,8 +1114,8 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                 className={cn(
                   'size-9 rounded-xl border flex items-center justify-center transition-all duration-200',
                   activeIdx === total - 1
-                    ? 'border-white/[0.04] text-gray-700 cursor-not-allowed'
-                    : 'border-white/[0.10] text-gray-400 hover:border-[#67e8f9]/35 hover:text-[#67e8f9] hover:bg-[#67e8f9]/[0.05]',
+                    ? 'border-[#404040] text-[#4A4A4A] cursor-not-allowed'
+                    : 'border-[#404040] text-[#6B6B6B] hover:border-[rgba(139,156,182,0.18)] hover:bg-[rgba(139,156,182,0.04)]',
                 )}
               >
                 <ChevronRight className="size-4" />
@@ -1124,9 +1131,10 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                   className={cn(
                     'rounded-full transition-all duration-300',
                     i === activeIdx
-                      ? 'w-5 h-1.5 bg-[#67e8f9]'
-                      : 'w-1.5 h-1.5 bg-white/[0.18] hover:bg-white/30',
+                      ? 'w-5 h-1.5'
+                      : 'w-1.5 h-1.5 bg-[#333333] hover:bg-[#555555]',
                   )}
+                  style={i === activeIdx ? { background: 'var(--space-accent)', width: '1.25rem', height: '0.375rem' } : {}}
                 />
               ))}
             </div>
@@ -1139,7 +1147,7 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
         {/* ── Package selector strip ────────────────────────────────────────── */}
         {total > 1 && (
           <div className="px-6 lg:px-10 pt-4 pb-10">
-            <p className="text-[9px] font-bold tracking-[0.28em] uppercase gradient-text mb-3">
+            <p className="text-[9px] font-bold tracking-[0.28em] uppercase text-[#1E3A6E] mb-3">
               All Packages
             </p>
             <div className="flex gap-2.5 overflow-x-auto scrollbar-none pb-1">
@@ -1153,21 +1161,21 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                     className={cn(
                       'shrink-0 flex flex-col gap-1.5 p-3.5 rounded-xl border text-left transition-all duration-200',
                       isActive
-                        ? 'border-[#67e8f9]/25 bg-[#67e8f9]/[0.06]'
-                        : 'border-white/[0.07] bg-white/[0.02] hover:border-white/[0.14] hover:bg-white/[0.04]',
+                        ? 'border-[rgba(139,156,182,0.18)] bg-[rgba(139,156,182,0.06)]'
+                        : 'border-[#404040] bg-[#252525] hover:border-[#404040] hover:bg-[#2D2D2D]',
                     )}
                     style={{ minWidth: 150, maxWidth: 200 }}
                   >
                     <div className="flex items-center gap-1.5">
-                      <span className={cn('text-[9px] font-bold tabular-nums', isActive ? 'text-[#67e8f9]/60' : 'text-gray-600')}>
+                      <span className={cn('text-[9px] font-bold tabular-nums', isActive ? '' : 'text-[#4A4A4A]')} style={isActive ? { color: 'var(--space-accent)', opacity: 0.6 } : {}}>
                         {pad(i + 1)}
                       </span>
                     </div>
-                    <p className={cn('text-xs font-semibold leading-snug line-clamp-2', isActive ? 'text-white' : 'text-gray-400')}>
+                    <p className={cn('text-xs font-semibold leading-snug line-clamp-2', isActive ? 'text-[#F0F0F0]' : 'text-[#6B6B6B]')}>
                       {pkg.name}
                     </p>
                     {(oneTime > 0 || monthly > 0) && (
-                      <p className={cn('text-xs font-mono tabular-nums', isActive ? 'text-[#67e8f9]' : 'text-gray-600')}>
+                      <p className={cn('text-xs font-mono tabular-nums')} style={isActive ? { color: 'var(--space-accent)' } : { color: '#4A4A4A' }}>
                         {oneTime > 0 ? fmt(oneTime) : `${fmt(monthly)}/mo`}
                       </p>
                     )}

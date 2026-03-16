@@ -164,11 +164,11 @@ export function ClientSettingsCard({
 
   return (
     <div
-      className="rounded-2xl border border-white/[0.08] overflow-hidden"
-      style={{ background: 'linear-gradient(145deg, #1a1a1a 0%, #111 100%)' }}
+      className="rounded-2xl border border-[#404040] overflow-hidden"
+      style={{ background: 'linear-gradient(145deg, #252525 0%, #2D2D2D 100%)' }}
     >
       {/* Top accent line */}
-      <div className="h-px bg-gradient-to-r from-transparent via-[#67e8f9]/30 to-transparent" />
+      <div className="h-px bg-gradient-to-r from-transparent via-[#1E3A6E]/20 to-transparent" />
 
       <div className="p-6 space-y-5">
 
@@ -176,12 +176,12 @@ export function ClientSettingsCard({
         <div className="flex items-start gap-4">
           {/* Avatar */}
           <div className="relative shrink-0">
-            <div className="size-16 rounded-2xl bg-cyan-400/[0.08] border border-cyan-400/[0.15] flex items-center justify-center">
-              <span className="text-2xl font-bold text-cyan-300 tracking-tight">{initials}</span>
+            <div className="size-16 rounded-2xl bg-[rgba(139,156,182,0.06)] border border-[rgba(139,156,182,0.15)] flex items-center justify-center">
+              <span className="text-2xl font-bold tracking-tight" style={{ color: 'var(--space-accent)' }}>{initials}</span>
             </div>
             {stripeCustomerId && (
-              <div className="absolute -bottom-1 -right-1 size-5 rounded-full bg-emerald-500 border-2 border-[#111] flex items-center justify-center">
-                <Check className="size-3 text-black" strokeWidth={3} />
+              <div className="absolute -bottom-1 -right-1 size-5 rounded-full bg-emerald-500 border-2 border-[#252525] flex items-center justify-center">
+                <Check className="size-3 text-white" strokeWidth={3} />
               </div>
             )}
           </div>
@@ -189,25 +189,25 @@ export function ClientSettingsCard({
           {/* Name + contact */}
           <div className="flex-1 min-w-0">
             <div className="overflow-x-auto scrollbar-none">
-              <h2 className="text-3xl font-bold gradient-text leading-tight whitespace-nowrap">{name}</h2>
+              <h2 className="text-3xl font-bold text-[#1E3A6E] leading-tight whitespace-nowrap">{name}</h2>
             </div>
             {company && (
-              <p className="text-sm text-gray-500 mt-0.5">{company}</p>
+              <p className="text-sm text-[#6B6B6B] mt-0.5">{company}</p>
             )}
             {email && (
-              <div className="flex items-center gap-1.5 mt-1 text-xs text-gray-600">
+              <div className="flex items-center gap-1.5 mt-1 text-xs text-[#4A4A4A]">
                 <Mail className="size-3 shrink-0" />
                 <span className="truncate">{email}</span>
               </div>
             )}
             {phone && (
-              <div className="flex items-center gap-1.5 mt-0.5 text-xs text-gray-600">
+              <div className="flex items-center gap-1.5 mt-0.5 text-xs text-[#4A4A4A]">
                 <Phone className="size-3 shrink-0" />
                 <span className="truncate">{phone}</span>
               </div>
             )}
             {(address?.line1 || address?.city) && (
-              <div className="flex items-start gap-1.5 mt-0.5 text-xs text-gray-600">
+              <div className="flex items-start gap-1.5 mt-0.5 text-xs text-[#4A4A4A]">
                 <MapPin className="size-3 shrink-0 mt-0.5" />
                 <span className="leading-snug">
                   {address.line1 && <span>{address.line1}{address.line2 ? `, ${address.line2}` : ''}<br /></span>}
@@ -216,7 +216,7 @@ export function ClientSettingsCard({
               </div>
             )}
             {company && !email && !phone && !address?.line1 && (
-              <div className="flex items-center gap-1.5 mt-0.5 text-xs text-gray-700">
+              <div className="flex items-center gap-1.5 mt-0.5 text-xs text-[#4A4A4A]">
                 <Building2 className="size-3 shrink-0" />
                 <span className="truncate">{company}</span>
               </div>
@@ -226,7 +226,7 @@ export function ClientSettingsCard({
             <div className="mt-2.5 flex items-center gap-2 flex-wrap">
               <button
                 onClick={handleOpenEdit}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-400 border border-white/[0.08] rounded-lg hover:text-white hover:border-white/[0.18] hover:bg-white/[0.03] transition-all"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[#6B6B6B] border border-[#404040] rounded-lg hover:text-[#F0F0F0] hover:border-[#404040] hover:bg-[#2D2D2D] transition-all"
               >
                 <Pencil className="size-3" />
                 Edit
@@ -241,8 +241,9 @@ export function ClientSettingsCard({
                       ? 'text-emerald-400 border-emerald-400/20 bg-emerald-400/[0.06]'
                       : resendResult === 'error'
                       ? 'text-red-400 border-red-400/20 bg-red-400/[0.06]'
-                      : 'text-gray-400 border-white/[0.08] hover:text-[#67e8f9] hover:border-[#67e8f9]/20 hover:bg-[#67e8f9]/[0.04]'
+                      : 'text-[#6B6B6B] border-[#404040] hover:border-[rgba(139,156,182,0.15)] hover:bg-[rgba(139,156,182,0.06)]'
                   }`}
+                  style={resendResult === null ? { } : undefined}
                 >
                   {resending ? (
                     <Loader2 className="size-3 animate-spin" />
@@ -264,10 +265,10 @@ export function ClientSettingsCard({
 
         {/* ── Team ── */}
         {allUsers.length > 0 && (
-          <div className="pt-4 border-t border-white/[0.06] space-y-3">
+          <div className="pt-4 border-t border-[#404040] space-y-3">
             <div className="flex items-center gap-2">
-              <Users className="size-3.5 text-gray-600" />
-              <p className="text-[10px] uppercase tracking-widest text-gray-600 font-semibold">
+              <Users className="size-3.5 text-[#4A4A4A]" />
+              <p className="text-[10px] uppercase tracking-widest text-[#4A4A4A] font-semibold">
                 Team · {allUsers.length}
               </p>
             </div>
@@ -275,17 +276,17 @@ export function ClientSettingsCard({
               {allUsers.map((u) => (
                 <div
                   key={u.id}
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-white/[0.07] bg-white/[0.02] text-xs"
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[#404040] bg-[rgba(255,255,255,0.02)] text-xs"
                 >
                   {u.type === 'developer'
-                    ? <Shield className="size-3 text-gray-600 shrink-0" />
-                    : <User className="size-3 text-[#67e8f9]/50 shrink-0" />
+                    ? <Shield className="size-3 text-[#4A4A4A] shrink-0" />
+                    : <User className="size-3 shrink-0" style={{ color: 'var(--space-accent)' }} />
                   }
-                  <span className={u.type === 'developer' ? 'text-gray-500' : 'text-gray-400'}>
+                  <span className={u.type === 'developer' ? 'text-[#6B6B6B]' : 'text-[#A0A0A0]'}>
                     {u.name}
                   </span>
                   <span className={`text-[9px] uppercase tracking-wide font-semibold ml-0.5 ${
-                    u.type === 'developer' ? 'text-gray-700' : 'text-[#67e8f9]/40'
+                    u.type === 'developer' ? 'text-[#4A4A4A]' : 'text-[#4A4A4A]'
                   }`}>
                     {u.type === 'developer' ? (u.title ?? 'developer') : 'client'}
                   </span>
@@ -298,58 +299,58 @@ export function ClientSettingsCard({
 
       {/* ── Edit Dialog ── */}
       <Dialog open={editOpen} onOpenChange={(v) => { if (!v) handleCloseEdit(); else setEditOpen(true) }}>
-        <DialogContent className="bg-[#111] border border-white/[0.10] text-white sm:max-w-[480px] rounded-2xl max-h-[90vh] overflow-y-auto">
-          <DialogTitle className="text-base font-semibold text-white">Edit Client Info</DialogTitle>
+        <DialogContent className="bg-[#1C1C1C] border border-[#404040] text-[#F0F0F0] sm:max-w-[480px] rounded-2xl max-h-[90vh] overflow-y-auto">
+          <DialogTitle className="text-base font-semibold text-[#F0F0F0]">Edit Client Info</DialogTitle>
           <div className="space-y-3 pt-1">
             <div className="grid grid-cols-2 gap-2.5">
               <div className="space-y-1.5">
-                <Label className="text-gray-500 text-xs uppercase tracking-wide">First Name</Label>
+                <Label className="text-[#6B6B6B] text-xs uppercase tracking-wide">First Name</Label>
                 <Input
                   value={form.firstName}
                   onChange={(e) => {
                     const val = e.target.value
                     setForm((f) => ({ ...f, firstName: val, name: `${val} ${f.lastName}`.trim() }))
                   }}
-                  className="h-9 bg-white/[0.04] border-white/[0.08] text-white focus-visible:ring-[#67e8f9]/30 text-sm"
+                  className="h-9 bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] focus-visible:ring-[var(--space-accent)]/30 text-sm"
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-gray-500 text-xs uppercase tracking-wide">Last Name</Label>
+                <Label className="text-[#6B6B6B] text-xs uppercase tracking-wide">Last Name</Label>
                 <Input
                   value={form.lastName}
                   onChange={(e) => {
                     const val = e.target.value
                     setForm((f) => ({ ...f, lastName: val, name: `${f.firstName} ${val}`.trim() }))
                   }}
-                  className="h-9 bg-white/[0.04] border-white/[0.08] text-white focus-visible:ring-[#67e8f9]/30 text-sm"
+                  className="h-9 bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] focus-visible:ring-[var(--space-accent)]/30 text-sm"
                 />
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-gray-500 text-xs uppercase tracking-wide">Display Name</Label>
+              <Label className="text-[#6B6B6B] text-xs uppercase tracking-wide">Display Name</Label>
               <Input
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                className="h-9 bg-white/[0.04] border-white/[0.08] text-white focus-visible:ring-[#67e8f9]/30 text-sm"
+                className="h-9 bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] focus-visible:ring-[var(--space-accent)]/30 text-sm"
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-gray-500 text-xs uppercase tracking-wide">Email</Label>
+              <Label className="text-[#6B6B6B] text-xs uppercase tracking-wide">Email</Label>
               <Input
                 type="email"
                 value={form.email}
                 onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
                 placeholder="client@example.com"
-                className="h-9 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-gray-700 focus-visible:ring-[#67e8f9]/30 text-sm"
+                className="h-9 bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] placeholder:text-[#4A4A4A] focus-visible:ring-[var(--space-accent)]/30 text-sm"
               />
             </div>
 
             {/* Welcome email toggle — visible whenever an email is set */}
             {form.email && (
-              <div className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-white/[0.025] border border-white/[0.06]">
+              <div className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-[#2D2D2D] border border-[#404040]">
                 <div className="space-y-0.5">
-                  <p className="text-xs font-medium text-gray-300">Send setup email</p>
-                  <p className="text-[10px] text-gray-600 leading-snug">
+                  <p className="text-xs font-medium text-[#A0A0A0]">Send setup email</p>
+                  <p className="text-[10px] text-[#4A4A4A] leading-snug">
                     {emailChanged
                       ? 'Sends a new setup link to the updated address'
                       : 'Resends a setup link on save (only if email changes)'}
@@ -358,71 +359,71 @@ export function ClientSettingsCard({
                 <Switch
                   checked={sendWelcomeEmail}
                   onCheckedChange={setSendWelcomeEmail}
-                  className="data-[state=checked]:bg-[#67e8f9] data-[state=unchecked]:bg-white/[0.12] shrink-0 ml-3"
+                  className="data-[state=checked]:bg-[var(--space-accent)] data-[state=unchecked]:bg-[#555555] shrink-0 ml-3"
                 />
               </div>
             )}
 
             <div className="space-y-1.5">
-              <Label className="text-gray-500 text-xs uppercase tracking-wide">Company</Label>
+              <Label className="text-[#6B6B6B] text-xs uppercase tracking-wide">Company</Label>
               <Input
                 value={form.company}
                 onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))}
                 placeholder="Optional"
-                className="h-9 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-gray-700 focus-visible:ring-[#67e8f9]/30 text-sm"
+                className="h-9 bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] placeholder:text-[#4A4A4A] focus-visible:ring-[var(--space-accent)]/30 text-sm"
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-gray-500 text-xs uppercase tracking-wide">Phone</Label>
+              <Label className="text-[#6B6B6B] text-xs uppercase tracking-wide">Phone</Label>
               <Input
                 type="tel"
                 value={form.phone}
                 onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
                 placeholder="+1 555-000-0000"
-                className="h-9 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-gray-700 focus-visible:ring-[#67e8f9]/30 text-sm"
+                className="h-9 bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] placeholder:text-[#4A4A4A] focus-visible:ring-[var(--space-accent)]/30 text-sm"
               />
             </div>
 
             {/* Address */}
             <div className="space-y-2 pt-1">
-              <p className="text-gray-500 text-xs uppercase tracking-wide font-medium">Address</p>
+              <p className="text-[#6B6B6B] text-xs uppercase tracking-wide font-medium">Address</p>
               <Input
                 value={form.address.line1 ?? ''}
                 onChange={(e) => setAddr('line1', e.target.value)}
                 placeholder="Street address"
-                className="h-9 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-gray-700 focus-visible:ring-[#67e8f9]/30 text-sm"
+                className="h-9 bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] placeholder:text-[#4A4A4A] focus-visible:ring-[var(--space-accent)]/30 text-sm"
               />
               <Input
                 value={form.address.line2 ?? ''}
                 onChange={(e) => setAddr('line2', e.target.value)}
                 placeholder="Suite, unit, etc. (optional)"
-                className="h-9 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-gray-700 focus-visible:ring-[#67e8f9]/30 text-sm"
+                className="h-9 bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] placeholder:text-[#4A4A4A] focus-visible:ring-[var(--space-accent)]/30 text-sm"
               />
               <div className="grid grid-cols-5 gap-2">
                 <Input
                   value={form.address.city ?? ''}
                   onChange={(e) => setAddr('city', e.target.value)}
                   placeholder="City"
-                  className="col-span-2 h-9 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-gray-700 focus-visible:ring-[#67e8f9]/30 text-sm"
+                  className="col-span-2 h-9 bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] placeholder:text-[#4A4A4A] focus-visible:ring-[var(--space-accent)]/30 text-sm"
                 />
                 <Input
                   value={form.address.state ?? ''}
                   onChange={(e) => setAddr('state', e.target.value)}
                   placeholder="State"
-                  className="col-span-1 h-9 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-gray-700 focus-visible:ring-[#67e8f9]/30 text-sm"
+                  className="col-span-1 h-9 bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] placeholder:text-[#4A4A4A] focus-visible:ring-[var(--space-accent)]/30 text-sm"
                 />
                 <Input
                   value={form.address.zip ?? ''}
                   onChange={(e) => setAddr('zip', e.target.value)}
                   placeholder="ZIP"
-                  className="col-span-2 h-9 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-gray-700 focus-visible:ring-[#67e8f9]/30 text-sm"
+                  className="col-span-2 h-9 bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] placeholder:text-[#4A4A4A] focus-visible:ring-[var(--space-accent)]/30 text-sm"
                 />
               </div>
               <Input
                 value={form.address.country ?? ''}
                 onChange={(e) => setAddr('country', e.target.value)}
                 placeholder="Country"
-                className="h-9 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-gray-700 focus-visible:ring-[#67e8f9]/30 text-sm"
+                className="h-9 bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] placeholder:text-[#4A4A4A] focus-visible:ring-[var(--space-accent)]/30 text-sm"
               />
             </div>
 
@@ -435,7 +436,7 @@ export function ClientSettingsCard({
               <Button
                 onClick={handleSave}
                 disabled={loading}
-                className="flex-1 bg-[#67e8f9] hover:bg-[#67e8f9]/90 text-black font-semibold h-9 text-sm"
+                className="flex-1 bg-[var(--space-accent)] hover:bg-[var(--space-accent)]/90 text-white font-semibold h-9 text-sm"
               >
                 {loading ? <Loader2 className="size-3.5 animate-spin" /> : 'Save Changes'}
               </Button>
@@ -443,7 +444,7 @@ export function ClientSettingsCard({
                 variant="ghost"
                 onClick={handleCloseEdit}
                 disabled={loading}
-                className="text-gray-500 hover:text-white hover:bg-white/[0.05] h-9 text-sm"
+                className="text-[#6B6B6B] hover:text-[#A0A0A0] hover:bg-[#2D2D2D] h-9 text-sm"
               >
                 Cancel
               </Button>

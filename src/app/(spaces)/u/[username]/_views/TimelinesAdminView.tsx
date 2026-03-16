@@ -55,9 +55,9 @@ function PhaseStrip({ phases }: { phases: TimelinePhase[] }) {
   if (!phases.length) {
     return (
       <div className="flex items-center gap-2 py-1">
-        <div className="h-px flex-1 bg-white/[0.05] rounded-full" />
-        <span className="text-[9px] text-white/20 font-medium shrink-0">no phases yet</span>
-        <div className="h-px flex-1 bg-white/[0.05] rounded-full" />
+        <div className="h-px flex-1 bg-[#333333] rounded-full" />
+        <span className="text-[9px] text-[#4A4A4A] font-medium shrink-0">no phases yet</span>
+        <div className="h-px flex-1 bg-[#333333] rounded-full" />
       </div>
     )
   }
@@ -131,13 +131,13 @@ function CopyButton({ text, className }: { text: string; className?: string }) {
       title="Copy"
       className={cn(
         'flex items-center justify-center size-5 rounded-md',
-        'text-white/30 hover:text-[#67e8f9] hover:bg-[#67e8f9]/[0.08]',
+        'text-[#4A4A4A] hover:text-[#F0F0F0] hover:bg-[#2D2D2D]',
         'transition-all duration-150',
         className,
       )}
     >
       {copied ? (
-        <span className="text-[8px] font-bold text-[#67e8f9] tracking-tight">OK</span>
+        <span className="text-[8px] font-bold tracking-tight" style={{ color: 'var(--space-accent)' }}>OK</span>
       ) : (
         <Copy className="size-3" />
       )}
@@ -198,22 +198,22 @@ function TimelineCard({
   return (
     <div className={cn(
       'group relative flex flex-col gap-4 p-5 rounded-2xl border',
-      'bg-white/[0.02] border-white/[0.07]',
-      'hover:bg-white/[0.035] hover:border-white/[0.13]',
+      'bg-[rgba(255,255,255,0.02)] border-[#404040]',
+      'hover:bg-[#2D2D2D] hover:border-[#404040]',
       'transition-all duration-200',
       'animate-in fade-in slide-in-from-bottom-2 duration-300',
     )}>
 
       {/* Top row: eyebrow + phase badge */}
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[9px] font-bold tracking-[0.28em] uppercase text-[#67e8f9]/70 truncate">
+        <span className="text-[9px] font-bold tracking-[0.28em] uppercase truncate" style={{ color: 'var(--space-accent)', opacity: 0.7 }}>
           {timeline.eyebrow}
         </span>
-        <span className="shrink-0 text-[8px] font-bold tracking-[0.1em] uppercase px-2 py-0.5 rounded-full border border-[#67e8f9]/15 text-[#67e8f9]/50 bg-[#67e8f9]/[0.04]">
+        <span className="shrink-0 text-[8px] font-bold tracking-[0.1em] uppercase px-2 py-0.5 rounded-full border border-[rgba(139,156,182,0.15)] text-[#6B6B6B] bg-[rgba(139,156,182,0.06)]">
           {phases.length} {phases.length === 1 ? 'phase' : 'phases'}
         </span>
         {timeline.style && timeline.style !== 'cinematic' && (
-          <span className="shrink-0 text-[8px] font-bold tracking-[0.1em] uppercase px-2 py-0.5 rounded-full border border-white/[0.10] text-white/30 bg-white/[0.03]">
+          <span className="shrink-0 text-[8px] font-bold tracking-[0.1em] uppercase px-2 py-0.5 rounded-full border border-[#404040] text-[#4A4A4A] bg-[rgba(255,255,255,0.02)]">
             {timeline.style.replace('-', ' ')}
           </span>
         )}
@@ -221,15 +221,15 @@ function TimelineCard({
 
       {/* Title */}
       <div>
-        <h3 className="text-base font-bold text-white leading-snug tracking-tight">
+        <h3 className="text-base font-bold text-[#F0F0F0] leading-snug tracking-tight">
           {timeline.title}
           {timeline.titleEmphasis && (
-            <em className="not-italic font-semibold text-[#67e8f9]/75 ml-1.5">
+            <em className="not-italic font-semibold ml-1.5" style={{ color: 'var(--space-accent)', opacity: 0.75 }}>
               {timeline.titleEmphasis}
             </em>
           )}
         </h3>
-        <p className="mt-1 font-mono text-[10px] text-white/20 tracking-wide">
+        <p className="mt-1 font-mono text-[10px] text-[#4A4A4A] tracking-wide">
           /timelines/{timeline.slug}
         </p>
       </div>
@@ -269,13 +269,13 @@ function TimelineCard({
       {(timeline.dateRange || timeline.metaLabel) && (
         <div className="flex items-center gap-3 flex-wrap">
           {timeline.dateRange && (
-            <span className="flex items-center gap-1 text-[10px] text-white/35">
+            <span className="flex items-center gap-1 text-[10px] text-[#4A4A4A]">
               <CalendarRange className="size-2.5 shrink-0 opacity-50" />
               {timeline.dateRange}
             </span>
           )}
           {timeline.metaLabel && (
-            <span className="text-[10px] text-white/20 italic">{timeline.metaLabel}</span>
+            <span className="text-[10px] text-[#4A4A4A] italic">{timeline.metaLabel}</span>
           )}
         </div>
       )}
@@ -283,9 +283,9 @@ function TimelineCard({
       {/* Share link + access code */}
       <div className="space-y-2">
         {/* Share URL row */}
-        <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/[0.025] border border-white/[0.05]">
-          <Link2 className="size-3 shrink-0 text-[#67e8f9]/40" />
-          <span className="flex-1 font-mono text-[9px] text-white/30 truncate tracking-wide">
+        <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#252525] border border-[#404040]">
+          <Link2 className="size-3 shrink-0 text-[#4A4A4A]" />
+          <span className="flex-1 font-mono text-[9px] text-[#4A4A4A] truncate tracking-wide">
             {shareUrl}
           </span>
           <CopyButton text={`https://${shareUrl}`} />
@@ -307,8 +307,8 @@ function TimelineCard({
                 placeholder="e.g. ORCA-2026 (blank to remove)"
                 className={cn(
                   'flex-1 px-2.5 py-1 text-[10px] font-mono tracking-widest',
-                  'bg-white/[0.05] border rounded-lg text-white placeholder:text-white/15',
-                  'focus:outline-none focus:border-amber-400/30 focus:bg-white/[0.07]',
+                  'bg-[#252525] border rounded-lg text-[#F0F0F0] placeholder:text-[#4A4A4A]',
+                  'focus:outline-none focus:border-amber-400/30 focus:bg-[#2D2D2D]',
                   'transition-all',
                   saveError ? 'border-red-500/40' : 'border-amber-400/20',
                 )}
@@ -333,7 +333,7 @@ function TimelineCard({
               </button>
               <button
                 onClick={() => setEditingCode(false)}
-                className="shrink-0 flex items-center justify-center size-6 rounded-lg text-white/20 hover:text-white/50 transition-colors"
+                className="shrink-0 flex items-center justify-center size-6 rounded-lg text-[#4A4A4A] hover:text-[#A0A0A0] transition-colors"
               >
                 <X className="size-3" />
               </button>
@@ -343,15 +343,15 @@ function TimelineCard({
             )}
           </div>
         ) : accessCode ? (
-          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/[0.025] border border-white/[0.05]">
+          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#252525] border border-[#404040]">
             <KeyRound className="size-3 shrink-0 text-amber-400/40" />
-            <span className="flex-1 font-mono text-[9px] tracking-widest text-white/40 select-none">
+            <span className="flex-1 font-mono text-[9px] tracking-widest text-[#6B6B6B] select-none">
               {showCode ? accessCode : '•'.repeat(Math.min(accessCode.length, 10))}
             </span>
             <button
               onClick={() => setShowCode(v => !v)}
               title={showCode ? 'Hide code' : 'Reveal code'}
-              className="flex items-center justify-center size-5 rounded-md text-white/25 hover:text-white/60 transition-colors"
+              className="flex items-center justify-center size-5 rounded-md text-[#4A4A4A] hover:text-[#A0A0A0] transition-colors"
             >
               {showCode ? <EyeOff className="size-3" /> : <Eye className="size-3" />}
             </button>
@@ -359,7 +359,7 @@ function TimelineCard({
             <button
               onClick={openEditor}
               title="Edit access code"
-              className="flex items-center justify-center size-5 rounded-md text-white/20 hover:text-amber-400/70 transition-colors"
+              className="flex items-center justify-center size-5 rounded-md text-[#4A4A4A] hover:text-amber-400/70 transition-colors"
             >
               <Pencil className="size-3" />
             </button>
@@ -369,13 +369,13 @@ function TimelineCard({
             onClick={openEditor}
             className={cn(
               'w-full flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg',
-              'border border-dashed border-white/[0.06] text-left',
+              'border border-dashed border-[#404040] text-left',
               'hover:border-amber-400/20 hover:bg-amber-400/[0.03]',
               'transition-all duration-150 group/code',
             )}
           >
-            <KeyRound className="size-3 shrink-0 text-white/15 group-hover/code:text-amber-400/40 transition-colors" />
-            <span className="text-[9px] text-white/15 italic group-hover/code:text-white/30 transition-colors">
+            <KeyRound className="size-3 shrink-0 text-[#4A4A4A] group-hover/code:text-amber-400/40 transition-colors" />
+            <span className="text-[9px] text-[#4A4A4A] italic group-hover/code:text-[#6B6B6B] transition-colors">
               Add access code…
             </span>
           </button>
@@ -383,7 +383,7 @@ function TimelineCard({
       </div>
 
       {/* Divider */}
-      <div className="h-px bg-white/[0.05]" />
+      <div className="h-px bg-[#333333]" />
 
       {/* Actions */}
       <div className="flex gap-2">
@@ -392,8 +392,8 @@ function TimelineCard({
           className={cn(
             'flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl',
             'text-[11px] font-bold tracking-[0.1em] uppercase',
-            'border border-white/[0.09] text-white/50',
-            'hover:text-white hover:border-white/[0.18] hover:bg-white/[0.04]',
+            'border border-[#404040] text-[#6B6B6B]',
+            'hover:text-[#F0F0F0] hover:border-[#404040] hover:bg-[#2D2D2D]',
             'transition-all duration-150',
           )}
         >
@@ -420,8 +420,8 @@ function TimelineCard({
           className={cn(
             'flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl',
             'text-[11px] font-bold tracking-[0.1em] uppercase',
-            'border border-[#67e8f9]/18 text-[#67e8f9]/60',
-            'hover:text-[#67e8f9] hover:border-[#67e8f9]/38 hover:bg-[#67e8f9]/[0.05]',
+            'border border-[rgba(139,156,182,0.15)] text-[#6B6B6B]',
+            'hover:text-[#F0F0F0] hover:border-[rgba(139,156,182,0.22)] hover:bg-[rgba(139,156,182,0.06)]',
             'transition-all duration-150',
           )}
         >
@@ -498,7 +498,7 @@ function CreateModal({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/75 backdrop-blur-sm"
+        className="absolute inset-0 bg-[#000000]/[0.40]"
         onClick={onClose}
       />
 
@@ -507,33 +507,33 @@ function CreateModal({ onClose }: { onClose: () => void }) {
         className={cn(
           'relative z-10 w-full sm:max-w-lg',
           'rounded-t-3xl sm:rounded-2xl',
-          'border border-white/[0.10] overflow-hidden',
+          'border border-[#404040] overflow-hidden',
           'animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300',
         )}
-        style={{ background: 'linear-gradient(160deg, #141414 0%, #0d0d0d 100%)' }}
+        style={{ background: '#1C1C1C' }}
       >
         {/* Top accent line */}
-        <div className="h-px bg-gradient-to-r from-transparent via-[#67e8f9]/45 to-transparent" />
+        <div className="h-px bg-gradient-to-r from-transparent via-[#1E3A6E]/45 to-transparent" />
 
         {/* Mobile drag handle */}
         <div className="flex justify-center pt-3 pb-1 sm:hidden">
-          <div className="w-9 h-1 rounded-full bg-white/[0.12]" />
+          <div className="w-9 h-1 rounded-full bg-[#E5E1D9]" />
         </div>
 
         {/* Header */}
-        <div className="flex items-start justify-between px-6 pt-5 pb-4 border-b border-white/[0.05]">
+        <div className="flex items-start justify-between px-6 pt-5 pb-4 border-b border-[#404040]">
           <div>
-            <p className="text-[9px] font-bold tracking-[0.28em] uppercase text-[#67e8f9]/60 mb-1">
+            <p className="text-[9px] font-bold tracking-[0.28em] uppercase mb-1" style={{ color: 'var(--space-accent)', opacity: 0.6 }}>
               New
             </p>
-            <h2 className="text-lg font-bold text-white leading-none">Create Timeline</h2>
-            <p className="text-xs text-white/30 mt-1.5">
+            <h2 className="text-lg font-bold text-[#F0F0F0] leading-none">Create Timeline</h2>
+            <p className="text-xs text-[#6B6B6B] mt-1.5">
               Add phases after creation in the full editor.
             </p>
           </div>
           <button
             onClick={onClose}
-            className="size-8 rounded-xl border border-white/[0.08] flex items-center justify-center text-white/25 hover:text-white hover:border-white/[0.18] transition-all mt-0.5"
+            className="size-8 rounded-xl border border-[#404040] flex items-center justify-center text-[#4A4A4A] hover:text-[#F0F0F0] hover:border-[#404040] transition-all mt-0.5"
           >
             <X className="size-4" />
           </button>
@@ -550,20 +550,20 @@ function CreateModal({ onClose }: { onClose: () => void }) {
           {/* Title + Emphasis */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[9px] font-bold tracking-[0.2em] uppercase text-white/35 mb-1.5">
-                Title <span className="text-[#67e8f9]/50">*</span>
+              <label className="block text-[9px] font-bold tracking-[0.2em] uppercase text-[#6B6B6B] mb-1.5">
+                Title <span className="text-[#4A4A4A]">*</span>
               </label>
               <input
                 value={form.title}
                 onChange={e => update('title', e.target.value)}
                 placeholder="Launch"
-                className="w-full px-3 py-2.5 text-sm bg-white/[0.04] border border-white/[0.08] rounded-xl text-white placeholder:text-white/20 focus:outline-none focus:border-[#67e8f9]/30 focus:bg-white/[0.06] transition-all"
+                className="w-full px-3 py-2.5 text-sm bg-[#252525] border border-[#404040] rounded-xl text-[#F0F0F0] placeholder:text-[#4A4A4A] focus:outline-none focus:border-[#404040] focus:bg-[#2D2D2D] transition-all"
               />
             </div>
             <div>
-              <label className="block text-[9px] font-bold tracking-[0.2em] uppercase text-white/35 mb-1.5">
+              <label className="block text-[9px] font-bold tracking-[0.2em] uppercase text-[#6B6B6B] mb-1.5">
                 Emphasis{' '}
-                <span className="text-white/20 normal-case tracking-normal font-normal italic">
+                <span className="text-[#4A4A4A] normal-case tracking-normal font-normal italic">
                   (italic)
                 </span>
               </label>
@@ -571,63 +571,63 @@ function CreateModal({ onClose }: { onClose: () => void }) {
                 value={form.titleEmphasis}
                 onChange={e => update('titleEmphasis', e.target.value)}
                 placeholder="Roadmap"
-                className="w-full px-3 py-2.5 text-sm bg-white/[0.04] border border-white/[0.08] rounded-xl text-white placeholder:text-white/20 focus:outline-none focus:border-[#67e8f9]/30 focus:bg-white/[0.06] transition-all"
+                className="w-full px-3 py-2.5 text-sm bg-[#252525] border border-[#404040] rounded-xl text-[#F0F0F0] placeholder:text-[#4A4A4A] focus:outline-none focus:border-[#404040] focus:bg-[#2D2D2D] transition-all"
               />
             </div>
           </div>
 
           {/* Eyebrow */}
           <div>
-            <label className="block text-[9px] font-bold tracking-[0.2em] uppercase text-white/35 mb-1.5">
-              Eyebrow <span className="text-[#67e8f9]/50">*</span>
+            <label className="block text-[9px] font-bold tracking-[0.2em] uppercase text-[#6B6B6B] mb-1.5">
+              Eyebrow <span className="text-[#4A4A4A]">*</span>
             </label>
             <input
               value={form.eyebrow}
               onChange={e => update('eyebrow', e.target.value)}
               placeholder="Kawai Digital · Site Relaunch"
-              className="w-full px-3 py-2.5 text-sm bg-white/[0.04] border border-white/[0.08] rounded-xl text-white placeholder:text-white/20 focus:outline-none focus:border-[#67e8f9]/30 focus:bg-white/[0.06] transition-all"
+              className="w-full px-3 py-2.5 text-sm bg-[#252525] border border-[#404040] rounded-xl text-[#F0F0F0] placeholder:text-[#4A4A4A] focus:outline-none focus:border-[#404040] focus:bg-[#2D2D2D] transition-all"
             />
           </div>
 
           {/* Date range + meta */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[9px] font-bold tracking-[0.2em] uppercase text-white/35 mb-1.5">
+              <label className="block text-[9px] font-bold tracking-[0.2em] uppercase text-[#6B6B6B] mb-1.5">
                 Date Range
               </label>
               <input
                 value={form.dateRange}
                 onChange={e => update('dateRange', e.target.value)}
                 placeholder="March – April 2026"
-                className="w-full px-3 py-2.5 text-sm bg-white/[0.04] border border-white/[0.08] rounded-xl text-white placeholder:text-white/20 focus:outline-none focus:border-[#67e8f9]/30 focus:bg-white/[0.06] transition-all"
+                className="w-full px-3 py-2.5 text-sm bg-[#252525] border border-[#404040] rounded-xl text-[#F0F0F0] placeholder:text-[#4A4A4A] focus:outline-none focus:border-[#404040] focus:bg-[#2D2D2D] transition-all"
               />
             </div>
             <div>
-              <label className="block text-[9px] font-bold tracking-[0.2em] uppercase text-white/35 mb-1.5">
+              <label className="block text-[9px] font-bold tracking-[0.2em] uppercase text-[#6B6B6B] mb-1.5">
                 Meta Label
               </label>
               <input
                 value={form.metaLabel}
                 onChange={e => update('metaLabel', e.target.value)}
                 placeholder="Internal Planning Doc"
-                className="w-full px-3 py-2.5 text-sm bg-white/[0.04] border border-white/[0.08] rounded-xl text-white placeholder:text-white/20 focus:outline-none focus:border-[#67e8f9]/30 focus:bg-white/[0.06] transition-all"
+                className="w-full px-3 py-2.5 text-sm bg-[#252525] border border-[#404040] rounded-xl text-[#F0F0F0] placeholder:text-[#4A4A4A] focus:outline-none focus:border-[#404040] focus:bg-[#2D2D2D] transition-all"
               />
             </div>
           </div>
 
           {/* Slug */}
           <div>
-            <label className="block text-[9px] font-bold tracking-[0.2em] uppercase text-white/35 mb-1.5">
+            <label className="block text-[9px] font-bold tracking-[0.2em] uppercase text-[#6B6B6B] mb-1.5">
               Slug
             </label>
             <input
               value={form.slug}
               onChange={e => { setSlugTouched(true); update('slug', e.target.value) }}
               placeholder="launch-roadmap"
-              className="w-full px-3 py-2.5 text-sm font-mono bg-white/[0.04] border border-white/[0.08] rounded-xl text-white/60 placeholder:text-white/20 focus:outline-none focus:border-[#67e8f9]/30 focus:bg-white/[0.06] transition-all"
+              className="w-full px-3 py-2.5 text-sm font-mono bg-[#252525] border border-[#404040] rounded-xl text-[#6B6B6B] placeholder:text-[#4A4A4A] focus:outline-none focus:border-[#404040] focus:bg-[#2D2D2D] transition-all"
             />
             {form.slug && (
-              <p className="mt-1.5 text-[9px] text-white/20 font-mono">
+              <p className="mt-1.5 text-[9px] text-[#4A4A4A] font-mono">
                 /timelines/{form.slug}
               </p>
             )}
@@ -635,13 +635,13 @@ function CreateModal({ onClose }: { onClose: () => void }) {
 
           {/* Visual Style */}
           <div>
-            <label className="block text-[9px] font-bold tracking-[0.2em] uppercase text-white/35 mb-1.5">
+            <label className="block text-[9px] font-bold tracking-[0.2em] uppercase text-[#6B6B6B] mb-1.5">
               Visual Style
             </label>
             <select
               value={form.style ?? 'cinematic'}
               onChange={e => update('style' as any, e.target.value)}
-              className="w-full px-3 py-2.5 text-sm bg-white/[0.04] border border-white/[0.08] rounded-xl text-white focus:outline-none focus:border-[#67e8f9]/30 focus:bg-white/[0.06] transition-all"
+              className="w-full px-3 py-2.5 text-sm bg-[#252525] border border-[#404040] rounded-xl text-[#F0F0F0] focus:outline-none focus:border-[#404040] focus:bg-[#2D2D2D] transition-all"
             >
               <option value="cinematic">🎬 Cinematic — Dark gold horizontal</option>
               <option value="vertical-clean">📋 Vertical Clean — Minimal scrollable</option>
@@ -653,10 +653,10 @@ function CreateModal({ onClose }: { onClose: () => void }) {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center gap-3 px-6 py-4 border-t border-white/[0.06] bg-black/20">
+        <div className="flex items-center gap-3 px-6 py-4 border-t border-[#404040] bg-[#252525]">
           <button
             onClick={onClose}
-            className="px-4 py-2.5 text-sm text-white/35 hover:text-white rounded-xl hover:bg-white/[0.04] transition-all"
+            className="px-4 py-2.5 text-sm text-[#6B6B6B] hover:text-[#F0F0F0] rounded-xl hover:bg-[#2D2D2D] transition-all"
           >
             Cancel
           </button>
@@ -666,15 +666,15 @@ function CreateModal({ onClose }: { onClose: () => void }) {
             className={cn(
               'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl',
               'text-sm font-semibold tracking-wide',
-              'bg-[#67e8f9]/[0.10] border border-[#67e8f9]/25 text-[#67e8f9]',
-              'hover:bg-[#67e8f9]/[0.18] hover:border-[#67e8f9]/40',
+              'bg-[rgba(139,156,182,0.06)] border border-[rgba(139,156,182,0.15)] text-[#1E3A6E]',
+              'hover:bg-[rgba(139,156,182,0.10)] hover:border-[rgba(139,156,182,0.22)]',
               'disabled:opacity-30 disabled:pointer-events-none',
               'transition-all duration-150',
             )}
           >
             {loading ? (
               <span className="flex items-center gap-2">
-                <span className="size-3.5 rounded-full border-2 border-[#67e8f9]/30 border-t-[#67e8f9] animate-spin" />
+                <span className="size-3.5 rounded-full border-2 border-[rgba(139,156,182,0.20)] border-t-[#1E3A6E] animate-spin" />
                 Creating…
               </span>
             ) : (
@@ -697,8 +697,8 @@ function EmptyState({ onNew }: { onNew: () => void }) {
     <div className="flex flex-col items-center justify-center py-24 px-8 text-center">
       {/* Decorative icon + mini timeline */}
       <div className="relative mb-8">
-        <div className="inline-flex p-5 rounded-2xl bg-white/[0.03] border border-white/[0.07] mb-4">
-          <CalendarRange className="size-7 text-white/20" />
+        <div className="inline-flex p-5 rounded-2xl bg-[rgba(255,255,255,0.02)] border border-[#404040] mb-4">
+          <CalendarRange className="size-7 text-[#4A4A4A]" />
         </div>
         {/* Mini phase strip */}
         <div className="flex items-center justify-center gap-0">
@@ -735,16 +735,16 @@ function EmptyState({ onNew }: { onNew: () => void }) {
         </div>
       </div>
 
-      <p className="text-sm font-semibold text-white/45 mb-2">No timelines yet</p>
-      <p className="text-xs text-white/25 max-w-sm mb-8 leading-relaxed">
+      <p className="text-sm font-semibold text-[#6B6B6B] mb-2">No timelines yet</p>
+      <p className="text-xs text-[#4A4A4A] max-w-sm mb-8 leading-relaxed">
         Build visual project roadmaps to share with clients. Each timeline shows phases, checklists, and a launch milestone.
       </p>
       <button
         onClick={onNew}
         className={cn(
           'flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold',
-          'bg-[#67e8f9]/[0.10] border border-[#67e8f9]/25 text-[#67e8f9]',
-          'hover:bg-[#67e8f9]/[0.18] hover:border-[#67e8f9]/40',
+          'bg-[rgba(139,156,182,0.06)] border border-[rgba(139,156,182,0.15)] text-[#1E3A6E]',
+          'hover:bg-[rgba(139,156,182,0.10)] hover:border-[rgba(139,156,182,0.22)]',
           'transition-all duration-150',
         )}
       >
@@ -792,13 +792,13 @@ export function TimelinesAdminView({ username: _username }: Props) {
       {/* ── Header ── */}
       <div className="flex items-start justify-between gap-4 mb-7">
         <div>
-          <p className="text-[9px] font-bold tracking-[0.32em] uppercase text-[#67e8f9]/80 mb-1">
+          <p className="text-[9px] font-bold tracking-[0.32em] uppercase mb-1" style={{ color: 'var(--space-accent)', opacity: 0.8 }}>
             Operations
           </p>
-          <h1 className="text-2xl font-bold text-white tracking-tight leading-none">
+          <h1 className="text-2xl font-bold text-[#F0F0F0] tracking-tight leading-none">
             Timelines
           </h1>
-          <p className="text-sm text-white/30 mt-1.5">
+          <p className="text-sm text-[#6B6B6B] mt-1.5">
             Build &amp; manage client project roadmaps
           </p>
         </div>
@@ -807,8 +807,8 @@ export function TimelinesAdminView({ username: _username }: Props) {
           className={cn(
             'shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl',
             'text-sm font-semibold tracking-wide',
-            'bg-[#67e8f9]/[0.10] border border-[#67e8f9]/25 text-[#67e8f9]',
-            'hover:bg-[#67e8f9]/[0.18] hover:border-[#67e8f9]/40',
+            'bg-[rgba(139,156,182,0.06)] border border-[rgba(139,156,182,0.15)] text-[#1E3A6E]',
+            'hover:bg-[rgba(139,156,182,0.10)] hover:border-[rgba(139,156,182,0.22)]',
             'transition-all duration-150',
           )}
         >
@@ -830,15 +830,15 @@ export function TimelinesAdminView({ username: _username }: Props) {
           ).map(({ label, value, icon: Icon }) => (
             <div
               key={label}
-              className="flex flex-col gap-1.5 px-4 py-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06]"
+              className="flex flex-col gap-1.5 px-4 py-3.5 rounded-xl bg-[rgba(255,255,255,0.02)] border border-[#404040]"
             >
               <div className="flex items-center gap-1.5">
-                <Icon className="size-3 text-white/25 shrink-0" />
-                <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/25 truncate">
+                <Icon className="size-3 text-[#4A4A4A] shrink-0" />
+                <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#4A4A4A] truncate">
                   {label}
                 </span>
               </div>
-              <span className="text-xl font-bold text-white tabular-nums leading-none">
+              <span className="text-xl font-bold text-[#F0F0F0] tabular-nums leading-none">
                 {value}
               </span>
             </div>
@@ -849,17 +849,17 @@ export function TimelinesAdminView({ username: _username }: Props) {
       {/* ── Search (only when there are timelines) ── */}
       {!loading && timelines.length > 1 && (
         <div className="relative mb-6">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-3.5 text-white/25 pointer-events-none" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-3.5 text-[#4A4A4A] pointer-events-none" />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search timelines…"
-            className="w-full pl-9 pr-4 py-2.5 text-sm bg-white/[0.04] border border-white/[0.08] rounded-xl text-white placeholder:text-white/25 focus:outline-none focus:border-[#67e8f9]/30 focus:bg-white/[0.06] transition-all"
+            className="w-full pl-9 pr-4 py-2.5 text-sm bg-[#252525] border border-[#404040] rounded-xl text-[#F0F0F0] placeholder:text-[#4A4A4A] focus:outline-none focus:border-[#404040] focus:bg-[#2D2D2D] transition-all"
           />
           {search && (
             <button
               onClick={() => setSearch('')}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/25 hover:text-white transition-colors"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#4A4A4A] hover:text-[#F0F0F0] transition-colors"
             >
               <X className="size-3.5" />
             </button>
@@ -875,22 +875,22 @@ export function TimelinesAdminView({ username: _username }: Props) {
             {[0, 120, 240].map(d => (
               <div
                 key={d}
-                className="w-1.5 h-1.5 rounded-full bg-[#67e8f9]/35 animate-pulse"
+                className="w-1.5 h-1.5 rounded-full bg-[rgba(139,156,182,0.22)] animate-pulse"
                 style={{ animationDelay: `${d}ms` }}
               />
             ))}
           </div>
-          <span className="text-[10px] text-white/20 uppercase tracking-widest">Loading</span>
+          <span className="text-[10px] text-[#4A4A4A] uppercase tracking-widest">Loading</span>
         </div>
       ) : timelines.length === 0 ? (
         <EmptyState onNew={() => setShowCreate(true)} />
       ) : filtered.length === 0 ? (
         /* No search results */
         <div className="flex flex-col items-center justify-center py-24 text-center">
-          <p className="text-sm text-white/35 mb-1">No results for "{search}"</p>
+          <p className="text-sm text-[#6B6B6B] mb-1">No results for "{search}"</p>
           <button
             onClick={() => setSearch('')}
-            className="text-xs text-[#67e8f9]/60 hover:text-[#67e8f9] transition-colors mt-2"
+            className="text-xs text-[#6B6B6B] hover:text-[#F0F0F0] transition-colors mt-2"
           >
             Clear search
           </button>

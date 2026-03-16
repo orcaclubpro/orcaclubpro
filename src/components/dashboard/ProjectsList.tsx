@@ -118,10 +118,10 @@ export function ProjectsList({ projects }: { projects: any[] }) {
       {/* Section Header with Upcoming Deadlines Badge */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-lg bg-[#1c1c1c] border border-white/[0.10]">
-            <Folder className="size-5 text-intelligence-cyan" />
+          <div className="p-2.5 rounded-lg bg-white border border-[#404040]">
+            <Folder className="size-5 text-[var(--space-accent)]" />
           </div>
-          <h2 className="text-2xl font-bold text-white">Your Projects</h2>
+          <h2 className="text-2xl font-bold text-[#F0F0F0]">Your Projects</h2>
         </div>
         {upcomingDeadlines.length > 0 && (
           <MetricBadge
@@ -145,7 +145,7 @@ export function ProjectsList({ projects }: { projects: any[] }) {
             <Link
               key={index}
               href={`/u/${username}/projects/${project.id}`}
-              className="block group relative overflow-hidden rounded-xl border border-white/[0.08] bg-[#1c1c1c] backdrop-blur-md p-6 hover:border-white/[0.14] hover:bg-[#242424] transition-all duration-500 hover:scale-[1.01] animate-in fade-in slide-in-from-bottom-2 duration-300 cursor-pointer"
+              className="block group relative overflow-hidden rounded-xl border border-[#404040] bg-[#252525] p-6 hover:border-[#404040] hover:bg-[#2D2D2D] transition-all duration-500 hover:scale-[1.01] animate-in fade-in slide-in-from-bottom-2 duration-300 cursor-pointer"
               style={{ animationDelay: `${Math.min(index * 40, 200)}ms` }}
             >
               {/* Subtle glow orb */}
@@ -156,7 +156,7 @@ export function ProjectsList({ projects }: { projects: any[] }) {
                 <div className="flex items-start justify-between mb-6">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-2xl font-bold text-white">
+                      <h3 className="text-2xl font-bold text-[#F0F0F0]">
                         {project.name}
                       </h3>
                       <Badge
@@ -168,7 +168,7 @@ export function ProjectsList({ projects }: { projects: any[] }) {
                       </Badge>
                     </div>
                     {project.description && (
-                      <p className="text-gray-200 text-sm leading-relaxed">
+                      <p className="text-[#A0A0A0] text-sm leading-relaxed">
                         {project.description}
                       </p>
                     )}
@@ -195,21 +195,21 @@ export function ProjectsList({ projects }: { projects: any[] }) {
                 {project.status !== 'cancelled' && (
                   <div className="mb-6">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                      <span className="text-xs font-semibold text-[#A0A0A0] uppercase tracking-wider">
                         Progress
                       </span>
-                      <span className="text-xs font-semibold text-white">
+                      <span className="text-xs font-semibold text-[#F0F0F0]">
                         {progress}%
                       </span>
                     </div>
-                    <div className="relative h-2 bg-white/[0.07] rounded-full overflow-hidden border border-white/[0.06]">
+                    <div className="relative h-2 bg-[#2D2D2D] rounded-full overflow-hidden border border-[#404040]">
                       <div
                         className={`absolute inset-y-0 left-0 rounded-full transition-all duration-1000 ${
                           project.status === 'on-hold'
                             ? 'bg-gradient-to-r from-yellow-400 to-orange-400 opacity-60'
                             : project.status === 'completed'
                             ? 'bg-gradient-to-r from-blue-400 to-blue-500'
-                            : 'bg-gradient-to-r from-green-400 to-intelligence-cyan'
+                            : 'bg-gradient-to-r from-green-400 to-[#1E3A6E]'
                         }`}
                         style={{ width: `${progress}%` }}
                       />
@@ -219,35 +219,35 @@ export function ProjectsList({ projects }: { projects: any[] }) {
 
                 {/* Details Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  <div className="flex items-start gap-2.5 p-3 rounded-lg bg-[#1c1c1c] border border-white/[0.08]">
-                    <div className="p-2 rounded-md bg-white/[0.05] border border-white/[0.08]">
-                      <Calendar className="size-3.5 text-intelligence-cyan" />
+                  <div className="flex items-start gap-2.5 p-3 rounded-lg bg-white border border-[#404040]">
+                    <div className="p-2 rounded-md bg-[#252525] border border-[#404040]">
+                      <Calendar className="size-3.5 text-[var(--space-accent)]" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-gray-300 uppercase tracking-wider mb-0.5">
+                      <p className="text-xs font-semibold text-[#A0A0A0] uppercase tracking-wider mb-0.5">
                         Start Date
                       </p>
-                      <p className="text-sm text-white font-medium">
+                      <p className="text-sm text-[#F0F0F0] font-medium">
                         {formatDate(project.startDate)}
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-2.5 p-3 rounded-lg bg-[#1c1c1c] border border-white/[0.08]">
-                    <div className="p-2 rounded-md bg-white/[0.05] border border-white/[0.08]">
+                  <div className="flex items-start gap-2.5 p-3 rounded-lg bg-white border border-[#404040]">
+                    <div className="p-2 rounded-md bg-[#252525] border border-[#404040]">
                       <Clock className="size-3.5 text-blue-400" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-gray-300 uppercase tracking-wider mb-0.5">
+                      <p className="text-xs font-semibold text-[#A0A0A0] uppercase tracking-wider mb-0.5">
                         End Date
                       </p>
-                      <p className="text-sm text-white font-medium">
+                      <p className="text-sm text-[#F0F0F0] font-medium">
                         {formatDate(project.endDate)}
                       </p>
                       {daysRemaining !== null &&
                         daysRemaining > 0 &&
                         project.status === 'active' && (
-                          <p className="text-xs text-intelligence-cyan mt-0.5 font-medium">
+                          <p className="text-xs text-[var(--space-accent)] mt-0.5 font-medium">
                             {daysRemaining} days remaining
                           </p>
                         )}
@@ -262,15 +262,15 @@ export function ProjectsList({ projects }: { projects: any[] }) {
                   </div>
 
                   {project.budget && (
-                    <div className="flex items-start gap-2.5 p-3 rounded-lg bg-white/[0.02] border border-white/[0.06]">
-                      <div className="p-2 rounded-md bg-white/[0.04] border border-white/[0.06]">
+                    <div className="flex items-start gap-2.5 p-3 rounded-lg bg-[#252525] border border-[#404040]">
+                      <div className="p-2 rounded-md bg-white border border-[#404040]">
                         <DollarSign className="size-3.5 text-green-400" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-gray-300 uppercase tracking-wider mb-0.5">
+                        <p className="text-xs font-semibold text-[#A0A0A0] uppercase tracking-wider mb-0.5">
                           Budget
                         </p>
-                        <p className="text-sm text-white font-medium">
+                        <p className="text-sm text-[#F0F0F0] font-medium">
                           {new Intl.NumberFormat('en-US', {
                             style: 'currency',
                             currency: 'USD',

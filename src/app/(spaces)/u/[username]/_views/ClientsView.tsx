@@ -29,7 +29,7 @@ interface ClientsViewProps {
 // ─── Palette ──────────────────────────────────────────────────────────────────
 
 const PALETTES = [
-  { text: 'text-cyan-300',    dot: 'bg-cyan-400'    },
+  { text: 'text-blue-500',    dot: 'bg-[#1E3A6E]'   },
   { text: 'text-blue-400',    dot: 'bg-blue-400'    },
   { text: 'text-violet-400',  dot: 'bg-violet-400'  },
   { text: 'text-emerald-400', dot: 'bg-emerald-400' },
@@ -72,8 +72,8 @@ function ClientNavRow({
         'w-full flex items-center gap-3 px-5 py-3.5 text-left transition-all duration-150 border-l-2 group',
         'animate-in fade-in slide-in-from-left-1 duration-300',
         isSelected
-          ? 'border-l-cyan-400/60 bg-white/[0.04]'
-          : 'border-l-transparent hover:bg-white/[0.02] hover:border-l-white/[0.08]',
+          ? 'border-l-[rgba(139,156,182,0.50)] bg-[#2D2D2D]'
+          : 'border-l-transparent hover:bg-[rgba(255,255,255,0.02)] hover:border-l-[#404040]',
       )}
       style={{ animationDelay: `${animationDelay}ms` }}
     >
@@ -90,12 +90,12 @@ function ClientNavRow({
         <p
           className={cn(
             'text-sm font-semibold truncate transition-colors duration-150',
-            isSelected ? 'text-white' : 'text-white/60 group-hover:text-white/85',
+            isSelected ? 'text-[#F0F0F0]' : 'text-[#6B6B6B] group-hover:text-[#A0A0A0]',
           )}
         >
           {client.name}
         </p>
-        <p className="text-[10px] text-white/35 truncate mt-0.5">
+        <p className="text-[10px] text-[#4A4A4A] truncate mt-0.5">
           {client.company || client.email}
         </p>
       </div>
@@ -207,18 +207,18 @@ function ClientEditModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-black border-white/[0.06] max-w-lg p-0 overflow-hidden">
+      <DialogContent className="bg-[#1C1C1C] border-[#404040] max-w-lg p-0 overflow-hidden">
 
         {/* Header */}
-        <div className="px-8 pt-8 pb-6 border-b border-white/[0.05]">
-          <p className="text-[10px] tracking-[0.4em] uppercase gradient-text font-medium mb-2">
+        <div className="px-8 pt-8 pb-6 border-b border-[#404040]">
+          <p className="text-[10px] tracking-[0.4em] uppercase text-[#1E3A6E] font-medium mb-2">
             Client Settings
           </p>
-          <DialogTitle className="text-xl font-bold text-white leading-tight line-clamp-1">
+          <DialogTitle className="text-xl font-bold text-[#F0F0F0] leading-tight line-clamp-1">
             {client.name}
           </DialogTitle>
           <DialogDescription className="sr-only">Edit client account settings</DialogDescription>
-          <div className="mt-3 w-6 h-px bg-cyan-400/40" />
+          <div className="mt-3 w-6 h-px bg-[rgba(139,156,182,0.20)]" />
         </div>
 
         {/* Form */}
@@ -226,55 +226,55 @@ function ClientEditModal({
 
           {/* Identity */}
           <section className="space-y-4">
-            <p className="text-[10px] tracking-[0.4em] uppercase gradient-text font-medium">Identity</p>
+            <p className="text-[10px] tracking-[0.4em] uppercase text-[#1E3A6E] font-medium">Identity</p>
             <div className="space-y-1.5">
-              <label className="text-[11px] text-white/35 tracking-wide">Display Name <span className="text-red-400/60">*</span></label>
+              <label className="text-[11px] text-[#4A4A4A] tracking-wide">Display Name <span className="text-red-400/60">*</span></label>
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="bg-white/[0.03] border-white/[0.06] text-white focus:border-cyan-400/30 focus-visible:ring-0"
+                className="bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] focus:border-[rgba(139,156,182,0.20)] focus-visible:ring-0"
                 disabled={isSaving}
                 required
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label className="text-[11px] text-white/35 tracking-wide">First Name</label>
+                <label className="text-[11px] text-[#4A4A4A] tracking-wide">First Name</label>
                 <Input
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
-                  className="bg-white/[0.03] border-white/[0.06] text-white focus:border-cyan-400/30 focus-visible:ring-0"
+                  className="bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] focus:border-[rgba(139,156,182,0.20)] focus-visible:ring-0"
                   disabled={isSaving}
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[11px] text-white/35 tracking-wide">Last Name</label>
+                <label className="text-[11px] text-[#4A4A4A] tracking-wide">Last Name</label>
                 <Input
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
-                  className="bg-white/[0.03] border-white/[0.06] text-white focus:border-cyan-400/30 focus-visible:ring-0"
+                  className="bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] focus:border-[rgba(139,156,182,0.20)] focus-visible:ring-0"
                   disabled={isSaving}
                 />
               </div>
             </div>
             <div className="space-y-1.5">
-              <label className="text-[11px] text-white/35 tracking-wide">Company</label>
+              <label className="text-[11px] text-[#4A4A4A] tracking-wide">Company</label>
               <Input
                 value={company}
                 onChange={(e) => setCompany(e.target.value)}
                 placeholder="Optional"
-                className="bg-white/[0.03] border-white/[0.06] text-white placeholder:text-white/15 focus:border-cyan-400/30 focus-visible:ring-0"
+                className="bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] placeholder:text-[#4A4A4A] focus:border-[rgba(139,156,182,0.20)] focus-visible:ring-0"
                 disabled={isSaving}
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[11px] text-white/35 tracking-wide">Email</label>
+              <label className="text-[11px] text-[#4A4A4A] tracking-wide">Email</label>
               <Input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="client@example.com"
-                className="bg-white/[0.03] border-white/[0.06] text-white placeholder:text-white/15 focus:border-cyan-400/30 focus-visible:ring-0"
+                className="bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] placeholder:text-[#4A4A4A] focus:border-[rgba(139,156,182,0.20)] focus-visible:ring-0"
                 disabled={isSaving}
               />
             </div>
@@ -282,25 +282,25 @@ function ClientEditModal({
 
           {/* Team Members */}
           {members.length > 0 && (
-            <section className="space-y-3 border-t border-white/[0.05] pt-5">
-              <p className="text-[10px] tracking-[0.4em] uppercase gradient-text font-medium">Team Members</p>
+            <section className="space-y-3 border-t border-[#404040] pt-5">
+              <p className="text-[10px] tracking-[0.4em] uppercase text-[#1E3A6E] font-medium">Team Members</p>
               <div className="space-y-1.5">
                 {members.map((m) => (
                   <div
                     key={m.id}
-                    className="flex items-center gap-3 px-4 py-2.5 rounded-lg bg-white/[0.025] border border-white/[0.04]"
+                    className="flex items-center gap-3 px-4 py-2.5 rounded-lg bg-[#2D2D2D] border border-[#404040]"
                   >
-                    <Shield className="size-3.5 text-gray-700 shrink-0" />
+                    <Shield className="size-3.5 text-[#4A4A4A] shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs text-white/60 truncate">{m.name}</p>
-                      {m.title && <p className="text-[10px] text-gray-400 truncate">{m.title}</p>}
+                      <p className="text-xs text-[#A0A0A0] truncate">{m.name}</p>
+                      {m.title && <p className="text-[10px] text-[#6B6B6B] truncate">{m.title}</p>}
                     </div>
                     <button
                       type="button"
                       onClick={() => handleRemoveMember(m.id)}
                       disabled={removingId === m.id || isSaving}
                       title="Remove from team"
-                      className="size-6 rounded-full flex items-center justify-center text-white/20 hover:text-red-400/70 hover:bg-red-500/10 transition-all duration-150 disabled:opacity-30"
+                      className="size-6 rounded-full flex items-center justify-center text-[#4A4A4A] hover:text-red-400/70 hover:bg-red-500/10 transition-all duration-150 disabled:opacity-30"
                     >
                       {removingId === m.id
                         ? <Loader2 className="size-3 animate-spin" />
@@ -333,15 +333,15 @@ function ClientEditModal({
               <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-5 space-y-4 animate-in fade-in slide-in-from-bottom-1 duration-200">
                 <div className="space-y-1">
                   <p className="text-xs text-red-400/80 font-medium">This is permanent and cannot be undone.</p>
-                  <p className="text-[11px] text-white/30">
-                    Type <span className="font-mono text-white/50">{client.name}</span> to confirm.
+                  <p className="text-[11px] text-[#6B6B6B]">
+                    Type <span className="font-mono text-[#A0A0A0]">{client.name}</span> to confirm.
                   </p>
                 </div>
                 <Input
                   value={deleteInput}
                   onChange={(e) => setDeleteInput(e.target.value)}
                   placeholder={client.name}
-                  className="bg-white/[0.03] border-red-500/20 text-white placeholder:text-white/15 focus:border-red-400/40 focus-visible:ring-0 font-mono text-sm"
+                  className="bg-[#2D2D2D] border-red-500/20 text-[#F0F0F0] placeholder:text-[#4A4A4A] focus:border-red-400/40 focus-visible:ring-0 font-mono text-sm"
                   disabled={isDeleting}
                 />
                 {deleteError && <p className="text-xs text-red-400/75">{deleteError}</p>}
@@ -350,7 +350,7 @@ function ClientEditModal({
                     type="button"
                     onClick={() => { setShowDelete(false); setDeleteInput(''); setDeleteError(null) }}
                     disabled={isDeleting}
-                    className="flex-1 text-xs text-white/30 hover:text-white/50 bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] rounded-lg px-3 py-2 transition-all duration-150"
+                    className="flex-1 text-xs text-[#6B6B6B] hover:text-[#A0A0A0] bg-[#2D2D2D] hover:bg-[#E5E1D9] border border-[#404040] rounded-lg px-3 py-2 transition-all duration-150"
                   >
                     Cancel
                   </button>
@@ -372,7 +372,7 @@ function ClientEditModal({
         </form>
 
         {/* Footer */}
-        <div className="px-8 pb-7 pt-5 border-t border-white/[0.05] space-y-3">
+        <div className="px-8 pb-7 pt-5 border-t border-[#404040] space-y-3">
           {saveError && (
             <p className="text-xs text-red-400/75 animate-in fade-in duration-200">{saveError}</p>
           )}
@@ -388,7 +388,7 @@ function ClientEditModal({
               variant="ghost"
               onClick={() => onOpenChange(false)}
               disabled={isSaving}
-              className="flex-1 text-white/35 hover:text-white/55 hover:bg-white/[0.04] border border-white/[0.06] transition-all duration-150"
+              className="flex-1 text-[#6B6B6B] hover:text-[#A0A0A0] hover:bg-[#2D2D2D] border border-[#404040] transition-all duration-150"
             >
               <X className="size-3.5 mr-2" />
               Cancel
@@ -397,7 +397,7 @@ function ClientEditModal({
               type="submit"
               form="client-edit-form"
               disabled={isSaving}
-              className="flex-1 bg-intelligence-cyan text-black hover:bg-intelligence-cyan/90 font-medium shadow-lg shadow-intelligence-cyan/10"
+              className="flex-1 bg-[var(--space-accent)] text-white hover:bg-[var(--space-accent)]/90 font-medium"
             >
               {isSaving
                 ? <><Loader2 className="size-3.5 mr-2 animate-spin" />Saving…</>
@@ -417,11 +417,11 @@ function EmptyState({ canCreate, username }: { canCreate: boolean; username: str
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-12 text-center">
       <div className="relative mb-8">
-        <div className="absolute inset-0 bg-cyan-400/5 rounded-full blur-3xl scale-150" />
-        <Users className="size-12 text-white/10 relative z-10" />
+        <div className="absolute inset-0 bg-[rgba(139,156,182,0.04)] rounded-full blur-3xl scale-150" />
+        <Users className="size-12 text-[#4A4A4A] relative z-10" />
       </div>
-      <p className="text-[10px] tracking-[0.4em] uppercase gradient-text font-medium mb-3">No Clients</p>
-      <p className="text-sm text-gray-300 mb-8 leading-relaxed">
+      <p className="text-[10px] tracking-[0.4em] uppercase text-[#1E3A6E] font-medium mb-3">No Clients</p>
+      <p className="text-sm text-[#6B6B6B] mb-8 leading-relaxed">
         Client accounts will appear here once created.
       </p>
       {canCreate && (
@@ -473,7 +473,7 @@ function ClientDetail({
           <button
             type="button"
             onClick={() => setEditOpen(true)}
-            className="flex items-center gap-2.5 bg-[#1c1c1c] hover:bg-[#252525] border border-white/[0.14] hover:border-white/[0.24] text-white/75 hover:text-white font-semibold rounded-full px-7 py-3 text-sm transition-all duration-200"
+            className="flex items-center gap-2.5 bg-[#2D2D2D] hover:bg-[#E5E1D9] border border-[#404040] hover:border-[#404040] text-[#A0A0A0] hover:text-[#F0F0F0] font-semibold rounded-full px-7 py-3 text-sm transition-all duration-200"
           >
             <Settings className="size-4" />
             Edit
@@ -481,7 +481,7 @@ function ClientDetail({
         )}
         <Link
           href={`/u/${username}/clients/${client.id}`}
-          className="flex items-center gap-2.5 bg-intelligence-cyan hover:bg-intelligence-cyan/90 active:scale-[0.98] text-black font-bold rounded-full px-7 py-3 text-sm transition-all duration-200 group shadow-[0_0_28px_rgba(103,232,249,0.35)] hover:shadow-[0_0_42px_rgba(103,232,249,0.5)]"
+          className="flex items-center gap-2.5 bg-[var(--space-accent)] hover:bg-[var(--space-accent)]/90 active:scale-[0.98] text-white font-bold rounded-full px-7 py-3 text-sm transition-all duration-200 group"
         >
           Open Profile
           <ArrowRight className="size-4 group-hover:translate-x-0.5 transition-transform duration-200" />
@@ -496,14 +496,14 @@ function ClientDetail({
           aria-hidden="true"
           style={{ height: 0, overflow: 'visible' }}
         >
-          <div className="absolute top-6 right-6 opacity-[0.03]">
+          <div className="absolute top-6 right-6 opacity-[0.04]">
             <svg width="240" height="240" viewBox="0 0 240 240" fill="none">
-              <circle cx="120" cy="120" r="119" stroke="white" strokeWidth="1" />
-              <circle cx="120" cy="120" r="89" stroke="white" strokeWidth="0.5" />
-              <circle cx="120" cy="120" r="52" stroke="white" strokeWidth="0.5" />
-              <line x1="120" y1="0" x2="120" y2="240" stroke="white" strokeWidth="0.5" />
-              <line x1="0" y1="120" x2="240" y2="120" stroke="white" strokeWidth="0.5" />
-              <circle cx="120" cy="120" r="2.5" stroke="white" strokeWidth="0.5" fill="none" />
+              <circle cx="120" cy="120" r="119" stroke="#333333" strokeWidth="1" />
+              <circle cx="120" cy="120" r="89" stroke="#333333" strokeWidth="0.5" />
+              <circle cx="120" cy="120" r="52" stroke="#333333" strokeWidth="0.5" />
+              <line x1="120" y1="0" x2="120" y2="240" stroke="#333333" strokeWidth="0.5" />
+              <line x1="0" y1="120" x2="240" y2="120" stroke="#333333" strokeWidth="0.5" />
+              <circle cx="120" cy="120" r="2.5" stroke="#333333" strokeWidth="0.5" fill="none" />
             </svg>
           </div>
         </div>
@@ -549,9 +549,9 @@ function ClientDetail({
 
                 {/* Company chip */}
                 {client.company && (
-                  <div className="flex items-center gap-2 text-xs bg-white/[0.04] border border-white/[0.08] rounded-full px-3.5 py-1.5">
-                    <Building2 className="size-3.5 text-cyan-400/50 shrink-0" />
-                    <span className="text-white/55 font-medium">{client.company}</span>
+                  <div className="flex items-center gap-2 text-xs bg-[#2D2D2D] border border-[#404040] rounded-full px-3.5 py-1.5">
+                    <Building2 className="size-3.5 text-[rgba(139,156,182,0.30)] shrink-0" />
+                    <span className="text-[#6B6B6B] font-medium">{client.company}</span>
                   </div>
                 )}
               </div>
@@ -560,13 +560,13 @@ function ClientDetail({
             </div>
 
             {/* Large name */}
-            <h2 className="text-6xl xl:text-7xl font-bold gradient-text leading-none mb-4">
+            <h2 className="text-6xl xl:text-7xl font-bold text-[#1E3A6E] leading-none mb-4">
               {client.name}
             </h2>
-            <div className="w-10 h-px bg-cyan-400/40 mb-5" />
+            <div className="w-10 h-px bg-[rgba(139,156,182,0.20)] mb-5" />
 
             {/* Email */}
-            <p className="text-base text-white/40 leading-relaxed">{client.email}</p>
+            <p className="text-base text-[#6B6B6B] leading-relaxed">{client.email}</p>
           </div>
 
           {/* ── Stats grid ── */}
@@ -590,16 +590,16 @@ function ClientDetail({
                   'rounded-2xl px-5 py-4 border',
                   s.accent && s.accentColor === 'amber'
                     ? 'bg-amber-400/5 border-amber-400/15'
-                    : 'bg-white/[0.025] border-white/[0.06]',
+                    : 'bg-[#2D2D2D] border-[#404040]',
                 )}
               >
-                <p className="text-[10px] uppercase tracking-[0.3em] gradient-text mb-2.5">
+                <p className="text-[10px] uppercase tracking-[0.3em] text-[#1E3A6E] mb-2.5">
                   {s.label}
                 </p>
                 <p
                   className={cn(
                     'text-base font-semibold',
-                    s.accent && s.accentColor === 'amber' ? 'text-amber-300/80' : 'text-white/75',
+                    s.accent && s.accentColor === 'amber' ? 'text-amber-300/80' : 'text-[#A0A0A0]',
                   )}
                 >
                   {s.value}
@@ -615,15 +615,15 @@ function ClientDetail({
           >
             {clientProjects.length > 0 ? (
               <>
-                <p className="text-[11px] tracking-[0.4em] uppercase gradient-text font-medium mb-5">
+                <p className="text-[11px] tracking-[0.4em] uppercase text-[#1E3A6E] font-medium mb-5">
                   Project Timeline
                 </p>
                 <PortfolioTimeline projects={clientProjects} allOrders={clientOrders} username={username} />
               </>
             ) : (
-              <div className="rounded-2xl border border-dashed border-white/[0.07] px-6 py-8 text-center">
-                <FolderOpen className="size-8 text-white/10 mx-auto mb-3" />
-                <p className="text-sm text-gray-400">No projects assigned yet</p>
+              <div className="rounded-2xl border border-dashed border-[#404040] px-6 py-8 text-center">
+                <FolderOpen className="size-8 text-[#4A4A4A] mx-auto mb-3" />
+                <p className="text-sm text-[#6B6B6B]">No projects assigned yet</p>
               </div>
             )}
           </div>
@@ -656,7 +656,7 @@ function MobileClientCard({
     <Link
       href={`/u/${username}/clients/${client.id}`}
       className={cn(
-        'block rounded-xl border border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/[0.12] transition-all duration-200 overflow-hidden',
+        'block rounded-xl border border-[#404040] bg-[#1C1C1C] hover:bg-[#252525] hover:border-[#404040] transition-all duration-200 overflow-hidden',
         'animate-in fade-in slide-in-from-bottom-2 duration-300',
       )}
       style={{ animationDelay: `${animationDelay}ms` }}
@@ -666,19 +666,19 @@ function MobileClientCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <span className={cn('size-1.5 rounded-full shrink-0', hasBalance ? 'bg-amber-400' : palette.dot)} />
-            <p className="text-base font-semibold text-white truncate">{client.name}</p>
+            <p className="text-base font-semibold text-[#F0F0F0] truncate">{client.name}</p>
           </div>
           {client.company && (
-            <p className="text-xs text-white/35 truncate">{client.company}</p>
+            <p className="text-xs text-[#4A4A4A] truncate">{client.company}</p>
           )}
-          <p className="text-xs text-gray-400 truncate">{client.email}</p>
+          <p className="text-xs text-[#6B6B6B] truncate">{client.email}</p>
         </div>
         {hasBalance ? (
           <span className="text-sm font-mono text-amber-400 shrink-0 tabular-nums">{fmt(balance)}</span>
         ) : (
           <span className="text-xs text-emerald-500/60 shrink-0">Clear</span>
         )}
-        <ArrowRight className="size-4 text-white/20 shrink-0" />
+        <ArrowRight className="size-4 text-[#4A4A4A] shrink-0" />
       </div>
     </Link>
   )
@@ -736,24 +736,24 @@ export function ClientsView({
   return (
     <>
       {/* ── DESKTOP: split panel ──────────────────────────────────────────── */}
-      <div className="hidden lg:flex h-[calc(100vh-4rem)] overflow-hidden border-t border-white/[0.04]">
+      <div className="hidden lg:flex h-[calc(100vh-4rem)] overflow-hidden border-t border-[#404040]">
 
         {/* Left panel — navigator */}
-        <div className="relative w-[272px] xl:w-[296px] bg-black flex flex-col overflow-hidden border-r border-white/[0.05] shrink-0">
+        <div className="relative w-[272px] xl:w-[296px] bg-[#252525] flex flex-col overflow-hidden border-r border-[#404040] shrink-0">
 
-          <div className="h-px w-full bg-gradient-to-r from-transparent via-cyan-400/25 to-transparent shrink-0" />
+          <div className="h-px w-full bg-gradient-to-r from-transparent via-[rgba(139,156,182,0.10)] to-transparent shrink-0" />
 
           {/* Header */}
           <div className="px-6 pt-8 pb-5 shrink-0">
-            <p className="text-[10px] tracking-[0.4em] uppercase gradient-text font-medium mb-3">
+            <p className="text-[10px] tracking-[0.4em] uppercase text-[#1E3A6E] font-medium mb-3">
               Workspace
             </p>
-            <h1 className="text-2xl font-bold text-white uppercase tracking-wide">Clients</h1>
-            <div className="mt-3 w-5 h-px bg-cyan-400/35" />
+            <h1 className="text-2xl font-bold text-[#F0F0F0] uppercase tracking-wide">Clients</h1>
+            <div className="mt-3 w-5 h-px bg-[rgba(139,156,182,0.18)]" />
           </div>
 
           {/* Summary counts */}
-          <div className="px-5 pb-3 shrink-0 flex items-center gap-3 text-[10px] text-white/30">
+          <div className="px-5 pb-3 shrink-0 flex items-center gap-3 text-[10px] text-[#4A4A4A]">
             {balanceCount > 0 && (
               <span className="flex items-center gap-1.5">
                 <span className="size-1 rounded-full bg-amber-400/60" />
@@ -763,12 +763,12 @@ export function ClientsView({
             <span>{clientAccounts.length} total</span>
           </div>
 
-          <div className="mx-5 mb-1 h-px bg-white/[0.04] shrink-0" />
+          <div className="mx-5 mb-1 h-px bg-[#333333] shrink-0" />
 
           {/* Client list */}
           <div ref={listRef} className="flex-1 overflow-y-auto py-1">
             {clientAccounts.length === 0 ? (
-              <p className="text-xs text-gray-400 px-5 py-6 text-center">No clients yet.</p>
+              <p className="text-xs text-[#6B6B6B] px-5 py-6 text-center">No clients yet.</p>
             ) : (
               clientAccounts.map((client, i) => (
                 <ClientNavRow
@@ -785,23 +785,23 @@ export function ClientsView({
           </div>
 
           {userRole === 'admin' && (
-            <div className="shrink-0 px-5 py-5 border-t border-white/[0.05] [&>button]:w-full">
+            <div className="shrink-0 px-5 py-5 border-t border-[#404040] [&>button]:w-full">
               <NewClientModal username={username} />
             </div>
           )}
 
           {/* Corner geometry */}
           <div className="absolute bottom-0 right-0 pointer-events-none select-none" aria-hidden="true">
-            <svg width="52" height="52" viewBox="0 0 52 52" fill="none" className="opacity-[0.05]">
-              <path d="M52 0 L52 52 L0 52" stroke="white" strokeWidth="1" />
-              <path d="M52 16 L52 52 L16 52" stroke="white" strokeWidth="0.5" />
+            <svg width="52" height="52" viewBox="0 0 52 52" fill="none" className="opacity-[0.08]">
+              <path d="M52 0 L52 52 L0 52" stroke="#333333" strokeWidth="1" />
+              <path d="M52 16 L52 52 L16 52" stroke="#333333" strokeWidth="0.5" />
             </svg>
           </div>
         </div>
 
         {/* Right panel — detail */}
-        <div className="flex-1 bg-[#080808] flex flex-col min-h-0 overflow-hidden">
-          <div className="h-px w-full bg-gradient-to-r from-transparent via-cyan-400/12 to-transparent shrink-0" />
+        <div className="flex-1 bg-[#1C1C1C] flex flex-col min-h-0 overflow-hidden">
+          <div className="h-px w-full bg-gradient-to-r from-transparent via-[rgba(139,156,182,0.06)] to-transparent shrink-0" />
 
           {selectedClient ? (
             <div
@@ -826,17 +826,17 @@ export function ClientsView({
       {/* ── MOBILE: stacked list ───────────────────────────────────────────── */}
       <div className="lg:hidden px-4 pt-6 pb-28 space-y-4">
         <div className="mb-6">
-          <p className="text-[10px] tracking-[0.4em] uppercase gradient-text font-medium mb-2">
+          <p className="text-[10px] tracking-[0.4em] uppercase text-[#1E3A6E] font-medium mb-2">
             Workspace
           </p>
-          <h1 className="text-2xl font-bold text-white uppercase tracking-wide">Clients</h1>
-          <div className="mt-3 w-5 h-px bg-cyan-400/35" />
+          <h1 className="text-2xl font-bold text-[#F0F0F0] uppercase tracking-wide">Clients</h1>
+          <div className="mt-3 w-5 h-px bg-[rgba(139,156,182,0.18)]" />
         </div>
 
         {clientAccounts.length === 0 ? (
-          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-10 text-center">
-            <Users className="size-8 text-white/10 mx-auto mb-3" />
-            <p className="text-sm text-white/25">No clients yet.</p>
+          <div className="rounded-xl border border-[#404040] bg-[#1C1C1C] p-10 text-center">
+            <Users className="size-8 text-[#4A4A4A] mx-auto mb-3" />
+            <p className="text-sm text-[#4A4A4A]">No clients yet.</p>
             {userRole === 'admin' && (
               <div className="mt-5">
                 <NewClientModal username={username} />

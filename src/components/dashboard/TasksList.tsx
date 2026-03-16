@@ -32,12 +32,12 @@ export function TasksList({ tasks, projectId }: TasksListProps) {
 
   if (tasks.length === 0) {
     return (
-      <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02] backdrop-blur-md p-16 text-center">
-        <div className="absolute inset-0 bg-gradient-to-br from-intelligence-cyan/[0.02] to-transparent" />
+      <div className="relative overflow-hidden rounded-2xl border border-[#404040] bg-[#252525] p-16 text-center">
+        <div className="absolute inset-0 bg-gradient-to-br from-[rgba(255,255,255,0.01)] to-transparent" />
         <div className="relative z-10">
-          <Circle className="size-12 text-gray-600 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-white mb-2">No Tasks Yet</h3>
-          <p className="text-gray-400 text-sm max-w-md mx-auto">
+          <Circle className="size-12 text-[#4A4A4A] mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-[#F0F0F0] mb-2">No Tasks Yet</h3>
+          <p className="text-[#6B6B6B] text-sm max-w-md mx-auto">
             Use the task manager to create and organize tasks for this project.
           </p>
         </div>
@@ -48,8 +48,8 @@ export function TasksList({ tasks, projectId }: TasksListProps) {
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-white">Tasks ({tasks.length})</h2>
-        <div className="flex items-center gap-2 text-sm text-gray-400">
+        <h2 className="text-2xl font-bold text-[#F0F0F0]">Tasks ({tasks.length})</h2>
+        <div className="flex items-center gap-2 text-sm text-[#6B6B6B]">
           <CheckCircle className="size-4 text-green-400" />
           <span>
             {tasks.filter((t) => t.status === 'completed').length} completed
@@ -79,7 +79,7 @@ export function TasksList({ tasks, projectId }: TasksListProps) {
                 return (
                   <div
                     key={task.id}
-                    className={`relative overflow-hidden rounded-xl border ${priorityConfig.border} ${priorityConfig.bg} p-4 hover:bg-white/[0.02] transition-all duration-200`}
+                    className={`relative overflow-hidden rounded-xl border ${priorityConfig.border} ${priorityConfig.bg} p-4 hover:bg-[#2D2D2D] transition-all duration-200`}
                   >
                     <div className="flex flex-col sm:flex-row sm:items-start gap-4">
                       {/* Task Info */}
@@ -87,11 +87,11 @@ export function TasksList({ tasks, projectId }: TasksListProps) {
                         <div className="flex items-start gap-3 mb-2">
                           <StatusIcon className={`size-5 ${statusConfig.color} shrink-0 mt-0.5`} />
                           <div className="flex-1 min-w-0">
-                            <h4 className="text-white font-medium leading-tight mb-1">
+                            <h4 className="text-[#F0F0F0] font-medium leading-tight mb-1">
                               {task.title}
                             </h4>
                             {task.description && typeof task.description === 'object' && (
-                              <p className="text-sm text-gray-400 line-clamp-2">
+                              <p className="text-sm text-[#6B6B6B] line-clamp-2">
                                 {/* Extract text from Lexical rich text structure */}
                                 {JSON.stringify(task.description).substring(0, 150)}...
                               </p>
@@ -113,7 +113,7 @@ export function TasksList({ tasks, projectId }: TasksListProps) {
                               className={`flex items-center gap-1.5 ${
                                 overdueTask && task.status !== 'completed'
                                   ? 'text-red-400'
-                                  : 'text-gray-400'
+                                  : 'text-[#6B6B6B]'
                               }`}
                             >
                               <Calendar className="size-3" />
@@ -125,13 +125,13 @@ export function TasksList({ tasks, projectId }: TasksListProps) {
                           )}
 
                           {task.estimatedHours && (
-                            <span className="text-gray-400">
+                            <span className="text-[#6B6B6B]">
                               Est: {task.estimatedHours}h
                             </span>
                           )}
 
                           {task.actualHours && (
-                            <span className="text-gray-400">
+                            <span className="text-[#6B6B6B]">
                               Actual: {task.actualHours}h
                             </span>
                           )}

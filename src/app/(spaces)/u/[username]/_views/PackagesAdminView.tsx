@@ -62,28 +62,28 @@ function computeTotals(lineItems: LineItem[] = []) {
 function statusStyle(status?: string) {
   switch (status) {
     case 'accepted': return 'text-emerald-400 border-emerald-400/25 bg-emerald-400/10'
-    case 'sent':     return 'text-[#67e8f9] border-[#67e8f9]/25 bg-[#67e8f9]/10'
-    case 'archived': return 'text-gray-600 border-white/10 bg-white/[0.03]'
+    case 'sent':     return 'text-[var(--space-accent)] border-[rgba(139,156,182,0.18)] bg-[rgba(139,156,182,0.10)]'
+    case 'archived': return 'text-[#4A4A4A] border-[#404040] bg-[rgba(255,255,255,0.02)]'
     default:         return 'text-amber-400/80 border-amber-400/20 bg-amber-400/[0.06]'
   }
 }
 
 function PricingSummary({ lineItems }: { lineItems: LineItem[] }) {
   const { oneTime, monthly, annual } = computeTotals(lineItems)
-  if (!oneTime && !monthly && !annual) return <span className="text-gray-400 text-xs">No pricing</span>
+  if (!oneTime && !monthly && !annual) return <span className="text-[#6B6B6B] text-xs">No pricing</span>
   return (
     <div className="flex items-center gap-2 flex-wrap">
       {oneTime > 0 && (
-        <span className="text-xs font-bold text-white tabular-nums font-mono">{fmt(oneTime)}</span>
+        <span className="text-xs font-bold text-[#F0F0F0] tabular-nums font-mono">{fmt(oneTime)}</span>
       )}
       {monthly > 0 && (
-        <span className="text-xs font-bold tabular-nums font-mono text-[#67e8f9]">
-          {fmt(monthly)}<span className="text-gray-500 font-sans font-normal">/mo</span>
+        <span className="text-xs font-bold tabular-nums font-mono" style={{ color: 'var(--space-accent)' }}>
+          {fmt(monthly)}<span className="text-[#4A4A4A] font-sans font-normal">/mo</span>
         </span>
       )}
       {annual > 0 && (
-        <span className="text-xs font-bold tabular-nums font-mono text-[#67e8f9]">
-          {fmt(annual)}<span className="text-gray-500 font-sans font-normal">/yr</span>
+        <span className="text-xs font-bold tabular-nums font-mono" style={{ color: 'var(--space-accent)' }}>
+          {fmt(annual)}<span className="text-[#4A4A4A] font-sans font-normal">/yr</span>
         </span>
       )}
     </div>
@@ -130,17 +130,17 @@ function ProposalModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-[#000000]/60" onClick={onClose} />
       <div
-        className="relative z-10 w-full sm:max-w-[540px] max-h-[92vh] sm:max-h-[85vh] flex flex-col rounded-t-3xl sm:rounded-2xl border border-white/[0.10] overflow-hidden"
-        style={{ background: 'linear-gradient(160deg, #141414 0%, #0d0d0d 100%)' }}
+        className="relative z-10 w-full sm:max-w-[540px] max-h-[92vh] sm:max-h-[85vh] flex flex-col rounded-t-3xl sm:rounded-2xl border border-[#404040] overflow-hidden"
+        style={{ background: '#1C1C1C' }}
       >
         {/* Top line */}
-        <div className="h-px bg-gradient-to-r from-transparent via-[#67e8f9]/50 to-transparent shrink-0" />
+        <div className="h-px bg-gradient-to-r from-transparent via-[var(--space-accent)]/30 to-transparent shrink-0" />
 
         {/* Mobile handle */}
         <div className="flex justify-center pt-3 pb-1 shrink-0 sm:hidden">
-          <div className="w-9 h-1 rounded-full bg-white/[0.15]" />
+          <div className="w-9 h-1 rounded-full bg-[#333333]" />
         </div>
 
         {/* Scrollable body */}
@@ -150,7 +150,7 @@ function ProposalModal({
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap mb-2">
-                <p className="text-[9px] font-bold tracking-[0.28em] uppercase text-[#67e8f9]/80">
+                <p className="text-[9px] font-bold tracking-[0.28em] uppercase" style={{ color: 'var(--space-accent)' }}>
                   Proposal
                 </p>
                 {pkg.status && (
@@ -162,20 +162,20 @@ function ProposalModal({
                   </span>
                 )}
               </div>
-              <h2 className="text-xl font-bold text-white leading-tight">{pkg.name}</h2>
+              <h2 className="text-xl font-bold text-[#F0F0F0] leading-tight">{pkg.name}</h2>
               <div className="flex items-center gap-1.5 mt-1.5">
-                <span className="text-sm font-semibold text-gray-300">{clientName}</span>
+                <span className="text-sm font-semibold text-[#A0A0A0]">{clientName}</span>
                 {clientCompany && (
-                  <span className="text-xs text-gray-300">· {clientCompany}</span>
+                  <span className="text-xs text-[#A0A0A0]">· {clientCompany}</span>
                 )}
               </div>
               {pkg.description && (
-                <p className="text-sm text-gray-500 mt-2 leading-relaxed">{pkg.description}</p>
+                <p className="text-sm text-[#4A4A4A] mt-2 leading-relaxed">{pkg.description}</p>
               )}
             </div>
             <button
               onClick={onClose}
-              className="shrink-0 size-8 rounded-lg border border-white/[0.08] flex items-center justify-center text-gray-500 hover:text-white hover:border-white/20 transition-all mt-0.5"
+              className="shrink-0 size-8 rounded-lg border border-[#404040] flex items-center justify-center text-[#4A4A4A] hover:text-[#F0F0F0] hover:border-[#404040] transition-all mt-0.5"
             >
               <X className="size-3.5" />
             </button>
@@ -183,29 +183,29 @@ function ProposalModal({
 
           {/* Pricing */}
           {(oneTime > 0 || monthly > 0 || annual > 0) && (
-            <div className="flex items-end gap-6 flex-wrap p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+            <div className="flex items-end gap-6 flex-wrap p-4 rounded-xl bg-[#252525] border border-[#404040]">
               {oneTime > 0 && (
                 <div>
-                  <p className="text-2xl font-bold text-white tabular-nums">{fmt(oneTime)}</p>
-                  <p className="text-[9px] text-gray-300 mt-1 uppercase tracking-[0.18em]">one-time</p>
+                  <p className="text-2xl font-bold text-[#F0F0F0] tabular-nums">{fmt(oneTime)}</p>
+                  <p className="text-[9px] text-[#A0A0A0] mt-1 uppercase tracking-[0.18em]">one-time</p>
                 </div>
               )}
               {monthly > 0 && (
                 <div>
                   <div className="flex items-baseline gap-0.5">
-                    <p className="text-2xl font-bold text-white tabular-nums">{fmt(monthly)}</p>
-                    <p className="text-sm text-gray-500">/mo</p>
+                    <p className="text-2xl font-bold text-[#F0F0F0] tabular-nums">{fmt(monthly)}</p>
+                    <p className="text-sm text-[#4A4A4A]">/mo</p>
                   </div>
-                  <p className="text-[9px] text-gray-300 mt-1 uppercase tracking-[0.18em]">monthly</p>
+                  <p className="text-[9px] text-[#A0A0A0] mt-1 uppercase tracking-[0.18em]">monthly</p>
                 </div>
               )}
               {annual > 0 && (
                 <div>
                   <div className="flex items-baseline gap-0.5">
-                    <p className="text-2xl font-bold text-white tabular-nums">{fmt(annual)}</p>
-                    <p className="text-sm text-gray-500">/yr</p>
+                    <p className="text-2xl font-bold text-[#F0F0F0] tabular-nums">{fmt(annual)}</p>
+                    <p className="text-sm text-[#4A4A4A]">/yr</p>
                   </div>
-                  <p className="text-[9px] text-gray-300 mt-1 uppercase tracking-[0.18em]">annually</p>
+                  <p className="text-[9px] text-[#A0A0A0] mt-1 uppercase tracking-[0.18em]">annually</p>
                 </div>
               )}
             </div>
@@ -214,7 +214,7 @@ function ProposalModal({
           {/* Line items */}
           {lineItems.length > 0 ? (
             <div>
-              <p className="text-[9px] font-bold tracking-[0.25em] uppercase gradient-text mb-2.5">
+              <p className="text-[9px] font-bold tracking-[0.25em] uppercase text-[#1E3A6E] mb-2.5">
                 Included · {lineItems.length}
               </p>
               <div className="space-y-1.5">
@@ -223,23 +223,23 @@ function ProposalModal({
                   return (
                     <div
                       key={i}
-                      className="flex items-start gap-3 px-3.5 py-3 rounded-xl bg-white/[0.02] border border-white/[0.05]"
+                      className="flex items-start gap-3 px-3.5 py-3 rounded-xl bg-[#2D2D2D] border border-[#404040]"
                     >
-                      <div className="mt-0.5 size-4 rounded-full bg-[#67e8f9]/10 border border-[#67e8f9]/25 flex items-center justify-center shrink-0">
-                        <Check className="size-2.5 text-[#67e8f9]" />
+                      <div className="mt-0.5 size-4 rounded-full bg-[rgba(139,156,182,0.06)] border border-[rgba(139,156,182,0.15)] flex items-center justify-center shrink-0">
+                        <Check className="size-2.5" style={{ color: 'var(--space-accent)' }} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-baseline justify-between gap-2">
-                          <p className="text-sm font-semibold text-white">{item.name}</p>
-                          <span className="text-sm font-bold text-gray-400 tabular-nums font-mono shrink-0">
+                          <p className="text-sm font-semibold text-[#F0F0F0]">{item.name}</p>
+                          <span className="text-sm font-bold text-[#6B6B6B] tabular-nums font-mono shrink-0">
                             {fmt(itemTotal)}
                             {item.isRecurring && (
-                              <span className="text-xs font-normal text-gray-600">/{item.recurringInterval === 'year' ? 'yr' : 'mo'}</span>
+                              <span className="text-xs font-normal text-[#4A4A4A]">/{item.recurringInterval === 'year' ? 'yr' : 'mo'}</span>
                             )}
                           </span>
                         </div>
                         {item.description && (
-                          <p className="text-xs text-gray-300 mt-0.5 leading-relaxed">{item.description}</p>
+                          <p className="text-xs text-[#A0A0A0] mt-0.5 leading-relaxed">{item.description}</p>
                         )}
                       </div>
                     </div>
@@ -248,7 +248,7 @@ function ProposalModal({
               </div>
             </div>
           ) : (
-            <p className="text-xs text-gray-400 italic py-2">No line items configured.</p>
+            <p className="text-xs text-[#6B6B6B] italic py-2">No line items configured.</p>
           )}
 
           {/* Invoice result */}
@@ -273,10 +273,10 @@ function ProposalModal({
         </div>
 
         {/* Footer */}
-        <div className="shrink-0 flex items-center gap-2 px-6 py-4 border-t border-white/[0.07] bg-black/20 flex-wrap">
+        <div className="shrink-0 flex items-center gap-2 px-6 py-4 border-t border-[#404040] bg-[#252525] flex-wrap">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm text-gray-500 hover:text-white transition-colors rounded-lg hover:bg-white/[0.04]"
+            className="px-4 py-2 text-sm text-[#4A4A4A] hover:text-[#F0F0F0] transition-colors rounded-lg hover:bg-[#2D2D2D]"
           >
             Close
           </button>
@@ -285,7 +285,7 @@ function ProposalModal({
             <button
               onClick={handleCreateInvoice}
               disabled={invoiceState === 'loading'}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-white/[0.06] border border-white/[0.12] text-gray-300 hover:text-white hover:bg-white/[0.10] transition-all disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-[#2D2D2D] border border-[#404040] text-[#A0A0A0] hover:text-[#F0F0F0] hover:bg-[#E5E1D9] transition-all disabled:opacity-50"
             >
               {invoiceState === 'loading'
                 ? <><Loader2 className="size-3.5 animate-spin" />Creating…</>
@@ -297,7 +297,8 @@ function ProposalModal({
             href={`/u/${username}/packages/${pkg.id}/print`}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-[#67e8f9]/[0.10] border border-[#67e8f9]/25 text-[#67e8f9] hover:bg-[#67e8f9]/[0.18] hover:border-[#67e8f9]/40 transition-all"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-[rgba(139,156,182,0.10)] border border-[rgba(139,156,182,0.15)] hover:bg-[rgba(139,156,182,0.12)] hover:border-[rgba(139,156,182,0.20)] transition-all"
+            style={{ color: 'var(--space-accent)' }}
           >
             <ExternalLink className="size-3.5" />
             View Proposal
@@ -324,8 +325,7 @@ function ProposalCard({
     <button
       type="button"
       onClick={onClick}
-      className="shrink-0 w-60 flex flex-col gap-3 p-4 rounded-xl border border-white/[0.07] hover:border-[#67e8f9]/20 hover:bg-[#67e8f9]/[0.02] transition-all duration-200 text-left group"
-      style={{ background: 'rgba(255,255,255,0.02)' }}
+      className="shrink-0 w-60 flex flex-col gap-3 p-4 rounded-xl border border-[#404040] hover:border-[rgba(139,156,182,0.15)] hover:bg-[rgba(255,255,255,0.01)] transition-all duration-200 text-left group bg-[#252525]"
     >
       {/* Status */}
       <div className="flex items-center justify-between">
@@ -335,16 +335,16 @@ function ProposalCard({
         )}>
           {pkg.status ?? 'draft'}
         </span>
-        <ChevronRight className="size-3.5 text-gray-400 group-hover:text-[#67e8f9]/60 group-hover:translate-x-0.5 transition-all" />
+        <ChevronRight className="size-3.5 text-[#6B6B6B] group-hover:translate-x-0.5 transition-all" style={{ color: undefined }} />
       </div>
 
       {/* Name */}
       <div>
-        <p className="text-sm font-semibold text-white leading-snug line-clamp-2 group-hover:text-[#67e8f9]/90 transition-colors">
+        <p className="text-sm font-semibold text-[#F0F0F0] leading-snug line-clamp-2 transition-colors">
           {pkg.name}
         </p>
         {pkg.description && (
-          <p className="text-xs text-gray-300 mt-1 line-clamp-2 leading-relaxed">
+          <p className="text-xs text-[#A0A0A0] mt-1 line-clamp-2 leading-relaxed">
             {pkg.description}
           </p>
         )}
@@ -354,7 +354,7 @@ function ProposalCard({
       <div>
         <PricingSummary lineItems={lineItems} />
         {lineItems.length > 0 && (
-          <p className="text-[10px] text-gray-400 mt-1">
+          <p className="text-[10px] text-[#6B6B6B] mt-1">
             {lineItems.length} service{lineItems.length !== 1 ? 's' : ''}
           </p>
         )}
@@ -374,9 +374,9 @@ function TemplateRow({ pkg }: { pkg: PackageDoc }) {
     <div
       className={cn(
         'rounded-xl border overflow-hidden transition-all duration-200',
-        expanded ? 'border-white/[0.10]' : 'border-white/[0.05] hover:border-white/[0.08]',
+        expanded ? 'border-[#404040]' : 'border-[#404040] hover:border-[#404040]',
       )}
-      style={{ background: 'rgba(255,255,255,0.015)' }}
+      style={{ background: '#252525' }}
     >
       <button
         onClick={() => setExpanded(v => !v)}
@@ -384,53 +384,53 @@ function TemplateRow({ pkg }: { pkg: PackageDoc }) {
       >
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2.5 flex-wrap">
-            <p className="text-sm font-medium text-gray-300">{pkg.name}</p>
+            <p className="text-sm font-medium text-[#A0A0A0]">{pkg.name}</p>
             <div className="flex items-center gap-2">
-              {oneTime > 0 && <span className="text-xs font-semibold text-gray-500 tabular-nums font-mono">{fmt(oneTime)}</span>}
-              {monthly > 0 && <span className="text-xs font-semibold text-gray-500 tabular-nums font-mono">{fmt(monthly)}<span className="font-normal">/mo</span></span>}
-              {annual > 0 && <span className="text-xs font-semibold text-gray-500 tabular-nums font-mono">{fmt(annual)}<span className="font-normal">/yr</span></span>}
+              {oneTime > 0 && <span className="text-xs font-semibold text-[#4A4A4A] tabular-nums font-mono">{fmt(oneTime)}</span>}
+              {monthly > 0 && <span className="text-xs font-semibold text-[#4A4A4A] tabular-nums font-mono">{fmt(monthly)}<span className="font-normal">/mo</span></span>}
+              {annual > 0 && <span className="text-xs font-semibold text-[#4A4A4A] tabular-nums font-mono">{fmt(annual)}<span className="font-normal">/yr</span></span>}
             </div>
           </div>
           {pkg.description && !expanded && (
-            <p className="text-xs text-gray-400 mt-0.5 truncate">{pkg.description}</p>
+            <p className="text-xs text-[#6B6B6B] mt-0.5 truncate">{pkg.description}</p>
           )}
         </div>
         <div className="flex items-center gap-2.5 shrink-0">
-          <span className="text-[10px] text-gray-400 tabular-nums">{lineItems.length} item{lineItems.length !== 1 ? 's' : ''}</span>
-          <div className={cn('size-5 rounded-md border border-white/[0.08] flex items-center justify-center transition-all', expanded && 'bg-white/[0.05]')}>
-            <ChevronRight className={cn('size-3 text-gray-600 transition-transform', expanded && 'rotate-90')} />
+          <span className="text-[10px] text-[#6B6B6B] tabular-nums">{lineItems.length} item{lineItems.length !== 1 ? 's' : ''}</span>
+          <div className={cn('size-5 rounded-md border border-[#404040] flex items-center justify-center transition-all', expanded && 'bg-[#2D2D2D]')}>
+            <ChevronRight className={cn('size-3 text-[#4A4A4A] transition-transform', expanded && 'rotate-90')} />
           </div>
         </div>
       </button>
 
       {expanded && (
-        <div className="border-t border-white/[0.05] px-4 pb-4">
+        <div className="border-t border-[#404040] px-4 pb-4">
           {lineItems.length > 0 ? (
             <div className="pt-3 space-y-2.5">
               {lineItems.map((item, i) => (
                 <div key={i} className="flex items-start justify-between gap-3 text-xs">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-gray-400 font-medium">{item.name}</span>
+                      <span className="text-[#6B6B6B] font-medium">{item.name}</span>
                       {item.isRecurring && (
-                        <span className="text-[10px] text-[#67e8f9]/50 uppercase tracking-wide">
+                        <span className="text-[10px] uppercase tracking-wide" style={{ color: 'var(--space-accent)', opacity: 0.6 }}>
                           {item.recurringInterval === 'year' ? 'annual' : 'monthly'}
                         </span>
                       )}
                     </div>
                     {item.description && (
-                      <p className="text-gray-400 mt-0.5 leading-relaxed whitespace-pre-line">{item.description}</p>
+                      <p className="text-[#6B6B6B] mt-0.5 leading-relaxed whitespace-pre-line">{item.description}</p>
                     )}
                   </div>
-                  <span className="text-gray-600 tabular-nums shrink-0 font-mono">
+                  <span className="text-[#4A4A4A] tabular-nums shrink-0 font-mono">
                     {fmt((item.adjustedPrice ?? item.price ?? 0) * (item.quantity ?? 1))}
-                    {item.isRecurring && <span className="text-gray-400">/{item.recurringInterval === 'year' ? 'yr' : 'mo'}</span>}
+                    {item.isRecurring && <span className="text-[#6B6B6B]">/{item.recurringInterval === 'year' ? 'yr' : 'mo'}</span>}
                   </span>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="pt-3 text-xs text-gray-400 italic">No line items</p>
+            <p className="pt-3 text-xs text-[#6B6B6B] italic">No line items</p>
           )}
         </div>
       )}
@@ -491,10 +491,10 @@ export function PackagesAdminView({ allPackages, username }: PackagesAdminViewPr
         {/* ── Header ─────────────────────────────────────────────────────── */}
         <div className="flex items-start gap-4 flex-wrap">
           <div className="flex-1">
-            <p className="text-[9px] font-bold tracking-[0.32em] uppercase text-[#67e8f9]/80 mb-1">
+            <p className="text-[9px] font-bold tracking-[0.32em] uppercase mb-1" style={{ color: 'var(--space-accent)' }}>
               Operations
             </p>
-            <h2 className="text-xl font-bold text-white tracking-tight">Packages</h2>
+            <h2 className="text-xl font-bold text-[#F0F0F0] tracking-tight">Packages</h2>
           </div>
 
           {/* Stats */}
@@ -506,10 +506,10 @@ export function PackagesAdminView({ allPackages, username }: PackagesAdminViewPr
             ].map(s => (
               <div
                 key={s.label}
-                className="flex flex-col items-center px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06]"
+                className="flex flex-col items-center px-3 py-2 rounded-lg bg-[#252525] border border-[#404040]"
               >
-                <span className="text-lg font-bold text-white tabular-nums">{s.value}</span>
-                <span className="text-[9px] text-gray-300 uppercase tracking-[0.15em] mt-0.5">{s.label}</span>
+                <span className="text-lg font-bold text-[#F0F0F0] tabular-nums">{s.value}</span>
+                <span className="text-[9px] text-[#A0A0A0] uppercase tracking-[0.15em] mt-0.5">{s.label}</span>
               </div>
             ))}
           </div>
@@ -517,13 +517,13 @@ export function PackagesAdminView({ allPackages, username }: PackagesAdminViewPr
 
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-3.5 text-gray-600 pointer-events-none" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-3.5 text-[#4A4A4A] pointer-events-none" />
           <input
             type="text"
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder="Search packages or clients…"
-            className="w-full pl-9 pr-4 py-2.5 text-sm bg-white/[0.04] border border-white/[0.08] rounded-xl text-white placeholder:text-gray-600 focus:outline-none focus:border-[#67e8f9]/30 focus:bg-white/[0.06] transition-all"
+            className="w-full pl-9 pr-4 py-2.5 text-sm bg-[#2D2D2D] border border-[#404040] rounded-xl text-[#F0F0F0] placeholder:text-[#4A4A4A] focus:outline-none focus:border-[rgba(139,156,182,0.20)] focus:bg-[#252525] transition-all"
           />
         </div>
 
@@ -536,18 +536,18 @@ export function PackagesAdminView({ allPackages, username }: PackagesAdminViewPr
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
                     {/* Avatar */}
-                    <div className="size-8 rounded-xl bg-[#67e8f9]/10 border border-[#67e8f9]/20 flex items-center justify-center shrink-0">
-                      <span className="text-xs font-bold text-[#67e8f9]">
+                    <div className="size-8 rounded-xl bg-[rgba(139,156,182,0.06)] border border-[rgba(139,156,182,0.15)] flex items-center justify-center shrink-0">
+                      <span className="text-xs font-bold" style={{ color: 'var(--space-accent)' }}>
                         {group.clientName.charAt(0).toUpperCase()}
                       </span>
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-white leading-none">{group.clientName}</p>
+                      <p className="text-sm font-semibold text-[#F0F0F0] leading-none">{group.clientName}</p>
                       {group.clientCompany && (
-                        <p className="text-[10px] text-gray-600 mt-0.5">{group.clientCompany}</p>
+                        <p className="text-[10px] text-[#4A4A4A] mt-0.5">{group.clientCompany}</p>
                       )}
                     </div>
-                    <span className="text-[10px] text-gray-400 ml-1 tabular-nums">
+                    <span className="text-[10px] text-[#6B6B6B] ml-1 tabular-nums">
                       {group.proposals.length} package{group.proposals.length !== 1 ? 's' : ''}
                     </span>
                   </div>
@@ -569,15 +569,15 @@ export function PackagesAdminView({ allPackages, username }: PackagesAdminViewPr
           </div>
         ) : q ? (
           <div className="py-10 text-center">
-            <p className="text-sm text-gray-600">No proposals match &ldquo;{query}&rdquo;</p>
+            <p className="text-sm text-[#4A4A4A]">No proposals match &ldquo;{query}&rdquo;</p>
           </div>
         ) : proposals.length === 0 ? (
           <div className="py-12 text-center">
-            <div className="inline-flex p-4 rounded-2xl bg-white/[0.04] border border-white/[0.08] mb-5">
-              <FileText className="size-7 text-gray-600" />
+            <div className="inline-flex p-4 rounded-2xl bg-[#2D2D2D] border border-[#404040] mb-5">
+              <FileText className="size-7 text-[#4A4A4A]" />
             </div>
-            <p className="text-sm text-gray-500 font-medium mb-1">No proposals yet</p>
-            <p className="text-xs text-gray-400 max-w-xs mx-auto leading-relaxed">
+            <p className="text-sm text-[#6B6B6B] font-medium mb-1">No proposals yet</p>
+            <p className="text-xs text-[#6B6B6B] max-w-xs mx-auto leading-relaxed">
               Assign packages to clients from their profile page to create proposals.
             </p>
           </div>
@@ -587,20 +587,20 @@ export function PackagesAdminView({ allPackages, username }: PackagesAdminViewPr
         {filteredTemplates.length > 0 && (
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <Layers className="size-3.5 text-gray-600" />
-              <p className="text-[10px] font-bold text-gray-600 uppercase tracking-[0.2em]">
+              <Layers className="size-3.5 text-[#4A4A4A]" />
+              <p className="text-[10px] font-bold text-[#4A4A4A] uppercase tracking-[0.2em]">
                 Templates
               </p>
-              <span className="text-[10px] text-gray-400 tabular-nums ml-0.5">{filteredTemplates.length}</span>
+              <span className="text-[10px] text-[#6B6B6B] tabular-nums ml-0.5">{filteredTemplates.length}</span>
             </div>
             <div className="space-y-1.5">
               {filteredTemplates.map(t => (
                 <TemplateRow key={t.id} pkg={t} />
               ))}
             </div>
-            <p className="text-[10px] text-gray-400 mt-4 text-center">
+            <p className="text-[10px] text-[#6B6B6B] mt-4 text-center">
               Manage templates in the{' '}
-              <a href="/admin/collections/packages" className="text-gray-500 hover:text-gray-400 underline transition-colors">
+              <a href="/admin/collections/packages" className="text-[#4A4A4A] hover:text-[#6B6B6B] underline transition-colors">
                 admin panel
               </a>
             </p>
@@ -610,11 +610,11 @@ export function PackagesAdminView({ allPackages, username }: PackagesAdminViewPr
         {/* Truly empty */}
         {filteredGroups.length === 0 && filteredTemplates.length === 0 && !q && proposals.length === 0 && templates.length === 0 && (
           <div className="py-20 text-center">
-            <div className="inline-flex p-5 rounded-2xl bg-white/[0.04] border border-white/[0.08] mb-6">
-              <Package className="size-8 text-gray-600" />
+            <div className="inline-flex p-5 rounded-2xl bg-[#2D2D2D] border border-[#404040] mb-6">
+              <Package className="size-8 text-[#4A4A4A]" />
             </div>
-            <p className="text-sm text-gray-500 font-medium mb-1.5">No packages yet</p>
-            <p className="text-xs text-gray-400 max-w-xs mx-auto leading-relaxed">
+            <p className="text-sm text-[#6B6B6B] font-medium mb-1.5">No packages yet</p>
+            <p className="text-xs text-[#6B6B6B] max-w-xs mx-auto leading-relaxed">
               Create package templates in the admin panel, then assign them to clients from their profile.
             </p>
           </div>

@@ -82,7 +82,7 @@ function fmtDateRange(start: string, end: string): string {
 }
 
 const SPRINT_STATUS_COLOR: Record<string, string> = {
-  'in-progress': '#67e8f9',
+  'in-progress': '#1E3A6E',
   delayed:       '#fb923c',
   finished:      '#4ade80',
   pending:       '#9ca3af',
@@ -211,10 +211,10 @@ export function PortfolioTimeline({
       {/* ── Section header ──────────────────────────────────────────────── */}
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-[10px] tracking-[0.4em] uppercase text-white/50 font-semibold">
+          <p className="text-[10px] tracking-[0.4em] uppercase text-[#6B6B6B] font-semibold">
             Portfolio Timeline
           </p>
-          <p className="text-[10px] text-white/35 mt-0.5">
+          <p className="text-[10px] text-[#6B6B6B] mt-0.5">
             {projects.length} of {allProjects.length} project{allProjects.length !== 1 ? 's' : ''} · sprints, milestones &amp; orders
           </p>
         </div>
@@ -222,21 +222,21 @@ export function PortfolioTimeline({
         <div className="flex items-center gap-2">
           <button
             onClick={() => setSettingsOpen(true)}
-            className="p-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white/40 hover:text-white/70 transition-colors"
+            className="p-2 rounded-lg bg-[rgba(255,255,255,0.06)] border border-[#404040] text-[#6B6B6B] hover:text-[#A0A0A0] transition-colors"
             title="Timeline settings"
           >
             <Settings2 className="size-3.5" />
           </button>
           {/* Show own picker only when not controlled externally */}
           {!externalRange && (
-            <div className="flex items-center p-1 bg-white/[0.04] rounded-lg border border-white/[0.08]">
+            <div className="flex items-center p-1 bg-[rgba(255,255,255,0.06)] rounded-lg border border-[#404040]">
               {(['week', 'month', 'year'] as Range[]).map((r) => (
                 <button
                   key={r}
                   onClick={() => handleRangeChange(r)}
                   className={cn(
                     'px-3.5 py-1.5 rounded-md text-[11px] font-medium transition-all duration-150',
-                    range === r ? 'bg-white/[0.12] text-white shadow-sm' : 'text-white/40 hover:text-white/65',
+                    range === r ? 'bg-[rgba(255,255,255,0.06)] text-[#F0F0F0] shadow-sm' : 'text-[#6B6B6B] hover:text-[#A0A0A0]',
                   )}
                 >
                   {RANGE_CFG[r].label}
@@ -248,30 +248,30 @@ export function PortfolioTimeline({
       </div>
 
       {/* ── Timeline card ────────────────────────────────────────────────── */}
-      <div className="relative rounded-xl border border-white/[0.10] bg-[#0a0a0a] overflow-hidden">
+      <div className="relative rounded-xl border border-[#404040] bg-[#252525] overflow-hidden">
 
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent pointer-events-none" />
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#333333] to-transparent pointer-events-none" />
 
         <svg width="60" height="60" viewBox="0 0 60 60" fill="none"
           className="absolute top-0 right-0 opacity-[0.04] pointer-events-none select-none" aria-hidden="true">
-          <path d="M60 0 L60 60 L0 60" stroke="white" strokeWidth="1" />
+          <path d="M60 0 L60 60 L0 60" stroke="#333333" strokeWidth="1" />
         </svg>
 
         <div
           ref={scrollRef}
           data-h-scroll
           className="overflow-x-auto"
-          style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.08) transparent' }}
+          style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.06) transparent' }}
         >
           <div style={{ width: LEFT_W + timelineWidth, minWidth: '100%' }}>
 
             {/* ── Header row ─────────────────────────────────────────────── */}
-            <div className="flex border-b border-white/[0.08]" style={{ height: HDR_H }}>
+            <div className="flex border-b border-[#404040]" style={{ height: HDR_H }}>
               <div
-                className="sticky left-0 z-30 bg-[#0a0a0a] border-r border-white/[0.08] shrink-0 flex items-end px-4 pb-2"
+                className="sticky left-0 z-30 bg-[#252525] border-r border-[#404040] shrink-0 flex items-end px-4 pb-2"
                 style={{ width: LEFT_W, minWidth: LEFT_W }}
               >
-                <p className="text-[9px] tracking-[0.3em] uppercase text-white/30">Project</p>
+                <p className="text-[9px] tracking-[0.3em] uppercase text-[#6B6B6B]">Project</p>
               </div>
               <div className="relative" style={{ width: timelineWidth }}>
                 {ticks.map((tick, i) => (
@@ -280,24 +280,24 @@ export function PortfolioTimeline({
                       className={cn(
                         'absolute top-2 whitespace-nowrap leading-none',
                         range === 'week' ? 'text-[9px]' : 'text-[8px]',
-                        tick.major ? 'text-white/55' : 'text-white/30',
+                        tick.major ? 'text-[#A0A0A0]' : 'text-[#6B6B6B]',
                       )}
                       style={{ transform: 'translateX(-50%)' }}
                     >
                       {tick.label}
                     </p>
-                    <div className={cn('absolute bottom-0 w-px', tick.major ? 'h-3 bg-white/20' : 'h-2 bg-white/[0.08]')} />
+                    <div className={cn('absolute bottom-0 w-px', tick.major ? 'h-3 bg-[#404040]/30' : 'h-2 bg-[#333333]')} />
                   </div>
                 ))}
                 {todayPx >= 0 && todayPx <= timelineWidth && (
                   <div className="absolute top-0 bottom-0 z-10" style={{ left: todayPx }}>
                     <p
-                      className="absolute top-2 text-[8px] font-bold tracking-[0.2em] uppercase text-intelligence-cyan/90 whitespace-nowrap leading-none"
+                      className="absolute top-2 text-[8px] font-bold tracking-[0.2em] uppercase text-[rgba(139,156,182,0.90)] whitespace-nowrap leading-none"
                       style={{ transform: 'translateX(-50%)' }}
                     >
                       Now
                     </p>
-                    <div className="absolute bottom-0 w-px h-5 bg-intelligence-cyan/80" />
+                    <div className="absolute bottom-0 w-px h-5 bg-[rgba(139,156,182,0.70)]" />
                   </div>
                 )}
               </div>
@@ -318,12 +318,12 @@ export function PortfolioTimeline({
               return (
                 <div
                   key={project.id}
-                  className="flex border-b border-white/[0.05] last:border-b-0 group/row"
+                  className="flex border-b border-[#404040] last:border-b-0 group/row"
                   style={{ height: ROW_H }}
                 >
                   {/* Sticky label */}
                   <div
-                    className="sticky left-0 z-20 bg-[#0a0a0a] border-r border-white/[0.07] shrink-0 flex items-center gap-2.5 px-4 group-hover/row:bg-[#0d0d0d] transition-colors"
+                    className="sticky left-0 z-20 bg-[#252525] border-r border-[#404040] shrink-0 flex items-center gap-2.5 px-4 group-hover/row:bg-[#2D2D2D] transition-colors"
                     style={{ width: LEFT_W, minWidth: LEFT_W }}
                   >
                     <div
@@ -332,7 +332,7 @@ export function PortfolioTimeline({
                     />
                     <a
                       href={`/u/${username}/projects/${project.id}`}
-                      className="text-[11px] text-white/65 truncate hover:text-white transition-colors leading-snug font-medium"
+                      className="text-[11px] text-[#A0A0A0] truncate hover:text-[#F0F0F0] transition-colors leading-snug font-medium"
                       title={project.name}
                     >
                       {project.name}
@@ -348,7 +348,7 @@ export function PortfolioTimeline({
                     {todayPx >= 0 && todayPx <= timelineWidth && (
                       <div
                         className="absolute top-0 bottom-0 w-px z-10 pointer-events-none"
-                        style={{ left: todayPx, background: 'rgba(103,232,249,0.15)' }}
+                        style={{ left: todayPx, background: 'rgba(139,156,182,0.10)' }}
                       />
                     )}
 
@@ -419,7 +419,7 @@ export function PortfolioTimeline({
                             transform:    'translate(-50%, -50%) rotate(45deg)',
                             width:        10,
                             height:       10,
-                            background:   m.completed ? color.hex : 'rgba(10,10,10,0.9)',
+                            background:   m.completed ? color.hex : 'rgba(242,240,235,0.9)',
                             border:       `2px solid ${color.hex}`,
                             borderRadius: 2,
                             boxShadow:    m.completed ? `0 0 10px ${rgba(color, 0.65)}` : `0 0 4px ${rgba(color, 0.3)}`,
@@ -436,12 +436,12 @@ export function PortfolioTimeline({
 
             {/* "N more" row */}
             {hiddenCount > 0 && (
-              <div className="flex border-b border-white/[0.04]" style={{ height: MORE_ROW_H }}>
+              <div className="flex border-b border-[#404040]" style={{ height: MORE_ROW_H }}>
                 <div
-                  className="sticky left-0 z-20 bg-[#0a0a0a] border-r border-white/[0.07] shrink-0 flex items-center px-4"
+                  className="sticky left-0 z-20 bg-[#252525] border-r border-[#404040] shrink-0 flex items-center px-4"
                   style={{ width: LEFT_W, minWidth: LEFT_W }}
                 >
-                  <button onClick={() => setSettingsOpen(true)} className="text-[10px] text-white/30 hover:text-white/55 transition-colors">
+                  <button onClick={() => setSettingsOpen(true)} className="text-[10px] text-[#6B6B6B] hover:text-[#A0A0A0] transition-colors">
                     +{hiddenCount} more project{hiddenCount !== 1 ? 's' : ''}
                   </button>
                 </div>
@@ -453,17 +453,17 @@ export function PortfolioTimeline({
 
             {/* Orders row */}
             {allOrders.length > 0 && (
-              <div className="flex border-t border-white/[0.06]" style={{ height: ORDERS_ROW_H }}>
+              <div className="flex border-t border-[#404040]" style={{ height: ORDERS_ROW_H }}>
                 <div
-                  className="sticky left-0 z-20 bg-[#0a0a0a] border-r border-white/[0.07] shrink-0 flex flex-col justify-center gap-0.5 px-4"
+                  className="sticky left-0 z-20 bg-[#252525] border-r border-[#404040] shrink-0 flex flex-col justify-center gap-0.5 px-4"
                   style={{ width: LEFT_W, minWidth: LEFT_W }}
                 >
-                  <p className="text-[9px] tracking-[0.2em] uppercase text-white/30">Orders</p>
-                  <p className="text-[8px] text-white/20">{allOrders.length} total</p>
+                  <p className="text-[9px] tracking-[0.2em] uppercase text-[#6B6B6B]">Orders</p>
+                  <p className="text-[8px] text-[#6B6B6B]">{allOrders.length} total</p>
                 </div>
                 <div className="relative" style={{ width: timelineWidth, height: ORDERS_ROW_H }}>
                   {todayPx >= 0 && todayPx <= timelineWidth && (
-                    <div className="absolute top-0 bottom-0 w-px pointer-events-none" style={{ left: todayPx, background: 'rgba(103,232,249,0.12)' }} />
+                    <div className="absolute top-0 bottom-0 w-px pointer-events-none" style={{ left: todayPx, background: 'rgba(139,156,182,0.10)' }} />
                   )}
                   {ordersInView.map((order: any, oi) => {
                     const px = toPx(order.dueDate ?? order.createdAt)
@@ -506,46 +506,46 @@ export function PortfolioTimeline({
         </div>
 
         {/* ── Legend ───────────────────────────────────────────────────────── */}
-        <div className="px-5 py-3.5 border-t border-white/[0.07] space-y-3">
+        <div className="px-5 py-3.5 border-t border-[#404040] space-y-3">
           <div className="flex items-center flex-wrap gap-x-5 gap-y-1.5">
             <div className="flex items-center gap-2">
-              <div className="w-5 rounded-sm shrink-0" style={{ height: 10, background: 'rgba(255,255,255,0.15)', borderTop: '2px solid rgba(255,255,255,0.5)' }} />
-              <span className="text-[9px] text-white/40 uppercase tracking-wider">Sprint</span>
+              <div className="w-5 rounded-sm shrink-0" style={{ height: 10, background: 'rgba(255,255,255,0.06)', borderTop: '2px solid rgba(255,255,255,0.10)' }} />
+              <span className="text-[9px] text-[#6B6B6B] uppercase tracking-wider">Sprint</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="shrink-0" style={{ width: 9, height: 9, background: 'rgba(255,255,255,0.6)', transform: 'rotate(45deg)', borderRadius: 2 }} />
-              <span className="text-[9px] text-white/40 uppercase tracking-wider">Milestone ✓</span>
+              <div className="shrink-0" style={{ width: 9, height: 9, background: 'rgba(255,255,255,0.12)', transform: 'rotate(45deg)', borderRadius: 2 }} />
+              <span className="text-[9px] text-[#6B6B6B] uppercase tracking-wider">Milestone ✓</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="shrink-0" style={{ width: 9, height: 9, border: '2px solid rgba(255,255,255,0.5)', transform: 'rotate(45deg)', borderRadius: 2 }} />
-              <span className="text-[9px] text-white/40 uppercase tracking-wider">Milestone</span>
+              <div className="shrink-0" style={{ width: 9, height: 9, border: '2px solid rgba(255,255,255,0.10)', transform: 'rotate(45deg)', borderRadius: 2 }} />
+              <span className="text-[9px] text-[#6B6B6B] uppercase tracking-wider">Milestone</span>
             </div>
             {allOrders.length > 0 && (
               <>
                 <div className="flex items-center gap-1.5">
                   <div className="w-1.5 rounded-sm" style={{ height: 12, background: 'rgba(251,191,36,0.8)' }} />
-                  <span className="text-[9px] text-white/40 uppercase tracking-wider">Pending</span>
+                  <span className="text-[9px] text-[#6B6B6B] uppercase tracking-wider">Pending</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <div className="w-1.5 rounded-sm" style={{ height: 12, background: 'rgba(74,222,128,0.8)' }} />
-                  <span className="text-[9px] text-white/40 uppercase tracking-wider">Paid</span>
+                  <span className="text-[9px] text-[#6B6B6B] uppercase tracking-wider">Paid</span>
                 </div>
               </>
             )}
             <div className="flex items-center gap-2 ml-auto">
-              <div className="w-px h-3 bg-intelligence-cyan/80" />
-              <span className="text-[9px] text-white/40 uppercase tracking-wider">Today</span>
+              <div className="w-px h-3 bg-[rgba(139,156,182,0.70)]" />
+              <span className="text-[9px] text-[#6B6B6B] uppercase tracking-wider">Today</span>
             </div>
           </div>
 
           {projects.length > 1 && (
-            <div className="flex items-center flex-wrap gap-x-5 gap-y-1.5 pt-2 border-t border-white/[0.05]">
+            <div className="flex items-center flex-wrap gap-x-5 gap-y-1.5 pt-2 border-t border-[#404040]">
               {projects.map((p, i) => {
                 const c = PROJECT_COLORS[i % PROJECT_COLORS.length]
                 return (
                   <div key={p.id} className="flex items-center gap-1.5">
                     <div className="size-2.5 rounded-sm shrink-0" style={{ background: c.hex }} />
-                    <span className="text-[9px] text-white/45 truncate max-w-[100px]">{p.name}</span>
+                    <span className="text-[9px] text-[#6B6B6B] truncate max-w-[100px]">{p.name}</span>
                   </div>
                 )
               })}
@@ -556,31 +556,31 @@ export function PortfolioTimeline({
 
       {/* Settings modal */}
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-        <DialogContent className="bg-[#0e0e0e] border border-white/[0.08] text-white max-w-xs rounded-2xl">
+        <DialogContent className="bg-[#252525] border border-[#404040] text-[#F0F0F0] max-w-xs rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="text-[13px] font-semibold text-white/70 tracking-wide">
+            <DialogTitle className="text-[13px] font-semibold text-[#A0A0A0] tracking-wide">
               Timeline Settings
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-6 pt-1">
             <div>
-              <p className="text-[10px] text-white/35 uppercase tracking-[0.25em] mb-4">Projects shown</p>
+              <p className="text-[10px] text-[#6B6B6B] uppercase tracking-[0.25em] mb-4">Projects shown</p>
               <div className="flex items-center gap-4">
                 <button
                   onClick={() => setProjectLimit(l => Math.max(1, l - 1))}
-                  className="size-9 rounded-xl bg-white/[0.05] border border-white/[0.08] text-white/50 hover:text-white hover:bg-white/[0.08] flex items-center justify-center transition-colors"
+                  className="size-9 rounded-xl bg-[rgba(255,255,255,0.06)] border border-[#404040] text-[#6B6B6B] hover:text-[#F0F0F0] hover:bg-[rgba(255,255,255,0.06)] flex items-center justify-center transition-colors"
                 >
                   <Minus className="size-3.5" />
                 </button>
-                <span className="text-3xl font-bold tabular-nums text-white w-8 text-center">{projectLimit}</span>
+                <span className="text-3xl font-bold tabular-nums text-[#F0F0F0] w-8 text-center">{projectLimit}</span>
                 <button
                   onClick={() => setProjectLimit(l => Math.min(allProjects.length || 20, l + 1))}
-                  className="size-9 rounded-xl bg-white/[0.05] border border-white/[0.08] text-white/50 hover:text-white hover:bg-white/[0.08] flex items-center justify-center transition-colors"
+                  className="size-9 rounded-xl bg-[rgba(255,255,255,0.06)] border border-[#404040] text-[#6B6B6B] hover:text-[#F0F0F0] hover:bg-[rgba(255,255,255,0.06)] flex items-center justify-center transition-colors"
                 >
                   <Plus className="size-3.5" />
                 </button>
               </div>
-              <p className="text-[10px] text-white/20 mt-3">
+              <p className="text-[10px] text-[#6B6B6B] mt-3">
                 {allProjects.length} total · sorted by most recently edited
               </p>
             </div>
@@ -594,13 +594,13 @@ export function PortfolioTimeline({
           className="fixed z-50 pointer-events-none"
           style={{ left: tooltip.x + 14, top: tooltip.y - 8, transform: 'translateY(-100%)' }}
         >
-          <div className="bg-[#111] border border-white/[0.12] rounded-lg px-3 py-2.5 shadow-2xl space-y-0.5 max-w-[220px]">
+          <div className="bg-[#252525] border border-[#404040] rounded-lg px-3 py-2.5 shadow-2xl space-y-0.5 max-w-[220px]">
             {tooltip.lines.map((l, i) => (
               <p
                 key={i}
                 className={cn(
                   'text-[10px] whitespace-nowrap',
-                  i === 0 ? 'text-white/85 font-semibold' : 'text-white/40',
+                  i === 0 ? 'text-[#F0F0F0] font-semibold' : 'text-[#6B6B6B]',
                 )}
               >
                 {l}

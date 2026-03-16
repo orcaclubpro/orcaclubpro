@@ -63,7 +63,7 @@ export function CreateMilestoneSheet({ projectId, open, onOpenChange }: CreateMi
 
   return (
     <Sheet open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v) }}>
-      <SheetContent className="bg-[#080808] border-white/[0.08] w-full sm:max-w-md p-0 flex flex-col gap-0 overflow-hidden">
+      <SheetContent className="bg-[#1C1C1C] border-[#404040] w-full sm:max-w-md p-0 flex flex-col gap-0 overflow-hidden">
 
         {/* Green top accent */}
         <div className="h-px bg-gradient-to-r from-transparent via-green-400/50 to-transparent shrink-0" />
@@ -71,21 +71,21 @@ export function CreateMilestoneSheet({ projectId, open, onOpenChange }: CreateMi
         {/* Corner SVG */}
         <div className="absolute top-0 right-0 pointer-events-none select-none" aria-hidden="true">
           <svg width="80" height="80" viewBox="0 0 80 80" fill="none" className="opacity-[0.04]">
-            <path d="M80 0 L80 80 L0 80" stroke="white" strokeWidth="1" />
-            <path d="M80 24 L80 80 L24 80" stroke="white" strokeWidth="0.5" />
+            <path d="M80 0 L80 80 L0 80" stroke="#333333" strokeWidth="1" />
+            <path d="M80 24 L80 80 L24 80" stroke="#333333" strokeWidth="0.5" />
           </svg>
         </div>
 
         {/* Header */}
-        <div className="px-7 pt-7 pb-6 border-b border-white/[0.06] shrink-0">
-          <p className="text-[10px] tracking-[0.35em] uppercase text-white/20 font-light mb-4">New Milestone</p>
+        <div className="px-7 pt-7 pb-6 border-b border-[#404040] shrink-0">
+          <p className="text-[10px] tracking-[0.35em] uppercase text-[#6B6B6B] font-light mb-4">New Milestone</p>
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-green-400/10 border border-green-400/20">
               <Flag className="size-4 text-green-400" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-white leading-snug">Add a Milestone</h2>
-              <p className="text-xs text-gray-500 mt-0.5">Mark an important project deliverable</p>
+              <h2 className="text-lg font-semibold text-[#F0F0F0] leading-snug">Add a Milestone</h2>
+              <p className="text-xs text-[#6B6B6B] mt-0.5">Mark an important project deliverable</p>
             </div>
           </div>
           <div className="mt-5 w-6 h-px bg-green-400/40" />
@@ -97,7 +97,7 @@ export function CreateMilestoneSheet({ projectId, open, onOpenChange }: CreateMi
 
             {/* Title */}
             <div className="space-y-1.5">
-              <label className="text-xs text-gray-400 font-medium tracking-wide">Milestone Title</label>
+              <label className="text-xs text-[#6B6B6B] font-medium tracking-wide">Milestone Title</label>
               <input
                 value={title}
                 onChange={(e) => { setTitle(e.target.value); clearField('title') }}
@@ -105,9 +105,9 @@ export function CreateMilestoneSheet({ projectId, open, onOpenChange }: CreateMi
                 disabled={isLoading}
                 autoFocus
                 className={cn(
-                  'w-full bg-white/[0.03] border rounded-lg px-4 py-2.5 text-white placeholder:text-gray-600 text-sm outline-none transition-all duration-200',
-                  'focus:bg-white/[0.05] focus:ring-1 focus:ring-green-400/20 focus:border-green-400/35',
-                  fieldErrors.title ? 'border-red-400/50' : 'border-white/[0.08]',
+                  'w-full bg-[rgba(255,255,255,0.06)] border rounded-lg px-4 py-2.5 text-[#F0F0F0] placeholder:text-[#6B6B6B] text-sm outline-none transition-all duration-200',
+                  'focus:bg-[rgba(255,255,255,0.06)] focus:ring-1 focus:ring-green-400/20 focus:border-green-400/35',
+                  fieldErrors.title ? 'border-red-400/50' : 'border-[#404040]',
                 )}
               />
               {fieldErrors.title && <p className="text-xs text-red-400">{fieldErrors.title}</p>}
@@ -115,18 +115,18 @@ export function CreateMilestoneSheet({ projectId, open, onOpenChange }: CreateMi
 
             {/* Date */}
             <div className="space-y-1.5">
-              <label className="text-xs text-gray-400 font-medium tracking-wide">Target Date</label>
+              <label className="text-xs text-[#6B6B6B] font-medium tracking-wide">Target Date</label>
               <div className="relative">
-                <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-gray-600 pointer-events-none" />
+                <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-[#6B6B6B] pointer-events-none" />
                 <input
                   type="date"
                   value={date}
                   onChange={(e) => { setDate(e.target.value); clearField('date') }}
                   disabled={isLoading}
                   className={cn(
-                    'w-full bg-white/[0.03] border rounded-lg pl-10 pr-4 py-2.5 text-white text-sm outline-none transition-all duration-200 [color-scheme:dark]',
-                    'focus:bg-white/[0.05] focus:border-green-400/35',
-                    fieldErrors.date ? 'border-red-400/50' : 'border-white/[0.08]',
+                    'w-full bg-[rgba(255,255,255,0.06)] border rounded-lg pl-10 pr-4 py-2.5 text-[#F0F0F0] text-sm outline-none transition-all duration-200 [color-scheme:light]',
+                    'focus:bg-[rgba(255,255,255,0.06)] focus:border-green-400/35',
+                    fieldErrors.date ? 'border-red-400/50' : 'border-[#404040]',
                   )}
                 />
               </div>
@@ -136,8 +136,8 @@ export function CreateMilestoneSheet({ projectId, open, onOpenChange }: CreateMi
             {/* Description */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <label className="text-xs text-gray-400 font-medium tracking-wide">Description</label>
-                <span className="text-[10px] text-gray-600">Optional</span>
+                <label className="text-xs text-[#6B6B6B] font-medium tracking-wide">Description</label>
+                <span className="text-[10px] text-[#6B6B6B]">Optional</span>
               </div>
               <textarea
                 value={description}
@@ -145,25 +145,25 @@ export function CreateMilestoneSheet({ projectId, open, onOpenChange }: CreateMi
                 placeholder="What does reaching this milestone mean for the project?"
                 rows={3}
                 disabled={isLoading}
-                className="w-full bg-white/[0.03] border border-white/[0.08] rounded-lg px-4 py-2.5 text-white placeholder:text-gray-600 text-sm outline-none transition-all duration-200 resize-none focus:bg-white/[0.05] focus:ring-1 focus:ring-green-400/20 focus:border-green-400/35"
+                className="w-full bg-[rgba(255,255,255,0.06)] border border-[#404040] rounded-lg px-4 py-2.5 text-[#F0F0F0] placeholder:text-[#6B6B6B] text-sm outline-none transition-all duration-200 resize-none focus:bg-[rgba(255,255,255,0.06)] focus:ring-1 focus:ring-green-400/20 focus:border-green-400/35"
               />
             </div>
 
             {/* Live preview */}
             {showPreview && (
-              <div className="relative overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.02] p-4 animate-in fade-in slide-in-from-bottom-1 duration-200">
+              <div className="relative overflow-hidden rounded-xl border border-[#404040] bg-[rgba(255,255,255,0.06)] p-4 animate-in fade-in slide-in-from-bottom-1 duration-200">
                 <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-green-400/50 via-green-400/20 to-transparent" />
                 <p className="text-[10px] tracking-[0.25em] uppercase text-green-400/50 mb-3">Preview</p>
                 <div className="flex items-start gap-3">
-                  <div className="mt-1 size-3 rounded-full border-2 border-gray-500 shrink-0" />
+                  <div className="mt-1 size-3 rounded-full border-2 border-[#555555] shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-white truncate">{title}</p>
+                    <p className="text-sm font-semibold text-[#F0F0F0] truncate">{title}</p>
                     <div className="flex items-center gap-1.5 mt-1">
-                      <Calendar className="size-3 text-gray-600 shrink-0" />
-                      <span className="text-xs text-gray-400">{fmtFull(date)}</span>
+                      <Calendar className="size-3 text-[#6B6B6B] shrink-0" />
+                      <span className="text-xs text-[#6B6B6B]">{fmtFull(date)}</span>
                     </div>
                     {description.trim() && (
-                      <p className="text-xs text-gray-500 mt-2 leading-relaxed border-t border-white/[0.06] pt-2">
+                      <p className="text-xs text-[#6B6B6B] mt-2 leading-relaxed border-t border-[#404040] pt-2">
                         {description}
                       </p>
                     )}
@@ -181,11 +181,11 @@ export function CreateMilestoneSheet({ projectId, open, onOpenChange }: CreateMi
           </div>
 
           {/* Sticky footer */}
-          <div className="shrink-0 px-7 pb-7 pt-4 border-t border-white/[0.06] bg-[#080808]">
+          <div className="shrink-0 px-7 pb-7 pt-4 border-t border-[#404040] bg-[#1C1C1C]">
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-white/[0.06] border border-green-400/20 text-white font-semibold py-3 rounded-xl hover:bg-white/[0.08] hover:border-green-400/35 active:scale-[0.99] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
+              className="w-full bg-[rgba(255,255,255,0.06)] border border-green-400/20 text-[#F0F0F0] font-semibold py-3 rounded-xl hover:bg-[rgba(255,255,255,0.06)] hover:border-green-400/35 active:scale-[0.99] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
             >
               {isLoading ? (
                 <><Loader2 className="size-4 animate-spin" />Adding milestone...</>

@@ -1,4 +1,4 @@
-export type ThemeId = 'void' | 'arctic' | 'ember' | 'emerald' | 'dusk' | 'chrome'
+export type ThemeId = 'paper' | 'void' | 'arctic' | 'ember' | 'emerald' | 'dusk' | 'chrome'
 
 export interface ThemeDefinition {
   id: ThemeId
@@ -19,6 +19,22 @@ export interface ThemeDefinition {
 }
 
 export const THEMES: Record<ThemeId, ThemeDefinition> = {
+  paper: {
+    id: 'paper',
+    label: 'Charcoal',
+    description: 'Dark charcoal with muted slate blue accent',
+    vars: {
+      '--space-accent': '#8B9CB6',
+      '--space-accent-rgb': '139, 156, 182',
+      '--space-accent-dim': '#6B7F9A',
+      '--space-accent-glow': 'rgba(139, 156, 182, 0.20)',
+      '--space-accent-soft': 'rgba(139, 156, 182, 0.08)',
+      '--space-bg-base': '#1C1C1C',
+      '--space-bg-surface': 'rgba(255, 255, 255, 0.04)',
+      '--space-nav-bg': 'rgba(34, 34, 34, 0.96)',
+      '--space-border': 'rgba(255, 255, 255, 0.08)',
+    },
+  },
   void: {
     id: 'void',
     label: 'Void',
@@ -117,4 +133,4 @@ export const THEMES: Record<ThemeId, ThemeDefinition> = {
   },
 }
 
-export const DEFAULT_THEME: ThemeId = 'void'
+export const DEFAULT_THEME: ThemeId = 'paper'

@@ -54,7 +54,7 @@ export function ClientTabNav({ activeTab, basePath }: ClientTabNavProps) {
           data-active={activeTab === tab.key ? 'true' : undefined}
           className={cn(
             'px-4 h-full flex items-center text-sm font-medium transition-colors duration-150',
-            activeTab === tab.key ? 'text-white' : 'text-gray-500 hover:text-gray-300'
+            activeTab === tab.key ? 'text-[#F0F0F0]' : 'text-[#4A4A4A] hover:text-[#A0A0A0]'
           )}
         >
           {tab.label}
@@ -62,7 +62,7 @@ export function ClientTabNav({ activeTab, basePath }: ClientTabNavProps) {
       ))}
       {/* Sliding active indicator */}
       <div
-        className="absolute bottom-0 h-0.5 bg-intelligence-cyan rounded-full pointer-events-none"
+        className="absolute bottom-0 h-0.5 bg-[var(--space-accent)] rounded-full pointer-events-none"
         style={{
           left: indicatorStyle.left,
           width: indicatorStyle.width,

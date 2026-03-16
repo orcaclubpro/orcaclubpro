@@ -93,26 +93,26 @@ export function MilestoneEditSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="bg-[#080808] border-white/[0.08] w-full sm:max-w-md p-0 flex flex-col gap-0 overflow-hidden">
+      <SheetContent className="bg-[#1C1C1C] border-[#404040] w-full sm:max-w-md p-0 flex flex-col gap-0 overflow-hidden">
 
         <div className="h-px bg-gradient-to-r from-transparent via-green-400/50 to-transparent shrink-0" />
 
         <div className="absolute top-0 right-0 pointer-events-none select-none" aria-hidden="true">
           <svg width="80" height="80" viewBox="0 0 80 80" fill="none" className="opacity-[0.04]">
-            <path d="M80 0 L80 80 L0 80" stroke="white" strokeWidth="1" />
-            <path d="M80 24 L80 80 L24 80" stroke="white" strokeWidth="0.5" />
+            <path d="M80 0 L80 80 L0 80" stroke="#333333" strokeWidth="1" />
+            <path d="M80 24 L80 80 L24 80" stroke="#333333" strokeWidth="0.5" />
           </svg>
         </div>
 
-        <div className="px-7 pt-7 pb-6 border-b border-white/[0.06] shrink-0">
-          <p className="text-[10px] tracking-[0.35em] uppercase text-white/20 font-light mb-4">Edit Milestone</p>
+        <div className="px-7 pt-7 pb-6 border-b border-[#404040] shrink-0">
+          <p className="text-[10px] tracking-[0.35em] uppercase text-[#6B6B6B] font-light mb-4">Edit Milestone</p>
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-green-400/10 border border-green-400/20">
               <Flag className="size-4 text-green-400" />
             </div>
             <div className="min-w-0">
-              <h2 className="text-lg font-semibold text-white leading-snug truncate">{title || 'Milestone'}</h2>
-              <p className="text-xs text-gray-500 mt-0.5">Modify or remove this milestone</p>
+              <h2 className="text-lg font-semibold text-[#F0F0F0] leading-snug truncate">{title || 'Milestone'}</h2>
+              <p className="text-xs text-[#6B6B6B] mt-0.5">Modify or remove this milestone</p>
             </div>
           </div>
           <div className="mt-5 w-6 h-px bg-green-400/40" />
@@ -122,32 +122,32 @@ export function MilestoneEditSheet({
           <div className="flex-1 overflow-y-auto px-7 py-6 space-y-5">
 
             <div className="space-y-1.5">
-              <label className="text-xs text-gray-400 font-medium tracking-wide">Milestone Title</label>
+              <label className="text-xs text-[#6B6B6B] font-medium tracking-wide">Milestone Title</label>
               <input
                 value={title}
                 onChange={(e) => { setTitle(e.target.value); clearField('title') }}
                 placeholder="Milestone title"
                 className={cn(
-                  'w-full bg-white/[0.03] border rounded-lg px-4 py-2.5 text-white placeholder:text-gray-600 text-sm outline-none transition-all duration-200',
-                  'focus:bg-white/[0.05] focus:ring-1 focus:ring-green-400/20 focus:border-green-400/35',
-                  fieldErrors.title ? 'border-red-400/50' : 'border-white/[0.08]',
+                  'w-full bg-[rgba(255,255,255,0.06)] border rounded-lg px-4 py-2.5 text-[#F0F0F0] placeholder:text-[#6B6B6B] text-sm outline-none transition-all duration-200',
+                  'focus:bg-[rgba(255,255,255,0.06)] focus:ring-1 focus:ring-green-400/20 focus:border-green-400/35',
+                  fieldErrors.title ? 'border-red-400/50' : 'border-[#404040]',
                 )}
               />
               {fieldErrors.title && <p className="text-xs text-red-400">{fieldErrors.title}</p>}
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs text-gray-400 font-medium tracking-wide">Target Date</label>
+              <label className="text-xs text-[#6B6B6B] font-medium tracking-wide">Target Date</label>
               <div className="relative">
-                <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-gray-600 pointer-events-none" />
+                <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-[#6B6B6B] pointer-events-none" />
                 <input
                   type="date"
                   value={date}
                   onChange={(e) => { setDate(e.target.value); clearField('date') }}
                   className={cn(
-                    'w-full bg-white/[0.03] border rounded-lg pl-10 pr-4 py-2.5 text-white text-sm outline-none transition-all duration-200 [color-scheme:dark]',
-                    'focus:bg-white/[0.05] focus:border-green-400/35',
-                    fieldErrors.date ? 'border-red-400/50' : 'border-white/[0.08]',
+                    'w-full bg-[rgba(255,255,255,0.06)] border rounded-lg pl-10 pr-4 py-2.5 text-[#F0F0F0] text-sm outline-none transition-all duration-200 [color-scheme:light]',
+                    'focus:bg-[rgba(255,255,255,0.06)] focus:border-green-400/35',
+                    fieldErrors.date ? 'border-red-400/50' : 'border-[#404040]',
                   )}
                 />
               </div>
@@ -156,15 +156,15 @@ export function MilestoneEditSheet({
 
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <label className="text-xs text-gray-400 font-medium tracking-wide">Description</label>
-                <span className="text-[10px] text-gray-600">Optional</span>
+                <label className="text-xs text-[#6B6B6B] font-medium tracking-wide">Description</label>
+                <span className="text-[10px] text-[#6B6B6B]">Optional</span>
               </div>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Notes about this milestone..."
                 rows={3}
-                className="w-full bg-white/[0.03] border border-white/[0.08] rounded-lg px-4 py-2.5 text-white placeholder:text-gray-600 text-sm outline-none transition-all duration-200 resize-none focus:bg-white/[0.05] focus:ring-1 focus:ring-green-400/20 focus:border-green-400/35"
+                className="w-full bg-[rgba(255,255,255,0.06)] border border-[#404040] rounded-lg px-4 py-2.5 text-[#F0F0F0] placeholder:text-[#6B6B6B] text-sm outline-none transition-all duration-200 resize-none focus:bg-[rgba(255,255,255,0.06)] focus:ring-1 focus:ring-green-400/20 focus:border-green-400/35"
               />
             </div>
 
@@ -182,11 +182,11 @@ export function MilestoneEditSheet({
             )}
           </div>
 
-          <div className="shrink-0 px-7 pb-7 pt-4 border-t border-white/[0.06] bg-[#080808] space-y-3">
+          <div className="shrink-0 px-7 pb-7 pt-4 border-t border-[#404040] bg-[#1C1C1C] space-y-3">
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-white/[0.06] border border-green-400/20 text-white font-semibold py-3 rounded-xl hover:bg-white/[0.08] hover:border-green-400/35 active:scale-[0.99] transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2 text-sm"
+              className="w-full bg-[rgba(255,255,255,0.06)] border border-green-400/20 text-[#F0F0F0] font-semibold py-3 rounded-xl hover:bg-[rgba(255,255,255,0.06)] hover:border-green-400/35 active:scale-[0.99] transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2 text-sm"
             >
               {isLoading
                 ? <><Loader2 className="size-4 animate-spin" />Saving...</>
@@ -203,7 +203,7 @@ export function MilestoneEditSheet({
                 'w-full border font-medium py-2.5 rounded-xl active:scale-[0.99] transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2 text-sm',
                 confirmDelete
                   ? 'bg-red-500/10 border-red-500/40 text-red-400 hover:bg-red-500/15'
-                  : 'bg-transparent border-white/[0.06] text-gray-600 hover:border-red-500/30 hover:text-red-400',
+                  : 'bg-transparent border-[#404040] text-[#6B6B6B] hover:border-red-500/30 hover:text-red-400',
               )}
             >
               {isDeleting

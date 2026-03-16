@@ -57,9 +57,9 @@ export function ActivityTimeline({ events, maxEvents = 5 }: ActivityTimelineProp
         }
       default:
         return {
-          dot: 'bg-intelligence-cyan shadow-[0_0_8px_rgba(103,232,249,0.4)]',
-          icon: 'text-intelligence-cyan',
-          iconBg: 'bg-intelligence-cyan/10 border-intelligence-cyan/20',
+          dot: 'bg-[var(--space-accent)] shadow-[0_0_8px_rgba(139,156,182,0.25)]',
+          icon: 'text-[var(--space-accent)]',
+          iconBg: 'bg-[rgba(139,156,182,0.10)] border-[rgba(139,156,182,0.15)]',
         }
     }
   }
@@ -103,7 +103,7 @@ export function ActivityTimeline({ events, maxEvents = 5 }: ActivityTimelineProp
               {/* Icon with dot */}
               <div className="relative flex-shrink-0">
                 <div
-                  className={`p-2 rounded-lg ${colors.iconBg} border backdrop-blur-sm`}
+                  className={`p-2 rounded-lg ${colors.iconBg} border`}
                 >
                   <Icon className={`size-4 ${colors.icon}`} />
                 </div>

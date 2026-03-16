@@ -26,10 +26,10 @@ export function CollapsibleSidebar({ children }: CollapsibleSidebarProps) {
 
   return (
     // aside stretches to the flex container's full height (no self-start, no fixed height)
-    // bg-[#1c1c1c]/40 + border-r extend the full page length for visual continuity
+    // border-r extends the full page length for visual continuity
     <aside
       className={cn(
-        'hidden lg:block shrink-0 border-r border-white/[0.08] bg-[#1c1c1c]/40 transition-[width] duration-300 ease-in-out',
+        'hidden lg:block shrink-0 border-r border-[#404040] bg-[#252525] transition-[width] duration-300 ease-in-out',
         isOpen ? 'w-72 xl:w-80' : 'w-12',
       )}
       onMouseEnter={handleMouseEnter}
@@ -52,7 +52,7 @@ export function CollapsibleSidebar({ children }: CollapsibleSidebarProps) {
           <div className={cn('flex shrink-0 pt-3', isOpen ? 'justify-end pr-3' : 'justify-center')}>
             <button
               onClick={() => setPinned((p) => !p)}
-              className="p-1.5 rounded-md text-gray-600 hover:text-gray-300 hover:bg-white/[0.05] transition-colors"
+              className="p-1.5 rounded-md text-[#4A4A4A] hover:text-[#A0A0A0] hover:bg-[#2D2D2D] transition-colors"
               aria-label={pinned ? 'Unpin sidebar' : 'Pin sidebar open'}
             >
               {pinned ? (

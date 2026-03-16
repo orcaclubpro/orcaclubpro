@@ -119,7 +119,7 @@ export function ClientRowActions({
               e.preventDefault()
               e.stopPropagation()
             }}
-            className="opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity duration-150 p-1.5 rounded-md text-gray-600 hover:text-white hover:bg-white/[0.08] relative z-[3]"
+            className="opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity duration-150 p-1.5 rounded-md text-gray-600 hover:text-[#F0F0F0] hover:bg-[rgba(255,255,255,0.06)] relative z-[3]"
             aria-label={`Actions for ${clientName}`}
           >
             <MoreHorizontal className="size-4" />
@@ -128,19 +128,19 @@ export function ClientRowActions({
 
         <DropdownMenuContent
           align="end"
-          className="bg-[#1c1c1c] border border-white/[0.10] text-white min-w-[140px] shadow-xl"
+          className="bg-[#1C1C1C] border border-[#404040] text-[#F0F0F0] min-w-[140px] shadow-xl"
           // Prevent the portal click from propagating to the row link
           onClick={(e) => e.stopPropagation()}
         >
           <DropdownMenuItem
             onClick={() => openEdit()}
-            className="gap-2 text-sm text-gray-300 hover:text-white focus:text-white cursor-pointer"
+            className="gap-2 text-sm text-[#A0A0A0] hover:text-[#F0F0F0] focus:text-[#F0F0F0] cursor-pointer"
           >
             <Pencil className="size-3.5 shrink-0" />
             Edit
           </DropdownMenuItem>
 
-          <DropdownMenuSeparator className="bg-white/[0.06]" />
+          <DropdownMenuSeparator className="bg-[#333333]" />
 
           <DropdownMenuItem
             onClick={() => openDelete()}
@@ -154,19 +154,19 @@ export function ClientRowActions({
 
       {/* ── Edit modal ── */}
       <Dialog open={activeModal === 'edit'} onOpenChange={(v) => !v && closeModal()}>
-        <DialogContent className="bg-[#111] border border-white/[0.10] text-white max-w-md">
+        <DialogContent className="bg-[#1C1C1C] border border-[#404040] text-[#F0F0F0] max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-white">Edit Client</DialogTitle>
-            <DialogDescription className="text-gray-500 text-sm">
+            <DialogTitle className="text-lg font-bold text-[#F0F0F0]">Edit Client</DialogTitle>
+            <DialogDescription className="text-[#6B6B6B] text-sm">
               Update account details for{' '}
-              <span className="text-gray-300 font-medium">{clientName}</span>.
+              <span className="text-[#A0A0A0] font-medium">{clientName}</span>.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 pt-2">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-gray-500 text-[11px] uppercase tracking-wider font-semibold">
+                <Label className="text-[#6B6B6B] text-[11px] uppercase tracking-wider font-semibold">
                   First Name
                 </Label>
                 <Input
@@ -175,11 +175,11 @@ export function ClientRowActions({
                     const val = e.target.value
                     setForm((f) => ({ ...f, firstName: val, name: `${val} ${f.lastName}`.trim() }))
                   }}
-                  className="bg-white/[0.04] border-white/[0.08] text-white focus-visible:ring-[#67e8f9]/30 focus-visible:ring-1"
+                  className="bg-[rgba(255,255,255,0.06)] border-[#404040] text-[#F0F0F0] focus-visible:ring-[rgba(139,156,182,0.20)] focus-visible:ring-1"
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-gray-500 text-[11px] uppercase tracking-wider font-semibold">
+                <Label className="text-[#6B6B6B] text-[11px] uppercase tracking-wider font-semibold">
                   Last Name
                 </Label>
                 <Input
@@ -188,31 +188,31 @@ export function ClientRowActions({
                     const val = e.target.value
                     setForm((f) => ({ ...f, lastName: val, name: `${f.firstName} ${val}`.trim() }))
                   }}
-                  className="bg-white/[0.04] border-white/[0.08] text-white focus-visible:ring-[#67e8f9]/30 focus-visible:ring-1"
+                  className="bg-[rgba(255,255,255,0.06)] border-[#404040] text-[#F0F0F0] focus-visible:ring-[rgba(139,156,182,0.20)] focus-visible:ring-1"
                 />
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-gray-500 text-[11px] uppercase tracking-wider font-semibold">
+              <Label className="text-[#6B6B6B] text-[11px] uppercase tracking-wider font-semibold">
                 Display Name
               </Label>
               <Input
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                className="bg-white/[0.04] border-white/[0.08] text-white focus-visible:ring-[#67e8f9]/30 focus-visible:ring-1"
+                className="bg-[rgba(255,255,255,0.06)] border-[#404040] text-[#F0F0F0] focus-visible:ring-[rgba(139,156,182,0.20)] focus-visible:ring-1"
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-gray-500 text-[11px] uppercase tracking-wider font-semibold">
+              <Label className="text-[#6B6B6B] text-[11px] uppercase tracking-wider font-semibold">
                 Company
               </Label>
               <Input
                 value={form.company}
                 onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))}
                 placeholder="Optional"
-                className="bg-white/[0.04] border-white/[0.08] text-white placeholder:text-gray-700 focus-visible:ring-[#67e8f9]/30 focus-visible:ring-1"
+                className="bg-[rgba(255,255,255,0.06)] border-[#404040] text-[#F0F0F0] placeholder:text-[#6B6B6B] focus-visible:ring-[rgba(139,156,182,0.20)] focus-visible:ring-1"
               />
             </div>
 
@@ -227,14 +227,14 @@ export function ClientRowActions({
                 variant="outline"
                 onClick={closeModal}
                 disabled={loading}
-                className="flex-1 border-white/[0.12] text-white hover:bg-white/[0.04]"
+                className="flex-1 border-[#404040] text-[#F0F0F0] hover:bg-[#2D2D2D]"
               >
                 Cancel
               </Button>
               <Button
                 onClick={handleEdit}
                 disabled={loading}
-                className="flex-1 bg-[#67e8f9] hover:bg-[#67e8f9]/90 text-black font-semibold"
+                className="flex-1 bg-[var(--space-accent)] hover:bg-[rgba(139,156,182,0.90)] text-white font-semibold"
               >
                 {loading ? <Loader2 className="size-4 animate-spin" /> : 'Save Changes'}
               </Button>
@@ -245,21 +245,21 @@ export function ClientRowActions({
 
       {/* ── Delete modal ── */}
       <Dialog open={activeModal === 'delete'} onOpenChange={(v) => !v && closeModal()}>
-        <DialogContent className="bg-[#111] border border-white/[0.10] text-white max-w-md">
+        <DialogContent className="bg-[#1C1C1C] border border-[#404040] text-[#F0F0F0] max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-white">Delete Client Account</DialogTitle>
-            <DialogDescription className="text-gray-500 text-sm leading-relaxed pt-1">
+            <DialogTitle className="text-lg font-bold text-[#F0F0F0]">Delete Client Account</DialogTitle>
+            <DialogDescription className="text-[#6B6B6B] text-sm leading-relaxed pt-1">
               This will permanently delete{' '}
-              <span className="text-gray-300 font-medium">{clientName}</span>
+              <span className="text-[#A0A0A0] font-medium">{clientName}</span>
               &apos;s account and remove them from Stripe. This cannot be undone.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 pt-2">
             <div className="space-y-1.5">
-              <Label className="text-gray-500 text-sm">
+              <Label className="text-[#6B6B6B] text-sm">
                 Type{' '}
-                <span className="text-white font-mono text-xs bg-white/[0.06] px-1.5 py-0.5 rounded">
+                <span className="text-[#F0F0F0] font-mono text-xs bg-[rgba(255,255,255,0.06)] px-1.5 py-0.5 rounded">
                   {clientEmail}
                 </span>{' '}
                 to confirm
@@ -270,7 +270,7 @@ export function ClientRowActions({
                 placeholder={clientEmail}
                 autoComplete="off"
                 spellCheck={false}
-                className="bg-white/[0.04] border-white/[0.1] text-white placeholder:text-gray-700 focus-visible:ring-red-400/30 focus-visible:ring-1 font-mono text-sm"
+                className="bg-[rgba(255,255,255,0.06)] border-[#404040] text-[#F0F0F0] placeholder:text-[#6B6B6B] focus-visible:ring-red-400/30 focus-visible:ring-1 font-mono text-sm"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && deleteConfirmed) handleDelete()
                 }}
@@ -288,7 +288,7 @@ export function ClientRowActions({
                 variant="outline"
                 onClick={closeModal}
                 disabled={loading}
-                className="flex-1 border-white/[0.12] text-white hover:bg-white/[0.04]"
+                className="flex-1 border-[#404040] text-[#F0F0F0] hover:bg-[#2D2D2D]"
               >
                 Cancel
               </Button>

@@ -15,7 +15,7 @@ interface TimeframePickerProps {
 
 export function TimeframePicker({ active, basePath }: TimeframePickerProps) {
   return (
-    <div className="flex items-center gap-0.5 bg-black/30 border border-white/[0.1] rounded-lg p-0.5 shrink-0">
+    <div className="flex items-center gap-0.5 bg-[rgba(255,255,255,0.06)] border border-[#404040] rounded-lg p-0.5 shrink-0">
       {TIMEFRAMES.map(tf => (
         <Link
           key={tf.value}
@@ -24,8 +24,8 @@ export function TimeframePicker({ active, basePath }: TimeframePickerProps) {
           prefetch={false}
           className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all duration-150 ${
             active === tf.value
-              ? 'bg-intelligence-cyan text-black shadow-sm'
-              : 'text-gray-500 hover:text-gray-200'
+              ? 'bg-[var(--space-accent)] text-white shadow-sm'
+              : 'text-[#6B6B6B] hover:text-[#A0A0A0]'
           }`}
         >
           {tf.label}

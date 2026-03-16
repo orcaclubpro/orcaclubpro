@@ -13,9 +13,9 @@ interface UserSettingsModalProps {
   title?: string | null
 }
 
-const PANEL_BG = '#0d0d0d'
+const PANEL_BG = '#1C1C1C'
 const fieldClass =
-  'w-full h-9 rounded-lg px-3 text-sm text-white placeholder:text-gray-700 outline-none transition-colors duration-150 border border-white/[0.09] focus:border-cyan-400/30 bg-white/[0.04] focus:bg-white/[0.06]'
+  'w-full h-9 rounded-lg px-3 text-sm text-[#F0F0F0] placeholder:text-[#4A4A4A] outline-none transition-colors duration-150 border border-[#404040] focus:border-[rgba(139,156,182,0.15)] bg-[#252525] focus:bg-[#2D2D2D]'
 
 export function UserSettingsModal({ name, email, title }: UserSettingsModalProps) {
   const router = useRouter()
@@ -101,7 +101,7 @@ export function UserSettingsModal({ name, email, title }: UserSettingsModalProps
     <>
       <button
         onClick={handleOpen}
-        className="group flex items-center justify-center w-12 h-12 rounded-lg hover:bg-white/[0.06] hover:shadow-[0_0_14px_rgba(103,232,249,0.18)] transition-all duration-200 focus:outline-none focus-visible:ring-1 focus-visible:ring-cyan-400/50"
+        className="group flex items-center justify-center w-12 h-12 rounded-lg hover:bg-[#2D2D2D] transition-all duration-200 focus:outline-none focus-visible:ring-1 focus-visible:ring-[rgba(139,156,182,0.15)]"
         aria-label="Profile"
       >
         <Image
@@ -109,7 +109,7 @@ export function UserSettingsModal({ name, email, title }: UserSettingsModalProps
           alt="Profile"
           width={48}
           height={48}
-          className="brightness-0 invert opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-all duration-200"
+          className="opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-all duration-200"
         />
       </button>
 
@@ -119,15 +119,14 @@ export function UserSettingsModal({ name, email, title }: UserSettingsModalProps
           <div
             className="fixed inset-0 z-[60] transition-all duration-300"
             style={{
-              background: visible ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0)',
-              backdropFilter: visible ? 'blur(4px)' : 'blur(0px)',
+              background: visible ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0)',
             }}
             onClick={handleClose}
           />
 
           {/* Panel — the panel itself scrolls; header is sticky */}
           <div
-            className="fixed top-0 right-0 bottom-0 z-[61] w-full sm:w-[380px] overflow-y-auto border-l border-white/[0.07]"
+            className="fixed top-0 right-0 bottom-0 z-[61] w-full sm:w-[380px] overflow-y-auto border-l border-[#404040]"
             style={{
               background: PANEL_BG,
               transform: visible ? 'translateX(0)' : 'translateX(100%)',
@@ -135,21 +134,21 @@ export function UserSettingsModal({ name, email, title }: UserSettingsModalProps
             }}
           >
             {/* Header — sticky so it stays while scrolling */}
-            <div className="sticky top-0 z-10 px-6 pt-8 pb-5 border-b border-white/[0.06]" style={{ background: PANEL_BG }}>
+            <div className="sticky top-0 z-10 px-6 pt-8 pb-5 border-b border-[#404040]" style={{ background: PANEL_BG }}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3.5">
-                  <div className="h-11 w-11 rounded-full flex items-center justify-center text-sm font-semibold text-cyan-300 flex-shrink-0 bg-gradient-to-br from-cyan-400/15 to-cyan-600/5 border border-cyan-400/20">
+                  <div className="h-11 w-11 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 bg-[rgba(139,156,182,0.06)] border border-[rgba(139,156,182,0.15)]" style={{ color: 'var(--space-accent)' }}>
                     {initial}
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-white leading-tight">{name || email}</p>
-                    <p className="text-[11px] text-gray-600 mt-0.5 tracking-wide">Account Settings</p>
+                    <p className="text-sm font-semibold text-[#F0F0F0] leading-tight">{name || email}</p>
+                    <p className="text-[11px] text-[#4A4A4A] mt-0.5 tracking-wide">Account Settings</p>
                   </div>
                 </div>
                 <button
                   onClick={handleClose}
                   disabled={profileLoading || pwLoading}
-                  className="text-gray-700 hover:text-gray-300 transition-colors p-1.5 rounded-md hover:bg-white/[0.05] disabled:opacity-40"
+                  className="text-[#4A4A4A] hover:text-[#A0A0A0] transition-colors p-1.5 rounded-md hover:bg-[#2D2D2D] disabled:opacity-40"
                   aria-label="Close"
                 >
                   <X className="h-4 w-4" />
@@ -161,11 +160,11 @@ export function UserSettingsModal({ name, email, title }: UserSettingsModalProps
             <div>
 
               {/* ── Profile section ── */}
-              <div className="px-6 py-6 space-y-4 border-b border-white/[0.05]">
-                <p className="text-[10px] tracking-[0.15em] uppercase text-gray-600 font-semibold">Profile</p>
+              <div className="px-6 py-6 space-y-4 border-b border-[#404040]">
+                <p className="text-[10px] tracking-[0.15em] uppercase text-[#4A4A4A] font-semibold">Profile</p>
 
                 <div className="space-y-1.5">
-                  <label className="block text-xs text-gray-500">Name</label>
+                  <label className="block text-xs text-[#6B6B6B]">Name</label>
                   <input
                     value={form.name}
                     onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
@@ -174,7 +173,7 @@ export function UserSettingsModal({ name, email, title }: UserSettingsModalProps
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="block text-xs text-gray-500">Email</label>
+                  <label className="block text-xs text-[#6B6B6B]">Email</label>
                   <input
                     type="email"
                     value={form.email}
@@ -184,14 +183,14 @@ export function UserSettingsModal({ name, email, title }: UserSettingsModalProps
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="block text-xs text-gray-500">Team Title</label>
+                  <label className="block text-xs text-[#6B6B6B]">Team Title</label>
                   <input
                     value={form.title}
                     onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
                     placeholder="e.g. Lead Developer"
                     className={fieldClass}
                   />
-                  <p className="text-[10px] text-gray-700">Shown to clients on their team view</p>
+                  <p className="text-[10px] text-[#4A4A4A]">Shown to clients on their team view</p>
                 </div>
 
                 {profileError && (
@@ -203,7 +202,7 @@ export function UserSettingsModal({ name, email, title }: UserSettingsModalProps
                 <button
                   onClick={handleSaveProfile}
                   disabled={profileLoading || profileSaved}
-                  className="w-full flex items-center justify-center gap-1.5 h-9 text-sm font-semibold rounded-lg transition-all duration-200 disabled:opacity-60 bg-cyan-400 hover:bg-cyan-300 text-black"
+                  className="w-full flex items-center justify-center gap-1.5 h-9 text-sm font-semibold rounded-lg transition-all duration-200 disabled:opacity-60 bg-[var(--space-accent)] hover:bg-[var(--space-accent)]/90 text-black"
                 >
                   {profileSaved ? (
                     <><Check className="size-3.5" />Saved</>
@@ -222,16 +221,16 @@ export function UserSettingsModal({ name, email, title }: UserSettingsModalProps
                   className="flex items-center justify-between w-full group"
                 >
                   <div className="flex items-center gap-2">
-                    <KeyRound className="size-3.5 text-gray-600" />
-                    <p className="text-[10px] tracking-[0.15em] uppercase text-gray-600 font-semibold">Change Password</p>
+                    <KeyRound className="size-3.5 text-[#4A4A4A]" />
+                    <p className="text-[10px] tracking-[0.15em] uppercase text-[#4A4A4A] font-semibold">Change Password</p>
                   </div>
-                  <ChevronDown className={`size-3.5 text-gray-700 transition-transform duration-200 ${showPassword ? 'rotate-180' : ''}`} />
+                  <ChevronDown className={`size-3.5 text-[#4A4A4A] transition-transform duration-200 ${showPassword ? 'rotate-180' : ''}`} />
                 </button>
 
                 {showPassword && (
                   <div className="mt-4 space-y-3">
                     <div className="space-y-1.5">
-                      <label className="block text-xs text-gray-500">Current Password</label>
+                      <label className="block text-xs text-[#6B6B6B]">Current Password</label>
                       <input
                         type="password"
                         value={pw.current}
@@ -241,7 +240,7 @@ export function UserSettingsModal({ name, email, title }: UserSettingsModalProps
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="block text-xs text-gray-500">New Password</label>
+                      <label className="block text-xs text-[#6B6B6B]">New Password</label>
                       <input
                         type="password"
                         value={pw.next}
@@ -252,7 +251,7 @@ export function UserSettingsModal({ name, email, title }: UserSettingsModalProps
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="block text-xs text-gray-500">Confirm New Password</label>
+                      <label className="block text-xs text-[#6B6B6B]">Confirm New Password</label>
                       <input
                         type="password"
                         value={pw.confirm}
@@ -271,10 +270,10 @@ export function UserSettingsModal({ name, email, title }: UserSettingsModalProps
                     <button
                       onClick={handleChangePassword}
                       disabled={pwLoading || pwSaved}
-                      className="w-full flex items-center justify-center gap-1.5 h-9 text-sm font-semibold rounded-lg transition-all duration-200 disabled:opacity-60 bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.10] text-white"
+                      className="w-full flex items-center justify-center gap-1.5 h-9 text-sm font-semibold rounded-lg transition-all duration-200 disabled:opacity-60 bg-[#2D2D2D] hover:bg-[#E5E1D9] border border-[#404040] text-[#F0F0F0]"
                     >
                       {pwSaved ? (
-                        <><Check className="size-3.5 text-cyan-400" />Password Updated</>
+                        <><Check className="size-3.5" style={{ color: 'var(--space-accent)' }} />Password Updated</>
                       ) : pwLoading ? (
                         <Loader2 className="size-3.5 animate-spin" />
                       ) : (

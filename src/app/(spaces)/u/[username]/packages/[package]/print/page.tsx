@@ -167,7 +167,7 @@ export default async function PackagePrintPage({
 
         {/* ── COVER MESSAGE ────────────────────────── */}
         {pkg.coverMessage && (
-          <div style={{ marginBottom: 32, padding: '16px 20px', background: '#f9fafb', borderRadius: 8, borderLeft: '3px solid #67e8f9' }}>
+          <div style={{ marginBottom: 32, padding: '16px 20px', background: '#f9fafb', borderRadius: 8, borderLeft: '3px solid #1E3A6E' }}>
             <p style={{ fontSize: 13, color: '#374151', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{pkg.coverMessage}</p>
           </div>
         )}

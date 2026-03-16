@@ -36,7 +36,7 @@ export function BillingPortalButton({
         <button
           onClick={handle}
           disabled={loading}
-          className="flex items-center gap-2 px-3 py-1.5 text-xs text-gray-400 border border-white/[0.08] rounded-lg hover:text-[#67e8f9] hover:border-[#67e8f9]/25 disabled:opacity-50 transition-all"
+          className="flex items-center gap-2 px-3 py-1.5 text-xs text-gray-400 border border-white/[0.08] rounded-lg hover:text-[var(--space-accent)] hover:border-[rgba(139,156,182,0.18)] disabled:opacity-50 transition-all"
         >
           {loading ? <Loader2 className="size-3.5 animate-spin" /> : <CreditCard className="size-3.5" />}
           {loading ? 'Loading…' : label}
@@ -52,7 +52,7 @@ export function BillingPortalButton({
       <button
         onClick={handle}
         disabled={loading}
-        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#67e8f9]/[0.08] border border-[#67e8f9]/25 text-[#67e8f9] text-sm font-semibold hover:bg-[#67e8f9]/[0.14] disabled:opacity-50 transition-all"
+        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[rgba(139,156,182,0.06)] border border-[rgba(139,156,182,0.18)] text-[var(--space-accent)] text-sm font-semibold hover:bg-[rgba(139,156,182,0.10)] disabled:opacity-50 transition-all"
       >
         {loading ? <Loader2 className="size-4 animate-spin" /> : <CreditCard className="size-4" />}
         {loading ? 'Opening portal…' : label}

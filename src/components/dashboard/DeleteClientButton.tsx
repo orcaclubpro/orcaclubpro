@@ -71,23 +71,23 @@ export function DeleteClientButton({ clientId, clientEmail, clientName }: Props)
       </button>
 
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="bg-[#111] border border-white/[0.10] text-white max-w-md">
+        <DialogContent className="bg-[#1C1C1C] border border-[#404040] text-[#F0F0F0] max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-white">
+            <DialogTitle className="text-lg font-bold text-[#F0F0F0]">
               Delete Client Account
             </DialogTitle>
-            <DialogDescription className="text-gray-500 text-sm leading-relaxed pt-1">
+            <DialogDescription className="text-[#6B6B6B] text-sm leading-relaxed pt-1">
               This will permanently delete{' '}
-              <span className="text-gray-300 font-medium">{clientName}</span>
+              <span className="text-[#A0A0A0] font-medium">{clientName}</span>
               &apos;s account and remove them from Stripe. This cannot be undone.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 pt-2">
             <div className="space-y-1.5">
-              <Label className="text-gray-500 text-sm">
+              <Label className="text-[#6B6B6B] text-sm">
                 Type{' '}
-                <span className="text-white font-mono text-xs bg-white/[0.06] px-1.5 py-0.5 rounded">
+                <span className="text-[#F0F0F0] font-mono text-xs bg-[rgba(255,255,255,0.06)] px-1.5 py-0.5 rounded">
                   {clientEmail}
                 </span>{' '}
                 to confirm
@@ -98,7 +98,7 @@ export function DeleteClientButton({ clientId, clientEmail, clientName }: Props)
                 placeholder={clientEmail}
                 autoComplete="off"
                 spellCheck={false}
-                className="bg-white/[0.04] border-white/[0.1] text-white placeholder:text-gray-700 focus-visible:ring-red-400/30 focus-visible:ring-1 font-mono text-sm"
+                className="bg-[rgba(255,255,255,0.06)] border-[#404040] text-[#F0F0F0] placeholder:text-[#6B6B6B] focus-visible:ring-red-400/30 focus-visible:ring-1 font-mono text-sm"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && confirmed) handleDelete()
                 }}
@@ -116,7 +116,7 @@ export function DeleteClientButton({ clientId, clientEmail, clientName }: Props)
                 variant="outline"
                 onClick={() => handleOpenChange(false)}
                 disabled={loading}
-                className="flex-1 border-white/[0.12] text-white hover:bg-white/[0.04]"
+                className="flex-1 border-[#404040] text-[#F0F0F0] hover:bg-[#2D2D2D]"
               >
                 Cancel
               </Button>

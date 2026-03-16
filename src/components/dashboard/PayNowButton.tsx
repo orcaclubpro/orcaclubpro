@@ -25,7 +25,7 @@ export function PayNowButton({ paymentUrl, orderNumber, amount }: PayNowButtonPr
   return (
     <Button
       onClick={handlePayment}
-      className="group bg-intelligence-cyan text-black hover:bg-intelligence-cyan/90 font-medium shadow-lg shadow-intelligence-cyan/20 hover:shadow-intelligence-cyan/30 transition-all duration-300 hover:scale-105"
+      className="group bg-[var(--space-accent)] text-white hover:bg-[var(--space-accent)]/90 font-medium shadow-lg shadow-[rgba(139,156,182,0.15)] hover:shadow-[rgba(139,156,182,0.20)] transition-all duration-300 hover:scale-105"
       size="lg"
     >
       <CreditCard className="size-4 mr-2 group-hover:scale-110 transition-transform" />

@@ -267,7 +267,7 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
           <Button
             variant="outline"
             size="lg"
-            className="group bg-white/[0.03] border-white/[0.08] hover:bg-white/[0.05] hover:border-intelligence-cyan/30 transition-all duration-300"
+            className="group bg-[#252525] border-[#404040] hover:bg-[#2D2D2D] hover:border-[rgba(139,156,182,0.15)] transition-all duration-300"
           >
             <Settings className="size-4 mr-2 group-hover:rotate-90 transition-transform duration-300" />
             Project Settings
@@ -275,13 +275,13 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
         </DialogTrigger>
       )}
 
-      <DialogContent className="bg-transparent border-0 max-w-5xl p-0 overflow-hidden h-[85vh] shadow-[0_0_60px_rgba(103,232,249,0.12)]">
+      <DialogContent className="bg-transparent border-0 max-w-5xl p-0 overflow-hidden h-[85vh] shadow-[0_0_60px_rgba(255,255,255,0.06)]">
         {/* Gradient border wrapper */}
-        <div className="h-full [background:linear-gradient(135deg,rgba(103,232,249,0.5),rgba(59,130,246,0.3),rgba(103,232,249,0.15))] p-px rounded-[inherit] overflow-hidden">
-        <div className="flex h-full min-h-0 bg-black rounded-[inherit] overflow-hidden">
+        <div className="h-full [background:linear-gradient(135deg,rgba(139,156,182,0.20),rgba(255,255,255,0.06),rgba(139,156,182,0.08))] p-px rounded-[inherit] overflow-hidden">
+        <div className="flex h-full min-h-0 bg-[#1C1C1C] rounded-[inherit] overflow-hidden">
 
           {/* ── LEFT PANEL ── atmospheric, informational */}
-          <div className="relative hidden lg:flex w-[38%] flex-col bg-black overflow-hidden border-r border-white/[0.05]">
+          <div className="relative hidden lg:flex w-[38%] flex-col bg-[#252525] overflow-hidden border-r border-[#404040]">
 
             {/* Orbital geometry */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
@@ -291,39 +291,39 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
                 viewBox="0 0 420 420"
                 fill="none"
                 aria-hidden="true"
-                className="opacity-[0.035]"
+                className="opacity-[0.05]"
               >
-                <circle cx="210" cy="210" r="209" stroke="white" strokeWidth="1" />
-                <circle cx="210" cy="210" r="158" stroke="white" strokeWidth="0.5" />
-                <circle cx="210" cy="210" r="95" stroke="white" strokeWidth="0.5" />
-                <line x1="210" y1="0" x2="210" y2="420" stroke="white" strokeWidth="0.5" />
-                <line x1="0" y1="210" x2="420" y2="210" stroke="white" strokeWidth="0.5" />
-                <circle cx="210" cy="210" r="3" stroke="white" strokeWidth="0.5" fill="none" />
-                <line x1="210" y1="1" x2="210" y2="18" stroke="white" strokeWidth="1" />
-                <line x1="210" y1="402" x2="210" y2="419" stroke="white" strokeWidth="1" />
-                <line x1="1" y1="210" x2="18" y2="210" stroke="white" strokeWidth="1" />
-                <line x1="402" y1="210" x2="419" y2="210" stroke="white" strokeWidth="1" />
+                <circle cx="210" cy="210" r="209" stroke="#333333" strokeWidth="1" />
+                <circle cx="210" cy="210" r="158" stroke="#333333" strokeWidth="0.5" />
+                <circle cx="210" cy="210" r="95" stroke="#333333" strokeWidth="0.5" />
+                <line x1="210" y1="0" x2="210" y2="420" stroke="#333333" strokeWidth="0.5" />
+                <line x1="0" y1="210" x2="420" y2="210" stroke="#333333" strokeWidth="0.5" />
+                <circle cx="210" cy="210" r="3" stroke="#333333" strokeWidth="0.5" fill="none" />
+                <line x1="210" y1="1" x2="210" y2="18" stroke="#333333" strokeWidth="1" />
+                <line x1="210" y1="402" x2="210" y2="419" stroke="#333333" strokeWidth="1" />
+                <line x1="1" y1="210" x2="18" y2="210" stroke="#333333" strokeWidth="1" />
+                <line x1="402" y1="210" x2="419" y2="210" stroke="#333333" strokeWidth="1" />
               </svg>
             </div>
 
-            {/* Cyan top accent line */}
-            <div className="h-px w-full bg-gradient-to-r from-transparent via-cyan-400/25 to-transparent flex-shrink-0" />
+            {/* Top accent line */}
+            <div className="h-px w-full bg-gradient-to-r from-transparent via-[rgba(139,156,182,0.18)] to-transparent flex-shrink-0" />
 
             {/* Project identity */}
             <div className="relative z-10 flex-1 flex flex-col justify-center px-10">
-              <p className="text-[10px] tracking-[0.4em] uppercase gradient-text font-medium mb-4">
+              <p className="text-[10px] tracking-[0.4em] uppercase text-[#1E3A6E] font-medium mb-4">
                 Project
               </p>
-              <h3 className="text-2xl font-bold gradient-text leading-tight mb-2 line-clamp-2">
+              <h3 className="text-2xl font-bold text-[#1E3A6E] leading-tight mb-2 line-clamp-2">
                 {project.name}
               </h3>
-              <div className="mt-3 w-6 h-px bg-cyan-400/30 mb-10" />
+              <div className="mt-3 w-6 h-px bg-[rgba(139,156,182,0.20)] mb-10" />
 
               {/* Task distribution */}
               {totalTasks > 0 ? (
                 <div className="space-y-6">
                   {/* Stacked progress bar */}
-                  <div className="h-px w-full bg-white/[0.05] rounded-full overflow-hidden flex">
+                  <div className="h-px w-full bg-[#333333] rounded-full overflow-hidden flex">
                     {completedTasks > 0 && (
                       <div
                         className="h-full bg-green-400/50 transition-all duration-700"
@@ -347,13 +347,13 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
                   {/* Stat rows */}
                   <div className="space-y-3.5">
                     {[
-                      { label: 'Total Tasks', value: totalTasks, color: 'text-white' },
+                      { label: 'Total Tasks', value: totalTasks, color: 'text-[#F0F0F0]' },
                       { label: 'Completed', value: completedTasks, color: 'text-green-400' },
                       { label: 'In Progress', value: inProgressTasks, color: 'text-blue-400' },
                       { label: 'Pending', value: pendingTasks, color: 'text-yellow-400' },
                     ].map(({ label, value, color }) => (
                       <div key={label} className="flex items-center justify-between">
-                        <span className="text-[10px] tracking-[0.25em] uppercase gradient-text font-medium">
+                        <span className="text-[10px] tracking-[0.25em] uppercase text-[#1E3A6E] font-medium">
                           {label}
                         </span>
                         <span className={cn('text-sm font-semibold tabular-nums', color)}>
@@ -364,23 +364,23 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
                   </div>
                 </div>
               ) : (
-                <p className="text-[11px] text-white/15 tracking-wide">No tasks assigned yet</p>
+                <p className="text-[11px] text-[#4A4A4A] tracking-wide">No tasks assigned yet</p>
               )}
             </div>
 
             {/* Client info — pinned to bottom */}
             {clientAccount && (
-              <div className="relative z-10 px-10 pb-10 pt-6 border-t border-white/[0.04]">
-                <p className="text-[10px] tracking-[0.4em] uppercase gradient-text font-medium mb-3">
+              <div className="relative z-10 px-10 pb-10 pt-6 border-t border-[#404040]">
+                <p className="text-[10px] tracking-[0.4em] uppercase text-[#1E3A6E] font-medium mb-3">
                   Client
                 </p>
                 <div className="flex items-center gap-3">
-                  <div className="w-7 h-7 rounded-full bg-intelligence-cyan/8 border border-intelligence-cyan/15 flex items-center justify-center flex-shrink-0">
-                    <Building2 className="size-3 text-intelligence-cyan/50" />
+                  <div className="w-7 h-7 rounded-full bg-[rgba(139,156,182,0.06)] border border-[rgba(139,156,182,0.10)] flex items-center justify-center flex-shrink-0">
+                    <Building2 className="size-3" style={{ color: 'var(--space-accent)', opacity: 0.5 }} />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-gray-200 truncate">{clientAccount.name}</p>
-                    <p className="text-xs text-gray-400 truncate">{clientAccount.email}</p>
+                    <p className="text-sm font-medium text-[#A0A0A0] truncate">{clientAccount.name}</p>
+                    <p className="text-xs text-[#6B6B6B] truncate">{clientAccount.email}</p>
                   </div>
                 </div>
               </div>
@@ -391,28 +391,28 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
               className="absolute bottom-0 right-0 pointer-events-none select-none"
               aria-hidden="true"
             >
-              <svg width="72" height="72" viewBox="0 0 72 72" fill="none" className="opacity-[0.06]">
-                <path d="M72 0 L72 72 L0 72" stroke="white" strokeWidth="1" />
-                <path d="M72 22 L72 72 L22 72" stroke="white" strokeWidth="0.5" />
+              <svg width="72" height="72" viewBox="0 0 72 72" fill="none" className="opacity-[0.08]">
+                <path d="M72 0 L72 72 L0 72" stroke="#333333" strokeWidth="1" />
+                <path d="M72 22 L72 72 L22 72" stroke="#333333" strokeWidth="0.5" />
               </svg>
             </div>
           </div>
 
           {/* ── RIGHT PANEL ── form, functional, monastic */}
-          <div className="flex-1 bg-[#080808] flex flex-col min-h-0 overflow-hidden">
+          <div className="flex-1 bg-[#1C1C1C] flex flex-col min-h-0 overflow-hidden">
 
             {/* Header */}
-            <div className="px-10 pt-10 pb-6 border-b border-white/[0.05] flex-shrink-0">
-              <p className="text-[10px] tracking-[0.4em] uppercase gradient-text font-medium mb-4">
+            <div className="px-10 pt-10 pb-6 border-b border-[#404040] flex-shrink-0">
+              <p className="text-[10px] tracking-[0.4em] uppercase text-[#1E3A6E] font-medium mb-4">
                 Configuration
               </p>
-              <DialogTitle className={`${gothic.className} text-2xl text-white`}>
+              <DialogTitle className={`${gothic.className} text-2xl text-[#F0F0F0]`}>
                 Settings
               </DialogTitle>
               <DialogDescription className="sr-only">
                 Update project details, timeline, and budget configuration
               </DialogDescription>
-              <div className="mt-4 w-6 h-px bg-cyan-400/40" />
+              <div className="mt-4 w-6 h-px bg-[rgba(139,156,182,0.25)]" />
             </div>
 
             {/* Scrollable form body */}
@@ -423,26 +423,26 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
             >
               {/* ── Identity ── */}
               <section className="space-y-5">
-                <p className="text-[10px] tracking-[0.4em] uppercase gradient-text font-medium">
+                <p className="text-[10px] tracking-[0.4em] uppercase text-[#1E3A6E] font-medium">
                   Identity
                 </p>
 
                 <div className="space-y-1.5">
-                  <label htmlFor="proj-name" className="text-xs text-gray-300 tracking-wide">
+                  <label htmlFor="proj-name" className="text-xs text-[#A0A0A0] tracking-wide">
                     Project Name <span className="text-red-400/60">*</span>
                   </label>
                   <Input
                     id="proj-name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="bg-white/[0.03] border-white/[0.06] text-white focus:border-cyan-400/30 focus-visible:ring-0 placeholder:text-white/20"
+                    className="bg-[#252525] border-[#404040] text-[#F0F0F0] focus:border-[rgba(139,156,182,0.15)] focus-visible:ring-0 placeholder:text-[#4A4A4A]"
                     disabled={isLoading}
                     required
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <label htmlFor="proj-description" className="text-xs text-gray-300 tracking-wide">
+                  <label htmlFor="proj-description" className="text-xs text-[#A0A0A0] tracking-wide">
                     Description
                   </label>
                   <Textarea
@@ -451,7 +451,7 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
                     onChange={(e) => setDescription(e.target.value)}
                     rows={3}
                     placeholder="Brief project description…"
-                    className="bg-white/[0.03] border-white/[0.06] text-white placeholder:text-white/15 focus:border-cyan-400/30 focus-visible:ring-0 resize-none"
+                    className="bg-[#252525] border-[#404040] text-[#F0F0F0] placeholder:text-[#4A4A4A] focus:border-[rgba(139,156,182,0.15)] focus-visible:ring-0 resize-none"
                     disabled={isLoading}
                   />
                 </div>
@@ -459,7 +459,7 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
 
               {/* ── Client Account ── */}
               <section className="space-y-4">
-                <p className="text-[10px] tracking-[0.4em] uppercase gradient-text font-medium">
+                <p className="text-[10px] tracking-[0.4em] uppercase text-[#1E3A6E] font-medium">
                   Client Account
                 </p>
                 <ClientAccountCombobox
@@ -473,7 +473,7 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
 
               {/* ── Status ── */}
               <section className="space-y-4">
-                <p className="text-[10px] tracking-[0.4em] uppercase gradient-text font-medium">
+                <p className="text-[10px] tracking-[0.4em] uppercase text-[#1E3A6E] font-medium">
                   Status
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -487,13 +487,13 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
                         'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 cursor-pointer',
                         status === option.value
                           ? cn(option.bg, option.color, 'ring-1', option.ring)
-                          : 'bg-white/[0.03] text-white/30 hover:bg-white/[0.06] hover:text-white/55 border border-white/[0.06]'
+                          : 'bg-[#252525] text-[#4A4A4A] hover:bg-[#2D2D2D] hover:text-[#6B6B6B] border border-[#404040]'
                       )}
                     >
                       <span
                         className={cn(
                           'w-1.5 h-1.5 rounded-full transition-colors duration-200',
-                          status === option.value ? option.dotColor : 'bg-white/20'
+                          status === option.value ? option.dotColor : 'bg-[#555555]'
                         )}
                       />
                       {option.label}
@@ -504,12 +504,12 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
 
               {/* ── Timeline ── */}
               <section className="space-y-4">
-                <p className="text-[10px] tracking-[0.4em] uppercase gradient-text font-medium">
+                <p className="text-[10px] tracking-[0.4em] uppercase text-[#1E3A6E] font-medium">
                   Timeline
                 </p>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label htmlFor="proj-start" className="text-xs text-gray-300 tracking-wide">
+                    <label htmlFor="proj-start" className="text-xs text-[#A0A0A0] tracking-wide">
                       Start Date
                     </label>
                     <Input
@@ -517,12 +517,12 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
                       type="date"
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
-                      className="bg-white/[0.03] border-white/[0.06] text-white focus:border-cyan-400/30 focus-visible:ring-0 [color-scheme:dark]"
+                      className="bg-[#252525] border-[#404040] text-[#F0F0F0] focus:border-[rgba(139,156,182,0.15)] focus-visible:ring-0 [color-scheme:light]"
                       disabled={isLoading}
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label htmlFor="proj-end" className="text-xs text-gray-300 tracking-wide">
+                    <label htmlFor="proj-end" className="text-xs text-[#A0A0A0] tracking-wide">
                       Target End
                     </label>
                     <Input
@@ -530,7 +530,7 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
                       type="date"
                       value={projectedEndDate}
                       onChange={(e) => setProjectedEndDate(e.target.value)}
-                      className="bg-white/[0.03] border-white/[0.06] text-white focus:border-cyan-400/30 focus-visible:ring-0 [color-scheme:dark]"
+                      className="bg-[#252525] border-[#404040] text-[#F0F0F0] focus:border-[rgba(139,156,182,0.15)] focus-visible:ring-0 [color-scheme:light]"
                       disabled={isLoading}
                     />
                   </div>
@@ -538,7 +538,7 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
                     <div className="space-y-1.5 col-span-2">
                       <label
                         htmlFor="proj-actual-end"
-                        className="text-xs text-gray-300 tracking-wide"
+                        className="text-xs text-[#A0A0A0] tracking-wide"
                       >
                         Actual End Date
                       </label>
@@ -547,7 +547,7 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
                         type="date"
                         value={actualEndDate}
                         onChange={(e) => setActualEndDate(e.target.value)}
-                        className="bg-white/[0.03] border-white/[0.06] text-white focus:border-cyan-400/30 focus-visible:ring-0 [color-scheme:dark]"
+                        className="bg-[#252525] border-[#404040] text-[#F0F0F0] focus:border-[rgba(139,156,182,0.15)] focus-visible:ring-0 [color-scheme:light]"
                         disabled={isLoading}
                       />
                     </div>
@@ -557,12 +557,12 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
 
               {/* ── Budget ── */}
               <section className="space-y-4">
-                <p className="text-[10px] tracking-[0.4em] uppercase gradient-text font-medium">
+                <p className="text-[10px] tracking-[0.4em] uppercase text-[#1E3A6E] font-medium">
                   Budget
                 </p>
                 <div className="flex gap-3">
                   <div className="flex-1 relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-sm font-medium pointer-events-none select-none">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#4A4A4A] text-sm font-medium pointer-events-none select-none">
                       {currencySymbol}
                     </span>
                     <Input
@@ -573,7 +573,7 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
                       value={budgetAmount}
                       onChange={(e) => setBudgetAmount(e.target.value)}
                       placeholder="0.00"
-                      className="bg-white/[0.03] border-white/[0.06] text-white pl-7 placeholder:text-white/15 focus:border-cyan-400/30 focus-visible:ring-0"
+                      className="bg-[#252525] border-[#404040] text-[#F0F0F0] pl-7 placeholder:text-[#4A4A4A] focus:border-[rgba(139,156,182,0.15)] focus-visible:ring-0"
                       disabled={isLoading}
                     />
                   </div>
@@ -582,10 +582,10 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
                     onValueChange={(value) => setCurrency(value as CurrencyType)}
                     disabled={isLoading}
                   >
-                    <SelectTrigger className="w-24 bg-white/[0.03] border-white/[0.06] text-white/60 focus:border-cyan-400/30 focus:ring-0">
+                    <SelectTrigger className="w-24 bg-[#252525] border-[#404040] text-[#6B6B6B] focus:border-[rgba(139,156,182,0.15)] focus:ring-0">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#0c0c0c] border-white/[0.08]">
+                    <SelectContent className="bg-[#1C1C1C] border-[#404040]">
                       <SelectItem value="USD">USD</SelectItem>
                       <SelectItem value="EUR">EUR</SelectItem>
                       <SelectItem value="GBP">GBP</SelectItem>
@@ -615,15 +615,15 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
                   <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-5 space-y-4 animate-in fade-in slide-in-from-bottom-1 duration-200">
                     <div className="space-y-1">
                       <p className="text-xs text-red-400/80 font-medium">This action is irreversible.</p>
-                      <p className="text-[11px] text-white/30">
-                        Type <span className="font-mono text-white/50">{project.name}</span> to confirm.
+                      <p className="text-[11px] text-[#4A4A4A]">
+                        Type <span className="font-mono text-[#6B6B6B]">{project.name}</span> to confirm.
                       </p>
                     </div>
                     <Input
                       value={deleteInput}
                       onChange={(e) => setDeleteInput(e.target.value)}
                       placeholder={project.name}
-                      className="bg-white/[0.03] border-red-500/20 text-white placeholder:text-white/15 focus:border-red-400/40 focus-visible:ring-0 font-mono text-sm"
+                      className="bg-[#252525] border-red-500/20 text-[#F0F0F0] placeholder:text-[#4A4A4A] focus:border-red-400/40 focus-visible:ring-0 font-mono text-sm"
                       disabled={isDeleting}
                     />
                     {deleteError && (
@@ -634,7 +634,7 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
                         type="button"
                         onClick={() => { setShowDeleteZone(false); setDeleteInput(''); setDeleteError(null) }}
                         disabled={isDeleting}
-                        className="flex-1 text-xs text-white/30 hover:text-white/50 bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] rounded-lg px-3 py-2 transition-all duration-150"
+                        className="flex-1 text-xs text-[#4A4A4A] hover:text-[#6B6B6B] bg-[#252525] hover:bg-[#2D2D2D] border border-[#404040] rounded-lg px-3 py-2 transition-all duration-150"
                       >
                         Cancel
                       </button>
@@ -657,7 +657,7 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
             </form>
 
             {/* ── Footer ── fixed, non-scrolling */}
-            <div className="px-10 pb-8 pt-5 border-t border-white/[0.05] flex-shrink-0 space-y-4">
+            <div className="px-10 pb-8 pt-5 border-t border-[#404040] flex-shrink-0 space-y-4">
 
               {/* Feedback messages */}
               {successMessage && (
@@ -678,7 +678,7 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
                   variant="ghost"
                   onClick={() => setOpen(false)}
                   disabled={isLoading}
-                  className="flex-1 text-white/35 hover:text-white/55 hover:bg-white/[0.04] border border-white/[0.06] transition-all duration-200"
+                  className="flex-1 text-[#4A4A4A] hover:text-[#6B6B6B] hover:bg-[#2D2D2D] border border-[#404040] transition-all duration-200"
                 >
                   <X className="size-3.5 mr-2" />
                   Cancel
@@ -687,7 +687,7 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
                   type="submit"
                   form="project-settings-form"
                   disabled={isLoading}
-                  className="flex-1 bg-intelligence-cyan text-black hover:bg-intelligence-cyan/90 font-medium shadow-lg shadow-intelligence-cyan/10 transition-all duration-200"
+                  className="flex-1 bg-[var(--space-accent)] text-white hover:bg-[var(--space-accent)]/90 font-medium shadow-lg shadow-[#000000]/[0.40] transition-all duration-200"
                 >
                   {isLoading ? (
                     <>

@@ -64,7 +64,7 @@ function ProjectCard({ project, username }: { project: ClientProjectSummary; use
   return (
     <Link
       href={`/u/${username}/projects/${project.id}`}
-      className="group relative flex flex-col sm:flex-row gap-5 rounded-2xl border border-white/[0.08] bg-gradient-to-b from-[#161616] to-[#0e0e0e] overflow-hidden hover:border-white/[0.14] transition-all duration-300 p-5 sm:p-6"
+      className="group relative flex flex-col sm:flex-row gap-5 rounded-2xl border border-[#404040] bg-[#252525] overflow-hidden hover:border-[#404040] transition-all duration-300 p-5 sm:p-6"
     >
       {/* Left accent stripe */}
       <div className={`absolute left-0 top-0 bottom-0 w-px ${cfg.stripe}`} />
@@ -79,11 +79,11 @@ function ProjectCard({ project, username }: { project: ClientProjectSummary; use
               {cfg.label}
             </span>
           </div>
-          <h3 className="text-base font-semibold text-white group-hover:text-intelligence-cyan transition-colors duration-200 leading-snug">
+          <h3 className="text-base font-semibold text-[#F0F0F0] group-hover:text-[var(--space-accent)] transition-colors duration-200 leading-snug">
             {project.name}
           </h3>
           {project.description && (
-            <p className="text-xs text-gray-500 mt-1 line-clamp-1 leading-relaxed">
+            <p className="text-xs text-[#6B6B6B] mt-1 line-clamp-1 leading-relaxed">
               {project.description}
             </p>
           )}
@@ -93,14 +93,14 @@ function ProjectCard({ project, username }: { project: ClientProjectSummary; use
         {project.currentSprint && sprintCfg && (
           <div className="space-y-1.5">
             <div className="flex items-center gap-1.5">
-              <Zap className="size-2.5 text-intelligence-cyan shrink-0" />
-              <span className="text-[9px] font-semibold uppercase tracking-[0.2em] text-gray-600">
+              <Zap className="size-2.5 text-[var(--space-accent)] shrink-0" />
+              <span className="text-[9px] font-semibold uppercase tracking-[0.2em] text-[#6B6B6B]">
                 Current Sprint
               </span>
             </div>
-            <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2 space-y-2">
+            <div className="rounded-lg border border-[#404040] bg-[rgba(255,255,255,0.06)] px-3 py-2 space-y-2">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-medium text-gray-300 truncate">
+                <span className="text-xs font-medium text-[#A0A0A0] truncate">
                   {project.currentSprint.name}
                 </span>
                 <span className={`flex items-center gap-1 text-[9px] font-medium shrink-0 ${sprintCfg.color}`}>
@@ -110,13 +110,13 @@ function ProjectCard({ project, username }: { project: ClientProjectSummary; use
               </div>
               {project.currentSprint.totalTasksCount > 0 && (
                 <div className="space-y-1">
-                  <div className="h-1 w-full bg-white/[0.06] rounded-full overflow-hidden">
+                  <div className="h-1 w-full bg-[#333333] rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-intelligence-cyan/60 rounded-full transition-all duration-500"
+                      className="h-full bg-[rgba(139,156,182,0.50)] rounded-full transition-all duration-500"
                       style={{ width: `${sprintProgress}%` }}
                     />
                   </div>
-                  <p className="text-[9px] text-gray-600">
+                  <p className="text-[9px] text-[#6B6B6B]">
                     {project.currentSprint.completedTasksCount}/{project.currentSprint.totalTasksCount} tasks · {sprintProgress}%
                   </p>
                 </div>
@@ -128,19 +128,19 @@ function ProjectCard({ project, username }: { project: ClientProjectSummary; use
         {/* Next milestone */}
         {nextMilestone && (
           <div className="flex items-start gap-2">
-            <Circle className="size-3 text-gray-700 shrink-0 mt-0.5" />
+            <Circle className="size-3 text-[#6B6B6B] shrink-0 mt-0.5" />
             <div className="min-w-0">
-              <p className="text-[9px] uppercase tracking-widest text-gray-700 font-medium mb-0.5">
+              <p className="text-[9px] uppercase tracking-widest text-[#6B6B6B] font-medium mb-0.5">
                 Next Milestone
               </p>
-              <p className="text-xs text-gray-400 truncate">{nextMilestone.title}</p>
+              <p className="text-xs text-[#6B6B6B] truncate">{nextMilestone.title}</p>
             </div>
           </div>
         )}
 
         {/* Timeline dates */}
         {(project.startDate || project.endDate) && (
-          <div className="flex items-center gap-1.5 text-[10px] text-gray-600">
+          <div className="flex items-center gap-1.5 text-[10px] text-[#6B6B6B]">
             <Calendar className="size-3 shrink-0" />
             {project.startDate && project.endDate
               ? `${fmtDate(project.startDate)} → ${fmtDate(project.endDate)}`
@@ -151,7 +151,7 @@ function ProjectCard({ project, username }: { project: ClientProjectSummary; use
         )}
 
         {/* Footer */}
-        <div className="flex items-center justify-between text-xs font-medium text-gray-600 group-hover:text-gray-300 transition-colors pt-2 border-t border-white/[0.05]">
+        <div className="flex items-center justify-between text-xs font-medium text-[#6B6B6B] group-hover:text-[#A0A0A0] transition-colors pt-2 border-t border-[#404040]">
           <span>View project</span>
           <ArrowRight className="size-3.5 group-hover:translate-x-0.5 transition-transform duration-150" />
         </div>
@@ -169,7 +169,7 @@ function ProjectCard({ project, username }: { project: ClientProjectSummary; use
               color={cfg.ringColor}
               showLabel
             />
-            <p className="text-[8px] text-gray-700 uppercase tracking-wider text-center">Timeline</p>
+            <p className="text-[8px] text-[#6B6B6B] uppercase tracking-wider text-center">Timeline</p>
           </div>
         )}
 
@@ -180,10 +180,10 @@ function ProjectCard({ project, username }: { project: ClientProjectSummary; use
               progress={milestoneProgress}
               size={48}
               strokeWidth={3.5}
-              color="rgb(103, 232, 249)"
+              color="rgb(30, 58, 110)"
               showLabel
             />
-            <p className="text-[8px] text-gray-700 uppercase tracking-wider text-center">
+            <p className="text-[8px] text-[#6B6B6B] uppercase tracking-wider text-center">
               {completedMilestones}/{totalMilestones}
             </p>
           </div>
@@ -204,17 +204,17 @@ interface ClientActiveProjectsProps {
 export function ClientActiveProjects({ projects, username, totalCount }: ClientActiveProjectsProps) {
   if (projects.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-white/[0.08] bg-[#080808] p-12 text-center">
-        <div className="inline-flex p-4 rounded-full bg-[#67e8f9]/[0.06] border border-[#67e8f9]/20 mb-5">
-          <FolderKanban className="size-7 text-[#67e8f9]/50" />
+      <div className="rounded-2xl border border-dashed border-[#404040] bg-[#252525] p-12 text-center">
+        <div className="inline-flex p-4 rounded-full bg-[rgba(139,156,182,0.06)] border border-[rgba(139,156,182,0.15)] mb-5">
+          <FolderKanban className="size-7 text-[rgba(139,156,182,0.30)]" />
         </div>
-        <p className="text-base font-semibold text-white mb-2">No active projects yet</p>
-        <p className="text-sm text-gray-500 mb-6 leading-relaxed max-w-xs mx-auto">
+        <p className="text-base font-semibold text-[#F0F0F0] mb-2">No active projects yet</p>
+        <p className="text-sm text-[#6B6B6B] mb-6 leading-relaxed max-w-xs mx-auto">
           Your project work will appear here once your engagement begins.
         </p>
         <a
           href="/contact"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#67e8f9] text-black text-xs font-semibold hover:bg-[#67e8f9]/90 transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--space-accent)] text-white text-xs font-semibold hover:bg-[var(--space-accent)]/90 transition-colors"
         >
           Start a conversation
           <ArrowRight className="size-3.5" />
@@ -232,7 +232,7 @@ export function ClientActiveProjects({ projects, username, totalCount }: ClientA
       {totalCount > projects.length && (
         <Link
           href={`/u/${username}/projects`}
-          className="flex items-center justify-center gap-2 w-full py-3 rounded-xl border border-dashed border-white/[0.08] text-xs text-gray-500 hover:text-gray-300 hover:border-white/[0.15] transition-all duration-200"
+          className="flex items-center justify-center gap-2 w-full py-3 rounded-xl border border-dashed border-[#404040] text-xs text-[#6B6B6B] hover:text-[#A0A0A0] hover:border-[#404040] transition-all duration-200"
         >
           View all {totalCount} projects
           <ArrowRight className="size-3.5" />

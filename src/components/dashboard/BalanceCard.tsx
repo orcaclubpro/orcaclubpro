@@ -79,13 +79,13 @@ export function BalanceCard({ orders, activeProjectCount, mostRecentOrder }: Bal
   const hasOrders = orders.length > 0
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-gradient-to-b from-[#141414] to-[#0e0e0e] p-6 sm:p-7">
+    <div className="relative overflow-hidden rounded-2xl border border-[#404040] bg-[#252525] p-6 sm:p-7">
       {pendingAmount > 0 && (
         <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-amber-400/[0.06] blur-3xl pointer-events-none animate-pulse" />
       )}
 
       <div className="relative z-10">
-        <p className="text-[9px] font-semibold uppercase tracking-[0.25em] text-gray-600 mb-5">
+        <p className="text-[9px] font-semibold uppercase tracking-[0.25em] text-[#4A4A4A] mb-5">
           Account Overview
         </p>
 
@@ -96,14 +96,14 @@ export function BalanceCard({ orders, activeProjectCount, mostRecentOrder }: Bal
           <div className="relative shrink-0 w-24 h-24">
             <svg viewBox="0 0 100 100" className="w-full h-full">
               {/* Background track */}
-              <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="10" />
+              <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="10" />
               {!hasOrders ? (
-                <DonutSegment pct={1} offset={0} color="rgba(255,255,255,0.10)" />
+                <DonutSegment pct={1} offset={0} color="rgba(255,255,255,0.05)" />
               ) : (
                 <>
                   {paidPct > 0 && <DonutSegment pct={paidPct} offset={paidOffset} color="#4ade80" />}
                   {pendingPct > 0 && <DonutSegment pct={pendingPct} offset={pendingOffset} color="#fbbf24" />}
-                  {cancelledPct > 0 && <DonutSegment pct={cancelledPct} offset={cancelledOffset} color="rgba(255,255,255,0.12)" />}
+                  {cancelledPct > 0 && <DonutSegment pct={cancelledPct} offset={cancelledOffset} color="rgba(255,255,255,0.06)" />}
                 </>
               )}
             </svg>
@@ -120,7 +120,7 @@ export function BalanceCard({ orders, activeProjectCount, mostRecentOrder }: Bal
                 ) : hasOrders ? (
                   <p className="text-base font-bold text-green-400 leading-none">✓</p>
                 ) : (
-                  <p className="text-[9px] text-gray-600 leading-none">—</p>
+                  <p className="text-[9px] text-[#4A4A4A] leading-none">—</p>
                 )}
               </div>
             </div>
@@ -134,18 +134,18 @@ export function BalanceCard({ orders, activeProjectCount, mostRecentOrder }: Bal
                   <p className="text-2xl sm:text-3xl font-black tabular-nums tracking-tight text-amber-400">
                     {fmt(pendingAmount)}
                   </p>
-                  <p className="text-xs text-gray-500 mt-0.5">
+                  <p className="text-xs text-[#6B6B6B] mt-0.5">
                     {pendingOrders.length} pending invoice{pendingOrders.length !== 1 ? 's' : ''}
                   </p>
                 </div>
                 <div className="flex items-center gap-3 flex-wrap">
                   {paidAmount > 0 && (
-                    <span className="flex items-center gap-1 text-[10px] text-gray-500">
+                    <span className="flex items-center gap-1 text-[10px] text-[#6B6B6B]">
                       <span className="size-1.5 rounded-full bg-green-400 shrink-0" />
                       {fmt(paidAmount)} paid
                     </span>
                   )}
-                  <span className="flex items-center gap-1 text-[10px] text-gray-500">
+                  <span className="flex items-center gap-1 text-[10px] text-[#6B6B6B]">
                     <span className="size-1.5 rounded-full bg-amber-400 shrink-0" />
                     {fmt(pendingAmount)} due
                   </span>
@@ -164,12 +164,12 @@ export function BalanceCard({ orders, activeProjectCount, mostRecentOrder }: Bal
                   <p className="text-2xl sm:text-3xl font-black text-green-400">
                     {hasOrders ? 'All clear' : 'No invoices'}
                   </p>
-                  <p className="text-xs text-gray-500 mt-0.5">
+                  <p className="text-xs text-[#6B6B6B] mt-0.5">
                     {hasOrders ? 'No outstanding invoices' : 'Nothing yet'}
                   </p>
                 </div>
                 {paidAmount > 0 && (
-                  <span className="flex items-center gap-1 text-[10px] text-gray-500">
+                  <span className="flex items-center gap-1 text-[10px] text-[#6B6B6B]">
                     <span className="size-1.5 rounded-full bg-green-400 shrink-0" />
                     {fmt(paidAmount)} paid total
                   </span>
@@ -180,23 +180,23 @@ export function BalanceCard({ orders, activeProjectCount, mostRecentOrder }: Bal
         </div>
 
         {/* Divider */}
-        <div className="border-t border-white/[0.06] mb-5" />
+        <div className="border-t border-[#404040] mb-5" />
 
         {/* Bottom metrics */}
         <div className="grid grid-cols-3 gap-4">
           <div>
-            <p className="text-[9px] text-gray-600 uppercase tracking-wider font-semibold mb-1">Projects</p>
-            <p className="text-2xl font-bold text-white tabular-nums">{activeProjectCount}</p>
-            <p className="text-[10px] text-gray-600">Active</p>
+            <p className="text-[9px] text-[#4A4A4A] uppercase tracking-wider font-semibold mb-1">Projects</p>
+            <p className="text-2xl font-bold text-[#F0F0F0] tabular-nums">{activeProjectCount}</p>
+            <p className="text-[10px] text-[#4A4A4A]">Active</p>
           </div>
           <div>
-            <p className="text-[9px] text-gray-600 uppercase tracking-wider font-semibold mb-1">Invoices</p>
-            <p className="text-2xl font-bold text-white tabular-nums">{orders.length}</p>
-            <p className="text-[10px] text-gray-600">Total</p>
+            <p className="text-[9px] text-[#4A4A4A] uppercase tracking-wider font-semibold mb-1">Invoices</p>
+            <p className="text-2xl font-bold text-[#F0F0F0] tabular-nums">{orders.length}</p>
+            <p className="text-[10px] text-[#4A4A4A]">Total</p>
           </div>
           {mostRecentOrder && (
             <div>
-              <p className="text-[9px] text-gray-600 uppercase tracking-wider font-semibold mb-1">Latest</p>
+              <p className="text-[9px] text-[#4A4A4A] uppercase tracking-wider font-semibold mb-1">Latest</p>
               <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border mt-1 ${
                 mostRecentOrder.status === 'paid'
                   ? 'text-green-400 bg-green-400/10 border-green-400/20'
@@ -217,9 +217,9 @@ export function BalanceCard({ orders, activeProjectCount, mostRecentOrder }: Bal
 
       {/* Pay Invoices Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="bg-[#111] border-white/[0.12] max-w-md">
+        <DialogContent className="bg-[#1C1C1C] border-[#404040] max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-white text-base font-semibold">
+            <DialogTitle className="text-[#F0F0F0] text-base font-semibold">
               Outstanding Invoices
             </DialogTitle>
           </DialogHeader>
@@ -227,13 +227,13 @@ export function BalanceCard({ orders, activeProjectCount, mostRecentOrder }: Bal
             {pendingOrders.map(order => (
               <div
                 key={order.id}
-                className="flex items-center justify-between gap-4 px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.07]"
+                className="flex items-center justify-between gap-4 px-4 py-3 rounded-xl bg-[#2D2D2D] border border-[#404040]"
               >
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-white truncate">
+                  <p className="text-sm font-semibold text-[#F0F0F0] truncate">
                     {order.orderNumber ?? `INV-${order.id.slice(-6).toUpperCase()}`}
                   </p>
-                  <p className="text-[10px] text-gray-500 mt-0.5">
+                  <p className="text-[10px] text-[#6B6B6B] mt-0.5">
                     {new Date(order.createdAt).toLocaleDateString('en-US', {
                       month: 'short',
                       day: 'numeric',
@@ -255,15 +255,15 @@ export function BalanceCard({ orders, activeProjectCount, mostRecentOrder }: Bal
                       Pay <ExternalLink className="size-3" />
                     </a>
                   ) : (
-                    <span className="text-xs text-gray-600 italic">No link</span>
+                    <span className="text-xs text-[#4A4A4A] italic">No link</span>
                   )}
                 </div>
               </div>
             ))}
           </div>
           {pendingOrders.length > 1 && (
-            <div className="pt-3 mt-2 border-t border-white/[0.07] flex items-center justify-between">
-              <p className="text-xs text-gray-500">Total outstanding</p>
+            <div className="pt-3 mt-2 border-t border-[#404040] flex items-center justify-between">
+              <p className="text-xs text-[#6B6B6B]">Total outstanding</p>
               <p className="text-sm font-bold text-amber-400 tabular-nums">{fmt(pendingAmount)}</p>
             </div>
           )}

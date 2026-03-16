@@ -190,19 +190,19 @@ function OptionCard({
     <div className={cn(
       'w-full flex flex-col rounded-xl border text-left transition-all duration-150',
       selected
-        ? 'bg-[#67e8f9]/[0.04] border-[#67e8f9]/25'
-        : 'border-white/[0.06] hover:border-white/[0.14] hover:bg-white/[0.02]',
+        ? 'bg-[rgba(255,255,255,0.03)] border-[rgba(139,156,182,0.15)]'
+        : 'border-[#404040] hover:border-[#404040] hover:bg-[#2D2D2D]',
     )}>
       <button type="button" onClick={onToggle} className="flex flex-col gap-2.5 p-4 text-left w-full">
         <div className="flex items-start gap-3">
           <div className={cn(
             'mt-0.5 size-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all',
-            selected ? 'bg-[#67e8f9]/20 border-[#67e8f9]/60' : 'border-white/[0.22]',
+            selected ? 'bg-[rgba(139,156,182,0.10)] border-[rgba(139,156,182,0.30)]' : 'border-[#404040]',
           )}>
-            {selected && <Check className="size-3 text-[#67e8f9]" />}
+            {selected && <Check className="size-3" style={{ color: 'var(--space-accent)' }} />}
           </div>
           <div className="flex-1 min-w-0">
-            <p className={cn('text-sm font-semibold leading-snug', selected ? 'text-white' : 'text-gray-400')}>
+            <p className={cn('text-sm font-semibold leading-snug', selected ? 'text-[#F0F0F0]' : 'text-[#6B6B6B]')}>
               {item.name}
             </p>
             {requested && !selected && (
@@ -217,15 +217,15 @@ function OptionCard({
             <span className={cn(
               'text-[10px] rounded-full px-1.5 py-0.5 uppercase tracking-wide font-medium',
               selected
-                ? 'text-[#67e8f9]/80 bg-[#67e8f9]/10 border border-[#67e8f9]/20'
-                : 'text-gray-500 bg-white/[0.04] border border-white/[0.08]',
-            )}>
+                ? 'border border-[rgba(139,156,182,0.15)] bg-[rgba(139,156,182,0.06)]'
+                : 'text-[#4A4A4A] bg-[#2D2D2D] border border-[#404040]',
+            )} style={selected ? { color: 'var(--space-accent)', opacity: 0.8 } : {}}>
               {item.recurringInterval === 'year' ? 'Annual' : 'Monthly'}
             </span>
           )}
           <div className="ml-auto flex flex-col items-end gap-0.5">
             {hasDiscount && (
-              <span className="text-[11px] font-mono tabular-nums text-gray-600 line-through leading-none">
+              <span className="text-[11px] font-mono tabular-nums text-[#4A4A4A] line-through leading-none">
                 {fmt(baseTotal)}
                 {item.isRecurring && (
                   <span className="font-sans">/{item.recurringInterval === 'year' ? 'yr' : 'mo'}</span>
@@ -234,11 +234,11 @@ function OptionCard({
             )}
             <span className={cn(
               'text-sm font-bold font-mono tabular-nums leading-none',
-              hasDiscount ? 'text-[#67e8f9]' : selected ? 'text-white' : 'text-gray-500'
-            )}>
+              hasDiscount ? '' : selected ? 'text-[#F0F0F0]' : 'text-[#4A4A4A]'
+            )} style={hasDiscount ? { color: 'var(--space-accent)' } : {}}>
               {fmt(total)}
               {item.isRecurring && (
-                <span className="text-xs font-normal text-gray-500 font-sans">/{item.recurringInterval === 'year' ? 'yr' : 'mo'}</span>
+                <span className="text-xs font-normal text-[#4A4A4A] font-sans">/{item.recurringInterval === 'year' ? 'yr' : 'mo'}</span>
               )}
             </span>
           </div>
@@ -247,17 +247,17 @@ function OptionCard({
 
       {selected && (onQuantityChange || onDescriptionChange || onAdjustedPriceChange) && (
         <div className="px-4 pb-4 pt-0" onClick={e => e.stopPropagation()}>
-          <div className="h-px bg-white/[0.06] mb-3" />
+          <div className="h-px bg-[#333333] mb-3" />
           <div className="flex flex-col gap-2">
             {onAdjustedPriceChange && (
               <div className="flex items-center justify-between">
-                <span className="text-[10px] text-gray-600 uppercase tracking-widest font-medium">Adjusted Price</span>
+                <span className="text-[10px] text-[#4A4A4A] uppercase tracking-widest font-medium">Adjusted Price</span>
                 <div className="flex items-center gap-1.5">
                   <div className={cn(
                     'flex items-center gap-1 border rounded-md px-2 h-7 transition-colors',
-                    item.adjustedPrice != null ? 'border-[#67e8f9]/30 bg-[#67e8f9]/[0.05]' : 'border-white/[0.10] bg-white/[0.04]'
+                    item.adjustedPrice != null ? 'border-[rgba(139,156,182,0.20)] bg-[rgba(139,156,182,0.04)]' : 'border-[#404040] bg-[#2D2D2D]'
                   )}>
-                    <span className={cn('text-[10px] shrink-0', item.adjustedPrice != null ? 'text-[#67e8f9]/70' : 'text-gray-500')}>$</span>
+                    <span className={cn('text-[10px] shrink-0', item.adjustedPrice != null ? '' : 'text-[#4A4A4A]')} style={item.adjustedPrice != null ? { color: 'var(--space-accent)', opacity: 0.7 } : {}}>$</span>
                     <input
                       type="number"
                       min={0}
@@ -268,14 +268,14 @@ function OptionCard({
                         onAdjustedPriceChange(v === '' ? null : parseFloat(v))
                       }}
                       placeholder={String(item.price ?? 0)}
-                      className="w-20 text-xs bg-transparent text-white focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      className="w-20 text-xs bg-transparent text-[#F0F0F0] focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
                   </div>
                   {item.adjustedPrice != null && (
                     <button
                       type="button"
                       onClick={() => onAdjustedPriceChange(null)}
-                      className="size-5 flex items-center justify-center text-gray-600 hover:text-gray-300 transition-colors"
+                      className="size-5 flex items-center justify-center text-[#4A4A4A] hover:text-[#A0A0A0] transition-colors"
                       title="Reset to base price"
                     >
                       <X className="size-3" />
@@ -286,12 +286,12 @@ function OptionCard({
             )}
             {onQuantityChange && (
               <div className="flex items-center justify-between">
-                <span className="text-[10px] text-gray-600 uppercase tracking-widest font-medium">Quantity</span>
+                <span className="text-[10px] text-[#4A4A4A] uppercase tracking-widest font-medium">Quantity</span>
                 <div className="flex items-center gap-1">
                   <button
                     type="button"
                     onClick={() => onQuantityChange(Math.max(1, qty - 1))}
-                    className="size-6 flex items-center justify-center rounded-md text-gray-500 hover:text-white hover:bg-white/[0.08] transition-colors text-sm leading-none"
+                    className="size-6 flex items-center justify-center rounded-md text-[#4A4A4A] hover:text-[#F0F0F0] hover:bg-[#2D2D2D] transition-colors text-sm leading-none"
                   >−</button>
                   <input
                     type="number"
@@ -301,15 +301,15 @@ function OptionCard({
                       const v = parseInt(e.target.value, 10)
                       if (!isNaN(v) && v >= 1) onQuantityChange(v)
                     }}
-                    className="w-10 text-center text-xs bg-white/[0.06] border border-white/[0.10] rounded-md text-white py-1 focus:outline-none focus:border-[#67e8f9]/40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    className="w-10 text-center text-xs bg-[#2D2D2D] border border-[#404040] rounded-md text-[#F0F0F0] py-1 focus:outline-none focus:border-[rgba(139,156,182,0.20)] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
                   <button
                     type="button"
                     onClick={() => onQuantityChange(qty + 1)}
-                    className="size-6 flex items-center justify-center rounded-md text-gray-500 hover:text-white hover:bg-white/[0.08] transition-colors text-sm leading-none"
+                    className="size-6 flex items-center justify-center rounded-md text-[#4A4A4A] hover:text-[#F0F0F0] hover:bg-[#2D2D2D] transition-colors text-sm leading-none"
                   >+</button>
                   {qty > 1 && (
-                    <span className="text-[10px] text-gray-600 ml-1 tabular-nums">× {fmt(unitPrice)} ea</span>
+                    <span className="text-[10px] text-[#4A4A4A] ml-1 tabular-nums">× {fmt(unitPrice)} ea</span>
                   )}
                 </div>
               </div>
@@ -320,7 +320,7 @@ function OptionCard({
                 onChange={e => onDescriptionChange(e.target.value)}
                 placeholder="Add a description… (shown on invoice)"
                 rows={2}
-                className="w-full px-3 py-2 text-xs bg-white/[0.04] border border-white/[0.08] rounded-lg text-gray-300 placeholder:text-gray-700 focus:outline-none focus:border-[#67e8f9]/30 resize-none leading-relaxed transition-colors"
+                className="w-full px-3 py-2 text-xs bg-[#2D2D2D] border border-[#404040] rounded-lg text-[#A0A0A0] placeholder:text-[#4A4A4A] focus:outline-none focus:border-[rgba(139,156,182,0.20)] resize-none leading-relaxed transition-colors"
               />
             )}
           </div>
@@ -639,8 +639,8 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
     <section className="space-y-4">
       <div className="flex items-baseline justify-between gap-4">
         <div className="flex items-baseline gap-3">
-          <h2 className="text-base font-semibold text-white">Packages</h2>
-          <span className="text-xs text-gray-600 tabular-nums">{packages.length}</span>
+          <h2 className="text-base font-semibold text-[#F0F0F0]">Packages</h2>
+          <span className="text-xs text-[#4A4A4A] tabular-nums">{packages.length}</span>
         </div>
         <AssignPackageModal clientId={clientId} />
       </div>
@@ -662,7 +662,6 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
             const invoicedAmount = pkgOrders.reduce((s, o) => s + (o.amount ?? 0), 0)
             const paidAmount = pkgOrders.filter(o => o.status === 'paid').reduce((s, o) => s + (o.amount ?? 0), 0)
             // For the schedule builder use editItems when this card is expanded
-            // — proposals are created without copying lineItems from the template
             const { oneTime: editOneTime } = computeTotals(expandedId === pkg.id && editItems.length > 0 ? editItems : (pkg.lineItems ?? []))
             const packageTotal = editOneTime
             const invoicedPct = packageTotal > 0 ? Math.min(100, (invoicedAmount / packageTotal) * 100) : 0
@@ -688,26 +687,26 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                 key={pkg.id}
                 className={cn(
                   'rounded-2xl border overflow-hidden transition-all duration-300',
-                  isExpanded ? 'border-[#67e8f9]/20' : 'border-white/[0.07] hover:border-white/[0.12]',
+                  isExpanded ? 'border-[rgba(139,156,182,0.15)]' : 'border-[#404040] hover:border-[#404040]',
                 )}
-                style={{ background: 'linear-gradient(145deg, #191919 0%, #121212 100%)' }}
+                style={{ background: '#252525' }}
               >
                 {/* Glow bar */}
                 <div className={cn(
                   'h-px transition-all duration-500',
                   isExpanded
-                    ? 'bg-gradient-to-r from-transparent via-[#67e8f9]/60 to-transparent'
-                    : 'bg-gradient-to-r from-transparent via-white/[0.06] to-transparent',
+                    ? 'bg-gradient-to-r from-transparent via-[var(--space-accent)]/30 to-transparent'
+                    : 'bg-gradient-to-r from-transparent via-[#333333] to-transparent',
                 )} />
 
                 {/* Card header */}
                 <div onClick={() => handleRowClick(pkg)} className="px-7 pt-7 pb-6 cursor-pointer select-none">
-                  <p className="text-[10px] font-bold text-[#67e8f9]/60 uppercase tracking-[0.3em] mb-4">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.3em] mb-4" style={{ color: 'var(--space-accent)', opacity: 0.6 }}>
                     Service Package
                   </p>
 
                   <div className="flex items-start justify-between gap-3 mb-2">
-                    <h3 className="text-xl font-bold text-white leading-tight">{pkg.name}</h3>
+                    <h3 className="text-xl font-bold text-[#F0F0F0] leading-tight">{pkg.name}</h3>
                     <div className="flex items-center gap-2 shrink-0 mt-1">
                       {pendingRequests > 0 && (
                         <span className="text-[10px] text-amber-400 bg-amber-400/[0.08] border border-amber-400/25 rounded px-1.5 py-0.5 font-medium">
@@ -715,14 +714,14 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                         </span>
                       )}
                       {isExpanded
-                        ? <ChevronUp className="size-4 text-gray-500" />
-                        : <ChevronDown className="size-4 text-gray-500" />
+                        ? <ChevronUp className="size-4 text-[#4A4A4A]" />
+                        : <ChevronDown className="size-4 text-[#4A4A4A]" />
                       }
                     </div>
                   </div>
 
                   {pkg.description && (
-                    <p className="text-sm text-gray-400 leading-relaxed mb-6">{pkg.description}</p>
+                    <p className="text-sm text-[#6B6B6B] leading-relaxed mb-6">{pkg.description}</p>
                   )}
 
                   {/* Pricing */}
@@ -730,48 +729,48 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                     <div className="flex items-end gap-8 flex-wrap">
                       {oneTime > 0 && (
                         <div>
-                          <p className="text-3xl font-bold text-white tabular-nums tracking-tight">{fmt(oneTime)}</p>
-                          <p className="text-xs text-gray-500 mt-1 uppercase tracking-widest">one-time</p>
+                          <p className="text-3xl font-bold text-[#F0F0F0] tabular-nums tracking-tight">{fmt(oneTime)}</p>
+                          <p className="text-xs text-[#4A4A4A] mt-1 uppercase tracking-widest">one-time</p>
                         </div>
                       )}
                       {monthly > 0 && (
                         <div>
                           <div className="flex items-baseline gap-0.5">
-                            <p className="text-3xl font-bold text-white tabular-nums tracking-tight">{fmt(monthly)}</p>
-                            <p className="text-lg text-gray-500 font-normal">/mo</p>
+                            <p className="text-3xl font-bold text-[#F0F0F0] tabular-nums tracking-tight">{fmt(monthly)}</p>
+                            <p className="text-lg text-[#4A4A4A] font-normal">/mo</p>
                           </div>
-                          <p className="text-xs text-gray-500 mt-1 uppercase tracking-widest">per month</p>
+                          <p className="text-xs text-[#4A4A4A] mt-1 uppercase tracking-widest">per month</p>
                         </div>
                       )}
                       {annual > 0 && (
                         <div>
                           <div className="flex items-baseline gap-0.5">
-                            <p className="text-3xl font-bold text-white tabular-nums tracking-tight">{fmt(annual)}</p>
-                            <p className="text-lg text-gray-500 font-normal">/yr</p>
+                            <p className="text-3xl font-bold text-[#F0F0F0] tabular-nums tracking-tight">{fmt(annual)}</p>
+                            <p className="text-lg text-[#4A4A4A] font-normal">/yr</p>
                           </div>
-                          <p className="text-xs text-gray-500 mt-1 uppercase tracking-widest">per year</p>
+                          <p className="text-xs text-[#4A4A4A] mt-1 uppercase tracking-widest">per year</p>
                         </div>
                       )}
                       <div className="pb-0.5">
-                        <p className="text-3xl font-bold text-white">{lineItems.length}</p>
-                        <p className="text-xs text-gray-500 mt-1 uppercase tracking-widest">
+                        <p className="text-3xl font-bold text-[#F0F0F0]">{lineItems.length}</p>
+                        <p className="text-xs text-[#4A4A4A] mt-1 uppercase tracking-widest">
                           {lineItems.length === 1 ? 'service' : 'services'}
                         </p>
                       </div>
                     </div>
                   ) : !hasItems ? (
-                    <p className="text-sm text-gray-600 italic">No options selected — configure below</p>
+                    <p className="text-sm text-[#4A4A4A] italic">No options selected — configure below</p>
                   ) : (
                     <div>
-                      <p className="text-3xl font-bold text-white">{lineItems.length}</p>
-                      <p className="text-xs text-gray-500 mt-1 uppercase tracking-widest">services</p>
+                      <p className="text-3xl font-bold text-[#F0F0F0]">{lineItems.length}</p>
+                      <p className="text-xs text-[#4A4A4A] mt-1 uppercase tracking-widest">services</p>
                     </div>
                   )}
 
                   {/* Progress bar */}
                   {pkgOrders.length > 0 && packageTotal > 0 && (
                     <div className="mt-5 space-y-1.5" onClick={e => e.stopPropagation()}>
-                      <div className="h-1.5 w-full rounded-full bg-white/[0.06] overflow-hidden">
+                      <div className="h-1.5 w-full rounded-full bg-[#333333] overflow-hidden">
                         <div className="h-full rounded-full flex">
                           {paidPct > 0 && (
                             <div className="h-full bg-emerald-400 transition-all duration-500" style={{ width: `${paidPct}%` }} />
@@ -781,7 +780,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center justify-between text-[10px] text-gray-500 tabular-nums">
+                      <div className="flex items-center justify-between text-[10px] text-[#4A4A4A] tabular-nums">
                         <span>
                           <span className={paidAmount > 0 ? 'text-emerald-400' : ''}>{fmt(invoicedAmount)}</span>
                           {' '}invoiced
@@ -795,21 +794,22 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                 {/* Expansion panel */}
                 {isExpanded && (
                   <>
-                    <div className="h-px bg-gradient-to-r from-transparent via-white/[0.07] to-transparent" />
-                    <div className="px-7 py-6 space-y-6" style={{ background: 'rgba(0,0,0,0.25)' }}>
+                    <div className="h-px bg-gradient-to-r from-transparent via-[#333333] to-transparent" />
+                    <div className="px-7 py-6 space-y-6 bg-[#2D2D2D]">
 
                       {/* Share row */}
                       <div className="flex items-center gap-2 flex-wrap">
                         <button
                           onClick={() => handleCopy(pkg.id)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-400 border border-white/[0.08] rounded-lg hover:text-white hover:border-white/[0.18] transition-all"
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[#6B6B6B] border border-[#404040] rounded-lg hover:text-[#F0F0F0] hover:border-[#404040] transition-all"
                         >
                           {copied ? <CheckCheck className="size-3.5 text-emerald-400" /> : <Copy className="size-3.5" />}
                           {copied ? 'Copied!' : 'Copy Link'}
                         </button>
                         <Link
                           href={`/u/${username}/packages/${pkg.id}/print`}
-                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-400 border border-white/[0.08] rounded-lg hover:text-[#67e8f9] hover:border-[#67e8f9]/30 transition-all"
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[#6B6B6B] border border-[#404040] rounded-lg hover:border-[rgba(139,156,182,0.18)] transition-all"
+                          style={{ color: undefined }}
                         >
                           <FileText className="size-3.5" />
                           View Package
@@ -817,7 +817,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                         </Link>
                         <button
                           onClick={() => { setEmailModalPkgId(pkg.id); setEmailAddresses(''); setEmailResult(null) }}
-                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-400 border border-white/[0.08] rounded-lg hover:text-[#67e8f9] hover:border-[#67e8f9]/30 transition-all"
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[#6B6B6B] border border-[#404040] rounded-lg hover:border-[rgba(139,156,182,0.18)] transition-all"
                         >
                           <Mail className="size-3.5" />
                           Email Proposal
@@ -831,7 +831,8 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                         ) : (
                           <button
                             onClick={() => { setAuthModalPkgId(pkg.id); setAuthName(''); setAuthResult(null) }}
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[#67e8f9] border border-[#67e8f9]/25 bg-[#67e8f9]/[0.05] rounded-lg hover:bg-[#67e8f9]/[0.12] transition-all"
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-[rgba(139,156,182,0.18)] bg-[rgba(139,156,182,0.06)] rounded-lg hover:bg-[rgba(139,156,182,0.10)] transition-all"
+                            style={{ color: 'var(--space-accent)' }}
                           >
                             <PenLine className="size-3.5" />
                             Sign as ORCACLUB
@@ -846,7 +847,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                           <span className="text-[10px] text-emerald-400 font-medium">
                             Client signed: {pkg.clientSignature.typedName} ({pkg.clientSignature.signedByEmail})
                           </span>
-                          <span className="text-[10px] text-gray-600 ml-auto shrink-0">
+                          <span className="text-[10px] text-[#4A4A4A] ml-auto shrink-0">
                             {new Date(pkg.clientSignature.signedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                           </span>
                         </div>
@@ -854,9 +855,9 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
 
                       {/* Send Signed Contract — visible when both parties have signed */}
                       {pkg.clientSignature?.signedAt && pkg.orcaclubSignature?.authorizedAt && (
-                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#67e8f9]/[0.03] border border-[#67e8f9]/15">
-                          <Send className="size-3.5 text-[#67e8f9] shrink-0" />
-                          <span className="text-[10px] text-[#67e8f9] font-medium flex-1">
+                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[rgba(255,255,255,0.02)] border border-[rgba(139,156,182,0.10)]">
+                          <Send className="size-3.5 shrink-0" style={{ color: 'var(--space-accent)' }} />
+                          <span className="text-[10px] font-medium flex-1" style={{ color: 'var(--space-accent)' }}>
                             Contract fully executed
                           </span>
                           {contractSentFor.has(pkg.id) ? (
@@ -874,7 +875,8 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                                 }
                               }}
                               disabled={sendingContract === pkg.id}
-                              className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold text-[#67e8f9] border border-[#67e8f9]/25 rounded-md hover:bg-[#67e8f9]/[0.1] disabled:opacity-40 transition-all"
+                              className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold border border-[rgba(139,156,182,0.18)] rounded-md hover:bg-[rgba(139,156,182,0.10)] disabled:opacity-40 transition-all"
+                              style={{ color: 'var(--space-accent)' }}
                             >
                               {sendingContract === pkg.id
                                 ? <><Loader2 className="size-3 animate-spin" /> Sending…</>
@@ -887,14 +889,14 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
 
                       {/* Project link */}
                       <div className="flex items-center justify-between gap-3">
-                        <span className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold shrink-0">
+                        <span className="text-[10px] text-[#4A4A4A] uppercase tracking-widest font-semibold shrink-0">
                           Link to project
                         </span>
                         {projects && projects.length > 0 ? (
                           <select
                             value={selectedProjectId[pkg.id] ?? ''}
                             onChange={e => setSelectedProjectId(prev => ({ ...prev, [pkg.id]: e.target.value }))}
-                            className="flex-1 max-w-[220px] appearance-none px-3 py-1.5 text-xs bg-white/[0.05] border border-white/[0.12] rounded-lg text-white focus:outline-none focus:border-[#67e8f9]/40"
+                            className="flex-1 max-w-[220px] appearance-none px-3 py-1.5 text-xs bg-[#252525] border border-[#404040] rounded-lg text-[#F0F0F0] focus:outline-none focus:border-[rgba(139,156,182,0.20)]"
                           >
                             <option value="">No project</option>
                             {projects.map(p => (
@@ -902,21 +904,21 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                             ))}
                           </select>
                         ) : (
-                          <span className="text-[10px] text-gray-700 italic">No projects yet</span>
+                          <span className="text-[10px] text-[#4A4A4A] italic">No projects yet</span>
                         )}
                       </div>
 
                       {/* Line item checklist */}
                       {loadingTemplate ? (
                         <div className="flex items-center gap-2 py-2">
-                          <Loader2 className="size-3.5 text-gray-500 animate-spin" />
-                          <span className="text-xs text-gray-600">Loading options…</span>
+                          <Loader2 className="size-3.5 text-[#4A4A4A] animate-spin" />
+                          <span className="text-xs text-[#4A4A4A]">Loading options…</span>
                         </div>
                       ) : (
                         <>
                           {templateItems.length > 0 && (
                             <div>
-                              <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-3">
+                              <p className="text-[10px] text-[#4A4A4A] uppercase tracking-widest font-semibold mb-3">
                                 Select services to include
                               </p>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -945,7 +947,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
 
                           {extraItems.length > 0 && (
                             <div>
-                              <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-3">
+                              <p className="text-[10px] text-[#4A4A4A] uppercase tracking-widest font-semibold mb-3">
                                 Custom Items
                               </p>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -953,26 +955,26 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                                   const globalIdx = editItems.findIndex(ei => ei.name === item.name)
                                   const total = (item.price ?? 0) * (item.quantity ?? 1)
                                   return (
-                                    <div key={i} className="flex flex-col gap-2.5 p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                                    <div key={i} className="flex flex-col gap-2.5 p-4 rounded-xl bg-[#252525] border border-[#404040]">
                                       <div className="flex items-start justify-between gap-2">
                                         <div className="flex-1 min-w-0">
-                                          <p className="text-sm font-semibold text-white">{item.name}</p>
+                                          <p className="text-sm font-semibold text-[#F0F0F0]">{item.name}</p>
                                           {item.description && (
-                                            <p className="text-[11px] text-gray-500 mt-0.5 line-clamp-2">{item.description}</p>
+                                            <p className="text-[11px] text-[#4A4A4A] mt-0.5 line-clamp-2">{item.description}</p>
                                           )}
                                         </div>
                                         <button
                                           onClick={() => removeExtra(globalIdx)}
-                                          className="size-6 flex items-center justify-center rounded-md text-gray-600 hover:text-red-400 hover:bg-red-400/10 transition-colors shrink-0"
+                                          className="size-6 flex items-center justify-center rounded-md text-[#4A4A4A] hover:text-red-400 hover:bg-red-400/10 transition-colors shrink-0"
                                         >
                                           <X className="size-3.5" />
                                         </button>
                                       </div>
                                       <div className="flex items-center justify-end">
-                                        <span className="text-sm font-bold text-white tabular-nums font-mono">
+                                        <span className="text-sm font-bold text-[#F0F0F0] tabular-nums font-mono">
                                           {fmt(total)}
                                           {item.isRecurring && (
-                                            <span className="text-xs font-normal text-gray-500 font-sans">/{item.recurringInterval === 'year' ? 'yr' : 'mo'}</span>
+                                            <span className="text-xs font-normal text-[#4A4A4A] font-sans">/{item.recurringInterval === 'year' ? 'yr' : 'mo'}</span>
                                           )}
                                         </span>
                                       </div>
@@ -984,32 +986,32 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                           )}
 
                           {templateItems.length === 0 && editItems.length === 0 && (
-                            <p className="text-xs text-gray-600 py-1">No source package found. Add items via the task manager.</p>
+                            <p className="text-xs text-[#4A4A4A] py-1">No source package found. Add items via the task manager.</p>
                           )}
                         </>
                       )}
 
                       {/* ── Payment Schedule Overview ────────────────────── */}
                       {pkg.paymentSchedule && pkg.paymentSchedule.length > 0 && (
-                        <div className="space-y-2 pt-1 border-t border-white/[0.05]">
+                        <div className="space-y-2 pt-1 border-t border-[#404040]">
                           <div className="flex items-center justify-between">
-                            <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">
+                            <p className="text-[10px] text-[#4A4A4A] uppercase tracking-widest font-semibold">
                               Payment Schedule
                             </p>
-                            <span className="text-[10px] text-gray-700 tabular-nums">
+                            <span className="text-[10px] text-[#4A4A4A] tabular-nums">
                               {pkg.paymentSchedule.filter(e => e.orderId).length}/{pkg.paymentSchedule.length} invoiced
                             </span>
                           </div>
-                          <div className="rounded-xl border border-white/[0.06] overflow-hidden divide-y divide-white/[0.04]">
+                          <div className="rounded-xl border border-[#404040] overflow-hidden divide-y divide-[#333333]">
                             {pkg.paymentSchedule.map((entry) => {
                               const isInvoiced = !!entry.orderId
                               return (
                                 <div key={entry.id} className="flex items-center gap-3 px-3.5 py-2.5">
                                   <div className="flex-1 min-w-0 flex items-center gap-3 flex-wrap">
-                                    <span className="text-xs text-gray-300 font-medium">{entry.label}</span>
-                                    <span className="text-xs text-white tabular-nums font-mono shrink-0">{fmtExact(entry.amount)}</span>
+                                    <span className="text-xs text-[#A0A0A0] font-medium">{entry.label}</span>
+                                    <span className="text-xs text-[#F0F0F0] tabular-nums font-mono shrink-0">{fmtExact(entry.amount)}</span>
                                     {entry.dueDate && (
-                                      <span className="flex items-center gap-1 text-[10px] text-gray-600 shrink-0">
+                                      <span className="flex items-center gap-1 text-[10px] text-[#4A4A4A] shrink-0">
                                         <CalendarDays className="size-3" />
                                         {formatDisplayDate(entry.dueDate)}
                                       </span>
@@ -1029,7 +1031,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                                           type="button"
                                           disabled={removingEntryId === entry.id}
                                           onClick={() => handleRemoveScheduleEntry(pkg.id, entry.id)}
-                                          className="flex items-center justify-center size-6 text-gray-600 hover:text-red-400 hover:bg-red-400/[0.08] rounded transition-all disabled:opacity-40"
+                                          className="flex items-center justify-center size-6 text-[#4A4A4A] hover:text-red-400 hover:bg-red-400/[0.08] rounded transition-all disabled:opacity-40"
                                           title="Remove entry"
                                         >
                                           {removingEntryId === entry.id
@@ -1048,21 +1050,22 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                       )}
 
                       {/* ── Invoice type selector ───────────────────────────── */}
-                      <div className="space-y-4 pt-1 border-t border-white/[0.05]">
+                      <div className="space-y-4 pt-1 border-t border-[#404040]">
                         <div className="flex items-center gap-3">
-                          <span className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold shrink-0">
+                          <span className="text-[10px] text-[#4A4A4A] uppercase tracking-widest font-semibold shrink-0">
                             Invoice Type
                           </span>
-                          <div className="flex items-center rounded-lg border border-white/[0.10] overflow-hidden">
+                          <div className="flex items-center rounded-lg border border-[#404040] overflow-hidden">
                             <button
                               type="button"
                               onClick={() => setInvoiceMode(prev => ({ ...prev, [pkg.id]: 'full' }))}
                               className={cn(
                                 'px-3 py-1.5 text-xs font-medium transition-all border-r',
                                 mode === 'full'
-                                  ? 'bg-[#67e8f9]/[0.12] text-[#67e8f9] border-[#67e8f9]/20'
-                                  : 'text-gray-500 hover:text-gray-300 border-white/[0.08]',
+                                  ? 'bg-[rgba(139,156,182,0.10)] border-[rgba(139,156,182,0.15)]'
+                                  : 'text-[#4A4A4A] hover:text-[#A0A0A0] border-[#404040]',
                               )}
+                              style={mode === 'full' ? { color: 'var(--space-accent)' } : {}}
                             >
                               Quick Invoice
                             </button>
@@ -1072,9 +1075,10 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                               className={cn(
                                 'px-3 py-1.5 text-xs font-medium transition-all',
                                 mode === 'schedule'
-                                  ? 'bg-[#67e8f9]/[0.12] text-[#67e8f9]'
-                                  : 'text-gray-500 hover:text-gray-300',
+                                  ? 'bg-[rgba(139,156,182,0.10)]'
+                                  : 'text-[#4A4A4A] hover:text-[#A0A0A0]',
                               )}
+                              style={mode === 'schedule' ? { color: 'var(--space-accent)' } : {}}
                             >
                               Payment Schedule
                             </button>
@@ -1087,10 +1091,10 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
 
                             {/* Row 1: Deposit amount + due date */}
                             <div className="space-y-2">
-                              <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">Deposit</p>
+                              <p className="text-[10px] text-[#4A4A4A] uppercase tracking-widest font-semibold">Deposit</p>
                               <div className="flex items-center gap-2 flex-wrap">
-                                <div className="flex items-center rounded-lg border border-white/[0.12] overflow-hidden">
-                                  <span className="px-2.5 py-1.5 text-xs text-gray-500 bg-white/[0.04] border-r border-white/[0.08]">$</span>
+                                <div className="flex items-center rounded-lg border border-[#404040] overflow-hidden">
+                                  <span className="px-2.5 py-1.5 text-xs text-[#4A4A4A] bg-[#2D2D2D] border-r border-[#404040]">$</span>
                                   <input
                                     type="number"
                                     min={0}
@@ -1098,17 +1102,17 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                                     value={scheduleDeposit[pkg.id] ?? ''}
                                     onChange={e => setScheduleDeposit(prev => ({ ...prev, [pkg.id]: e.target.value }))}
                                     placeholder="0.00"
-                                    className="w-28 px-2 py-1.5 text-xs bg-transparent text-white focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                    className="w-28 px-2 py-1.5 text-xs bg-[#252525] text-[#F0F0F0] focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                   />
                                 </div>
                                 <input
                                   type="date"
                                   value={scheduleDepositDate[pkg.id] ?? ''}
                                   onChange={e => setScheduleDepositDate(prev => ({ ...prev, [pkg.id]: e.target.value }))}
-                                  className="px-3 py-1.5 text-xs bg-white/[0.05] border border-white/[0.12] rounded-lg text-white focus:outline-none focus:border-[#67e8f9]/40 [color-scheme:dark]"
+                                  className="px-3 py-1.5 text-xs bg-[#252525] border border-[#404040] rounded-lg text-[#F0F0F0] focus:outline-none focus:border-[rgba(139,156,182,0.20)] [color-scheme:light]"
                                 />
                                 {packageTotal > 0 && schDeposit > 0 && (
-                                  <span className="text-[10px] text-gray-600 tabular-nums">
+                                  <span className="text-[10px] text-[#4A4A4A] tabular-nums">
                                     {fmt(schDeposit)} of {fmt(packageTotal)}
                                   </span>
                                 )}
@@ -1117,23 +1121,23 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
 
                             {/* Row 2: Installments count + frequency (always visible) */}
                             <div className="space-y-2">
-                              <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">
+                              <p className="text-[10px] text-[#4A4A4A] uppercase tracking-widest font-semibold">
                                 Installments
                                 {packageTotal > 0 && (
-                                  <span className="ml-2 font-mono normal-case text-white">
+                                  <span className="ml-2 font-mono normal-case text-[#F0F0F0]">
                                     {schDeposit > 0 ? `${fmt(schRemaining)} remaining` : fmt(packageTotal)}
                                   </span>
                                 )}
                               </p>
                               <div className="flex items-center gap-2 flex-wrap">
-                                <div className="flex items-center rounded-lg border border-white/[0.12] overflow-hidden">
-                                  <span className="px-2.5 py-1.5 text-[10px] text-gray-500 bg-white/[0.04] border-r border-white/[0.08] uppercase tracking-wide">
+                                <div className="flex items-center rounded-lg border border-[#404040] overflow-hidden">
+                                  <span className="px-2.5 py-1.5 text-[10px] text-[#4A4A4A] bg-[#2D2D2D] border-r border-[#404040] uppercase tracking-wide">
                                     Split into
                                   </span>
                                   <select
                                     value={schInstallments}
                                     onChange={e => handleInstallmentCountChange(pkg.id, Number(e.target.value))}
-                                    className="appearance-none px-2 py-1.5 text-xs bg-transparent text-white focus:outline-none pr-5"
+                                    className="appearance-none px-2 py-1.5 text-xs bg-[#252525] text-[#F0F0F0] focus:outline-none pr-5"
                                   >
                                     {[1, 2, 3, 4, 5, 6, 8, 10, 12].map(n => (
                                       <option key={n} value={n}>{n} {n === 1 ? 'payment' : 'payments'}</option>
@@ -1142,7 +1146,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                                 </div>
 
                                 {/* Frequency tabs */}
-                                <div className="flex items-center rounded-lg border border-white/[0.10] overflow-hidden">
+                                <div className="flex items-center rounded-lg border border-[#404040] overflow-hidden">
                                   {(['monthly', 'biweekly', 'weekly', 'custom'] as const).map((freq, fi, arr) => (
                                     <button
                                       key={freq}
@@ -1152,8 +1156,8 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                                         'px-2.5 py-1.5 text-xs font-medium transition-all',
                                         fi < arr.length - 1 ? 'border-r' : '',
                                         schFrequency === freq
-                                          ? 'bg-white/[0.10] text-white border-white/[0.10]'
-                                          : 'text-gray-500 hover:text-gray-300 border-white/[0.07]',
+                                          ? 'bg-[#2D2D2D] text-[#F0F0F0] border-[#404040]'
+                                          : 'text-[#4A4A4A] hover:text-[#A0A0A0] border-[#404040]',
                                       )}
                                     >
                                       {freq === 'biweekly' ? 'Bi-weekly'
@@ -1168,15 +1172,15 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                               {/* Start date (non-custom) */}
                               {schFrequency !== 'custom' && (
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="text-[10px] text-gray-600">First payment due:</span>
+                                  <span className="text-[10px] text-[#4A4A4A]">First payment due:</span>
                                   <input
                                     type="date"
                                     value={schStartDate}
                                     onChange={e => setScheduleStartDate(prev => ({ ...prev, [pkg.id]: e.target.value }))}
-                                    className="px-3 py-1.5 text-xs bg-white/[0.05] border border-white/[0.12] rounded-lg text-white focus:outline-none focus:border-[#67e8f9]/40 [color-scheme:dark]"
+                                    className="px-3 py-1.5 text-xs bg-[#252525] border border-[#404040] rounded-lg text-[#F0F0F0] focus:outline-none focus:border-[rgba(139,156,182,0.20)] [color-scheme:light]"
                                   />
                                   {schAmounts[0] > 0 && (
-                                    <span className="text-[10px] text-gray-600 tabular-nums">
+                                    <span className="text-[10px] text-[#4A4A4A] tabular-nums">
                                       = {fmtExact(schAmounts[0])} each
                                     </span>
                                   )}
@@ -1186,18 +1190,18 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
 
                             {/* Schedule Preview */}
                             <div className="space-y-1.5">
-                              <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">Schedule Preview</p>
+                              <p className="text-[10px] text-[#4A4A4A] uppercase tracking-widest font-semibold">Schedule Preview</p>
 
-                              <div className="rounded-xl border border-white/[0.07] overflow-hidden divide-y divide-white/[0.05]">
+                              <div className="rounded-xl border border-[#404040] overflow-hidden divide-y divide-[#333333]">
                                 {/* Deposit row — only shown when a deposit amount is entered */}
                                 {schDeposit > 0 && (
-                                  <div className="flex items-center gap-3 px-4 py-2.5 bg-white/[0.02]">
-                                    <span className="text-xs text-gray-400 flex-1 font-medium">Deposit</span>
-                                    <span className="text-xs text-white tabular-nums font-mono shrink-0">{fmtExact(schDeposit)}</span>
-                                    <span className="text-[10px] text-gray-600 w-24 text-right shrink-0">
+                                  <div className="flex items-center gap-3 px-4 py-2.5 bg-[#252525]">
+                                    <span className="text-xs text-[#6B6B6B] flex-1 font-medium">Deposit</span>
+                                    <span className="text-xs text-[#F0F0F0] tabular-nums font-mono shrink-0">{fmtExact(schDeposit)}</span>
+                                    <span className="text-[10px] text-[#4A4A4A] w-24 text-right shrink-0">
                                       {scheduleDepositDate[pkg.id]
                                         ? formatDisplayDate(scheduleDepositDate[pkg.id])
-                                        : <em className="text-gray-700">no date set</em>}
+                                        : <em className="text-[#4A4A4A]">no date set</em>}
                                     </span>
                                   </div>
                                 )}
@@ -1213,19 +1217,19 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                                   const date = schComputedDates[i] ?? ''
                                   return (
                                     <div key={i} className="flex items-center gap-3 px-4 py-2.5">
-                                      <span className="text-xs text-gray-400 flex-1">{label}</span>
-                                      <span className="text-xs text-white tabular-nums font-mono shrink-0">{fmtExact(amount)}</span>
+                                      <span className="text-xs text-[#6B6B6B] flex-1">{label}</span>
+                                      <span className="text-xs text-[#F0F0F0] tabular-nums font-mono shrink-0">{fmtExact(amount)}</span>
                                       <div className="w-24 flex justify-end shrink-0">
                                         {schFrequency === 'custom' ? (
                                           <input
                                             type="date"
                                             value={date}
                                             onChange={e => handleCustomDateChange(pkg.id, i, e.target.value)}
-                                            className="w-full px-2 py-1 text-[10px] bg-white/[0.05] border border-white/[0.12] rounded-lg text-white focus:outline-none focus:border-[#67e8f9]/40 [color-scheme:dark]"
+                                            className="w-full px-2 py-1 text-[10px] bg-[#2D2D2D] border border-[#404040] rounded-lg text-[#F0F0F0] focus:outline-none focus:border-[rgba(139,156,182,0.20)] [color-scheme:light]"
                                           />
                                         ) : (
-                                          <span className="text-[10px] text-gray-600">
-                                            {date ? formatDisplayDate(date) : <em className="text-gray-700">set start date</em>}
+                                          <span className="text-[10px] text-[#4A4A4A]">
+                                            {date ? formatDisplayDate(date) : <em className="text-[#4A4A4A]">set start date</em>}
                                           </span>
                                         )}
                                       </div>
@@ -1263,8 +1267,8 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
 
                             {/* Saved schedule entries */}
                             {pkg.paymentSchedule && pkg.paymentSchedule.length > 0 && (
-                              <div className="space-y-2 pt-4 border-t border-white/[0.05]">
-                                <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">
+                              <div className="space-y-2 pt-4 border-t border-[#404040]">
+                                <p className="text-[10px] text-[#4A4A4A] uppercase tracking-widest font-semibold">
                                   Saved Schedule
                                 </p>
                                 {pkg.paymentSchedule.map((entry) => {
@@ -1274,12 +1278,12 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                                     : null
                                   const entryResult = entryResults[entry.id]
                                   return (
-                                    <div key={entry.id} className="flex items-center gap-3 py-2.5 px-3 rounded-lg bg-white/[0.02] border border-white/[0.06]">
+                                    <div key={entry.id} className="flex items-center gap-3 py-2.5 px-3 rounded-lg bg-[#252525] border border-[#404040]">
                                       <div className="flex-1 min-w-0 flex items-center gap-3 flex-wrap">
-                                        <span className="text-xs text-gray-300 font-medium">{entry.label}</span>
-                                        <span className="text-xs text-white tabular-nums font-mono shrink-0">{fmtExact(entry.amount)}</span>
+                                        <span className="text-xs text-[#A0A0A0] font-medium">{entry.label}</span>
+                                        <span className="text-xs text-[#F0F0F0] tabular-nums font-mono shrink-0">{fmtExact(entry.amount)}</span>
                                         {entry.dueDate && (
-                                          <span className="flex items-center gap-1 text-[10px] text-gray-600 shrink-0">
+                                          <span className="flex items-center gap-1 text-[10px] text-[#4A4A4A] shrink-0">
                                             <CalendarDays className="size-3" />
                                             {formatDisplayDate(entry.dueDate)}
                                           </span>
@@ -1293,7 +1297,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                                             </span>
                                             {invoicedOrder?.stripeInvoiceUrl && (
                                               <a href={invoicedOrder.stripeInvoiceUrl} target="_blank" rel="noopener noreferrer"
-                                                className="text-gray-600 hover:text-gray-400 transition-colors">
+                                                className="text-[#4A4A4A] hover:text-[#6B6B6B] transition-colors">
                                                 <ExternalLink className="size-3" />
                                               </a>
                                             )}
@@ -1314,7 +1318,8 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                                               type="button"
                                               disabled={sendingEntryId === entry.id || removingEntryId === entry.id}
                                               onClick={() => handleSendScheduledPayment(pkg.id, entry.id, selectedProjectId[pkg.id] || undefined)}
-                                              className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-[#67e8f9] border border-[#67e8f9]/30 bg-[#67e8f9]/[0.06] rounded hover:bg-[#67e8f9]/[0.14] disabled:opacity-50 transition-all"
+                                              className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium border border-[rgba(139,156,182,0.18)] bg-[rgba(139,156,182,0.06)] rounded hover:bg-[rgba(139,156,182,0.10)] disabled:opacity-50 transition-all"
+                                              style={{ color: 'var(--space-accent)' }}
                                             >
                                               {sendingEntryId === entry.id
                                                 ? <Loader2 className="size-3 animate-spin" />
@@ -1326,7 +1331,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                                               type="button"
                                               disabled={sendingEntryId === entry.id || removingEntryId === entry.id}
                                               onClick={() => handleRemoveScheduleEntry(pkg.id, entry.id)}
-                                              className="flex items-center justify-center size-6 text-gray-600 hover:text-red-400 hover:bg-red-400/[0.08] rounded transition-all disabled:opacity-40"
+                                              className="flex items-center justify-center size-6 text-[#4A4A4A] hover:text-red-400 hover:bg-red-400/[0.08] rounded transition-all disabled:opacity-40"
                                               title="Remove entry"
                                             >
                                               {removingEntryId === entry.id
@@ -1353,7 +1358,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                       )}
 
                       {/* Footer */}
-                      <div className="flex items-center justify-between pt-2 border-t border-white/[0.06]">
+                      <div className="flex items-center justify-between pt-2 border-t border-[#404040]">
                         <button
                           onClick={() => handleDelete(pkg.id)}
                           onBlur={() => setTimeout(() => setConfirmDeleteId(null), 300)}
@@ -1362,7 +1367,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                             'flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition-all disabled:opacity-50',
                             confirmDeleteId === pkg.id
                               ? 'text-red-400 border-red-500/40 bg-red-500/10'
-                              : 'text-gray-600 border-white/[0.06] hover:text-red-400 hover:border-red-500/30',
+                              : 'text-[#4A4A4A] border-[#404040] hover:text-red-400 hover:border-red-500/30',
                           )}
                         >
                           {deletingId === pkg.id ? <Loader2 className="size-3 animate-spin" /> : <Trash2 className="size-3.5" />}
@@ -1398,7 +1403,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
 
                           <button
                             onClick={() => setExpandedId(null)}
-                            className="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-300 transition-colors"
+                            className="px-3 py-1.5 text-xs text-[#4A4A4A] hover:text-[#A0A0A0] transition-colors"
                           >
                             Cancel
                           </button>
@@ -1407,7 +1412,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                           <button
                             onClick={() => handleSave(pkg)}
                             disabled={saving}
-                            className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold bg-white/[0.06] border border-white/[0.12] text-gray-300 rounded-lg hover:bg-white/[0.10] disabled:opacity-50 transition-colors"
+                            className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold bg-[#2D2D2D] border border-[#404040] text-[#A0A0A0] rounded-lg hover:bg-[#E5E1D9] disabled:opacity-50 transition-colors"
                           >
                             {saving && <Loader2 className="size-3 animate-spin" />}
                             Save
@@ -1418,7 +1423,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                               <select
                                 value={getDays(pkg.id)}
                                 onChange={e => setDaysUntilDue(prev => ({ ...prev, [pkg.id]: Number(e.target.value) }))}
-                                className="appearance-none pl-2 pr-5 py-1.5 text-xs bg-white/[0.05] border border-white/[0.12] rounded-lg text-gray-400 focus:outline-none focus:border-[#67e8f9]/40 cursor-pointer"
+                                className="appearance-none pl-2 pr-5 py-1.5 text-xs bg-[#252525] border border-[#404040] rounded-lg text-[#6B6B6B] focus:outline-none focus:border-[rgba(139,156,182,0.20)] cursor-pointer"
                               >
                                 <option value={7}>7 days</option>
                                 <option value={14}>14 days</option>
@@ -1430,7 +1435,8 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                               <button
                                 onClick={() => handleCreateInvoice(pkg)}
                                 disabled={invoicingId === pkg.id || !editItems.length}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-[#67e8f9]/[0.1] border border-[#67e8f9]/30 text-[#67e8f9] rounded-lg hover:bg-[#67e8f9]/[0.18] disabled:opacity-40 transition-all"
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border border-[rgba(139,156,182,0.18)] bg-[rgba(139,156,182,0.06)] rounded-lg hover:bg-[rgba(139,156,182,0.10)] disabled:opacity-40 transition-all"
+                                style={{ color: 'var(--space-accent)' }}
                               >
                                 {invoicingId === pkg.id ? <Loader2 className="size-3.5 animate-spin" /> : <Receipt className="size-3.5" />}
                                 {invoicingId === pkg.id ? 'Pushing…' : 'Push Invoice'}
@@ -1445,7 +1451,8 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                                 onClick={() => handlePushSchedule(pkg.id)}
                                 disabled={pushingScheduleId === pkg.id || !hasPending}
                                 title={!hasPending ? 'Save your schedule first to enable pushing' : undefined}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-[#67e8f9]/[0.1] border border-[#67e8f9]/30 text-[#67e8f9] rounded-lg hover:bg-[#67e8f9]/[0.18] disabled:opacity-40 transition-all"
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border border-[rgba(139,156,182,0.18)] bg-[rgba(139,156,182,0.06)] rounded-lg hover:bg-[rgba(139,156,182,0.10)] disabled:opacity-40 transition-all"
+                                style={{ color: 'var(--space-accent)' }}
                               >
                                 {pushingScheduleId === pkg.id ? <Loader2 className="size-3.5 animate-spin" /> : <ListOrdered className="size-3.5" />}
                                 {pushingScheduleId === pkg.id ? 'Pushing…' : 'Push Schedule'}
@@ -1463,17 +1470,17 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
           })}
         </div>
       ) : (
-        <div className="relative overflow-hidden rounded-2xl border border-white/[0.07]"
-          style={{ background: 'linear-gradient(145deg, #191919 0%, #121212 100%)' }}>
+        <div className="relative overflow-hidden rounded-2xl border border-[#404040]"
+          style={{ background: '#252525' }}>
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="size-64 rounded-full bg-[#67e8f9]/[0.02] blur-3xl" />
+            <div className="size-64 rounded-full bg-[rgba(255,255,255,0.01)] blur-3xl" />
           </div>
           <div className="relative z-10 flex flex-col items-center text-center py-14 px-6">
-            <div className="p-4 rounded-2xl bg-white/[0.04] border border-white/[0.08] mb-5">
-              <Sparkles className="size-7 text-gray-600" />
+            <div className="p-4 rounded-2xl bg-[#2D2D2D] border border-[#404040] mb-5">
+              <Sparkles className="size-7 text-[#4A4A4A]" />
             </div>
-            <h3 className="text-base font-semibold text-white mb-2">No packages assigned</h3>
-            <p className="text-gray-500 text-sm max-w-xs mb-6 leading-relaxed">
+            <h3 className="text-base font-semibold text-[#F0F0F0] mb-2">No packages assigned</h3>
+            <p className="text-[#4A4A4A] text-sm max-w-xs mb-6 leading-relaxed">
               Assign a service package to start building a custom offering for this client.
             </p>
             <AssignPackageModal clientId={clientId} />
@@ -1486,26 +1493,26 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
           {/* Backdrop */}
           <div
-            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            className="absolute inset-0 bg-[#000000]/60"
             onClick={() => { setEmailModalPkgId(null); setEmailAddresses(''); setEmailResult(null) }}
           />
           {/* Dialog */}
-          <div className="relative z-10 w-full max-w-sm rounded-2xl border border-white/[0.1] bg-[#111] p-6 space-y-4 shadow-2xl">
+          <div className="relative z-10 w-full max-w-sm rounded-2xl border border-[#404040] bg-[#1C1C1C] p-6 space-y-4 shadow-[0_8px_40px_rgba(255,255,255,0.06)]">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Mail className="size-4 text-[#67e8f9]" />
-                <h3 className="text-sm font-semibold text-white">Email Proposal</h3>
+                <Mail className="size-4" style={{ color: 'var(--space-accent)' }} />
+                <h3 className="text-sm font-semibold text-[#F0F0F0]">Email Proposal</h3>
               </div>
               <button
                 onClick={() => { setEmailModalPkgId(null); setEmailAddresses(''); setEmailResult(null) }}
-                className="p-1 text-gray-600 hover:text-gray-300 transition-colors rounded-lg hover:bg-white/[0.06]"
+                className="p-1 text-[#4A4A4A] hover:text-[#A0A0A0] transition-colors rounded-lg hover:bg-[#2D2D2D]"
               >
                 <X className="size-4" />
               </button>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">
+              <label className="text-[10px] font-semibold uppercase tracking-widest text-[#4A4A4A]">
                 Email addresses
               </label>
               <textarea
@@ -1513,9 +1520,9 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                 onChange={e => setEmailAddresses(e.target.value)}
                 placeholder="client@example.com, another@example.com"
                 rows={3}
-                className="w-full px-3 py-2.5 text-sm bg-white/[0.05] border border-white/[0.12] rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-[#67e8f9]/40 resize-none"
+                className="w-full px-3 py-2.5 text-sm bg-[#2D2D2D] border border-[#404040] rounded-xl text-[#F0F0F0] placeholder-[#555555] focus:outline-none focus:border-[rgba(139,156,182,0.20)] resize-none"
               />
-              <p className="text-[10px] text-gray-600">Separate multiple addresses with commas</p>
+              <p className="text-[10px] text-[#4A4A4A]">Separate multiple addresses with commas</p>
             </div>
 
             {emailResult && (
@@ -1534,14 +1541,15 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
             <div className="flex items-center gap-2 pt-1">
               <button
                 onClick={() => { setEmailModalPkgId(null); setEmailAddresses(''); setEmailResult(null) }}
-                className="flex-1 px-4 py-2 text-xs font-medium text-gray-500 border border-white/[0.08] rounded-xl hover:text-gray-300 hover:border-white/[0.14] transition-all"
+                className="flex-1 px-4 py-2 text-xs font-medium text-[#4A4A4A] border border-[#404040] rounded-xl hover:text-[#A0A0A0] hover:border-[#404040] transition-all"
               >
                 Cancel
               </button>
               <button
                 onClick={handleEmailProposal}
                 disabled={emailSending || !emailAddresses.trim()}
-                className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-semibold bg-[#67e8f9]/[0.1] border border-[#67e8f9]/30 text-[#67e8f9] rounded-xl hover:bg-[#67e8f9]/[0.18] disabled:opacity-40 transition-all"
+                className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-semibold border border-[rgba(139,156,182,0.18)] bg-[rgba(139,156,182,0.06)] rounded-xl hover:bg-[rgba(139,156,182,0.10)] disabled:opacity-40 transition-all"
+                style={{ color: 'var(--space-accent)' }}
               >
                 {emailSending
                   ? <><Loader2 className="size-3.5 animate-spin" /> Sending…</>
@@ -1556,29 +1564,29 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
       {authModalPkgId && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
           <div
-            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            className="absolute inset-0 bg-[#000000]/60"
             onClick={() => { setAuthModalPkgId(null); setAuthName(''); setAuthResult(null) }}
           />
-          <div className="relative z-10 w-full max-w-sm rounded-2xl border border-white/[0.1] bg-[#111] p-6 space-y-4 shadow-2xl">
+          <div className="relative z-10 w-full max-w-sm rounded-2xl border border-[#404040] bg-[#1C1C1C] p-6 space-y-4 shadow-[0_8px_40px_rgba(255,255,255,0.06)]">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <PenLine className="size-4 text-[#67e8f9]" />
-                <h3 className="text-sm font-semibold text-white">Sign as ORCACLUB</h3>
+                <PenLine className="size-4" style={{ color: 'var(--space-accent)' }} />
+                <h3 className="text-sm font-semibold text-[#F0F0F0]">Sign as ORCACLUB</h3>
               </div>
               <button
                 onClick={() => { setAuthModalPkgId(null); setAuthName(''); setAuthResult(null) }}
-                className="p-1 text-gray-600 hover:text-gray-300 transition-colors rounded-lg hover:bg-white/[0.06]"
+                className="p-1 text-[#4A4A4A] hover:text-[#A0A0A0] transition-colors rounded-lg hover:bg-[#2D2D2D]"
               >
                 <X className="size-4" />
               </button>
             </div>
 
-            <p className="text-xs text-gray-500 leading-relaxed">
+            <p className="text-xs text-[#4A4A4A] leading-relaxed">
               Enter your full name to authorize this proposal on behalf of ORCACLUB. This records you as the authorized representative.
             </p>
 
             <div className="space-y-1.5">
-              <label className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">
+              <label className="text-[10px] font-semibold uppercase tracking-widest text-[#4A4A4A]">
                 Your Full Name
               </label>
               <input
@@ -1587,7 +1595,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                 onChange={e => setAuthName(e.target.value)}
                 placeholder="e.g. Chance Noonan"
                 autoComplete="name"
-                className="w-full px-3 py-2.5 text-sm bg-white/[0.05] border border-white/[0.12] rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-[#67e8f9]/40"
+                className="w-full px-3 py-2.5 text-sm bg-[#2D2D2D] border border-[#404040] rounded-xl text-[#F0F0F0] placeholder-[#555555] focus:outline-none focus:border-[rgba(139,156,182,0.20)]"
               />
             </div>
 
@@ -1607,14 +1615,15 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
             <div className="flex items-center gap-2 pt-1">
               <button
                 onClick={() => { setAuthModalPkgId(null); setAuthName(''); setAuthResult(null) }}
-                className="flex-1 px-4 py-2 text-xs font-medium text-gray-500 border border-white/[0.08] rounded-xl hover:text-gray-300 hover:border-white/[0.14] transition-all"
+                className="flex-1 px-4 py-2 text-xs font-medium text-[#4A4A4A] border border-[#404040] rounded-xl hover:text-[#A0A0A0] hover:border-[#404040] transition-all"
               >
                 Cancel
               </button>
               <button
                 onClick={handleAuthorize}
                 disabled={authorizing || !authName.trim()}
-                className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-semibold bg-[#67e8f9]/[0.1] border border-[#67e8f9]/30 text-[#67e8f9] rounded-xl hover:bg-[#67e8f9]/[0.18] disabled:opacity-40 transition-all"
+                className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-semibold border border-[rgba(139,156,182,0.18)] bg-[rgba(139,156,182,0.06)] rounded-xl hover:bg-[rgba(139,156,182,0.10)] disabled:opacity-40 transition-all"
+                style={{ color: 'var(--space-accent)' }}
               >
                 {authorizing
                   ? <><Loader2 className="size-3.5 animate-spin" /> Saving…</>

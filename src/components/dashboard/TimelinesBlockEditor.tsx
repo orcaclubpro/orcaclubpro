@@ -92,8 +92,8 @@ function blockDateRange(block: AnyBlock): string | null {
 
 // ── Label styles ─────────────────────────────────────────────────────────────
 
-const labelClass = 'block text-[9px] font-bold tracking-[0.2em] uppercase text-white/35 mb-1.5'
-const inputClass = 'w-full px-3 py-2.5 text-sm bg-white/[0.04] border border-white/[0.08] rounded-xl text-white placeholder:text-white/20 focus:outline-none focus:border-[#67e8f9]/30 focus:bg-white/[0.06] transition-all'
+const labelClass = 'block text-[9px] font-bold tracking-[0.2em] uppercase text-[#6B6B6B] mb-1.5'
+const inputClass = 'w-full px-3 py-2.5 text-sm bg-[#252525] border border-[#404040] rounded-xl text-[#F0F0F0] placeholder:text-[#4A4A4A] focus:outline-none focus:border-[#404040] focus:bg-[#2D2D2D] transition-all'
 
 // ── Block row in left panel ───────────────────────────────────────────────────
 
@@ -134,15 +134,15 @@ function BlockRow({
         'group relative flex items-center gap-2 px-3 py-2.5 rounded-xl cursor-pointer',
         'border transition-all duration-150',
         selected
-          ? 'bg-[#67e8f9]/[0.06] border-[#67e8f9]/25'
-          : 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.04] hover:border-white/[0.10]',
+          ? 'bg-[rgba(139,156,182,0.06)] border-[rgba(139,156,182,0.15)]'
+          : 'bg-[rgba(255,255,255,0.02)] border-[#404040] hover:bg-[#2D2D2D] hover:border-[#404040]',
         isDragging && 'opacity-40',
-        isOver && 'border-t-2 border-t-[#67e8f9]/70',
+        isOver && 'border-t-2 border-t-[rgba(139,156,182,0.60)]',
       )}
     >
       {/* Drag handle */}
       <div
-        className="shrink-0 cursor-grab active:cursor-grabbing text-white/20 hover:text-white/50 transition-colors"
+        className="shrink-0 cursor-grab active:cursor-grabbing text-[#4A4A4A] hover:text-[#A0A0A0] transition-colors"
         onMouseDown={e => e.stopPropagation()}
       >
         <GripVertical className="size-3.5" />
@@ -167,17 +167,17 @@ function BlockRow({
           >
             {label}
           </span>
-          <span className="text-xs font-medium text-white/75 truncate">{title}</span>
+          <span className="text-xs font-medium text-[#A0A0A0] truncate">{title}</span>
         </div>
         {dateRange && (
-          <p className="text-[9px] text-white/25 mt-0.5 truncate">{dateRange}</p>
+          <p className="text-[9px] text-[#4A4A4A] mt-0.5 truncate">{dateRange}</p>
         )}
       </div>
 
       {/* Delete */}
       <button
         onClick={e => { e.stopPropagation(); onDelete() }}
-        className="shrink-0 size-5 rounded-lg flex items-center justify-center text-white/0 group-hover:text-white/30 hover:!text-red-400 hover:bg-red-400/10 transition-all"
+        className="shrink-0 size-5 rounded-lg flex items-center justify-center text-transparent group-hover:text-[#4A4A4A] hover:!text-red-400 hover:bg-red-400/10 transition-all"
       >
         <X className="size-3" />
       </button>
@@ -218,8 +218,8 @@ function BlockTypePicker({ onPick, onCancel }: BlockTypePickerProps) {
   ]
 
   return (
-    <div className="p-3 rounded-xl border border-white/[0.08] bg-white/[0.03] space-y-3">
-      <p className="text-[9px] font-bold tracking-[0.2em] uppercase text-white/35">
+    <div className="p-3 rounded-xl border border-[#404040] bg-[#252525] space-y-3">
+      <p className="text-[9px] font-bold tracking-[0.2em] uppercase text-[#6B6B6B]">
         Choose block type
       </p>
       <div className="grid grid-cols-3 gap-2">
@@ -229,8 +229,8 @@ function BlockTypePicker({ onPick, onCancel }: BlockTypePickerProps) {
             onClick={() => onPick(type)}
             className={cn(
               'flex flex-col items-center gap-1.5 p-2.5 rounded-xl border',
-              'border-white/[0.07] bg-white/[0.02]',
-              'hover:bg-white/[0.06] hover:border-white/[0.14]',
+              'border-[#404040] bg-[rgba(255,255,255,0.02)]',
+              'hover:bg-[#2D2D2D] hover:border-[#404040]',
               'transition-all duration-150 text-center',
             )}
           >
@@ -240,16 +240,16 @@ function BlockTypePicker({ onPick, onCancel }: BlockTypePickerProps) {
             >
               <Icon className="size-3.5" style={{ color: `${color}CC` }} />
             </div>
-            <span className="text-[9px] font-bold tracking-[0.06em] uppercase text-white/60 leading-tight">
+            <span className="text-[9px] font-bold tracking-[0.06em] uppercase text-[#6B6B6B] leading-tight">
               {label}
             </span>
-            <span className="text-[8px] text-white/25 leading-tight">{desc}</span>
+            <span className="text-[8px] text-[#4A4A4A] leading-tight">{desc}</span>
           </button>
         ))}
       </div>
       <button
         onClick={onCancel}
-        className="w-full text-[10px] text-white/25 hover:text-white/50 transition-colors py-1"
+        className="w-full text-[10px] text-[#4A4A4A] hover:text-[#A0A0A0] transition-colors py-1"
       >
         Cancel
       </button>
@@ -328,13 +328,13 @@ function PhaseEditor({
                   'flex items-center gap-2 px-3 py-2 rounded-xl border text-left',
                   'transition-all duration-150',
                   selected
-                    ? 'border-white/[0.18] bg-white/[0.06]'
-                    : 'border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12] hover:bg-white/[0.04]',
+                    ? 'border-[#404040] bg-[#2D2D2D]'
+                    : 'border-[#404040] bg-[rgba(255,255,255,0.02)] hover:border-[#404040] hover:bg-[#2D2D2D]',
                 )}
               >
                 <div className="size-2 rounded-full shrink-0" style={{ background: color }} />
-                <span className="text-[9px] font-semibold text-white/50 truncate">{opt.label}</span>
-                {selected && <Check className="size-2.5 ml-auto shrink-0 text-[#67e8f9]/70" />}
+                <span className="text-[9px] font-semibold text-[#6B6B6B] truncate">{opt.label}</span>
+                {selected && <Check className="size-2.5 ml-auto shrink-0" style={{ color: 'var(--space-accent)', opacity: 0.7 }} />}
               </button>
             )
           })}
@@ -343,7 +343,7 @@ function PhaseEditor({
 
       {/* Title */}
       <div>
-        <label className={labelClass}>Title <span className="text-[#67e8f9]/50">*</span></label>
+        <label className={labelClass}>Title <span className="text-[#4A4A4A]">*</span></label>
         <input
           value={block.title ?? ''}
           onChange={e => onChange({ ...block, title: e.target.value })}
@@ -366,7 +366,7 @@ function PhaseEditor({
               />
               <button
                 onClick={() => removeItem(i)}
-                className="shrink-0 size-8 rounded-xl border border-white/[0.07] flex items-center justify-center text-white/25 hover:text-red-400 hover:border-red-400/25 hover:bg-red-400/[0.06] transition-all"
+                className="shrink-0 size-8 rounded-xl border border-[#404040] flex items-center justify-center text-[#4A4A4A] hover:text-red-400 hover:border-red-400/25 hover:bg-red-400/[0.06] transition-all"
               >
                 <X className="size-3.5" />
               </button>
@@ -376,8 +376,8 @@ function PhaseEditor({
             onClick={addItem}
             className={cn(
               'w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-dashed',
-              'border-white/[0.07] text-white/30 text-[10px] font-semibold tracking-[0.06em] uppercase',
-              'hover:border-[#67e8f9]/25 hover:text-[#67e8f9]/50 hover:bg-[#67e8f9]/[0.03]',
+              'border-[#404040] text-[#4A4A4A] text-[10px] font-semibold tracking-[0.06em] uppercase',
+              'hover:border-[rgba(139,156,182,0.18)] hover:text-[#1E3A6E] hover:bg-[rgba(255,255,255,0.02)]',
               'transition-all duration-150',
             )}
           >
@@ -388,7 +388,7 @@ function PhaseEditor({
       </div>
 
       {/* Dealer pill */}
-      <div className="p-3 rounded-xl border border-white/[0.06] bg-white/[0.02] space-y-3">
+      <div className="p-3 rounded-xl border border-[#404040] bg-[rgba(255,255,255,0.02)] space-y-3">
         <div className="flex items-center gap-2">
           <button
             onClick={() =>
@@ -403,8 +403,8 @@ function PhaseEditor({
             className={cn(
               'relative inline-flex h-4 w-7 shrink-0 rounded-full border transition-colors',
               block.dealerPill?.enabled
-                ? 'bg-[#67e8f9]/40 border-[#67e8f9]/40'
-                : 'bg-white/[0.06] border-white/[0.12]',
+                ? 'bg-[rgba(139,156,182,0.25)] border-[rgba(139,156,182,0.25)]'
+                : 'bg-[#2D2D2D] border-[#404040]',
             )}
           >
             <span
@@ -414,7 +414,7 @@ function PhaseEditor({
               )}
             />
           </button>
-          <label className="text-[9px] font-bold tracking-[0.2em] uppercase text-white/35">
+          <label className="text-[9px] font-bold tracking-[0.2em] uppercase text-[#6B6B6B]">
             Notification Pill
           </label>
         </div>
@@ -509,7 +509,7 @@ function ChecklistEditor({
 
       {/* Title */}
       <div>
-        <label className={labelClass}>Title <span className="text-[#67e8f9]/50">*</span></label>
+        <label className={labelClass}>Title <span className="text-[#4A4A4A]">*</span></label>
         <input
           value={block.title ?? ''}
           onChange={e => onChange({ ...block, title: e.target.value })}
@@ -523,13 +523,13 @@ function ChecklistEditor({
         <label className={labelClass}>Checklist Items</label>
         <div className="space-y-2">
           {(block.items ?? []).map((item, i) => (
-            <div key={i} className="rounded-xl border border-white/[0.07] bg-white/[0.02] overflow-hidden">
+            <div key={i} className="rounded-xl border border-[#404040] bg-[rgba(255,255,255,0.02)] overflow-hidden">
               <div className="flex items-center gap-2 p-2">
                 <input
                   value={item.text}
                   onChange={e => updateItem(i, 'text', e.target.value)}
                   placeholder={`Checklist item ${i + 1}`}
-                  className="flex-1 px-2 py-1.5 text-sm bg-transparent text-white placeholder:text-white/20 focus:outline-none"
+                  className="flex-1 px-2 py-1.5 text-sm bg-transparent text-[#F0F0F0] placeholder:text-[#4A4A4A] focus:outline-none"
                 />
                 <button
                   onClick={() => toggleNote(i)}
@@ -537,25 +537,25 @@ function ChecklistEditor({
                     'shrink-0 text-[8px] font-bold tracking-[0.08em] uppercase px-2 py-1 rounded-lg border transition-all',
                     expandedNotes.has(i)
                       ? 'border-amber-400/25 text-amber-400/70 bg-amber-400/[0.06]'
-                      : 'border-white/[0.07] text-white/20 hover:text-white/40 hover:border-white/[0.12]',
+                      : 'border-[#404040] text-[#4A4A4A] hover:text-[#6B6B6B] hover:border-[#404040]',
                   )}
                 >
                   {expandedNotes.has(i) ? 'Note ✓' : '+ Note'}
                 </button>
                 <button
                   onClick={() => removeItem(i)}
-                  className="shrink-0 size-7 rounded-lg flex items-center justify-center text-white/20 hover:text-red-400 hover:bg-red-400/[0.06] transition-all"
+                  className="shrink-0 size-7 rounded-lg flex items-center justify-center text-[#4A4A4A] hover:text-red-400 hover:bg-red-400/[0.06] transition-all"
                 >
                   <X className="size-3" />
                 </button>
               </div>
               {expandedNotes.has(i) && (
-                <div className="px-2 pb-2 border-t border-white/[0.05]">
+                <div className="px-2 pb-2 border-t border-[#404040]">
                   <input
                     value={item.note ?? ''}
                     onChange={e => updateItem(i, 'note', e.target.value)}
                     placeholder="Warning note shown below item"
-                    className="w-full px-2 py-1.5 text-xs bg-transparent text-amber-400/60 placeholder:text-white/15 focus:outline-none"
+                    className="w-full px-2 py-1.5 text-xs bg-transparent text-amber-400/60 placeholder:text-[#4A4A4A] focus:outline-none"
                   />
                 </div>
               )}
@@ -565,8 +565,8 @@ function ChecklistEditor({
             onClick={addItem}
             className={cn(
               'w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-dashed',
-              'border-white/[0.07] text-white/30 text-[10px] font-semibold tracking-[0.06em] uppercase',
-              'hover:border-[#67e8f9]/25 hover:text-[#67e8f9]/50 hover:bg-[#67e8f9]/[0.03]',
+              'border-[#404040] text-[#4A4A4A] text-[10px] font-semibold tracking-[0.06em] uppercase',
+              'hover:border-[rgba(139,156,182,0.18)] hover:text-[#1E3A6E] hover:bg-[rgba(255,255,255,0.02)]',
               'transition-all duration-150',
             )}
           >
@@ -622,7 +622,7 @@ function LaunchEditor({
           />
         </div>
         <div>
-          <label className={labelClass}>Title Emphasis <span className="text-white/20 normal-case tracking-normal font-normal italic">(italic gold)</span></label>
+          <label className={labelClass}>Title Emphasis <span className="text-[#4A4A4A] normal-case tracking-normal font-normal italic">(italic gold)</span></label>
           <input
             value={block.titleEmphasis ?? ''}
             onChange={e => onChange({ ...block, titleEmphasis: e.target.value })}
@@ -660,7 +660,7 @@ function BlockDetailEditor({
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center gap-2.5 mb-5 pb-4 border-b border-white/[0.06]">
+      <div className="flex items-center gap-2.5 mb-5 pb-4 border-b border-[#404040]">
         <div
           className="size-7 rounded-xl flex items-center justify-center shrink-0"
           style={{ background: `${color}18`, border: `1px solid ${color}35` }}
@@ -673,7 +673,7 @@ function BlockDetailEditor({
           <p className="text-[8px] font-bold tracking-[0.18em] uppercase" style={{ color: `${color}80` }}>
             {label} Block
           </p>
-          <p className="text-sm font-semibold text-white/80 leading-snug mt-0.5">
+          <p className="text-sm font-semibold text-[#A0A0A0] leading-snug mt-0.5">
             {blockTitle(block)}
           </p>
         </div>
@@ -849,29 +849,29 @@ export function TimelinesBlockEditor({ timeline, onClose, onSave }: Props) {
   const selectedBlock = selectedIndex !== null ? blocks[selectedIndex] ?? null : null
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col" style={{ background: '#0a0a0a' }}>
+    <div className="fixed inset-0 z-50 flex flex-col" style={{ background: '#1C1C1C' }}>
       {/* ── Top toolbar ── */}
       <div
-        className="shrink-0 flex items-center gap-3 px-4 sm:px-6 h-14 border-b border-white/[0.07]"
-        style={{ background: 'linear-gradient(180deg, #111 0%, #0d0d0d 100%)' }}
+        className="shrink-0 flex items-center gap-3 px-4 sm:px-6 h-14 border-b border-[#404040]"
+        style={{ background: '#252525' }}
       >
         {/* Close */}
         <button
           onClick={onClose}
-          className="size-8 rounded-xl border border-white/[0.08] flex items-center justify-center text-white/30 hover:text-white hover:border-white/[0.18] transition-all"
+          className="size-8 rounded-xl border border-[#404040] flex items-center justify-center text-[#6B6B6B] hover:text-[#F0F0F0] hover:border-[#404040] transition-all"
         >
           <X className="size-4" />
         </button>
 
         {/* Title */}
         <div className="flex-1 min-w-0">
-          <p className="text-[8px] font-bold tracking-[0.22em] uppercase text-white/25">
+          <p className="text-[8px] font-bold tracking-[0.22em] uppercase text-[#4A4A4A]">
             Block Editor
           </p>
-          <h2 className="text-sm font-bold text-white leading-none truncate">
+          <h2 className="text-sm font-bold text-[#F0F0F0] leading-none truncate">
             {timeline.title}
             {timeline.titleEmphasis && (
-              <em className="not-italic font-semibold text-[#67e8f9]/65 ml-1.5">
+              <em className="not-italic font-semibold ml-1.5" style={{ color: 'var(--space-accent)', opacity: 0.65 }}>
                 {timeline.titleEmphasis}
               </em>
             )}
@@ -879,7 +879,7 @@ export function TimelinesBlockEditor({ timeline, onClose, onSave }: Props) {
         </div>
 
         {/* Block count badge */}
-        <span className="hidden sm:inline text-[8px] font-bold tracking-[0.1em] uppercase px-2 py-0.5 rounded-full border border-[#67e8f9]/15 text-[#67e8f9]/40 bg-[#67e8f9]/[0.04]">
+        <span className="hidden sm:inline text-[8px] font-bold tracking-[0.1em] uppercase px-2 py-0.5 rounded-full border border-[rgba(139,156,182,0.15)] text-[#6B6B6B] bg-[rgba(139,156,182,0.06)]">
           {blocks.length} {blocks.length === 1 ? 'block' : 'blocks'}
         </span>
 
@@ -900,13 +900,13 @@ export function TimelinesBlockEditor({ timeline, onClose, onSave }: Props) {
             'transition-all duration-150',
             saveSuccess
               ? 'bg-emerald-500/[0.15] border border-emerald-500/30 text-emerald-400'
-              : 'bg-[#67e8f9]/[0.10] border border-[#67e8f9]/25 text-[#67e8f9] hover:bg-[#67e8f9]/[0.18] hover:border-[#67e8f9]/40',
+              : 'bg-[rgba(139,156,182,0.06)] border border-[rgba(139,156,182,0.15)] text-[#1E3A6E] hover:bg-[rgba(139,156,182,0.10)] hover:border-[rgba(139,156,182,0.22)]',
             'disabled:opacity-40 disabled:pointer-events-none',
           )}
         >
           {saving ? (
             <span className="flex items-center gap-1.5">
-              <span className="size-3.5 rounded-full border-2 border-[#67e8f9]/30 border-t-[#67e8f9] animate-spin" />
+              <span className="size-3.5 rounded-full border-2 border-[rgba(139,156,182,0.20)] border-t-[#1E3A6E] animate-spin" />
               Saving…
             </span>
           ) : saveSuccess ? (
@@ -937,21 +937,21 @@ export function TimelinesBlockEditor({ timeline, onClose, onSave }: Props) {
         {/* ── Left panel: block list ── */}
         <div
           className={cn(
-            'flex flex-col border-white/[0.07]',
+            'flex flex-col border-[#404040]',
             'sm:w-80 sm:shrink-0 sm:border-r',
             // Mobile: fixed height, scrollable
             'h-48 sm:h-auto border-b sm:border-b-0 overflow-y-auto',
           )}
-          style={{ background: '#0d0d0d' }}
+          style={{ background: '#252525' }}
         >
           <div className="flex-1 p-3 space-y-1.5 overflow-y-auto">
             {blocks.length === 0 && !showPicker && (
               <div className="flex flex-col items-center justify-center py-8 text-center">
-                <div className="size-10 rounded-2xl border border-white/[0.06] bg-white/[0.02] flex items-center justify-center mb-3">
-                  <LayoutList className="size-4 text-white/20" />
+                <div className="size-10 rounded-2xl border border-[#404040] bg-[rgba(255,255,255,0.02)] flex items-center justify-center mb-3">
+                  <LayoutList className="size-4 text-[#4A4A4A]" />
                 </div>
-                <p className="text-xs text-white/25 mb-1">No blocks yet</p>
-                <p className="text-[10px] text-white/15">Add a block below to get started</p>
+                <p className="text-xs text-[#4A4A4A] mb-1">No blocks yet</p>
+                <p className="text-[10px] text-[#4A4A4A]">Add a block below to get started</p>
               </div>
             )}
 
@@ -987,8 +987,8 @@ export function TimelinesBlockEditor({ timeline, onClose, onSave }: Props) {
                   onClick={() => setShowPicker(true)}
                   className={cn(
                     'w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-dashed',
-                    'border-white/[0.07] text-white/25 text-[10px] font-semibold tracking-[0.08em] uppercase',
-                    'hover:border-[#67e8f9]/25 hover:text-[#67e8f9]/50 hover:bg-[#67e8f9]/[0.03]',
+                    'border-[#404040] text-[#4A4A4A] text-[10px] font-semibold tracking-[0.08em] uppercase',
+                    'hover:border-[rgba(139,156,182,0.18)] hover:text-[#1E3A6E] hover:bg-[rgba(255,255,255,0.02)]',
                     'transition-all duration-150',
                   )}
                 >
@@ -1001,7 +1001,7 @@ export function TimelinesBlockEditor({ timeline, onClose, onSave }: Props) {
         </div>
 
         {/* ── Right panel: block detail editor ── */}
-        <div className="flex-1 min-w-0 overflow-y-auto">
+        <div className="flex-1 min-w-0 overflow-y-auto" style={{ background: '#1C1C1C' }}>
           {selectedBlock !== null && selectedIndex !== null ? (
             <div className="max-w-2xl mx-auto p-4 sm:p-6">
               <BlockDetailEditor
@@ -1011,13 +1011,13 @@ export function TimelinesBlockEditor({ timeline, onClose, onSave }: Props) {
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center h-full py-16 text-center px-8">
-              <div className="size-12 rounded-2xl border border-white/[0.06] bg-white/[0.02] flex items-center justify-center mb-4">
-                <ChevronRight className="size-5 text-white/15" />
+              <div className="size-12 rounded-2xl border border-[#404040] bg-[rgba(255,255,255,0.02)] flex items-center justify-center mb-4">
+                <ChevronRight className="size-5 text-[#4A4A4A]" />
               </div>
-              <p className="text-sm font-semibold text-white/25 mb-1">
+              <p className="text-sm font-semibold text-[#4A4A4A] mb-1">
                 {blocks.length === 0 ? 'Add your first block' : 'Select a block to edit'}
               </p>
-              <p className="text-xs text-white/15 max-w-xs leading-relaxed">
+              <p className="text-xs text-[#4A4A4A] max-w-xs leading-relaxed">
                 {blocks.length === 0
                   ? 'Click "+ Add Block" in the left panel to start building your timeline.'
                   : 'Click any block in the list on the left to edit its details.'}

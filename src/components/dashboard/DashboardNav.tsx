@@ -37,13 +37,13 @@ export function DashboardNav({ user }: { user: User }) {
   ]
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-xl border-b border-white/[0.08]">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-[#1C1C1C] border-b border-[#404040]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href={`/u/${user.username}`} className="flex items-center gap-2">
-            <span className="font-bold text-white text-lg">ORCA</span>
-            <span className="font-bold gradient-text text-lg">CLUB</span>
+            <span className="font-bold text-[#F0F0F0] text-lg">ORCA</span>
+            <span className="font-bold text-[#1E3A6E] text-lg">CLUB</span>
           </Link>
 
           <div className="flex items-center gap-6">
@@ -58,8 +58,8 @@ export function DashboardNav({ user }: { user: User }) {
                     className={cn(
                       'flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200',
                       link.active
-                        ? 'bg-intelligence-cyan/10 text-intelligence-cyan border border-intelligence-cyan/20'
-                        : 'text-gray-400 hover:text-white hover:bg-white/[0.05]'
+                        ? 'bg-[rgba(139,156,182,0.10)] text-[var(--space-accent)] border border-[rgba(139,156,182,0.15)]'
+                        : 'text-[#6B6B6B] hover:text-[#F0F0F0] hover:bg-[rgba(255,255,255,0.06)]'
                     )}
                   >
                     <Icon className="size-4" />
@@ -70,18 +70,18 @@ export function DashboardNav({ user }: { user: User }) {
             </div>
 
             {/* User Menu */}
-            <div className="flex items-center gap-4 ml-4 pl-4 border-l border-white/[0.08]">
+            <div className="flex items-center gap-4 ml-4 pl-4 border-l border-[#404040]">
               <div className="text-right hidden md:block">
-                <p className="text-sm font-medium text-white">
+                <p className="text-sm font-medium text-[#F0F0F0]">
                   {user.firstName} {user.lastName}
                 </p>
-                <p className="text-xs text-gray-400">{user.email}</p>
+                <p className="text-xs text-[#6B6B6B]">{user.email}</p>
               </div>
               <Button
                 onClick={handleLogout}
                 variant="outline"
                 size="sm"
-                className="border-white/[0.08] hover:bg-white/[0.05] gap-2"
+                className="border-[#404040] hover:bg-[#2D2D2D] gap-2"
               >
                 <LogOut className="size-4" />
                 <span className="hidden sm:inline">Logout</span>

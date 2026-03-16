@@ -6,6 +6,7 @@ import { TabProvider } from "./TabContext"
 import { HeaderTitleProvider } from "./HeaderTitleContext"
 import { PackageCountProvider } from "./PackageCountContext"
 import { ThemeProvider } from "./ThemeContext"
+import { THEMES } from "./themes"
 import type { ThemeId } from "./themes"
 
 export default async function SpacesLayout({
@@ -15,20 +16,43 @@ export default async function SpacesLayout({
 }) {
   const user = await getCurrentUser()
   const isDeveloper = user?.role === 'admin' || user?.role === 'user'
-  const initialTheme = ((user as any)?.dashboardTheme as ThemeId) ?? 'void'
+  // Default to paper (gray); only use user's saved theme if it's not a dark theme
+  const savedTheme = (user as any)?.dashboardTheme as ThemeId | undefined
+  const darkThemes: ThemeId[] = ['void', 'arctic', 'ember', 'emerald', 'dusk', 'chrome']
+  const initialTheme = savedTheme && !darkThemes.includes(savedTheme) ? savedTheme : 'paper'
+
+  // Build inline CSS vars from the initial theme so the correct background
+  // renders on the server — before ThemeContext's useEffect fires on the client.
+  const themeVars = THEMES[initialTheme]?.vars ?? THEMES.paper.vars
+  const cssVarString = Object.entries(themeVars)
+    .map(([k, v]) => `${k}:${v}`)
+    .join(';')
 
   return (
     <ThemeProvider initialTheme={initialTheme} username={user?.username ?? undefined}>
     <HeaderTitleProvider>
     <TabProvider>
     <PackageCountProvider>
-      <SpacesHeader user={user} showTips={(user as any)?.showTips !== false && user?.role === 'client'} />
-      {/* zoom: 1.3 scales up the entire spaces UI for better legibility.
-          Note: `zoom` is non-standard CSS; Firefox ignores it. For cross-browser
-          support, this should eventually migrate to transform:scale(1.3) with
-          compensating width/height calculations.
-          min-h-[calc(100vh/1.3)] — with zoom:1.3, visually fills exactly 100vh. pb-28 reserved for mobile bottom nav only. */}
-      <main className="pt-[49px] min-h-[calc(100vh/1.3)] bg-black pb-28 lg:pb-0 text-gray-200 [overflow-x:clip]" style={{ zoom: 1.3 }}>{children}</main>
+      {/* Wrapper fills the full viewport — inline theme vars applied server-side
+          so the background is correct before JS hydration (avoids black flash). */}
+      <div
+        className="min-h-screen"
+        style={{ backgroundColor: 'var(--space-bg-base)', color: 'var(--space-text, #F0F0F0)' } as React.CSSProperties}
+      >
+        {/* Inline script sets CSS vars synchronously before first paint */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){var r=document.documentElement;var v="${cssVarString}".split(';');v.forEach(function(p){var i=p.indexOf(':');if(i>0)r.style.setProperty(p.slice(0,i),p.slice(i+1));});})();`,
+          }}
+        />
+        <SpacesHeader user={user} showTips={(user as any)?.showTips !== false && user?.role === 'client'} />
+        {/* zoom: 1.3 scales up the entire spaces UI for better legibility.
+            Note: `zoom` is non-standard CSS; Firefox ignores it. For cross-browser
+            support, this should eventually migrate to transform:scale(1.3) with
+            compensating width/height calculations.
+            min-h-[calc(100vh/1.3)] — with zoom:1.3, visually fills exactly 100vh. pb-28 reserved for mobile bottom nav only. */}
+        <main className="pt-[68px] min-h-[calc(100vh/1.3)] pb-28 lg:pb-0 [overflow-x:clip]" style={{ zoom: 1.3 }}>{children}</main>
+      </div>
       <MobileBottomNav role={user?.role} />
       {isDeveloper && user?.username && (
         <GlobalSearchPalette username={user.username} />
