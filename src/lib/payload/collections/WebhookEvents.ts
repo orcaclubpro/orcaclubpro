@@ -5,6 +5,7 @@
  */
 
 import type { CollectionConfig } from 'payload'
+import { adminOnly } from '../access'
 
 export const WebhookEvents: CollectionConfig = {
   slug: 'webhook-events',
@@ -15,10 +16,10 @@ export const WebhookEvents: CollectionConfig = {
     description: 'Tracks processed Stripe webhook events',
   },
   access: {
-    read: () => true,
-    create: () => true,
-    update: () => true,
-    delete: ({ req }) => req.user?.role === 'admin',
+    read: adminOnly,
+    create: adminOnly,
+    update: adminOnly,
+    delete: adminOnly,
   },
   fields: [
     {

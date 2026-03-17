@@ -27,6 +27,7 @@ import Credentials from './collections/Credentials'
 import { Timelines } from './collections/Timelines'
 import Solutions from './collections/Solutions'
 import { Pages } from './collections/Pages'
+import { anyone, authenticated, authenticatedOrPublished, adminOnly, adminOrSelf } from './access'
 
 // Helper function to format strings as URL-friendly slugs
 const formatSlug = (val: string): string =>
@@ -67,10 +68,10 @@ const Media: CollectionConfig = {
     mimeTypes: ['image/*', 'application/pdf'],
   },
   access: {
-    read: () => true,
-    create: () => true,
-    update: () => true,
-    delete: () => true,
+    read: anyone,
+    create: authenticated,
+    update: authenticated,
+    delete: authenticated,
   },
   fields: [
     {
@@ -94,10 +95,10 @@ const Leads: CollectionConfig = {
     description: 'Consultation booking requests from the website',
   },
   access: {
-    read: () => true,
-    create: () => true, // Allow API to create leads
-    update: () => true,
-    delete: () => true,
+    read: authenticated,
+    create: anyone, // Public contact/booking forms create leads
+    update: authenticated,
+    delete: adminOnly,
   },
   fields: [
     {
@@ -261,10 +262,10 @@ const Categories: CollectionConfig = {
     group: 'Blog',
   },
   access: {
-    read: () => true,
-    create: () => true,
-    update: () => true,
-    delete: () => true,
+    read: anyone,
+    create: authenticated,
+    update: authenticated,
+    delete: authenticated,
   },
   fields: [
     {
@@ -319,10 +320,10 @@ const Tags: CollectionConfig = {
     group: 'Blog',
   },
   access: {
-    read: () => true,
-    create: () => true,
-    update: () => true,
-    delete: () => true,
+    read: anyone,
+    create: authenticated,
+    update: authenticated,
+    delete: authenticated,
   },
   fields: [
     {
@@ -382,9 +383,9 @@ const Posts: CollectionConfig = {
         },
       }
     },
-    create: () => true,
-    update: () => true,
-    delete: () => true,
+    create: authenticated,
+    update: authenticated,
+    delete: authenticated,
   },
   versions: {
     drafts: {
@@ -589,10 +590,10 @@ const Users: CollectionConfig = {
     defaultColumns: ['name', 'email', 'twoFactorVerified'],
   },
   access: {
-    read: () => true,
-    create: () => true,
-    update: () => true,
-    delete: () => true,
+    read: adminOrSelf,
+    create: adminOnly,
+    update: adminOrSelf,
+    delete: adminOnly,
   },
   hooks: {
     beforeChange: [createClientAccountHook], // Must run BEFORE afterChange

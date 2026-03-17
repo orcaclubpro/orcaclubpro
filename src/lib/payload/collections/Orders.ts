@@ -1,5 +1,6 @@
 import type { CollectionConfig } from 'payload'
 import { updateClientBalance, revertClientBalance } from '../hooks/updateClientBalance'
+import { authenticated, adminOnly } from '../access'
 
 const Orders: CollectionConfig = {
   slug: 'orders',
@@ -44,10 +45,10 @@ const Orders: CollectionConfig = {
     afterDelete: [revertClientBalance],
   },
   access: {
-    read: () => true,
-    create: () => true,
-    update: () => true,
-    delete: () => true,
+    read: authenticated,
+    create: authenticated,
+    update: authenticated,
+    delete: adminOnly,
   },
   fields: [
     // ROW 1: Order Number + Status (side by side)
