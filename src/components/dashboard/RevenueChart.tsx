@@ -16,10 +16,10 @@ const fmt = (n: number) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
 
 // ── Donut geometry ─────────────────────────────────────────────────────────────
-const CX = 96
-const CY = 96
-const R  = 72   // circle radius
-const SW = 26   // stroke (ring) width
+const CX = 82
+const CY = 82
+const R  = 61   // circle radius
+const SW = 22   // stroke (ring) width
 const C  = 2 * Math.PI * R
 const GAP = 4   // visual gap between segments (px)
 
@@ -176,7 +176,7 @@ export function RevenueChart({
       )}
 
       {/* ── Chart ─────────────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-6 sm:gap-10 px-6 sm:px-8 py-6 sm:py-7">
+      <div className="flex items-center gap-4 sm:gap-7 px-5 sm:px-6 py-5 sm:py-6">
 
           {/* Donut SVG */}
           <div className="relative shrink-0" style={{ width: CX * 2, height: CY * 2 }}>

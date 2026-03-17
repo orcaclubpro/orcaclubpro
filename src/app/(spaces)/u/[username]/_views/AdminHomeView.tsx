@@ -350,7 +350,7 @@ export function AdminHomeView({
   }, [])
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-10 pb-24">
+    <div className="max-w-7xl mx-auto pl-4 pr-14 sm:pl-6 sm:pr-14 lg:pl-8 lg:pr-16 pt-8 sm:pt-10 pb-24">
 
       {/* ── Page header ──────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between mb-6">

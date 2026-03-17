@@ -131,7 +131,7 @@
 }
 
 html {
-  font-size: 22px;
+  font-size: 16px;
   scroll-behavior: smooth;
   /* Always reserve scrollbar gutter to prevent layout shift when modals open */
   overflow-y: scroll;

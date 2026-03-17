@@ -32,20 +32,20 @@ export function SpacesHeader({ user, showTips }: SpacesHeaderProps) {
   const { title, subtitle } = useHeaderTitle()
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 h-16 border-b border-white/[0.06] bg-[#222222]">
-      <nav className="flex h-full w-full items-center justify-between px-6 lg:px-10" aria-label="Global">
+    <header className="fixed top-0 left-0 right-0 z-50 h-[88px] border-b border-white/[0.06] bg-[#222222]">
+      <nav className="flex h-full w-full items-center justify-between px-8 lg:px-12" aria-label="Global">
 
         {/* Logo / breadcrumb */}
         <div className="flex items-center gap-3 min-w-0">
           <Link
             href={homeHref}
-            className="text-sm font-bold tracking-[0.2em] shrink-0 text-white focus:outline-none hover:opacity-70 transition-opacity"
+            className="text-[19px] font-bold tracking-[0.2em] shrink-0 text-white focus:outline-none hover:opacity-70 transition-opacity"
           >
             SPACES
           </Link>
 
           {/* Vertical divider */}
-          <div className="w-px h-4 bg-white/20 shrink-0" />
+          <div className="w-px h-5 bg-white/20 shrink-0" />
 
           {/* ThemeSwitcher sits right next to SPACES */}
           <ThemeSwitcher />
@@ -53,15 +53,15 @@ export function SpacesHeader({ user, showTips }: SpacesHeaderProps) {
           {/* Breadcrumb — only when on a sub-page */}
           {title && (
             <>
-              <div className="w-px h-4 bg-white/20 shrink-0" />
-              <span className="text-white/40 select-none shrink-0 text-xs">/</span>
-              <span className={`text-sm font-medium text-white/70 truncate animate-in fade-in duration-200 ${subtitle ? 'max-w-[120px] sm:max-w-[200px]' : 'max-w-[180px] sm:max-w-[320px]'}`}>
+              <div className="w-px h-5 bg-white/20 shrink-0" />
+              <span className="text-white/40 select-none shrink-0 text-[13px]">/</span>
+              <span className={`text-[17px] font-medium text-white/70 truncate animate-in fade-in duration-200 ${subtitle ? 'max-w-[120px] sm:max-w-[200px]' : 'max-w-[180px] sm:max-w-[320px]'}`}>
                 {title}
               </span>
               {subtitle && (
                 <>
-                  <span className="text-white/40 select-none shrink-0 text-xs">/</span>
-                  <span className="text-sm font-medium text-white/70 truncate max-w-[120px] sm:max-w-[200px] animate-in fade-in duration-200">
+                  <span className="text-white/40 select-none shrink-0 text-[13px]">/</span>
+                  <span className="text-[17px] font-medium text-white/70 truncate max-w-[120px] sm:max-w-[200px] animate-in fade-in duration-200">
                     {subtitle}
                   </span>
                 </>
@@ -80,10 +80,10 @@ export function SpacesHeader({ user, showTips }: SpacesHeaderProps) {
 
             <button
               onClick={handleLogout}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium text-white/50 hover:text-white hover:bg-white/[0.08] transition-all duration-200 focus:outline-none"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-[17px] font-medium text-white/50 hover:text-white hover:bg-white/[0.08] transition-all duration-200 focus:outline-none"
               aria-label="Logout"
             >
-              <LogOut className="h-4 w-4" />
+              <LogOut className="h-[22px] w-[22px]" />
               <span className="hidden sm:inline">Logout</span>
             </button>
 
