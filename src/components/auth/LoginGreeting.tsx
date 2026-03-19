@@ -1,6 +1,9 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { Cinzel_Decorative } from "next/font/google"
+
+const gothic = Cinzel_Decorative({ weight: "700", subsets: ["latin"] })
 
 export default function LoginGreeting() {
   const [textVisible, setTextVisible] = useState(false)
@@ -23,9 +26,12 @@ export default function LoginGreeting() {
           transitionDelay: textVisible ? '300ms' : '0ms',
         }}
       >
-        <div className="text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-light tracking-tighter leading-tight whitespace-nowrap">
+        <div
+          className={`${gothic.className} tracking-tighter leading-tight whitespace-nowrap`}
+          style={{ fontSize: 'clamp(2rem, 7vw, 6rem)' }}
+        >
           <span className="text-white">Welcome</span>
-          <span className="ml-3 md:ml-4 lg:ml-5 gradient-text">back.</span>
+          <span className="ml-3 md:ml-4 lg:ml-5 primary-gradient-text">back.</span>
         </div>
       </div>
 

@@ -5,7 +5,7 @@ import AnimatedBackground from "@/components/layout/animated-background"
 import ScrollReveal from "@/components/layout/scroll-reveal"
 import Link from "next/link"
 import { ArrowRight, ShoppingCart, Zap, Mail, CheckCircle2, Clock, TrendingUp, BarChart3, Package, Workflow, ChevronDown, Rocket, RefreshCw } from "lucide-react"
-import { motion } from "framer-motion"
+import { motion } from "motion/react"
 import { useState } from "react"
 
 export default function ShopifyAutomationPage() {

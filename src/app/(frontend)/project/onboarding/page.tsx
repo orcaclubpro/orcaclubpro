@@ -128,21 +128,21 @@ export default function OnboardingPage() {
           <div className="flex gap-16 xl:gap-28">
 
             {/* Sticky side nav */}
-            <div className="w-44 xl:w-52 shrink-0">
+            <div className="hidden lg:block w-44 xl:w-52 shrink-0">
               <PhaseProgressNav />
             </div>
 
             {/* Phase sections */}
             <div className="flex-1 min-w-0 space-y-44 md:space-y-52">
               {phases.map((phase) => (
-                <div key={phase.id} id={phase.id} className="scroll-mt-[176px]">
+                <div key={phase.id} id={phase.id} className="scroll-mt-[145px]">
 
                   {/* Sticky phase header — catches at top-[136px] and rides there
                       while the user scrolls through all steps in this phase */}
-                  <div className="sticky top-[170px] z-20 pt-8 relative backdrop-blur-2xl">
+                  <div className="sticky top-[139px] z-20 pt-6 relative backdrop-blur-2xl">
                     {/* Decorative number lives inside sticky so it travels with the heading */}
                     <span
-                      className="absolute -top-4 -left-4 text-[160px] font-black text-white/[0.04] leading-none pointer-events-none select-none"
+                      className="hidden sm:block absolute -top-4 -left-4 text-[160px] font-black text-white/[0.04] leading-none pointer-events-none select-none"
                       aria-hidden="true"
                     >
                       {phase.number}
@@ -253,7 +253,7 @@ export default function OnboardingPage() {
                   href="/contact"
                   className="group flex items-center justify-center gap-2.5 px-10 py-4 rounded-md font-semibold text-sm text-black bg-white hover:bg-white/90 hover:scale-[1.02] transition-all duration-200"
                 >
-                  Begin the Process
+                  Join the Waitlist
                   <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform duration-200" />
                 </Link>
                 <Link

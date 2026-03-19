@@ -20,7 +20,10 @@ import Link from 'next/link'
 import type { ClientAccount, Project, User as UserType } from '@/types/payload-types'
 import { CreateProjectModal } from '@/components/dashboard/CreateProjectModal'
 import { ClientTabNav } from '@/components/dashboard/ClientTabNav'
-import { ClientPackagesTab } from '@/components/dashboard/ClientPackagesTab'
+import dynamic from 'next/dynamic'
+const ClientPackagesTab = dynamic(
+  () => import('@/components/dashboard/ClientPackagesTab').then(m => ({ default: m.ClientPackagesTab }))
+)
 import { ClientCredentialsTab } from '@/components/dashboard/ClientCredentialsTab'
 import { ClientOrdersTab } from '@/components/dashboard/ClientOrdersTab'
 import { SwipeTabRouter } from '@/components/dashboard/SwipeTabRouter'

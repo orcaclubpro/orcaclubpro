@@ -90,7 +90,7 @@ export default function ProjectDevelopmentPage() {
           <div className="flex gap-16 xl:gap-28">
 
             {/* Sticky side nav */}
-            <div className="w-44 xl:w-52 shrink-0">
+            <div className="hidden lg:block w-44 xl:w-52 shrink-0">
               <DevelopmentSideNav />
             </div>
 
@@ -98,8 +98,8 @@ export default function ProjectDevelopmentPage() {
             <div className="flex-1 min-w-0 space-y-36">
 
               {/* Sprint cycle */}
-              <div id="section-sprint" className="scroll-mt-[176px]">
-                <div className="sticky top-[170px] z-20 pt-8 backdrop-blur-2xl">
+              <div id="section-sprint" className="scroll-mt-[145px]">
+                <div className="sticky top-[139px] z-20 pt-6 backdrop-blur-2xl">
                   <h2 className="text-4xl md:text-5xl font-extralight text-white mb-2 tracking-tight">
                     Sprint Cycle
                   </h2>
@@ -112,7 +112,7 @@ export default function ProjectDevelopmentPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-px bg-white/[0.04] rounded-xl overflow-hidden">
                   {sprintSteps.map((step, i) => (
-                    <ScrollReveal key={i} delay={i * 60}>
+                    <ScrollReveal key={i} delay={i * 60} className="h-full">
                       <div className="bg-black p-8 h-full flex flex-col gap-5">
                         <div className="flex items-center gap-3">
                           <span className="text-xs tracking-[0.25em] uppercase text-white/20 font-light">
@@ -142,8 +142,8 @@ export default function ProjectDevelopmentPage() {
               </div>
 
               {/* What to expect */}
-              <div id="section-expect" className="scroll-mt-[176px]">
-                <div className="sticky top-[170px] z-20 pt-8 backdrop-blur-2xl">
+              <div id="section-expect" className="scroll-mt-[145px]">
+                <div className="sticky top-[139px] z-20 pt-6 backdrop-blur-2xl">
                   <h2 className="text-4xl md:text-5xl font-extralight text-white mb-2 tracking-tight">
                     What to Expect
                   </h2>
@@ -198,7 +198,7 @@ export default function ProjectDevelopmentPage() {
                   href="/contact"
                   className="group flex items-center justify-center gap-2.5 px-10 py-4 rounded-md font-semibold text-sm text-black bg-white hover:bg-white/90 hover:scale-[1.02] transition-all duration-200"
                 >
-                  Get in Touch
+                  Join the Waitlist
                   <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform duration-200" />
                 </Link>
                 <Link

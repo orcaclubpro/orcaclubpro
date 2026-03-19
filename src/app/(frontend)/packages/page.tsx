@@ -202,7 +202,7 @@ export default function PackagesPage() {
           <div className="flex gap-16 xl:gap-28">
 
             {/* Sticky sidebar */}
-            <div className="w-44 xl:w-52 shrink-0">
+            <div className="hidden lg:block w-44 xl:w-52 shrink-0">
               <PackagesSideNav />
             </div>
 
@@ -210,8 +210,8 @@ export default function PackagesPage() {
             <div className="flex-1 min-w-0 space-y-36">
 
               {/* ── Packages ── */}
-              <div id="section-packages" className="scroll-mt-[100px]">
-                <div className="sticky top-[96px] z-20 pt-8 backdrop-blur-2xl">
+              <div id="section-packages" className="scroll-mt-[89px]">
+                <div className="sticky top-[83px] z-20 pt-6 bg-black">
                   <h2 className="text-4xl md:text-5xl font-extralight text-white mb-2 tracking-tight">
                     Packages
                   </h2>
@@ -227,18 +227,18 @@ export default function PackagesPage() {
                     <ScrollReveal key={tier.id} delay={i * 60}>
                       <Link
                         href={tier.href}
-                        className={`group flex items-start gap-8 p-8 rounded-xl border transition-all duration-300 hover:border-white/[0.12] ${
+                        className={`group flex flex-col sm:flex-row items-start gap-5 sm:gap-8 p-6 sm:p-8 rounded-xl border transition-all duration-300 hover:border-white/[0.12] ${
                           tier.featured
                             ? "border-[#67e8f9]/[0.15] bg-[#67e8f9]/[0.02]"
                             : "border-white/[0.06] bg-white/[0.01]"
                         }`}
                       >
-                        <span className="text-[10px] tracking-[0.35em] uppercase text-white/20 font-light pt-1.5 shrink-0 w-6">
+                        <span className="text-[10px] tracking-[0.35em] uppercase text-white/20 font-light pt-1.5 shrink-0 w-6 hidden sm:block">
                           {tier.label}
                         </span>
 
                         <div className="flex-1 min-w-0">
-                          <div className="flex flex-wrap items-baseline gap-4 mb-3">
+                          <div className="flex flex-wrap items-baseline gap-3 sm:gap-4 mb-3">
                             <h3 className="text-3xl font-extralight text-white">
                               {tier.name}
                             </h3>
@@ -248,17 +248,17 @@ export default function PackagesPage() {
                               </span>
                             )}
                           </div>
-                          <p className="text-gray-500 font-light text-lg leading-relaxed max-w-md">
+                          <p className="text-gray-500 font-light text-base sm:text-lg leading-relaxed max-w-md">
                             {tier.description}
                           </p>
                         </div>
 
-                        <div className="shrink-0 text-right">
-                          <p className="text-white font-light text-xl mb-1">{tier.price}</p>
-                          <p className="text-white/30 font-light text-base">{tier.timeline}</p>
+                        <div className="sm:shrink-0 sm:text-right flex sm:flex-col items-baseline sm:items-end gap-3 sm:gap-0">
+                          <p className="text-white font-light text-xl sm:mb-1">{tier.price}</p>
+                          <p className="text-white/30 font-light text-sm sm:text-base">{tier.timeline}</p>
                         </div>
 
-                        <div className="shrink-0 self-center">
+                        <div className="shrink-0 self-end sm:self-center">
                           <ArrowRight
                             size={16}
                             className="text-white/20 group-hover:text-white/50 group-hover:translate-x-0.5 transition-all duration-200"
@@ -277,8 +277,8 @@ export default function PackagesPage() {
               </div>
 
               {/* ── What's Included ── */}
-              <div id="section-comparison" className="scroll-mt-[100px]">
-                <div className="sticky top-[96px] z-20 pt-8 backdrop-blur-2xl">
+              <div id="section-comparison" className="scroll-mt-[89px]">
+                <div className="sticky top-[83px] z-20 pt-6 bg-black">
                   <h2 className="text-4xl md:text-5xl font-extralight text-white mb-2 tracking-tight">
                     What&apos;s Included
                   </h2>
@@ -327,8 +327,8 @@ export default function PackagesPage() {
               </div>
 
               {/* ── Maintenance ── */}
-              <div id="section-maintenance" className="scroll-mt-[100px]">
-                <div className="sticky top-[96px] z-20 pt-8 backdrop-blur-2xl">
+              <div id="section-maintenance" className="scroll-mt-[89px]">
+                <div className="sticky top-[83px] z-20 pt-6 bg-black">
                   <h2 className="text-4xl md:text-5xl font-extralight text-white mb-2 tracking-tight">
                     Maintenance
                   </h2>
@@ -341,8 +341,8 @@ export default function PackagesPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-px bg-white/[0.04] rounded-xl overflow-hidden mb-8">
                   {maintenancePlans.map((plan, i) => (
-                    <ScrollReveal key={plan.name} delay={i * 60}>
-                      <div className={`bg-black p-8 h-full flex flex-col gap-5 ${plan.featured ? "bg-[#67e8f9]/[0.02]" : ""}`}>
+                    <ScrollReveal key={plan.name} delay={i * 60} className="h-full">
+                      <div className={`p-8 h-full flex flex-col gap-5 ${plan.featured ? "bg-[#67e8f9]/[0.02]" : "bg-black"}`}>
                         <div>
                           <p className="text-xs tracking-[0.25em] uppercase text-white/20 font-light mb-3">
                             {plan.hours}
@@ -389,8 +389,8 @@ export default function PackagesPage() {
               </div>
 
               {/* ── FAQ ── */}
-              <div id="section-faq" className="scroll-mt-[100px]">
-                <div className="sticky top-[96px] z-20 pt-8 backdrop-blur-2xl">
+              <div id="section-faq" className="scroll-mt-[89px]">
+                <div className="sticky top-[83px] z-20 pt-6 bg-black">
                   <h2 className="text-4xl md:text-5xl font-extralight text-white mb-2 tracking-tight">
                     FAQ
                   </h2>
@@ -434,7 +434,7 @@ export default function PackagesPage() {
                   href="/contact"
                   className="group flex items-center justify-center gap-2.5 px-10 py-4 rounded-md font-semibold text-sm text-black bg-white hover:bg-white/90 hover:scale-[1.02] transition-all duration-200"
                 >
-                  Get in Touch
+                  Join the Waitlist
                   <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform duration-200" />
                 </Link>
                 <Link

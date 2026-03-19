@@ -5,7 +5,11 @@ import { useRouter } from 'next/navigation'
 import { Settings, Flag, Zap } from 'lucide-react'
 import type { Project, Task } from '@/types/payload-types'
 import { cn } from '@/lib/utils'
-import { ProjectSettingsModal } from './ProjectSettingsModal'
+import dynamic from 'next/dynamic'
+const ProjectSettingsModal = dynamic(
+  () => import('./ProjectSettingsModal').then(m => ({ default: m.ProjectSettingsModal })),
+  { ssr: false }
+)
 import { CreateMilestoneModal } from './CreateMilestoneModal'
 import { CreateSprintModal } from './CreateSprintModal'
 

@@ -58,7 +58,7 @@ export default function PhaseProgressNav() {
   }
 
   return (
-    <nav className="hidden lg:block sticky top-[170px] self-start" aria-label="Phase navigation">
+    <nav className="hidden lg:block sticky top-[139px] self-start" aria-label="Phase navigation">
       <p className="text-xs tracking-[0.35em] uppercase text-white/20 mb-7 font-light">
         Process
       </p>

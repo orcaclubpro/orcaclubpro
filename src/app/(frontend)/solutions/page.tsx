@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
-import { getPayload } from 'payload'
-import config from '@payload-config'
+import { getCachedSolutions } from '@/lib/payload/cached-queries'
 import Link from 'next/link'
 import { ArrowRight, ArrowUpRight } from 'lucide-react'
 import AnimatedBackground from '@/components/layout/animated-background'
@@ -29,14 +28,7 @@ export const metadata: Metadata = {
 }
 
 export default async function SolutionsPage() {
-  const payload = await getPayload({ config })
-
-  const { docs: solutions } = await payload.find({
-    collection: 'solutions',
-    limit: 100,
-    overrideAccess: false,
-    sort: 'createdAt',
-  })
+  const { docs: solutions } = await getCachedSolutions()
 
   return (
     <div className="min-h-screen bg-black relative overflow-hidden">

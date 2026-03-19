@@ -56,46 +56,49 @@ export async function POST(
       return NextResponse.json({ error: 'Cannot mark a cancelled order as paid' }, { status: 400 })
     }
 
-    // 1. Mark order as paid in Payload
-    // context flag prevents the updateClientBalance hook from conflicting with
-    // the Stripe webhook that fires shortly after
-    await payload.update({
-      collection: 'orders',
-      id,
-      data: { status: 'paid' },
-      context: { fromManualFulfillment: true },
-    })
-
-    console.log(`[Fulfill] Order ${order.orderNumber} marked as paid by ${user.email}`)
-
-    // 2. Mark Stripe invoice as paid out of band (if linked)
+    // 1. Mark Stripe invoice as paid out of band (if linked) — do this first so
+    //    if Stripe fails we haven't already mutated the Payload record
     let stripeUpdated = false
     const stripeInvoiceId = order.stripeInvoiceId as string | undefined
 
     if (stripeInvoiceId) {
       try {
         const stripe = getStripe()
-        await stripe.invoices.pay(stripeInvoiceId, {
-          paid_out_of_band: true,
-        })
-        stripeUpdated = true
-        console.log(`[Fulfill] Stripe invoice ${stripeInvoiceId} marked as paid out of band`)
-      } catch (stripeErr: any) {
-        // Invoice already paid, voided, or uncollectible — not a fatal error
-        const code = stripeErr?.raw?.code || stripeErr?.code
-        if (
-          code === 'invoice_already_paid' ||
-          stripeErr?.message?.includes('already paid') ||
-          stripeErr?.message?.includes('No payment is due')
-        ) {
+
+        // Pre-check invoice status — invoice.pay() only works on 'open' or 'uncollectible'
+        const stripeInvoice = await stripe.invoices.retrieve(stripeInvoiceId)
+
+        if (stripeInvoice.status === 'paid') {
           console.log(`[Fulfill] Stripe invoice ${stripeInvoiceId} already paid — skipping`)
           stripeUpdated = true
+        } else if (stripeInvoice.status === 'void') {
+          console.warn(`[Fulfill] Stripe invoice ${stripeInvoiceId} is voided — skipping Stripe update`)
+        } else if (stripeInvoice.status === 'draft') {
+          console.warn(`[Fulfill] Stripe invoice ${stripeInvoiceId} is still a draft — skipping Stripe update`)
         } else {
-          // Log but don't fail — Payload record is the source of truth
-          console.warn(`[Fulfill] Could not update Stripe invoice ${stripeInvoiceId}:`, stripeErr?.message)
+          // 'open' or 'uncollectible' — safe to mark paid out of band
+          await stripe.invoices.pay(
+            stripeInvoiceId,
+            { paid_out_of_band: true },
+            { idempotencyKey: `fulfill-${id}` },
+          )
+          stripeUpdated = true
+          console.log(`[Fulfill] Stripe invoice ${stripeInvoiceId} marked as paid out of band`)
         }
+      } catch (stripeErr: any) {
+        // Log but don't fail — Payload record is the source of truth
+        console.warn(`[Fulfill] Could not update Stripe invoice ${stripeInvoiceId}:`, stripeErr?.message)
       }
     }
+
+    // 2. Mark order as paid in Payload
+    await payload.update({
+      collection: 'orders',
+      id,
+      data: { status: 'paid' },
+    })
+
+    console.log(`[Fulfill] Order ${order.orderNumber} marked as paid by ${user.email}`)
 
     return NextResponse.json({
       success: true,

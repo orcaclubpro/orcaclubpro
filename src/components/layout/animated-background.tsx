@@ -7,9 +7,11 @@ interface Particle {
   x: number;
   y: number;
   size: number;
-  speedX: number;
-  speedY: number;
   opacity: number;
+  duration: number;
+  delay: number;
+  driftX: number;
+  driftY: number;
 }
 
 interface AnimatedBackgroundProps {
@@ -19,52 +21,26 @@ interface AnimatedBackgroundProps {
 const AnimatedBackground: React.FC<AnimatedBackgroundProps> = ({ className = "" }) => {
   const [scrollPosition, setScrollPosition] = useState(0);
   const [particles, setParticles] = useState<Particle[]>([]);
-  const [isMounted, setIsMounted] = useState(false);
 
+  // Generate particles once — no per-frame JS updates
   useEffect(() => {
-    const initParticles = Array.from({ length: 18 }, (_, i) => ({
-      id: i,
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      size: Math.random() * 1.8 + 0.4,
-      speedX: (Math.random() - 0.5) * 0.05,
-      speedY: (Math.random() - 0.5) * 0.05,
-      opacity: Math.random() * 0.35 + 0.08,
-    }));
-    setParticles(initParticles);
+    setParticles(
+      Array.from({ length: 18 }, (_, i) => ({
+        id: i,
+        x: Math.random() * 100,
+        y: Math.random() * 100,
+        size: Math.random() * 1.8 + 0.4,
+        opacity: Math.random() * 0.35 + 0.08,
+        duration: Math.random() * 20 + 15,   // 15–35s drift cycle
+        delay: Math.random() * -30,           // stagger start times
+        driftX: (Math.random() - 0.5) * 12,  // ±6% drift
+        driftY: (Math.random() - 0.5) * 12,
+      }))
+    );
   }, []);
 
+  // Scroll parallax — passive listener, throttled via rAF
   useEffect(() => {
-    if (!isMounted) return;
-
-    let animationFrameId: number;
-    let lastUpdateTime = Date.now();
-
-    const updateParticles = () => {
-      const now = Date.now();
-      const deltaTime = now - lastUpdateTime;
-
-      if (deltaTime >= 16) {
-        lastUpdateTime = now;
-        setParticles(prevParticles =>
-          prevParticles.map(particle => ({
-            ...particle,
-            x: (particle.x + particle.speedX + 100) % 100,
-            y: (particle.y + particle.speedY + 100) % 100,
-          }))
-        );
-      }
-
-      animationFrameId = requestAnimationFrame(updateParticles);
-    };
-
-    animationFrameId = requestAnimationFrame(updateParticles);
-    return () => cancelAnimationFrame(animationFrameId);
-  }, [isMounted]);
-
-  useEffect(() => {
-    setIsMounted(true);
-
     let scrollTicking = false;
     const handleScroll = () => {
       if (!scrollTicking) {
@@ -75,21 +51,20 @@ const AnimatedBackground: React.FC<AnimatedBackgroundProps> = ({ className = "" 
         scrollTicking = true;
       }
     };
-
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const parallaxY   = useMemo(() => scrollPosition * 0.3, [scrollPosition]);
+  const parallaxY    = useMemo(() => scrollPosition * 0.3, [scrollPosition]);
   const parallaxSlow = useMemo(() => scrollPosition * 0.1, [scrollPosition]);
 
   return (
-    <div className={`fixed inset-0 overflow-hidden ${className}`}>
+    <div className={`fixed inset-0 overflow-hidden pointer-events-none ${className}`}>
 
       {/* Base gradient */}
       <div className="absolute inset-0 bg-linear-to-br from-black via-gray-900 to-black" />
 
-      {/* Aurora — soft cyan light from above, like filtered deep water */}
+      {/* Aurora — soft cyan light from above */}
       <div
         className="absolute inset-0 pointer-events-none aurora-breathe"
         style={{
@@ -107,7 +82,7 @@ const AnimatedBackground: React.FC<AnimatedBackgroundProps> = ({ className = "" 
         }}
       />
 
-      {/* Noise grain — organic texture, prevents sterile digital look */}
+      {/* Noise grain */}
       <svg
         className="absolute inset-0 w-full h-full pointer-events-none"
         style={{ opacity: 0.025 }}
@@ -125,26 +100,34 @@ const AnimatedBackground: React.FC<AnimatedBackgroundProps> = ({ className = "" 
         <rect width="100%" height="100%" filter="url(#grain)" />
       </svg>
 
-      {/* Particles — slow-drifting, no connections, bioluminescent */}
-      <svg
-        className="absolute inset-0 w-full h-full"
+      {/* Particles — pure CSS animation, zero JS per-frame */}
+      <div
+        className="absolute inset-0 pointer-events-none"
         style={{
           transform: `translate(${parallaxSlow * 0.6}px, ${parallaxY * 0.15}px)`,
           willChange: 'transform',
-        } as React.CSSProperties}
+        }}
         aria-hidden="true"
       >
         {particles.map((particle) => (
-          <circle
+          <div
             key={particle.id}
-            cx={`${particle.x}%`}
-            cy={`${particle.y}%`}
-            r={particle.size}
-            fill="#67e8f9"
-            opacity={particle.opacity}
+            style={{
+              position: 'absolute',
+              left: `${particle.x}%`,
+              top: `${particle.y}%`,
+              width: `${particle.size * 2}px`,
+              height: `${particle.size * 2}px`,
+              borderRadius: '50%',
+              backgroundColor: '#67e8f9',
+              opacity: particle.opacity,
+              animation: `particleDrift ${particle.duration}s ease-in-out ${particle.delay}s infinite`,
+              '--drift-x': `${particle.driftX}%`,
+              '--drift-y': `${particle.driftY}%`,
+            } as React.CSSProperties}
           />
         ))}
-      </svg>
+      </div>
 
       <style>{`
         @keyframes auroraBreathe {
@@ -153,6 +136,12 @@ const AnimatedBackground: React.FC<AnimatedBackgroundProps> = ({ className = "" 
         }
         .aurora-breathe {
           animation: auroraBreathe 8s ease-in-out infinite;
+        }
+        @keyframes particleDrift {
+          0%, 100% { transform: translate(0, 0); }
+          25%       { transform: translate(var(--drift-x), calc(var(--drift-y) * 0.5)); }
+          50%       { transform: translate(calc(var(--drift-x) * 0.7), var(--drift-y)); }
+          75%       { transform: translate(calc(var(--drift-x) * -0.3), calc(var(--drift-y) * 0.8)); }
         }
       `}</style>
     </div>

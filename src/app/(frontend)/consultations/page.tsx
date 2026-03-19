@@ -3,7 +3,8 @@ import Link from 'next/link'
 import { ArrowRight, Check, Clock, Calendar, MessageSquare, Zap, Shield } from 'lucide-react'
 import AnimatedBackground from '@/components/layout/animated-background'
 import ScrollReveal from '@/components/layout/scroll-reveal'
-import { BookingModal } from '@/components/booking-modal'
+import dynamic from 'next/dynamic'
+const BookingModal = dynamic(() => import('@/components/booking-modal').then(m => ({ default: m.BookingModal })))
 
 export const metadata: Metadata = {
   title: 'Free Consultation | ORCACLUB',

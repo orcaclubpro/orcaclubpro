@@ -2,11 +2,11 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import {
-  Menu, X, ArrowRight, Clock, Code2, Palette, Server, Search,
+  X, ArrowRight, Clock, Code2, Palette, Server, Search,
   BarChart3, Zap, Plug, Rocket, ShoppingBag, Target, User,
-  LogOut, LayoutDashboard,
+  LogOut, LayoutDashboard, ChevronDown,
 } from "lucide-react"
 import { logoutAction } from "@/actions/auth"
 import { Cinzel_Decorative } from "next/font/google"
@@ -55,6 +55,7 @@ export function Header({ user }: { user?: HeaderUser | null } = {}) {
   const [mounted, setMounted]                 = React.useState(false)
 
   const pathname = usePathname()
+  const router = useRouter()
   const dropdownCloseTimer = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const profileCloseTimer  = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
@@ -95,6 +96,7 @@ export function Header({ user }: { user?: HeaderUser | null } = {}) {
     : { name: 'Login', href: '/login' }
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
+  const isServicesActive = isActive('/services')
 
   React.useEffect(() => { setMobileMenuOpen(false); setDropdownOpen(false) }, [pathname])
 
@@ -106,39 +108,68 @@ export function Header({ user }: { user?: HeaderUser | null } = {}) {
   return (
     <>
       <header
-        className={`fixed top-0 left-0 right-0 z-50 overflow-visible transition-all duration-500 ${
+        className={`fixed top-0 left-0 right-0 z-50 overflow-visible pointer-events-auto transition-all duration-500 ${
           scrolled
-            ? 'bg-black/90 backdrop-blur-xl border-b border-white/[0.06] shadow-lg shadow-black/20'
+            ? 'bg-zinc-950 border-b border-zinc-800/80'
             : 'bg-transparent border-b border-transparent'
         } ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'}`}
         style={{ transition: 'background-color 0.5s ease, border-color 0.5s ease, opacity 0.6s ease, transform 0.6s ease' }}
-        onMouseEnter={openDropdown}
-        onMouseLeave={closeDropdown}
+        onClick={(e) => {
+          if (pathname !== '/') return
+          if ((e.target as HTMLElement).closest('a, button')) return
+          window.scrollTo({ top: 0, behavior: 'smooth' })
+        }}
       >
-        <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-8">
+        <nav className="mx-auto flex h-[83px] max-w-7xl items-center justify-between px-6 lg:px-8">
 
           {/* Logo */}
-          <div className="flex flex-1">
-            <Link href="/" className="group flex items-center gap-2">
-              <span className={`${gothic.className} text-xl text-white transition-opacity duration-300 group-hover:opacity-80`}>
+          <div className="flex flex-1 -ml-1">
+            <Link
+              href="/"
+              className="group flex items-center gap-2 cursor-pointer"
+              onClick={(e) => {
+                e.preventDefault()
+                if (pathname === '/') {
+                  window.scrollTo({ top: 0, behavior: 'smooth' })
+                } else {
+                  router.push('/')
+                }
+              }}
+            >
+              <span className={`${gothic.className} text-2xl text-white transition-opacity duration-300 group-hover:opacity-80`}>
                 ORCACLUB
               </span>
             </Link>
           </div>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex md:gap-x-8 items-center">
-            {/* Solutions */}
+          <div className="hidden md:flex md:gap-x-7 items-center">
             <NavLink href="/solutions" active={isActive('/solutions')}>Solutions</NavLink>
 
-            {/* Project */}
-            <NavLink href="/project" active={isActive('/project')}>Project</NavLink>
+            {/* Services — owns the mega dropdown */}
+            <div
+              className="relative"
+              onMouseEnter={openDropdown}
+              onMouseLeave={closeDropdown}
+            >
+              <button
+                className={`relative flex items-center gap-1 text-[15px] font-medium pb-0.5 transition-colors duration-200 ${
+                  dropdownOpen || isServicesActive ? 'text-white' : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                Services
+                <ChevronDown
+                  className={`w-3.5 h-3.5 transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`}
+                />
+                {isServicesActive && !dropdownOpen && (
+                  <span className="absolute bottom-0 left-0 right-0 h-px bg-cyan-400/60 rounded-full" />
+                )}
+              </button>
+            </div>
 
-            {/* Pricing */}
+            <NavLink href="/project"  active={isActive('/project')}>Project</NavLink>
             <NavLink href="/packages" active={isActive('/packages')}>Pricing</NavLink>
-
-            {/* Contact */}
-            <NavLink href="/contact" active={isActive('/contact')}>Contact</NavLink>
+            <NavLink href="/contact"  active={isActive('/contact')}>Contact</NavLink>
 
             {/* Profile / Login */}
             {dashboardHref ? (
@@ -151,11 +182,11 @@ export function Header({ user }: { user?: HeaderUser | null } = {}) {
                   onClick={openProfile}
                   className={`flex items-center justify-center w-8 h-8 rounded-full border transition-all duration-300 ${
                     profileOpen
-                      ? 'border-cyan-400/50 text-cyan-400'
-                      : 'border-white/15 text-gray-400 hover:border-white/30 hover:text-white'
+                      ? 'border-cyan-400/50 bg-cyan-400/10 text-cyan-400'
+                      : 'border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-white'
                   }`}
                 >
-                  <User className="w-4 h-4" />
+                  <User className="w-3.5 h-3.5" />
                 </button>
 
                 {profileOpen && (
@@ -164,20 +195,21 @@ export function Header({ user }: { user?: HeaderUser | null } = {}) {
                     onMouseEnter={keepProfile}
                     onMouseLeave={closeProfile}
                   >
-                    <div className="mt-3 bg-black/95 backdrop-blur-xl border border-white/[0.08] rounded-xl overflow-hidden min-w-[180px] shadow-xl shadow-black/40">
+                    <div className="mt-2.5 bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden min-w-[188px] shadow-xl shadow-black/50">
                       <Link
                         href={authNavItem.href}
-                        className="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:text-white hover:bg-white/[0.04] transition-colors"
+                        className="flex items-center gap-3 px-4 py-3 text-sm text-zinc-300 hover:text-white hover:bg-zinc-800/60 transition-colors"
                         onClick={() => setProfileOpen(false)}
                       >
-                        <LayoutDashboard className="w-4 h-4 text-cyan-400/70" />
+                        <LayoutDashboard className="w-4 h-4 text-cyan-400/70 flex-shrink-0" />
                         {authNavItem.name}
                       </Link>
+                      <div className="border-t border-zinc-800" />
                       <button
                         onClick={() => { logoutAction(); setProfileOpen(false) }}
-                        className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-500 hover:text-white hover:bg-white/[0.04] transition-colors border-t border-white/[0.05]"
+                        className="w-full flex items-center gap-3 px-4 py-3 text-sm text-zinc-500 hover:text-white hover:bg-zinc-800/60 transition-colors"
                       >
-                        <LogOut className="w-4 h-4" />
+                        <LogOut className="w-4 h-4 flex-shrink-0" />
                         Logout
                       </button>
                     </div>
@@ -193,7 +225,7 @@ export function Header({ user }: { user?: HeaderUser | null } = {}) {
           <div className="flex md:hidden">
             <button
               type="button"
-              className="flex items-center justify-center w-9 h-9 text-gray-400 hover:text-white transition-colors"
+              className="flex items-center justify-center w-9 h-9 text-zinc-400 hover:text-white transition-colors"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
               <span className="sr-only">Open main menu</span>
@@ -206,113 +238,127 @@ export function Header({ user }: { user?: HeaderUser | null } = {}) {
           </div>
         </nav>
 
-        {/* Desktop Dropdown */}
+        {/* Desktop Mega Dropdown — triggered by Services nav item */}
         {dropdownOpen && (
           <div
-            className="hidden md:block absolute left-0 right-0 top-full bg-black/95 backdrop-blur-xl border-b border-white/[0.06] animate-slideDown"
+            className="hidden md:block absolute left-0 right-0 top-full animate-slideDown"
             onMouseEnter={openDropdown}
             onMouseLeave={closeDropdown}
           >
-            <div className="max-w-7xl mx-auto px-6 py-8">
-              <div className="grid grid-cols-12 gap-8">
+            <div className="bg-zinc-900 shadow-2xl shadow-black/70 border-b border-zinc-800">
+              <div className="max-w-7xl mx-auto flex divide-x divide-zinc-800">
 
-                {/* Services */}
-                <div className="col-span-4">
-                  <p className="text-[10px] tracking-[0.35em] uppercase text-white/20 font-light mb-5">Services</p>
-                  <div className="space-y-0.5">
+                {/* ── CAPABILITIES PANEL ── */}
+                <div className="flex-1 px-8 py-8">
+
+                  {/* Section label */}
+                  <div className="flex items-center gap-4 mb-6">
+                    <span className="text-[9px] tracking-[0.45em] uppercase font-semibold text-zinc-500">Capabilities</span>
+                    <div className="flex-1 h-px bg-zinc-800" />
+                  </div>
+
+                  {/* Numbered service grid — 2 columns */}
+                  <div className="grid grid-cols-2 gap-x-10 gap-y-0 mb-8">
                     {services.map((service, i) => (
                       <Link
                         key={service.name}
                         href={service.href}
-                        className="group flex items-start gap-3 px-2 py-2.5 rounded-lg hover:bg-white/[0.04] transition-colors"
-                        style={{ animationDelay: `${i * 30}ms` }}
+                        className="group relative flex items-start gap-4 py-3.5 border-b border-zinc-800/50 hover:border-zinc-700/60 transition-colors"
                       >
-                        <service.icon className="h-4 w-4 text-cyan-400/50 flex-shrink-0 mt-0.5 group-hover:text-cyan-400 transition-colors" />
-                        <div>
-                          <p className="text-sm font-medium text-gray-300 group-hover:text-white transition-colors leading-none mb-0.5">
-                            {service.name}
-                          </p>
-                          <p className="text-xs text-gray-600 font-light">{service.description}</p>
+                        {/* Large extralight number — the distinctive element */}
+                        <span className="text-2xl font-extralight text-zinc-700 group-hover:text-cyan-400/50 transition-colors duration-200 tabular-nums leading-none mt-0.5 w-8 flex-shrink-0 select-none">
+                          {String(i + 1).padStart(2, '0')}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <service.icon className="h-3.5 w-3.5 text-zinc-600 group-hover:text-cyan-400 transition-colors duration-150 flex-shrink-0" />
+                            <p className="text-sm font-medium text-zinc-300 group-hover:text-white transition-colors">
+                              {service.name}
+                            </p>
+                          </div>
+                          <p className="text-xs text-zinc-600 font-light leading-relaxed">{service.description}</p>
                         </div>
+                        <ArrowRight className="h-3.5 w-3.5 text-cyan-400/60 flex-shrink-0 mt-1 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200" />
                       </Link>
                     ))}
                   </div>
-                </div>
 
-                {/* Integrations */}
-                <div className="col-span-4">
-                  <p className="text-[10px] tracking-[0.35em] uppercase text-white/20 font-light mb-5">Integrations</p>
-                  <div className="space-y-0.5 mb-5">
+                  {/* Integrations as compact badge pills */}
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <span className="text-[9px] tracking-[0.45em] uppercase font-semibold text-zinc-600 flex-shrink-0">Integrations</span>
+                    <div className="h-px w-4 bg-zinc-800 flex-shrink-0" />
                     {integrations.map((item) => (
                       <Link
                         key={item.name}
                         href={item.href}
-                        className="group flex items-start gap-3 px-2 py-2.5 rounded-lg hover:bg-white/[0.04] transition-colors"
+                        className="group flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-zinc-800 bg-zinc-800/30 hover:border-zinc-600 hover:bg-zinc-800 transition-all duration-150"
                       >
-                        <item.icon className="h-4 w-4 text-cyan-400/50 flex-shrink-0 mt-0.5 group-hover:text-cyan-400 transition-colors" />
-                        <div>
-                          <p className="text-sm font-medium text-gray-300 group-hover:text-white transition-colors leading-none mb-0.5">
-                            {item.name}
-                          </p>
-                          <p className="text-xs text-gray-600 font-light">{item.description}</p>
-                        </div>
+                        <item.icon className="h-3 w-3 text-zinc-600 group-hover:text-cyan-400 transition-colors" />
+                        <span className="text-xs text-zinc-500 group-hover:text-zinc-200 transition-colors">{item.name}</span>
                       </Link>
                     ))}
+                    <Link
+                      href="/services"
+                      className="group flex items-center gap-1 text-xs text-cyan-400/50 hover:text-cyan-400 transition-colors ml-1"
+                    >
+                      All Services
+                      <ArrowRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
+                    </Link>
                   </div>
-                  <Link
-                    href="/services"
-                    className="inline-flex items-center gap-2 text-xs font-medium text-cyan-400/70 hover:text-cyan-400 transition-colors group"
-                  >
-                    All Services
-                    <ArrowRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
-                  </Link>
                 </div>
 
-                {/* Pricing */}
-                <div className="col-span-4">
-                  <p className="text-[10px] tracking-[0.35em] uppercase text-white/20 font-light mb-5">Pricing</p>
-                  <div className="space-y-2 mb-6">
+                {/* ── PRICING PANEL ── */}
+                <div className="w-72 px-8 py-8 bg-zinc-800/20">
+
+                  <div className="flex items-center gap-4 mb-6">
+                    <span className="text-[9px] tracking-[0.45em] uppercase font-semibold text-zinc-500">Pricing</span>
+                    <div className="flex-1 h-px bg-zinc-800" />
+                  </div>
+
+                  <div className="space-y-1 mb-6">
                     {packages.map((pkg) => (
                       <Link
                         key={pkg.name}
                         href={pkg.href}
-                        className="group block p-3 rounded-lg border border-white/[0.05] hover:border-cyan-400/20 hover:bg-white/[0.03] transition-all duration-300"
+                        className="group flex items-center gap-3 px-3 py-3 rounded-lg border border-transparent hover:border-zinc-700/50 hover:bg-zinc-800/50 transition-all duration-150"
                       >
-                        <div className="flex items-center justify-between mb-1.5">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-gray-300 group-hover:text-white transition-colors">
+                        <div className="w-1.5 h-1.5 rounded-full bg-zinc-700 group-hover:bg-cyan-400 transition-colors flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className="text-sm font-medium text-zinc-300 group-hover:text-white transition-colors">
                               {pkg.name}
                             </span>
                             {pkg.popular && (
-                              <span className="text-[10px] text-cyan-400/70 border border-cyan-400/20 px-1.5 py-0.5 rounded-full tracking-wide">
+                              <span className="text-[9px] font-medium text-cyan-400/80 border border-cyan-400/25 px-1.5 py-0.5 rounded-full tracking-wide">
                                 Popular
                               </span>
                             )}
                           </div>
-                          <span className="text-xs text-gray-500 font-light">{pkg.price}</span>
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-2.5 w-2.5 text-zinc-700 flex-shrink-0" />
+                            <span className="text-xs text-zinc-600 font-light">{pkg.timeline}</span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1.5 text-xs text-gray-600">
-                          <Clock className="h-3 w-3" />
-                          {pkg.timeline}
-                        </div>
+                        <span className="text-sm font-mono text-zinc-500 group-hover:text-zinc-300 transition-colors flex-shrink-0">
+                          {pkg.price}
+                        </span>
                       </Link>
                     ))}
                   </div>
 
-                  <div className="border-t border-white/[0.05] pt-4 space-y-0.5">
+                  <div className="border-t border-zinc-800 pt-4 space-y-0.5">
                     {quickLinks.map((link) => (
                       <Link
                         key={link.name}
                         href={link.href}
-                        className="group flex items-center justify-between px-2 py-2 rounded-lg hover:bg-white/[0.04] transition-colors"
+                        className="group flex items-center justify-between px-3 py-1.5 rounded-md hover:bg-zinc-800/50 transition-colors"
                       >
-                        <span className="text-sm text-gray-500 group-hover:text-gray-300 transition-colors font-light">
-                          {link.name}
-                        </span>
-                        <ArrowRight className="h-3 w-3 text-gray-600 group-hover:text-cyan-400/70 group-hover:translate-x-0.5 transition-all" />
+                        <span className="text-xs text-zinc-600 group-hover:text-zinc-300 transition-colors">{link.name}</span>
+                        <ArrowRight className="h-3 w-3 text-zinc-700 group-hover:text-cyan-400/60 group-hover:translate-x-0.5 transition-all flex-shrink-0" />
                       </Link>
                     ))}
                   </div>
+
                 </div>
 
               </div>
@@ -329,15 +375,26 @@ export function Header({ user }: { user?: HeaderUser | null } = {}) {
             onClick={() => setMobileMenuOpen(false)}
           />
 
-          <div className="fixed top-0 right-0 bottom-0 w-full max-w-sm bg-black border-l border-white/[0.06] overflow-y-auto animate-slideInRight">
+          <div className="fixed top-0 right-0 bottom-0 w-full max-w-sm bg-zinc-950 border-l border-zinc-800/80 overflow-y-auto animate-slideInRight">
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-5 border-b border-white/[0.06]">
-              <Link href="/" onClick={() => setMobileMenuOpen(false)}>
+            <div className="flex items-center justify-between px-6 py-5 border-b border-zinc-800/80">
+              <Link
+                href="/"
+                onClick={(e) => {
+                  e.preventDefault()
+                  setMobileMenuOpen(false)
+                  if (pathname === '/') {
+                    window.scrollTo({ top: 0, behavior: 'smooth' })
+                  } else {
+                    router.push('/')
+                  }
+                }}
+              >
                 <span className={`${gothic.className} text-xl text-white`}>ORCACLUB</span>
               </Link>
               <button
                 type="button"
-                className="flex items-center justify-center w-8 h-8 text-gray-500 hover:text-white transition-colors"
+                className="flex items-center justify-center w-8 h-8 text-zinc-500 hover:text-white transition-colors"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 <X className="h-5 w-5" />
@@ -348,9 +405,9 @@ export function Header({ user }: { user?: HeaderUser | null } = {}) {
             <div className="px-4 py-6 space-y-1">
               {[
                 { name: 'Solutions', href: '/solutions' },
+                { name: 'Services',  href: '/services' },
                 { name: 'Project',   href: '/project' },
                 { name: 'Pricing',   href: '/packages' },
-                { name: 'Services',  href: '/services' },
                 { name: 'Contact',   href: '/contact' },
                 { name: 'About',     href: '/about' },
               ].map((item) => (
@@ -359,29 +416,29 @@ export function Header({ user }: { user?: HeaderUser | null } = {}) {
                   href={item.href}
                   className={`flex items-center justify-between px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
                     isActive(item.href)
-                      ? 'text-white bg-white/[0.05]'
-                      : 'text-gray-400 hover:text-white hover:bg-white/[0.03]'
+                      ? 'text-white bg-zinc-800/60'
+                      : 'text-zinc-400 hover:text-white hover:bg-zinc-800/40'
                   }`}
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   {item.name}
-                  {isActive(item.href) && <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />}
+                  {isActive(item.href) && <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 flex-shrink-0" />}
                 </Link>
               ))}
             </div>
 
             {/* Bottom CTAs */}
-            <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-white/[0.06] bg-black space-y-3">
+            <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-zinc-800/80 bg-zinc-950 space-y-3">
               <Link
                 href="/contact"
-                className="block w-full text-center px-6 py-3.5 bg-gradient-to-r from-cyan-500/80 to-cyan-400/80 text-black font-semibold rounded-md hover:from-cyan-400 hover:to-cyan-300 transition-all text-sm shadow-lg shadow-cyan-900/20"
+                className="block w-full text-center px-6 py-3.5 bg-gradient-to-r from-cyan-500/80 to-cyan-400/80 text-black font-semibold rounded-lg hover:from-cyan-400 hover:to-cyan-300 transition-all text-sm shadow-lg shadow-cyan-900/20"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Start Your Project
               </Link>
               <Link
                 href={authNavItem.href}
-                className="block w-full text-center px-6 py-3.5 border border-white/[0.1] text-gray-400 font-medium rounded-md hover:bg-white/[0.04] hover:text-white transition-all text-sm"
+                className="block w-full text-center px-6 py-3.5 border border-zinc-700 text-zinc-400 font-medium rounded-lg hover:bg-zinc-800/50 hover:text-white transition-all text-sm"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 {authNavItem.name}
@@ -394,16 +451,18 @@ export function Header({ user }: { user?: HeaderUser | null } = {}) {
   )
 }
 
-// Reusable nav link with animated underline
 function NavLink({ href, active, children }: { href: string; active: boolean; children: React.ReactNode }) {
   return (
     <Link
       href={href}
-      className={`text-sm font-medium transition-colors duration-200 ${
-        active ? 'text-white' : 'text-gray-400 hover:text-white'
+      className={`relative text-[15px] font-medium pb-0.5 transition-colors duration-200 ${
+        active ? 'text-white' : 'text-zinc-400 hover:text-white'
       }`}
     >
       {children}
+      {active && (
+        <span className="absolute bottom-0 left-0 right-0 h-px bg-cyan-400/60 rounded-full" />
+      )}
     </Link>
   )
 }

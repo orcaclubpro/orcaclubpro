@@ -4,7 +4,8 @@ import * as React from "react"
 import Link from "next/link"
 import { ArrowDown, Check, Clock, DollarSign, Zap, Target, Wrench, Package, Headphones, ChevronDown } from "lucide-react"
 import ScrollReveal from "@/components/layout/scroll-reveal"
-import { BookingModal } from "@/components/booking-modal"
+import dynamic from 'next/dynamic'
+const BookingModal = dynamic(() => import('@/components/booking-modal').then(m => ({ default: m.BookingModal })), { ssr: false })
 import { cn } from "@/lib/utils"
 
 interface TierCardProps {

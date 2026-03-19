@@ -1,6 +1,9 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
+import { Cinzel_Decorative } from "next/font/google"
+
+const gothic = Cinzel_Decorative({ weight: "700", subsets: ["latin"] })
 
 interface DynamicGreetingProps {
   className?: string
@@ -84,7 +87,7 @@ export default function DynamicGreeting({ className = "" }: DynamicGreetingProps
 
   const animateToNextGreeting = useCallback(() => {
     if (isTransitioning) return // Prevent overlapping animations
-    
+
     // Start exit animation (swipe up)
     setIsTransitioning(true)
     setIsVisible(false)
@@ -94,11 +97,11 @@ export default function DynamicGreeting({ className = "" }: DynamicGreetingProps
       const newIndex = currentLanguageIndex + 1
       const currentTime = determineTimeOfDay()
       const newGreeting = getCurrentGreeting(newIndex, currentTime)
-      
+
       setCurrentLanguageIndex(newIndex)
       setTimeOfDay(currentTime)
       setGreetingContent(newGreeting)
-      
+
       // Small delay before entrance animation for smoother transition
       setTimeout(() => {
         setIsTransitioning(false)
@@ -107,11 +110,18 @@ export default function DynamicGreeting({ className = "" }: DynamicGreetingProps
     }, 600) // Slightly longer exit animation for more fluid feel
   }, [isTransitioning, currentLanguageIndex])
 
+  // Stable ref — always points to the latest animateToNextGreeting without
+  // being a dependency of the interval effect, preventing teardown/recreation.
+  const animateRef = useRef(animateToNextGreeting)
+  useEffect(() => {
+    animateRef.current = animateToNextGreeting
+  }, [animateToNextGreeting])
+
   // Initial setup
   useEffect(() => {
     const initialTime = determineTimeOfDay()
     const initialGreeting = getCurrentGreeting(0, initialTime)
-    
+
     setTimeOfDay(initialTime)
     setGreetingContent(initialGreeting)
     setMounted(true)
@@ -125,57 +135,56 @@ export default function DynamicGreeting({ className = "" }: DynamicGreetingProps
     }
   }, [])
 
-  // Language cycling effect
+  // Combined interval: cycles language every 15s and checks time-of-day each tick.
+  // Uses stable ref so the interval is never torn down and recreated.
   useEffect(() => {
     if (!mounted) return
 
-    // Cycle through languages every 15 seconds
-    const languageInterval = setInterval(() => {
-      animateToNextGreeting()
+    const interval = setInterval(() => {
+      animateRef.current()
+
+      // Check time-of-day on every tick (15s granularity is fine).
+      // animateToNextGreeting already updates timeOfDay inside the transition,
+      // but we also catch the case where time changes between language cycles.
+      setTimeOfDay(prev => {
+        const newTime = determineTimeOfDay()
+        if (newTime !== prev) {
+          // Update greeting content to match new time, keeping current index.
+          setCurrentLanguageIndex(idx => {
+            const newGreeting = getCurrentGreeting(idx, newTime)
+            setGreetingContent(newGreeting)
+            return idx
+          })
+        }
+        return newTime
+      })
     }, 15000)
 
-    return () => clearInterval(languageInterval)
-  }, [mounted, currentLanguageIndex, isTransitioning, animateToNextGreeting])
-
-  // Time of day checking effect (separate from language cycling)
-  useEffect(() => {
-    if (!mounted) return
-
-    const timeInterval = setInterval(() => {
-      const newTime = determineTimeOfDay()
-      if (newTime !== timeOfDay && !isTransitioning) {
-        // Update time of day without animation when time changes
-        const newGreeting = getCurrentGreeting(currentLanguageIndex, newTime)
-        setTimeOfDay(newTime)
-        setGreetingContent(newGreeting)
-      }
-    }, 60000)
-
-    return () => clearInterval(timeInterval)
-  }, [mounted, timeOfDay, currentLanguageIndex, isTransitioning])
+    return () => clearInterval(interval)
+  }, [mounted]) // stable — never re-registers after mount
 
   if (!mounted) return null
 
   return (
     <div className={`flex flex-col items-center w-full ${className}`}>
-      <div className="flex flex-col items-center text-center space-y-3 max-w-4xl mx-auto px-8">
+      <div className="flex flex-col items-center text-center space-y-3 px-8">
 
         {/* Dynamic Greeting Text - Centered */}
         <div className="flex flex-col items-center">
           <div
-            className={`text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-light tracking-tighter leading-tight transition-all duration-700 ease-in-out whitespace-nowrap ${
+            className={`${gothic.className} tracking-tighter leading-tight transition-all duration-700 ease-in-out whitespace-nowrap ${
               isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-[-60px]'
             }`}
             style={{
               transitionDelay: isTransitioning ? '0ms' : '300ms',
-              fontWeight: '300'
+              fontSize: 'clamp(2rem, 7vw, 6rem)',
             }}
           >
             <span className="text-white">
               {greetingContent.first}
             </span>
             <span className="ml-2 md:ml-3 lg:ml-4 xl:ml-6">
-              <span className="gradient-text">
+              <span className="primary-gradient-text">
                 {greetingContent.second}
               </span>
             </span>

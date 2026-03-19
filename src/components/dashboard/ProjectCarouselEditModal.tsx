@@ -2,7 +2,11 @@
 
 import { useState } from 'react'
 import { Settings } from 'lucide-react'
-import { ProjectSettingsModal } from './ProjectSettingsModal'
+import dynamic from 'next/dynamic'
+const ProjectSettingsModal = dynamic(
+  () => import('./ProjectSettingsModal').then(m => ({ default: m.ProjectSettingsModal })),
+  { ssr: false }
+)
 import type { SerializedProject } from './ProjectsCarousel'
 
 export function ProjectCarouselEditModal({ project, large }: { project: SerializedProject; large?: boolean }) {

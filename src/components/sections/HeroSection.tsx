@@ -5,6 +5,9 @@ import DynamicGreeting from "@/components/layout/dynamic-greeting"
 import { ArrowRight } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
+import { Cinzel_Decorative } from "next/font/google"
+
+const gothic = Cinzel_Decorative({ weight: "700", subsets: ["latin"] })
 
 interface HeroSectionProps {
   clients?: any[]
@@ -19,9 +22,9 @@ interface HeroSectionProps {
 export default function HeroSection({
   clients = [],
   subheading = 'Marketing, Development, and Design agency.',
-  primaryButtonLabel = 'Free Consultation',
+  primaryButtonLabel = 'Join the Wait List',
   primaryButtonHref = '/contact',
-  secondaryButtonLabel = 'Our Solutions',
+  secondaryButtonLabel = 'Start a Project',
   secondaryButtonHref = '/solutions',
   showClientsCarousel = true,
 }: HeroSectionProps) {
@@ -39,8 +42,8 @@ export default function HeroSection({
             <Image
               src="/orcaclubpro.png"
               alt="ORCACLUB"
-              width={72}
-              height={72}
+              width={100}
+              height={100}
               className="mx-auto object-contain"
               priority
             />
@@ -49,13 +52,40 @@ export default function HeroSection({
 
         {/* Greeting */}
         <ScrollReveal delay={150}>
-          <DynamicGreeting className="mb-6" />
+          <DynamicGreeting className="mb-20 sm:mb-6" />
         </ScrollReveal>
 
-        {/* Client logo carousel — inline, below greeting */}
+        {/* Value prop + CTAs */}
+        <ScrollReveal delay={225}>
+          <p className="text-sm text-white/35 font-light tracking-wide mb-10">
+            {subheading}
+          </p>
+
+          <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
+            {/* Primary button — black */}
+            <Link
+              href={primaryButtonHref}
+              className="group relative w-56 py-4 rounded-md font-semibold text-base text-black bg-white inline-flex items-center justify-center gap-2 whitespace-nowrap overflow-hidden transition-all duration-300 hover:bg-white/90 hover:scale-[1.02]"
+            >
+              <span className="absolute inset-0 bg-gradient-to-r from-transparent via-black/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+              <span className={`relative tracking-[0.06em] ${gothic.className}`}>{primaryButtonLabel}</span>
+            </Link>
+
+            {/* Secondary button — white */}
+            <Link
+              href={secondaryButtonHref}
+              className="group w-56 py-4 bg-white/[0.04] border border-white/[0.12] rounded-md text-base font-light text-white/80 hover:bg-white/[0.08] hover:border-white/[0.22] hover:text-white transition-all duration-300 inline-flex items-center justify-center gap-2 whitespace-nowrap"
+            >
+              <span className={gothic.className}>{secondaryButtonLabel}</span>
+              <ArrowRight size={13} className="opacity-50 group-hover:opacity-80 group-hover:translate-x-0.5 transition-all duration-200" />
+            </Link>
+          </div>
+        </ScrollReveal>
+
+        {/* Client logo carousel — below CTA buttons */}
         {repeated.length > 0 && (
-          <ScrollReveal delay={225}>
-            <div className="mb-8">
+          <ScrollReveal delay={300}>
+            <div className="mt-24">
               <p className="text-[9px] tracking-[0.4em] uppercase text-white/20 font-light text-center mb-5">
                 Trusted By
               </p>
@@ -73,13 +103,13 @@ export default function HeroSection({
                     const hasWebsite = client.website && client.website.trim() !== ""
 
                     const inner = (
-                      <div className="carousel-logo flex items-center justify-center w-28 h-10 flex-shrink-0">
+                      <div className="carousel-logo flex items-center justify-center w-36 h-14 flex-shrink-0">
                         {logoUrl ? (
                           <Image
                             src={logoUrl}
                             alt={logo.alt || client.name}
-                            width={112}
-                            height={40}
+                            width={144}
+                            height={56}
                             className="object-contain w-full h-full"
                             priority={index < clients.length}
                           />
@@ -106,33 +136,6 @@ export default function HeroSection({
             </div>
           </ScrollReveal>
         )}
-
-        {/* Value prop + CTAs */}
-        <ScrollReveal delay={300}>
-          <p className="text-sm text-white/35 font-light tracking-wide mb-10">
-            {subheading}
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
-            {/* Primary button */}
-            <Link
-              href={primaryButtonHref}
-              className="group relative w-48 py-3 rounded-md font-semibold text-sm text-black bg-white inline-flex items-center justify-center gap-2 whitespace-nowrap overflow-hidden transition-all duration-300 hover:bg-white/90 hover:scale-[1.02]"
-            >
-              <span className="absolute inset-0 bg-gradient-to-r from-transparent via-black/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-              <span className="relative tracking-[0.06em]">{primaryButtonLabel}</span>
-            </Link>
-
-            {/* Secondary button */}
-            <Link
-              href={secondaryButtonHref}
-              className="group w-48 py-3 bg-white/[0.04] border border-white/[0.12] rounded-md text-sm font-light text-white/80 hover:bg-white/[0.08] hover:border-white/[0.22] hover:text-white transition-all duration-300 inline-flex items-center justify-center gap-2 whitespace-nowrap"
-            >
-              {secondaryButtonLabel}
-              <ArrowRight size={13} className="opacity-40 group-hover:opacity-80 group-hover:translate-x-0.5 transition-all duration-200" />
-            </Link>
-          </div>
-        </ScrollReveal>
       </div>
 
       <style jsx>{`

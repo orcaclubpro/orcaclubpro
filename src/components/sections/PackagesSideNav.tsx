@@ -37,7 +37,7 @@ export default function PackagesSideNav() {
   }
 
   return (
-    <nav className="hidden lg:block sticky top-[96px] self-start" aria-label="Section navigation">
+    <nav className="hidden lg:block sticky top-[83px] self-start" aria-label="Section navigation">
       <p className="text-xs tracking-[0.35em] uppercase text-white/20 mb-7 font-light">
         On this page
       </p>

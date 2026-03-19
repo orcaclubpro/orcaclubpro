@@ -5,7 +5,7 @@ import AnimatedBackground from "@/components/layout/animated-background"
 import ScrollReveal from "@/components/layout/scroll-reveal"
 import Link from "next/link"
 import { ArrowRight, Code2, Database, Lock, CheckCircle2, Clock, Zap, Server, FileCode, Shield, Terminal, ChevronDown, Rocket } from "lucide-react"
-import { motion } from "framer-motion"
+import { motion } from "motion/react"
 import { useState } from "react"
 
 export default function APIDevelopmentsPage() {

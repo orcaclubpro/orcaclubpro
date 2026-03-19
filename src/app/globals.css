@@ -383,6 +383,16 @@ body {
   animation: textReveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+/* Primary brand gradient — intelligence cyan to blue */
+.primary-gradient-text {
+  background: linear-gradient(120deg, #67e8f9 0%, #3b82f6 50%, #67e8f9 100%);
+  background-size: 300% 300%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradientShift 4s ease-in-out infinite;
+}
+
 /* Gradient text — light on dark charcoal */
 .gradient-text {
   background: linear-gradient(120deg, #F0F0F0 0%, #8B9CB6 50%, #F0F0F0 100%);
@@ -414,24 +424,14 @@ body {
    PERFORMANCE OPTIMIZATIONS
    ======================================== */
 
-/* GPU acceleration hints for animated elements */
-.gradient-text,
-.wave-text,
-.morph {
-  will-change: transform;
-  transform: translateZ(0); /* Force GPU layer */
-}
-
+/* GPU acceleration hints — only on elements that are actively animating */
 .float {
   will-change: transform;
 }
 
-.workspace-card {
-  will-change: transform, background-color, border-color;
-}
-
-.interactive::before {
-  will-change: left;
+/* workspace-card gets will-change only on hover, not permanently */
+.workspace-card:hover {
+  will-change: transform;
 }
 
 /* Parallax container */
@@ -466,7 +466,6 @@ body {
 
 /* Workspace styles */
 .workspace-card {
-  backdrop-filter: blur(10px); /* Reduced from 20px for better performance */
   background: rgba(15, 23, 42, 0.8);
   border: 1px solid rgba(103, 232, 249, 0.1);
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
@@ -516,17 +515,14 @@ body {
   0% {
     opacity: 0;
     transform: translateY(64px) scale(0.95);
-    filter: blur(4px);
   }
   60% {
     opacity: 0.8;
     transform: translateY(8px) scale(0.98);
-    filter: blur(1px);
   }
   100% {
     opacity: 1;
     transform: translateY(0) scale(1);
-    filter: blur(0);
   }
 }
 

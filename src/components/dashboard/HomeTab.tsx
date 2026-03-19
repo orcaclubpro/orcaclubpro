@@ -11,7 +11,11 @@ import { cn } from '@/lib/utils'
 import { CreateMilestoneModal } from './CreateMilestoneModal'
 import { CreateSprintSheet } from './CreateSprintSheet'
 import { MilestoneEditSheet } from './MilestoneEditSheet'
-import { ProjectSettingsModal } from './ProjectSettingsModal'
+import dynamic from 'next/dynamic'
+const ProjectSettingsModal = dynamic(
+  () => import('./ProjectSettingsModal').then(m => ({ default: m.ProjectSettingsModal })),
+  { ssr: false }
+)
 
 // ── Timeline layout constants (px from top of inner track div) ──────────────
 const LABEL_Y    = 2    // milestone title label top

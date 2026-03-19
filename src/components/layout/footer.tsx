@@ -8,13 +8,13 @@ const gothic = Cinzel_Decorative({ weight: "700", subsets: ["latin"] })
 
 export function Footer() {
   return (
-    <footer className="relative z-10 bg-zinc-950 border-t border-white/10">
+    <footer className="relative z-10 bg-zinc-950 border-t border-zinc-800/80">
       <div className="max-w-7xl mx-auto px-8 py-20">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
           {/* Column 1: Brand */}
           <div className="space-y-4">
-            <h3 className={`${gothic.className} text-xl text-white`}>ORCACLUB</h3>
-            <p className="text-gray-400 text-sm">
+            <h3 className={`${gothic.className} text-3xl text-white`}>ORCACLUB</h3>
+            <p className="text-zinc-400 text-base">
               Software Agency for Modern Business
             </p>
             <div className="flex items-center gap-4 pt-2">
@@ -23,7 +23,7 @@ export function Footer() {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="LinkedIn"
-                className="text-gray-400 hover:text-white transition-colors duration-200"
+                className="text-zinc-400 hover:text-white transition-colors duration-200"
               >
                 <Linkedin size={20} />
               </Link>
@@ -32,7 +32,7 @@ export function Footer() {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Instagram"
-                className="text-gray-400 hover:text-white transition-colors duration-200"
+                className="text-zinc-400 hover:text-white transition-colors duration-200"
               >
                 <Instagram size={20} />
               </Link>
@@ -41,14 +41,14 @@ export function Footer() {
 
           {/* Column 2: Services */}
           <div className="space-y-4">
-            <h4 className="text-sm font-semibold text-white uppercase tracking-wider">
+            <h4 className="text-[13px] font-semibold text-white uppercase tracking-wider">
               Services
             </h4>
             <ul className="space-y-3">
               <li>
                 <Link
                   href="/services/web-development"
-                  className="text-gray-400 hover:text-white transition-colors duration-200 text-sm"
+                  className="text-zinc-400 hover:text-white transition-colors duration-200 text-[15px]"
                 >
                   Web Development
                 </Link>
@@ -56,7 +56,7 @@ export function Footer() {
               <li>
                 <Link
                   href="/services/digital-marketing"
-                  className="text-gray-400 hover:text-white transition-colors duration-200 text-sm"
+                  className="text-zinc-400 hover:text-white transition-colors duration-200 text-[15px]"
                 >
                   Digital Marketing
                 </Link>
@@ -64,7 +64,7 @@ export function Footer() {
               <li>
                 <Link
                   href="/services/seo-services"
-                  className="text-gray-400 hover:text-white transition-colors duration-200 text-sm"
+                  className="text-zinc-400 hover:text-white transition-colors duration-200 text-[15px]"
                 >
                   SEO Services
                 </Link>
@@ -72,7 +72,7 @@ export function Footer() {
               <li>
                 <Link
                   href="/services/integration-automation"
-                  className="text-gray-400 hover:text-white transition-colors duration-200 text-sm"
+                  className="text-zinc-400 hover:text-white transition-colors duration-200 text-[15px]"
                 >
                   Integration & Automation
                 </Link>
@@ -82,25 +82,25 @@ export function Footer() {
 
           {/* Column 3: Contact */}
           <div className="space-y-4">
-            <h4 className="text-sm font-semibold text-white uppercase tracking-wider">
+            <h4 className="text-[13px] font-semibold text-white uppercase tracking-wider">
               Contact
             </h4>
             <ul className="space-y-3">
               <li>
                 <a
                   href="mailto:Chance@orcaclub.pro"
-                  className="text-gray-400 hover:text-white transition-colors duration-200 text-sm"
+                  className="text-zinc-400 hover:text-white transition-colors duration-200 text-[15px]"
                 >
                   Chance@orcaclub.pro
                 </a>
               </li>
               <li>
-                <span className="text-gray-400 text-sm">Orange, CA</span>
+                <span className="text-zinc-400 text-[15px]">Orange, CA</span>
               </li>
               <li>
                 <Link
                   href="/contact"
-                  className="text-gray-400 hover:text-white transition-colors duration-200 text-sm"
+                  className="text-zinc-400 hover:text-white transition-colors duration-200 text-[15px]"
                 >
                   Contact Us
                 </Link>
@@ -108,7 +108,7 @@ export function Footer() {
               <li>
                 <Link
                   href="/merchandise"
-                  className="text-gray-400 hover:text-white transition-colors duration-200 text-sm"
+                  className="text-zinc-400 hover:text-white transition-colors duration-200 text-[15px]"
                 >
                   Merchandise
                 </Link>
@@ -118,11 +118,11 @@ export function Footer() {
         </div>
 
         {/* Footer Bottom */}
-        <div className="border-t border-white/5 mt-16 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-gray-400 text-sm">
+        <div className="border-t border-zinc-800 mt-16 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+          <p className="text-zinc-400 text-[15px]">
             &copy; 2025 OrcaClubPro. All rights reserved.
           </p>
-          <p className="text-gray-400 text-sm">Built to Surface.</p>
+          <p className="text-zinc-400 text-[15px]">Built to Surface.</p>
         </div>
       </div>
     </footer>

@@ -1,6 +1,6 @@
 import { SpacesHeader } from "@/components/layout/spaces-header"
 import { MobileBottomNav } from "@/components/dashboard/MobileBottomNav"
-import { GlobalSearchPalette } from "@/components/dashboard/GlobalSearchPalette"
+import { GlobalSearchPaletteLoader } from "@/components/dashboard/GlobalSearchPaletteLoader"
 import { getCurrentUser } from "@/actions/auth"
 import { TabProvider } from "./TabContext"
 import { HeaderTitleProvider } from "./HeaderTitleContext"
@@ -55,7 +55,7 @@ export default async function SpacesLayout({
       </div>
       <MobileBottomNav role={user?.role} />
       {isDeveloper && user?.username && (
-        <GlobalSearchPalette username={user.username} />
+        <GlobalSearchPaletteLoader username={user.username} />
       )}
     </PackageCountProvider>
     </TabProvider>

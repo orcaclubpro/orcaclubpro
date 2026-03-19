@@ -16,7 +16,11 @@ import { RANGE_CFG } from '@/components/dashboard/PortfolioTimeline'
 import { cn } from '@/lib/utils'
 import { RevenueChart } from '@/components/dashboard/RevenueChart'
 import { ThemeSwitcher } from '@/components/dashboard/ThemeSwitcher'
-import { AnalyticsSidebar } from '@/components/dashboard/AnalyticsSidebar'
+import dynamic from 'next/dynamic'
+const AnalyticsSidebar = dynamic(
+  () => import('@/components/dashboard/AnalyticsSidebar').then(m => ({ default: m.AnalyticsSidebar })),
+  { ssr: false }
+)
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

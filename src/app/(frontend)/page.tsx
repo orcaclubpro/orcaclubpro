@@ -6,8 +6,7 @@ import ServicesGrid from "@/components/sections/ServicesGrid"
 import RenderBlocks from "@/components/blocks/RenderBlocks"
 import Link from "next/link"
 import { ArrowRight } from "lucide-react"
-import { getPayload } from "payload"
-import config from "@payload-config"
+import { getCachedClients, getCachedHomePage } from "@/lib/payload/cached-queries"
 
 export const metadata: Metadata = {
   title: 'ORCACLUB',
@@ -52,28 +51,16 @@ export const metadata: Metadata = {
 }
 
 export default async function HomePage() {
-  const payload = await getPayload({ config })
-
-  // Fetch clients for the fallback hero (used when no CMS page exists)
-  const clientsData = await payload.find({
-    collection: 'clients' as any,
-    sort: 'displayOrder',
-    limit: 12,
-  })
-  const clients = clientsData.docs
-
-  // Try to fetch the CMS-managed home page
+  // Fetch clients and CMS home page in parallel using cached queries
+  let clients: any[] = []
   let homePage: any = null
   try {
-    const { docs } = await payload.find({
-      collection: 'pages' as any,
-      where: { slug: { equals: 'home' } },
-      depth: 2,
-      limit: 1,
-      draft: process.env.NODE_ENV === 'development',
-      overrideAccess: true, // public page
-    })
-    homePage = docs[0] ?? null
+    const [clientsData, pagesData] = await Promise.all([
+      getCachedClients(),
+      getCachedHomePage(),
+    ])
+    clients = clientsData.docs
+    homePage = pagesData.docs[0] ?? null
   } catch {
     // Pages collection may not exist yet or no home page created
   }
@@ -95,7 +82,7 @@ export default async function HomePage() {
   const hasCmsLayout = homePage?.layout && Array.isArray(homePage.layout) && homePage.layout.length > 0
 
   return (
-    <div className="min-h-screen bg-black relative overflow-hidden">
+    <div className="min-h-screen relative">
       {/* Breadcrumb Schema */}
       <script
         type="application/ld+json"

@@ -13,7 +13,8 @@ import {
   Target,
 } from "lucide-react"
 import IntegrationSection from './IntegrationSection'
-import { BookingModal } from '@/components/booking-modal'
+import dynamic from 'next/dynamic'
+const BookingModal = dynamic(() => import('@/components/booking-modal').then(m => ({ default: m.BookingModal })), { ssr: false })
 
 export default function ServicesGrid() {
   return (

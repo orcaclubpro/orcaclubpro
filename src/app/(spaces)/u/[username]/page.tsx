@@ -95,7 +95,8 @@ export default async function DashboardPage({
   // ── Admin / user ─────────────────────────────────────────────────────────────
 
   if (user.role === 'admin' || user.role === 'user') {
-    const [{ docs: clientAccounts }, { docs: allOrders }, { docs: allProjects }, { docs: allTasks }, { docs: allPackages }, { docs: allFiles }] =
+    // completedTasksCount only needs user.id/role — run in the first batch
+    const [{ docs: clientAccounts }, { docs: allOrders }, { docs: allProjects }, { docs: allTasks }, { docs: allPackages }, { docs: allFiles }, { totalDocs: completedTasksCount }] =
       await Promise.all([
         payload.find({
           collection: 'client-accounts',
@@ -112,14 +113,14 @@ export default async function DashboardPage({
         payload.find({
           collection: 'projects',
           where: user.role === 'admin' ? {} : { assignedTo: { contains: user.id } },
-          depth: 2,
+          depth: 1,
           sort: '-updatedAt',
           limit: 100,
         }),
         payload.find({
           collection: 'tasks',
           where: user.role === 'admin' ? {} : { assignedTo: { equals: user.id } },
-          depth: 2,
+          depth: 1,
           sort: '-dueDate',
           limit: 100,
         }),
@@ -135,13 +136,6 @@ export default async function DashboardPage({
           sort: '-createdAt',
           limit: 200,
         }).catch(() => ({ docs: [] })),
-      ])
-
-    const projectIds = allProjects.map((p: any) => p.id)
-    const clientAccountIds = clientAccounts.map((ca: any) => ca.id)
-
-    const [{ totalDocs: completedTasksCount }, { totalDocs: completedSprintsCount }, sprintsResult] =
-      await Promise.all([
         payload.find({
           collection: 'tasks',
           where: user.role === 'admin'
@@ -149,6 +143,14 @@ export default async function DashboardPage({
             : { and: [{ assignedTo: { equals: user.id } }, { status: { equals: 'completed' } }] },
           limit: 1,
         }),
+      ])
+
+    const projectIds = allProjects.map((p: any) => p.id)
+    const clientAccountIds = clientAccounts.map((ca: any) => ca.id)
+
+    // Sprint queries depend on projectIds — second batch is unavoidable but now only 2 queries
+    const [{ totalDocs: completedSprintsCount }, sprintsResult] =
+      await Promise.all([
         payload.find({
           collection: 'sprints',
           where: projectIds.length > 0

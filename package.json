@@ -55,7 +55,7 @@
     "@tailwindcss/postcss": "^4.1.18",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "framer-motion": "^12.23.26",
+    "critters": "^0.0.25",
     "google-auth-library": "^9.15.0",
     "graphql": "^16.12.0",
     "lucide-react": "^0.511.0",

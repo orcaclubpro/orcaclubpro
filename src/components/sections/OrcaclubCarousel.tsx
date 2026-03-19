@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion, AnimatePresence } from "motion/react"
 import Image from "next/image"
 import Link from "next/link"
 import { ArrowLeft, ArrowRight, X, Grid2X2, ChevronLeft, ChevronRight } from "lucide-react"
@@ -151,7 +151,7 @@ function GridModal({ slide, onClose }: { slide: CarouselSlide; onClose: () => vo
       exit={{ opacity: 0 }}
       transition={{ duration: 0.22 }}
       className="fixed inset-0 z-[9000] flex flex-col"
-      style={{ background: 'rgba(4,4,7,0.97)', backdropFilter: 'blur(20px) saturate(1.4)' }}
+      style={{ background: 'rgba(4,4,7,0.97)', backdropFilter: 'blur(8px) saturate(1.4)' }}
     >
       {/* Header */}
       <div
@@ -229,7 +229,7 @@ function GridModal({ slide, onClose }: { slide: CarouselSlide; onClose: () => vo
                 </div>
               </div>
               {/* Click-to-expand icon hint */}
-              <div className="absolute top-3 right-3 p-1.5 rounded-md bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 backdrop-blur-sm">
+              <div className="absolute top-3 right-3 p-1.5 rounded-md bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                 <Grid2X2 size={11} className="text-white/60" />
               </div>
             </motion.button>
@@ -470,7 +470,7 @@ function HorizontalCard({ slide, active, totalSlides, onGridOpen, onPrev, onNext
       {slide.images.length > 1 && (
         <button
           onClick={(e) => { e.stopPropagation(); onGridOpen() }}
-          className="absolute top-4 right-14 flex items-center gap-2 px-3 py-2 rounded-xl backdrop-blur-sm transition-all duration-200 hover:bg-white/[0.08]"
+          className="absolute top-4 right-14 flex items-center gap-2 px-3 py-2 rounded-xl transition-all duration-200 hover:bg-white/[0.08]"
           style={{ border: '1px solid rgba(255,255,255,0.10)' }}
         >
           <Grid2X2 size={12} className="text-white/40" />
@@ -481,10 +481,10 @@ function HorizontalCard({ slide, active, totalSlides, onGridOpen, onPrev, onNext
       {/* Arrow nav */}
       {totalSlides > 1 && (
         <div className="absolute bottom-4 right-4 flex items-center gap-2">
-          <button onClick={(e) => { e.stopPropagation(); onPrev() }} className="p-2 rounded-full bg-black/40 border border-white/[0.10] text-white/45 hover:text-white hover:bg-black/60 transition-all duration-200 backdrop-blur-sm">
+          <button onClick={(e) => { e.stopPropagation(); onPrev() }} className="p-2 rounded-full bg-black/40 border border-white/[0.10] text-white/45 hover:text-white hover:bg-black/60 transition-all duration-200">
             <ArrowLeft size={14} />
           </button>
-          <button onClick={(e) => { e.stopPropagation(); onNext() }} className="p-2 rounded-full bg-black/40 border border-white/[0.10] text-white/45 hover:text-white hover:bg-black/60 transition-all duration-200 backdrop-blur-sm">
+          <button onClick={(e) => { e.stopPropagation(); onNext() }} className="p-2 rounded-full bg-black/40 border border-white/[0.10] text-white/45 hover:text-white hover:bg-black/60 transition-all duration-200">
             <ArrowRight size={14} />
           </button>
         </div>
@@ -593,7 +593,7 @@ function VerticalCard({ slide, active, totalSlides, onGridOpen, onPrev, onNext, 
             {/* Category pill */}
             <span
               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-[0.12em] uppercase"
-              style={{ color: cat.color, background: cat.bg, border: `1px solid ${cat.border}`, backdropFilter: 'blur(10px)' }}
+              style={{ color: cat.color, background: cat.bg, border: `1px solid ${cat.border}`, backdropFilter: 'blur(6px)' }}
             >
               <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: cat.color }} />
               {cat.label}
@@ -625,7 +625,7 @@ function VerticalCard({ slide, active, totalSlides, onGridOpen, onPrev, onNext, 
                 <button
                   onClick={(e) => { e.stopPropagation(); onGridOpen() }}
                   className="flex items-center gap-1 p-1.5 rounded-lg transition-all duration-200 hover:bg-white/[0.14]"
-                  style={{ border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(10px)' }}
+                  style={{ border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(6px)' }}
                   aria-label="View all images"
                 >
                   <Grid2X2 size={12} className="text-white/45" />
@@ -713,14 +713,14 @@ function VerticalCard({ slide, active, totalSlides, onGridOpen, onPrev, onNext, 
               <button
                 onClick={(e) => { e.stopPropagation(); onPrev() }}
                 className="p-1.5 rounded-full text-white/35 hover:text-white hover:bg-white/[0.10] transition-all duration-200"
-                style={{ background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.09)', backdropFilter: 'blur(8px)' }}
+                style={{ background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.09)', backdropFilter: 'blur(6px)' }}
               >
                 <ArrowLeft size={13} />
               </button>
               <button
                 onClick={(e) => { e.stopPropagation(); onNext() }}
                 className="p-1.5 rounded-full text-white/35 hover:text-white hover:bg-white/[0.10] transition-all duration-200"
-                style={{ background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.09)', backdropFilter: 'blur(8px)' }}
+                style={{ background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.09)', backdropFilter: 'blur(6px)' }}
               >
                 <ArrowRight size={13} />
               </button>
