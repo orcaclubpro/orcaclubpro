@@ -425,10 +425,10 @@ export function AnalyticsSidebar({
         aria-haspopup="dialog"
         aria-label={`${open ? 'Close' : 'Open'} analytics panel${pendingCount > 0 ? `, ${pendingCount} pending invoice${pendingCount !== 1 ? 's' : ''}` : ''}`}
         className={[
-          'fixed right-0 top-1/2 -translate-y-1/2 z-[60]',
+          'fixed left-0 top-1/2 -translate-y-1/2 z-[60]',
           'flex flex-col items-center gap-2.5',
-          'pl-3 pr-2.5 py-5',
-          'rounded-l-2xl border border-r-0',
+          'pr-3 pl-2.5 py-5',
+          'rounded-r-2xl border border-l-0',
           'transition-all duration-300 group',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--space-accent)]/40 focus-visible:ring-offset-1 focus-visible:ring-offset-black',
           open
@@ -458,7 +458,7 @@ export function AnalyticsSidebar({
           aria-hidden="true"
           className={[
             'text-[8px] font-bold uppercase tracking-[0.22em] transition-colors duration-200',
-            '[writing-mode:vertical-rl] rotate-180',
+            '[writing-mode:vertical-rl]',
             open
               ? 'text-[var(--space-accent)]/70'
               : 'text-[#333] group-hover:text-[#555]',

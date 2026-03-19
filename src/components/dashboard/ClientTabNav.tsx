@@ -6,7 +6,8 @@ import { cn } from '@/lib/utils'
 
 interface ClientTabNavProps {
   activeTab: string
-  basePath: string
+  basePath?: string
+  onTabChange?: (tab: string) => void
 }
 
 const tabs = [
@@ -17,7 +18,7 @@ const tabs = [
   { key: 'accounts', label: 'Accounts' },
 ]
 
-export function ClientTabNav({ activeTab, basePath }: ClientTabNavProps) {
+export function ClientTabNav({ activeTab, basePath, onTabChange }: ClientTabNavProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const [indicatorStyle, setIndicatorStyle] = useState<{ left: number; width: number; opacity: number }>({
@@ -29,7 +30,7 @@ export function ClientTabNav({ activeTab, basePath }: ClientTabNavProps) {
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
-    const activeEl = container.querySelector<HTMLAnchorElement>('[data-active="true"]')
+    const activeEl = container.querySelector<HTMLElement>('[data-active="true"]')
     if (!activeEl) return
     setIndicatorStyle({
       left: activeEl.offsetLeft,
@@ -45,21 +46,40 @@ export function ClientTabNav({ activeTab, basePath }: ClientTabNavProps) {
   }, [activeTab])
 
   return (
-    <div ref={scrollRef} className="overflow-x-auto scrollbar-none">
+    <div ref={scrollRef} className="overflow-x-auto scrollbar-none px-6 lg:px-10">
     <div ref={containerRef} className="relative flex items-center h-11 gap-1 min-w-max">
-      {tabs.map((tab) => (
-        <Link
-          key={tab.key}
-          href={`${basePath}?tab=${tab.key}`}
-          data-active={activeTab === tab.key ? 'true' : undefined}
-          className={cn(
-            'px-4 h-full flex items-center text-sm font-medium transition-colors duration-150',
-            activeTab === tab.key ? 'text-[#F0F0F0]' : 'text-[#4A4A4A] hover:text-[#A0A0A0]'
-          )}
-        >
-          {tab.label}
-        </Link>
-      ))}
+      {tabs.map((tab) => {
+        const isActive = activeTab === tab.key
+        const sharedClassName = cn(
+          'px-4 h-full flex items-center text-sm font-medium transition-colors duration-150',
+          isActive ? 'text-[#F0F0F0]' : 'text-[#4A4A4A] hover:text-[#A0A0A0]'
+        )
+
+        if (onTabChange) {
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              data-active={isActive ? 'true' : undefined}
+              className={sharedClassName}
+              onClick={() => onTabChange(tab.key)}
+            >
+              {tab.label}
+            </button>
+          )
+        }
+
+        return (
+          <Link
+            key={tab.key}
+            href={`${basePath}?tab=${tab.key}`}
+            data-active={isActive ? 'true' : undefined}
+            className={sharedClassName}
+          >
+            {tab.label}
+          </Link>
+        )
+      })}
       {/* Sliding active indicator */}
       <div
         className="absolute bottom-0 h-0.5 bg-[var(--space-accent)] rounded-full pointer-events-none"

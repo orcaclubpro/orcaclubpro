@@ -648,37 +648,91 @@ function MobileClientCard({
   username: string
   animationDelay: number
 }) {
-  const palette = PALETTES[index % PALETTES.length]
   const balance = client.accountBalance ?? 0
   const hasBalance = balance > 0
 
   return (
     <Link
       href={`/u/${username}/clients/${client.id}`}
-      className={cn(
-        'block rounded-xl border border-[#404040] bg-[#1C1C1C] hover:bg-[#252525] hover:border-[#404040] transition-all duration-200 overflow-hidden',
-        'animate-in fade-in slide-in-from-bottom-2 duration-300',
-      )}
-      style={{ animationDelay: `${animationDelay}ms` }}
+      className="group block"
+      style={{
+        opacity: 0,
+        animation: `cardFadeUp 0.4s cubic-bezier(0.22,1,0.36,1) ${animationDelay}ms forwards`,
+      }}
     >
-      <div className={cn('h-px w-full', hasBalance ? 'bg-amber-400' : palette.dot)} />
-      <div className="p-4 flex items-center gap-3">
+      <style>{`
+        @keyframes cardFadeUp {
+          from { opacity: 0; transform: translateY(10px); }
+          to   { opacity: 1; transform: translateY(0);    }
+        }
+      `}</style>
+
+      <div
+        className="relative flex items-center gap-3 px-4 py-3.5 rounded-xl overflow-hidden
+          border border-[#242424] bg-[#161616]
+          transition-all duration-200
+          group-hover:-translate-y-px group-hover:border-[rgba(103,232,249,0.18)] group-hover:bg-[#1A1A1A]
+          group-hover:shadow-[0_4px_24px_rgba(0,0,0,0.4)]
+          active:scale-[0.99] active:transition-none"
+      >
+        {/* Cyan glow on hover — top edge */}
+        <div
+          className="absolute top-0 left-0 right-0 h-px opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+          style={{ background: 'linear-gradient(90deg, transparent 10%, var(--space-accent) 50%, transparent 90%)' }}
+        />
+
+        {/* Left accent dot */}
+        <div
+          className="size-1.5 rounded-full shrink-0 transition-all duration-200"
+          style={{
+            background: hasBalance ? '#fbbf24' : 'var(--space-accent)',
+            opacity: hasBalance ? 1 : 0.35,
+            boxShadow: hasBalance
+              ? '0 0 6px rgba(251,191,36,0.5)'
+              : '0 0 0px var(--space-accent)',
+          }}
+        />
+
+        {/* Text */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <span className={cn('size-1.5 rounded-full shrink-0', hasBalance ? 'bg-amber-400' : palette.dot)} />
-            <p className="text-base font-semibold text-[#F0F0F0] truncate">{client.name}</p>
-          </div>
-          {client.company && (
-            <p className="text-xs text-[#4A4A4A] truncate">{client.company}</p>
-          )}
-          <p className="text-xs text-[#6B6B6B] truncate">{client.email}</p>
+          <p className="text-sm font-semibold text-[#E8E8E8] group-hover:text-white truncate transition-colors duration-200 leading-snug">
+            {client.name}
+          </p>
+          <p className="text-[11px] text-[#666666] group-hover:text-[#777777] truncate mt-0.5 transition-colors duration-200">
+            {[client.company, client.email].filter(Boolean).join(' · ')}
+          </p>
         </div>
+
+        {/* Status badge */}
         {hasBalance ? (
-          <span className="text-sm font-mono text-amber-400 shrink-0 tabular-nums">{fmt(balance)}</span>
+          <span
+            className="shrink-0 text-[11px] font-mono font-medium tabular-nums px-2 py-0.5 rounded"
+            style={{
+              color: '#fbbf24',
+              background: 'rgba(251,191,36,0.07)',
+              border: '1px solid rgba(251,191,36,0.14)',
+            }}
+          >
+            {fmt(balance)}
+          </span>
         ) : (
-          <span className="text-xs text-emerald-500/60 shrink-0">Clear</span>
+          <span
+            className="shrink-0 text-[9px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded"
+            style={{
+              color: 'rgba(103,232,249,0.35)',
+              background: 'rgba(103,232,249,0.04)',
+              border: '1px solid rgba(103,232,249,0.08)',
+            }}
+          >
+            Clear
+          </span>
         )}
-        <ArrowRight className="size-4 text-[#4A4A4A] shrink-0" />
+
+        {/* Arrow */}
+        <ArrowRight
+          className="size-3.5 shrink-0 transition-all duration-200"
+          style={{ color: 'rgba(103,232,249,0.2)' }}
+        />
       </div>
     </Link>
   )

@@ -64,6 +64,10 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
 
   const handleNav = (href: string, tab: string) => {
     setMenuOpen(false)
+    if (tab === 'search') {
+      document.dispatchEvent(new CustomEvent('orcaclub:open-search'))
+      return
+    }
     window.scrollTo({ top: 0, behavior: 'instant' })
     if (isSubPage) router.push(href)
     else navigate(tab)
@@ -82,6 +86,7 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
         { href: `/u/${username}`,                   label: 'Home',    icon: LayoutDashboard, tab: 'home' },
         { href: `/u/${username}?tab=projects`,       label: 'Plan',    icon: FolderKanban,    tab: 'projects' },
         { href: `/u/${username}?tab=clients`,        label: 'Clients', icon: Building2,       tab: 'clients' },
+        { href: '#search',                          label: 'Search',  icon: Search,          tab: 'search'  },
       ]
 
   // Secondary: hidden on mobile, shown in More menu / full on md+
@@ -178,16 +183,6 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
               </a>
             )
           })}
-          {/* Search — admin only */}
-          {!isClient && (
-            <button
-              onClick={() => { setMenuOpen(false); document.dispatchEvent(new CustomEvent('orcaclub:open-search')) }}
-              className="flex flex-col items-center gap-2 px-4 py-3 rounded-xl transition-all duration-200 active:scale-95 hover:bg-white/[0.06] cursor-pointer"
-            >
-              <Search className="size-5 text-white/40" />
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-white/40 leading-none">Search</span>
-            </button>
-          )}
         </div>
       </div>
 

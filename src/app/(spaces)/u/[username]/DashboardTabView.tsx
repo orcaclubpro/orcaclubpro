@@ -69,11 +69,8 @@ interface DashboardTabViewProps {
 // Animation state shape
 interface AnimState {
   mode: 'idle' | 'animating'
-  exitTab: AnyTab | null
   // Which side the entering view slides in from
   enterFrom: 'left' | 'right'
-  // Where the exit animation starts (0 for clicks, deltaX for swipes)
-  exitStartX: number
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -100,9 +97,7 @@ export function DashboardTabView({
 
   const [anim, setAnim] = useState<AnimState>({
     mode: 'idle',
-    exitTab: null,
     enterFrom: 'right',
-    exitStartX: 0,
   })
 
   // Stable refs — updated every render, never stale in effects
@@ -119,9 +114,6 @@ export function DashboardTabView({
   // Direct DOM ref for the current/entering view (used for real-time drag)
   const contentRef = useRef<HTMLDivElement>(null)
 
-  // Counter that makes the exit div key unique even when going A→B→A
-  const exitKeyRef = useRef(0)
-
   // ── Trigger animation before the browser paints ───────────────────────────
   // useLayoutEffect fires synchronously after DOM mutations and before paint,
   // so the user never sees the new content without its slide-in animation.
@@ -135,22 +127,15 @@ export function DashboardTabView({
     // forward = higher index = entering view slides in from the right
     const forward = nextIdx > prevIdx || nextIdx === -1
 
-    exitKeyRef.current += 1
-
     setAnim({
       mode: 'animating',
-      exitTab: prev as AnyTab,
       enterFrom: forward ? 'right' : 'left',
-      // Capture the mid-drag offset so the exit animation starts exactly where
-      // the finger left off (0 when navigating via tap/click)
-      exitStartX: dragRef.current.currentX,
     })
 
     prevTabRef.current = activeTab
-    dragRef.current.currentX = 0
 
     const timer = setTimeout(() => {
-      setAnim(s => ({ ...s, mode: 'idle', exitTab: null }))
+      setAnim(s => ({ ...s, mode: 'idle' }))
       // Clear any residual inline styles on the entering view
       if (contentRef.current) {
         contentRef.current.style.animation = ''
@@ -170,7 +155,6 @@ export function DashboardTabView({
     startX: 0,
     startY: 0,
     startTime: 0,
-    currentX: 0,
     locked: false,
   })
 
@@ -186,7 +170,6 @@ export function DashboardTabView({
         startX: e.touches[0].clientX,
         startY: e.touches[0].clientY,
         startTime: Date.now(),
-        currentX: 0,
         locked: false,
       }
 
@@ -218,8 +201,6 @@ export function DashboardTabView({
 
       // Prevent vertical scroll once we've locked into a horizontal swipe
       e.preventDefault()
-
-      d.currentX = deltaX
 
       const tabs = tabListRef.current
       const idx = tabs.indexOf(activeTabRef.current as AnyTab)
@@ -255,15 +236,12 @@ export function DashboardTabView({
 
       if (shouldNav && deltaX < 0 && idx < tabs.length - 1) {
         // Swipe left → next tab
-        d.currentX = deltaX // useLayoutEffect reads this for the exit start position
         navigateRef.current(tabs[idx + 1])
       } else if (shouldNav && deltaX > 0 && idx > 0) {
         // Swipe right → prev tab
-        d.currentX = deltaX
         navigateRef.current(tabs[idx - 1])
       } else {
         // Not far/fast enough — spring back with a slight overshoot
-        d.currentX = 0
         if (contentRef.current) {
           contentRef.current.style.transition =
             'transform 380ms cubic-bezier(0.34, 1.56, 0.64, 1)'
@@ -318,7 +296,7 @@ export function DashboardTabView({
       const idx  = tabs.indexOf(activeTabRef.current as AnyTab)
 
       // Require a meaningful swipe before committing to a tab change
-      const THRESHOLD = 80
+      const THRESHOLD = 120
 
       if (accumulated > THRESHOLD && idx < tabs.length - 1) {
         // Scrolled right (trackpad fingers moved left) → next tab
@@ -326,14 +304,14 @@ export function DashboardTabView({
         inCooldown  = true
         navigateRef.current(tabs[idx + 1])
         if (cooldownTimer) clearTimeout(cooldownTimer)
-        cooldownTimer = setTimeout(() => { inCooldown = false }, 700)
+        cooldownTimer = setTimeout(() => { inCooldown = false }, 300)
       } else if (accumulated < -THRESHOLD && idx > 0) {
         // Scrolled left (trackpad fingers moved right) → previous tab
         accumulated = 0
         inCooldown  = true
         navigateRef.current(tabs[idx - 1])
         if (cooldownTimer) clearTimeout(cooldownTimer)
-        cooldownTimer = setTimeout(() => { inCooldown = false }, 700)
+        cooldownTimer = setTimeout(() => { inCooldown = false }, 300)
       }
     }
 
@@ -397,6 +375,7 @@ export function DashboardTabView({
               allOrders={d.allOrders}
               allProjects={d.allProjects}
               allTasks={d.allTasks}
+              allPackages={d.allPackages}
               completedTasksCount={d.completedTasksCount}
               completedSprintsCount={d.completedSprintsCount}
               timeframe={timeframe}
@@ -443,10 +422,8 @@ export function DashboardTabView({
 
   // ── Derived animation names ───────────────────────────────────────────────
 
-  // forward (enterFrom 'right'): current exits LEFT, new enters FROM RIGHT
-  // backward (enterFrom 'left'): current exits RIGHT, new enters FROM LEFT
-  const exitAnimName =
-    anim.enterFrom === 'right' ? 'tabSlideOutLeft' : 'tabSlideOutRight'
+  // forward (enterFrom 'right'): new content enters FROM RIGHT
+  // backward (enterFrom 'left'): new content enters FROM LEFT
   const enterAnimName =
     anim.enterFrom === 'right' ? 'tabSlideInFromRight' : 'tabSlideInFromLeft'
   const timing = `${ANIM_MS}ms cubic-bezier(0.36, 0.66, 0.04, 1) forwards`
@@ -455,23 +432,6 @@ export function DashboardTabView({
 
   return (
     <div style={{ position: 'relative', overflow: 'hidden' }}>
-
-      {/* Exiting view — positioned absolute, plays its exit animation */}
-      {anim.exitTab && (
-        <div
-          key={`exit-${anim.exitTab}-${exitKeyRef.current}`}
-          style={{
-            position: 'absolute',
-            inset: 0,
-            zIndex: 0,
-            // CSS custom property read by tabSlideOut* keyframes
-            '--tab-slide-from': `${anim.exitStartX}px`,
-            animation: `${exitAnimName} ${timing}`,
-          } as React.CSSProperties}
-        >
-          {renderTab(anim.exitTab)}
-        </div>
-      )}
 
       {/* Entering / current view — slides in, then becomes the static view */}
       <div

@@ -3,8 +3,8 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  Mail, Building2, Pencil, Check, Loader2,
-  Shield, User, Users, Phone, MapPin, Send, CheckCircle2,
+  Mail, Building2, Pencil, Loader2,
+  Shield, User, Users, Phone, MapPin, Send, CheckCircle2, Check,
 } from 'lucide-react'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -34,15 +34,6 @@ export interface ClientSettingsCardProps {
   stripeCustomerId?: string | null
   teamMembers: Array<{ id: string; name: string; title?: string | null }>
   clientUsers: Array<{ id: string; name: string; email: string }>
-}
-
-function getInitials(name: string) {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((n) => n[0].toUpperCase())
-    .join('')
 }
 
 function blankAddress(): Address {
@@ -76,12 +67,9 @@ export function ClientSettingsCard({
   const [sendWelcomeEmail, setSendWelcomeEmail] = useState(true)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  // Resend welcome email state
   const [resending, setResending] = useState(false)
   const [resendResult, setResendResult] = useState<'sent' | 'error' | null>(null)
 
-  const initials = getInitials(name)
   const allUsers = [
     ...teamMembers.map((m) => ({ ...m, type: 'developer' as const })),
     ...clientUsers.map((u) => ({ ...u, type: 'client' as const })),
@@ -156,146 +144,136 @@ export function ClientSettingsCard({
     const result = await resendClientWelcomeEmail({ id })
     setResending(false)
     setResendResult(result.success ? 'sent' : 'error')
-    // Auto-clear result after 4s
     setTimeout(() => setResendResult(null), 4000)
   }
 
   const emailChanged = form.email && form.email !== (email ?? '')
 
   return (
-    <div
-      className="rounded-2xl border border-[#404040] overflow-hidden"
-      style={{ background: 'linear-gradient(145deg, #252525 0%, #2D2D2D 100%)' }}
-    >
-      {/* Top accent line */}
-      <div className="h-px bg-gradient-to-r from-transparent via-[#1E3A6E]/20 to-transparent" />
+    <div className="rounded-xl border border-[#333333] bg-[#1E1E1E] overflow-hidden transition-all duration-300">
 
-      <div className="p-6 space-y-5">
-
-        {/* ── Identity ── */}
-        <div className="flex items-start gap-4">
-          {/* Avatar */}
-          <div className="relative shrink-0">
-            <div className="size-16 rounded-2xl bg-[rgba(139,156,182,0.06)] border border-[rgba(139,156,182,0.15)] flex items-center justify-center">
-              <span className="text-2xl font-bold tracking-tight" style={{ color: 'var(--space-accent)' }}>{initials}</span>
-            </div>
+      {/* ── Header strip ── */}
+      <div className="flex items-start justify-between gap-4 px-5 pt-5 pb-4">
+        <div className="min-w-0 flex-1">
+          {/* Name */}
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <h2 className="text-xl font-semibold text-[#F0F0F0] leading-tight truncate">{name}</h2>
             {stripeCustomerId && (
-              <div className="absolute -bottom-1 -right-1 size-5 rounded-full bg-emerald-500 border-2 border-[#252525] flex items-center justify-center">
-                <Check className="size-3 text-white" strokeWidth={3} />
-              </div>
-            )}
-          </div>
-
-          {/* Name + contact */}
-          <div className="flex-1 min-w-0">
-            <div className="overflow-x-auto scrollbar-none">
-              <h2 className="text-3xl font-bold text-[#1E3A6E] leading-tight whitespace-nowrap">{name}</h2>
-            </div>
-            {company && (
-              <p className="text-sm text-[#6B6B6B] mt-0.5">{company}</p>
-            )}
-            {email && (
-              <div className="flex items-center gap-1.5 mt-1 text-xs text-[#4A4A4A]">
-                <Mail className="size-3 shrink-0" />
-                <span className="truncate">{email}</span>
-              </div>
-            )}
-            {phone && (
-              <div className="flex items-center gap-1.5 mt-0.5 text-xs text-[#4A4A4A]">
-                <Phone className="size-3 shrink-0" />
-                <span className="truncate">{phone}</span>
-              </div>
-            )}
-            {(address?.line1 || address?.city) && (
-              <div className="flex items-start gap-1.5 mt-0.5 text-xs text-[#4A4A4A]">
-                <MapPin className="size-3 shrink-0 mt-0.5" />
-                <span className="leading-snug">
-                  {address.line1 && <span>{address.line1}{address.line2 ? `, ${address.line2}` : ''}<br /></span>}
-                  {[address.city, address.state, address.zip].filter(Boolean).join(', ')}
-                </span>
-              </div>
-            )}
-            {company && !email && !phone && !address?.line1 && (
-              <div className="flex items-center gap-1.5 mt-0.5 text-xs text-[#4A4A4A]">
-                <Building2 className="size-3 shrink-0" />
-                <span className="truncate">{company}</span>
-              </div>
-            )}
-
-            {/* Action buttons */}
-            <div className="mt-2.5 flex items-center gap-2 flex-wrap">
-              <button
-                onClick={handleOpenEdit}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[#6B6B6B] border border-[#404040] rounded-lg hover:text-[#F0F0F0] hover:border-[#404040] hover:bg-[#2D2D2D] transition-all"
+              <span
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider"
+                style={{ background: 'rgba(52,211,153,0.08)', color: '#34d399', border: '1px solid rgba(52,211,153,0.2)' }}
               >
-                <Pencil className="size-3" />
-                Edit
-              </button>
-
-              {email && (
-                <button
-                  onClick={handleResendWelcome}
-                  disabled={resending}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs border rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-                    resendResult === 'sent'
-                      ? 'text-emerald-400 border-emerald-400/20 bg-emerald-400/[0.06]'
-                      : resendResult === 'error'
-                      ? 'text-red-400 border-red-400/20 bg-red-400/[0.06]'
-                      : 'text-[#6B6B6B] border-[#404040] hover:border-[rgba(139,156,182,0.15)] hover:bg-[rgba(139,156,182,0.06)]'
-                  }`}
-                  style={resendResult === null ? { } : undefined}
-                >
-                  {resending ? (
-                    <Loader2 className="size-3 animate-spin" />
-                  ) : resendResult === 'sent' ? (
-                    <CheckCircle2 className="size-3" />
-                  ) : (
-                    <Send className="size-3" />
-                  )}
-                  {resendResult === 'sent'
-                    ? 'Sent!'
-                    : resendResult === 'error'
-                    ? 'Failed'
-                    : 'Resend Welcome'}
-                </button>
-              )}
-            </div>
+                <Check className="size-2.5" strokeWidth={3} />
+                Stripe
+              </span>
+            )}
           </div>
+
+          {/* Company */}
+          {company && (
+            <p className="text-sm text-[#5A5A5A] mt-0.5 flex items-center gap-1.5">
+              <Building2 className="size-3 shrink-0" />
+              {company}
+            </p>
+          )}
         </div>
 
-        {/* ── Team ── */}
-        {allUsers.length > 0 && (
-          <div className="pt-4 border-t border-[#404040] space-y-3">
-            <div className="flex items-center gap-2">
-              <Users className="size-3.5 text-[#4A4A4A]" />
-              <p className="text-[10px] uppercase tracking-widest text-[#4A4A4A] font-semibold">
-                Team · {allUsers.length}
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {allUsers.map((u) => (
-                <div
-                  key={u.id}
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[#404040] bg-[rgba(255,255,255,0.02)] text-xs"
-                >
-                  {u.type === 'developer'
-                    ? <Shield className="size-3 text-[#4A4A4A] shrink-0" />
-                    : <User className="size-3 shrink-0" style={{ color: 'var(--space-accent)' }} />
-                  }
-                  <span className={u.type === 'developer' ? 'text-[#6B6B6B]' : 'text-[#A0A0A0]'}>
-                    {u.name}
-                  </span>
-                  <span className={`text-[9px] uppercase tracking-wide font-semibold ml-0.5 ${
-                    u.type === 'developer' ? 'text-[#4A4A4A]' : 'text-[#4A4A4A]'
-                  }`}>
-                    {u.type === 'developer' ? (u.title ?? 'developer') : 'client'}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* Actions */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            onClick={handleOpenEdit}
+            className="group flex items-center gap-1.5 px-3 py-1.5 text-xs text-[#5A5A5A] border border-[#333333] rounded-lg
+              hover:text-[#F0F0F0] hover:border-[#555555] hover:bg-[#2A2A2A]
+              transition-all duration-200"
+          >
+            <Pencil className="size-3 transition-transform duration-200 group-hover:rotate-12" />
+            Edit
+          </button>
+
+          {email && (
+            <button
+              onClick={handleResendWelcome}
+              disabled={resending}
+              className={[
+                'flex items-center gap-1.5 px-3 py-1.5 text-xs border rounded-lg transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed',
+                resendResult === 'sent'
+                  ? 'text-emerald-400 border-emerald-400/20 bg-emerald-400/[0.06]'
+                  : resendResult === 'error'
+                  ? 'text-red-400 border-red-400/20 bg-red-400/[0.06]'
+                  : 'text-[#5A5A5A] border-[#333333] hover:text-[#F0F0F0] hover:border-[#555555] hover:bg-[#2A2A2A]',
+              ].join(' ')}
+            >
+              {resending
+                ? <Loader2 className="size-3 animate-spin" />
+                : resendResult === 'sent'
+                ? <CheckCircle2 className="size-3" />
+                : <Send className="size-3" />
+              }
+              {resendResult === 'sent' ? 'Sent!' : resendResult === 'error' ? 'Failed' : 'Welcome'}
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* ── Contact info row ── */}
+      {(email || phone || address?.line1 || address?.city) && (
+        <div className="px-5 pb-4 flex flex-wrap gap-x-5 gap-y-1.5">
+          {email && (
+            <a
+              href={`mailto:${email}`}
+              className="flex items-center gap-1.5 text-xs text-[#5A5A5A] hover:text-[#A0A0A0] transition-colors duration-150"
+            >
+              <Mail className="size-3 shrink-0" />
+              <span>{email}</span>
+            </a>
+          )}
+          {phone && (
+            <a
+              href={`tel:${phone}`}
+              className="flex items-center gap-1.5 text-xs text-[#5A5A5A] hover:text-[#A0A0A0] transition-colors duration-150"
+            >
+              <Phone className="size-3 shrink-0" />
+              <span>{phone}</span>
+            </a>
+          )}
+          {(address?.line1 || address?.city) && (
+            <span className="flex items-start gap-1.5 text-xs text-[#5A5A5A]">
+              <MapPin className="size-3 shrink-0 mt-0.5" />
+              <span>
+                {address?.line1 && `${address.line1}${address.line2 ? `, ${address.line2}` : ''}, `}
+                {[address?.city, address?.state, address?.zip].filter(Boolean).join(', ')}
+              </span>
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* ── Team ── */}
+      {allUsers.length > 0 && (
+        <div className="px-5 py-3.5 border-t border-[#2A2A2A] flex items-center gap-3 flex-wrap">
+          <span className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-[#3A3A3A] font-semibold shrink-0">
+            <Users className="size-3" />
+            Team
+          </span>
+          <div className="flex flex-wrap gap-1.5">
+            {allUsers.map((u) => (
+              <div
+                key={u.id}
+                className="flex items-center gap-1.5 px-2 py-0.5 rounded-md border border-[#2A2A2A] bg-[#252525] text-xs
+                  hover:border-[#3A3A3A] hover:bg-[#2D2D2D] transition-all duration-150"
+              >
+                {u.type === 'developer'
+                  ? <Shield className="size-2.5 text-[#4A4A4A] shrink-0" />
+                  : <User className="size-2.5 shrink-0" style={{ color: 'var(--space-accent)' }} />
+                }
+                <span className={u.type === 'developer' ? 'text-[#6B6B6B]' : 'text-[#A0A0A0]'}>
+                  {u.name}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── Edit Dialog ── */}
       <Dialog open={editOpen} onOpenChange={(v) => { if (!v) handleCloseEdit(); else setEditOpen(true) }}>
@@ -345,7 +323,6 @@ export function ClientSettingsCard({
               />
             </div>
 
-            {/* Welcome email toggle — visible whenever an email is set */}
             {form.email && (
               <div className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-[#2D2D2D] border border-[#404040]">
                 <div className="space-y-0.5">
@@ -384,7 +361,6 @@ export function ClientSettingsCard({
               />
             </div>
 
-            {/* Address */}
             <div className="space-y-2 pt-1">
               <p className="text-[#6B6B6B] text-xs uppercase tracking-wide font-medium">Address</p>
               <Input

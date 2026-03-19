@@ -763,71 +763,107 @@ function MobileProjectCard({
       ? Math.round((activeSprint.completedTasksCount / activeSprint.totalTasksCount) * 100)
       : 0
 
+  const dotColor = overdue ? '#fbbf24' : cfg.dot.replace('bg-', '')
+
   return (
     <Link
       href={`/u/${username}/projects/${project.id}`}
-      className={cn(
-        'block rounded-xl border border-[#404040] bg-[#1C1C1C] hover:bg-[#2D2D2D] hover:border-[#404040] transition-all duration-200 overflow-hidden',
-        'animate-in fade-in slide-in-from-bottom-2 duration-300',
-      )}
-      style={{ animationDelay: `${animationDelay}ms` }}
+      className="group block"
+      style={{
+        opacity: 0,
+        animation: `cardFadeUp 0.4s cubic-bezier(0.22,1,0.36,1) ${animationDelay}ms forwards`,
+      }}
     >
-      <div className={cn('h-px w-full', overdue ? 'bg-amber-400/70' : cfg.dot)} />
+      <style>{`
+        @keyframes cardFadeUp {
+          from { opacity: 0; transform: translateY(10px); }
+          to   { opacity: 1; transform: translateY(0);    }
+        }
+      `}</style>
 
-      <div className="p-4 space-y-3">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <span className={cn('size-1.5 rounded-full', overdue ? 'bg-amber-400 animate-pulse' : cfg.dot)} />
-              <span className={cn('text-[9px] font-semibold uppercase tracking-widest', overdue ? 'text-amber-400/80' : cfg.color)}>
-                {overdue ? 'Overdue' : cfg.label}
-              </span>
-              {project.client && (
-                <>
-                  <span className="text-[#4A4A4A] text-[9px]">·</span>
-                  <span className="text-[9px] text-[#4A4A4A] truncate">{project.client.name}</span>
-                </>
-              )}
+      <div
+        className="relative flex items-stretch rounded-xl overflow-hidden
+          border border-[#242424] bg-[#161616]
+          transition-all duration-200
+          group-hover:-translate-y-px group-hover:border-[rgba(103,232,249,0.18)] group-hover:bg-[#1A1A1A]
+          group-hover:shadow-[0_4px_24px_rgba(0,0,0,0.4)]
+          active:scale-[0.99] active:transition-none"
+      >
+        {/* Cyan top glow on hover */}
+        <div
+          className="absolute top-0 left-0 right-0 h-px opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+          style={{ background: 'linear-gradient(90deg, transparent 10%, var(--space-accent) 50%, transparent 90%)' }}
+        />
+
+        {/* Left accent bar — status color */}
+        <div
+          className="w-[3px] shrink-0 transition-opacity duration-200 opacity-30 group-hover:opacity-80"
+          style={{ background: overdue ? '#fbbf24' : 'var(--space-accent)' }}
+        />
+
+        <div className="flex-1 min-w-0 px-4 py-3.5 space-y-2.5">
+          {/* Header row */}
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-[#E8E8E8] group-hover:text-white truncate transition-colors duration-200 leading-snug">
+                {project.name}
+              </p>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span
+                  className={cn(
+                    'text-[9px] font-semibold uppercase tracking-widest',
+                    overdue ? 'text-amber-400/80' : cfg.color,
+                  )}
+                >
+                  {overdue ? 'Overdue' : cfg.label}
+                </span>
+                {project.client && (
+                  <>
+                    <span className="text-[#444444] text-[9px]">·</span>
+                    <span className="text-[10px] text-[#777777] truncate">{project.client.name}</span>
+                  </>
+                )}
+              </div>
             </div>
-            <p className="text-base font-semibold text-[#F0F0F0]">{project.name}</p>
-            {project.description && (
-              <p className="text-xs text-[#6B6B6B] mt-1 line-clamp-2">{project.description}</p>
-            )}
+            <ArrowRight
+              className="size-3.5 shrink-0 mt-0.5 transition-all duration-200 group-hover:translate-x-0.5"
+              style={{ color: 'rgba(103,232,249,0.25)' }}
+            />
           </div>
-          <ArrowRight className="size-4 text-[#4A4A4A] shrink-0 mt-1" />
-        </div>
 
-        {activeSprint && (
-          <div className="rounded-lg border border-[#404040] bg-[rgba(255,255,255,0.02)] px-3 py-2.5 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] text-[#6B6B6B] font-medium truncate">{activeSprint.name}</span>
-              <span className={cn('text-[9px] shrink-0 ml-2', SPRINT_STATUS[activeSprint.status].color)}>
-                {SPRINT_STATUS[activeSprint.status].label}
-              </span>
+          {/* Active sprint progress */}
+          {activeSprint && activeSprint.totalTasksCount > 0 && (
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-[#666666] truncate max-w-[70%]">{activeSprint.name}</span>
+                <span className="text-[10px] text-[#555555] tabular-nums shrink-0 ml-2">
+                  {activeSprint.completedTasksCount}/{activeSprint.totalTasksCount}
+                </span>
+              </div>
+              <div className="h-px bg-[#2A2A2A] rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{
+                    width: `${sprintProgress}%`,
+                    background: sprintProgress === 100
+                      ? 'rgba(52,211,153,0.6)'
+                      : 'rgba(103,232,249,0.45)',
+                  }}
+                />
+              </div>
             </div>
-            {activeSprint.totalTasksCount > 0 && (
-              <>
-                <div className="h-1.5 bg-[#333333] rounded-full overflow-hidden">
-                  <div className="h-full bg-[rgba(139,156,182,0.30)] rounded-full" style={{ width: `${sprintProgress}%` }} />
-                </div>
-                <p className="text-[9px] text-[#4A4A4A] tabular-nums">
-                  {activeSprint.completedTasksCount}/{activeSprint.totalTasksCount} tasks · {sprintProgress}%
-                </p>
-              </>
-            )}
-          </div>
-        )}
+          )}
 
-        <div className="flex items-center justify-between text-[10px] text-[#4A4A4A]">
-          <div className="flex items-center gap-3">
+          {/* Footer */}
+          <div className="flex items-center gap-3 text-[10px] text-[#4A4A4A] group-hover:text-[#5A5A5A] transition-colors duration-200">
             {project.sprints.length > 0 && (
-              <span>{project.sprints.length} sprint{project.sprints.length !== 1 ? 's' : ''}</span>
+              <span>{project.sprints.length}sp</span>
             )}
             {project.milestones.length > 0 && (
               <span>{completedMilestones}/{project.milestones.length} milestones</span>
             )}
+            <span className="ml-auto tabular-nums">{relTime(project.updatedAt)}</span>
           </div>
-          <span className="tabular-nums">{relTime(project.updatedAt)}</span>
         </div>
       </div>
     </Link>

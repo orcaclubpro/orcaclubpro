@@ -7,30 +7,23 @@ import { cn } from '@/lib/utils'
 import { fetchSearchData } from '@/actions/search'
 import type { SearchClient, SearchProject, SearchSprint } from '@/actions/search'
 
-// ─── Status dot colours ───────────────────────────────────────────────────────
-
-const PROJECT_STATUS_DOT: Record<string, string> = {
-  pending:       'bg-yellow-400',
-  'in-progress': 'bg-[#1E3A6E]',
-  'on-hold':     'bg-orange-400',
-  completed:     'bg-green-400',
-  cancelled:     'bg-red-400/70',
-  active:        'bg-green-400',
-}
-
-const SPRINT_STATUS_DOT: Record<string, string> = {
-  pending:       'bg-yellow-400',
-  'in-progress': 'bg-[#1E3A6E]',
-  delayed:       'bg-orange-400',
-  finished:      'bg-green-400',
-}
-
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type ResultItem =
-  | { type: 'client'; data: SearchClient }
+  | { type: 'client';  data: SearchClient  }
   | { type: 'project'; data: SearchProject }
-  | { type: 'sprint'; data: SearchSprint }
+  | { type: 'sprint';  data: SearchSprint  }
+
+// ─── Status labels ────────────────────────────────────────────────────────────
+
+const PROJECT_STATUS_LABEL: Record<string, string> = {
+  pending:       'Pending',
+  'in-progress': 'In Progress',
+  'on-hold':     'On Hold',
+  completed:     'Completed',
+  cancelled:     'Cancelled',
+  active:        'Active',
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -46,21 +39,17 @@ function buildResults(
   if (!data || !query.trim()) return []
   const q = query.trim()
   const out: ResultItem[] = []
-
   for (const client of data.clients) {
-    if (matches(client.name, q) || matches(client.email, q) || matches(client.company, q)) {
+    if (matches(client.name, q) || matches(client.email, q) || matches(client.company, q))
       out.push({ type: 'client', data: client })
-    }
   }
   for (const project of data.projects) {
-    if (matches(project.name, q) || matches(project.clientName, q) || matches(project.description, q)) {
+    if (matches(project.name, q) || matches(project.clientName, q) || matches(project.description, q))
       out.push({ type: 'project', data: project })
-    }
   }
   for (const sprint of data.sprints) {
-    if (matches(sprint.name, q) || matches(sprint.projectName, q) || matches(sprint.clientName, q) || matches(sprint.description, q)) {
+    if (matches(sprint.name, q) || matches(sprint.projectName, q) || matches(sprint.clientName, q) || matches(sprint.description, q))
       out.push({ type: 'sprint', data: sprint })
-    }
   }
   return out
 }
@@ -74,23 +63,21 @@ interface GlobalSearchPaletteProps {
 export function GlobalSearchPalette({ username }: GlobalSearchPaletteProps) {
   const router = useRouter()
 
-  const [isOpen, setIsOpen] = useState(false)
-  const [query, setQuery] = useState('')
-  const [data, setData] = useState<{ clients: SearchClient[]; projects: SearchProject[]; sprints: SearchSprint[] } | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [fetchError, setFetchError] = useState<string | null>(null)
+  const [isOpen,      setIsOpen]      = useState(false)
+  const [query,       setQuery]       = useState('')
+  const [data,        setData]        = useState<{ clients: SearchClient[]; projects: SearchProject[]; sprints: SearchSprint[] } | null>(null)
+  const [isLoading,   setIsLoading]   = useState(false)
+  const [fetchError,  setFetchError]  = useState<string | null>(null)
   const [selectedIdx, setSelectedIdx] = useState(0)
 
-  const inputRef = useRef<HTMLInputElement>(null)
-  const listRef = useRef<HTMLDivElement>(null)
-  const dataLoadedRef = useRef(false)
-
-  // Mutable refs so keyboard handlers never go stale
-  const isOpenRef = useRef(isOpen)
+  const inputRef       = useRef<HTMLInputElement>(null)
+  const listRef        = useRef<HTMLDivElement>(null)
+  const dataLoadedRef  = useRef(false)
+  const isOpenRef      = useRef(isOpen)
   const selectedIdxRef = useRef(selectedIdx)
-  const resultsRef = useRef<ResultItem[]>([])
+  const resultsRef     = useRef<ResultItem[]>([])
 
-  isOpenRef.current = isOpen
+  isOpenRef.current      = isOpen
   selectedIdxRef.current = selectedIdx
 
   // ── Data loading ────────────────────────────────────────────────────────────
@@ -106,11 +93,9 @@ export function GlobalSearchPalette({ username }: GlobalSearchPaletteProps) {
       setData(result.data)
     } else {
       setFetchError(result.error ?? 'Failed to load')
-      dataLoadedRef.current = false // allow retry
+      dataLoadedRef.current = false
     }
   }
-
-  // ── Open / close ────────────────────────────────────────────────────────────
 
   const openPalette = () => {
     setIsOpen(true)
@@ -126,7 +111,7 @@ export function GlobalSearchPalette({ username }: GlobalSearchPaletteProps) {
     setSelectedIdx(0)
   }
 
-  // ── Custom DOM event (from nav bar) ─────────────────────────────────────────
+  // ── Event listeners ─────────────────────────────────────────────────────────
 
   useEffect(() => {
     const handler = () => openPalette()
@@ -134,11 +119,8 @@ export function GlobalSearchPalette({ username }: GlobalSearchPaletteProps) {
     return () => document.removeEventListener('orcaclub:open-search', handler)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Global L shortcut ────────────────────────────────────────────────────────
-
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      // Skip if modifier keys are held or focus is in an input/textarea
       if (e.metaKey || e.ctrlKey || e.altKey) return
       const tag = (e.target as HTMLElement)?.tagName
       if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable) return
@@ -152,48 +134,30 @@ export function GlobalSearchPalette({ username }: GlobalSearchPaletteProps) {
     return () => document.removeEventListener('keydown', handler)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Keyboard navigation inside palette ─────────────────────────────────────
-
   useEffect(() => {
     if (!isOpen) return
-
     const handler = (e: KeyboardEvent) => {
       const results = resultsRef.current
       switch (e.key) {
         case 'Escape':
-          e.preventDefault()
-          closePalette()
-          break
+          e.preventDefault(); closePalette(); break
         case 'ArrowDown':
           e.preventDefault()
-          setSelectedIdx((i) => {
-            const next = Math.min(results.length - 1, i + 1)
-            selectedIdxRef.current = next
-            return next
-          })
+          setSelectedIdx((i) => { const n = Math.min(results.length - 1, i + 1); selectedIdxRef.current = n; return n })
           break
         case 'ArrowUp':
           e.preventDefault()
-          setSelectedIdx((i) => {
-            const next = Math.max(0, i - 1)
-            selectedIdxRef.current = next
-            return next
-          })
+          setSelectedIdx((i) => { const n = Math.max(0, i - 1); selectedIdxRef.current = n; return n })
           break
         case 'Enter':
           e.preventDefault()
-          if (results[selectedIdxRef.current]) {
-            navigateToResult(results[selectedIdxRef.current])
-          }
+          if (results[selectedIdxRef.current]) navigateToResult(results[selectedIdxRef.current])
           break
       }
     }
-
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
   }, [isOpen]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── Scroll selected item into view ─────────────────────────────────────────
 
   useEffect(() => {
     const el = listRef.current?.querySelector(`[data-idx="${selectedIdx}"]`)
@@ -205,36 +169,24 @@ export function GlobalSearchPalette({ username }: GlobalSearchPaletteProps) {
   const results = buildResults(data, query)
   resultsRef.current = results
 
-  // Reset selection when query changes
-  useEffect(() => {
-    setSelectedIdx(0)
-  }, [query])
-
-  // ── Navigation ──────────────────────────────────────────────────────────────
+  useEffect(() => { setSelectedIdx(0) }, [query])
 
   const navigateToResult = (item: ResultItem) => {
     closePalette()
-    if (item.type === 'client') {
-      router.push(`/u/${username}/clients/${item.data.id}`)
-    } else if (item.type === 'project') {
-      router.push(`/u/${username}/projects/${item.data.id}`)
-    } else {
-      router.push(`/u/${username}/projects/${item.data.projectId}?tab=sprints`)
-    }
+    if (item.type === 'client')        router.push(`/u/${username}/clients/${item.data.id}`)
+    else if (item.type === 'project')  router.push(`/u/${username}/projects/${item.data.id}`)
+    else                               router.push(`/u/${username}/projects/${item.data.projectId}?tab=sprints`)
   }
 
-  // ── Split results by type for grouped display ───────────────────────────────
-
-  const clientResults = results.filter((r): r is { type: 'client'; data: SearchClient } => r.type === 'client')
+  const clientResults  = results.filter((r): r is { type: 'client';  data: SearchClient  } => r.type === 'client')
   const projectResults = results.filter((r): r is { type: 'project'; data: SearchProject } => r.type === 'project')
-  const sprintResults = results.filter((r): r is { type: 'sprint'; data: SearchSprint } => r.type === 'sprint')
+  const sprintResults  = results.filter((r): r is { type: 'sprint';  data: SearchSprint  } => r.type === 'sprint')
 
-  // Global index within the flat `results` array
-  let globalIdx = 0
-
-  const totalClients = data?.clients.length ?? 0
+  const totalClients  = data?.clients.length  ?? 0
   const totalProjects = data?.projects.length ?? 0
-  const totalSprints = data?.sprints.length ?? 0
+  const totalSprints  = data?.sprints.length  ?? 0
+
+  let globalIdx = 0
 
   if (!isOpen) return null
 
@@ -242,45 +194,45 @@ export function GlobalSearchPalette({ username }: GlobalSearchPaletteProps) {
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-[75] bg-[#000000]/[0.40] animate-in fade-in duration-150"
+        className="fixed inset-0 z-[75] animate-in fade-in duration-150"
+        style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(2px)' }}
         onClick={closePalette}
       />
 
       {/* Palette */}
-      <div
-        className="fixed left-1/2 top-[12vh] z-[76] w-full max-w-xl -translate-x-1/2 px-4 animate-in fade-in slide-in-from-top-3 duration-200"
-      >
+      <div className="fixed left-1/2 top-[10vh] z-[76] w-full max-w-[560px] -translate-x-1/2 px-4 animate-in fade-in slide-in-from-top-2 duration-200">
         <div
-          className="overflow-hidden rounded-2xl border border-[#404040] shadow-2xl shadow-[#000000]/[0.40]"
-          style={{ background: '#1C1C1C' }}
+          className="overflow-hidden rounded-2xl shadow-[0_32px_80px_rgba(0,0,0,0.7)]"
+          style={{
+            background: '#111111',
+            border: '1px solid rgba(255,255,255,0.07)',
+          }}
         >
-          {/* Top accent line */}
-          <div className="h-px w-full bg-gradient-to-r from-transparent via-[#1E3A6E]/30 to-transparent" />
-
-          {/* Search input */}
-          <div className="flex items-center gap-3 px-5 py-4 border-b border-[#404040]">
-            {isLoading ? (
-              <Loader2 className="size-4 text-[#4A4A4A] shrink-0 animate-spin" />
-            ) : (
-              <Search className="size-4 text-[#4A4A4A] shrink-0" />
-            )}
+          {/* Search input row */}
+          <div className="flex items-center gap-3 px-4 py-3.5 border-b border-[#1E1E1E]">
+            <div className="size-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'rgba(103,232,249,0.07)', border: '1px solid rgba(103,232,249,0.12)' }}>
+              {isLoading
+                ? <Loader2 className="size-3.5 animate-spin" style={{ color: 'var(--space-accent)' }} />
+                : <Search className="size-3.5" style={{ color: 'var(--space-accent)' }} />
+              }
+            </div>
             <input
               ref={inputRef}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search clients, projects and sprints…"
-              className="flex-1 bg-transparent text-[#F0F0F0] text-sm placeholder:text-[#4A4A4A] outline-none"
+              placeholder="Search clients, projects, sprints…"
+              className="flex-1 bg-transparent text-white text-sm placeholder:text-[#555555] outline-none"
             />
             <div className="flex items-center gap-2 shrink-0">
               {query ? (
                 <button
                   onClick={() => { setQuery(''); inputRef.current?.focus() }}
-                  className="text-[#4A4A4A] hover:text-[#6B6B6B] transition-colors"
+                  className="size-5 rounded flex items-center justify-center text-[#3A3A3A] hover:text-[#6B6B6B] hover:bg-[#222222] transition-all"
                 >
-                  <X className="size-3.5" />
+                  <X className="size-3" />
                 </button>
               ) : (
-                <kbd className="hidden sm:inline text-[10px] text-[#4A4A4A] bg-[#252525] border border-[#404040] rounded-md px-1.5 py-0.5 font-mono">
+                <kbd className="hidden sm:inline text-[10px] text-[#2A2A2A] bg-[#1A1A1A] border border-[#252525] rounded px-1.5 py-0.5 font-mono tracking-wide">
                   L
                 </kbd>
               )}
@@ -288,15 +240,15 @@ export function GlobalSearchPalette({ username }: GlobalSearchPaletteProps) {
           </div>
 
           {/* Body */}
-          <div ref={listRef} className="max-h-[54vh] overflow-y-auto">
+          <div ref={listRef} className="max-h-[56vh] overflow-y-auto">
 
             {/* Error */}
             {fetchError && (
-              <div className="px-5 py-8 text-center">
-                <p className="text-sm text-red-400/70">{fetchError}</p>
+              <div className="px-5 py-10 text-center space-y-3">
+                <p className="text-sm text-red-400/60">{fetchError}</p>
                 <button
                   onClick={() => { dataLoadedRef.current = false; loadData() }}
-                  className="mt-3 text-xs text-[#4A4A4A] hover:text-[#6B6B6B] transition-colors"
+                  className="text-xs text-[#3A3A3A] hover:text-[#6B6B6B] transition-colors"
                 >
                   Retry
                 </button>
@@ -305,247 +257,151 @@ export function GlobalSearchPalette({ username }: GlobalSearchPaletteProps) {
 
             {/* Loading */}
             {!fetchError && isLoading && (
-              <div className="px-5 py-10 flex flex-col items-center gap-2.5">
-                <Loader2 className="size-5 text-[#4A4A4A] animate-spin" />
-                <p className="text-xs text-[#4A4A4A]">Loading…</p>
+              <div className="px-5 py-12 flex flex-col items-center gap-3">
+                <Loader2 className="size-4 text-[#2A2A2A] animate-spin" />
+                <p className="text-xs text-[#2A2A2A]">Loading workspace…</p>
               </div>
             )}
 
-            {/* Empty query — overview */}
+            {/* Empty query — workspace overview */}
             {!fetchError && !isLoading && !query.trim() && (
-              <div className="px-5 py-5 space-y-4">
-                <p className="text-[10px] tracking-[0.35em] uppercase text-[#4A4A4A] font-light">
+              <div className="px-4 py-4 space-y-3">
+                <p className="text-[9px] tracking-[0.4em] uppercase text-[#555555] font-semibold px-1">
                   Workspace
                 </p>
                 <div className="grid grid-cols-3 gap-2">
-                  <div className="flex items-center gap-2.5 px-3 py-3 rounded-xl bg-[#252525] border border-[#404040]">
-                    <div className="p-1.5 rounded-lg bg-[rgba(139,156,182,0.06)] border border-[rgba(139,156,182,0.10)]">
-                      <Building2 className="size-3 text-[#1E3A6E]/60" />
+                  {[
+                    { icon: Building2,    count: totalClients,  label: 'client' },
+                    { icon: FolderKanban, count: totalProjects, label: 'project' },
+                    { icon: Zap,          count: totalSprints,  label: 'sprint' },
+                  ].map(({ icon: Icon, count, label }) => (
+                    <div
+                      key={label}
+                      className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl"
+                      style={{ background: '#1A1A1A', border: '1px solid #252525' }}
+                    >
+                      <Icon className="size-3.5 shrink-0" style={{ color: 'rgba(103,232,249,0.5)' }} />
+                      <div>
+                        <p className="text-sm font-semibold text-white tabular-nums leading-none">
+                          {data ? count : '—'}
+                        </p>
+                        <p className="text-[9px] text-[#555555] mt-0.5">
+                          {label}{count !== 1 ? 's' : ''}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs font-semibold text-[#6B6B6B] tabular-nums">
-                        {data ? totalClients : '—'}
-                      </p>
-                      <p className="text-[10px] text-[#4A4A4A]">client{totalClients !== 1 ? 's' : ''}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2.5 px-3 py-3 rounded-xl bg-[#252525] border border-[#404040]">
-                    <div className="p-1.5 rounded-lg bg-[rgba(139,156,182,0.06)] border border-[rgba(139,156,182,0.10)]">
-                      <FolderKanban className="size-3 text-[#1E3A6E]/60" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-[#6B6B6B] tabular-nums">
-                        {data ? totalProjects : '—'}
-                      </p>
-                      <p className="text-[10px] text-[#4A4A4A]">project{totalProjects !== 1 ? 's' : ''}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2.5 px-3 py-3 rounded-xl bg-[#252525] border border-[#404040]">
-                    <div className="p-1.5 rounded-lg bg-[rgba(139,156,182,0.06)] border border-[rgba(139,156,182,0.10)]">
-                      <Zap className="size-3 text-[#1E3A6E]/60" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-[#6B6B6B] tabular-nums">
-                        {data ? totalSprints : '—'}
-                      </p>
-                      <p className="text-[10px] text-[#4A4A4A]">sprint{totalSprints !== 1 ? 's' : ''}</p>
-                    </div>
-                  </div>
+                  ))}
                 </div>
-                <p className="text-[11px] text-[#4A4A4A] leading-relaxed">
-                  Type to search across all clients, projects and sprints.
+                <p className="text-[11px] text-[#555555] px-1 leading-relaxed">
+                  Start typing to search across clients, projects and sprints.
                 </p>
               </div>
             )}
 
             {/* No results */}
             {!fetchError && !isLoading && query.trim() && results.length === 0 && (
-              <div className="px-5 py-10 text-center">
-                <p className="text-sm text-[#4A4A4A]">
+              <div className="px-5 py-12 text-center">
+                <p className="text-sm text-[#2A2A2A]">
                   No results for{' '}
-                  <span className="text-[#6B6B6B] font-mono">&ldquo;{query}&rdquo;</span>
+                  <span className="text-[#4A4A4A] font-mono">&ldquo;{query}&rdquo;</span>
                 </p>
               </div>
             )}
 
             {/* Results */}
             {!fetchError && !isLoading && results.length > 0 && (
-              <div className="py-2">
+              <div className="py-1.5">
 
-                {/* Clients group */}
+                {/* ── Clients ── */}
                 {clientResults.length > 0 && (
                   <div>
-                    <p className="px-5 pt-3 pb-1.5 text-[10px] tracking-[0.35em] uppercase text-[#4A4A4A] font-light flex items-center gap-1.5">
-                      <Building2 className="size-2.5" />
-                      Clients
-                    </p>
+                    <div className="flex items-center gap-2 px-4 py-2 mt-1">
+                      <Building2 className="size-2.5 text-[#555555]" />
+                      <span className="text-[9px] font-semibold uppercase tracking-[0.4em] text-[#555555]">Clients</span>
+                      <span className="ml-auto text-[9px] text-[#444444] tabular-nums">{clientResults.length}</span>
+                    </div>
                     {clientResults.map((item) => {
                       const idx = globalIdx++
                       const isSelected = idx === selectedIdx
                       return (
-                        <button
+                        <ResultRow
                           key={item.data.id}
-                          data-idx={idx}
+                          idx={idx}
+                          isSelected={isSelected}
+                          icon={Building2}
+                          primary={item.data.name}
+                          secondary={[item.data.company, item.data.email].filter(Boolean).join(' · ')}
                           onClick={() => navigateToResult(item)}
-                          className={cn(
-                            'w-full flex items-center gap-3 px-5 py-3 text-left transition-colors duration-100 group',
-                            isSelected ? 'bg-[#2D2D2D]' : 'hover:bg-[#252525]',
-                          )}
-                        >
-                          <div className={cn(
-                            'size-7 rounded-lg flex items-center justify-center shrink-0 transition-colors duration-100',
-                            isSelected
-                              ? 'bg-[rgba(139,156,182,0.10)] border border-[rgba(139,156,182,0.18)]'
-                              : 'bg-[#252525] border border-[#404040]',
-                          )}>
-                            <Building2 className={cn('size-3.5 transition-colors', isSelected ? 'text-[#1E3A6E]' : 'text-[#4A4A4A]')} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className={cn('text-sm font-medium truncate transition-colors', isSelected ? 'text-[#F0F0F0]' : 'text-[#A0A0A0]')}>
-                              {item.data.name}
-                            </p>
-                            <p className="text-[11px] text-[#4A4A4A] truncate">
-                              {item.data.company ? `${item.data.company} · ` : ''}
-                              {item.data.email}
-                            </p>
-                          </div>
-                          <ArrowRight className={cn(
-                            'size-3.5 shrink-0 transition-all duration-150',
-                            isSelected
-                              ? 'text-[#1E3A6E]/60'
-                              : 'text-[#555555] -translate-x-1 opacity-0 group-hover:opacity-100 group-hover:translate-x-0',
-                          )} />
-                        </button>
+                        />
                       )
                     })}
                   </div>
                 )}
 
-                {/* Projects group */}
+                {/* ── Projects ── */}
                 {projectResults.length > 0 && (
-                  <div>
-                    <p className={cn(
-                      'px-5 pb-1.5 text-[10px] tracking-[0.35em] uppercase text-[#4A4A4A] font-light flex items-center gap-1.5',
-                      clientResults.length > 0 ? 'pt-4 mt-1 border-t border-[#404040]' : 'pt-3',
-                    )}>
-                      <FolderKanban className="size-2.5" />
-                      Projects
-                    </p>
+                  <div className={clientResults.length > 0 ? 'mt-1 border-t border-[#181818]' : ''}>
+                    <div className="flex items-center gap-2 px-4 py-2 mt-1">
+                      <FolderKanban className="size-2.5 text-[#555555]" />
+                      <span className="text-[9px] font-semibold uppercase tracking-[0.4em] text-[#555555]">Projects</span>
+                      <span className="ml-auto text-[9px] text-[#444444] tabular-nums">{projectResults.length}</span>
+                    </div>
                     {projectResults.map((item) => {
                       const idx = globalIdx++
                       const isSelected = idx === selectedIdx
-                      const dotClass = PROJECT_STATUS_DOT[item.data.status] ?? 'bg-[#4A4A4A]/60'
                       return (
-                        <button
+                        <ResultRow
                           key={item.data.id}
-                          data-idx={idx}
+                          idx={idx}
+                          isSelected={isSelected}
+                          icon={FolderKanban}
+                          primary={item.data.name}
+                          secondary={[item.data.clientName, PROJECT_STATUS_LABEL[item.data.status] ?? item.data.status].filter(Boolean).join(' · ')}
                           onClick={() => navigateToResult(item)}
-                          className={cn(
-                            'w-full flex items-center gap-3 px-5 py-3 text-left transition-colors duration-100 group',
-                            isSelected ? 'bg-[#2D2D2D]' : 'hover:bg-[#252525]',
-                          )}
-                        >
-                          <div className={cn(
-                            'size-7 rounded-lg flex items-center justify-center shrink-0 transition-colors duration-100',
-                            isSelected
-                              ? 'bg-[rgba(139,156,182,0.10)] border border-[rgba(139,156,182,0.18)]'
-                              : 'bg-[#252525] border border-[#404040]',
-                          )}>
-                            <FolderKanban className={cn('size-3.5 transition-colors', isSelected ? 'text-[#1E3A6E]' : 'text-[#4A4A4A]')} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className={cn('text-sm font-medium truncate transition-colors', isSelected ? 'text-[#F0F0F0]' : 'text-[#A0A0A0]')}>
-                                {item.data.name}
-                              </p>
-                              <span className={cn('size-1.5 rounded-full shrink-0', dotClass)} />
-                            </div>
-                            <p className="text-[11px] text-[#4A4A4A] truncate">
-                              {item.data.clientName ? `${item.data.clientName} · ` : ''}
-                              {item.data.status}
-                            </p>
-                          </div>
-                          <ArrowRight className={cn(
-                            'size-3.5 shrink-0 transition-all duration-150',
-                            isSelected
-                              ? 'text-[#1E3A6E]/60'
-                              : 'text-[#555555] -translate-x-1 opacity-0 group-hover:opacity-100 group-hover:translate-x-0',
-                          )} />
-                        </button>
+                        />
                       )
                     })}
                   </div>
                 )}
 
-                {/* Sprints group */}
+                {/* ── Sprints ── */}
                 {sprintResults.length > 0 && (
-                  <div>
-                    <p className={cn(
-                      'px-5 pb-1.5 text-[10px] tracking-[0.35em] uppercase text-[#4A4A4A] font-light flex items-center gap-1.5',
-                      (clientResults.length > 0 || projectResults.length > 0) ? 'pt-4 mt-1 border-t border-[#404040]' : 'pt-3',
-                    )}>
-                      <Zap className="size-2.5" />
-                      Sprints
-                    </p>
+                  <div className={(clientResults.length > 0 || projectResults.length > 0) ? 'mt-1 border-t border-[#181818]' : ''}>
+                    <div className="flex items-center gap-2 px-4 py-2 mt-1">
+                      <Zap className="size-2.5 text-[#555555]" />
+                      <span className="text-[9px] font-semibold uppercase tracking-[0.4em] text-[#555555]">Sprints</span>
+                      <span className="ml-auto text-[9px] text-[#444444] tabular-nums">{sprintResults.length}</span>
+                    </div>
                     {sprintResults.map((item) => {
                       const idx = globalIdx++
                       const isSelected = idx === selectedIdx
-                      const dotClass = SPRINT_STATUS_DOT[item.data.status] ?? 'bg-[#4A4A4A]/60'
                       return (
-                        <button
+                        <ResultRow
                           key={item.data.id}
-                          data-idx={idx}
+                          idx={idx}
+                          isSelected={isSelected}
+                          icon={Zap}
+                          primary={item.data.name}
+                          secondary={[item.data.projectName, item.data.clientName].filter(Boolean).join(' · ')}
                           onClick={() => navigateToResult(item)}
-                          className={cn(
-                            'w-full flex items-center gap-3 px-5 py-3 text-left transition-colors duration-100 group',
-                            isSelected ? 'bg-[#2D2D2D]' : 'hover:bg-[#252525]',
-                          )}
-                        >
-                          <div className={cn(
-                            'size-7 rounded-lg flex items-center justify-center shrink-0 transition-colors duration-100',
-                            isSelected
-                              ? 'bg-[rgba(139,156,182,0.10)] border border-[rgba(139,156,182,0.18)]'
-                              : 'bg-[#252525] border border-[#404040]',
-                          )}>
-                            <Zap className={cn('size-3.5 transition-colors', isSelected ? 'text-[#1E3A6E]' : 'text-[#4A4A4A]')} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className={cn('text-sm font-medium truncate transition-colors', isSelected ? 'text-[#F0F0F0]' : 'text-[#A0A0A0]')}>
-                                {item.data.name}
-                              </p>
-                              <span className={cn('size-1.5 rounded-full shrink-0', dotClass)} />
-                            </div>
-                            <p className="text-[11px] text-[#4A4A4A] truncate">
-                              {item.data.projectName}
-                              {item.data.clientName ? ` · ${item.data.clientName}` : ''}
-                            </p>
-                          </div>
-                          <ArrowRight className={cn(
-                            'size-3.5 shrink-0 transition-all duration-150',
-                            isSelected
-                              ? 'text-[#1E3A6E]/60'
-                              : 'text-[#555555] -translate-x-1 opacity-0 group-hover:opacity-100 group-hover:translate-x-0',
-                          )} />
-                        </button>
+                        />
                       )
                     })}
                   </div>
                 )}
-
               </div>
             )}
           </div>
 
           {/* Footer */}
-          <div className="px-5 py-3 border-t border-[#404040] flex items-center gap-4">
+          <div className="px-4 py-2.5 border-t border-[#1E1E1E] flex items-center gap-4">
             {[
               { key: '↑↓', label: 'navigate' },
-              { key: '↵',  label: 'open' },
-              { key: 'esc', label: 'close' },
+              { key: '↵',  label: 'open'     },
+              { key: 'esc', label: 'close'   },
             ].map(({ key, label }) => (
-              <span key={key} className="flex items-center gap-1.5 text-[10px] text-[#4A4A4A]">
-                <kbd className="font-mono bg-[#252525] border border-[#404040] rounded px-1.5 py-0.5 text-[#4A4A4A]">
+              <span key={key} className="flex items-center gap-1.5 text-[10px] text-[#555555]">
+                <kbd className="font-mono text-[#888888] bg-[#1A1A1A] border border-[#2A2A2A] rounded px-1.5 py-0.5">
                   {key}
                 </kbd>
                 {label}
@@ -555,5 +411,77 @@ export function GlobalSearchPalette({ username }: GlobalSearchPaletteProps) {
         </div>
       </div>
     </>
+  )
+}
+
+// ─── Result row ───────────────────────────────────────────────────────────────
+
+function ResultRow({
+  idx,
+  isSelected,
+  icon: Icon,
+  primary,
+  secondary,
+  onClick,
+}: {
+  idx: number
+  isSelected: boolean
+  icon: React.ComponentType<{ className?: string }>
+  primary: string
+  secondary: string
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      data-idx={idx}
+      onClick={onClick}
+      className={cn(
+        'w-full flex items-center gap-3 px-4 py-2.5 text-left transition-all duration-100 group relative',
+        isSelected ? 'bg-[#161616]' : 'hover:bg-[#141414]',
+      )}
+    >
+      {/* Selected left bar */}
+      {isSelected && (
+        <div
+          className="absolute left-0 top-1 bottom-1 w-[2px] rounded-full"
+          style={{ background: 'var(--space-accent)', opacity: 0.6 }}
+        />
+      )}
+
+      <Icon
+        className={cn(
+          'size-3.5 shrink-0 transition-colors duration-100',
+          isSelected ? 'text-[var(--space-accent)]/70' : 'text-[#444444]',
+        )}
+      />
+
+      <div className="flex-1 min-w-0">
+        <p className={cn(
+          'text-sm truncate transition-colors duration-100',
+          isSelected ? 'text-white font-medium' : 'text-[#B0B0B0] group-hover:text-[#D0D0D0]',
+        )}>
+          {primary}
+        </p>
+        {secondary && (
+          <p className={cn(
+            'text-[11px] truncate transition-colors duration-100',
+            isSelected ? 'text-[#555555]' : 'text-[#444444] group-hover:text-[#555555]',
+          )}>
+            {secondary}
+          </p>
+        )}
+      </div>
+
+      <ArrowRight
+        className={cn(
+          'size-3 shrink-0 transition-all duration-150',
+          isSelected
+            ? 'opacity-60 translate-x-0'
+            : 'opacity-0 -translate-x-1 group-hover:opacity-30 group-hover:translate-x-0',
+        )}
+        style={isSelected ? { color: 'var(--space-accent)' } : { color: '#6B6B6B' }}
+      />
+    </button>
   )
 }
