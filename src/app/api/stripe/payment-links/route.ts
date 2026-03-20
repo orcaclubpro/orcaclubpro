@@ -273,6 +273,9 @@ export async function POST(request: NextRequest) {
       days_until_due: 30,
       auto_advance: false, // ✅ Don't auto-finalize - we'll do it manually
       description: `Order ${orderNumber}`,
+      payment_settings: {
+        payment_method_types: ['card', 'us_bank_account'], // Enable ACH (capped at $5)
+      },
       metadata: {
         order_number: orderNumber,
         orcaclub_order_id: order.id,

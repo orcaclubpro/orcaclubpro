@@ -224,21 +224,6 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
           </span>
         </button>
 
-        {/* Search — desktop admin only */}
-        {!isClient && (
-          <>
-            <div className="hidden md:block w-px h-5 bg-white/10 self-center mx-0.5" />
-            <button
-              onClick={() => document.dispatchEvent(new CustomEvent('orcaclub:open-search'))}
-              className="hidden md:flex flex-col items-center gap-1.5 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-95 hover:bg-white/[0.06] cursor-pointer"
-              aria-label="Open search"
-            >
-              <Search className="size-5 text-white/40" />
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-white/40 leading-none">Search</span>
-            </button>
-          </>
-        )}
-
         {/* Back button — detail sub-pages */}
         {onDetailPage && (
           <>

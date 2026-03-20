@@ -4,29 +4,26 @@ import type { NdaFormData, SowFormData } from './document-generators'
 // ── Color palette ──────────────────────────────────────────────────────────────
 
 const C = {
-  navy:  rgb(0.122, 0.306, 0.475),
-  black: rgb(0.1,   0.1,   0.1),
-  grey:  rgb(0.35,  0.35,  0.35),
-  lgrey: rgb(0.6,   0.6,   0.6),
-  line:  rgb(0.69,  0.77,  0.85),
-  lblue: rgb(0.84,  0.89,  0.94),
-  bg:    rgb(0.972, 0.976, 0.98),
-  field: rgb(0.95,  0.97,  1.0),
+  navy:  rgb(0.102, 0.196, 0.400),
+  black: rgb(0.10,  0.10,  0.10),
+  dark:  rgb(0.24,  0.24,  0.24),
+  mid:   rgb(0.42,  0.42,  0.42),
+  light: rgb(0.60,  0.60,  0.60),
+  rule:  rgb(0.78,  0.80,  0.85),
+  bgAlt: rgb(0.952, 0.955, 0.961),
   white: rgb(1,     1,     1),
-  cyan:  rgb(0.404, 0.91,  0.976),
-  dark:  rgb(0.051, 0.051, 0.051),
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 function fmtDate(val: string): string {
-  if (!val) return '______________________________'
+  if (!val) return '___________________________'
   const d = new Date(val + 'T00:00:00')
   return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
 }
 
-function blank(val: string, fallback = '______________________________'): string {
-  return val.trim() || fallback
+function blank(val: string, fallback = '___________________________'): string {
+  return val?.trim() || fallback
 }
 
 function wrap(text: string, font: PDFFont, size: number, maxW: number): string[] {
@@ -46,744 +43,984 @@ function wrap(text: string, font: PDFFont, size: number, maxW: number): string[]
   return lines.length ? lines : ['']
 }
 
-// ── DocWriter ─────────────────────────────────────────────────────────────────
+// ── DocWriter ──────────────────────────────────────────────────────────────────
 
 class DocWriter {
-  doc: PDFDocument
-  page!: PDFPage
-  bold!: PDFFont
-  normal!: PDFFont
-  x: number
-  y: number
-  ml: number
-  mr: number
-  mt: number
-  mb: number
-  pw: number
-  ph: number
-  innerW: number
-  prefix: string
+  doc:     PDFDocument
+  page!:   PDFPage
+  bold:    PDFFont
+  normal:  PDFFont
+  x = 0; y = 0
+  ml = 68; mr = 68; mt = 72; mb = 72
+  pw = 612; ph = 792
+  innerW:  number
+  prefix:  string
+  private pageNum  = 0
+  private runTitle = ''
+  private footNote = ''
 
-  constructor(doc: PDFDocument, bold: PDFFont, normal: PDFFont, prefix = '') {
-    this.doc    = doc
-    this.bold   = bold
-    this.normal = normal
-    this.x      = 0
-    this.y      = 0
-    this.ml     = 72
-    this.mr     = 72
-    this.mt     = 72
-    this.mb     = 72
-    this.pw     = 612
-    this.ph     = 792
-    this.innerW = this.pw - this.ml - this.mr
-    this.prefix = prefix
-    this._np()
+  constructor(
+    doc: PDFDocument, bold: PDFFont, normal: PDFFont,
+    prefix = '', runTitle = '', footNote = '',
+  ) {
+    this.doc      = doc
+    this.bold     = bold
+    this.normal   = normal
+    this.innerW   = this.pw - this.ml - this.mr
+    this.prefix   = prefix
+    this.runTitle = runTitle
+    this.footNote = footNote
+    this._np(true)
   }
 
-  setFonts(bold: PDFFont, normal: PDFFont) {
-    this.bold   = bold
-    this.normal = normal
-  }
+  // ── Pagination ───────────────────────────────────────────────────────────────
 
-  _np() {
+  _np(isFirst = false) {
     this.page = this.doc.addPage([this.pw, this.ph])
-    this.y    = this.ph - this.mt
-    this.x    = this.ml
+    this.pageNum++
+    this.x = this.ml
+    if (isFirst) {
+      this.y = this.ph - this.mt
+    } else {
+      this._drawRunningHeader()
+      this.y = this.ph - 52
+    }
+  }
+
+  private _drawRunningHeader() {
+    const y = this.ph - 33
+    this.page.drawLine({
+      start: { x: this.ml, y: y - 6 },
+      end:   { x: this.pw - this.mr, y: y - 6 },
+      thickness: 0.4, color: C.rule,
+    })
+    this.page.drawText(this.runTitle, {
+      x: this.ml, y, size: 7, font: this.bold, color: C.light,
+    })
+    const pg  = `Page ${this.pageNum}`
+    const pgW = this.normal.widthOfTextAtSize(pg, 7)
+    this.page.drawText(pg, {
+      x: this.pw - this.mr - pgW, y, size: 7, font: this.normal, color: C.light,
+    })
+  }
+
+  _drawFooter() {
+    this.page.drawLine({
+      start: { x: this.ml, y: this.mb + 12 },
+      end:   { x: this.pw - this.mr, y: this.mb + 12 },
+      thickness: 0.4, color: C.rule,
+    })
+    if (!this.footNote) return
+    const size = 6.5
+    const tw = this.normal.widthOfTextAtSize(this.footNote, size)
+    this.page.drawText(this.footNote, {
+      x: (this.pw - tw) / 2, y: this.mb,
+      size, font: this.normal, color: C.light,
+    })
   }
 
   need(n: number) {
-    if (this.y - n < this.mb) this._np()
+    if (this.y - n < this.mb + 24) {
+      this._drawFooter()
+      this._np()
+    }
   }
 
-  sp(n = 6) {
-    this.y -= n
-  }
+  sp(n = 6) { this.y -= n }
 
-  hr(color = C.navy, thick = 1) {
-    this.need(8)
+  // ── Title block (page 1) ─────────────────────────────────────────────────────
+
+  titleBlock(title: string, subtitle?: string) {
     this.page.drawLine({
       start: { x: this.ml, y: this.y },
       end:   { x: this.pw - this.mr, y: this.y },
-      thickness: thick,
-      color,
+      thickness: 2.5, color: C.navy,
     })
-    this.y -= 8
+    this.y -= 20
+
+    const ts = 17
+    const tw = this.bold.widthOfTextAtSize(title, ts)
+    this.page.drawText(title, {
+      x: (this.pw - tw) / 2, y: this.y,
+      size: ts, font: this.bold, color: C.navy,
+    })
+    this.y -= ts + 8
+
+    if (subtitle) {
+      const ss = 8.5
+      const sw = this.normal.widthOfTextAtSize(subtitle, ss)
+      this.page.drawText(subtitle, {
+        x: (this.pw - sw) / 2, y: this.y,
+        size: ss, font: this.normal, color: C.mid,
+      })
+      this.y -= ss + 12
+    }
+
+    this.page.drawLine({
+      start: { x: this.ml, y: this.y },
+      end:   { x: this.pw - this.mr, y: this.y },
+      thickness: 0.5, color: C.rule,
+    })
+    this.y -= 18
   }
 
-  thr() { this.hr(C.navy, 2) }
-
-  ctr(text: string, size = 10, color = C.grey, bold = false) {
-    this.need(size + 6)
-    const font  = bold ? this.bold : this.normal
-    const tw    = font.widthOfTextAtSize(text, size)
-    this.page.drawText(text, { x: (this.pw - tw) / 2, y: this.y, size, font, color })
-    this.y -= size + 6
-  }
-
-  title(text: string) {
-    this.need(22)
-    const size = 16
-    const tw   = this.bold.widthOfTextAtSize(text, size)
-    this.page.drawText(text, { x: (this.pw - tw) / 2, y: this.y, size, font: this.bold, color: C.navy })
-    this.y -= size + 8
-  }
-
-  subtitle(text: string) {
-    this.need(14)
-    const size = 9
-    const tw   = this.normal.widthOfTextAtSize(text, size)
-    this.page.drawText(text, { x: (this.pw - tw) / 2, y: this.y, size, font: this.normal, color: C.lgrey })
-    this.y -= size + 8
-  }
+  // ── Section heading ──────────────────────────────────────────────────────────
 
   section(text: string) {
-    this.need(20)
-    this.sp(4)
-    const size = 11
-    this.page.drawText(text.toUpperCase(), { x: this.x, y: this.y, size, font: this.bold, color: C.navy })
-    this.y -= size + 6
+    this.need(26)
+    this.sp(10)
+    const size = 8.5
+    this.page.drawRectangle({
+      x: this.ml - 9, y: this.y - (size - 1),
+      width: 3, height: size + 1,
+      color: C.navy,
+    })
+    this.page.drawText(text.toUpperCase(), {
+      x: this.x, y: this.y, size, font: this.bold, color: C.navy,
+    })
+    this.y -= size + 5
+    this.page.drawLine({
+      start: { x: this.ml, y: this.y },
+      end:   { x: this.pw - this.mr, y: this.y },
+      thickness: 0.3, color: C.rule,
+    })
+    this.y -= 7
   }
+
+  // ── Subsection ───────────────────────────────────────────────────────────────
 
   sub(text: string) {
-    this.need(16)
-    const size = 9.5
-    this.page.drawText(text, { x: this.x, y: this.y, size, font: this.bold, color: C.navy })
-    this.y -= size + 5
+    this.need(20)
+    this.sp(4)
+    this.page.drawText(text, {
+      x: this.x, y: this.y, size: 9, font: this.bold, color: C.dark,
+    })
+    this.y -= 15
   }
 
-  body(text: string, size = 10, color = C.black) {
+  // ── Body text ────────────────────────────────────────────────────────────────
+
+  body(text: string, size = 9.5, color = C.black) {
     const lines = wrap(text, this.normal, size, this.innerW)
     for (const line of lines) {
       this.need(size + 5)
       this.page.drawText(line, { x: this.x, y: this.y, size, font: this.normal, color })
-      this.y -= size + 5
+      this.y -= size + 4.5
     }
   }
 
-  mixed(segments: Array<{ text: string; bold?: boolean }>, size = 10) {
-    // Renders a line with mixed bold/normal segments, wrapping as a whole
-    const fullText = segments.map(s => s.text).join('')
-    const lines = wrap(fullText, this.normal, size, this.innerW)
-    // Rebuild segments per line (simple approach: render full line, bold via overlay)
-    // For simplicity, render the assembled text normally then re-draw bold segments
-    for (const line of lines) {
-      this.need(size + 5)
-      this.page.drawText(line, { x: this.x, y: this.y, size, font: this.normal, color: C.black })
-      // Bold overlay: walk segments that appear in this line
-      let cx = this.x
-      for (const seg of segments) {
-        if (!seg.bold) {
-          cx += this.normal.widthOfTextAtSize(seg.text, size)
-          continue
-        }
-        const idx = line.indexOf(seg.text)
-        if (idx >= 0) {
-          const prefix2 = line.slice(0, idx)
-          const ox = this.x + this.normal.widthOfTextAtSize(prefix2, size)
-          this.page.drawText(seg.text, { x: ox, y: this.y, size, font: this.bold, color: C.black })
-        }
-        cx += this.normal.widthOfTextAtSize(seg.text, size)
-      }
-      this.y -= size + 5
-    }
-  }
+  // ── Bullet ───────────────────────────────────────────────────────────────────
 
-  bullet(text: string, size = 10, indent = 12) {
-    const maxW   = this.innerW - indent
-    const lines  = wrap(text, this.normal, size, maxW)
-    const dotX   = this.x + indent - 8
+  bullet(text: string, size = 9.5, indent = 14) {
+    const maxW = this.innerW - indent
+    const lines = wrap(text, this.normal, size, maxW)
     this.need(size + 5)
-    this.page.drawText('•', { x: dotX, y: this.y, size, font: this.normal, color: C.black })
+    this.page.drawText('•', { x: this.x + 3, y: this.y, size: size - 1, font: this.normal, color: C.mid })
     for (let i = 0; i < lines.length; i++) {
       this.need(size + 5)
       this.page.drawText(lines[i], { x: this.x + indent, y: this.y, size, font: this.normal, color: C.black })
-      this.y -= size + 5
+      this.y -= size + 4.5
     }
   }
 
-  row(cols: string[], widths: number[], size = 9.5, bg?: { r: number; g: number; b: number }) {
-    // Measure max height needed for this row
-    let maxLines = 1
-    for (let ci = 0; ci < cols.length; ci++) {
-      const lines = wrap(cols[ci], this.normal, size, widths[ci] - 8)
-      maxLines = Math.max(maxLines, lines.length)
-    }
-    const rowH = maxLines * (size + 4) + 6
-    this.need(rowH + 2)
+  // ── Divider ──────────────────────────────────────────────────────────────────
 
-    const rowY = this.y - rowH
-    let cx = this.x
-    for (let ci = 0; ci < cols.length; ci++) {
-      if (bg) {
-        this.page.drawRectangle({ x: cx, y: rowY, width: widths[ci], height: rowH, color: rgb(bg.r, bg.g, bg.b) })
-      }
-      const lines = wrap(cols[ci], this.normal, size, widths[ci] - 8)
-      let ty = this.y - size - 3
-      for (const line of lines) {
-        this.page.drawText(line, { x: cx + 4, y: ty, size, font: this.normal, color: C.black })
-        ty -= size + 4
-      }
-      cx += widths[ci]
-    }
-    // Bottom border
+  hr() {
+    this.need(14)
+    this.sp(6)
     this.page.drawLine({
-      start: { x: this.ml, y: rowY },
-      end:   { x: this.pw - this.mr, y: rowY },
-      thickness: 0.5, color: C.line,
+      start: { x: this.ml, y: this.y },
+      end:   { x: this.pw - this.mr, y: this.y },
+      thickness: 0.4, color: C.rule,
     })
-    this.y -= rowH + 2
+    this.y -= 8
   }
+
+  // ── Party box ────────────────────────────────────────────────────────────────
 
   partyBox(tag: string, lines: string[]) {
-    const boxH = 12 + lines.length * 14 + 10
-    this.need(boxH + 4)
-    this.page.drawRectangle({ x: this.x, y: this.y - boxH, width: this.innerW, height: boxH, color: C.bg })
-    this.page.drawRectangle({ x: this.x, y: this.y - boxH, width: 3, height: boxH, color: C.navy })
-    let ty = this.y - 12
-    this.page.drawText(tag.toUpperCase(), { x: this.x + 8, y: ty, size: 8, font: this.bold, color: C.navy })
-    ty -= 14
+    const lh   = 13
+    const pad  = 10
+    const boxH = pad + 11 + lines.length * lh + pad
+    this.need(boxH + 8)
+
+    this.page.drawRectangle({
+      x: this.ml, y: this.y - boxH, width: this.innerW, height: boxH, color: C.bgAlt,
+    })
+    this.page.drawRectangle({
+      x: this.ml, y: this.y - boxH, width: 3, height: boxH, color: C.navy,
+    })
+
+    let ty = this.y - pad
+    this.page.drawText(tag.toUpperCase(), {
+      x: this.ml + 10, y: ty, size: 7.5, font: this.bold, color: C.navy,
+    })
+    ty -= lh + 2
     for (const ln of lines) {
-      const lns = wrap(ln, this.normal, 10, this.innerW - 16)
+      const lns = wrap(ln, this.normal, 9.5, this.innerW - pad * 2 - 6)
       for (const l of lns) {
-        this.page.drawText(l, { x: this.x + 8, y: ty, size: 10, font: this.normal, color: C.black })
-        ty -= 14
+        this.page.drawText(l, { x: this.ml + 10, y: ty, size: 9.5, font: this.normal, color: C.dark })
+        ty -= lh
       }
     }
-    this.y -= boxH + 4
+    this.y -= boxH + 8
   }
+
+  // ── Note box ─────────────────────────────────────────────────────────────────
 
   noteBox(lines: string[]) {
-    const boxH = lines.length * 13 + 14
+    const lh   = 12
+    const pad  = 9
+    const boxH = lines.length * lh + pad * 2 + 4
     this.need(boxH + 4)
-    this.page.drawRectangle({ x: this.x, y: this.y - boxH, width: this.innerW, height: boxH, color: rgb(0.94, 0.96, 0.98) })
-    this.page.drawRectangle({ x: this.x, y: this.y - boxH, width: 2, height: boxH, color: C.line })
-    let ty = this.y - 12
+
+    this.page.drawRectangle({
+      x: this.ml, y: this.y - boxH, width: this.innerW, height: boxH,
+      color: rgb(0.976, 0.974, 0.944),
+    })
+    this.page.drawRectangle({
+      x: this.ml, y: this.y - boxH, width: 3, height: boxH,
+      color: rgb(0.72, 0.62, 0.08),
+    })
+
+    let ty = this.y - pad
     for (const ln of lines) {
-      const lns = wrap(ln, this.normal, 9.5, this.innerW - 16)
+      const lns = wrap(ln, this.normal, 8.5, this.innerW - pad * 2 - 6)
       for (const l of lns) {
-        this.page.drawText(l, { x: this.x + 8, y: ty, size: 9.5, font: this.normal, color: C.grey })
-        ty -= 13
+        this.page.drawText(l, { x: this.ml + 10, y: ty, size: 8.5, font: this.normal, color: C.dark })
+        ty -= lh
       }
     }
-    this.y -= boxH + 4
+    this.y -= boxH + 6
   }
 
-  table(headers: string[], widths: number[], rows: string[][], size = 9.5) {
-    // Header row
-    let cx = this.x
-    const hRowH = (size + 4) + 6
-    this.need(hRowH + 2)
-    for (let ci = 0; ci < headers.length; ci++) {
-      this.page.drawRectangle({ x: cx, y: this.y - hRowH, width: widths[ci], height: hRowH, color: C.lblue })
-      this.page.drawText(headers[ci], { x: cx + 4, y: this.y - size - 3, size, font: this.bold, color: C.navy })
-      cx += widths[ci]
+  // ── Table ────────────────────────────────────────────────────────────────────
+
+  table(headers: string[], widths: number[], rows: string[][], size = 9) {
+    if (headers.length > 0) {
+      const hRowH = size + 12
+      this.need(hRowH + 2)
+      let cx = this.ml
+      for (let ci = 0; ci < headers.length; ci++) {
+        this.page.drawRectangle({
+          x: cx, y: this.y - hRowH, width: widths[ci], height: hRowH, color: C.navy,
+        })
+        this.page.drawText(headers[ci], {
+          x: cx + 6, y: this.y - size - 4,
+          size: size - 0.5, font: this.bold, color: C.white,
+        })
+        cx += widths[ci]
+      }
+      this.y -= hRowH + 1
     }
-    this.y -= hRowH + 2
 
     for (let ri = 0; ri < rows.length; ri++) {
-      const bg = ri % 2 === 0 ? undefined : { r: 0.972, g: 0.976, b: 0.98 }
-      this.row(rows[ri], widths, size, bg)
+      const bg = ri % 2 === 1 ? C.bgAlt : C.white
+      let maxLines = 1
+      for (let ci = 0; ci < rows[ri].length; ci++) {
+        const lns = wrap(rows[ri][ci], this.normal, size, widths[ci] - 12)
+        maxLines = Math.max(maxLines, lns.length)
+      }
+      const rowH = maxLines * (size + 3) + 10
+      this.need(rowH + 1)
+
+      let cx = this.ml
+      for (let ci = 0; ci < rows[ri].length; ci++) {
+        this.page.drawRectangle({
+          x: cx, y: this.y - rowH, width: widths[ci], height: rowH, color: bg,
+        })
+        const lns = wrap(rows[ri][ci], this.normal, size, widths[ci] - 12)
+        let ty = this.y - size - 5
+        for (const l of lns) {
+          this.page.drawText(l, { x: cx + 6, y: ty, size, font: this.normal, color: C.dark })
+          ty -= size + 3
+        }
+        cx += widths[ci]
+      }
+      this.page.drawLine({
+        start: { x: this.ml, y: this.y - rowH },
+        end:   { x: this.pw - this.mr, y: this.y - rowH },
+        thickness: 0.3, color: C.rule,
+      })
+      this.y -= rowH + 1
     }
+    this.sp(4)
   }
 
   totalRow(label: string, amount: string, widths: number[]) {
-    const size = 10
+    const size  = 9.5
+    const rowH  = size + 14
     const totalW = widths.reduce((a, b) => a + b, 0)
-    const rowH = size + 10
     this.need(rowH + 2)
-    this.page.drawRectangle({ x: this.x, y: this.y - rowH, width: totalW, height: rowH, color: rgb(0.96, 0.97, 0.99) })
     this.page.drawLine({
-      start: { x: this.ml, y: this.y - rowH },
-      end:   { x: this.pw - this.mr, y: this.y - rowH },
-      thickness: 1, color: C.line,
+      start: { x: this.ml, y: this.y },
+      end:   { x: this.pw - this.mr, y: this.y },
+      thickness: 1.2, color: C.navy,
     })
-    this.page.drawText(label, { x: this.x + 4, y: this.y - size - 3, size, font: this.bold, color: C.black })
-    const amtW = this.normal.widthOfTextAtSize(amount, size)
-    this.page.drawText(amount, { x: this.pw - this.mr - amtW - 4, y: this.y - size - 3, size, font: this.bold, color: C.black })
-    this.y -= rowH + 2
+    this.page.drawRectangle({
+      x: this.ml, y: this.y - rowH, width: totalW, height: rowH,
+      color: rgb(0.89, 0.92, 0.97),
+    })
+    this.page.drawText(label, {
+      x: this.ml + 6, y: this.y - size - 5, size, font: this.bold, color: C.navy,
+    })
+    const amtW = this.bold.widthOfTextAtSize(amount, size)
+    this.page.drawText(amount, {
+      x: this.pw - this.mr - amtW - 6, y: this.y - size - 5, size, font: this.bold, color: C.navy,
+    })
+    this.y -= rowH + 4
   }
 
-  footer(text: string) {
-    const size = 7.5
-    const tw   = this.normal.widthOfTextAtSize(text, size)
-    this.page.drawLine({
-      start: { x: this.ml, y: this.mb + 14 },
-      end:   { x: this.pw - this.mr, y: this.mb + 14 },
-      thickness: 0.5, color: C.line,
-    })
-    this.page.drawText(text, { x: (this.pw - tw) / 2, y: this.mb + 4, size, font: this.normal, color: C.lgrey })
-  }
+  // ── Signature page ───────────────────────────────────────────────────────────
 
-  sigBlock(
+  sigPage(
     sp_label: string, sp_name: string, sp_title: string,
-    cl_label: string, cl_name: string,
+    cl_label: string, witnessClause: string,
   ) {
-    this.need(160)
-    this.sp(12)
-    const form   = this.doc.getForm()
-    const colW   = this.innerW / 2 - 10
-    const leftX  = this.x
-    const rightX = this.x + colW + 20
+    this._drawFooter()
+    this._np()
+    this._drawFooter()
 
-    const mkField = (name: string, x: number, y: number, w: number, h: number) => {
-      const f = form.createTextField(`${this.prefix}${name}`)
-      f.addToPage(this.page, { x, y: y - h, width: w, height: h, borderWidth: 0, backgroundColor: C.field })
-      f.setFontSize(10)
+    // Execution header
+    this.page.drawLine({
+      start: { x: this.ml, y: this.y },
+      end:   { x: this.pw - this.mr, y: this.y },
+      thickness: 2, color: C.navy,
+    })
+    this.y -= 18
+
+    const htxt = 'AUTHORIZATION AND SIGNATURES'
+    const htw  = this.bold.widthOfTextAtSize(htxt, 11)
+    this.page.drawText(htxt, {
+      x: (this.pw - htw) / 2, y: this.y, size: 11, font: this.bold, color: C.navy,
+    })
+    this.y -= 16
+
+    this.page.drawLine({
+      start: { x: this.ml, y: this.y },
+      end:   { x: this.pw - this.mr, y: this.y },
+      thickness: 0.5, color: C.rule,
+    })
+    this.y -= 16
+
+    // Witness clause
+    const wcLines = wrap(witnessClause, this.normal, 9.5, this.innerW)
+    for (const l of wcLines) {
+      this.page.drawText(l, { x: this.ml, y: this.y, size: 9.5, font: this.normal, color: C.dark })
+      this.y -= 14
+    }
+    this.y -= 14
+
+    // Two-column signature block
+    const form = this.doc.getForm()
+    const gap  = 28
+    const colW = (this.innerW - gap) / 2
+    const L    = this.ml
+    const R    = this.ml + colW + gap
+
+    const mkField = (name: string, x: number, yy: number, w: number, h: number) => {
+      try {
+        const f = form.createTextField(`${this.prefix}${name}`)
+        f.addToPage(this.page, {
+          x, y: yy - h + 2, width: w, height: h,
+          borderWidth: 0,
+          backgroundColor: rgb(0.97, 0.97, 1.00),
+        })
+        f.setFontSize(10)
+      } catch { /* name collision — skip */ }
     }
 
-    // Left column (Service Provider)
-    this.page.drawText(sp_label.toUpperCase(), { x: leftX, y: this.y, size: 8, font: this.bold, color: C.lgrey })
-    this.y -= 14
-    // Sig line
-    this.page.drawLine({
-      start: { x: leftX, y: this.y }, end: { x: leftX + colW, y: this.y },
-      thickness: 1, color: C.grey,
-    })
-    mkField('sp_sig', leftX, this.y, colW, 20)
-    this.y -= 4
-    this.page.drawText(sp_name, { x: leftX, y: this.y - 12, size: 11, font: this.bold, color: C.black })
-    this.y -= 26
-    this.page.drawText(sp_title, { x: leftX, y: this.y - 10, size: 9, font: this.normal, color: C.grey })
-    this.y -= 22
-    this.page.drawText('Date:', { x: leftX, y: this.y - 10, size: 9, font: this.normal, color: C.grey })
-    mkField('sp_date', leftX + 32, this.y - 2, colW - 32, 16)
-    this.y -= 24
+    const sigLine = (x: number, yy: number, w: number) => {
+      this.page.drawLine({ start: { x, y: yy }, end: { x: x + w, y: yy }, thickness: 0.8, color: C.dark })
+    }
 
-    // Right column (Client)
-    const sigY = this.y + 80 // reset to top of sig block
-    const baseY = sigY + 14
-    this.page.drawText(cl_label.toUpperCase(), { x: rightX, y: baseY, size: 8, font: this.bold, color: C.lgrey })
-    this.page.drawLine({
-      start: { x: rightX, y: baseY - 14 }, end: { x: rightX + colW, y: baseY - 14 },
-      thickness: 1, color: C.grey,
+    const lbl = (text: string, x: number, yy: number) => {
+      this.page.drawText(text, { x, y: yy, size: 7, font: this.bold, color: C.light })
+    }
+
+    const startY = this.y
+
+    // Column headers (navy bars)
+    this.page.drawRectangle({ x: L, y: startY - 14, width: colW, height: 14, color: C.navy })
+    this.page.drawText(sp_label.toUpperCase(), {
+      x: L + 6, y: startY - 10.5, size: 7.5, font: this.bold, color: C.white,
     })
-    mkField('cl_sig', rightX, baseY - 14, colW, 20)
-    this.page.drawText('Printed Name:', { x: rightX, y: baseY - 42, size: 9, font: this.normal, color: C.grey })
-    mkField('cl_name', rightX + 78, baseY - 34, colW - 78, 16)
-    this.page.drawText('Title:', { x: rightX, y: baseY - 64, size: 9, font: this.normal, color: C.grey })
-    mkField('cl_title', rightX + 28, baseY - 56, colW - 28, 16)
-    this.page.drawText('Date:', { x: rightX, y: baseY - 86, size: 9, font: this.normal, color: C.grey })
-    mkField('cl_date', rightX + 32, baseY - 78, colW - 32, 16)
+    this.page.drawRectangle({ x: R, y: startY - 14, width: colW, height: 14, color: C.navy })
+    this.page.drawText(cl_label.toUpperCase(), {
+      x: R + 6, y: startY - 10.5, size: 7.5, font: this.bold, color: C.white,
+    })
+
+    let y = startY - 26
+
+    // Signature
+    lbl('SIGNATURE', L, y)
+    lbl('SIGNATURE', R, y)
+    y -= 9
+    sigLine(L, y, colW)
+    sigLine(R, y, colW)
+    mkField('sp_sig', L, y, colW, 22)
+    mkField('cl_sig', R, y, colW, 22)
+    y -= 32
+
+    // Name — SP pre-printed, Client fillable
+    lbl('NAME', L, y)
+    lbl('NAME', R, y)
+    y -= 9
+    this.page.drawText(sp_name, { x: L, y, size: 10, font: this.bold, color: C.black })
+    sigLine(R, y, colW)
+    mkField('cl_name', R, y, colW, 18)
+    y -= 24
+
+    // Title — SP pre-printed, Client fillable
+    lbl('TITLE / POSITION', L, y)
+    lbl('TITLE / POSITION', R, y)
+    y -= 9
+    this.page.drawText(sp_title, { x: L, y, size: 9.5, font: this.normal, color: C.dark })
+    sigLine(R, y, colW)
+    mkField('cl_title', R, y, colW, 18)
+    y -= 24
+
+    // Date — both fillable
+    lbl('DATE', L, y)
+    lbl('DATE', R, y)
+    y -= 9
+    sigLine(L, y, colW)
+    sigLine(R, y, colW)
+    mkField('sp_date', L, y, colW, 18)
+    mkField('cl_date', R, y, colW, 18)
+    y -= 28
+
+    // Divider + electronic signature notice
+    this.page.drawLine({
+      start: { x: this.ml, y: y },
+      end:   { x: this.pw - this.mr, y: y },
+      thickness: 0.4, color: C.rule,
+    })
+    y -= 14
+    const notice = 'Electronic signatures are valid and legally binding under the ESIGN Act and applicable state law. Printed, ink-signed copies are equally binding.'
+    const noticeLines = wrap(notice, this.normal, 8, this.innerW)
+    for (const l of noticeLines) {
+      this.page.drawText(l, { x: this.ml, y, size: 8, font: this.normal, color: C.light })
+      y -= 11
+    }
+
+    this.y = y
   }
 }
 
-// ── NDA sections helpers ───────────────────────────────────────────────────────
-
-function writeNdaCommonSections(w: DocWriter, forOrcaclub: boolean) {
-  const sp   = forOrcaclub ? 'ORCACLUB' : 'Service Provider'
-  const name = forOrcaclub ? 'ORCACLUB' : 'Chance Noonan'
-
-  w.section('2. Definition of Confidential Information')
-  w.body('Confidential Information means any non-public information disclosed by one Party (the Disclosing Party) to the other Party (the Receiving Party), whether disclosed orally, in writing, electronically, or by any other means, that is designated as confidential or that reasonably should be understood to be confidential. Confidential Information includes, without limitation:')
-  w.bullet('Business strategies, marketing plans, pricing structures, and financial data')
-  w.bullet('Client lists, vendor relationships, and partnership details')
-  w.bullet(forOrcaclub
-    ? 'Source code, proprietary tools, systems architecture, and technical workflows'
-    : 'Website code, proprietary tools, workflows, and technical systems')
-  w.bullet(forOrcaclub
-    ? 'Performance data, analytics, creative assets, and campaign information'
-    : 'Campaign data, creative assets, ad performance data, and analytics')
-  w.bullet('Proposals, contracts, scopes of work, and project deliverables')
-  w.bullet('Any other information that a reasonable person in the industry would consider proprietary or sensitive')
-  w.sp(4)
-  w.sub('2.1 Exclusions')
-  w.body('Confidential Information does not include information that: (a) is or becomes publicly known through no breach of this Agreement; (b) was rightfully known to the Receiving Party prior to disclosure; (c) is independently developed by the Receiving Party without reference to the Disclosing Party\'s information; or (d) is required to be disclosed by law or court order, provided prompt written notice is given.')
-  w.hr()
-}
-
-function writeNdaPortfolioSection(w: DocWriter, spName: string, sectionNum: number) {
-  w.section(`${sectionNum}. Portfolio & Public Work`)
-  w.bullet(`${spName} may identify Client by name and display or reference any publicly published work product (including live websites, advertisements, social media content, and marketing materials) in ${spName}'s portfolio, case studies, or promotional materials without prior written consent from Client.`)
-  w.bullet(`The portfolio right established in this section applies only to work that is publicly visible and accessible; any non-public or confidential work remains subject to the confidentiality obligations of this Agreement.`)
-  w.bullet(`Client may, at any time, submit a written request that ${spName} refrain from referencing Client's name or non-public project details in future promotional materials. Such a request is not retroactive and does not apply to publicly accessible work already in ${spName}'s portfolio.`)
-  w.hr()
-}
-
-// ── SOW payment schedule helper ────────────────────────────────────────────────
-
-function writeSowPaymentSchedule(w: DocWriter, d: SowFormData, accentColor: { r: number; g: number; b: number }) {
-  const baseTotal = d.pricingType === 'retainer'
-    ? d.retainerItems.reduce((s, i) => s + (parseFloat(i.amount) || 0), 0)
-    : d.projectItems.reduce((s, i) => s + (parseFloat(i.amount) || 0), 0)
-
-  const entries = d.paymentSchedule || []
-  if (entries.length === 0) return
-
-  const colW = [w.innerW * 0.28, w.innerW * 0.1, w.innerW * 0.18, w.innerW * 0.44]
-  const rows = entries.map(e => {
-    const pct = parseFloat(e.pct) || 0
-    const amt = (baseTotal * pct / 100).toFixed(2)
-    return [e.label || '—', `${pct}%`, `$${amt}`, e.note || '—']
-  })
-  w.table(['Payment', '%', 'Amount', 'Trigger / Note'], colW, rows)
-  w.sp(4)
-}
-
-// ── SOW IP & Termination helpers ───────────────────────────────────────────────
-
-function writeSowIpSection(w: DocWriter, spName: string) {
-  w.section('9. Intellectual Property & Ownership')
-  w.bullet('All deliverables become the property of Client upon receipt of full payment.')
-  w.bullet(`Until full payment is received, all work product remains the intellectual property of ${spName}.`)
-  w.bullet(`${spName} retains the right to display or reference any publicly visible work product in portfolio materials, case studies, or promotional content without prior written consent.`)
-  w.bullet('The portfolio right applies only to publicly visible and accessible work; non-public work remains confidential under any applicable agreement.')
-  w.bullet(`Client may request in writing that ${spName} refrain from referencing Client's name or non-public project details in future materials. Such a request is not retroactive and does not apply to publicly accessible work already displayed.`)
-  w.bullet('Third-party tools or assets incorporated into deliverables remain subject to their respective licenses.')
-  w.hr()
-}
-
-function writeSowTerminationSection(w: DocWriter) {
-  w.section('10. Termination')
-  w.bullet('Either party may terminate this Agreement with 14 days written notice.')
-  w.bullet('Client is responsible for payment of all work completed up to the termination date.')
-  w.bullet('Deposits are non-refundable once work has commenced.')
-  w.bullet('Service Provider reserves the right to terminate immediately if payment obligations are not met.')
-  w.hr()
-}
-
-// ── SOW sections 11–12 ─────────────────────────────────────────────────────────
-
-function writeSowTailSections(w: DocWriter, spName: string) {
-  w.section('11. Limitation of Liability')
-  w.body(`${spName}'s total liability shall not exceed the total fees paid by Client in the 30 days preceding the event giving rise to the claim. ${spName} is not liable for indirect, incidental, or consequential damages.`)
-  w.hr()
-  w.section('12. Independent Contractor')
-  w.body(`${spName} is acting as an independent contractor. Nothing in this Agreement creates an employment, partnership, or agency relationship. ${spName} is solely responsible for applicable taxes on fees received.`)
-  w.sp(6)
-}
-
-// ── Pricing section (SOW) ──────────────────────────────────────────────────────
+// ── SOW helper — pricing section ───────────────────────────────────────────────
 
 function writeSowPricingSection(w: DocWriter, d: SowFormData) {
   const projTotal = d.projectItems.reduce((s, i) => s + (parseFloat(i.amount) || 0), 0)
   const retTotal  = d.retainerItems.reduce((s, i) => s + (parseFloat(i.amount) || 0), 0)
 
   if (d.pricingType === 'project' || d.pricingType === 'both') {
-    w.sub('Option A — Project-Based (One-Time Fee)')
+    w.sub('Project-Based Fee (One-Time)')
     const colW = [w.innerW - 100, 100]
     const rows = d.projectItems
       .filter(i => i.desc.trim())
       .map(i => [i.desc, `$${(parseFloat(i.amount) || 0).toFixed(2)}`])
-    if (rows.length === 0) rows.push(['No items added', ''])
+    if (rows.length === 0) rows.push(['(No line items specified)', ''])
     w.table(['Description', 'Amount'], colW, rows)
-    w.totalRow('Total', `$${projTotal.toFixed(2)}`, colW)
+    w.totalRow('Total Project Fee', `$${projTotal.toFixed(2)}`, colW)
     w.sp(8)
   }
 
   if (d.pricingType === 'retainer' || d.pricingType === 'both') {
-    w.sub('Option B — Monthly Retainer')
+    w.sub('Monthly Retainer')
     const colW = [w.innerW - 120, 120]
     const rows = d.retainerItems
       .filter(i => i.desc.trim())
-      .map(i => [i.desc, `$${(parseFloat(i.amount) || 0).toFixed(2)}`])
-    if (rows.length === 0) rows.push(['No items added', ''])
+      .map(i => [i.desc, `$${(parseFloat(i.amount) || 0).toFixed(2)}/mo`])
+    if (rows.length === 0) rows.push(['(No line items specified)', ''])
     w.table(['Description', 'Monthly Rate'], colW, rows)
-    w.totalRow('Monthly Total', `$${retTotal.toFixed(2)}`, colW)
-    w.sp(6)
-    w.body(`Billing Cycle: ${d.billingCycle || '—'}    Contract Term: ${d.contractTerm || '—'}`)
+    w.totalRow('Total Monthly Retainer', `$${retTotal.toFixed(2)}/mo`, colW)
+    w.sp(4)
+    w.body(`Billing Cycle: ${d.billingCycle || '—'}    ·    Contract Term: ${d.contractTerm || '—'}`)
     w.sp(4)
   }
 }
 
-// ── Personal NDA PDF ───────────────────────────────────────────────────────────
+// ── SOW helper — payment schedule ─────────────────────────────────────────────
+
+function writeSowPaymentSchedule(w: DocWriter, d: SowFormData) {
+  const entries = d.paymentSchedule || []
+  if (entries.length === 0) return
+
+  const baseTotal = d.pricingType === 'retainer'
+    ? d.retainerItems.reduce((s, i) => s + (parseFloat(i.amount) || 0), 0)
+    : d.projectItems.reduce((s, i) => s + (parseFloat(i.amount) || 0), 0)
+
+  const colW = [w.innerW * 0.30, w.innerW * 0.10, w.innerW * 0.18, w.innerW * 0.42]
+  const rows = entries.map(e => {
+    const pct = parseFloat(e.pct) || 0
+    const amt = (baseTotal * pct / 100).toFixed(2)
+    return [e.label || '—', `${pct}%`, `$${amt}`, e.note || '—']
+  })
+  w.table(['Payment', '%', 'Amount', 'Trigger / Condition'], colW, rows)
+  w.sp(4)
+}
+
+// ── Personal NDA ───────────────────────────────────────────────────────────────
 
 export async function buildPersonalNdaPdf(d: NdaFormData): Promise<Uint8Array> {
   const doc    = await PDFDocument.create()
   const bold   = await doc.embedFont(StandardFonts.HelveticaBold)
   const normal = await doc.embedFont(StandardFonts.Helvetica)
-  const w      = new DocWriter(doc, bold, normal, 'nda_')
 
   const client = blank(d.clientName)
   const ctype  = d.clientType === 'company' ? 'a company' : 'an individual'
 
-  w.title('Mutual Non-Disclosure Agreement')
-  w.subtitle('with Independent Contractor Acknowledgment & Employer Information Firewall')
-  w.thr()
-  w.sp(4)
-  w.body(`Effective Date: ${fmtDate(d.effectiveDate)}`)
-  w.sp(4)
-  w.body('This Mutual Non-Disclosure Agreement ("Agreement") is entered into as of the Effective Date above by and between:')
-  w.sp(6)
-  w.partyBox('Party 1 — Service Provider', [
-    'Chance Noonan, an individual doing business as an independent freelance consultant',
-    '("Service Provider"), located in the State of California.',
-  ])
-  w.noteBox([
-    'Note: Service Provider is currently employed full-time by Kawai America Corporation ("Kawai") in a',
-    'separate capacity. The services rendered under this Agreement are performed exclusively in Service',
-    'Provider\'s independent freelance capacity as Chance Noonan and are in no way affiliated with,',
-    'authorized by, or performed on behalf of Kawai.',
-  ])
-  w.partyBox(`Party 2 — Client`, [
-    `${client}, ${ctype}, located at: ${blank(d.clientAddress)}.`,
-  ])
-  w.body('Each Party is referred to individually as a "Party" and collectively as the "Parties."')
-  w.hr()
-
-  w.section('1. Purpose')
-  w.body('The Parties intend to explore and/or engage in a business relationship in which Service Provider provides digital marketing, web development, and/or consulting services to Client in Service Provider\'s independent freelance capacity (the "Business Purpose"). In connection with this Business Purpose, each Party may disclose certain Confidential Information to the other.')
-  w.hr()
-
-  writeNdaCommonSections(w, false)
-
-  w.section('3. Employer Information Firewall — Kawai America Corporation')
-  w.sub('3.1 What Service Provider Will NOT Disclose to Client')
-  w.body('Service Provider shall not disclose to Client any Confidential Information belonging to or concerning Kawai, including: proprietary product information; internal pricing or dealer agreements; marketing budgets, campaign strategies, or performance data; customer or dealer lists; trade secrets, intellectual property, or proprietary systems; or any information accessed or handled in Service Provider\'s capacity as a Kawai employee.')
-  w.sp(4)
-  w.sub('3.2 What Client Will NOT Request')
-  w.body('Client acknowledges Service Provider\'s existing confidentiality obligations to Kawai and agrees not to solicit, request, or encourage Service Provider to disclose any Kawai-protected information. Client will not use this engagement to obtain competitive intelligence about Kawai.')
-  w.sp(4)
-  w.sub('3.3 What Service Provider CAN Provide')
-  w.body('Service Provider may apply the following in performing services for Client: general professional knowledge and industry expertise; skills and frameworks developed independently by Service Provider; publicly available industry data and platform documentation; and all creative work, code, and deliverables specifically developed for Client under this engagement.')
-  w.sp(4)
-  w.sub('3.4 No Agency or Affiliation')
-  w.body('Nothing herein creates any agency, partnership, or affiliation between Client and Kawai. Client agrees not to represent to any third party that services rendered under this Agreement are authorized by or connected to Kawai.')
-  w.hr()
-
-  w.section('4. Mutual Confidentiality Obligations')
-  w.body('Each Party agrees to: hold Confidential Information in strict confidence using no less than reasonable care; not use it for any purpose other than the Business Purpose; not disclose it to any third party without prior written consent; limit access to those with a legitimate need to know who are bound by equivalent obligations; and promptly notify the Disclosing Party of any unauthorized use or disclosure.')
-  w.hr()
-
-  w.section('5. Client Confidential Information — Service Provider Obligations')
-  w.body('All Confidential Information received from Client shall: be kept strictly confidential and not disclosed to Kawai or its agents; not be used in any work performed for Kawai; not be incorporated into any Kawai-owned systems or deliverables; and be stored separately from any systems used in Service Provider\'s Kawai employment.')
-  w.hr()
-
-  w.section('6. Term and Duration')
-  w.body('This Agreement shall remain in effect for three (3) years from the Effective Date, unless earlier terminated by mutual written consent. Confidentiality obligations survive termination with respect to any information disclosed during the term.')
-  w.hr()
-
-  w.section('7. Return or Destruction of Confidential Information')
-  w.body('Upon written request or upon termination, the Receiving Party shall promptly return or destroy all tangible materials containing Confidential Information and certify such return or destruction in writing.')
-  w.hr()
-
-  w.section('8. No License; No Warranty')
-  w.body('Nothing in this Agreement grants any right, license, or interest in any intellectual property of the other Party. All Confidential Information is provided AS IS without warranty of any kind.')
-  w.hr()
-
-  writeNdaPortfolioSection(w, 'Service Provider', 9)
-
-  w.section('10. Remedies')
-  w.body('Each Party acknowledges that a breach may cause irreparable harm and that the Disclosing Party shall be entitled to seek equitable relief, including injunction and specific performance, in addition to all other remedies available at law or in equity.')
-  w.hr()
-
-  w.section('11. General Provisions')
-  w.body('Governing Law: State of California. Severability: Invalid provisions shall be severed; remaining provisions continue in full force. No Waiver: Failure to enforce shall not constitute waiver. Electronic Signatures: Valid and binding to the same extent as original signatures. Independent Contractor: Nothing herein creates an employment, partnership, or agency relationship.')
-  w.sp(8)
-
-  w._np()
-  w.thr()
-  w.ctr('SIGNATURES', 11, C.navy, true)
-  w.ctr('IN WITNESS WHEREOF, the Parties have executed this Agreement as of the Effective Date first written above.', 9)
-  w.sp(8)
-  w.sigBlock(
-    'Party 1 — Service Provider', 'Chance Noonan', 'Independent Freelance Consultant',
-    'Party 2 — Client', client,
+  const w = new DocWriter(
+    doc, bold, normal,
+    'nda_p_',
+    'MUTUAL NON-DISCLOSURE AGREEMENT — CONFIDENTIAL',
+    'Prepared by Chance Noonan · Independent Freelance Consultant · Does not constitute legal advice.',
   )
-  w.sp(12)
-  w.footer('Prepared by Chance Noonan for independent use. Does not constitute legal advice. Consult qualified legal counsel before execution.')
 
+  // ── Title block ──────────────────────────────────────────────────────────────
+  w.titleBlock(
+    'Mutual Non-Disclosure Agreement',
+    'with Independent Contractor Acknowledgment and Employer Information Firewall',
+  )
+
+  // ── Recitals ─────────────────────────────────────────────────────────────────
+  w.body(
+    `This Mutual Non-Disclosure Agreement (this "Agreement") is entered into as of ${fmtDate(d.effectiveDate)} (the "Effective Date"), by and between Chance Noonan, an independent freelance consultant ("Service Provider"), and ${client}, ${ctype} ("Client"). Service Provider and Client are each referred to herein individually as a "Party" and collectively as the "Parties."`,
+  )
+  w.sp(10)
+  w.body('The Parties intend to explore and/or engage in a business relationship in which Service Provider provides digital marketing, web development, and/or consulting services to Client in Service Provider\'s independent freelance capacity (the "Business Purpose"). In connection with this Business Purpose, each Party may disclose certain Confidential Information to the other. This Agreement sets forth the terms and conditions governing such disclosures.')
+  w.sp(8)
+
+  // ── Employer notice ───────────────────────────────────────────────────────────
+  w.noteBox([
+    'IMPORTANT: Service Provider is currently employed full-time by Kawai America Corporation ("Kawai") in a separate',
+    'capacity. All services rendered under this Agreement are performed exclusively in Service Provider\'s independent',
+    'freelance capacity and are in no way affiliated with, authorized by, or performed on behalf of Kawai.',
+    'Client agrees that this engagement creates no connection to Kawai.',
+  ])
+
+  // ── Parties ───────────────────────────────────────────────────────────────────
+  w.partyBox('Party 1 — Service Provider', [
+    'Chance Noonan, independent freelance consultant',
+    'Operating in independent capacity, State of California',
+  ])
+  w.partyBox('Party 2 — Client', [
+    `${client}, ${ctype}`,
+    `Address: ${blank(d.clientAddress)}`,
+  ])
+  w.hr()
+
+  // ── Section 1: Definitions ───────────────────────────────────────────────────
+  w.section('1. Definitions')
+  w.sub('1.1  Confidential Information')
+  w.body('"Confidential Information" means any non-public information disclosed by one Party (the "Disclosing Party") to the other Party (the "Receiving Party"), whether orally, in writing, electronically, or by any other means, that is designated as confidential or that reasonably should be understood to be confidential given the nature of the information and circumstances of disclosure. Confidential Information includes, without limitation:')
+  w.bullet('Business strategies, marketing plans, pricing structures, and financial data')
+  w.bullet('Client lists, vendor relationships, and partnership details')
+  w.bullet('Website code, proprietary tools, workflows, technical systems, and processes')
+  w.bullet('Campaign data, creative assets, ad performance data, and analytics')
+  w.bullet('Proposals, contracts, scopes of work, and project deliverables')
+  w.bullet('Any other information a reasonable person in the industry would consider proprietary or sensitive')
+  w.sp(6)
+  w.sub('1.2  Exclusions')
+  w.body('Confidential Information does not include information that: (a) is or becomes publicly known through no breach of this Agreement; (b) was rightfully known to the Receiving Party before disclosure; (c) is independently developed by the Receiving Party without reference to the Disclosing Party\'s information; (d) is received from a third party without breach of any obligation of confidentiality; or (e) is required to be disclosed by applicable law or court order, provided the Receiving Party gives prompt written notice to the Disclosing Party and cooperates in seeking a protective order.')
+  w.hr()
+
+  // ── Section 2: Employer Information Firewall ─────────────────────────────────
+  w.section('2. Employer Information Firewall — Kawai America Corporation')
+  w.sub('2.1  Scope of Firewall')
+  w.body('Service Provider\'s employment with Kawai America Corporation ("Kawai") is entirely separate from this engagement. Service Provider shall not disclose to Client any Confidential Information belonging to or concerning Kawai, including: proprietary product data; internal pricing or dealer agreements; marketing budgets, campaign strategies, or performance data; customer or dealer lists; trade secrets or proprietary systems; or any information accessed in Service Provider\'s capacity as a Kawai employee.')
+  w.sp(4)
+  w.sub('2.2  Client Obligations')
+  w.body('Client acknowledges Service Provider\'s confidentiality obligations to Kawai and agrees not to solicit, request, or encourage Service Provider to disclose any Kawai-protected information. Client shall not use this engagement to obtain competitive intelligence concerning Kawai.')
+  w.sp(4)
+  w.sub('2.3  Permitted Scope of Services')
+  w.body('Service Provider may apply the following in performing services for Client: general professional knowledge and industry expertise; independently developed skills, tools, and frameworks; publicly available industry data and platform documentation; and all creative work, code, and deliverables specifically developed for Client under this engagement.')
+  w.sp(4)
+  w.sub('2.4  No Agency or Affiliation')
+  w.body('Nothing in this Agreement creates any agency, partnership, or affiliation between Client and Kawai. Client agrees not to represent to any third party that services rendered hereunder are authorized by, connected to, or performed on behalf of Kawai.')
+  w.hr()
+
+  // ── Section 3: Confidentiality Obligations ───────────────────────────────────
+  w.section('3. Mutual Confidentiality Obligations')
+  w.body('Each Party, as a Receiving Party, agrees to:')
+  w.bullet('Hold the Disclosing Party\'s Confidential Information in strict confidence, using no less than reasonable care — and in no event less than the same degree of care used to protect its own confidential information of similar nature')
+  w.bullet('Not use Confidential Information for any purpose other than evaluating or pursuing the Business Purpose')
+  w.bullet('Not disclose Confidential Information to any third party without the Disclosing Party\'s prior written consent')
+  w.bullet('Limit access to those employees, contractors, or agents who have a legitimate need to know and who are bound by equivalent confidentiality obligations')
+  w.bullet('Promptly notify the Disclosing Party in writing upon discovering any unauthorized use, disclosure, or access to Confidential Information')
+  w.sp(4)
+  w.body('In addition, all Confidential Information received from Client shall: be kept strictly confidential and not disclosed to Kawai or its agents; not be used in any work performed for Kawai; and be stored separately from any systems used in Service Provider\'s Kawai employment.')
+  w.hr()
+
+  // ── Section 4: Term ───────────────────────────────────────────────────────────
+  w.section('4. Term and Duration')
+  w.body('This Agreement shall remain in effect for three (3) years from the Effective Date, unless earlier terminated by mutual written consent of both Parties. Confidentiality obligations under this Agreement shall survive termination or expiration with respect to any Confidential Information disclosed during the term, and shall remain in effect until such information no longer qualifies as Confidential Information under Section 1.2.')
+  w.hr()
+
+  // ── Section 5: Return / Destruction ──────────────────────────────────────────
+  w.section('5. Return or Destruction of Confidential Information')
+  w.body('Upon written request by the Disclosing Party, or upon termination or expiration of this Agreement, the Receiving Party shall promptly: (a) return all tangible materials containing or embodying Confidential Information; or (b) certify in writing that all such materials have been destroyed. The Receiving Party may retain one archival copy solely to demonstrate compliance with this Agreement.')
+  w.hr()
+
+  // ── Section 6: No License; No Warranty ───────────────────────────────────────
+  w.section('6. No License or Warranty')
+  w.body('Nothing in this Agreement grants either Party any right, license, or interest in any patent, trademark, copyright, trade secret, or other intellectual property of the other Party. All Confidential Information is provided "AS IS," without warranty of any kind, express or implied, including as to accuracy, completeness, or fitness for any particular purpose.')
+  w.hr()
+
+  // ── Section 7: Portfolio Rights ───────────────────────────────────────────────
+  w.section('7. Portfolio and Public Work Rights')
+  w.bullet('Service Provider may identify Client by name and display or reference any publicly published work product (including live websites, published advertisements, social media content, and marketing materials) in Service Provider\'s portfolio, case studies, or promotional materials, without prior written consent from Client.')
+  w.bullet('This portfolio right applies only to work that is publicly visible and accessible. Any non-public or confidential work remains subject to the confidentiality obligations of this Agreement.')
+  w.bullet('Client may, at any time, submit a written request that Service Provider refrain from referencing Client\'s name or non-public project details in future promotional materials. Such a request is not retroactive and does not apply to publicly accessible work already displayed.')
+  w.hr()
+
+  // ── Section 8: Remedies ───────────────────────────────────────────────────────
+  w.section('8. Remedies')
+  w.body('Each Party acknowledges that unauthorized disclosure or use of Confidential Information may cause irreparable harm to the Disclosing Party for which monetary damages would be an inadequate remedy. Accordingly, the Disclosing Party shall be entitled to seek equitable relief, including injunction and specific performance, without the requirement to post bond or prove actual damages, in addition to all other remedies available at law or in equity. Nothing herein shall limit the Disclosing Party\'s right to seek monetary damages.')
+  w.hr()
+
+  // ── Section 9: General Provisions ────────────────────────────────────────────
+  w.section('9. General Provisions')
+  w.body('Governing Law and Jurisdiction. This Agreement shall be governed by and construed in accordance with the laws of the State of California, without regard to its conflict-of-law principles. Any dispute arising under this Agreement shall be resolved in the state or federal courts located in California.')
+  w.sp(4)
+  w.body('Entire Agreement. This Agreement constitutes the entire agreement of the Parties with respect to its subject matter and supersedes all prior and contemporaneous negotiations, representations, and agreements, whether oral or written.')
+  w.sp(4)
+  w.body('Severability. If any provision of this Agreement is found to be invalid, illegal, or unenforceable, the remaining provisions shall remain in full force and effect. The invalid provision shall be modified to the minimum extent necessary to make it enforceable.')
+  w.sp(4)
+  w.body('No Waiver. No failure or delay by either Party in exercising any right under this Agreement shall constitute a waiver of that right. Any waiver must be in writing and signed by the waiving Party.')
+  w.sp(4)
+  w.body('Amendments. This Agreement may be amended only by a written instrument signed by both Parties.')
+  w.sp(4)
+  w.body('Electronic Signatures. The Parties agree that electronic signatures are valid and binding to the same extent as original ink signatures under the ESIGN Act and applicable state law.')
+  w.sp(4)
+  w.body('Independent Contractor. Nothing in this Agreement creates an employment, partnership, joint venture, or agency relationship between the Parties.')
+
+  // ── Signature page ────────────────────────────────────────────────────────────
+  w.sigPage(
+    'Service Provider',
+    'Chance Noonan',
+    'Independent Freelance Consultant',
+    'Client',
+    'IN WITNESS WHEREOF, the Parties have executed this Mutual Non-Disclosure Agreement as of the Effective Date first written above. Each Party represents that it has read, understands, and agrees to be bound by all terms of this Agreement.',
+  )
+
+  w._drawFooter()
   return doc.save()
 }
 
-// ── ORCACLUB NDA PDF ───────────────────────────────────────────────────────────
+// ── ORCACLUB NDA ───────────────────────────────────────────────────────────────
 
 export async function buildOrcaclubNdaPdf(d: NdaFormData): Promise<Uint8Array> {
   const doc    = await PDFDocument.create()
   const bold   = await doc.embedFont(StandardFonts.HelveticaBold)
   const normal = await doc.embedFont(StandardFonts.Helvetica)
-  const w      = new DocWriter(doc, bold, normal, 'nda_')
 
   const client = blank(d.clientName)
   const ctype  = d.clientType === 'company' ? 'a company' : 'an individual'
 
-  w.title('Mutual Non-Disclosure Agreement')
-  w.subtitle('Confidentiality & Non-Disclosure')
-  w.thr()
-  w.sp(4)
-  w.body(`Effective Date: ${fmtDate(d.effectiveDate)}`)
-  w.sp(4)
-  w.body('This Mutual Non-Disclosure Agreement ("Agreement") is entered into as of the Effective Date above by and between:')
-  w.sp(6)
+  const w = new DocWriter(
+    doc, bold, normal,
+    'nda_o_',
+    'MUTUAL NON-DISCLOSURE AGREEMENT — CONFIDENTIAL',
+    'Prepared by ORCACLUB Technical Operations Development Studio · orcaclub.pro · Does not constitute legal advice.',
+  )
+
+  // ── Title block ──────────────────────────────────────────────────────────────
+  w.titleBlock(
+    'Mutual Non-Disclosure Agreement',
+    'Mutual Confidentiality and Non-Disclosure',
+  )
+
+  // ── Recitals ─────────────────────────────────────────────────────────────────
+  w.body(
+    `This Mutual Non-Disclosure Agreement (this "Agreement") is entered into as of ${fmtDate(d.effectiveDate)} (the "Effective Date"), by and between ORCACLUB, a Technical Operations Development Studio ("Service Provider"), and ${client}, ${ctype} ("Client"). Service Provider and Client are each referred to herein individually as a "Party" and collectively as the "Parties."`,
+  )
+  w.sp(10)
+  w.body('The Parties intend to explore and/or engage in a business relationship in which Service Provider provides technical operations, development, and/or consulting services to Client (the "Business Purpose"). In connection with this Business Purpose, each Party may disclose certain Confidential Information to the other. This Agreement sets forth the terms and conditions governing such disclosures.')
+  w.sp(8)
+
   w.partyBox('Party 1 — Service Provider', [
-    'ORCACLUB, a Technical Operations Development Studio ("Service Provider"),',
-    'operating as ORCACLUB at orcaclub.pro.',
+    'ORCACLUB, a Technical Operations Development Studio',
+    'Website: orcaclub.pro',
   ])
   w.partyBox('Party 2 — Client', [
-    `${client}, ${ctype}, located at: ${blank(d.clientAddress)}.`,
+    `${client}, ${ctype}`,
+    `Address: ${blank(d.clientAddress)}`,
   ])
-  w.body('Each Party is referred to individually as a "Party" and collectively as the "Parties."')
   w.hr()
 
-  w.section('1. Purpose')
-  w.body('The Parties intend to explore and/or engage in a business relationship in which Service Provider provides technical operations, development, and/or consulting services to Client (the "Business Purpose"). In connection with this Business Purpose, each Party may disclose certain Confidential Information to the other. This Agreement establishes the obligations of each Party with respect to that information.')
+  // ── Section 1: Definitions ───────────────────────────────────────────────────
+  w.section('1. Definitions')
+  w.sub('1.1  Confidential Information')
+  w.body('"Confidential Information" means any non-public information disclosed by one Party (the "Disclosing Party") to the other Party (the "Receiving Party"), whether orally, in writing, electronically, or by any other means, that is designated as confidential or that reasonably should be understood to be confidential given the nature of the information and the circumstances of disclosure. Confidential Information includes, without limitation:')
+  w.bullet('Business strategies, marketing plans, pricing structures, and financial data')
+  w.bullet('Client lists, vendor relationships, and partnership details')
+  w.bullet('Source code, proprietary tools, systems architecture, and technical workflows')
+  w.bullet('Performance data, analytics, creative assets, and campaign information')
+  w.bullet('Proposals, contracts, scopes of work, and project deliverables')
+  w.bullet('Any other information a reasonable person in the industry would consider proprietary or sensitive')
+  w.sp(6)
+  w.sub('1.2  Exclusions')
+  w.body('Confidential Information does not include information that: (a) is or becomes publicly known through no breach of this Agreement; (b) was rightfully known to the Receiving Party before disclosure; (c) is independently developed by the Receiving Party without reference to the Disclosing Party\'s information; (d) is received from a third party without breach of any obligation of confidentiality; or (e) is required to be disclosed by applicable law or court order, provided the Receiving Party gives prompt written notice to the Disclosing Party and cooperates in seeking a protective order.')
   w.hr()
 
-  writeNdaCommonSections(w, true)
-
-  w.section('3. Mutual Confidentiality Obligations')
-  w.body('Each Party agrees to: hold Confidential Information in strict confidence using no less than reasonable care; not use it for any purpose other than the Business Purpose; not disclose it to any third party without prior written consent; limit access to those with a legitimate need to know who are bound by equivalent obligations; and promptly notify the Disclosing Party of any unauthorized use or disclosure.')
+  // ── Section 2: Mutual Obligations ───────────────────────────────────────────
+  w.section('2. Mutual Confidentiality Obligations')
+  w.body('Each Party, as a Receiving Party, agrees to:')
+  w.bullet('Hold the Disclosing Party\'s Confidential Information in strict confidence, using no less than reasonable care — and in no event less than the same degree of care used to protect its own confidential information of similar nature')
+  w.bullet('Not use Confidential Information for any purpose other than evaluating or pursuing the Business Purpose')
+  w.bullet('Not disclose Confidential Information to any third party without the Disclosing Party\'s prior written consent')
+  w.bullet('Limit access to those employees, contractors, or agents who have a legitimate need to know and who are bound by equivalent confidentiality obligations')
+  w.bullet('Promptly notify the Disclosing Party in writing upon discovering any unauthorized use, disclosure, or access to Confidential Information')
   w.hr()
 
-  w.section('4. Term and Duration')
-  w.body('This Agreement shall remain in effect for three (3) years from the Effective Date, unless earlier terminated by mutual written consent. Confidentiality obligations survive termination with respect to any information disclosed during the term.')
+  // ── Section 3: Term ───────────────────────────────────────────────────────────
+  w.section('3. Term and Duration')
+  w.body('This Agreement shall remain in effect for three (3) years from the Effective Date, unless earlier terminated by mutual written consent of both Parties. Confidentiality obligations shall survive termination or expiration with respect to any Confidential Information disclosed during the term, and shall remain in effect until such information no longer qualifies as Confidential Information under Section 1.2.')
   w.hr()
 
-  w.section('5. Return or Destruction of Confidential Information')
-  w.body('Upon written request or upon termination, the Receiving Party shall promptly return or destroy all tangible materials containing Confidential Information and certify such return or destruction in writing.')
+  // ── Section 4: Return / Destruction ──────────────────────────────────────────
+  w.section('4. Return or Destruction of Confidential Information')
+  w.body('Upon written request by the Disclosing Party, or upon termination or expiration of this Agreement, the Receiving Party shall promptly: (a) return all tangible materials containing or embodying Confidential Information; or (b) certify in writing that all such materials have been destroyed. The Receiving Party may retain one archival copy solely to demonstrate compliance with this Agreement.')
   w.hr()
 
-  w.section('6. No License; No Warranty')
-  w.body('Nothing in this Agreement grants any right, license, or interest in any intellectual property of the other Party. All Confidential Information is provided AS IS without warranty of any kind.')
+  // ── Section 5: No License; No Warranty ───────────────────────────────────────
+  w.section('5. No License or Warranty')
+  w.body('Nothing in this Agreement grants either Party any right, license, or interest in any patent, trademark, copyright, trade secret, or other intellectual property of the other Party. All Confidential Information is provided "AS IS," without warranty of any kind, express or implied, including as to accuracy, completeness, or fitness for any particular purpose.')
   w.hr()
 
-  writeNdaPortfolioSection(w, 'ORCACLUB', 7)
-
-  w.section('8. Remedies')
-  w.body('Each Party acknowledges that a breach may cause irreparable harm and that the Disclosing Party shall be entitled to seek equitable relief, including injunction and specific performance, in addition to all other remedies available at law or in equity.')
+  // ── Section 6: Portfolio Rights ───────────────────────────────────────────────
+  w.section('6. Portfolio and Public Work Rights')
+  w.bullet('ORCACLUB may identify Client by name and display or reference any publicly published work product (including live websites, published advertisements, social media content, and marketing materials) in ORCACLUB\'s portfolio, case studies, or promotional materials, without prior written consent from Client.')
+  w.bullet('This portfolio right applies only to work that is publicly visible and accessible. Any non-public or confidential work remains subject to the confidentiality obligations of this Agreement.')
+  w.bullet('Client may, at any time, submit a written request that ORCACLUB refrain from referencing Client\'s name or non-public project details in future promotional materials. Such a request is not retroactive.')
   w.hr()
 
-  w.section('9. General Provisions')
-  w.body('Governing Law: State of California. Severability: Invalid provisions shall be severed; remaining provisions continue in full force. No Waiver: Failure to enforce shall not constitute waiver. Electronic Signatures: Valid and binding to the same extent as original signatures. Independent Contractor: Nothing herein creates an employment, partnership, or agency relationship.')
-  w.sp(8)
+  // ── Section 7: Remedies ───────────────────────────────────────────────────────
+  w.section('7. Remedies')
+  w.body('Each Party acknowledges that unauthorized disclosure or use of Confidential Information may cause irreparable harm for which monetary damages would be an inadequate remedy. Accordingly, the Disclosing Party shall be entitled to seek equitable relief, including injunction and specific performance, without the requirement to post bond or prove actual damages, in addition to all other remedies available at law or in equity.')
+  w.hr()
 
-  w._np()
-  w.thr()
-  w.ctr('SIGNATURES', 11, C.navy, true)
-  w.ctr('IN WITNESS WHEREOF, the Parties have executed this Agreement as of the Effective Date first written above.', 9)
-  w.sp(8)
-  w.sigBlock(
-    'Party 1 — Service Provider', 'ORCACLUB', 'Authorized Representative',
-    'Party 2 — Client', client,
+  // ── Section 8: General Provisions ────────────────────────────────────────────
+  w.section('8. General Provisions')
+  w.body('Governing Law and Jurisdiction. This Agreement is governed by the laws of the State of California, without regard to conflict-of-law principles. Any disputes shall be resolved in the state or federal courts of California.')
+  w.sp(4)
+  w.body('Entire Agreement. This Agreement is the entire agreement between the Parties regarding its subject matter and supersedes all prior negotiations, representations, and agreements, whether oral or written.')
+  w.sp(4)
+  w.body('Severability. If any provision is found invalid or unenforceable, the remaining provisions shall remain in full force and effect.')
+  w.sp(4)
+  w.body('No Waiver. No failure to exercise any right under this Agreement shall constitute a waiver of that right. Any waiver must be in writing and signed by the waiving Party.')
+  w.sp(4)
+  w.body('Amendments. This Agreement may be amended only by a written instrument signed by both Parties.')
+  w.sp(4)
+  w.body('Electronic Signatures. Electronic signatures are valid and binding under the ESIGN Act and applicable state law.')
+  w.sp(4)
+  w.body('Independent Contractor. Nothing in this Agreement creates an employment, partnership, joint venture, or agency relationship between the Parties.')
+
+  // ── Signature page ────────────────────────────────────────────────────────────
+  w.sigPage(
+    'Service Provider',
+    'ORCACLUB',
+    'Authorized Representative',
+    'Client',
+    'IN WITNESS WHEREOF, the Parties have executed this Mutual Non-Disclosure Agreement as of the Effective Date first written above. Each Party represents that it has read, understands, and agrees to be bound by all terms of this Agreement.',
   )
-  w.sp(12)
-  w.footer('Prepared by ORCACLUB Technical Operations Development Studio · orcaclub.pro · Does not constitute legal advice.')
 
+  w._drawFooter()
   return doc.save()
 }
 
-// ── SOW shared body ────────────────────────────────────────────────────────────
+// ── SOW core ───────────────────────────────────────────────────────────────────
 
-async function buildSowPdfCore(d: SowFormData, brand: 'personal' | 'orcaclub'): Promise<Uint8Array> {
+async function buildSowCore(d: SowFormData, brand: 'personal' | 'orcaclub'): Promise<Uint8Array> {
   const doc    = await PDFDocument.create()
   const bold   = await doc.embedFont(StandardFonts.HelveticaBold)
   const normal = await doc.embedFont(StandardFonts.Helvetica)
-  const w      = new DocWriter(doc, bold, normal, 'sow_')
 
-  const spName  = brand === 'orcaclub' ? 'ORCACLUB Technical Operations Development Studio' : 'Chance Noonan'
-  const spShort = brand === 'orcaclub' ? 'ORCACLUB' : 'Chance Noonan'
+  const spName  = brand === 'orcaclub' ? 'ORCACLUB' : 'Chance Noonan'
+  const spFull  = brand === 'orcaclub' ? 'ORCACLUB Technical Operations Development Studio' : 'Chance Noonan, Independent Freelance Consultant'
   const spTitle = brand === 'orcaclub' ? 'Authorized Representative' : 'Independent Freelance Consultant'
-  const footer  = brand === 'orcaclub'
-    ? 'Prepared by ORCACLUB Technical Operations Development Studio · orcaclub.pro · Does not constitute legal advice.'
-    : 'Prepared by Chance Noonan for independent use. Does not constitute legal advice. Consult qualified legal counsel before execution.'
+  const footNote = brand === 'orcaclub'
+    ? 'ORCACLUB Technical Operations Development Studio · orcaclub.pro · Does not constitute legal advice.'
+    : 'Prepared by Chance Noonan · Independent Freelance Consultant · Does not constitute legal advice.'
 
-  w.title('Scope of Work')
-  w.subtitle(brand === 'orcaclub' ? 'Technical Services Agreement' : 'Independent Contractor Agreement')
-  w.thr()
+  const w = new DocWriter(
+    doc, bold, normal,
+    'sow_',
+    `SCOPE OF WORK AGREEMENT — ${blank(d.projectName, 'CONFIDENTIAL')}`,
+    footNote,
+  )
 
-  // Section 1 — Parties table
-  w.section('1. Parties')
-  const pColW = [w.innerW * 0.28, w.innerW * 0.72]
-  w.table([], pColW, [
-    ['Service Provider', `${spName}${d.providerContact ? '  ·  ' + d.providerContact : ''}`],
+  // ── Title block ──────────────────────────────────────────────────────────────
+  w.titleBlock(
+    'Scope of Work Agreement',
+    brand === 'orcaclub' ? 'Technical Services Agreement' : 'Independent Contractor Agreement',
+  )
+
+  // ── Opening recital ──────────────────────────────────────────────────────────
+  w.body(
+    `This Scope of Work Agreement (this "Agreement") is entered into as of ${fmtDate(d.effectiveDate)} (the "Effective Date"), by and between ${spFull} ("Service Provider") and ${blank(d.clientName)} ("Client"). This Agreement governs the services described herein and constitutes a binding contract between the Parties.`,
+  )
+  w.sp(8)
+
+  // ── Section 1: Parties ───────────────────────────────────────────────────────
+  w.section('1. Parties and Project Identification')
+  const pColW = [w.innerW * 0.30, w.innerW * 0.70]
+  const pRows: string[][] = [
+    ['Service Provider', `${spFull}${d.providerContact ? '  ·  ' + d.providerContact : ''}`],
     ['Client',           `${blank(d.clientName)}${d.clientContact ? '  ·  ' + d.clientContact : ''}`],
     ['Effective Date',   fmtDate(d.effectiveDate)],
     ['Project Name',     blank(d.projectName)],
-  ])
-  w.sp(4)
+  ]
+  w.table([], pColW, pRows)
   w.hr()
 
-  // Section 2 — Overview
+  // ── Section 2: Scope of Work ─────────────────────────────────────────────────
   w.section('2. Project Overview')
   w.body(d.projectOverview || '(Not provided.)')
   w.hr()
 
-  // Section 3 — Scope
-  w.section('3. Scope of Work')
+  // ── Section 3: Scope ─────────────────────────────────────────────────────────
+  w.section('3. Scope of Work and Deliverables')
+  w.body('Service Provider shall perform the following services and deliver the following items (collectively, the "Deliverables"):')
   const scope = d.scopeItems.filter(i => i.trim())
   if (scope.length > 0) {
     for (const item of scope) w.bullet(item)
   } else {
-    w.body('No scope items defined.')
+    w.body('(Scope items to be defined by written amendment.)')
   }
-  w.sp(4)
-  w.body('Out of Scope: Any work not explicitly listed above requires a written Change Order and may be subject to additional fees.')
+  w.sp(6)
+  w.sub('3.1  Out of Scope')
+  w.body('Any services, work, or deliverables not explicitly listed above are excluded from this Agreement. Client requests for additional work shall be addressed through a written Change Order executed by both Parties, which may result in additional fees and adjusted timelines. Service Provider is under no obligation to perform out-of-scope work without a signed Change Order.')
   w.hr()
 
-  // Section 4 — Milestones
-  w.section('4. Timeline & Milestones')
+  // ── Section 4: Timeline ───────────────────────────────────────────────────────
+  w.section('4. Timeline and Milestones')
   const miles = d.milestones.filter(m => m.name.trim())
   if (miles.length > 0) {
-    const mColW = [w.innerW * 0.4, w.innerW * 0.2, w.innerW * 0.4]
+    const mColW = [w.innerW * 0.38, w.innerW * 0.20, w.innerW * 0.42]
     const mRows = miles.map(m => {
-      const mdt = m.date ? new Date(m.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'
-      return [m.name, mdt, m.notes || '—']
+      const dt = m.date ? new Date(m.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'TBD'
+      return [m.name, dt, m.notes || '—']
     })
-    w.table(['Milestone / Phase', 'Due Date', 'Notes'], mColW, mRows)
+    w.table(['Milestone / Phase', 'Target Date', 'Notes'], mColW, mRows)
   } else {
-    w.body('No milestones defined.')
+    w.body('Milestone schedule to be agreed upon in writing following execution of this Agreement.')
   }
   w.sp(4)
-  w.body('Timeline Note: Timelines are contingent on Client providing required materials, access, and feedback within 48 hours of request. Delays caused by Client may shift delivery dates accordingly.')
+  w.body('All timelines are contingent on Client providing required materials, access, credentials, and feedback within forty-eight (48) hours of request by Service Provider. Delays attributable to Client\'s failure to respond timely shall extend corresponding delivery dates by an equal period, with no liability to Service Provider.')
   w.hr()
 
-  // Section 5 — Pricing
-  w.section('5. Pricing & Payment')
+  // ── Section 5: Pricing ───────────────────────────────────────────────────────
+  w.section('5. Fees and Pricing')
   writeSowPricingSection(w, d)
   w.hr()
 
-  // Section 6 — Payment Terms
-  w.section('6. Payment Terms')
-  writeSowPaymentSchedule(w, d, { r: 0.122, g: 0.306, b: 0.475 })
-  w.bullet(`Invoices are due within ${d.netDays || '30'} days of issue.`)
-  w.bullet(`Late payments are subject to a ${d.lateFee || '1.5'}% monthly fee after the due date.`)
-  w.bullet('Work may be paused or withheld if an invoice remains unpaid beyond 14 days past due.')
+  // ── Section 6: Payment Terms ─────────────────────────────────────────────────
+  w.section('6. Payment Terms and Schedule')
+  writeSowPaymentSchedule(w, d)
+  w.bullet(`Invoices are due and payable within ${d.netDays || '30'} days of the invoice date ("Due Date").`)
+  w.bullet(`Balances unpaid after the Due Date shall accrue a late fee of ${d.lateFee || '1.5'}% per month (${(parseFloat(d.lateFee || '1.5') * 12).toFixed(1)}% per annum) on the outstanding balance, compounding monthly.`)
+  w.bullet('If any invoice remains unpaid for fourteen (14) or more days past the Due Date, Service Provider reserves the right to suspend all work and withhold delivery of Deliverables until the overdue balance is paid in full.')
+  w.bullet('All fees are denominated in U.S. Dollars. Deposits and advance payments are non-refundable once work has commenced unless otherwise specified in writing.')
   w.hr()
 
-  // Section 7 — Client Responsibilities
+  // ── Section 7: Client Responsibilities ───────────────────────────────────────
   w.section('7. Client Responsibilities')
-  w.bullet('Access to required platforms, accounts, and tools')
-  w.bullet('Brand assets, copy, and content as requested')
-  w.bullet('Timely review and feedback within 48-72 hours of delivery')
-  w.bullet('A designated point of contact for approvals and communications')
+  w.body('Client\'s timely cooperation is essential to Service Provider\'s performance. Client shall:')
+  w.bullet('Provide Service Provider with timely access to required platforms, accounts, tools, credentials, and any third-party services necessary to perform the services')
+  w.bullet('Provide brand assets, copy, content, and materials requested by Service Provider in a timely manner')
+  w.bullet('Review and provide written feedback on all deliverables within forty-eight (48) to seventy-two (72) hours of delivery')
+  w.bullet('Designate a single authorized point of contact for all approvals, decisions, and communications related to this Agreement')
+  w.bullet('Promptly notify Service Provider of any changes in project requirements, stakeholders, or access permissions')
+  w.body('Service Provider shall not be responsible for delays caused by Client\'s failure to fulfill these responsibilities.')
   w.hr()
 
-  // Section 8 — Revisions
-  w.section('8. Revisions')
-  w.body(`Included: Up to ${d.revisionRounds || '2'} rounds of revisions per deliverable are included in the quoted price.`)
+  // ── Section 8: Revisions and Change Orders ────────────────────────────────────
+  w.section('8. Revisions and Change Orders')
+  w.sub('8.1  Included Revisions')
+  w.body(`This Agreement includes up to ${d.revisionRounds || '2'} round(s) of revisions per deliverable. A "revision round" means one consolidated set of feedback submitted in writing following delivery. Service Provider will incorporate all reasonable feedback within a single revision round.`)
   w.sp(4)
-  w.body(`Additional: Revisions beyond the included rounds will be billed at ${d.revisionRate ? '$' + d.revisionRate + '/hr' : '[rate TBD]'} or as agreed in a Change Order.`)
+  w.sub('8.2  Additional Revisions')
+  w.body(`Revisions exceeding the included rounds, or revisions that materially alter the original scope, shall be billed at ${d.revisionRate ? '$' + d.revisionRate + ' per hour' : 'Service Provider\'s then-current hourly rate'}, or as otherwise agreed in a written Change Order signed by both Parties.`)
+  w.sp(4)
+  w.sub('8.3  Change Order Process')
+  w.body('Any request by Client for work outside the Scope of Work defined in Section 3 shall be submitted in writing. Service Provider shall respond with a written Change Order describing the additional work, timeline impact, and pricing. Work on any change shall not begin until the Change Order is signed by both Parties.')
   w.hr()
 
-  // Section 9 — IP
-  writeSowIpSection(w, spShort)
+  // ── Section 9: Intellectual Property ─────────────────────────────────────────
+  w.section('9. Intellectual Property and Ownership')
+  w.sub('9.1  Assignment of Deliverables')
+  w.body('Upon receipt of full payment for all amounts due under this Agreement, Service Provider hereby assigns to Client all right, title, and interest in and to the Deliverables, including all applicable intellectual property rights therein. No assignment shall be deemed made until full payment is received.')
+  w.sp(4)
+  w.sub('9.2  Background IP')
+  w.body(`Service Provider retains all right, title, and interest in and to any pre-existing tools, methodologies, code libraries, frameworks, processes, or know-how ("Background IP") used in performing the services. To the extent any Background IP is incorporated into the Deliverables, Service Provider grants Client a non-exclusive, royalty-free, perpetual license to use such Background IP solely as part of the Deliverables.`)
+  w.sp(4)
+  w.sub('9.3  Portfolio Rights')
+  w.body(`${spName} may identify Client by name and reference publicly visible Deliverables in ${spName}'s portfolio, case studies, and promotional materials. This right applies only to publicly accessible work; non-public Deliverables remain confidential. Client may request in writing that ${spName} cease future references to Client's name; such request is not retroactive.`)
+  w.hr()
 
-  // Section 10 — Termination
-  writeSowTerminationSection(w)
+  // ── Section 10: Confidentiality ───────────────────────────────────────────────
+  w.section('10. Confidentiality')
+  w.body('Each Party agrees to hold in confidence all non-public information disclosed by the other Party in connection with this Agreement ("Confidential Information"), using at least the same degree of care as it uses to protect its own confidential information. Neither Party shall disclose the other\'s Confidential Information to any third party without prior written consent, except as required by law. This obligation shall survive termination of this Agreement for a period of three (3) years. If the Parties have executed a separate Non-Disclosure Agreement, its terms shall govern and supplement this Section.')
+  w.hr()
 
-  // Sections 11–12
-  writeSowTailSections(w, spShort)
+  // ── Section 11: Limited Warranty ─────────────────────────────────────────────
+  w.section('11. Limited Warranty')
+  w.body(`Service Provider warrants that the Deliverables will conform materially to the specifications in this Agreement for a period of thirty (30) days following final delivery ("Warranty Period"). Client's sole remedy for any warranty claim is for Service Provider to correct the non-conforming Deliverable at no additional charge. This warranty does not apply to defects caused by Client modifications, third-party integrations, or misuse. EXCEPT AS SET FORTH HEREIN, THE DELIVERABLES AND SERVICES ARE PROVIDED "AS IS" WITHOUT ANY WARRANTY, EXPRESS OR IMPLIED.`)
+  w.hr()
 
-  // Signature page
-  w._np()
-  w.thr()
-  w.ctr('Agreement & Signatures', 11, C.navy, true)
-  w.ctr('By signing below, both parties agree to the terms outlined in this Scope of Work.', 9)
-  w.sp(8)
-  w.sigBlock(
-    'Service Provider', spShort, spTitle,
-    'Client', blank(d.clientName),
+  // ── Section 12: Termination ───────────────────────────────────────────────────
+  w.section('12. Termination')
+  w.body('Either Party may terminate this Agreement upon fourteen (14) days\' written notice to the other Party. In the event of termination:')
+  w.bullet('Client shall pay Service Provider for all work completed and expenses incurred through the effective date of termination, on a pro-rata basis')
+  w.bullet('All deposits and amounts paid for commenced work are non-refundable')
+  w.bullet('Service Provider shall deliver to Client all completed Deliverables and work-in-progress upon receipt of final payment for work performed')
+  w.bullet('Service Provider may terminate immediately, without notice, if Client fails to make any required payment when due and such failure continues for five (5) business days after written notice')
+  w.hr()
+
+  // ── Section 13: Limitation of Liability ──────────────────────────────────────
+  w.section('13. Limitation of Liability')
+  w.body(`IN NO EVENT SHALL EITHER PARTY BE LIABLE TO THE OTHER FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING LOSS OF PROFITS, REVENUE, DATA, OR GOODWILL, HOWEVER CAUSED AND UNDER ANY THEORY OF LIABILITY, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES. ${spName.toUpperCase()}'S TOTAL CUMULATIVE LIABILITY ARISING OUT OF OR RELATED TO THIS AGREEMENT SHALL NOT EXCEED THE TOTAL FEES PAID OR PAYABLE BY CLIENT TO SERVICE PROVIDER IN THE THREE (3) MONTHS PRECEDING THE EVENT GIVING RISE TO THE CLAIM. THE PARTIES ACKNOWLEDGE THAT THESE LIMITATIONS REFLECT A REASONABLE ALLOCATION OF RISK.`)
+  w.hr()
+
+  // ── Section 14: Independent Contractor ────────────────────────────────────────
+  w.section('14. Independent Contractor')
+  w.body(`Service Provider is an independent contractor and not an employee, agent, partner, or joint venturer of Client. Service Provider shall have sole responsibility for all taxes, withholdings, insurance, benefits, and other obligations relating to its compensation under this Agreement. Service Provider may perform services for other clients during the term of this Agreement, provided doing so does not conflict with Service Provider's obligations hereunder.`)
+  w.hr()
+
+  // ── Section 15: General Provisions ───────────────────────────────────────────
+  w.section('15. General Provisions')
+  w.body('Governing Law. This Agreement is governed by the laws of the State of California, without regard to its conflict-of-law principles. Any dispute arising under this Agreement shall be resolved in the state or federal courts of California, and the Parties consent to personal jurisdiction therein.')
+  w.sp(4)
+  w.body('Entire Agreement. This Agreement, together with any attached exhibits or executed Change Orders, constitutes the entire agreement between the Parties with respect to its subject matter and supersedes all prior negotiations, representations, warranties, and agreements, whether oral or written.')
+  w.sp(4)
+  w.body('Severability. If any provision of this Agreement is found to be invalid, illegal, or unenforceable, the remaining provisions shall continue in full force and effect. The invalid provision shall be modified only to the minimum extent necessary to make it enforceable.')
+  w.sp(4)
+  w.body('No Waiver. Failure to enforce any provision of this Agreement shall not constitute a waiver of the right to enforce it in the future. Any waiver must be in writing and signed by an authorized representative of the waiving Party.')
+  w.sp(4)
+  w.body('Force Majeure. Neither Party shall be liable for delays or failures in performance resulting from causes beyond its reasonable control, including natural disasters, government actions, internet outages, or labor disputes, provided that the affected Party gives prompt written notice.')
+  w.sp(4)
+  w.body('Counterparts and Electronic Signatures. This Agreement may be executed in counterparts, each of which shall constitute an original, and all of which together shall constitute one binding instrument. Electronic signatures are valid and enforceable under the ESIGN Act and applicable state law.')
+
+  // ── Signature page ────────────────────────────────────────────────────────────
+  w.sigPage(
+    'Service Provider',
+    spName,
+    spTitle,
+    'Client',
+    'IN WITNESS WHEREOF, the Parties have executed this Scope of Work Agreement as of the Effective Date. By signing below, each Party acknowledges that it has read and understands this Agreement and agrees to be bound by its terms.',
   )
-  w.sp(12)
-  w.footer(footer)
 
+  w._drawFooter()
   return doc.save()
 }
 
 export async function buildPersonalSowPdf(d: SowFormData): Promise<Uint8Array> {
-  return buildSowPdfCore(d, 'personal')
+  return buildSowCore(d, 'personal')
 }
 
 export async function buildOrcaclubSowPdf(d: SowFormData): Promise<Uint8Array> {
-  return buildSowPdfCore(d, 'orcaclub')
+  return buildSowCore(d, 'orcaclub')
 }

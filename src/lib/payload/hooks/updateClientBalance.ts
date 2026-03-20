@@ -4,43 +4,7 @@
  */
 
 import type { CollectionAfterChangeHook, CollectionAfterDeleteHook } from 'payload'
-
-/**
- * Retry helper for transient MongoDB errors (write conflicts)
- * Based on MongoDB's official retry pattern for TransientTransactionError
- * @see https://www.mongodb.com/docs/manual/core/retryable-writes/
- */
-async function retryOnTransientError<T>(
-  fn: () => Promise<T>,
-  maxRetries = 5
-): Promise<T> {
-  let lastError: any
-
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      return await fn()
-    } catch (error: any) {
-      lastError = error
-
-      // Check if it's a transient write conflict that can be retried
-      const isTransient =
-        error?.message?.includes('Write conflict') ||
-        error?.code === 112 || // WriteConflict error code
-        error?.codeName === 'WriteConflict' ||
-        error?.errorLabels?.includes('TransientTransactionError')
-
-      if (!isTransient || attempt === maxRetries) {
-        throw error // Not retryable or max retries reached
-      }
-
-      // Exponential backoff: 200ms, 400ms, 800ms, 1600ms, 3200ms
-      const delay = 200 * Math.pow(2, attempt - 1)
-      await new Promise(resolve => setTimeout(resolve, delay))
-    }
-  }
-
-  throw lastError
-}
+import { retryOnTransientError } from '@/lib/stripe/retry'
 
 /**
  * Updates client account balance after order creation or update

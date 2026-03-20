@@ -124,7 +124,7 @@ export function LoginForm({ callbackUrl }: { callbackUrl?: string }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} method="post" className="space-y-5">
       {/* Success message */}
       {success && (
         <div className="flex items-start gap-3 px-4 py-3 bg-[#67e8f9]/10 border border-[#67e8f9]/20 rounded-xl">

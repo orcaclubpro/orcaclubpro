@@ -21,15 +21,75 @@ const EXPLOIT_PATTERNS = [
   /NEXT_REDIRECT/,      // CVE-2025-66478 exploit signature
 ]
 
+// ---------------------------------------------------------------------------
+// Simple in-memory rate limiter
+// Works within a single server process. For multi-instance deployments,
+// replace with an external store (e.g. Upstash Redis).
+// ---------------------------------------------------------------------------
+interface RateEntry { count: number; resetAt: number }
+const rateLimits = new Map<string, RateEntry>()
+
+function checkRateLimit(
+  key: string,
+  limit: number,
+  windowMs: number,
+): { allowed: boolean; retryAfter: number } {
+  const now = Date.now()
+  const entry = rateLimits.get(key)
+
+  if (!entry || now > entry.resetAt) {
+    rateLimits.set(key, { count: 1, resetAt: now + windowMs })
+    return { allowed: true, retryAfter: 0 }
+  }
+
+  if (entry.count >= limit) {
+    return { allowed: false, retryAfter: Math.ceil((entry.resetAt - now) / 1000) }
+  }
+
+  entry.count++
+  return { allowed: true, retryAfter: 0 }
+}
+
+// Rate limit configs: [maxRequests, windowMs]
+const RATE_LIMIT_RULES: Record<string, [number, number]> = {
+  '/api/users/login':              [10, 15 * 60 * 1000], // 10 attempts / 15 min — admin brute-force
+  '/api/users/forgot-password':    [5,  15 * 60 * 1000], // 5 / 15 min
+  '/api/auth/request-login-code':  [5,  15 * 60 * 1000], // 5 / 15 min
+  '/api/auth/verify-login-code':   [10, 15 * 60 * 1000], // 10 / 15 min
+  '/api/auth/forgot-password':     [5,  15 * 60 * 1000], // 5 / 15 min
+  '/api/contact':                  [5,  60 * 60 * 1000], // 5 / hour — spam prevention
+  '/api/booking':                  [5,  60 * 60 * 1000], // 5 / hour
+}
+
+function getClientIp(request: NextRequest): string {
+  return (
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    request.headers.get('x-real-ip') ||
+    'unknown'
+  )
+}
+
+function rateLimitedResponse(retryAfter: number): NextResponse {
+  return new NextResponse(
+    JSON.stringify({ errors: [{ message: 'Too many requests. Please try again later.' }] }),
+    {
+      status: 429,
+      headers: {
+        'Content-Type': 'application/json',
+        'Retry-After': String(retryAfter),
+      },
+    },
+  )
+}
+
 export function middleware(request: NextRequest) {
-  const url = request.nextUrl.pathname + request.nextUrl.search
+  const pathname = request.nextUrl.pathname
+  const url = pathname + request.nextUrl.search
 
   // SECURITY: Block requests containing exploit patterns
   for (const pattern of EXPLOIT_PATTERNS) {
     if (pattern.test(url)) {
-      const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0] ||
-                       request.headers.get('x-real-ip') ||
-                       'unknown'
+      const clientIp = getClientIp(request)
       console.error(`[SECURITY] Blocked malicious request from ${clientIp}: ${url}`)
       return new NextResponse('Forbidden', { status: 403 })
     }
@@ -42,8 +102,32 @@ export function middleware(request: NextRequest) {
     console.warn(`[SECURITY] Suspicious user-agent: ${userAgent}`)
   }
 
+  // SECURITY: Block /api/access for unauthenticated users.
+  // This endpoint exposes the full permission map for every collection.
+  if (pathname === '/api/access') {
+    const token = request.cookies.get('payload-token')?.value
+    if (!token) {
+      return new NextResponse(
+        JSON.stringify({ errors: [{ message: 'You are not allowed to perform this action.' }] }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } },
+      )
+    }
+  }
+
+  // SECURITY: Rate limiting on sensitive endpoints
+  const ruleKey = Object.keys(RATE_LIMIT_RULES).find((k) => pathname === k || pathname.startsWith(k + '/'))
+  if (ruleKey) {
+    const [limit, windowMs] = RATE_LIMIT_RULES[ruleKey]
+    const ip = getClientIp(request)
+    const { allowed, retryAfter } = checkRateLimit(`${ruleKey}:${ip}`, limit, windowMs)
+    if (!allowed) {
+      console.warn(`[SECURITY] Rate limit hit for ${ruleKey} from ${ip}`)
+      return rateLimitedResponse(retryAfter)
+    }
+  }
+
   // Check if accessing a protected dashboard route
-  const isProtectedRoute = request.nextUrl.pathname.startsWith('/u/')
+  const isProtectedRoute = pathname.startsWith('/u/')
 
   if (isProtectedRoute) {
     // Check for authentication token
@@ -51,7 +135,7 @@ export function middleware(request: NextRequest) {
 
     if (!token) {
       const loginUrl = new URL('/login', request.url)
-      loginUrl.searchParams.set('callbackUrl', request.nextUrl.pathname + request.nextUrl.search)
+      loginUrl.searchParams.set('callbackUrl', pathname + request.nextUrl.search)
       return NextResponse.redirect(loginUrl)
     }
   }
@@ -62,14 +146,16 @@ export function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
+     * Run on all routes except:
      * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder
-     * - admin (PayloadCMS admin)
+     * - _next/image (image optimization)
+     * - favicon.ico
+     * - files with extensions (public assets)
+     * - admin (Payload CMS admin — Payload handles its own auth)
+     *
+     * Intentionally includes /api/* so rate limiting and /api/access
+     * protection apply to Payload's REST API endpoints.
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|.*\\..*|admin).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\..*|admin).*)',
   ],
 }

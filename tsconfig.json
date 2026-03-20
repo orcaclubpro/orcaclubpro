@@ -20,6 +20,7 @@
     ],
     "baseUrl": "./",
     "paths": {
+      "stripe": ["./node_modules/stripe"],
       "@payload-config": ["./src/lib/payload/payload.config.ts"],
       "@/*": ["./src/*"],
       "@/components/*": ["./src/components/*"],

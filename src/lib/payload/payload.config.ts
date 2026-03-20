@@ -1,5 +1,11 @@
 import sharp from 'sharp'
 import { seoPlugin } from '@payloadcms/plugin-seo'
+import { stripePlugin } from '@payloadcms/plugin-stripe'
+import {
+  handleInvoicePaid,
+  handleInvoicePaymentFailed,
+  handleInvoiceVoided,
+} from '@/lib/stripe/webhook-handlers'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import { mongooseAdapter } from '@payloadcms/db-mongodb'
 import { nodemailerAdapter } from '@payloadcms/email-nodemailer'
@@ -68,7 +74,10 @@ const Media: CollectionConfig = {
     mimeTypes: ['image/*', 'application/pdf'],
   },
   access: {
-    read: anyone,
+    // SECURITY: restrict REST API metadata listing to authenticated users.
+    // Static files under /public/media/ are still served directly by Next.js
+    // and remain publicly accessible for the website frontend.
+    read: authenticated,
     create: authenticated,
     update: authenticated,
     delete: authenticated,
@@ -183,6 +192,11 @@ const Leads: CollectionConfig = {
         { label: 'Completed', value: 'completed' },
         { label: 'Cancelled', value: 'cancelled' },
       ],
+      // SECURITY: public form submissions must not be able to set status
+      access: {
+        create: ({ req: { user } }) => Boolean(user),
+        update: ({ req: { user } }) => Boolean(user),
+      },
       admin: {
         description: 'Lead status for tracking',
         position: 'sidebar',
@@ -192,6 +206,11 @@ const Leads: CollectionConfig = {
       name: 'emailSent',
       type: 'checkbox',
       defaultValue: false,
+      // SECURITY: internal tracking field — not writable by public
+      access: {
+        create: ({ req: { user } }) => Boolean(user),
+        update: ({ req: { user } }) => Boolean(user),
+      },
       admin: {
         description: 'Whether confirmation email was sent',
         position: 'sidebar',
@@ -201,6 +220,11 @@ const Leads: CollectionConfig = {
       name: 'calendarCreated',
       type: 'checkbox',
       defaultValue: false,
+      // SECURITY: internal tracking field — not writable by public
+      access: {
+        create: ({ req: { user } }) => Boolean(user),
+        update: ({ req: { user } }) => Boolean(user),
+      },
       admin: {
         description: 'Whether calendar event was created',
         position: 'sidebar',
@@ -209,6 +233,11 @@ const Leads: CollectionConfig = {
     {
       name: 'calendarEventLink',
       type: 'text',
+      // SECURITY: internal tracking field — not writable by public
+      access: {
+        create: ({ req: { user } }) => Boolean(user),
+        update: ({ req: { user } }) => Boolean(user),
+      },
       admin: {
         description: 'Google Calendar event link',
         position: 'sidebar',
@@ -217,6 +246,11 @@ const Leads: CollectionConfig = {
     {
       name: 'notes',
       type: 'textarea',
+      // SECURITY: internal staff field — not writable by public
+      access: {
+        create: ({ req: { user } }) => Boolean(user),
+        update: ({ req: { user } }) => Boolean(user),
+      },
       admin: {
         description: 'Internal notes about this lead',
       },
@@ -224,6 +258,11 @@ const Leads: CollectionConfig = {
     {
       name: 'shopifyCustomerId',
       type: 'text',
+      // SECURITY: auto-populated by hook — not writable by anyone via API
+      access: {
+        create: () => false,
+        update: () => false,
+      },
       admin: {
         description: 'Shopify customer ID (auto-populated)',
         position: 'sidebar',
@@ -234,6 +273,11 @@ const Leads: CollectionConfig = {
       name: 'shopifyPasswordGenerated',
       type: 'checkbox',
       defaultValue: false,
+      // SECURITY: auto-populated by hook — not writable by anyone via API
+      access: {
+        create: () => false,
+        update: () => false,
+      },
       admin: {
         description: 'Whether a Shopify password was generated',
         position: 'sidebar',
@@ -994,6 +1038,16 @@ export default buildConfig({
       generateDescription: ({ doc }: { doc: any }) => doc?.excerpt ?? '',
       generateURL: ({ doc }: { doc: any }) =>
         doc?.slug ? `https://orcaclub.pro/sonar/${doc.slug}` : 'https://orcaclub.pro',
+    }),
+    stripePlugin({
+      stripeSecretKey: process.env.STRIPE_SECRET_KEY || '',
+      stripeWebhooksEndpointSecret: process.env.STRIPE_WEBHOOK_SECRET,
+      webhooks: {
+        'invoice.paid': (args) => handleInvoicePaid(args as any),
+        'invoice.payment_failed': (args) => handleInvoicePaymentFailed(args as any),
+        'invoice.voided': (args) => handleInvoiceVoided(args as any),
+        'invoice.marked_uncollectible': (args) => handleInvoiceVoided(args as any),
+      },
     }),
   ],
 })

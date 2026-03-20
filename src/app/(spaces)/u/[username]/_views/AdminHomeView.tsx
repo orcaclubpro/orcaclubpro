@@ -314,11 +314,14 @@ export function AdminHomeView({
   const pendingOrders = allOrders.filter((o: any) => o.status === 'pending').slice(0, 6)
 
   // Uninvoiced schedule entries = planned payments not yet converted to an order
-  const uninvoicedEntries = (allPackages ?? []).flatMap((pkg: any) =>
-    (pkg.paymentSchedule ?? [])
-      .filter((e: any) => !e.orderId)
-      .map((e: any) => ({ ...e, packageName: pkg.name ?? 'Untitled', packageId: pkg.id }))
-  ).sort((a: any, b: any) => {
+  // Only from proposals that have been sent/accepted (pushed out to a client) — excludes templates and drafts
+  const uninvoicedEntries = (allPackages ?? [])
+    .filter((pkg: any) => pkg.type === 'proposal' && (pkg.status === 'sent' || pkg.status === 'accepted'))
+    .flatMap((pkg: any) =>
+      (pkg.paymentSchedule ?? [])
+        .filter((e: any) => !e.orderId)
+        .map((e: any) => ({ ...e, packageName: pkg.name ?? 'Untitled', packageId: pkg.id }))
+    ).sort((a: any, b: any) => {
     if (!a.dueDate) return 1
     if (!b.dueDate) return -1
     return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()

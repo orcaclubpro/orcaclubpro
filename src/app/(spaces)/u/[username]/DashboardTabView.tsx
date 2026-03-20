@@ -364,6 +364,11 @@ export function DashboardTabView({
                 name: s.name ?? '',
                 project: s.project,
               }))}
+              clientAccounts={d.clientAccounts.map((c: any) => ({
+                id: c.id,
+                name: c.name ?? '',
+                email: c.email ?? '',
+              }))}
             />
           )
         default:

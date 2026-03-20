@@ -3,6 +3,7 @@
 import { getCurrentUser } from '@/actions/auth'
 import { getPayload } from 'payload'
 import config from '@payload-config'
+import type { SowFormData } from '@/lib/document-generators'
 import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
 import { getStripe } from '@/lib/stripe'
@@ -103,6 +104,97 @@ export async function createPackage({
     return { success: true, package: pkg }
   } catch (error) {
     console.error('[createPackage]', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to create package' }
+  }
+}
+
+export async function createPackageFromSow(
+  sowData: SowFormData,
+): Promise<{ success: boolean; id?: string; error?: string }> {
+  try {
+    const user = await getCurrentUser()
+    if (!user) return { success: false, error: 'Unauthorized' }
+    if (user.role === 'client') return { success: false, error: 'Clients cannot create packages' }
+
+    const payload = await getPayload({ config })
+
+    const name = sowData.projectName.trim() || sowData.clientName.trim() || 'New Package'
+    const description = sowData.projectOverview || undefined
+
+    // Scope items → coverMessage
+    const scopeLines = sowData.scopeItems.filter(s => s.trim())
+    const coverMessage = scopeLines.length > 0
+      ? scopeLines.map((s, i) => `${i + 1}. ${s}`).join('\n')
+      : undefined
+
+    // Milestones + terms → notes
+    const milestoneLines = sowData.milestones
+      .filter(m => m.name.trim())
+      .map(m => {
+        const parts = [m.name]
+        if (m.date) parts.push(`(${m.date})`)
+        if (m.notes) parts.push(`— ${m.notes}`)
+        return parts.join(' ')
+      })
+    const termsLines = [
+      `Net Days: ${sowData.netDays || '30'}`,
+      `Late Fee: ${sowData.lateFee || '1.5'}%/mo`,
+      `Revisions: ${sowData.revisionRounds || '2'} rounds${sowData.revisionRate ? ` @ $${sowData.revisionRate}/hr` : ''}`,
+      sowData.contractTerm ? `Term: ${sowData.contractTerm}` : '',
+      sowData.pricingType !== 'project' && sowData.billingCycle ? `Billing: ${sowData.billingCycle}` : '',
+    ].filter(Boolean)
+    const notesSections = [
+      milestoneLines.length > 0 ? `Milestones:\n${milestoneLines.join('\n')}` : '',
+      termsLines.length > 0 ? `Terms:\n${termsLines.join('\n')}` : '',
+    ].filter(Boolean)
+    const notes = notesSections.length > 0 ? notesSections.join('\n\n') : undefined
+
+    // Line items
+    const lineItems: Array<{
+      name: string
+      price: number
+      quantity: number
+      isRecurring: boolean
+      recurringInterval?: 'month' | 'year'
+    }> = []
+
+    if (sowData.pricingType === 'project' || sowData.pricingType === 'both') {
+      for (const item of sowData.projectItems.filter(i => i.desc.trim())) {
+        lineItems.push({ name: item.desc, price: parseFloat(item.amount) || 0, quantity: 1, isRecurring: false })
+      }
+    }
+    if (sowData.pricingType === 'retainer' || sowData.pricingType === 'both') {
+      for (const item of sowData.retainerItems.filter(i => i.desc.trim())) {
+        lineItems.push({ name: item.desc, price: parseFloat(item.amount) || 0, quantity: 1, isRecurring: true, recurringInterval: 'month' })
+      }
+    }
+
+    // Payment schedule — convert percentages to dollar amounts
+    const total = lineItems.reduce((s, i) => s + i.price * i.quantity, 0)
+    const paymentSchedule = sowData.paymentSchedule
+      .filter(e => e.label.trim())
+      .map(e => ({
+        label: e.label,
+        amount: Math.round(total * (parseFloat(e.pct) || 0) / 100 * 100) / 100,
+      }))
+
+    const pkg = await payload.create({
+      collection: 'packages',
+      data: {
+        name,
+        description,
+        coverMessage,
+        notes,
+        lineItems,
+        paymentSchedule,
+        type: 'template',
+        status: 'draft',
+      },
+    })
+
+    return { success: true, id: pkg.id }
+  } catch (error) {
+    console.error('[createPackageFromSow]', error)
     return { success: false, error: error instanceof Error ? error.message : 'Failed to create package' }
   }
 }
