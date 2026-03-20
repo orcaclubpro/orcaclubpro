@@ -18,6 +18,7 @@ import {
   KeyRound,
   FileDown,
   ChevronDown,
+  Trash2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Timeline } from '@/types/payload-types'
@@ -120,21 +121,38 @@ function TimelineRow({
   timeline,
   onEditBlocks,
   onUpdate,
+  onDelete,
 }: {
   timeline: Timeline
   onEditBlocks: () => void
   onUpdate: (updated: Timeline) => void
+  onDelete: () => void
 }) {
   const phases     = (timeline.phases ?? []) as TimelinePhase[]
   const accessCode = (timeline as any).accessCode as string | null | undefined
   const shareUrl   = `orcaclub.pro/c/${timeline.slug}`
 
-  const [expanded,    setExpanded]    = useState(false)
-  const [showCode,    setShowCode]    = useState(false)
-  const [editingCode, setEditingCode] = useState(false)
-  const [codeInput,   setCodeInput]   = useState('')
-  const [saving,      setSaving]      = useState(false)
-  const [saveError,   setSaveError]   = useState<string | null>(null)
+  const [expanded,     setExpanded]     = useState(false)
+  const [showCode,     setShowCode]     = useState(false)
+  const [editingCode,  setEditingCode]  = useState(false)
+  const [codeInput,    setCodeInput]    = useState('')
+  const [saving,       setSaving]       = useState(false)
+  const [saveError,    setSaveError]    = useState<string | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting,     setDeleting]     = useState(false)
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!confirmDelete) { setConfirmDelete(true); return }
+    setDeleting(true)
+    try {
+      await fetch(`/api/timelines/${timeline.id}`, { method: 'DELETE' })
+      onDelete()
+    } catch {
+      setDeleting(false)
+      setConfirmDelete(false)
+    }
+  }
 
   const openCodeEditor = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -286,6 +304,25 @@ function TimelineRow({
           </a>
 
           <CopyButton text={`https://${shareUrl}`} />
+
+          <button
+            onClick={handleDelete}
+            onBlur={() => setConfirmDelete(false)}
+            disabled={deleting}
+            title={confirmDelete ? 'Click again to confirm delete' : 'Delete timeline'}
+            className={cn(
+              'flex items-center justify-center gap-1 rounded-lg transition-all duration-150 disabled:opacity-40',
+              confirmDelete
+                ? 'px-2 py-1 text-[9px] font-bold uppercase tracking-wide bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20'
+                : 'size-7 text-[#4A4A4A] hover:text-red-400 hover:bg-red-400/10',
+            )}
+          >
+            {deleting
+              ? <span className="size-3 rounded-full border border-red-400/30 border-t-red-400 animate-spin" />
+              : confirmDelete
+                ? <>Confirm</>
+                : <Trash2 className="size-3.5" />}
+          </button>
         </div>
       </div>
 
@@ -821,6 +858,9 @@ export function TimelinesAdminView({ username: _username }: Props) {
               onEditBlocks={() => setEditingTimeline(t)}
               onUpdate={updated =>
                 setTimelines(prev => prev.map(x => (x.id === updated.id ? updated : x)))
+              }
+              onDelete={() =>
+                setTimelines(prev => prev.filter(x => x.id !== t.id))
               }
             />
           ))}
