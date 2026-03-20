@@ -177,7 +177,7 @@ export default function DynamicGreeting({ className = "" }: DynamicGreetingProps
             }`}
             style={{
               transitionDelay: isTransitioning ? '0ms' : '300ms',
-              fontSize: 'clamp(2rem, 7vw, 6rem)',
+              fontSize: 'clamp(1.5rem, 3.5vw, 3rem)',
             }}
           >
             <span className="text-white">

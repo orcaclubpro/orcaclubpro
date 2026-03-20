@@ -677,24 +677,20 @@ export async function buildPersonalNdaPdf(d: NdaFormData): Promise<Uint8Array> {
 
   // ── Section 8: Remedies ───────────────────────────────────────────────────────
   w.section('8. Remedies')
-  w.body('Each Party acknowledges that unauthorized disclosure or use of Confidential Information may cause irreparable harm to the Disclosing Party for which monetary damages would be an inadequate remedy. Accordingly, the Disclosing Party shall be entitled to seek equitable relief, including injunction and specific performance, without the requirement to post bond or prove actual damages, in addition to all other remedies available at law or in equity. Nothing herein shall limit the Disclosing Party\'s right to seek monetary damages.')
+  w.body('Both Parties agree to treat each other\'s Confidential Information with the same care they would apply to their own. In the event of a breach that causes harm, the affected Party may seek appropriate remedies, including equitable relief where necessary. Nothing in this Agreement limits the right to pursue available legal remedies.')
   w.hr()
 
   // ── Section 9: General Provisions ────────────────────────────────────────────
   w.section('9. General Provisions')
-  w.body('Governing Law and Jurisdiction. This Agreement shall be governed by and construed in accordance with the laws of the State of California, without regard to its conflict-of-law principles. Any dispute arising under this Agreement shall be resolved in the state or federal courts located in California.')
+  w.body('Governing Law. This Agreement is governed by the laws of the State of California. Disputes not resolved through direct discussion will be addressed through the appropriate California courts.')
   w.sp(4)
-  w.body('Entire Agreement. This Agreement constitutes the entire agreement of the Parties with respect to its subject matter and supersedes all prior and contemporaneous negotiations, representations, and agreements, whether oral or written.')
+  w.body('Entire Agreement. This Agreement represents the full understanding between the Parties on the subject of confidentiality and supersedes any prior discussions or informal understandings. Any amendments require written agreement from both Parties.')
   w.sp(4)
-  w.body('Severability. If any provision of this Agreement is found to be invalid, illegal, or unenforceable, the remaining provisions shall remain in full force and effect. The invalid provision shall be modified to the minimum extent necessary to make it enforceable.')
+  w.body('Severability. If any provision is found unenforceable, the remaining provisions continue in full effect.')
   w.sp(4)
-  w.body('No Waiver. No failure or delay by either Party in exercising any right under this Agreement shall constitute a waiver of that right. Any waiver must be in writing and signed by the waiving Party.')
+  w.body('Electronic Signatures. Electronic signatures are valid and legally binding under the ESIGN Act and applicable state law.')
   w.sp(4)
-  w.body('Amendments. This Agreement may be amended only by a written instrument signed by both Parties.')
-  w.sp(4)
-  w.body('Electronic Signatures. The Parties agree that electronic signatures are valid and binding to the same extent as original ink signatures under the ESIGN Act and applicable state law.')
-  w.sp(4)
-  w.body('Independent Contractor. Nothing in this Agreement creates an employment, partnership, joint venture, or agency relationship between the Parties.')
+  w.body('Independent Contractor. This Agreement does not create an employment, partnership, or agency relationship between the Parties.')
 
   // ── Signature page ────────────────────────────────────────────────────────────
   w.sigPage(
@@ -702,7 +698,7 @@ export async function buildPersonalNdaPdf(d: NdaFormData): Promise<Uint8Array> {
     'Chance Noonan',
     'Independent Freelance Consultant',
     'Client',
-    'IN WITNESS WHEREOF, the Parties have executed this Mutual Non-Disclosure Agreement as of the Effective Date first written above. Each Party represents that it has read, understands, and agrees to be bound by all terms of this Agreement.',
+    'By signing below, both Parties confirm they have read and understood this Agreement and agree to its terms, effective as of the date noted above.',
   )
 
   w._drawFooter()
@@ -824,7 +820,7 @@ export async function buildOrcaclubNdaPdf(d: NdaFormData): Promise<Uint8Array> {
     'ORCACLUB',
     'Authorized Representative',
     'Client',
-    'IN WITNESS WHEREOF, the Parties have executed this Mutual Non-Disclosure Agreement as of the Effective Date first written above. Each Party represents that it has read, understands, and agrees to be bound by all terms of this Agreement.',
+    'By signing below, both Parties confirm they have read and understood this Agreement and agree to its terms, effective as of the date noted above.',
   )
 
   w._drawFooter()
@@ -860,7 +856,7 @@ async function buildSowCore(d: SowFormData, brand: 'personal' | 'orcaclub'): Pro
 
   // ── Opening recital ──────────────────────────────────────────────────────────
   w.body(
-    `This Scope of Work Agreement (this "Agreement") is entered into as of ${fmtDate(d.effectiveDate)} (the "Effective Date"), by and between ${spFull} ("Service Provider") and ${blank(d.clientName)} ("Client"). This Agreement governs the services described herein and constitutes a binding contract between the Parties.`,
+    `This Scope of Work Agreement (this "Agreement") is entered into as of ${fmtDate(d.effectiveDate)}, by and between ${spFull} ("Service Provider") and ${blank(d.clientName)} ("Client"). This Agreement defines the scope, timeline, fees, and terms governing the engagement described below.`,
   )
   w.sp(8)
 
@@ -892,7 +888,7 @@ async function buildSowCore(d: SowFormData, brand: 'personal' | 'orcaclub'): Pro
   }
   w.sp(6)
   w.sub('3.1  Out of Scope')
-  w.body('Any services, work, or deliverables not explicitly listed above are excluded from this Agreement. Client requests for additional work shall be addressed through a written Change Order executed by both Parties, which may result in additional fees and adjusted timelines. Service Provider is under no obligation to perform out-of-scope work without a signed Change Order.')
+  w.body('Work not explicitly listed above is outside the scope of this Agreement. Any additional requests will be addressed through a written Change Order — outlining the work, timeline impact, and cost — agreed upon by both Parties before work begins.')
   w.hr()
 
   // ── Section 4: Timeline ───────────────────────────────────────────────────────
@@ -909,7 +905,7 @@ async function buildSowCore(d: SowFormData, brand: 'personal' | 'orcaclub'): Pro
     w.body('Milestone schedule to be agreed upon in writing following execution of this Agreement.')
   }
   w.sp(4)
-  w.body('All timelines are contingent on Client providing required materials, access, credentials, and feedback within forty-eight (48) hours of request by Service Provider. Delays attributable to Client\'s failure to respond timely shall extend corresponding delivery dates by an equal period, with no liability to Service Provider.')
+  w.body('Timelines are contingent on both Parties\' timely participation. When materials, access, or feedback are requested, a response within 48 hours keeps the project on track. If delays occur on either side, target dates adjust accordingly to protect the quality of the work.')
   w.hr()
 
   // ── Section 5: Pricing ───────────────────────────────────────────────────────
@@ -920,33 +916,33 @@ async function buildSowCore(d: SowFormData, brand: 'personal' | 'orcaclub'): Pro
   // ── Section 6: Payment Terms ─────────────────────────────────────────────────
   w.section('6. Payment Terms and Schedule')
   writeSowPaymentSchedule(w, d)
-  w.bullet(`Invoices are due and payable within ${d.netDays || '30'} days of the invoice date ("Due Date").`)
-  w.bullet(`Balances unpaid after the Due Date shall accrue a late fee of ${d.lateFee || '1.5'}% per month (${(parseFloat(d.lateFee || '1.5') * 12).toFixed(1)}% per annum) on the outstanding balance, compounding monthly.`)
-  w.bullet('If any invoice remains unpaid for fourteen (14) or more days past the Due Date, Service Provider reserves the right to suspend all work and withhold delivery of Deliverables until the overdue balance is paid in full.')
-  w.bullet('All fees are denominated in U.S. Dollars. Deposits and advance payments are non-refundable once work has commenced unless otherwise specified in writing.')
+  w.bullet(`Invoices are due within ${d.netDays || '30'} days of the invoice date. Each invoice will be itemized and sent promptly upon the applicable milestone or billing period.`)
+  w.bullet(`Balances not settled by the due date may accrue a late fee of ${d.lateFee || '1.5'}% per month on the outstanding amount. Service Provider will notify Client before any fees are applied.`)
+  w.bullet('If an invoice remains materially past due, Service Provider may pause active work until the outstanding balance is resolved. Service Provider will communicate before taking this step.')
+  w.bullet('Deposits and advance payments are non-refundable once work has commenced, as they represent resources and time already committed to the project.')
   w.hr()
 
   // ── Section 7: Client Responsibilities ───────────────────────────────────────
   w.section('7. Client Responsibilities')
-  w.body('Client\'s timely cooperation is essential to Service Provider\'s performance. Client shall:')
-  w.bullet('Provide Service Provider with timely access to required platforms, accounts, tools, credentials, and any third-party services necessary to perform the services')
-  w.bullet('Provide brand assets, copy, content, and materials requested by Service Provider in a timely manner')
-  w.bullet('Review and provide written feedback on all deliverables within forty-eight (48) to seventy-two (72) hours of delivery')
-  w.bullet('Designate a single authorized point of contact for all approvals, decisions, and communications related to this Agreement')
-  w.bullet('Promptly notify Service Provider of any changes in project requirements, stakeholders, or access permissions')
-  w.body('Service Provider shall not be responsible for delays caused by Client\'s failure to fulfill these responsibilities.')
+  w.body('Successful delivery depends on both Parties\' active participation. Client agrees to:')
+  w.bullet('Provide access to relevant platforms, accounts, tools, and credentials as reasonably required')
+  w.bullet('Supply brand assets, copy, content, and supporting materials in a timely manner')
+  w.bullet('Review deliverables and provide consolidated written feedback within 48–72 hours of delivery')
+  w.bullet('Maintain a consistent point of contact with authority to approve decisions and communications')
+  w.bullet('Communicate changes to project requirements, stakeholders, or direction as early as possible')
+  w.body('If any of the above is delayed, both Parties will communicate promptly to assess the impact on timeline and scope.')
   w.hr()
 
   // ── Section 8: Revisions and Change Orders ────────────────────────────────────
   w.section('8. Revisions and Change Orders')
   w.sub('8.1  Included Revisions')
-  w.body(`This Agreement includes up to ${d.revisionRounds || '2'} round(s) of revisions per deliverable. A "revision round" means one consolidated set of feedback submitted in writing following delivery. Service Provider will incorporate all reasonable feedback within a single revision round.`)
+  w.body(`This Agreement includes up to ${d.revisionRounds || '2'} round(s) of revisions per deliverable. A revision round consists of one consolidated set of feedback submitted after delivery. Batching feedback into a single round keeps the process efficient and well-documented for both Parties.`)
   w.sp(4)
   w.sub('8.2  Additional Revisions')
-  w.body(`Revisions exceeding the included rounds, or revisions that materially alter the original scope, shall be billed at ${d.revisionRate ? '$' + d.revisionRate + ' per hour' : 'Service Provider\'s then-current hourly rate'}, or as otherwise agreed in a written Change Order signed by both Parties.`)
+  w.body(`Revisions beyond the included rounds, or requests that materially alter the original direction, are billed at ${d.revisionRate ? '$' + d.revisionRate + '/hr' : 'Service Provider\'s standard hourly rate'}. Service Provider will confirm the estimated cost before proceeding.`)
   w.sp(4)
-  w.sub('8.3  Change Order Process')
-  w.body('Any request by Client for work outside the Scope of Work defined in Section 3 shall be submitted in writing. Service Provider shall respond with a written Change Order describing the additional work, timeline impact, and pricing. Work on any change shall not begin until the Change Order is signed by both Parties.')
+  w.sub('8.3  Change Orders')
+  w.body('Requests for work outside the defined scope are handled through a written Change Order that details the additional work, timeline impact, and associated cost. Work on any change begins only after both Parties have signed the Change Order.')
   w.hr()
 
   // ── Section 9: Intellectual Property ─────────────────────────────────────────
@@ -967,42 +963,40 @@ async function buildSowCore(d: SowFormData, brand: 'personal' | 'orcaclub'): Pro
   w.hr()
 
   // ── Section 11: Limited Warranty ─────────────────────────────────────────────
-  w.section('11. Limited Warranty')
-  w.body(`Service Provider warrants that the Deliverables will conform materially to the specifications in this Agreement for a period of thirty (30) days following final delivery ("Warranty Period"). Client's sole remedy for any warranty claim is for Service Provider to correct the non-conforming Deliverable at no additional charge. This warranty does not apply to defects caused by Client modifications, third-party integrations, or misuse. EXCEPT AS SET FORTH HEREIN, THE DELIVERABLES AND SERVICES ARE PROVIDED "AS IS" WITHOUT ANY WARRANTY, EXPRESS OR IMPLIED.`)
+  w.section('11. Quality and Warranty')
+  w.body(`Service Provider warrants that Deliverables will perform materially as specified for 30 days following final delivery. Any defects originating from Service Provider's work will be corrected at no additional charge within this period. This warranty does not extend to issues resulting from Client modifications, third-party platform behavior, or changes made after final sign-off. Beyond the warranty period, additional support is scoped and billed as new work.`)
   w.hr()
 
   // ── Section 12: Termination ───────────────────────────────────────────────────
   w.section('12. Termination')
-  w.body('Either Party may terminate this Agreement upon fourteen (14) days\' written notice to the other Party. In the event of termination:')
-  w.bullet('Client shall pay Service Provider for all work completed and expenses incurred through the effective date of termination, on a pro-rata basis')
-  w.bullet('All deposits and amounts paid for commenced work are non-refundable')
-  w.bullet('Service Provider shall deliver to Client all completed Deliverables and work-in-progress upon receipt of final payment for work performed')
-  w.bullet('Service Provider may terminate immediately, without notice, if Client fails to make any required payment when due and such failure continues for five (5) business days after written notice')
+  w.body('Either Party may terminate this Agreement with 14 days\' written notice. Upon termination:')
+  w.bullet('Client is responsible for payment of all work completed and expenses incurred through the termination date, billed on a pro-rata basis')
+  w.bullet('Deposits and payments applied to work already underway are non-refundable')
+  w.bullet('Service Provider will deliver all completed Deliverables and meaningful work-in-progress upon receipt of final payment')
+  w.bullet('Both Parties are encouraged to raise concerns in writing early, so that issues can be addressed before termination becomes necessary')
   w.hr()
 
   // ── Section 13: Limitation of Liability ──────────────────────────────────────
   w.section('13. Limitation of Liability')
-  w.body(`IN NO EVENT SHALL EITHER PARTY BE LIABLE TO THE OTHER FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING LOSS OF PROFITS, REVENUE, DATA, OR GOODWILL, HOWEVER CAUSED AND UNDER ANY THEORY OF LIABILITY, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES. ${spName.toUpperCase()}'S TOTAL CUMULATIVE LIABILITY ARISING OUT OF OR RELATED TO THIS AGREEMENT SHALL NOT EXCEED THE TOTAL FEES PAID OR PAYABLE BY CLIENT TO SERVICE PROVIDER IN THE THREE (3) MONTHS PRECEDING THE EVENT GIVING RISE TO THE CLAIM. THE PARTIES ACKNOWLEDGE THAT THESE LIMITATIONS REFLECT A REASONABLE ALLOCATION OF RISK.`)
+  w.body(`Neither Party shall be liable to the other for indirect, incidental, or consequential damages — including lost revenue, lost data, or loss of business opportunity — arising from or related to this Agreement. ${spName}'s total liability shall not exceed the total fees paid by Client in the three months preceding the event giving rise to the claim. These limitations reflect a reasonable and standard allocation of risk between professional service providers and their clients.`)
   w.hr()
 
   // ── Section 14: Independent Contractor ────────────────────────────────────────
   w.section('14. Independent Contractor')
-  w.body(`Service Provider is an independent contractor and not an employee, agent, partner, or joint venturer of Client. Service Provider shall have sole responsibility for all taxes, withholdings, insurance, benefits, and other obligations relating to its compensation under this Agreement. Service Provider may perform services for other clients during the term of this Agreement, provided doing so does not conflict with Service Provider's obligations hereunder.`)
+  w.body(`${spName} performs services under this Agreement as an independent contractor, not as an employee or agent of Client. Service Provider is solely responsible for its own taxes, benefits, and business obligations. Service Provider may engage with other clients during this Agreement, provided those engagements do not interfere with the commitments made herein.`)
   w.hr()
 
   // ── Section 15: General Provisions ───────────────────────────────────────────
   w.section('15. General Provisions')
-  w.body('Governing Law. This Agreement is governed by the laws of the State of California, without regard to its conflict-of-law principles. Any dispute arising under this Agreement shall be resolved in the state or federal courts of California, and the Parties consent to personal jurisdiction therein.')
+  w.body('Governing Law. This Agreement is governed by the laws of the State of California. Any disputes not resolved through direct negotiation will be addressed through the appropriate courts in California.')
   w.sp(4)
-  w.body('Entire Agreement. This Agreement, together with any attached exhibits or executed Change Orders, constitutes the entire agreement between the Parties with respect to its subject matter and supersedes all prior negotiations, representations, warranties, and agreements, whether oral or written.')
+  w.body('Entire Agreement. This document, together with any executed Change Orders, constitutes the complete agreement between the Parties for this engagement and supersedes any prior discussions or informal understandings on the same subject.')
   w.sp(4)
-  w.body('Severability. If any provision of this Agreement is found to be invalid, illegal, or unenforceable, the remaining provisions shall continue in full force and effect. The invalid provision shall be modified only to the minimum extent necessary to make it enforceable.')
+  w.body('Severability and Amendments. If any provision of this Agreement is found unenforceable, the remaining terms continue in full effect. Either provision may be amended by written agreement signed by both Parties.')
   w.sp(4)
-  w.body('No Waiver. Failure to enforce any provision of this Agreement shall not constitute a waiver of the right to enforce it in the future. Any waiver must be in writing and signed by an authorized representative of the waiving Party.')
+  w.body('Force Majeure. Neither Party is liable for delays caused by circumstances outside their reasonable control. In such cases, both Parties will communicate promptly and agree on a reasonable path forward.')
   w.sp(4)
-  w.body('Force Majeure. Neither Party shall be liable for delays or failures in performance resulting from causes beyond its reasonable control, including natural disasters, government actions, internet outages, or labor disputes, provided that the affected Party gives prompt written notice.')
-  w.sp(4)
-  w.body('Counterparts and Electronic Signatures. This Agreement may be executed in counterparts, each of which shall constitute an original, and all of which together shall constitute one binding instrument. Electronic signatures are valid and enforceable under the ESIGN Act and applicable state law.')
+  w.body('Electronic Signatures. Signatures obtained electronically are valid and enforceable under the ESIGN Act and applicable state law, with the same legal effect as original ink signatures.')
 
   // ── Signature page ────────────────────────────────────────────────────────────
   w.sigPage(
@@ -1010,7 +1004,7 @@ async function buildSowCore(d: SowFormData, brand: 'personal' | 'orcaclub'): Pro
     spName,
     spTitle,
     'Client',
-    'IN WITNESS WHEREOF, the Parties have executed this Scope of Work Agreement as of the Effective Date. By signing below, each Party acknowledges that it has read and understands this Agreement and agrees to be bound by its terms.',
+    'By signing below, both Parties confirm they have reviewed this Agreement, understand its terms, and agree to proceed accordingly.',
   )
 
   w._drawFooter()

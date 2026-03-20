@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils'
 import { createDocument, updateDocument, deleteFileRecord, sendDocumentEmail } from '@/actions/files'
 import { createPackageFromSow } from '@/actions/packages'
 import type { NdaFormData, SowFormData } from '@/lib/document-generators'
-import { buildPersonalNdaPdf, buildOrcaclubNdaPdf } from '@/lib/pdf-generators'
+import { buildPersonalNdaPdf, buildOrcaclubNdaPdf, buildPersonalSowPdf, buildOrcaclubSowPdf } from '@/lib/pdf-generators'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -252,15 +252,22 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
       window.open((rec.file as any).url, '_blank')
       return
     }
-    // Generated NDA — render client-side and open as blob
-    if (rec.documentTemplate === 'nda' && rec.documentData) {
+    // Generated document — render client-side and open as blob
+    if ((rec.documentTemplate === 'nda' || rec.documentTemplate === 'sow') && rec.documentData) {
       setViewingId(rec.id)
       try {
         const data = rec.documentData as any
         const brand = rec.documentBrand ?? 'orcaclub'
-        const bytes = brand === 'personal'
-          ? await buildPersonalNdaPdf(data)
-          : await buildOrcaclubNdaPdf(data)
+        let bytes: Uint8Array
+        if (rec.documentTemplate === 'nda') {
+          bytes = brand === 'personal'
+            ? await buildPersonalNdaPdf(data)
+            : await buildOrcaclubNdaPdf(data)
+        } else {
+          bytes = brand === 'personal'
+            ? await buildPersonalSowPdf(data)
+            : await buildOrcaclubSowPdf(data)
+        }
         const blob = new Blob([new Uint8Array(bytes)], { type: 'application/pdf' })
         const url = URL.createObjectURL(blob)
         window.open(url, '_blank')

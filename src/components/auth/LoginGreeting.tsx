@@ -28,7 +28,7 @@ export default function LoginGreeting() {
       >
         <div
           className={`${gothic.className} tracking-tighter leading-tight whitespace-nowrap`}
-          style={{ fontSize: 'clamp(2rem, 7vw, 6rem)' }}
+          style={{ fontSize: 'clamp(1.5rem, 3.5vw, 3rem)' }}
         >
           <span className="text-white">Welcome</span>
           <span className="ml-3 md:ml-4 lg:ml-5 primary-gradient-text">back.</span>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
 import {
   ChevronLeft, ChevronRight, Zap, ArrowRight,
   ReceiptText, BarChart3, Activity, CalendarDays, Wallet,
@@ -63,6 +64,28 @@ const TABS: { id: HomeTab; label: string; icon: React.ElementType }[] = [
   { id: 'schedule',  label: 'Schedule',  icon: CalendarDays },
   { id: 'analytics', label: 'Analytics', icon: BarChart3 },
 ]
+
+// ─── Animation variants ───────────────────────────────────────────────────────
+
+const tabVariants = {
+  initial: { opacity: 0, y: 10, filter: 'blur(4px)' },
+  animate: { opacity: 1, y: 0,  filter: 'blur(0px)', transition: { duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] as const } },
+  exit:    { opacity: 0, y: -6, filter: 'blur(3px)', transition: { duration: 0.14, ease: [0.55, 0, 1, 0.45]    as const } },
+}
+
+const stagger = {
+  animate: { transition: { staggerChildren: 0.055, delayChildren: 0.04 } },
+}
+
+const fadeUp = {
+  initial: { opacity: 0, y: 8  },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] as const } },
+}
+
+const fadeLeft = {
+  initial: { opacity: 0, x: -10 },
+  animate: { opacity: 1, x: 0,  transition: { duration: 0.18, ease: 'easeOut' as const } },
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -393,73 +416,82 @@ export function AdminHomeView({
             </p>
           </div>
 
+          <AnimatePresence mode="wait">
+
           {/* Overview — pulse summary */}
           {homeTab === 'overview' && (
-            <div className="rounded-2xl border border-[#1C1C1C] bg-[#0D0D0D] overflow-hidden">
-
-              {/* Collected */}
-              <div className="px-4 py-4 border-b border-[#141414]">
-                <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#333] mb-2">Collected</p>
-                <p className="text-2xl font-black tabular-nums text-[var(--space-accent)] leading-none">
-                  {fmtUsd(orderPipeline.paidAmount)}
-                </p>
-                <p className="text-[10px] text-[#3A3A3A] mt-1">
-                  {orderPipeline.paidCount} paid order{orderPipeline.paidCount !== 1 ? 's' : ''}
-                </p>
-              </div>
-
-              {/* Pending orders — open invoices + uninvoiced schedule entries */}
-              <div className="px-4 py-4 border-b border-[#141414]">
-                <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#333] mb-2">Pending Orders</p>
-                <p className="text-2xl font-black tabular-nums text-[#F0F0F0] leading-none">
-                  {fmtUsd(totalPendingAmount)}
-                </p>
-                <p className="text-[10px] text-[#3A3A3A] mt-1">
-                  {orderPipeline.pendingCount > 0 && `${orderPipeline.pendingCount} open invoice${orderPipeline.pendingCount !== 1 ? 's' : ''}`}
-                  {orderPipeline.pendingCount > 0 && uninvoicedCount > 0 && ' · '}
-                  {uninvoicedCount > 0 && `${uninvoicedCount} scheduled`}
-                  {totalPendingCount === 0 && 'no pending balance'}
-                </p>
-              </div>
-
-              {/* Active sprints */}
-              <div className="px-4 py-4">
-                <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#333] mb-2">Active Sprints</p>
-                <p className="text-2xl font-black tabular-nums text-[#F0F0F0] leading-none">
-                  {activeSprints.length}
-                </p>
-                {activeSprints.length > 0 ? (
-                  <p className="text-[10px] text-[#3A3A3A] mt-1 truncate">
-                    {activeSprints.slice(0, 2).map(s => s.name).join(' · ')}
-                    {activeSprints.length > 2 ? ` +${activeSprints.length - 2}` : ''}
+            <motion.div key="overview" variants={tabVariants} initial="initial" animate="animate" exit="exit">
+              <motion.div
+                variants={stagger}
+                initial="initial"
+                animate="animate"
+                className="rounded-2xl border border-[#1C1C1C] bg-[#0D0D0D] overflow-hidden"
+              >
+                {/* Collected */}
+                <motion.div variants={fadeUp} className="px-4 py-4 border-b border-[#141414]">
+                  <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#333] mb-2">Collected</p>
+                  <p className="text-2xl font-black tabular-nums text-[var(--space-accent)] leading-none">
+                    {fmtUsd(orderPipeline.paidAmount)}
                   </p>
-                ) : (
-                  <p className="text-[10px] text-[#3A3A3A] mt-1">no sprints in progress</p>
-                )}
-              </div>
+                  <p className="text-[10px] text-[#3A3A3A] mt-1">
+                    {orderPipeline.paidCount} paid order{orderPipeline.paidCount !== 1 ? 's' : ''}
+                  </p>
+                </motion.div>
 
-            </div>
+                {/* Pending orders */}
+                <motion.div variants={fadeUp} className="px-4 py-4 border-b border-[#141414]">
+                  <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#333] mb-2">Pending Orders</p>
+                  <p className="text-2xl font-black tabular-nums text-[#F0F0F0] leading-none">
+                    {fmtUsd(totalPendingAmount)}
+                  </p>
+                  <p className="text-[10px] text-[#3A3A3A] mt-1">
+                    {orderPipeline.pendingCount > 0 && `${orderPipeline.pendingCount} open invoice${orderPipeline.pendingCount !== 1 ? 's' : ''}`}
+                    {orderPipeline.pendingCount > 0 && uninvoicedCount > 0 && ' · '}
+                    {uninvoicedCount > 0 && `${uninvoicedCount} scheduled`}
+                    {totalPendingCount === 0 && 'no pending balance'}
+                  </p>
+                </motion.div>
+
+                {/* Active sprints */}
+                <motion.div variants={fadeUp} className="px-4 py-4">
+                  <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#333] mb-2">Active Sprints</p>
+                  <p className="text-2xl font-black tabular-nums text-[#F0F0F0] leading-none">
+                    {activeSprints.length}
+                  </p>
+                  {activeSprints.length > 0 ? (
+                    <p className="text-[10px] text-[#3A3A3A] mt-1 truncate">
+                      {activeSprints.slice(0, 2).map(s => s.name).join(' · ')}
+                      {activeSprints.length > 2 ? ` +${activeSprints.length - 2}` : ''}
+                    </p>
+                  ) : (
+                    <p className="text-[10px] text-[#3A3A3A] mt-1">no sprints in progress</p>
+                  )}
+                </motion.div>
+              </motion.div>
+            </motion.div>
           )}
 
           {/* Sprints */}
           {homeTab === 'sprints' && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
+            <motion.div key="sprints" variants={tabVariants} initial="initial" animate="animate" exit="exit" className="space-y-4">
+              <motion.div variants={fadeUp} className="flex items-center gap-2">
                 <Zap className="size-3.5 text-[var(--space-accent)]/40" aria-hidden="true" />
                 <span className="text-[10px] font-bold text-[#3A3A3A] uppercase tracking-[0.25em]">
                   {activeSprints.length} Active Sprint{activeSprints.length !== 1 ? 's' : ''}
                 </span>
-              </div>
-              <SprintCarousel sprints={activeSprints} username={username} />
-            </div>
+              </motion.div>
+              <motion.div variants={fadeUp}>
+                <SprintCarousel sprints={activeSprints} username={username} />
+              </motion.div>
+            </motion.div>
           )}
 
           {/* Payments — pending orders + uninvoiced schedule entries */}
           {homeTab === 'payments' && (
-            <div className="space-y-4">
+            <motion.div key="payments" variants={tabVariants} initial="initial" animate="animate" exit="exit" className="space-y-4">
 
               {/* Open invoices */}
-              <div className="rounded-2xl border border-[#1C1C1C] bg-[#0D0D0D] overflow-hidden">
+              <motion.div variants={fadeUp} className="rounded-2xl border border-[#1C1C1C] bg-[#0D0D0D] overflow-hidden">
                 <div className="flex items-center justify-between px-4 py-3 border-b border-[#141414]">
                   <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#444]">Open Invoices</p>
                   <span className="text-[9px] font-bold tabular-nums text-amber-400/70">
@@ -469,7 +501,7 @@ export function AdminHomeView({
                 {allPendingOrders.length === 0 ? (
                   <p className="px-4 py-5 text-[11px] text-[#333]">No open invoices</p>
                 ) : (
-                  <ul role="list">
+                  <motion.ul role="list" variants={stagger} initial="initial" animate="animate">
                     {allPendingOrders.map((order: any, i: number) => {
                       const ca       = typeof order.clientAccount === 'object' ? order.clientAccount : null
                       const name     = ca?.companyName || ca?.firstName || 'Client'
@@ -477,8 +509,9 @@ export function AdminHomeView({
                         ? Math.ceil((new Date(order.dueDate).getTime() - Date.now()) / 86_400_000)
                         : null
                       return (
-                        <li
+                        <motion.li
                           key={order.id}
+                          variants={fadeLeft}
                           className={cn(
                             'flex items-center gap-3 px-4 py-3',
                             i < allPendingOrders.length - 1 && 'border-b border-[#111]',
@@ -504,15 +537,15 @@ export function AdminHomeView({
                               </div>
                             )}
                           </div>
-                        </li>
+                        </motion.li>
                       )
                     })}
-                  </ul>
+                  </motion.ul>
                 )}
-              </div>
+              </motion.div>
 
               {/* Uninvoiced schedule entries */}
-              <div className="rounded-2xl border border-[#1C1C1C] bg-[#0D0D0D] overflow-hidden">
+              <motion.div variants={fadeUp} className="rounded-2xl border border-[#1C1C1C] bg-[#0D0D0D] overflow-hidden">
                 <div className="flex items-center justify-between px-4 py-3 border-b border-[#141414]">
                   <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#444]">Scheduled</p>
                   <span className="text-[9px] font-bold tabular-nums text-[var(--space-accent)]/70">
@@ -522,14 +555,15 @@ export function AdminHomeView({
                 {uninvoicedEntries.length === 0 ? (
                   <p className="px-4 py-5 text-[11px] text-[#333]">No scheduled payments</p>
                 ) : (
-                  <ul role="list">
+                  <motion.ul role="list" variants={stagger} initial="initial" animate="animate">
                     {uninvoicedEntries.map((entry: any, i: number) => {
                       const daysLeft = entry.dueDate
                         ? Math.ceil((new Date(entry.dueDate).getTime() - Date.now()) / 86_400_000)
                         : null
                       return (
-                        <li
+                        <motion.li
                           key={entry.id ?? i}
+                          variants={fadeLeft}
                           className={cn(
                             'flex items-center gap-3 px-4 py-3',
                             i < uninvoicedEntries.length - 1 && 'border-b border-[#111]',
@@ -555,19 +589,19 @@ export function AdminHomeView({
                               </div>
                             )}
                           </div>
-                        </li>
+                        </motion.li>
                       )
                     })}
-                  </ul>
+                  </motion.ul>
                 )}
-              </div>
+              </motion.div>
 
-            </div>
+            </motion.div>
           )}
 
           {/* Schedule */}
           {homeTab === 'schedule' && (
-            <div className="space-y-6">
+            <motion.div key="schedule" variants={tabVariants} initial="initial" animate="animate" exit="exit" className="space-y-6">
               <div className="flex items-center justify-between">
                 <p className="text-[10px] font-bold text-[#3A3A3A] uppercase tracking-[0.25em]">Schedule</p>
                 <div
@@ -622,22 +656,23 @@ export function AdminHomeView({
                   <p className="text-xs text-[#333] mt-1">Projects and clients with active sprints will appear here</p>
                 </div>
               )}
-            </div>
+            </motion.div>
           )}
 
           {/* Analytics */}
           {homeTab === 'analytics' && (
-            <div className="space-y-5">
+            <motion.div key="analytics" variants={tabVariants} initial="initial" animate="animate" exit="exit">
+              <motion.div variants={stagger} initial="initial" animate="animate" className="space-y-5">
 
-              <div className="bg-[#0D0D0D] border border-[#1C1C1C] rounded-2xl p-5 space-y-4">
+              <motion.div variants={fadeUp} className="bg-[#0D0D0D] border border-[#1C1C1C] rounded-2xl p-5 space-y-4">
                 <div className="flex items-center justify-between">
                   <p className="text-[10px] font-bold text-[#444] uppercase tracking-[0.2em]">Weekly Revenue</p>
                   <span className="text-sm font-bold text-[#E0E0E0] tabular-nums">{fmtUsd(pulseKpis.revenue30d)}</span>
                 </div>
                 <MiniBarChart data={weeklyRevenue} />
-              </div>
+              </motion.div>
 
-              <div className="bg-[#0D0D0D] border border-[#1C1C1C] rounded-2xl p-5 space-y-4">
+              <motion.div variants={fadeUp} className="bg-[#0D0D0D] border border-[#1C1C1C] rounded-2xl p-5 space-y-4">
                 <p className="text-[10px] font-bold text-[#444] uppercase tracking-[0.2em]">Order Pipeline · All Time</p>
                 <div
                   className="h-[5px] rounded-full overflow-hidden flex gap-px"
@@ -664,9 +699,9 @@ export function AdminHomeView({
                     </div>
                   ))}
                 </dl>
-              </div>
+              </motion.div>
 
-              <div className="bg-[#0D0D0D] border border-[#1C1C1C] rounded-2xl p-5 space-y-4">
+              <motion.div variants={fadeUp} className="bg-[#0D0D0D] border border-[#1C1C1C] rounded-2xl p-5 space-y-4">
                 <p className="text-[10px] font-bold text-[#444] uppercase tracking-[0.2em]">Project Health</p>
                 <dl className="grid grid-cols-3 gap-4">
                   {[
@@ -691,7 +726,9 @@ export function AdminHomeView({
                     </div>
                   ))}
                 </dl>
-              </div>
+              </motion.div>
+
+              </motion.div>
 
               {pendingOrders.length > 0 && (
                 <div className="bg-[#0D0D0D] border border-[#1C1C1C] rounded-2xl overflow-hidden">
@@ -723,8 +760,10 @@ export function AdminHomeView({
                 </div>
               )}
 
-            </div>
+            </motion.div>
           )}
+
+          </AnimatePresence>
 
         </div>
 
@@ -745,14 +784,19 @@ export function AdminHomeView({
                 aria-label={label}
                 aria-current={isActive ? 'page' : undefined}
                 className={cn(
-                  'relative flex items-center justify-center size-10 rounded-xl transition-all duration-150',
+                  'relative flex items-center justify-center size-10 rounded-xl transition-colors duration-150',
                   'active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--space-accent)]/40',
-                  isActive
-                    ? 'bg-[var(--space-accent)]/[0.10] text-[var(--space-accent)]'
-                    : 'text-[#383838] hover:text-[#555] hover:bg-white/[0.03]',
+                  isActive ? 'text-[var(--space-accent)]' : 'text-[#383838] hover:text-[#555]',
                 )}
               >
-                <Icon className="size-4" aria-hidden="true" />
+                {isActive && (
+                  <motion.div
+                    layoutId="tab-active-bg"
+                    className="absolute inset-0 rounded-xl bg-[var(--space-accent)]/[0.10]"
+                    transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                  />
+                )}
+                <Icon className="relative size-4 z-10" aria-hidden="true" />
                 {id === 'sprints' && activeSprints.length > 0 && (
                   <span
                     className={cn(

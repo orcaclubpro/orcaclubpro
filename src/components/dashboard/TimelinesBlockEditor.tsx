@@ -740,10 +740,12 @@ export function TimelinesBlockEditor({ timeline, onClose, onSave }: Props) {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(
     blocks.length > 0 ? 0 : null,
   )
-  const [showPicker, setShowPicker] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [saveSuccess, setSaveSuccess] = useState(false)
+  const [showPicker,   setShowPicker]   = useState(false)
+  const [saving,       setSaving]       = useState(false)
+  const [error,        setError]        = useState<string | null>(null)
+  const [saveSuccess,  setSaveSuccess]  = useState(false)
+  const [isDirty,      setIsDirty]      = useState(false)
+  const lastSavedRef = useRef<Timeline>(timeline)
 
   // Drag state
   const [dragIndex, setDragIndex] = useState<number | null>(null)
@@ -849,7 +851,7 @@ export function TimelinesBlockEditor({ timeline, onClose, onSave }: Props) {
   const selectedBlock = selectedIndex !== null ? blocks[selectedIndex] ?? null : null
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col" style={{ background: '#1C1C1C' }}>
+    <div className="fixed inset-0 z-[110] flex flex-col" style={{ background: '#1C1C1C' }}>
       {/* ── Top toolbar ── */}
       <div
         className="shrink-0 flex items-center gap-3 px-4 sm:px-6 h-14 border-b border-[#404040]"
@@ -897,16 +899,15 @@ export function TimelinesBlockEditor({ timeline, onClose, onSave }: Props) {
           disabled={saving}
           className={cn(
             'flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold',
-            'transition-all duration-150',
+            'transition-all duration-150 disabled:opacity-40 disabled:pointer-events-none',
             saveSuccess
-              ? 'bg-emerald-500/[0.15] border border-emerald-500/30 text-emerald-400'
-              : 'bg-[rgba(139,156,182,0.06)] border border-[rgba(139,156,182,0.15)] text-[#1E3A6E] hover:bg-[rgba(139,156,182,0.10)] hover:border-[rgba(139,156,182,0.22)]',
-            'disabled:opacity-40 disabled:pointer-events-none',
+              ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-400'
+              : 'bg-[rgba(139,156,182,0.12)] border border-[rgba(139,156,182,0.30)] text-[rgba(139,156,182,0.9)] hover:bg-[rgba(139,156,182,0.20)] hover:border-[rgba(139,156,182,0.45)] hover:text-white',
           )}
         >
           {saving ? (
             <span className="flex items-center gap-1.5">
-              <span className="size-3.5 rounded-full border-2 border-[rgba(139,156,182,0.20)] border-t-[#1E3A6E] animate-spin" />
+              <span className="size-3.5 rounded-full border-2 border-[rgba(139,156,182,0.30)] border-t-[rgba(139,156,182,0.9)] animate-spin" />
               Saving…
             </span>
           ) : saveSuccess ? (
@@ -917,7 +918,7 @@ export function TimelinesBlockEditor({ timeline, onClose, onSave }: Props) {
           ) : (
             <span className="flex items-center gap-1.5">
               <Save className="size-3.5" />
-              Save Changes
+              Save
             </span>
           )}
         </button>
@@ -939,12 +940,12 @@ export function TimelinesBlockEditor({ timeline, onClose, onSave }: Props) {
           className={cn(
             'flex flex-col border-[#404040]',
             'sm:w-80 sm:shrink-0 sm:border-r',
-            // Mobile: fixed height, scrollable
-            'h-48 sm:h-auto border-b sm:border-b-0 overflow-y-auto',
+            'h-64 sm:h-auto border-b sm:border-b-0',
           )}
           style={{ background: '#252525' }}
         >
-          <div className="flex-1 p-3 space-y-1.5 overflow-y-auto">
+          {/* Scrollable block list */}
+          <div className="flex-1 p-3 space-y-1.5 overflow-y-auto min-h-0">
             {blocks.length === 0 && !showPicker && (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <div className="size-10 rounded-2xl border border-[#404040] bg-[rgba(255,255,255,0.02)] flex items-center justify-center mb-3">
@@ -988,7 +989,7 @@ export function TimelinesBlockEditor({ timeline, onClose, onSave }: Props) {
                   className={cn(
                     'w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-dashed',
                     'border-[#404040] text-[#4A4A4A] text-[10px] font-semibold tracking-[0.08em] uppercase',
-                    'hover:border-[rgba(139,156,182,0.18)] hover:text-[#1E3A6E] hover:bg-[rgba(255,255,255,0.02)]',
+                    'hover:border-[rgba(139,156,182,0.18)] hover:text-[rgba(139,156,182,0.7)] hover:bg-[rgba(255,255,255,0.02)]',
                     'transition-all duration-150',
                   )}
                 >
@@ -997,6 +998,44 @@ export function TimelinesBlockEditor({ timeline, onClose, onSave }: Props) {
                 </button>
               )}
             </div>
+          </div>
+
+          {/* ── Save footer — always visible ── */}
+          <div className="shrink-0 p-3 border-t border-[#404040]">
+            {error && (
+              <div className="flex items-center gap-1.5 mb-2 text-[10px] text-red-400">
+                <AlertCircle className="size-3 shrink-0" />
+                <span className="truncate">{error}</span>
+              </div>
+            )}
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className={cn(
+                'w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold',
+                'transition-all duration-150 disabled:opacity-40 disabled:pointer-events-none',
+                saveSuccess
+                  ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-400'
+                  : 'bg-[rgba(139,156,182,0.12)] border border-[rgba(139,156,182,0.30)] text-[rgba(139,156,182,0.9)] hover:bg-[rgba(139,156,182,0.20)] hover:border-[rgba(139,156,182,0.45)] hover:text-white',
+              )}
+            >
+              {saving ? (
+                <>
+                  <span className="size-3.5 rounded-full border-2 border-[rgba(139,156,182,0.30)] border-t-[rgba(139,156,182,0.9)] animate-spin" />
+                  Saving…
+                </>
+              ) : saveSuccess ? (
+                <>
+                  <Check className="size-3.5" />
+                  Saved
+                </>
+              ) : (
+                <>
+                  <Save className="size-3.5" />
+                  Save Blocks
+                </>
+              )}
+            </button>
           </div>
         </div>
 
