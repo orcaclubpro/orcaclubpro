@@ -19,132 +19,130 @@ function esc(s: string): string {
 // ── Color maps ────────────────────────────────────────────────────────────────
 
 const TAG_COLOR: Record<string, string> = {
-  build:     '#4A8C7A',
-  integrate: '#7B6AAA',
-  touchup:   '#B07840',
-  prep:      '#A05858',
+  build:     '#7BAE9A',
+  integrate: '#A88FD4',
+  touchup:   '#D4A06B',
+  prep:      '#C97A7A',
 }
 
 // ── Block HTML builders ───────────────────────────────────────────────────────
 
-function phaseCardHtml(block: PhaseBlock): string {
+function phaseEntryHtml(block: PhaseBlock, index: number): string {
   const color = TAG_COLOR[block.tagColor ?? 'build'] ?? TAG_COLOR.build
+  const num = String(index + 1).padStart(2, '0')
 
   const items = (block.items ?? []).map(item =>
-    `<li style="display:flex;gap:8px;align-items:flex-start;margin-bottom:4px;">
-       <span style="color:${esc(color)};flex-shrink:0;font-size:10px;margin-top:1px;">–</span>
-       <span style="font-size:11px;color:#555;line-height:1.5;">${esc(item.text ?? '')}</span>
+    `<li style="display:flex;align-items:baseline;gap:8px;margin-bottom:5px;">
+       <span style="color:${esc(color)};flex-shrink:0;font-size:14px;line-height:1;">•</span>
+       <span style="font-size:11px;color:#4a4540;line-height:1.55;font-family:'DM Sans',system-ui,sans-serif;">${esc(item.text ?? '')}</span>
      </li>`
   ).join('')
 
   const dealerPill = block.dealerPill?.enabled && block.dealerPill.text
-    ? `<div style="margin-top:10px;display:flex;align-items:center;gap:6px;
-                   background:#f0f4f8;border:1px solid #c8daea;padding:5px 8px;border-radius:4px;">
-         <div style="width:5px;height:5px;border-radius:50%;background:#6B9FD4;flex-shrink:0;"></div>
-         <span style="font-size:9px;color:#5580a0;">${esc(block.dealerPill.text)}</span>
+    ? `<div style="margin-top:10px;padding:8px 12px;background:${esc(color)}14;border:1px solid ${esc(color)}40;border-radius:4px;font-size:11px;color:${esc(color)};font-weight:500;font-family:'DM Sans',system-ui,sans-serif;">
+         ${esc(block.dealerPill.text)}
        </div>`
     : ''
 
   return `
-    <div style="break-inside:avoid;page-break-inside:avoid;">
-      ${block.dateRange
-        ? `<div style="display:inline-block;margin-bottom:8px;padding:3px 10px;
-                        border:1px solid ${esc(color)}55;background:${esc(color)}10;
-                        font-size:9px;letter-spacing:0.1em;color:${esc(color)};font-weight:600;">
-             ${esc(block.dateRange)}
-           </div>`
-        : ''}
-      <div style="border:1px solid #e2e2e2;border-top:2px solid ${esc(color)};
-                  padding:12px 14px;background:#fafafa;border-radius:0 0 4px 4px;">
-        ${block.tag
-          ? `<div style="display:inline-block;margin-bottom:6px;padding:2px 7px;
-                          border:1px solid ${esc(color)}88;color:${esc(color)};
-                          font-size:8px;letter-spacing:0.18em;text-transform:uppercase;">
-               ${esc(block.tag)}
-             </div>`
+    <div style="display:flex;align-items:flex-start;margin-bottom:32px;break-inside:avoid;page-break-inside:avoid;">
+      <!-- Dot column -->
+      <div style="width:48px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding-top:18px;position:relative;">
+        <div style="width:12px;height:12px;border-radius:50%;background:${esc(color)};border:2.5px solid #FAFAF8;box-shadow:0 0 0 2px ${esc(color)};z-index:1;flex-shrink:0;"></div>
+      </div>
+
+      <!-- Content -->
+      <div style="flex:1;min-width:0;">
+        ${block.dateRange
+          ? `<div style="font-size:10px;font-weight:500;color:#b5afa6;letter-spacing:0.07em;font-family:'DM Sans',system-ui,sans-serif;margin-bottom:6px;">${esc(block.dateRange)}</div>`
           : ''}
-        <div style="font-family:'Cormorant Garamond',Georgia,serif;font-size:16px;
-                    font-weight:400;color:#1a1a1a;margin-bottom:${items ? '8px' : '0'};line-height:1.3;">
-          ${esc(block.title ?? '')}
+
+        <div style="background:#ffffff;border-left:4px solid ${esc(color)};border-radius:0 6px 6px 0;box-shadow:0 1px 6px rgba(0,0,0,0.06);padding:16px 18px 16px 16px;position:relative;overflow:hidden;">
+          <!-- Ghost number -->
+          <div style="position:absolute;top:-6px;right:12px;font-size:56px;font-weight:700;font-family:'Playfair Display',Georgia,serif;color:rgba(0,0,0,0.04);line-height:1;pointer-events:none;user-select:none;">${num}</div>
+
+          ${block.tag
+            ? `<div style="display:inline-block;font-size:9px;font-weight:600;letter-spacing:0.13em;text-transform:uppercase;color:${esc(color)};margin-bottom:6px;font-family:'DM Sans',system-ui,sans-serif;">${esc(block.tag)}</div>`
+            : ''}
+
+          <h3 style="font-family:'Playfair Display',Georgia,serif;font-size:17px;font-weight:700;color:#1a1814;margin:0 0 10px 0;line-height:1.25;">${esc(block.title ?? '')}</h3>
+
+          ${items ? `<ul style="list-style:none;padding:0;margin:0;">${items}</ul>` : ''}
+          ${dealerPill}
         </div>
-        ${items ? `<ul style="list-style:none;padding:0;margin:0;">${items}</ul>` : ''}
-        ${dealerPill}
       </div>
     </div>`
 }
 
-function checklistCardHtml(block: ChecklistBlock): string {
+function checklistEntryHtml(block: ChecklistBlock, index: number): string {
+  const color = '#6B9FD4'
+
   const items = (block.items ?? []).map(item =>
-    `<li style="display:flex;gap:10px;align-items:flex-start;margin-bottom:7px;">
-       <div style="width:11px;height:11px;border:1.5px solid #6B9FD4;flex-shrink:0;
-                   margin-top:1px;border-radius:2px;"></div>
+    `<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:9px;">
+       <div style="width:13px;height:13px;flex-shrink:0;border:1.5px solid ${color};border-radius:2px;margin-top:1px;"></div>
        <div>
-         <span style="font-size:11px;color:#555;line-height:1.5;">${esc(item.text ?? '')}</span>
+         <span style="font-size:11px;color:#4a4540;line-height:1.55;font-family:'DM Sans',system-ui,sans-serif;">${esc(item.text ?? '')}</span>
          ${item.note
-           ? `<span style="display:block;font-size:9px;color:#9a7a40;margin-top:2px;">${esc(item.note)}</span>`
+           ? `<span style="display:block;font-size:9px;color:#C9A84C;margin-top:2px;font-weight:500;font-family:'DM Sans',system-ui,sans-serif;">⚠ ${esc(item.note)}</span>`
            : ''}
        </div>
-     </li>`
+     </div>`
   ).join('')
 
   return `
-    <div style="break-inside:avoid;page-break-inside:avoid;">
-      ${block.dateLabel
-        ? `<div style="display:inline-block;margin-bottom:8px;padding:3px 10px;
-                        border:1px solid #6B9FD455;background:#6B9FD410;
-                        font-size:9px;letter-spacing:0.1em;color:#4a7aa0;font-weight:600;">
-             ${esc(block.dateLabel)}
-           </div>`
-        : ''}
-      <div style="border:1px solid #e2e2e2;border-top:2px solid #6B9FD4;
-                  padding:12px 14px;background:#f8fafc;border-radius:0 0 4px 4px;">
-        ${block.tag
-          ? `<div style="display:inline-block;margin-bottom:6px;padding:2px 7px;
-                          border:1px solid #6B9FD488;color:#4a7aa0;
-                          font-size:8px;letter-spacing:0.18em;text-transform:uppercase;">
-               ${esc(block.tag)}
-             </div>`
+    <div style="display:flex;align-items:flex-start;margin-bottom:32px;break-inside:avoid;page-break-inside:avoid;">
+      <!-- Square dot -->
+      <div style="width:48px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding-top:18px;">
+        <div style="width:12px;height:12px;border-radius:2px;background:${color};border:2.5px solid #FAFAF8;box-shadow:0 0 0 2px ${color};z-index:1;flex-shrink:0;"></div>
+      </div>
+
+      <!-- Content -->
+      <div style="flex:1;min-width:0;">
+        ${block.dateLabel
+          ? `<div style="font-size:10px;font-weight:500;color:#b5afa6;letter-spacing:0.07em;font-family:'DM Sans',system-ui,sans-serif;margin-bottom:6px;">${esc(block.dateLabel)}</div>`
           : ''}
-        <div style="font-family:'Cormorant Garamond',Georgia,serif;font-size:16px;
-                    font-weight:400;color:#1a1a1a;margin-bottom:${items ? '10px' : '0'};line-height:1.3;">
-          ${esc(block.title ?? '')}
+
+        <div style="background:rgba(107,159,212,0.05);border:1px solid rgba(107,159,212,0.22);border-radius:6px;box-shadow:0 1px 6px rgba(0,0,0,0.04);padding:16px 18px;">
+          ${block.tag
+            ? `<div style="font-size:9px;font-weight:600;letter-spacing:0.13em;text-transform:uppercase;color:${color};margin-bottom:6px;font-family:'DM Sans',system-ui,sans-serif;">${esc(block.tag)}</div>`
+            : ''}
+
+          <h3 style="font-family:'Playfair Display',Georgia,serif;font-size:17px;font-weight:700;color:#1a1814;margin:0 0 12px 0;line-height:1.25;">${esc(block.title ?? '')}</h3>
+
+          ${items}
         </div>
-        ${items ? `<ul style="list-style:none;padding:0;margin:0;">${items}</ul>` : ''}
       </div>
     </div>`
 }
 
-function launchCardHtml(block: LaunchBlock): string {
+function launchEntryHtml(block: LaunchBlock): string {
   return `
-    <div style="break-inside:avoid;page-break-inside:avoid;text-align:center;max-width:360px;margin:0 auto;">
-      ${block.dateLabel
-        ? `<div style="display:inline-block;margin-bottom:10px;padding:4px 14px;
-                        border:1px solid #b89840;background:#fbf6e9;
-                        font-size:9px;letter-spacing:0.14em;color:#9a7820;font-weight:600;">
-             ${esc(block.dateLabel)}
-           </div>`
-        : ''}
-      <div style="border:1px solid #d4b84a;border-top:2px solid #C9A84C;
-                  padding:20px 24px;background:linear-gradient(135deg,#fffdf5,#fdf8e8);
-                  border-radius:0 0 4px 4px;">
-        ${block.label
-          ? `<div style="font-size:8px;letter-spacing:0.3em;color:#9a7820;
-                          text-transform:uppercase;margin-bottom:6px;">
-               ${esc(block.label)}
-             </div>`
+    <div style="display:flex;align-items:flex-start;margin-bottom:32px;break-inside:avoid;page-break-inside:avoid;">
+      <!-- Gold dot (larger) -->
+      <div style="width:48px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding-top:20px;">
+        <div style="width:18px;height:18px;border-radius:50%;background:#C9A84C;border:3px solid #FAFAF8;box-shadow:0 0 0 2.5px #C9A84C,0 0 12px rgba(201,168,76,0.4);z-index:1;flex-shrink:0;margin-left:-3px;"></div>
+      </div>
+
+      <!-- Content -->
+      <div style="flex:1;min-width:0;">
+        ${block.dateLabel
+          ? `<div style="font-size:10px;font-weight:500;color:#b5afa6;letter-spacing:0.07em;font-family:'DM Sans',system-ui,sans-serif;margin-bottom:6px;">${esc(block.dateLabel)}</div>`
           : ''}
-        <div style="font-family:'Cormorant Garamond',Georgia,serif;font-size:28px;
-                    font-weight:300;letter-spacing:0.05em;color:#1a1a1a;margin-bottom:4px;">
-          ${block.title ? `<span>${esc(block.title)} </span>` : ''}
-          ${block.titleEmphasis
-            ? `<em style="font-style:italic;color:#9a7820;">${esc(block.titleEmphasis)}</em>`
+
+        <div style="background:linear-gradient(135deg,#C9A84C 0%,#E8C97A 50%,#C9A84C 100%);border-radius:8px;padding:28px 36px;text-align:center;box-shadow:0 4px 24px rgba(201,168,76,0.25);">
+          ${block.label
+            ? `<div style="font-size:9px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:rgba(255,255,255,0.75);margin-bottom:10px;font-family:'DM Sans',system-ui,sans-serif;">${esc(block.label)}</div>`
+            : ''}
+
+          <h2 style="font-family:'Playfair Display',Georgia,serif;font-size:28px;font-weight:700;color:#fff;margin:0;line-height:1.2;">
+            ${block.title ? esc(block.title) : ''}
+            ${block.titleEmphasis ? `<em style="font-style:italic;font-weight:400;display:block;">${esc(block.titleEmphasis)}</em>` : ''}
+          </h2>
+
+          ${block.subtitle
+            ? `<p style="margin-top:10px;font-size:13px;color:rgba(255,255,255,0.8);font-family:'DM Sans',system-ui,sans-serif;font-weight:400;">${esc(block.subtitle)}</p>`
             : ''}
         </div>
-        ${block.subtitle
-          ? `<div style="font-size:10px;color:#888;letter-spacing:0.12em;margin-top:4px;">
-               ${esc(block.subtitle)}
-             </div>`
-          : ''}
       </div>
     </div>`
 }
@@ -154,45 +152,15 @@ function launchCardHtml(block: LaunchBlock): string {
 function buildHtml(timeline: Timeline): string {
   const phases = (timeline.phases ?? []) as TimelinePhase[]
 
-  // Group phases: launch blocks get their own full-width row; others go 2-per-row
-  type Row =
-    | { wide: true;  block: LaunchBlock }
-    | { wide: false; blocks: TimelinePhase[] }
-
-  const rows: Row[] = []
-  let buf: TimelinePhase[] = []
-
-  for (const phase of phases) {
-    if (phase.blockType === 'launch') {
-      if (buf.length) { rows.push({ wide: false, blocks: buf }); buf = [] }
-      rows.push({ wide: true, block: phase as LaunchBlock })
-    } else {
-      buf.push(phase)
-      if (buf.length === 2) { rows.push({ wide: false, blocks: buf }); buf = [] }
-    }
-  }
-  if (buf.length) rows.push({ wide: false, blocks: buf })
-
-  const rowsHtml = rows.map(row => {
-    if (row.wide) {
-      return `<div style="margin-bottom:20px;">${launchCardHtml(row.block)}</div>`
-    }
-    return `
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:20px;">
-        ${row.blocks.map(p => {
-          if (p.blockType === 'phase')     return `<div>${phaseCardHtml(p as PhaseBlock)}</div>`
-          if (p.blockType === 'checklist') return `<div>${checklistCardHtml(p as ChecklistBlock)}</div>`
-          return '<div></div>'
-        }).join('')}
-        ${row.blocks.length === 1 ? '<div></div>' : ''}
-      </div>`
+  const entriesHtml = phases.map((block, i) => {
+    if (block.blockType === 'phase')     return phaseEntryHtml(block as PhaseBlock, i)
+    if (block.blockType === 'checklist') return checklistEntryHtml(block as ChecklistBlock, i)
+    if (block.blockType === 'launch')    return launchEntryHtml(block as LaunchBlock)
+    return ''
   }).join('')
 
-  const titleLine = [timeline.title, timeline.titleEmphasis]
-    .filter((s): s is string => Boolean(s))
-    .map(esc)
-    .join(' ')
-
+  const titleLine = timeline.title ?? ''
+  const titleEmphasis = timeline.titleEmphasis ?? ''
   const metaLine = [timeline.eyebrow, timeline.dateRange, timeline.metaLabel]
     .filter((s): s is string => Boolean(s))
     .map(esc)
@@ -205,14 +173,14 @@ function buildHtml(timeline: Timeline): string {
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
-      font-family: 'Inter', system-ui, sans-serif;
+      font-family: 'DM Sans', system-ui, sans-serif;
       font-size: 13px;
-      color: #1a1a1a;
-      background: #ffffff;
+      color: #1a1814;
+      background: #FAFAF8;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
@@ -223,24 +191,26 @@ function buildHtml(timeline: Timeline): string {
   </style>
 </head>
 <body>
-  <div style="max-width:680px;margin:0 auto;padding:0;">
-
-    <!-- Title block -->
-    <div style="margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid #e5e5e5;">
-      <div style="font-family:'Cormorant Garamond',Georgia,serif;font-size:28px;font-weight:300;
-                  letter-spacing:0.02em;color:#1a1a1a;line-height:1.15;margin-bottom:6px;">
-        ${titleLine}
-      </div>
-      ${metaLine
-        ? `<div style="font-size:10px;color:#888;letter-spacing:0.12em;text-transform:uppercase;">
-             ${metaLine}
-           </div>`
-        : ''}
+  <!-- ── Title block ── -->
+  <div style="margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid #E8E4DC;">
+    <div style="font-size:10px;font-weight:600;letter-spacing:0.15em;text-transform:uppercase;color:#7a756c;margin-bottom:10px;font-family:'DM Sans',system-ui,sans-serif;">
+      ${metaLine || '&nbsp;'}
     </div>
+    <h1 style="font-family:'Playfair Display',Georgia,serif;font-size:32px;font-weight:700;color:#1a1814;line-height:1.15;margin:0;">
+      ${esc(titleLine)}${titleEmphasis
+        ? ` <em style="font-style:italic;font-weight:400;color:#C9A84C;">${esc(titleEmphasis)}</em>`
+        : ''}
+    </h1>
+    <div style="width:40px;height:2px;background:#C9A84C;margin-top:14px;"></div>
+  </div>
 
-    <!-- Phases -->
-    ${rowsHtml}
+  <!-- ── Timeline body ── -->
+  <div style="position:relative;">
+    <!-- Vertical spine -->
+    <div style="position:absolute;left:23px;top:18px;bottom:0;width:2px;background:#E8E4DC;"></div>
 
+    <!-- Entries -->
+    ${entriesHtml}
   </div>
 </body>
 </html>`
@@ -248,10 +218,6 @@ function buildHtml(timeline: Timeline): string {
 
 // ── Main export ───────────────────────────────────────────────────────────────
 
-/**
- * Renders the timeline phases to a PDF buffer.
- * No branding — just the timeline title and phases.
- */
 export async function generateTimelinePDF(timeline: Timeline): Promise<Buffer> {
   const html = buildHtml(timeline)
 

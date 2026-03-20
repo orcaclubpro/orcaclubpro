@@ -11,6 +11,7 @@ import {
   Rocket,
   Check,
   ChevronRight,
+  ExternalLink,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Timeline } from '@/types/payload-types'
@@ -121,6 +122,7 @@ function BlockRow({
   const dateRange = blockDateRange(block)
   const isDragging = dragIndex === index
   const isOver = overIndex === index && dragIndex !== index
+  const isLaunch = block.blockType === 'launch'
 
   return (
     <div
@@ -131,56 +133,64 @@ function BlockRow({
       onDragEnd={onDragEnd}
       onClick={onSelect}
       className={cn(
-        'group relative flex items-center gap-2 px-3 py-2.5 rounded-xl cursor-pointer',
-        'border transition-all duration-150',
-        selected
-          ? 'bg-[rgba(139,156,182,0.06)] border-[rgba(139,156,182,0.15)]'
-          : 'bg-[rgba(255,255,255,0.02)] border-[#404040] hover:bg-[#2D2D2D] hover:border-[#404040]',
+        'group relative flex items-start gap-0 cursor-pointer transition-all duration-150',
         isDragging && 'opacity-40',
-        isOver && 'border-t-2 border-t-[rgba(139,156,182,0.60)]',
+        isOver && 'translate-y-0.5',
       )}
     >
-      {/* Drag handle */}
-      <div
-        className="shrink-0 cursor-grab active:cursor-grabbing text-[#4A4A4A] hover:text-[#A0A0A0] transition-colors"
-        onMouseDown={e => e.stopPropagation()}
-      >
-        <GripVertical className="size-3.5" />
-      </div>
-
-      {/* Colored dot */}
-      <div
-        className="shrink-0 w-2 h-2 rounded-full"
-        style={{ background: color, opacity: 0.8 }}
-      />
-
-      {/* Content */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5">
-          <span
-            className="text-[8px] font-bold tracking-[0.12em] uppercase px-1.5 py-0.5 rounded-full border"
-            style={{
-              color: `${color}BB`,
-              borderColor: `${color}35`,
-              background: `${color}0D`,
-            }}
-          >
-            {label}
-          </span>
-          <span className="text-xs font-medium text-[#A0A0A0] truncate">{title}</span>
+      {/* Spine + dot column */}
+      <div className="flex flex-col items-center shrink-0 w-8 pt-1 select-none">
+        {/* Drag handle lives here */}
+        <div
+          className="mb-1 cursor-grab active:cursor-grabbing text-[#3A3A3A] hover:text-[#6B6B6B] transition-colors"
+          onMouseDown={e => e.stopPropagation()}
+        >
+          <GripVertical className="size-3" />
         </div>
-        {dateRange && (
-          <p className="text-[9px] text-[#4A4A4A] mt-0.5 truncate">{dateRange}</p>
-        )}
+        {/* Dot on the spine */}
+        <div
+          className={cn('shrink-0 z-10', isLaunch ? 'w-3 h-3 rounded-full' : 'w-2.5 h-2.5 rounded-full')}
+          style={{
+            background: color,
+            boxShadow: selected ? `0 0 0 2px ${color}55` : undefined,
+            opacity: selected ? 1 : 0.65,
+          }}
+        />
       </div>
 
-      {/* Delete */}
-      <button
-        onClick={e => { e.stopPropagation(); onDelete() }}
-        className="shrink-0 size-5 rounded-lg flex items-center justify-center text-transparent group-hover:text-[#4A4A4A] hover:!text-red-400 hover:bg-red-400/10 transition-all"
+      {/* Card */}
+      <div
+        className={cn(
+          'flex-1 min-w-0 ml-2 mb-3 rounded-lg px-3 py-2.5 transition-all duration-150',
+          selected
+            ? 'bg-[rgba(255,255,255,0.06)]'
+            : 'bg-[rgba(255,255,255,0.02)] hover:bg-[rgba(255,255,255,0.04)]',
+        )}
+        style={{
+          borderLeft: `2px solid ${color}${selected ? 'CC' : '44'}`,
+        }}
       >
-        <X className="size-3" />
-      </button>
+        <div className="flex items-start justify-between gap-1">
+          <div className="min-w-0 flex-1">
+            <div
+              className="text-[9px] font-bold tracking-[0.14em] uppercase mb-0.5"
+              style={{ color: `${color}99` }}
+            >
+              {label}
+            </div>
+            <p className="text-xs font-medium text-[#C0C0C0] truncate leading-tight">{title}</p>
+            {dateRange && (
+              <p className="text-[9px] text-[#4A4A4A] mt-0.5 truncate">{dateRange}</p>
+            )}
+          </div>
+          <button
+            onClick={e => { e.stopPropagation(); onDelete() }}
+            className="shrink-0 size-4 rounded flex items-center justify-center text-transparent group-hover:text-[#3A3A3A] hover:!text-red-400 hover:bg-red-400/10 transition-all mt-0.5"
+          >
+            <X className="size-2.5" />
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -744,8 +754,7 @@ export function TimelinesBlockEditor({ timeline, onClose, onSave }: Props) {
   const [saving,       setSaving]       = useState(false)
   const [error,        setError]        = useState<string | null>(null)
   const [saveSuccess,  setSaveSuccess]  = useState(false)
-  const [isDirty,      setIsDirty]      = useState(false)
-  const lastSavedRef = useRef<Timeline>(timeline)
+  const [style,        setStyle]        = useState<string>((timeline as any).style ?? 'cinematic')
 
   // Drag state
   const [dragIndex, setDragIndex] = useState<number | null>(null)
@@ -827,7 +836,7 @@ export function TimelinesBlockEditor({ timeline, onClose, onSave }: Props) {
       const res = await fetch(`/api/timelines/${timeline.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phases: blocks }),
+        body: JSON.stringify({ phases: blocks, style }),
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
@@ -851,7 +860,7 @@ export function TimelinesBlockEditor({ timeline, onClose, onSave }: Props) {
   const selectedBlock = selectedIndex !== null ? blocks[selectedIndex] ?? null : null
 
   return (
-    <div className="fixed inset-0 z-[110] flex flex-col" style={{ background: '#1C1C1C' }}>
+    <div className="fixed inset-x-0 bottom-0 z-[110] flex flex-col" style={{ top: '68px', background: '#1C1C1C' }}>
       {/* ── Top toolbar ── */}
       <div
         className="shrink-0 flex items-center gap-3 px-4 sm:px-6 h-14 border-b border-[#404040]"
@@ -864,6 +873,17 @@ export function TimelinesBlockEditor({ timeline, onClose, onSave }: Props) {
         >
           <X className="size-4" />
         </button>
+
+        {/* View */}
+        <a
+          href={`/timelines/${timeline.slug}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="size-8 rounded-xl border border-[#404040] flex items-center justify-center text-[#6B6B6B] hover:text-[#F0F0F0] hover:border-[#606060] transition-all"
+          title="View timeline"
+        >
+          <ExternalLink className="size-4" />
+        </a>
 
         {/* Title */}
         <div className="flex-1 min-w-0">
@@ -884,6 +904,19 @@ export function TimelinesBlockEditor({ timeline, onClose, onSave }: Props) {
         <span className="hidden sm:inline text-[8px] font-bold tracking-[0.1em] uppercase px-2 py-0.5 rounded-full border border-[rgba(139,156,182,0.15)] text-[#6B6B6B] bg-[rgba(139,156,182,0.06)]">
           {blocks.length} {blocks.length === 1 ? 'block' : 'blocks'}
         </span>
+
+        {/* Theme selector */}
+        <select
+          value={style}
+          onChange={e => setStyle(e.target.value)}
+          className="hidden sm:block px-2.5 py-1.5 text-xs bg-[#1C1C1C] border border-[#404040] rounded-lg text-[#A0A0A0] focus:outline-none focus:border-[rgba(139,156,182,0.25)] transition-all"
+        >
+          <option value="cinematic">Cinematic</option>
+          <option value="vertical-clean">Vertical Clean</option>
+          <option value="blueprint">Blueprint</option>
+          <option value="editorial">Editorial</option>
+          <option value="terminal">Terminal</option>
+        </select>
 
         {/* Error indicator */}
         {error && (
@@ -945,7 +978,15 @@ export function TimelinesBlockEditor({ timeline, onClose, onSave }: Props) {
           style={{ background: '#252525' }}
         >
           {/* Scrollable block list */}
-          <div className="flex-1 p-3 space-y-1.5 overflow-y-auto min-h-0">
+          <div className="flex-1 px-3 pt-3 pb-1 overflow-y-auto min-h-0 relative">
+            {/* Spine line */}
+            {blocks.length > 0 && (
+              <div
+                className="absolute top-10 bottom-4 w-px"
+                style={{ left: '27px', background: 'linear-gradient(to bottom, #404040, #2A2A2A)' }}
+              />
+            )}
+
             {blocks.length === 0 && !showPicker && (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <div className="size-10 rounded-2xl border border-[#404040] bg-[rgba(255,255,255,0.02)] flex items-center justify-center mb-3">
@@ -1000,49 +1041,12 @@ export function TimelinesBlockEditor({ timeline, onClose, onSave }: Props) {
             </div>
           </div>
 
-          {/* ── Save footer — always visible ── */}
-          <div className="shrink-0 p-3 border-t border-[#404040]">
-            {error && (
-              <div className="flex items-center gap-1.5 mb-2 text-[10px] text-red-400">
-                <AlertCircle className="size-3 shrink-0" />
-                <span className="truncate">{error}</span>
-              </div>
-            )}
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className={cn(
-                'w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold',
-                'transition-all duration-150 disabled:opacity-40 disabled:pointer-events-none',
-                saveSuccess
-                  ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-400'
-                  : 'bg-[rgba(139,156,182,0.12)] border border-[rgba(139,156,182,0.30)] text-[rgba(139,156,182,0.9)] hover:bg-[rgba(139,156,182,0.20)] hover:border-[rgba(139,156,182,0.45)] hover:text-white',
-              )}
-            >
-              {saving ? (
-                <>
-                  <span className="size-3.5 rounded-full border-2 border-[rgba(139,156,182,0.30)] border-t-[rgba(139,156,182,0.9)] animate-spin" />
-                  Saving…
-                </>
-              ) : saveSuccess ? (
-                <>
-                  <Check className="size-3.5" />
-                  Saved
-                </>
-              ) : (
-                <>
-                  <Save className="size-3.5" />
-                  Save Blocks
-                </>
-              )}
-            </button>
-          </div>
         </div>
 
         {/* ── Right panel: block detail editor ── */}
         <div className="flex-1 min-w-0 overflow-y-auto" style={{ background: '#1C1C1C' }}>
           {selectedBlock !== null && selectedIndex !== null ? (
-            <div className="max-w-2xl mx-auto p-4 sm:p-6">
+            <div className="max-w-2xl mx-auto p-4 sm:p-6 pb-28 md:pb-8">
               <BlockDetailEditor
                 block={selectedBlock}
                 onChange={updated => updateBlock(selectedIndex, updated)}

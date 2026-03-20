@@ -127,7 +127,7 @@ function TimelineRow({
 }) {
   const phases     = (timeline.phases ?? []) as TimelinePhase[]
   const accessCode = (timeline as any).accessCode as string | null | undefined
-  const shareUrl   = `orcaclub.pro/orcaclub/projects/${timeline.slug}`
+  const shareUrl   = `orcaclub.pro/c/${timeline.slug}`
 
   const [expanded,    setExpanded]    = useState(false)
   const [showCode,    setShowCode]    = useState(false)

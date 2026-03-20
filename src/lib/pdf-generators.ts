@@ -834,12 +834,14 @@ async function buildSowCore(d: SowFormData, brand: 'personal' | 'orcaclub'): Pro
   const bold   = await doc.embedFont(StandardFonts.HelveticaBold)
   const normal = await doc.embedFont(StandardFonts.Helvetica)
 
-  const spName  = brand === 'orcaclub' ? 'ORCACLUB' : 'Chance Noonan'
-  const spFull  = brand === 'orcaclub' ? 'ORCACLUB Technical Operations Development Studio' : 'Chance Noonan, Independent Freelance Consultant'
-  const spTitle = brand === 'orcaclub' ? 'Authorized Representative' : 'Independent Freelance Consultant'
-  const footNote = brand === 'orcaclub'
+  const isOrcaclub = brand === 'orcaclub'
+  const spName  = d.providerName?.trim() || (isOrcaclub ? 'ORCACLUB' : 'Chance Noonan')
+  const spFull  = d.providerName?.trim() || (isOrcaclub ? 'ORCACLUB Technical Operations Development Studio' : 'Chance Noonan, Independent Freelance Consultant')
+  const spTitle = isOrcaclub ? 'Authorized Representative' : 'Independent Freelance Consultant'
+  const subtitle = isOrcaclub ? 'Technical Services Agreement' : 'Independent Contractor Agreement'
+  const footNote = isOrcaclub
     ? 'ORCACLUB Technical Operations Development Studio · orcaclub.pro · Does not constitute legal advice.'
-    : 'Prepared by Chance Noonan · Independent Freelance Consultant · Does not constitute legal advice.'
+    : `Prepared by ${spName} · Independent Freelance Consultant · Does not constitute legal advice.`
 
   const w = new DocWriter(
     doc, bold, normal,
@@ -851,7 +853,7 @@ async function buildSowCore(d: SowFormData, brand: 'personal' | 'orcaclub'): Pro
   // ── Title block ──────────────────────────────────────────────────────────────
   w.titleBlock(
     'Scope of Work Agreement',
-    brand === 'orcaclub' ? 'Technical Services Agreement' : 'Independent Contractor Agreement',
+    subtitle,
   )
 
   // ── Opening recital ──────────────────────────────────────────────────────────
@@ -880,13 +882,16 @@ async function buildSowCore(d: SowFormData, brand: 'personal' | 'orcaclub'): Pro
   // ── Section 3: Scope ─────────────────────────────────────────────────────────
   w.section('3. Scope of Work and Deliverables')
   w.body('Service Provider shall perform the following services and deliver the following items (collectively, the "Deliverables"):')
+  w.sp(4)
   const scope = d.scopeItems.filter(i => i.trim())
   if (scope.length > 0) {
-    for (const item of scope) w.bullet(item)
+    const sColW = [w.innerW * 0.08, w.innerW * 0.92]
+    const sRows = scope.map((item, i) => [`${i + 1}.`, item])
+    w.table(['#', 'Deliverable / Service'], sColW, sRows)
   } else {
     w.body('(Scope items to be defined by written amendment.)')
   }
-  w.sp(6)
+  w.sp(4)
   w.sub('3.1  Out of Scope')
   w.body('Work not explicitly listed above is outside the scope of this Agreement. Any additional requests will be addressed through a written Change Order — outlining the work, timeline impact, and cost — agreed upon by both Parties before work begins.')
   w.hr()
@@ -978,7 +983,7 @@ async function buildSowCore(d: SowFormData, brand: 'personal' | 'orcaclub'): Pro
 
   // ── Section 13: Limitation of Liability ──────────────────────────────────────
   w.section('13. Limitation of Liability')
-  w.body(`Neither Party shall be liable to the other for indirect, incidental, or consequential damages — including lost revenue, lost data, or loss of business opportunity — arising from or related to this Agreement. ${spName}'s total liability shall not exceed the total fees paid by Client in the three months preceding the event giving rise to the claim. These limitations reflect a reasonable and standard allocation of risk between professional service providers and their clients.`)
+  w.body(`Neither Party shall be liable to the other for indirect, incidental, or consequential damages — including lost revenue, lost data, or loss of business opportunity — arising from or related to this Agreement. Service Provider's total liability shall not exceed the total fees paid by Client in the three months preceding the event giving rise to the claim. These limitations reflect a reasonable and standard allocation of risk between professional service providers and their clients.`)
   w.hr()
 
   // ── Section 14: Independent Contractor ────────────────────────────────────────

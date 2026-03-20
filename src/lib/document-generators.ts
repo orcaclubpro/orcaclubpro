@@ -25,6 +25,7 @@ export interface SowPaymentEntry {
 }
 
 export interface SowFormData {
+  providerName: string
   providerContact: string
   clientName: string
   clientContact: string

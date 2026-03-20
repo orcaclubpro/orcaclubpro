@@ -52,6 +52,7 @@ const defaultNda = (): NdaFormData => ({
 })
 
 const defaultSow = (): SowFormData => ({
+  providerName: '',
   providerContact: '',
   clientName: '',
   clientContact: '',
@@ -344,9 +345,17 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
     setEditingId(null)
   }
 
+  async function buildPdfBytes(): Promise<Uint8Array> {
+    if (docType === 'nda') {
+      return brand === 'personal' ? buildPersonalNdaPdf(ndaForm) : buildOrcaclubNdaPdf(ndaForm)
+    } else {
+      return brand === 'personal' ? buildPersonalSowPdf(sowForm) : buildOrcaclubSowPdf(sowForm)
+    }
+  }
+
   async function handleDownload() {
     if (docType !== 'nda') return
-    const bytes = brand === 'personal' ? await buildPersonalNdaPdf(ndaForm) : await buildOrcaclubNdaPdf(ndaForm)
+    const bytes = await buildPdfBytes()
     const blob = new Blob([new Uint8Array(bytes)], { type: 'application/pdf' })
     const url  = URL.createObjectURL(blob)
     const a    = document.createElement('a')
@@ -356,20 +365,29 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
     setTimeout(() => URL.revokeObjectURL(url), 2000)
   }
 
+  async function handlePreview() {
+    const bytes = await buildPdfBytes()
+    const blob  = new Blob([new Uint8Array(bytes)], { type: 'application/pdf' })
+    const url   = URL.createObjectURL(blob)
+    window.open(url, '_blank')
+    setTimeout(() => URL.revokeObjectURL(url), 30000)
+  }
+
   function handleSave() {
     startTransition(async () => {
       const isNda = docType === 'nda'
       const data  = isNda ? ndaForm : sowForm
+      const brandLabel = brand === 'orcaclub' ? 'ORCACLUB' : 'Personal'
       const docName = isNda
-        ? `NDA — ${ndaForm.clientName || 'Client'} (${brand === 'orcaclub' ? 'ORCACLUB' : 'Personal'})`
-        : `SOW — ${sowForm.projectName || sowForm.clientName || 'Project'}`
+        ? `NDA — ${ndaForm.clientName || 'Client'} (${brandLabel})`
+        : `SOW — ${sowForm.projectName || sowForm.clientName || 'Project'} (${brandLabel})`
 
       // Always save to Files collection
       if (editingId) {
         const result = await updateDocument(editingId, {
           name: docName,
           documentTemplate: docType,
-          documentBrand: isNda ? brand : 'orcaclub',
+          documentBrand: brand,
           documentData: data,
           projectId: assignProject || undefined,
           sprintId: isNda ? (assignSprint || undefined) : undefined,
@@ -379,18 +397,19 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
             ...f,
             name: docName,
             documentTemplate: docType,
-            documentBrand: isNda ? brand : 'orcaclub',
+            documentBrand: brand,
             documentData: data,
             project: assignProject ? allProjects.find(p => p.id === assignProject) ?? assignProject : null,
             sprint: isNda && assignSprint ? availableSprints.find(s => s.id === assignSprint) ?? assignSprint : null,
           }))
           setSaveSuccess(true)
+          setTimeout(() => setSaveSuccess(false), 2000)
         }
       } else {
         const result = await createDocument({
           name: docName,
           documentTemplate: docType,
-          documentBrand: isNda ? brand : 'orcaclub',
+          documentBrand: brand,
           documentData: data,
           projectId: assignProject || undefined,
           sprintId: isNda ? (assignSprint || undefined) : undefined,
@@ -401,7 +420,7 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
             name: docName,
             fileType: 'document',
             documentTemplate: docType,
-            documentBrand: isNda ? brand : 'orcaclub',
+            documentBrand: brand,
             documentData: data,
             project: assignProject ? allProjects.find(p => p.id === assignProject) ?? assignProject : null,
             sprint: isNda && assignSprint ? availableSprints.find(s => s.id === assignSprint) ?? assignSprint : null,
@@ -409,6 +428,7 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
           }
           setFiles(prev => [newRecord, ...prev])
           setSaveSuccess(true)
+          setTimeout(() => setSaveSuccess(false), 2000)
         }
       }
 
@@ -637,8 +657,8 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
                   </div>
                 </div>
 
-                {/* Brand — NDA only */}
-                {docType === 'nda' && (
+                {/* Brand — NDA + SOW */}
+                {(docType === 'nda' || docType === 'sow') && (
                   <div>
                     <SectionLabel>Branding</SectionLabel>
                     <div className="flex gap-2">
@@ -706,12 +726,19 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
                 <div className="space-y-4">
                   <div className="space-y-3">
                     <SectionLabel>Parties</SectionLabel>
+                    <FieldGroup label="Effective Date">
+                      <FormInput type="date" value={sowForm.effectiveDate} onChange={v => setSowForm(f => ({ ...f, effectiveDate: v }))} />
+                    </FieldGroup>
                     <div className="grid grid-cols-2 gap-3">
-                      <FieldGroup label="Effective Date">
-                        <FormInput type="date" value={sowForm.effectiveDate} onChange={v => setSowForm(f => ({ ...f, effectiveDate: v }))} />
+                      <FieldGroup label="Service Provider Name">
+                        <FormInput
+                          value={sowForm.providerName}
+                          onChange={v => setSowForm(f => ({ ...f, providerName: v }))}
+                          placeholder={brand === 'orcaclub' ? 'ORCACLUB' : 'Chance Noonan'}
+                        />
                       </FieldGroup>
-                      <FieldGroup label={brand === 'orcaclub' ? 'ORCACLUB Contact' : 'Your Contact (Email/Phone)'}>
-                        <FormInput value={sowForm.providerContact} onChange={v => setSowForm(f => ({ ...f, providerContact: v }))} placeholder="e.g. team@orcaclub.pro" />
+                      <FieldGroup label="Service Provider Contact">
+                        <FormInput value={sowForm.providerContact} onChange={v => setSowForm(f => ({ ...f, providerContact: v }))} placeholder={brand === 'orcaclub' ? 'team@orcaclub.pro' : 'email@example.com'} />
                       </FieldGroup>
                       <FieldGroup label="Client Name">
                         <FormInput value={sowForm.clientName} onChange={v => setSowForm(f => ({ ...f, clientName: v }))} placeholder="Full legal name or company" />
@@ -987,6 +1014,13 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
                   Download Fillable PDF
                 </button>
               )}
+              <button
+                onClick={handlePreview}
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#181818] border border-[#282828] text-sm font-medium text-[#E0E0E0] hover:bg-[#222] transition-colors flex-1 justify-center"
+              >
+                <Eye className="size-3.5" />
+                View Document
+              </button>
               <button
                 onClick={handleSave}
                 disabled={isPending || saveSuccess}

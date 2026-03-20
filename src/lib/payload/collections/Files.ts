@@ -1,5 +1,5 @@
 import type { CollectionConfig } from 'payload'
-import { adminOrUser, authenticated, adminOrProjectMember } from '../access'
+import { adminOrUser, adminOrProjectMember } from '../access'
 
 /**
  * Files Collection
@@ -24,7 +24,7 @@ export const Files: CollectionConfig = {
   },
   access: {
     create: adminOrUser, // Only admin/user can upload files
-    read: authenticated, // All authenticated users can view files
+    read: adminOrProjectMember, // Admins see all; users/clients see only files on their projects
     update: adminOrUser, // Only admin/user can update file metadata
     delete: adminOrUser, // Only admin/user can delete files
   },

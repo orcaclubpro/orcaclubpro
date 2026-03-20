@@ -37,7 +37,8 @@ const ORDER_COLORS = {
   cancelled: { hex: '#f87171', rgb: '248,113,113' },
 } as const
 
-const LEFT_W     = 168
+const LEFT_W_BASE = 168
+const LEFT_W_SM   = 88
 const HDR_H      = 40
 const CLIENT_H   = 36
 const PROJECT_H  = 40
@@ -122,12 +123,29 @@ export function ClientPortfolioTimeline({
   // expanded = set of client IDs that are currently open; starts empty (all collapsed)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [tooltip, setTooltip] = useState<TooltipState>(null)
+  const [isMobile, setIsMobile] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const leftWRef = useRef(LEFT_W_BASE)
 
   const showTooltip = (e: React.MouseEvent, lines: string[]) => {
     setTooltip({ lines, x: e.clientX, y: e.clientY })
   }
   const hideTooltip = () => setTooltip(null)
+
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const obs = new ResizeObserver(([entry]) => {
+      const narrow = entry.contentRect.width < 600
+      setIsMobile(narrow)
+      leftWRef.current = narrow ? LEFT_W_SM : LEFT_W_BASE
+    })
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [])
+
+  const leftW = isMobile ? LEFT_W_SM : LEFT_W_BASE
 
   const cfg = RANGE_CFG[range]
   const totalDays     = cfg.back + cfg.forward
@@ -222,7 +240,7 @@ export function ClientPortfolioTimeline({
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
-    el.scrollLeft = Math.max(0, todayPx - (el.clientWidth - LEFT_W) * 0.40)
+    el.scrollLeft = Math.max(0, todayPx - (el.clientWidth - leftWRef.current) * 0.40)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [range])
 
@@ -237,7 +255,7 @@ export function ClientPortfolioTimeline({
   }
 
   return (
-    <div className="space-y-3">
+    <div ref={containerRef} className="space-y-3">
 
       {/* ── Section header ──────────────────────────────────────────────── */}
       <div className="flex items-center justify-between">
@@ -282,6 +300,9 @@ export function ClientPortfolioTimeline({
       <div className="relative rounded-xl border border-[#404040] bg-[#252525] overflow-hidden">
 
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#333333] to-transparent pointer-events-none" />
+        {isMobile && (
+          <div className="absolute top-0 right-0 bottom-0 w-8 bg-gradient-to-l from-[#252525] to-transparent pointer-events-none z-30" aria-hidden="true" />
+        )}
 
         <svg width="60" height="60" viewBox="0 0 60 60" fill="none"
           className="absolute top-0 right-0 opacity-[0.04] pointer-events-none select-none" aria-hidden="true">
@@ -294,15 +315,15 @@ export function ClientPortfolioTimeline({
           className="overflow-x-auto"
           style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.06) transparent' }}
         >
-          <div style={{ width: LEFT_W + timelineWidth, minWidth: '100%' }}>
+          <div style={{ width: leftW + timelineWidth, minWidth: '100%' }}>
 
             {/* ── Header ─────────────────────────────────────────────────── */}
             <div className="flex border-b border-[#404040]" style={{ height: HDR_H }}>
               <div
-                className="sticky left-0 z-30 bg-[#252525] border-r border-[#404040] shrink-0 flex items-end px-4 pb-2"
-                style={{ width: LEFT_W, minWidth: LEFT_W }}
+                className="sticky left-0 z-30 bg-[#252525] border-r border-[#404040] shrink-0 flex items-end pb-2"
+                style={{ width: leftW, minWidth: leftW, paddingLeft: isMobile ? 8 : 16 }}
               >
-                <p className="text-[9px] tracking-[0.3em] uppercase text-[#6B6B6B]">Client / Project</p>
+                <p className="text-[9px] tracking-[0.3em] uppercase text-[#6B6B6B]">{isMobile ? 'Client' : 'Client / Project'}</p>
               </div>
               <div className="relative" style={{ width: timelineWidth }}>
                 {ticks.map((tick, i) => (
@@ -352,8 +373,8 @@ export function ClientPortfolioTimeline({
                     style={{ height: CLIENT_H, borderColor: rgba(color, 0.18), background: rgba(color, 0.07) }}
                   >
                     <div
-                      className="sticky left-0 z-20 border-r shrink-0 flex items-center gap-2 px-3"
-                      style={{ width: LEFT_W, minWidth: LEFT_W, borderColor: rgba(color, 0.18), background: rgba(color, 0.09) }}
+                      className="sticky left-0 z-20 border-r shrink-0 flex items-center"
+                      style={{ width: leftW, minWidth: leftW, gap: isMobile ? 4 : 8, paddingLeft: isMobile ? 6 : 12, paddingRight: isMobile ? 4 : 8, borderColor: rgba(color, 0.18), background: rgba(color, 0.09) }}
                     >
                       {/* Collapse toggle */}
                       <button
@@ -370,15 +391,17 @@ export function ClientPortfolioTimeline({
                       {/* Client name — link to clients tab */}
                       <a
                         href={`/u/${username}/clients/${group.id}`}
-                        className="text-[11px] font-semibold truncate flex-1 min-w-0 hover:opacity-80 transition-opacity"
-                        style={{ color: color.hex }}
+                        className="font-semibold truncate flex-1 min-w-0 hover:opacity-80 transition-opacity"
+                        style={{ fontSize: isMobile ? 10 : 11, color: color.hex }}
                         title={group.name}
                       >
                         {group.name}
                       </a>
-                      <span className="ml-auto text-[9px] shrink-0 font-medium" style={{ color: rgba(color, 0.55) }}>
-                        {group.projects.length}p
-                      </span>
+                      {!isMobile && (
+                        <span className="ml-auto text-[9px] shrink-0 font-medium" style={{ color: rgba(color, 0.55) }}>
+                          {group.projects.length}p
+                        </span>
+                      )}
                     </div>
 
                     {/* Order bars on client row */}
@@ -435,14 +458,15 @@ export function ClientPortfolioTimeline({
                         style={{ height: PROJECT_H }}
                       >
                         <div
-                          className="sticky left-0 z-20 bg-[#252525] border-r border-[#404040] shrink-0 flex items-center gap-2 pl-7 pr-3 group-hover/row:bg-[#2D2D2D] transition-colors"
-                          style={{ width: LEFT_W, minWidth: LEFT_W }}
+                          className="sticky left-0 z-20 bg-[#252525] border-r border-[#404040] shrink-0 flex items-center group-hover/row:bg-[#2D2D2D] transition-colors"
+                          style={{ width: leftW, minWidth: leftW, paddingLeft: isMobile ? 16 : 28, paddingRight: isMobile ? 4 : 12, gap: isMobile ? 4 : 8 }}
                         >
                           <div className="size-1.5 rounded-full shrink-0" style={{ background: rgba(color, 0.7) }} />
                           {/* Project name — link to project detail */}
                           <a
                             href={`/u/${username}/projects/${project.id}`}
-                            className="text-[10px] text-[#A0A0A0] truncate hover:text-[#F0F0F0] transition-colors leading-snug font-medium"
+                            className="text-[#A0A0A0] truncate hover:text-[#F0F0F0] transition-colors leading-snug font-medium flex-1 min-w-0"
+                            style={{ fontSize: isMobile ? 9 : 10 }}
                             title={project.name}
                           >
                             {project.name}
@@ -538,7 +562,7 @@ export function ClientPortfolioTimeline({
             {/* "N more" row */}
             {hiddenCount > 0 && (
               <div className="flex" style={{ height: 30 }}>
-                <div className="sticky left-0 z-20 bg-[#252525] border-r border-[#404040] shrink-0 flex items-center px-4" style={{ width: LEFT_W, minWidth: LEFT_W }}>
+                <div className="sticky left-0 z-20 bg-[#252525] border-r border-[#404040] shrink-0 flex items-center" style={{ width: leftW, minWidth: leftW, paddingLeft: isMobile ? 8 : 16 }}>
                   <button onClick={() => setSettingsOpen(true)} className="text-[10px] text-[#6B6B6B] hover:text-[#A0A0A0] transition-colors">
                     +{hiddenCount} more client{hiddenCount !== 1 ? 's' : ''}
                   </button>
