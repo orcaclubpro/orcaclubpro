@@ -118,7 +118,7 @@ export function ClientHomeView({
         {/* Greeting — always first in DOM → first on mobile, col 1 on desktop */}
         <div className={`flex flex-col justify-center py-4 sm:py-8 lg:py-14 ${hasSchedule ? 'lg:order-1' : ''}`}>
           <div className="flex items-center justify-between mb-5">
-            <p className="text-xs font-semibold text-[#1E3A6E] uppercase tracking-[0.25em]">
+            <p className="text-xs font-semibold text-[var(--space-accent)] uppercase tracking-[0.25em]">
               Client Portal · ORCACLUB Spaces
             </p>
             <ThemeSwitcher />
@@ -140,7 +140,7 @@ export function ClientHomeView({
           <div className="lg:order-3 space-y-3">
             <div className="flex items-center gap-3">
               <div className="w-px h-4 bg-[var(--space-accent)]/40 rounded-full shrink-0" />
-              <h2 className="text-sm font-semibold text-[#F0F0F0]">Payment Schedule</h2>
+              <h2 className="text-sm font-semibold text-[var(--space-text-primary)]">Payment Schedule</h2>
             </div>
             <PaymentScheduleCard
               packages={clientPackages}
@@ -167,16 +167,16 @@ export function ClientHomeView({
           <div>
             <div className="flex items-center gap-3">
               <div className="w-px h-4 bg-[var(--space-accent)]/40 rounded-full shrink-0" />
-              <h2 className="text-sm font-semibold text-[#F0F0F0]">Active Projects</h2>
+              <h2 className="text-sm font-semibold text-[var(--space-text-primary)]">Active Projects</h2>
             </div>
             {clientProjects.length > 0 && (
-              <p className="text-xs text-[#4A4A4A] mt-0.5 ml-4">
+              <p className="text-xs text-[var(--space-text-muted)] mt-0.5 ml-4">
                 {activeProjectCount} active · {clientProjects.length} total
               </p>
             )}
           </div>
           {clientProjects.length > 3 && (
-            <Link href={`/u/${username}?tab=projects`} className="flex items-center gap-1 text-xs text-[#6B6B6B] hover:text-[#A0A0A0] transition-colors">
+            <Link href={`/u/${username}?tab=projects`} className="flex items-center gap-1 text-xs text-[var(--space-text-secondary)] hover:text-[var(--space-text-tertiary)] transition-colors">
               View all <ArrowRight className="size-3" />
             </Link>
           )}
@@ -189,11 +189,11 @@ export function ClientHomeView({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-px h-4 bg-[var(--space-accent)]/40 rounded-full shrink-0" />
-            <h2 className="text-sm font-semibold text-[#F0F0F0]">Invoices</h2>
+            <h2 className="text-sm font-semibold text-[var(--space-text-primary)]">Invoices</h2>
           </div>
           <Link
             href={`/u/${username}?tab=invoices`}
-            className="flex items-center gap-1 text-xs text-[#6B6B6B] hover:text-[#A0A0A0] transition-colors"
+            className="flex items-center gap-1 text-xs text-[var(--space-text-secondary)] hover:text-[var(--space-text-tertiary)] transition-colors"
           >
             View all <ArrowRight className="size-3" />
           </Link>

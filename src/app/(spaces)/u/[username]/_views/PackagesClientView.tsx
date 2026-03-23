@@ -80,7 +80,7 @@ function statusStyle(status?: string) {
   switch (status) {
     case 'accepted': return 'text-emerald-400 border-emerald-400/25 bg-emerald-400/10'
     case 'sent':     return 'text-[var(--space-accent)] border-[rgba(139,156,182,0.18)] bg-[rgba(139,156,182,0.10)]'
-    default:         return 'text-[#4A4A4A] border-[#404040] bg-[rgba(255,255,255,0.02)]'
+    default:         return 'text-[var(--space-text-muted)] border-[var(--space-border-hard)] bg-[rgba(255,255,255,0.02)]'
   }
 }
 
@@ -138,7 +138,7 @@ function PackageModal({
           // height constraints — the only source of truth
           'max-h-[96dvh] sm:max-h-[82vh] sm:max-w-[700px]',
         )}
-        style={{ background: '#111111' }}
+        style={{ background: 'var(--space-bg-card)' }}
       >
         {/* ── CYAN ACCENT LINE ── */}
         <div className="shrink-0 h-px" style={{ background: 'linear-gradient(90deg,transparent,rgba(103,232,249,0.4),transparent)' }} />
@@ -441,12 +441,12 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
     return (
       <div className="flex items-center justify-center min-h-[60vh] px-6">
         <div className="text-center max-w-xs">
-          <div className="inline-flex p-5 rounded-2xl bg-[#2D2D2D] border border-[#404040] mb-6 relative overflow-hidden">
+          <div className="inline-flex p-5 rounded-2xl bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] mb-6 relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-[rgba(255,255,255,0.03)] to-transparent" />
-            <Sparkles className="size-8 text-[#4A4A4A] relative z-10" />
+            <Sparkles className="size-8 text-[var(--space-text-muted)] relative z-10" />
           </div>
-          <h3 className="text-lg font-semibold text-[#F0F0F0] mb-2">Your packages are on the way</h3>
-          <p className="text-sm text-[#4A4A4A] leading-relaxed">
+          <h3 className="text-lg font-semibold text-[var(--space-text-primary)] mb-2">Your packages are on the way</h3>
+          <p className="text-sm text-[var(--space-text-muted)] leading-relaxed">
             Your team is curating custom service packages for you. They&apos;ll appear here once ready.
           </p>
         </div>
@@ -466,11 +466,11 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
             <p className="text-[9px] font-bold tracking-[0.32em] uppercase mb-1.5" style={{ color: 'var(--space-accent)' }}>
               Service Packages
             </p>
-            <h2 className="text-xl font-bold text-[#F0F0F0] tracking-tight">Your Packages</h2>
+            <h2 className="text-xl font-bold text-[var(--space-text-primary)] tracking-tight">Your Packages</h2>
           </div>
           {total > 1 && (
-            <span className="text-sm font-mono text-[#A0A0A0] tabular-nums">
-              {pad(activeIdx + 1)}<span className="text-[#4A4A4A] mx-1">/</span>{pad(total)}
+            <span className="text-sm font-mono text-[var(--space-text-tertiary)] tabular-nums">
+              {pad(activeIdx + 1)}<span className="text-[var(--space-text-muted)] mx-1">/</span>{pad(total)}
             </span>
           )}
         </div>
@@ -494,9 +494,9 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                   <div
                     className={cn(
                       'relative rounded-2xl border overflow-hidden transition-all duration-500',
-                      isActive ? 'border-[rgba(139,156,182,0.12)]' : 'border-[#404040]',
+                      isActive ? 'border-[rgba(139,156,182,0.12)]' : 'border-[var(--space-border-hard)]',
                     )}
-                    style={{ background: '#252525' }}
+                    style={{ background: 'var(--space-bg-card)' }}
                   >
                     {/* Top accent line */}
                     <div className={cn(
@@ -523,12 +523,12 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                       </div>
 
                       {/* Name */}
-                      <h3 className="text-2xl sm:text-3xl lg:text-[2.5rem] font-bold text-[#F0F0F0] leading-tight tracking-tight mb-4">
+                      <h3 className="text-2xl sm:text-3xl lg:text-[2.5rem] font-bold text-[var(--space-text-primary)] leading-tight tracking-tight mb-4">
                         {pkg.name}
                       </h3>
 
                       {pkg.description && (
-                        <p className="text-sm text-[#6B6B6B] leading-relaxed mb-5 lg:mb-8 max-w-xl">
+                        <p className="text-sm text-[var(--space-text-secondary)] leading-relaxed mb-5 lg:mb-8 max-w-xl">
                           {pkg.description}
                         </p>
                       )}
@@ -538,26 +538,26 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                         <div className="flex items-end gap-8 flex-wrap mb-8">
                           {oneTime > 0 && (
                             <div>
-                              <p className="text-3xl sm:text-4xl font-bold text-[#F0F0F0] tabular-nums tracking-tight">{fmt(oneTime)}</p>
-                              <p className="text-[9px] text-[#A0A0A0] mt-1.5 uppercase tracking-[0.2em]">one-time</p>
+                              <p className="text-3xl sm:text-4xl font-bold text-[var(--space-text-primary)] tabular-nums tracking-tight">{fmt(oneTime)}</p>
+                              <p className="text-[9px] text-[var(--space-text-tertiary)] mt-1.5 uppercase tracking-[0.2em]">one-time</p>
                             </div>
                           )}
                           {monthly > 0 && (
                             <div>
                               <div className="flex items-baseline gap-1">
-                                <p className="text-3xl sm:text-4xl font-bold text-[#F0F0F0] tabular-nums tracking-tight">{fmt(monthly)}</p>
-                                <p className="text-xl text-[#A0A0A0] font-normal">/mo</p>
+                                <p className="text-3xl sm:text-4xl font-bold text-[var(--space-text-primary)] tabular-nums tracking-tight">{fmt(monthly)}</p>
+                                <p className="text-xl text-[var(--space-text-tertiary)] font-normal">/mo</p>
                               </div>
-                              <p className="text-[9px] text-[#A0A0A0] mt-1.5 uppercase tracking-[0.2em]">monthly</p>
+                              <p className="text-[9px] text-[var(--space-text-tertiary)] mt-1.5 uppercase tracking-[0.2em]">monthly</p>
                             </div>
                           )}
                           {annual > 0 && (
                             <div>
                               <div className="flex items-baseline gap-1">
-                                <p className="text-3xl sm:text-4xl font-bold text-[#F0F0F0] tabular-nums tracking-tight">{fmt(annual)}</p>
-                                <p className="text-xl text-[#A0A0A0] font-normal">/yr</p>
+                                <p className="text-3xl sm:text-4xl font-bold text-[var(--space-text-primary)] tabular-nums tracking-tight">{fmt(annual)}</p>
+                                <p className="text-xl text-[var(--space-text-tertiary)] font-normal">/yr</p>
                               </div>
-                              <p className="text-[9px] text-[#A0A0A0] mt-1.5 uppercase tracking-[0.2em]">annually</p>
+                              <p className="text-[9px] text-[var(--space-text-tertiary)] mt-1.5 uppercase tracking-[0.2em]">annually</p>
                             </div>
                           )}
                         </div>
@@ -578,14 +578,14 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                             ))}
                             {lineItems.length > 6 && (
                               <div
-                                className="size-6 rounded-full bg-[#2D2D2D] border-2 flex items-center justify-center"
+                                className="size-6 rounded-full bg-[var(--space-bg-card-hover)] border-2 flex items-center justify-center"
                                 style={{ borderColor: '#404040' }}
                               >
-                                <span className="text-[9px] text-[#6B6B6B] font-bold">+{lineItems.length - 6}</span>
+                                <span className="text-[9px] text-[var(--space-text-secondary)] font-bold">+{lineItems.length - 6}</span>
                               </div>
                             )}
                           </div>
-                          <p className="text-xs text-[#4A4A4A]">
+                          <p className="text-xs text-[var(--space-text-muted)]">
                             {lineItems.length} service{lineItems.length !== 1 ? 's' : ''} included
                           </p>
                         </div>
@@ -596,7 +596,7 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                         {/* View Details — primary action */}
                         <button
                           onClick={() => setModalPkg(pkg)}
-                          className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-2.5 rounded-xl text-sm font-semibold bg-[#2D2D2D] border border-[#404040] text-[#F0F0F0] hover:bg-[#E5E1D9] hover:border-[#404040] transition-all duration-200"
+                          className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-2.5 rounded-xl text-sm font-semibold bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] text-[var(--space-text-primary)] hover:bg-[var(--space-bg-card-hover)] hover:border-[var(--space-border-hard)] transition-all duration-200"
                         >
                           View Details
                         </button>
@@ -620,8 +620,8 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                 className={cn(
                   'size-9 rounded-xl border flex items-center justify-center transition-all duration-200',
                   activeIdx === 0
-                    ? 'border-[#404040] text-[#4A4A4A] cursor-not-allowed'
-                    : 'border-[#404040] text-[#6B6B6B] hover:border-[rgba(139,156,182,0.18)] hover:bg-[rgba(139,156,182,0.04)]',
+                    ? 'border-[var(--space-border-hard)] text-[var(--space-text-muted)] cursor-not-allowed'
+                    : 'border-[var(--space-border-hard)] text-[var(--space-text-secondary)] hover:border-[rgba(139,156,182,0.18)] hover:bg-[rgba(139,156,182,0.04)]',
                 )}
                 style={activeIdx !== 0 ? { } : {}}
               >
@@ -633,8 +633,8 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                 className={cn(
                   'size-9 rounded-xl border flex items-center justify-center transition-all duration-200',
                   activeIdx === total - 1
-                    ? 'border-[#404040] text-[#4A4A4A] cursor-not-allowed'
-                    : 'border-[#404040] text-[#6B6B6B] hover:border-[rgba(139,156,182,0.18)] hover:bg-[rgba(139,156,182,0.04)]',
+                    ? 'border-[var(--space-border-hard)] text-[var(--space-text-muted)] cursor-not-allowed'
+                    : 'border-[var(--space-border-hard)] text-[var(--space-text-secondary)] hover:border-[rgba(139,156,182,0.18)] hover:bg-[rgba(139,156,182,0.04)]',
                 )}
               >
                 <ChevronRight className="size-4" />
@@ -651,7 +651,7 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                     'rounded-full transition-all duration-300',
                     i === activeIdx
                       ? 'w-5 h-1.5'
-                      : 'w-1.5 h-1.5 bg-[#333333] hover:bg-[#555555]',
+                      : 'w-1.5 h-1.5 bg-[var(--space-divider)] hover:bg-[#555555]',
                   )}
                   style={i === activeIdx ? { background: 'var(--space-accent)', width: '1.25rem', height: '0.375rem' } : {}}
                 />
@@ -666,7 +666,7 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
         {/* ── Package selector strip ────────────────────────────────────────── */}
         {total > 1 && (
           <div className="px-6 lg:px-10 pt-4 pb-10">
-            <p className="text-[9px] font-bold tracking-[0.28em] uppercase text-[#1E3A6E] mb-3">
+            <p className="text-[9px] font-bold tracking-[0.28em] uppercase text-[var(--space-accent)] mb-3">
               All Packages
             </p>
             <div className="flex gap-2.5 overflow-x-auto scrollbar-none pb-1">
@@ -681,16 +681,16 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                       'shrink-0 flex flex-col gap-1.5 p-3.5 rounded-xl border text-left transition-all duration-200',
                       isActive
                         ? 'border-[rgba(139,156,182,0.18)] bg-[rgba(139,156,182,0.06)]'
-                        : 'border-[#404040] bg-[#252525] hover:border-[#404040] hover:bg-[#2D2D2D]',
+                        : 'border-[var(--space-border-hard)] bg-[var(--space-bg-card)] hover:border-[var(--space-border-hard)] hover:bg-[var(--space-bg-card-hover)]',
                     )}
                     style={{ minWidth: 150, maxWidth: 200 }}
                   >
                     <div className="flex items-center gap-1.5">
-                      <span className={cn('text-[9px] font-bold tabular-nums', isActive ? '' : 'text-[#4A4A4A]')} style={isActive ? { color: 'var(--space-accent)', opacity: 0.6 } : {}}>
+                      <span className={cn('text-[9px] font-bold tabular-nums', isActive ? '' : 'text-[var(--space-text-muted)]')} style={isActive ? { color: 'var(--space-accent)', opacity: 0.6 } : {}}>
                         {pad(i + 1)}
                       </span>
                     </div>
-                    <p className={cn('text-xs font-semibold leading-snug line-clamp-2', isActive ? 'text-[#F0F0F0]' : 'text-[#6B6B6B]')}>
+                    <p className={cn('text-xs font-semibold leading-snug line-clamp-2', isActive ? 'text-[var(--space-text-primary)]' : 'text-[var(--space-text-secondary)]')}>
                       {pkg.name}
                     </p>
                     {(oneTime > 0 || monthly > 0) && (

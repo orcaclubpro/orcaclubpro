@@ -30,12 +30,12 @@ export function WelcomeTipsBanner({ firstName }: WelcomeTipsBannerProps) {
 
         {/* Icon */}
         <div className="shrink-0 mt-0.5 p-2 rounded-lg bg-[rgba(139,156,182,0.10)] border border-[rgba(139,156,182,0.15)]">
-          <FolderOpen className="size-4 text-[#1E3A6E]" />
+          <FolderOpen className="size-4 text-[var(--space-accent)]" />
         </div>
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <p className="text-[10px] font-semibold text-[#1E3A6E] uppercase tracking-[0.25em] mb-1">
+          <p className="text-[10px] font-semibold text-[var(--space-accent)] uppercase tracking-[0.25em] mb-1">
             Welcome to ORCACLUB{firstName ? `, ${firstName}` : ''}
           </p>
           <p className="text-sm text-gray-300 font-light leading-relaxed">

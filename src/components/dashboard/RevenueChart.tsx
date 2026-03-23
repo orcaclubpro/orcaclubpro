@@ -162,14 +162,14 @@ export function RevenueChart({
   const pendingFrac = cur.total > 0 ? cur.pendingAmt / cur.total : 0
 
   return (
-    <div className="rounded-xl border border-[#404040] bg-[#252525] overflow-hidden relative">
+    <div className="rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] overflow-hidden relative">
 
       {/* ── Info button — opens projected revenue in analytics panel ──────── */}
       {onInfo && pendingCount > 0 && (
         <button
           onClick={onInfo}
           title={`${pendingCount} pending invoice${pendingCount !== 1 ? 's' : ''} · view projected revenue`}
-          className="absolute top-3 right-3 z-10 flex items-center justify-center size-6 rounded-full border border-[#404040] text-amber-400/50 hover:border-amber-400/40 hover:text-amber-400/90 hover:bg-amber-400/[0.05] transition-all duration-150"
+          className="absolute top-3 right-3 z-10 flex items-center justify-center size-6 rounded-full border border-[var(--space-border-hard)] text-amber-400/50 hover:border-amber-400/40 hover:text-amber-400/90 hover:bg-amber-400/[0.05] transition-all duration-150"
         >
           <Info className="size-3" />
         </button>
@@ -220,7 +220,7 @@ export function RevenueChart({
                   <p className="text-[28px] font-black tabular-nums leading-none" style={{ color: 'var(--space-accent)' }}>
                     {cur.collectRate}%
                   </p>
-                  <p className="text-[9px] uppercase tracking-[0.2em] text-[#4A4A4A] mt-1">
+                  <p className="text-[9px] uppercase tracking-[0.2em] text-[var(--space-text-muted)] mt-1">
                     collected
                   </p>
                   <div className="mt-1.5">
@@ -228,17 +228,17 @@ export function RevenueChart({
                   </div>
                 </>
               ) : (
-                <p className="text-[10px] uppercase tracking-wider text-[#4A4A4A]">No data</p>
+                <p className="text-[10px] uppercase tracking-wider text-[var(--space-text-muted)]">No data</p>
               )}
             </div>
           </div>
 
           {/* Breakdown */}
           <div className="flex-1 min-w-0">
-            <p className="text-[11px] tracking-[0.3em] uppercase font-semibold text-[#6B6B6B] mb-1">
+            <p className="text-[11px] tracking-[0.3em] uppercase font-semibold text-[var(--space-text-secondary)] mb-1">
               Revenue
             </p>
-            <p className="text-[10px] text-[#4A4A4A] mb-5">{RANGE_LABEL[range]}</p>
+            <p className="text-[10px] text-[var(--space-text-muted)] mb-5">{RANGE_LABEL[range]}</p>
 
             <div className="space-y-3.5">
 
@@ -250,9 +250,9 @@ export function RevenueChart({
                     style={{ background: 'var(--space-accent)', boxShadow: '0 0 8px rgba(139,156,182,0.45)' }}
                   />
                   <div>
-                    <p className="text-[12px] font-medium text-[#6B6B6B] leading-none">Collected</p>
+                    <p className="text-[12px] font-medium text-[var(--space-text-secondary)] leading-none">Collected</p>
                     {cur.paidCt > 0 && (
-                      <p className="text-[10px] text-[#4A4A4A] mt-0.5">{cur.paidCt} order{cur.paidCt !== 1 ? 's' : ''}</p>
+                      <p className="text-[10px] text-[var(--space-text-muted)] mt-0.5">{cur.paidCt} order{cur.paidCt !== 1 ? 's' : ''}</p>
                     )}
                   </div>
                 </div>
@@ -274,9 +274,9 @@ export function RevenueChart({
                     style={{ boxShadow: '0 0 7px rgba(251,191,36,0.45)' }}
                   />
                   <div>
-                    <p className="text-[12px] font-medium text-[#6B6B6B] leading-none">Pending</p>
+                    <p className="text-[12px] font-medium text-[var(--space-text-secondary)] leading-none">Pending</p>
                     {cur.pendingCt > 0 && (
-                      <p className="text-[10px] text-[#4A4A4A] mt-0.5">{cur.pendingCt} order{cur.pendingCt !== 1 ? 's' : ''}</p>
+                      <p className="text-[10px] text-[var(--space-text-muted)] mt-0.5">{cur.pendingCt} order{cur.pendingCt !== 1 ? 's' : ''}</p>
                     )}
                   </div>
                 </div>
@@ -296,9 +296,9 @@ export function RevenueChart({
                   <div className="flex items-center gap-3">
                     <div className="size-3 rounded-full shrink-0" style={{ background: 'rgba(248,113,113,0.45)' }} />
                     <div>
-                      <p className="text-[12px] font-medium text-[#4A4A4A] leading-none">Cancelled</p>
+                      <p className="text-[12px] font-medium text-[var(--space-text-muted)] leading-none">Cancelled</p>
                       {cur.cancelledCt > 0 && (
-                        <p className="text-[10px] text-[#4A4A4A] mt-0.5">{cur.cancelledCt} order{cur.cancelledCt !== 1 ? 's' : ''}</p>
+                        <p className="text-[10px] text-[var(--space-text-muted)] mt-0.5">{cur.cancelledCt} order{cur.cancelledCt !== 1 ? 's' : ''}</p>
                       )}
                     </div>
                   </div>
@@ -314,17 +314,17 @@ export function RevenueChart({
               )}
 
               {/* Pipeline total */}
-              <div className="pt-3.5 border-t border-[#404040] flex items-center justify-between gap-4">
+              <div className="pt-3.5 border-t border-[var(--space-border-hard)] flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.2em] text-[#4A4A4A] leading-none">Pipeline</p>
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--space-text-muted)] leading-none">Pipeline</p>
                   {prev.total > 0 && (
-                    <p className="text-[9px] text-[#4A4A4A] mt-0.5">
+                    <p className="text-[9px] text-[var(--space-text-muted)] mt-0.5">
                       prev. {fmt(prev.total)}
                     </p>
                   )}
                 </div>
                 <div className="text-right">
-                  <p className="text-[18px] font-black text-[#F0F0F0] tabular-nums leading-none">{fmt(cur.total)}</p>
+                  <p className="text-[18px] font-black text-[var(--space-text-primary)] tabular-nums leading-none">{fmt(cur.total)}</p>
                   <div className="flex justify-end mt-0.5">
                     <DeltaBadge current={cur.total} prev={prev.total} />
                   </div>

@@ -248,7 +248,7 @@ export default async function DashboardPage({
           <div className="inline-flex p-4 rounded-full bg-red-500/10 border border-red-500/20 mb-5">
             <HelpCircle className="size-7 text-red-400" />
           </div>
-          <h2 className="text-xl font-semibold text-[#F0F0F0] mb-2">Account Not Found</h2>
+          <h2 className="text-xl font-semibold text-[var(--space-text-primary)] mb-2">Account Not Found</h2>
           <p className="text-sm text-gray-500 mb-6 leading-relaxed">
             Your client account could not be found. Please contact support for assistance.
           </p>

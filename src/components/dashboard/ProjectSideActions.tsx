@@ -40,8 +40,8 @@ export function ProjectSideActions({ project, tasks, username }: ProjectSideActi
   const buttonClass = (i: number, mobile: boolean) => cn(
     'flex flex-col items-center gap-2 transition-all duration-300 group',
     mobile
-      ? 'pl-2.5 pr-2 py-3 bg-[#1C1C1C] border border-r-0 border-[#404040] hover:border-[rgba(139,156,182,0.20)] hover:bg-[#2D2D2D] active:scale-95'
-      : 'pl-3 pr-2.5 py-5 bg-[#252525] border border-r-0 border-[#404040] hover:border-[rgba(139,156,182,0.20)] hover:bg-[#2D2D2D]',
+      ? 'pl-2.5 pr-2 py-3 bg-[var(--space-bg-base)] border border-r-0 border-[var(--space-border-hard)] hover:border-[rgba(139,156,182,0.20)] hover:bg-[var(--space-bg-card-hover)] active:scale-95'
+      : 'pl-3 pr-2.5 py-5 bg-[var(--space-bg-card)] border border-r-0 border-[var(--space-border-hard)] hover:border-[rgba(139,156,182,0.20)] hover:bg-[var(--space-bg-card-hover)]',
     i === 0 ? 'rounded-tl-xl' : 'border-t-0',
     i === BUTTONS.length - 1 ? 'rounded-bl-xl' : '',
   )
@@ -53,7 +53,7 @@ export function ProjectSideActions({ project, tasks, username }: ProjectSideActi
         {BUTTONS.map(({ key, icon: Icon, label, color }, i) => (
           <button key={key} onClick={handlers[key]} className={buttonClass(i, false)} aria-label={label}>
             <Icon className={cn('size-3.5', color)} />
-            <span className="text-[9px] font-semibold text-[#6B6B6B] uppercase tracking-[0.18em] group-hover:text-[#A0A0A0] transition-colors [writing-mode:vertical-rl] rotate-180">
+            <span className="text-[9px] font-semibold text-[var(--space-text-secondary)] uppercase tracking-[0.18em] group-hover:text-[var(--space-text-tertiary)] transition-colors [writing-mode:vertical-rl] rotate-180">
               {label}
             </span>
           </button>
@@ -65,7 +65,7 @@ export function ProjectSideActions({ project, tasks, username }: ProjectSideActi
         {BUTTONS.map(({ key, icon: Icon, label, color }, i) => (
           <button key={key} onClick={handlers[key]} className={buttonClass(i, true)} aria-label={label}>
             <Icon className={cn('size-3', color)} />
-            <span className="text-[8px] font-semibold text-[#6B6B6B] uppercase tracking-[0.15em] [writing-mode:vertical-rl] rotate-180">
+            <span className="text-[8px] font-semibold text-[var(--space-text-secondary)] uppercase tracking-[0.15em] [writing-mode:vertical-rl] rotate-180">
               {label}
             </span>
           </button>

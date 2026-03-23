@@ -57,7 +57,7 @@ export default async function ProjectLayout({
               <div className="inline-flex p-4 rounded-full bg-red-500/10 border border-red-500/20 mb-5">
                 <AlertCircle className="size-7 text-red-400" />
               </div>
-              <h2 className="text-xl font-semibold text-[#F0F0F0] mb-2">Access Denied</h2>
+              <h2 className="text-xl font-semibold text-[var(--space-text-primary)] mb-2">Access Denied</h2>
               <p className="text-sm text-gray-500">
                 You do not have permission to view this project.
               </p>

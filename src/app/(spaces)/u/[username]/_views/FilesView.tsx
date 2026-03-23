@@ -114,7 +114,7 @@ function fileTypeIcon(rec: FileRecord) {
 function FieldGroup({ label, children, col = '' }: { label: string; children: React.ReactNode; col?: string }) {
   return (
     <div className={col}>
-      <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#5A5A5A] mb-1.5">
+      <label className="block text-[10px] font-semibold uppercase tracking-widest text-[var(--space-text-secondary)] mb-1.5">
         {label}
       </label>
       {children}
@@ -134,7 +134,7 @@ function FormInput({
       onChange={e => onChange(e.target.value)}
       placeholder={placeholder}
       className={cn(
-        'w-full bg-[#1A1A1A] border border-[#333] rounded-lg px-3 py-2 text-sm text-[#F0F0F0] placeholder-[#4A4A4A] outline-none focus:border-[var(--space-accent)] transition-colors',
+        'w-full bg-[var(--space-bg-base)] border border-[#333] rounded-lg px-3 py-2 text-sm text-[var(--space-text-primary)] placeholder-[var(--space-text-muted)] outline-none focus:border-[var(--space-accent)] transition-colors',
         className,
       )}
     />
@@ -150,7 +150,7 @@ function FormTextarea({ value, onChange, placeholder }: {
       onChange={e => onChange(e.target.value)}
       placeholder={placeholder}
       rows={3}
-      className="w-full bg-[#1A1A1A] border border-[#333] rounded-lg px-3 py-2 text-sm text-[#F0F0F0] placeholder-[#4A4A4A] outline-none focus:border-[var(--space-accent)] transition-colors resize-y"
+      className="w-full bg-[var(--space-bg-base)] border border-[#333] rounded-lg px-3 py-2 text-sm text-[var(--space-text-primary)] placeholder-[var(--space-text-muted)] outline-none focus:border-[var(--space-accent)] transition-colors resize-y"
     />
   )
 }
@@ -164,19 +164,19 @@ function FormSelect({ value, onChange, options, placeholder }: {
       <select
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="w-full bg-[#1A1A1A] border border-[#333] rounded-lg px-3 py-2 text-sm text-[#F0F0F0] outline-none focus:border-[var(--space-accent)] transition-colors appearance-none pr-8"
+        className="w-full bg-[var(--space-bg-base)] border border-[#333] rounded-lg px-3 py-2 text-sm text-[var(--space-text-primary)] outline-none focus:border-[var(--space-accent)] transition-colors appearance-none pr-8"
       >
         {placeholder && <option value="">{placeholder}</option>}
         {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
-      <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 size-3.5 text-[#5A5A5A] pointer-events-none" />
+      <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 size-3.5 text-[var(--space-text-secondary)] pointer-events-none" />
     </div>
   )
 }
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-[9px] font-bold uppercase tracking-widest text-[var(--space-accent)] border-b border-[#222] pb-1.5 mb-3">
+    <p className="text-[9px] font-bold uppercase tracking-widest text-[var(--space-accent)] border-b border-[var(--space-border-hard)] pb-1.5 mb-3">
       {children}
     </p>
   )
@@ -480,8 +480,8 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-semibold text-[#F0F0F0] tracking-tight">Files &amp; Documents</h1>
-          <p className="text-xs text-[#5A5A5A] mt-0.5">Generate, manage, and assign documents to projects</p>
+          <h1 className="text-xl font-semibold text-[var(--space-text-primary)] tracking-tight">Files &amp; Documents</h1>
+          <p className="text-xs text-[var(--space-text-secondary)] mt-0.5">Generate, manage, and assign documents to projects</p>
         </div>
         <button
           onClick={openModal}
@@ -496,30 +496,30 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
       {/* Filters */}
       <div className="flex flex-wrap gap-2 mb-5">
         <div className="relative flex-1 min-w-[180px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-[#5A5A5A]" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-[var(--space-text-secondary)]" />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search files..."
-            className="w-full bg-[#111] border border-[#282828] rounded-xl pl-8 pr-3 py-2 text-sm text-[#F0F0F0] placeholder-[#4A4A4A] outline-none focus:border-[#333] transition-colors"
+            className="w-full bg-[var(--space-bg-card)] border border-[var(--space-border-hard)] rounded-xl pl-8 pr-3 py-2 text-sm text-[var(--space-text-primary)] placeholder-[var(--space-text-muted)] outline-none focus:border-[var(--space-accent)] transition-colors"
           />
         </div>
         <div className="relative">
           <select
             value={filterProject}
             onChange={e => setFilterProject(e.target.value)}
-            className="bg-[#111] border border-[#282828] rounded-xl px-3 py-2 text-sm text-[#A0A0A0] outline-none appearance-none pr-7 focus:border-[#333]"
+            className="bg-[var(--space-bg-card)] border border-[var(--space-border-hard)] rounded-xl px-3 py-2 text-sm text-[var(--space-text-tertiary)] outline-none appearance-none pr-7 focus:border-[var(--space-accent)]"
           >
             <option value="">All Projects</option>
             {allProjects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
-          <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 size-3 text-[#5A5A5A] pointer-events-none" />
+          <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 size-3 text-[var(--space-text-secondary)] pointer-events-none" />
         </div>
         <div className="relative">
           <select
             value={filterType}
             onChange={e => setFilterType(e.target.value)}
-            className="bg-[#111] border border-[#282828] rounded-xl px-3 py-2 text-sm text-[#A0A0A0] outline-none appearance-none pr-7 focus:border-[#333]"
+            className="bg-[var(--space-bg-card)] border border-[var(--space-border-hard)] rounded-xl px-3 py-2 text-sm text-[var(--space-text-tertiary)] outline-none appearance-none pr-7 focus:border-[var(--space-accent)]"
           >
             <option value="">All Types</option>
             <option value="document">Document</option>
@@ -529,34 +529,34 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
             <option value="pdf">PDF</option>
             <option value="other">Other</option>
           </select>
-          <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 size-3 text-[#5A5A5A] pointer-events-none" />
+          <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 size-3 text-[var(--space-text-secondary)] pointer-events-none" />
         </div>
       </div>
 
       {/* File list */}
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
-          <FolderOpen className="size-10 text-[#2A2A2A] mb-3" />
-          <p className="text-sm text-[#4A4A4A]">No files found</p>
+          <FolderOpen className="size-10 text-[var(--space-text-muted)] mb-3" />
+          <p className="text-sm text-[var(--space-text-muted)]">No files found</p>
           <button onClick={openModal} className="mt-4 text-xs text-[var(--space-accent)] hover:underline">
             Generate your first document
           </button>
         </div>
       ) : (
-        <div className="rounded-xl border border-[#1E1E1E] overflow-hidden">
+        <div className="rounded-xl border border-[var(--space-border-hard)] overflow-hidden">
           {filtered.map((rec, i) => (
             <div
               key={rec.id}
               onClick={() => rec.documentTemplate && rec.documentData && handleEdit(rec)}
               className={cn(
-                'flex items-center gap-3 px-4 py-3 hover:bg-[#111] transition-colors',
-                i < filtered.length - 1 && 'border-b border-[#1A1A1A]',
+                'flex items-center gap-3 px-4 py-3 hover:bg-[var(--space-bg-card)] transition-colors',
+                i < filtered.length - 1 && 'border-b border-[var(--space-divider)]',
                 rec.documentTemplate && rec.documentData && 'cursor-pointer',
               )}
             >
               <div className="shrink-0">{fileTypeIcon(rec)}</div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-[#E0E0E0] truncate">{rec.name}</p>
+                <p className="text-sm font-medium text-[var(--space-text-primary)] truncate">{rec.name}</p>
                 <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                   {rec.documentTemplate && (
                     <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--space-accent)]">
@@ -564,18 +564,18 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
                     </span>
                   )}
                   {rec.documentBrand && (
-                    <span className="text-[10px] text-[#4A4A4A]">
+                    <span className="text-[10px] text-[var(--space-text-muted)]">
                       {rec.documentBrand === 'orcaclub' ? 'ORCACLUB' : 'Personal'}
                     </span>
                   )}
                   {getProjectName(rec) && (
-                    <span className="text-[10px] text-[#5A5A5A] flex items-center gap-0.5">
+                    <span className="text-[10px] text-[var(--space-text-secondary)] flex items-center gap-0.5">
                       <FolderOpen className="size-2.5" />
                       {getProjectName(rec)}
                     </span>
                   )}
                   {getSprintName(rec) && (
-                    <span className="text-[10px] text-[#5A5A5A]">· {getSprintName(rec)}</span>
+                    <span className="text-[10px] text-[var(--space-text-secondary)]">· {getSprintName(rec)}</span>
                   )}
                 </div>
               </div>
@@ -585,7 +585,7 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
                     onClick={() => handleView(rec)}
                     title="View document"
                     disabled={viewingId === rec.id}
-                    className="p-1.5 rounded-lg text-[#5A5A5A] hover:text-[#F0F0F0] hover:bg-[#181818] transition-colors disabled:opacity-40"
+                    className="p-1.5 rounded-lg text-[var(--space-text-secondary)] hover:text-[var(--space-text-primary)] hover:bg-[var(--space-bg-card-hover)] transition-colors disabled:opacity-40"
                   >
                     {viewingId === rec.id ? <Loader2 className="size-3.5 animate-spin" /> : <Eye className="size-3.5" />}
                   </button>
@@ -593,14 +593,14 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
                 <button
                   onClick={() => openSendModal(rec)}
                   title="Send via email"
-                  className="p-1.5 rounded-lg text-[#5A5A5A] hover:text-blue-400 hover:bg-[#181818] transition-colors"
+                  className="p-1.5 rounded-lg text-[var(--space-text-secondary)] hover:text-blue-400 hover:bg-[var(--space-bg-card-hover)] transition-colors"
                 >
                   <Mail className="size-3.5" />
                 </button>
                 <button
                   onClick={() => handleDelete(rec.id)}
                   disabled={deletingId === rec.id}
-                  className="p-1.5 rounded-lg text-[#5A5A5A] hover:text-red-400 hover:bg-[#181818] transition-colors disabled:opacity-40"
+                  className="p-1.5 rounded-lg text-[var(--space-text-secondary)] hover:text-red-400 hover:bg-[var(--space-bg-card-hover)] transition-colors disabled:opacity-40"
                 >
                   {deletingId === rec.id ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
                 </button>
@@ -614,15 +614,15 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
       {modalOpen && mounted && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center px-0 sm:px-4 pb-[76px] sm:pb-4 pt-0 sm:pt-4">
           <div className="absolute inset-0 bg-black/70" onClick={closeModal} />
-          <div className="relative w-full sm:max-w-2xl bg-[#0E0E0E] border border-[#222] rounded-2xl flex flex-col max-h-[calc(100dvh-76px)] sm:max-h-[88dvh] overflow-hidden shadow-2xl">
+          <div className="relative w-full sm:max-w-2xl bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] rounded-2xl flex flex-col max-h-[calc(100dvh-76px)] sm:max-h-[88dvh] overflow-hidden shadow-2xl">
 
             {/* Modal header */}
-            <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-[#1A1A1A] shrink-0">
+            <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-[var(--space-divider)] shrink-0">
               <div className="flex items-center gap-3">
                 <FilePen className="size-4 text-[var(--space-accent)]" />
-                <span className="text-sm font-semibold text-[#F0F0F0]">{editingId ? 'Edit Document' : 'Document Generator'}</span>
+                <span className="text-sm font-semibold text-[var(--space-text-primary)]">{editingId ? 'Edit Document' : 'Document Generator'}</span>
               </div>
-              <button onClick={closeModal} className="p-1.5 rounded-lg text-[#5A5A5A] hover:text-[#F0F0F0] hover:bg-[#181818] transition-colors">
+              <button onClick={closeModal} className="p-1.5 rounded-lg text-[var(--space-text-secondary)] hover:text-[var(--space-text-primary)] hover:bg-[var(--space-bg-card-hover)] transition-colors">
                 <X className="size-4" />
               </button>
             </div>
@@ -646,7 +646,7 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
                           'flex-1 py-2 px-3 rounded-xl text-xs font-semibold border transition-all',
                           docType === t
                             ? 'bg-[var(--space-accent)]/10 border-[var(--space-accent)]/40 text-[var(--space-accent)]'
-                            : 'bg-[#141414] border-[#282828] text-[#5A5A5A]',
+                            : 'bg-[var(--space-bg-base)] border-[var(--space-border-hard)] text-[var(--space-text-secondary)]',
                           editingId && docType !== t && 'opacity-30 cursor-not-allowed',
                           editingId && docType === t && 'cursor-default',
                         )}
@@ -668,7 +668,7 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
                           'flex-1 py-2 px-2 rounded-xl text-xs font-semibold border transition-all flex items-center justify-center gap-1',
                           brand === 'orcaclub'
                             ? 'bg-[var(--space-accent)]/10 border-[var(--space-accent)]/40 text-[var(--space-accent)]'
-                            : 'bg-[#141414] border-[#282828] text-[#5A5A5A] hover:border-[#333]',
+                            : 'bg-[var(--space-bg-base)] border-[var(--space-border-hard)] text-[var(--space-text-secondary)] hover:border-[#333]',
                         )}
                       >
                         <Building2 className="size-3" />
@@ -680,7 +680,7 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
                           'flex-1 py-2 px-2 rounded-xl text-xs font-semibold border transition-all flex items-center justify-center gap-1',
                           brand === 'personal'
                             ? 'bg-white/10 border-white/20 text-white'
-                            : 'bg-[#141414] border-[#282828] text-[#5A5A5A] hover:border-[#333]',
+                            : 'bg-[var(--space-bg-base)] border-[var(--space-border-hard)] text-[var(--space-text-secondary)] hover:border-[#333]',
                         )}
                       >
                         <User className="size-3" />
@@ -714,7 +714,7 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
                     <FormInput value={ndaForm.clientAddress} onChange={v => setNdaForm(f => ({ ...f, clientAddress: v }))} placeholder="Street, City, State, ZIP" />
                   </FieldGroup>
                   {brand === 'personal' && (
-                    <p className="text-[10px] text-[#4A4A4A] bg-[#141414] border border-[#222] rounded-lg px-3 py-2">
+                    <p className="text-[10px] text-[var(--space-text-muted)] bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] rounded-lg px-3 py-2">
                       Personal version includes Kawai America employer firewall clauses specific to Chance Noonan.
                     </p>
                   )}
@@ -767,7 +767,7 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
                     </div>
                     {sowForm.scopeItems.map((item, i) => (
                       <div key={i} className="flex gap-2 items-center">
-                        <span className="text-[10px] text-[#4A4A4A] w-4 shrink-0">{i + 1}.</span>
+                        <span className="text-[10px] text-[var(--space-text-muted)] w-4 shrink-0">{i + 1}.</span>
                         <FormInput
                           value={item}
                           onChange={v => setSowForm(f => ({ ...f, scopeItems: f.scopeItems.map((x, j) => j === i ? v : x) }))}
@@ -776,7 +776,7 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
                         {sowForm.scopeItems.length > 1 && (
                           <button
                             onClick={() => setSowForm(f => ({ ...f, scopeItems: f.scopeItems.filter((_, j) => j !== i) }))}
-                            className="shrink-0 text-[#5A5A5A] hover:text-red-400 transition-colors"
+                            className="shrink-0 text-[var(--space-text-secondary)] hover:text-red-400 transition-colors"
                           ><X className="size-3.5" /></button>
                         )}
                       </div>
@@ -801,7 +801,7 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
                           <FormInput value={m.notes} onChange={v => setSowForm(f => ({ ...f, milestones: f.milestones.map((x, j) => j === i ? { ...x, notes: v } : x) }))} placeholder="Notes" />
                         </div>
                         {sowForm.milestones.length > 1 && (
-                          <button onClick={() => setSowForm(f => ({ ...f, milestones: f.milestones.filter((_, j) => j !== i) }))} className="text-[#5A5A5A] hover:text-red-400 transition-colors justify-self-center">
+                          <button onClick={() => setSowForm(f => ({ ...f, milestones: f.milestones.filter((_, j) => j !== i) }))} className="text-[var(--space-text-secondary)] hover:text-red-400 transition-colors justify-self-center">
                             <X className="size-3.5" />
                           </button>
                         )}
@@ -820,7 +820,7 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
                             'flex-1 py-1.5 text-xs font-semibold rounded-lg border transition-all',
                             sowForm.pricingType === t
                               ? 'bg-[var(--space-accent)]/10 border-[var(--space-accent)]/40 text-[var(--space-accent)]'
-                              : 'bg-[#141414] border-[#282828] text-[#5A5A5A] hover:border-[#333]',
+                              : 'bg-[var(--space-bg-base)] border-[var(--space-border-hard)] text-[var(--space-text-secondary)] hover:border-[#333]',
                           )}
                         >
                           {t === 'project' ? 'Project' : t === 'retainer' ? 'Retainer' : 'Both'}
@@ -830,13 +830,13 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
 
                     {(sowForm.pricingType === 'project' || sowForm.pricingType === 'both') && (
                       <div className="space-y-1.5">
-                        <p className="text-[10px] text-[#5A5A5A] uppercase tracking-widest">Project Line Items</p>
+                        <p className="text-[10px] text-[var(--space-text-secondary)] uppercase tracking-widest">Project Line Items</p>
                         {sowForm.projectItems.map((item, i) => (
                           <div key={i} className="flex gap-2 items-center">
                             <FormInput value={item.desc} onChange={v => setSowForm(f => ({ ...f, projectItems: f.projectItems.map((x, j) => j === i ? { ...x, desc: v } : x) }))} placeholder="Description" />
                             <FormInput value={item.amount} onChange={v => setSowForm(f => ({ ...f, projectItems: f.projectItems.map((x, j) => j === i ? { ...x, amount: v } : x) }))} placeholder="$0.00" className="w-24 shrink-0 text-right" />
                             {sowForm.projectItems.length > 1 && (
-                              <button onClick={() => setSowForm(f => ({ ...f, projectItems: f.projectItems.filter((_, j) => j !== i) }))} className="shrink-0 text-[#5A5A5A] hover:text-red-400"><X className="size-3.5" /></button>
+                              <button onClick={() => setSowForm(f => ({ ...f, projectItems: f.projectItems.filter((_, j) => j !== i) }))} className="shrink-0 text-[var(--space-text-secondary)] hover:text-red-400"><X className="size-3.5" /></button>
                             )}
                           </div>
                         ))}
@@ -846,13 +846,13 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
 
                     {(sowForm.pricingType === 'retainer' || sowForm.pricingType === 'both') && (
                       <div className="space-y-1.5">
-                        <p className="text-[10px] text-[#5A5A5A] uppercase tracking-widest">Retainer Line Items</p>
+                        <p className="text-[10px] text-[var(--space-text-secondary)] uppercase tracking-widest">Retainer Line Items</p>
                         {sowForm.retainerItems.map((item, i) => (
                           <div key={i} className="flex gap-2 items-center">
                             <FormInput value={item.desc} onChange={v => setSowForm(f => ({ ...f, retainerItems: f.retainerItems.map((x, j) => j === i ? { ...x, desc: v } : x) }))} placeholder="Monthly service" />
                             <FormInput value={item.amount} onChange={v => setSowForm(f => ({ ...f, retainerItems: f.retainerItems.map((x, j) => j === i ? { ...x, amount: v } : x) }))} placeholder="$/mo" className="w-24 shrink-0 text-right" />
                             {sowForm.retainerItems.length > 1 && (
-                              <button onClick={() => setSowForm(f => ({ ...f, retainerItems: f.retainerItems.filter((_, j) => j !== i) }))} className="shrink-0 text-[#5A5A5A] hover:text-red-400"><X className="size-3.5" /></button>
+                              <button onClick={() => setSowForm(f => ({ ...f, retainerItems: f.retainerItems.filter((_, j) => j !== i) }))} className="shrink-0 text-[var(--space-text-secondary)] hover:text-red-400"><X className="size-3.5" /></button>
                             )}
                           </div>
                         ))}
@@ -878,11 +878,11 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
                           className="text-[10px] text-[var(--space-accent)] hover:underline"
                         >+ Add Payment</button>
                       </div>
-                      <p className="text-[10px] text-[#5A5A5A] mb-2">Percentages should add up to 100%</p>
+                      <p className="text-[10px] text-[var(--space-text-secondary)] mb-2">Percentages should add up to 100%</p>
                       <div className="grid grid-cols-[1fr_56px_1fr_28px] gap-1.5 mb-1.5">
-                        <span className="text-[10px] text-[#5A5A5A] font-semibold uppercase tracking-widest">Payment Label</span>
-                        <span className="text-[10px] text-[#5A5A5A] font-semibold uppercase tracking-widest text-right">%</span>
-                        <span className="text-[10px] text-[#5A5A5A] font-semibold uppercase tracking-widest">Trigger / Note</span>
+                        <span className="text-[10px] text-[var(--space-text-secondary)] font-semibold uppercase tracking-widest">Payment Label</span>
+                        <span className="text-[10px] text-[var(--space-text-secondary)] font-semibold uppercase tracking-widest text-right">%</span>
+                        <span className="text-[10px] text-[var(--space-text-secondary)] font-semibold uppercase tracking-widest">Trigger / Note</span>
                         <span />
                       </div>
                       {sowForm.paymentSchedule.map((entry, i) => (
@@ -906,7 +906,7 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
                           {sowForm.paymentSchedule.length > 1 ? (
                             <button
                               onClick={() => setSowForm(f => ({ ...f, paymentSchedule: f.paymentSchedule.filter((_, j) => j !== i) }))}
-                              className="text-[#5A5A5A] hover:text-red-400 transition-colors justify-self-center"
+                              className="text-[var(--space-text-secondary)] hover:text-red-400 transition-colors justify-self-center"
                             ><X className="size-3.5" /></button>
                           ) : <span />}
                         </div>
@@ -917,10 +917,10 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
                         const barColor = totalPct === 100 ? 'bg-[var(--space-accent)]' : totalPct > 100 ? 'bg-red-400' : 'bg-blue-400'
                         return (
                           <div className="flex items-center gap-2 mt-1">
-                            <div className="flex-1 h-1.5 bg-[#222] rounded-full overflow-hidden">
+                            <div className="flex-1 h-1.5 bg-[var(--space-bg-base)] rounded-full overflow-hidden">
                               <div className={cn('h-full rounded-full transition-all', barColor)} style={{ width: `${Math.min(totalPct, 100)}%` }} />
                             </div>
-                            <span className={cn('text-[10px] font-semibold shrink-0', totalPct === 100 ? 'text-[var(--space-accent)]' : totalPct > 100 ? 'text-red-400' : 'text-[#5A5A5A]')}>
+                            <span className={cn('text-[10px] font-semibold shrink-0', totalPct === 100 ? 'text-[var(--space-accent)]' : totalPct > 100 ? 'text-red-400' : 'text-[var(--space-text-secondary)]')}>
                               {totalPct}% of total
                             </span>
                           </div>
@@ -942,7 +942,7 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
 
               {/* Project / Sprint Assignment — NDA only */}
               {docType === 'nda' && (
-                <div className="space-y-3 border-t border-[#1A1A1A] pt-4">
+                <div className="space-y-3 border-t border-[var(--space-divider)] pt-4">
                   <SectionLabel>Assign to Project &amp; Sprint (Optional)</SectionLabel>
                   <div className="grid grid-cols-2 gap-3">
                     <FieldGroup label="Project">
@@ -974,7 +974,7 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
                       'w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-all',
                       createPackageAlso
                         ? 'bg-[var(--space-accent)] border-[var(--space-accent)]'
-                        : 'border-[#444] bg-[#1A1A1A]',
+                        : 'border-[#444] bg-[var(--space-bg-base)]',
                     )}
                   >
                     {createPackageAlso && (
@@ -983,7 +983,7 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
                       </svg>
                     )}
                   </div>
-                  <span className="text-xs text-[#A0A0A0]">Also create a package template from this SOW</span>
+                  <span className="text-xs text-[var(--space-text-tertiary)]">Also create a package template from this SOW</span>
                 </label>
               )}
 
@@ -1004,11 +1004,11 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
             </div>
 
             {/* Modal footer */}
-            <div className="flex gap-2 px-5 py-4 border-t border-[#1A1A1A] shrink-0">
+            <div className="flex gap-2 px-5 py-4 border-t border-[var(--space-divider)] shrink-0">
               {docType === 'nda' && (
                 <button
                   onClick={handleDownload}
-                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#181818] border border-[#282828] text-sm font-medium text-[#E0E0E0] hover:bg-[#222] transition-colors flex-1 justify-center"
+                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] text-sm font-medium text-[var(--space-text-primary)] hover:bg-[var(--space-bg-base)] transition-colors flex-1 justify-center"
                 >
                   <Download className="size-3.5" />
                   Download Fillable PDF
@@ -1016,7 +1016,7 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
               )}
               <button
                 onClick={handlePreview}
-                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#181818] border border-[#282828] text-sm font-medium text-[#E0E0E0] hover:bg-[#222] transition-colors flex-1 justify-center"
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] text-sm font-medium text-[var(--space-text-primary)] hover:bg-[var(--space-bg-base)] transition-colors flex-1 justify-center"
               >
                 <Eye className="size-3.5" />
                 View Document
@@ -1069,7 +1069,7 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
               style={{
                 maxWidth: 440,
                 maxHeight: 'min(calc(100dvh - 112px), 640px)',
-                background: '#090909',
+                background: 'var(--space-bg-card)',
                 border: '1px solid #1c1c1c',
                 borderRadius: 18,
                 boxShadow: '0 0 0 1px rgba(103,232,249,0.05), 0 32px 72px rgba(0,0,0,0.85), 0 0 80px rgba(103,232,249,0.025)',
@@ -1116,7 +1116,7 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
                   onClick={closeSendModal}
                   style={{
                     width: 26, height: 26, borderRadius: 7, flexShrink: 0, marginTop: 2,
-                    background: 'transparent', border: '1px solid #1E1E1E',
+                    background: 'transparent', border: '1px solid var(--space-border-hard)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     color: '#3E3E3E', cursor: 'pointer', transition: 'all 0.15s',
                   }}
@@ -1160,7 +1160,7 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
                     onClick={closeSendModal}
                     style={{
                       padding: '8px 22px', borderRadius: 9, fontSize: 12, fontWeight: 500,
-                      background: 'transparent', border: '1px solid #1E1E1E', color: '#5A5A5A',
+                      background: 'transparent', border: '1px solid var(--space-border-hard)', color: '#5A5A5A',
                       cursor: 'pointer', transition: 'all 0.15s', letterSpacing: '0.02em',
                     }}
                     onMouseEnter={e => { const el = e.currentTarget; el.style.borderColor = '#2A2A2A'; el.style.color = '#A0A0A0'; el.style.background = '#111' }}
@@ -1187,7 +1187,7 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
                       <div
                         style={{
                           minHeight: 46, borderRadius: 12,
-                          background: '#0D0D0D', border: '1px solid #1E1E1E',
+                          background: 'var(--space-bg-card)', border: '1px solid var(--space-border-hard)',
                           padding: recipients.length > 0 ? '8px 10px' : '0 14px',
                           display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center',
                           transition: 'border-color 0.15s', cursor: 'text',
@@ -1273,7 +1273,7 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
                       {clientDropdownOpen && filteredClients.length > 0 && (
                         <div style={{
                           marginTop: 4, borderRadius: 12,
-                          background: '#0C0C0C', border: '1px solid #1E1E1E',
+                          background: 'var(--space-bg-card)', border: '1px solid var(--space-border-hard)',
                           overflow: 'hidden',
                           boxShadow: '0 16px 48px rgba(0,0,0,0.7)',
                           maxHeight: 210, overflowY: 'auto',
@@ -1327,7 +1327,7 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
                           {/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clientSearch.trim()) && !filteredClients.some(c => c.email === clientSearch.trim()) && (
                             <div style={{ padding: '9px 14px', borderTop: '1px solid #111', display: 'flex', alignItems: 'center', gap: 8 }}>
                               <span style={{ fontSize: 11, color: '#3A3A3A' }}>Press</span>
-                              <kbd style={{ fontSize: 9, fontWeight: 600, padding: '1px 5px', borderRadius: 4, background: '#161616', border: '1px solid #2A2A2A', color: '#5A5A5A', fontFamily: 'monospace' }}>↵ Enter</kbd>
+                              <kbd style={{ fontSize: 9, fontWeight: 600, padding: '1px 5px', borderRadius: 4, background: 'var(--space-bg-card)', border: '1px solid var(--space-border-hard)', color: '#5A5A5A', fontFamily: 'monospace' }}>↵ Enter</kbd>
                               <span style={{ fontSize: 11, color: '#3A3A3A' }}>to add <span style={{ color: '#5A5A5A' }}>{clientSearch.trim()}</span></span>
                             </div>
                           )}
@@ -1348,7 +1348,7 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
                         rows={3}
                         style={{
                           width: '100%', borderRadius: 12, padding: '10px 14px',
-                          background: '#0D0D0D', border: '1px solid #1E1E1E',
+                          background: 'var(--space-bg-card)', border: '1px solid var(--space-border-hard)',
                           fontSize: 13, color: '#E0E0E0', outline: 'none',
                           resize: 'none', lineHeight: 1.65, boxSizing: 'border-box',
                           caretColor: '#67e8f9', fontFamily: 'inherit',

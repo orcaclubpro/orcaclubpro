@@ -67,7 +67,7 @@ type StatusCfg = { dot: string; label: string; color: string; bg: string }
 const STATUS: Record<string, StatusCfg> = {
   active:        { dot: 'bg-green-400',  label: 'Active',      color: 'text-green-400',  bg: 'bg-green-400/10'  },
   pending:       { dot: 'bg-yellow-400', label: 'Pending',     color: 'text-yellow-400', bg: 'bg-yellow-400/10' },
-  'in-progress': { dot: 'bg-[#1E3A6E]',  label: 'In Progress', color: 'text-[#1E3A6E]', bg: 'bg-[rgba(139,156,182,0.10)]' },
+  'in-progress': { dot: 'bg-[var(--space-accent)]',  label: 'In Progress', color: 'text-[var(--space-accent)]', bg: 'bg-[rgba(139,156,182,0.10)]' },
   'on-hold':     { dot: 'bg-orange-400', label: 'On Hold',     color: 'text-orange-400', bg: 'bg-orange-400/10' },
   completed:     { dot: 'bg-blue-400',   label: 'Completed',   color: 'text-blue-400',   bg: 'bg-blue-400/10'   },
   cancelled:     { dot: 'bg-red-400/70', label: 'Cancelled',   color: 'text-red-400',    bg: 'bg-red-400/10'    },
@@ -79,7 +79,7 @@ function getStatus(s: string): StatusCfg {
 
 const SPRINT_STATUS = {
   pending:       { dot: 'bg-gray-500',   label: 'Pending',     color: 'text-gray-400',   bg: 'bg-gray-500/10 border-gray-500/20'     },
-  'in-progress': { dot: 'bg-[#1E3A6E]',  label: 'In Progress', color: 'text-[#1E3A6E]', bg: 'bg-[rgba(139,156,182,0.10)] border-[rgba(139,156,182,0.15)]' },
+  'in-progress': { dot: 'bg-[var(--space-accent)]',  label: 'In Progress', color: 'text-[var(--space-accent)]', bg: 'bg-[rgba(139,156,182,0.10)] border-[rgba(139,156,182,0.15)]' },
   delayed:       { dot: 'bg-yellow-400', label: 'Delayed',     color: 'text-yellow-400', bg: 'bg-yellow-400/10 border-yellow-400/20' },
   finished:      { dot: 'bg-green-400',  label: 'Finished',    color: 'text-green-400',  bg: 'bg-green-400/10 border-green-400/20'   },
 } as const
@@ -159,14 +159,14 @@ function StatCard({
         'rounded-2xl px-5 py-4 border',
         accent
           ? 'bg-[rgba(139,156,182,0.06)] border-[rgba(139,156,182,0.15)]'
-          : 'bg-[rgba(255,255,255,0.02)] border-[#404040]',
+          : 'bg-[rgba(255,255,255,0.02)] border-[var(--space-border-hard)]',
       )}
     >
-      <p className="text-[10px] uppercase tracking-[0.3em] text-[#4A4A4A] flex items-center gap-1.5 mb-2.5">
+      <p className="text-[10px] uppercase tracking-[0.3em] text-[var(--space-text-muted)] flex items-center gap-1.5 mb-2.5">
         <Icon className="size-3" />
         {label}
       </p>
-      <p className={cn('text-base font-semibold', accent ? 'text-[#A0A0A0]' : 'text-[#A0A0A0]')}>
+      <p className={cn('text-base font-semibold', accent ? 'text-[var(--space-text-tertiary)]' : 'text-[var(--space-text-tertiary)]')}>
         {value}
       </p>
     </div>
@@ -210,7 +210,7 @@ function ProjectNavRow({
         'w-full flex items-start gap-3 px-5 py-3.5 text-left transition-all duration-150 border-l-2 group cursor-pointer select-none',
         'animate-in fade-in slide-in-from-left-1 duration-300',
         isSelected
-          ? 'border-l-[var(--space-accent)]/60 bg-[#2D2D2D]'
+          ? 'border-l-[var(--space-accent)]/60 bg-[var(--space-bg-card-hover)]'
           : 'border-l-transparent hover:bg-[rgba(255,255,255,0.02)] hover:border-l-[#555555]',
       )}
       style={{ animationDelay: `${animationDelay}ms` }}
@@ -227,7 +227,7 @@ function ProjectNavRow({
         <p
           className={cn(
             'text-sm font-semibold truncate transition-colors duration-150',
-            isSelected ? 'text-[#F0F0F0]' : 'text-[#6B6B6B] group-hover:text-[#A0A0A0]',
+            isSelected ? 'text-[var(--space-text-primary)]' : 'text-[var(--space-text-secondary)] group-hover:text-[var(--space-text-tertiary)]',
           )}
         >
           {project.name}
@@ -241,16 +241,16 @@ function ProjectNavRow({
                 <Link
                   href={`/u/${username}/clients/${project.client.id}`}
                   onClick={(e) => e.stopPropagation()}
-                  className="text-[10px] text-[#4A4A4A] truncate max-w-[90px] hover:text-[var(--space-accent)] transition-colors"
+                  className="text-[10px] text-[var(--space-text-muted)] truncate max-w-[90px] hover:text-[var(--space-accent)] transition-colors"
                 >
                   {project.client.name}
                 </Link>
               ) : (
-                <span className="text-[10px] text-[#4A4A4A] truncate max-w-[90px]">
+                <span className="text-[10px] text-[var(--space-text-muted)] truncate max-w-[90px]">
                   {project.client.name}
                 </span>
               )}
-              <span className="text-[#4A4A4A] text-[10px] shrink-0">·</span>
+              <span className="text-[var(--space-text-muted)] text-[10px] shrink-0">·</span>
             </>
           )}
           <span
@@ -260,7 +260,7 @@ function ProjectNavRow({
                 ? 'text-cyan-500/80'
                 : overdue
                   ? 'text-amber-400/80'
-                  : 'text-[#4A4A4A]',
+                  : 'text-[var(--space-text-muted)]',
             )}
           >
             {activeSprint
@@ -274,7 +274,7 @@ function ProjectNavRow({
 
       {/* Sprint count */}
       {project.sprints.length > 0 && (
-        <span className="text-[9px] text-[#4A4A4A] shrink-0 tabular-nums mt-1">
+        <span className="text-[9px] text-[var(--space-text-muted)] shrink-0 tabular-nums mt-1">
           {project.sprints.length}sp
         </span>
       )}
@@ -289,10 +289,10 @@ function EmptyState({ canCreate, clients }: { canCreate: boolean; clients: Clien
     <div className="flex-1 flex flex-col items-center justify-center px-12 text-center">
       <div className="relative mb-8">
         <div className="absolute inset-0 bg-[rgba(255,255,255,0.03)] rounded-full blur-3xl scale-150" />
-        <FolderOpen className="size-12 text-[#4A4A4A] relative z-10" />
+        <FolderOpen className="size-12 text-[var(--space-text-muted)] relative z-10" />
       </div>
-      <p className="text-[10px] tracking-[0.4em] uppercase text-[#4A4A4A] font-light mb-3">No Projects</p>
-      <p className="text-sm text-[#6B6B6B] mb-8 leading-relaxed">Projects will appear here once created.</p>
+      <p className="text-[10px] tracking-[0.4em] uppercase text-[var(--space-text-muted)] font-light mb-3">No Projects</p>
+      <p className="text-sm text-[var(--space-text-secondary)] mb-8 leading-relaxed">Projects will appear here once created.</p>
       {canCreate && (
         <div className="[&>button]:px-5 [&>button]:py-2.5">
           <CreateProjectModal clients={clients} />
@@ -321,9 +321,9 @@ function SprintsDetailPanel({
   if (project.sprints.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center px-12">
-        <Zap className="size-10 text-[#4A4A4A] mb-4" />
-        <p className="text-sm text-[#6B6B6B]">No sprints yet</p>
-        <p className="text-xs text-[#4A4A4A] mt-2 max-w-xs">
+        <Zap className="size-10 text-[var(--space-text-muted)] mb-4" />
+        <p className="text-sm text-[var(--space-text-secondary)]">No sprints yet</p>
+        <p className="text-xs text-[var(--space-text-muted)] mt-2 max-w-xs">
           Open the workspace to create sprints and track progress.
         </p>
       </div>
@@ -335,7 +335,7 @@ function SprintsDetailPanel({
 
       {/* ── Active sprints ── */}
       <div className="space-y-4">
-        <p className="text-[11px] tracking-[0.4em] uppercase text-[#4A4A4A] font-light flex items-center gap-2">
+        <p className="text-[11px] tracking-[0.4em] uppercase text-[var(--space-text-muted)] font-light flex items-center gap-2">
           <Zap className="size-3 text-cyan-500/50" />
           Active
         </p>
@@ -356,10 +356,10 @@ function SprintsDetailPanel({
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
-                      <p className="text-base font-semibold text-[#F0F0F0] group-hover:text-[#A0A0A0] transition-colors leading-snug">
+                      <p className="text-base font-semibold text-[var(--space-text-primary)] group-hover:text-[var(--space-text-tertiary)] transition-colors leading-snug">
                         {sprint.name}
                       </p>
-                      <p className="text-xs text-[#6B6B6B] mt-0.5">
+                      <p className="text-xs text-[var(--space-text-secondary)] mt-0.5">
                         {fmtShort(sprint.startDate)} → {fmtShort(sprint.endDate)}
                       </p>
                     </div>
@@ -375,20 +375,20 @@ function SprintsDetailPanel({
                   </div>
 
                   {(sprint.goalDescription || sprint.description) && (
-                    <p className="text-xs text-[#6B6B6B] leading-relaxed">
+                    <p className="text-xs text-[var(--space-text-secondary)] leading-relaxed">
                       {sprint.goalDescription || sprint.description}
                     </p>
                   )}
 
                   {sprint.totalTasksCount > 0 && (
                     <div className="space-y-1.5">
-                      <div className="flex items-center justify-between text-xs text-[#4A4A4A]">
+                      <div className="flex items-center justify-between text-xs text-[var(--space-text-muted)]">
                         <span className="tabular-nums">
                           {sprint.completedTasksCount}/{sprint.totalTasksCount} tasks
                         </span>
                         <span className="tabular-nums font-medium">{progress}%</span>
                       </div>
-                      <div className="h-1.5 rounded-full bg-[#333333]">
+                      <div className="h-1.5 rounded-full bg-[var(--space-divider)]">
                         <div
                           className="h-full bg-[rgba(139,156,182,0.45)] rounded-full transition-all duration-500"
                           style={{ width: `${progress}%` }}
@@ -401,9 +401,9 @@ function SprintsDetailPanel({
             })}
           </div>
         ) : (
-          <div className="rounded-xl border border-[#404040] bg-[rgba(255,255,255,0.02)] px-5 py-4 flex items-center gap-3">
-            <Zap className="size-4 text-[#4A4A4A] shrink-0" />
-            <p className="text-sm text-[#6B6B6B]">No active sprint</p>
+          <div className="rounded-xl border border-[var(--space-border-hard)] bg-[rgba(255,255,255,0.02)] px-5 py-4 flex items-center gap-3">
+            <Zap className="size-4 text-[var(--space-text-muted)] shrink-0" />
+            <p className="text-sm text-[var(--space-text-secondary)]">No active sprint</p>
           </div>
         )}
       </div>
@@ -411,10 +411,10 @@ function SprintsDetailPanel({
       {/* ── Latest sprints ── */}
       {latestSprints.length > 0 && (
         <div className="space-y-3">
-          <p className="text-[11px] tracking-[0.4em] uppercase text-[#4A4A4A] font-light">
+          <p className="text-[11px] tracking-[0.4em] uppercase text-[var(--space-text-muted)] font-light">
             Latest · {latestSprints.length}
           </p>
-          <div className="rounded-xl border border-[#404040] overflow-hidden divide-y divide-[#333333]">
+          <div className="rounded-xl border border-[var(--space-border-hard)] overflow-hidden divide-y divide-[var(--space-divider)]">
             {latestSprints.map((sprint) => {
               const cfg = SPRINT_STATUS[sprint.status]
               const progress =
@@ -431,22 +431,22 @@ function SprintsDetailPanel({
                     <span className={cn('size-1.5 rounded-full shrink-0', cfg.dot)} />
                     {cfg.label}
                   </span>
-                  <span className="flex-1 text-sm text-[#6B6B6B] group-hover:text-[#A0A0A0] transition-colors truncate min-w-0">
+                  <span className="flex-1 text-sm text-[var(--space-text-secondary)] group-hover:text-[var(--space-text-tertiary)] transition-colors truncate min-w-0">
                     {sprint.name}
                   </span>
-                  <span className="text-xs text-[#4A4A4A] shrink-0 tabular-nums hidden sm:block">
+                  <span className="text-xs text-[var(--space-text-muted)] shrink-0 tabular-nums hidden sm:block">
                     {fmtShort(sprint.startDate)} → {fmtShort(sprint.endDate)}
                   </span>
                   <div className="w-12 shrink-0 hidden md:flex items-center">
-                    <div className="h-px w-full bg-[#333333] relative">
+                    <div className="h-px w-full bg-[var(--space-divider)] relative">
                       <div
                         className={cn('absolute inset-y-0 left-0 h-full', cfg.dot)}
                         style={{ width: `${progress}%`, height: '1px' }}
                       />
                     </div>
                   </div>
-                  <span className="text-xs text-[#4A4A4A] shrink-0 tabular-nums w-7 text-right">{progress}%</span>
-                  <ArrowRight className="size-3.5 text-[#4A4A4A] group-hover:text-[#6B6B6B] shrink-0 transition-colors" />
+                  <span className="text-xs text-[var(--space-text-muted)] shrink-0 tabular-nums w-7 text-right">{progress}%</span>
+                  <ArrowRight className="size-3.5 text-[var(--space-text-muted)] group-hover:text-[var(--space-text-secondary)] shrink-0 transition-colors" />
                 </Link>
               )
             })}
@@ -510,7 +510,7 @@ function ProjectDetail({
       </div>
 
       {/* ── Tab nav ──────────────────────────────────────────────────── */}
-      <div className="shrink-0 flex items-center gap-1 px-8 pt-3 border-b border-[#404040]">
+      <div className="shrink-0 flex items-center gap-1 px-8 pt-3 border-b border-[var(--space-border-hard)]">
         {(['overview', 'sprints'] as const).map((tab) => (
           <button
             key={tab}
@@ -519,13 +519,13 @@ function ProjectDetail({
             className={cn(
               'px-4 h-10 text-sm font-medium border-b-2 transition-colors duration-150 capitalize',
               activeTab === tab
-                ? 'border-[var(--space-accent)]/70 text-[#F0F0F0]'
-                : 'border-transparent text-[#4A4A4A] hover:text-[#6B6B6B]',
+                ? 'border-[var(--space-accent)]/70 text-[var(--space-text-primary)]'
+                : 'border-transparent text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)]',
             )}
           >
             {tab}
             {tab === 'sprints' && project.sprints.length > 0 && (
-              <span className="ml-1.5 text-[10px] text-[#4A4A4A] tabular-nums">
+              <span className="ml-1.5 text-[10px] text-[var(--space-text-muted)] tabular-nums">
                 {project.sprints.length}
               </span>
             )}
@@ -548,12 +548,12 @@ function ProjectDetail({
             >
               <div className="absolute top-6 right-6 opacity-[0.03]">
                 <svg width="240" height="240" viewBox="0 0 240 240" fill="none">
-                  <circle cx="120" cy="120" r="119" stroke="#333333" strokeWidth="1" />
-                  <circle cx="120" cy="120" r="89" stroke="#333333" strokeWidth="0.5" />
-                  <circle cx="120" cy="120" r="52" stroke="#333333" strokeWidth="0.5" />
-                  <line x1="120" y1="0" x2="120" y2="240" stroke="#333333" strokeWidth="0.5" />
-                  <line x1="0" y1="120" x2="240" y2="120" stroke="#333333" strokeWidth="0.5" />
-                  <circle cx="120" cy="120" r="2.5" stroke="#333333" strokeWidth="0.5" fill="none" />
+                  <circle cx="120" cy="120" r="119" stroke="var(--space-divider)" strokeWidth="1" />
+                  <circle cx="120" cy="120" r="89" stroke="var(--space-divider)" strokeWidth="0.5" />
+                  <circle cx="120" cy="120" r="52" stroke="var(--space-divider)" strokeWidth="0.5" />
+                  <line x1="120" y1="0" x2="120" y2="240" stroke="var(--space-divider)" strokeWidth="0.5" />
+                  <line x1="0" y1="120" x2="240" y2="120" stroke="var(--space-divider)" strokeWidth="0.5" />
+                  <circle cx="120" cy="120" r="2.5" stroke="var(--space-divider)" strokeWidth="0.5" fill="none" />
                 </svg>
               </div>
             </div>
@@ -591,10 +591,10 @@ function ProjectDetail({
                     {showClientLink && project.client && (
                       <Link
                         href={`/u/${username}/clients/${project.client.id}`}
-                        className="flex items-center gap-2 text-xs bg-[#2D2D2D] hover:bg-[#E5E1D9] border border-[#404040] hover:border-[#404040] rounded-full px-3.5 py-1.5 transition-all duration-150 group shrink-0"
+                        className="flex items-center gap-2 text-xs bg-[var(--space-bg-card-hover)] hover:bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] hover:border-[var(--space-border-hard)] rounded-full px-3.5 py-1.5 transition-all duration-150 group shrink-0"
                       >
                         <Building2 className="size-3.5 text-cyan-500/50 group-hover:text-cyan-600 transition-colors shrink-0" />
-                        <span className="text-[#6B6B6B] group-hover:text-[#A0A0A0] font-medium transition-colors">
+                        <span className="text-[var(--space-text-secondary)] group-hover:text-[var(--space-text-tertiary)] font-medium transition-colors">
                           {project.client.name}
                         </span>
                       </Link>
@@ -604,14 +604,14 @@ function ProjectDetail({
                 </div>
 
                 {/* Project name — huge */}
-                <h2 className="text-6xl xl:text-7xl font-bold text-[#1E3A6E] leading-none mb-4">
+                <h2 className="text-6xl xl:text-7xl font-bold text-[var(--space-accent)] leading-none mb-4">
                   {project.name}
                 </h2>
-                <div className="w-10 h-px bg-[#1E3A6E]/40 mb-5" />
+                <div className="w-10 h-px bg-[var(--space-accent)]/40 mb-5" />
 
                 {/* Description */}
                 {project.description && (
-                  <p className="text-base text-[#6B6B6B] leading-relaxed max-w-2xl">
+                  <p className="text-base text-[var(--space-text-secondary)] leading-relaxed max-w-2xl">
                     {project.description}
                   </p>
                 )}
@@ -624,15 +624,15 @@ function ProjectDetail({
               >
                 {activeSprint ? (
                   <div className="space-y-3">
-                    <p className="text-[11px] tracking-[0.4em] uppercase text-[#4A4A4A] font-light flex items-center gap-2">
+                    <p className="text-[11px] tracking-[0.4em] uppercase text-[var(--space-text-muted)] font-light flex items-center gap-2">
                       <Zap className="size-3.5 text-cyan-500/40" />
                       Current Sprint
                     </p>
                     <div className="rounded-2xl border border-[rgba(139,156,182,0.10)] bg-gradient-to-b from-[rgba(255,255,255,0.03)] to-transparent p-6 space-y-5">
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1 min-w-0">
-                          <p className="text-base font-semibold text-[#F0F0F0] mb-1.5">{activeSprint.name}</p>
-                          <p className="text-xs text-[#6B6B6B]">
+                          <p className="text-base font-semibold text-[var(--space-text-primary)] mb-1.5">{activeSprint.name}</p>
+                          <p className="text-xs text-[var(--space-text-secondary)]">
                             {fmtShort(activeSprint.startDate)} → {fmtShort(activeSprint.endDate)}
                           </p>
                         </div>
@@ -651,14 +651,14 @@ function ProjectDetail({
                       {activeSprint.totalTasksCount > 0 ? (
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
-                            <span className="text-xs text-[#4A4A4A] tabular-nums">
+                            <span className="text-xs text-[var(--space-text-muted)] tabular-nums">
                               {activeSprint.completedTasksCount} of {activeSprint.totalTasksCount} tasks done
                             </span>
-                            <span className="text-xs text-[#4A4A4A] tabular-nums font-medium">
+                            <span className="text-xs text-[var(--space-text-muted)] tabular-nums font-medium">
                               {sprintProgress}%
                             </span>
                           </div>
-                          <div className="h-2 w-full bg-[#333333] rounded-full overflow-hidden">
+                          <div className="h-2 w-full bg-[var(--space-divider)] rounded-full overflow-hidden">
                             <div
                               className="h-full bg-[rgba(139,156,182,0.45)] rounded-full transition-all duration-700"
                               style={{ width: `${sprintProgress}%` }}
@@ -666,29 +666,29 @@ function ProjectDetail({
                           </div>
                         </div>
                       ) : (
-                        <p className="text-xs text-[#4A4A4A]">No tasks assigned yet</p>
+                        <p className="text-xs text-[var(--space-text-muted)]">No tasks assigned yet</p>
                       )}
 
                       {activeSprint.goalDescription && (
-                        <p className="text-sm text-[#6B6B6B] leading-relaxed border-t border-[#404040] pt-4">
+                        <p className="text-sm text-[var(--space-text-secondary)] leading-relaxed border-t border-[var(--space-border-hard)] pt-4">
                           {activeSprint.goalDescription}
                         </p>
                       )}
                     </div>
 
                     {otherSprints.length > 0 && (
-                      <div className="flex items-center gap-3 pl-1 text-xs text-[#4A4A4A]">
+                      <div className="flex items-center gap-3 pl-1 text-xs text-[var(--space-text-muted)]">
                         {upcomingSprints.length > 0 && <span>{upcomingSprints.length} upcoming</span>}
                         {upcomingSprints.length > 0 && finishedSprints.length > 0 && (
-                          <span className="text-[#4A4A4A]">·</span>
+                          <span className="text-[var(--space-text-muted)]">·</span>
                         )}
                         {finishedSprints.length > 0 && <span>{finishedSprints.length} finished</span>}
                       </div>
                     )}
                   </div>
                 ) : project.sprints.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-[#404040] px-6 py-8 text-center">
-                    <p className="text-sm text-[#4A4A4A]">No sprints yet — all work is on the project page.</p>
+                  <div className="rounded-2xl border border-dashed border-[var(--space-border-hard)] px-6 py-8 text-center">
+                    <p className="text-sm text-[var(--space-text-muted)]">No sprints yet — all work is on the project page.</p>
                   </div>
                 ) : (
                   <div className="rounded-2xl border border-green-400/12 bg-green-400/5 px-6 py-5 flex items-center gap-3">
@@ -705,7 +705,7 @@ function ProjectDetail({
                 className="animate-in fade-in slide-in-from-bottom-2 duration-300"
                 style={{ animationDelay: '120ms' }}
               >
-                <p className="text-[11px] tracking-[0.4em] uppercase text-[#4A4A4A] font-light mb-5">
+                <p className="text-[11px] tracking-[0.4em] uppercase text-[var(--space-text-muted)] font-light mb-5">
                   Timeline
                 </p>
                 <ProfileTimeline project={project} username={username} />
@@ -727,8 +727,8 @@ function ProjectDetail({
               )}
 
               {/* Last updated */}
-              <div className="border-t border-[#404040] pt-4">
-                <p className="text-xs text-[#4A4A4A] tabular-nums tracking-wide uppercase font-light flex items-center gap-1.5">
+              <div className="border-t border-[var(--space-border-hard)] pt-4">
+                <p className="text-xs text-[var(--space-text-muted)] tabular-nums tracking-wide uppercase font-light flex items-center gap-1.5">
                   <Clock className="size-3" />
                   Updated {relTime(project.updatedAt)}
                 </p>
@@ -783,9 +783,9 @@ function MobileProjectCard({
 
       <div
         className="relative flex items-stretch rounded-xl overflow-hidden
-          border border-[#242424] bg-[#161616]
+          border border-[var(--space-border-hard)] bg-[var(--space-bg-card)]
           transition-all duration-200
-          group-hover:-translate-y-px group-hover:border-[rgba(103,232,249,0.18)] group-hover:bg-[#1A1A1A]
+          group-hover:-translate-y-px group-hover:border-[rgba(103,232,249,0.18)] group-hover:bg-[var(--space-bg-base)]
           group-hover:shadow-[0_4px_24px_rgba(0,0,0,0.4)]
           active:scale-[0.99] active:transition-none"
       >
@@ -805,7 +805,7 @@ function MobileProjectCard({
           {/* Header row */}
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-[#E8E8E8] group-hover:text-white truncate transition-colors duration-200 leading-snug">
+              <p className="text-sm font-semibold text-[var(--space-text-primary)] group-hover:text-white truncate transition-colors duration-200 leading-snug">
                 {project.name}
               </p>
               <div className="flex items-center gap-1.5 mt-0.5">
@@ -840,7 +840,7 @@ function MobileProjectCard({
                   {activeSprint.completedTasksCount}/{activeSprint.totalTasksCount}
                 </span>
               </div>
-              <div className="h-px bg-[#2A2A2A] rounded-full overflow-hidden">
+              <div className="h-px bg-[var(--space-divider)] rounded-full overflow-hidden">
                 <div
                   className="h-full rounded-full transition-all duration-500"
                   style={{
@@ -855,7 +855,7 @@ function MobileProjectCard({
           )}
 
           {/* Footer */}
-          <div className="flex items-center gap-3 text-[10px] text-[#4A4A4A] group-hover:text-[#5A5A5A] transition-colors duration-200">
+          <div className="flex items-center gap-3 text-[10px] text-[var(--space-text-muted)] group-hover:text-[var(--space-text-secondary)] transition-colors duration-200">
             {project.sprints.length > 0 && (
               <span>{project.sprints.length}sp</span>
             )}
@@ -923,24 +923,24 @@ export function ProjectsCarousel({
   return (
     <>
       {/* ── DESKTOP: split panel ──────────────────────────────────────────── */}
-      <div className="hidden lg:flex h-[calc(100vh-4rem)] overflow-hidden border-t border-[#404040]">
+      <div className="hidden lg:flex h-[calc(100vh-4rem)] overflow-hidden border-t border-[var(--space-border-hard)]">
 
         {/* Left panel — navigator */}
-        <div className="relative w-[272px] xl:w-[296px] bg-[#252525] flex flex-col overflow-hidden border-r border-[#404040] shrink-0">
+        <div className="relative w-[272px] xl:w-[296px] bg-[var(--space-bg-card)] flex flex-col overflow-hidden border-r border-[var(--space-border-hard)] shrink-0">
 
           <div className="h-px w-full bg-gradient-to-r from-transparent via-[#1E3A6E]/20 to-transparent shrink-0" />
 
           {/* Header */}
           <div className="px-6 pt-8 pb-5 shrink-0">
-            <p className="text-[10px] tracking-[0.4em] uppercase text-[#1E3A6E] font-medium mb-3">
+            <p className="text-[10px] tracking-[0.4em] uppercase text-[var(--space-accent)] font-medium mb-3">
               Workspace
             </p>
-            <h1 className="text-2xl font-bold text-[#F0F0F0] uppercase tracking-wide">Projects</h1>
-            <div className="mt-3 w-5 h-px bg-[#1E3A6E]/35" />
+            <h1 className="text-2xl font-bold text-[var(--space-text-primary)] uppercase tracking-wide">Projects</h1>
+            <div className="mt-3 w-5 h-px bg-[var(--space-accent)]/35" />
           </div>
 
           {/* Summary counts */}
-          <div className="px-5 pb-3 shrink-0 flex items-center gap-3 text-[10px] text-[#4A4A4A]">
+          <div className="px-5 pb-3 shrink-0 flex items-center gap-3 text-[10px] text-[var(--space-text-muted)]">
             {activeCount > 0 && (
               <span className="flex items-center gap-1.5">
                 <span className="size-1 rounded-full bg-cyan-500/60" />
@@ -950,12 +950,12 @@ export function ProjectsCarousel({
             <span>{sorted.length} total</span>
           </div>
 
-          <div className="mx-5 mb-1 h-px bg-[#333333] shrink-0" />
+          <div className="mx-5 mb-1 h-px bg-[var(--space-divider)] shrink-0" />
 
           {/* Project list */}
           <div ref={listRef} className="flex-1 overflow-y-auto py-1">
             {sorted.length === 0 ? (
-              <p className="text-xs text-[#4A4A4A] px-5 py-6 text-center">No projects yet.</p>
+              <p className="text-xs text-[var(--space-text-muted)] px-5 py-6 text-center">No projects yet.</p>
             ) : (
               sorted.map((p, i) => (
                 <ProjectNavRow
@@ -972,21 +972,21 @@ export function ProjectsCarousel({
           </div>
 
           {canCreate && (
-            <div className="shrink-0 px-5 py-5 border-t border-[#404040] [&>button]:w-full">
+            <div className="shrink-0 px-5 py-5 border-t border-[var(--space-border-hard)] [&>button]:w-full">
               <CreateProjectModal clients={clients} />
             </div>
           )}
 
           <div className="absolute bottom-0 right-0 pointer-events-none select-none" aria-hidden="true">
             <svg width="52" height="52" viewBox="0 0 52 52" fill="none" className="opacity-[0.05]">
-              <path d="M52 0 L52 52 L0 52" stroke="#333333" strokeWidth="1" />
-              <path d="M52 16 L52 52 L16 52" stroke="#333333" strokeWidth="0.5" />
+              <path d="M52 0 L52 52 L0 52" stroke="var(--space-divider)" strokeWidth="1" />
+              <path d="M52 16 L52 52 L16 52" stroke="var(--space-divider)" strokeWidth="0.5" />
             </svg>
           </div>
         </div>
 
         {/* Right panel — detail */}
-        <div className="flex-1 bg-[#1C1C1C] flex flex-col min-h-0 overflow-hidden">
+        <div className="flex-1 bg-[var(--space-bg-base)] flex flex-col min-h-0 overflow-hidden">
           <div className="h-px w-full bg-gradient-to-r from-transparent via-[#1E3A6E]/10 to-transparent shrink-0" />
 
           {selected ? (
@@ -1005,17 +1005,17 @@ export function ProjectsCarousel({
       {/* ── MOBILE: stacked list ───────────────────────────────────────────── */}
       <div className="lg:hidden px-4 pt-6 pb-28 space-y-4">
         <div className="mb-6">
-          <p className="text-[10px] tracking-[0.4em] uppercase text-[#1E3A6E] font-medium mb-2">
+          <p className="text-[10px] tracking-[0.4em] uppercase text-[var(--space-accent)] font-medium mb-2">
             {canCreate ? 'Workspace' : 'Client Dashboard'}
           </p>
-          <h1 className="text-2xl font-bold text-[#F0F0F0] uppercase tracking-wide">Projects</h1>
-          <div className="mt-3 w-5 h-px bg-[#1E3A6E]/35" />
+          <h1 className="text-2xl font-bold text-[var(--space-text-primary)] uppercase tracking-wide">Projects</h1>
+          <div className="mt-3 w-5 h-px bg-[var(--space-accent)]/35" />
         </div>
 
         {sorted.length === 0 ? (
-          <div className="rounded-xl border border-[#404040] bg-[rgba(255,255,255,0.02)] p-10 text-center">
-            <FolderOpen className="size-8 text-[#4A4A4A] mx-auto mb-3" />
-            <p className="text-sm text-[#4A4A4A]">No projects yet.</p>
+          <div className="rounded-xl border border-[var(--space-border-hard)] bg-[rgba(255,255,255,0.02)] p-10 text-center">
+            <FolderOpen className="size-8 text-[var(--space-text-muted)] mx-auto mb-3" />
+            <p className="text-sm text-[var(--space-text-muted)]">No projects yet.</p>
             {canCreate && (
               <div className="mt-5">
                 <CreateProjectModal clients={clients} />

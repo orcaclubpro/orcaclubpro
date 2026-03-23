@@ -124,6 +124,17 @@
   --space-bg-surface: rgba(255, 255, 255, 0.04);
   --space-nav-bg: rgba(34, 34, 34, 0.96);
   --space-border: rgba(255, 255, 255, 0.08);
+  /* Extended theme variables */
+  --space-text-primary:   #F0F0F0;
+  --space-text-secondary: #6B6B6B;
+  --space-text-tertiary:  #A0A0A0;
+  --space-text-muted:     #4A4A4A;
+  --space-bg-card:        #252525;
+  --space-bg-card-hover:  #2D2D2D;
+  --space-border-hard:    #404040;
+  --space-divider:        #333333;
+  --space-nav-fg:         #ffffff;
+  --space-nav-fg-dim:     rgba(255, 255, 255, 0.40);
 }
 
 * {

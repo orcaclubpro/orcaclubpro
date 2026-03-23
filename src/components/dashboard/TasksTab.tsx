@@ -147,7 +147,7 @@ function SidebarTask({ task }: { task: Task }) {
   return (
     <div className="flex items-center gap-2 px-2 py-[5px] rounded hover:bg-[rgba(255,255,255,0.02)] transition-colors">
       <span className={`shrink-0 size-1.5 rounded-full ${STATUS_DOT[task.status]}`} />
-      <span className="flex-1 min-w-0 text-xs text-[#F0F0F0] truncate leading-tight">{task.title}</span>
+      <span className="flex-1 min-w-0 text-xs text-[var(--space-text-primary)] truncate leading-tight">{task.title}</span>
       {over && <span className="shrink-0 size-1 rounded-full bg-red-400/70" />}
       <span className={`shrink-0 text-[10px] font-bold px-1 rounded border leading-4 ${pc.color} ${pc.bg}`}>
         {pc.label[0]}
@@ -198,7 +198,7 @@ function TaskCard({
 
   if (isEditing && !readOnly) {
     return (
-      <div className="px-3 py-3 bg-[#2D2D2D] rounded-lg space-y-2 border border-[#404040] mx-1 mb-1">
+      <div className="px-3 py-3 bg-[var(--space-bg-card-hover)] rounded-lg space-y-2 border border-[var(--space-border-hard)] mx-1 mb-1">
         {/* Title row */}
         <div className="flex items-center gap-2">
           <Input
@@ -206,7 +206,7 @@ function TaskCard({
             value={editState.title}
             onChange={(e) => onEditChange({ title: e.target.value })}
             placeholder="Task title…"
-            className="flex-1 bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] placeholder:text-[#4A4A4A] focus:border-[rgba(139,156,182,0.25)] h-7 text-sm"
+            className="flex-1 bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)] focus:border-[rgba(139,156,182,0.25)] h-7 text-sm"
             onKeyDown={(e) => {
               if (e.key === 'Enter') onEditSave(task)
               if (e.key === 'Escape') onEditCancel()
@@ -223,7 +223,7 @@ function TaskCard({
           <button
             type="button"
             onClick={onEditCancel}
-            className="p-1.5 rounded-lg text-[#4A4A4A] hover:text-[#6B6B6B] hover:bg-[#2D2D2D] transition-colors"
+            className="p-1.5 rounded-lg text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)] hover:bg-[var(--space-bg-card-hover)] transition-colors"
           >
             <X className="size-3.5" />
           </button>
@@ -235,7 +235,7 @@ function TaskCard({
           onChange={(e) => onEditChange({ description: e.target.value })}
           placeholder="Description (optional)…"
           rows={2}
-          className="w-full bg-[#252525] border-[#404040] text-[#A0A0A0] placeholder:text-[#4A4A4A] focus:border-[rgba(139,156,182,0.20)] resize-none text-xs leading-relaxed"
+          className="w-full bg-[var(--space-bg-card)] border-[var(--space-border-hard)] text-[var(--space-text-tertiary)] placeholder:text-[var(--space-text-muted)] focus:border-[rgba(139,156,182,0.20)] resize-none text-xs leading-relaxed"
         />
 
         {/* Priority + due date */}
@@ -250,7 +250,7 @@ function TaskCard({
                   'text-[10px] font-medium px-2 py-0.5 rounded-full border transition-colors',
                   editState.priority === pri
                     ? cn(PRIORITY_CFG[pri].text, 'border-current bg-current/10')
-                    : 'text-[#4A4A4A] border-[#404040] hover:border-[#404040]',
+                    : 'text-[var(--space-text-muted)] border-[var(--space-border-hard)] hover:border-[var(--space-border-hard)]',
                 )}
               >
                 {PRIORITY_CFG[pri].label}
@@ -261,7 +261,7 @@ function TaskCard({
             type="date"
             value={editState.dueDate}
             onChange={(e) => onEditChange({ dueDate: e.target.value })}
-            className="ml-auto text-[11px] text-[#6B6B6B] bg-transparent border border-[#404040] rounded px-2 py-0.5 focus:outline-none focus:border-[#404040]"
+            className="ml-auto text-[11px] text-[var(--space-text-secondary)] bg-transparent border border-[var(--space-border-hard)] rounded px-2 py-0.5 focus:outline-none focus:border-[var(--space-border-hard)]"
           />
         </div>
       </div>
@@ -276,7 +276,7 @@ function TaskCard({
         'group flex items-start gap-2.5 rounded-lg transition-colors',
         isActive
           ? 'px-3 py-3 bg-[var(--space-accent)]/[0.04] hover:bg-[var(--space-accent)]/[0.06] border-l-2 border-[var(--space-accent)]/25'
-          : 'px-3 py-2.5 hover:bg-[#2D2D2D]',
+          : 'px-3 py-2.5 hover:bg-[var(--space-bg-card-hover)]',
         (updating || isSaving) && 'opacity-50 pointer-events-none',
         done && 'opacity-55',
       )}
@@ -296,7 +296,7 @@ function TaskCard({
               ? 'bg-green-400/80 border-green-400/80 hover:bg-green-300/70'
               : task.status === 'in-progress'
               ? 'border-[rgba(139,156,182,0.30)] hover:border-[var(--space-accent)]'
-              : 'border-[#404040] hover:border-[rgba(139,156,182,0.30)] hover:bg-[rgba(139,156,182,0.06)]',
+              : 'border-[var(--space-border-hard)] hover:border-[rgba(139,156,182,0.30)] hover:bg-[rgba(139,156,182,0.06)]',
           )}
         >
           {done ? (
@@ -308,7 +308,7 @@ function TaskCard({
       )}
 
       <div className="flex-1 min-w-0">
-        <p className={cn('text-sm leading-snug', done ? 'line-through text-[#6B6B6B]' : isActive ? 'text-white' : 'text-[#F0F0F0]')}>
+        <p className={cn('text-sm leading-snug', done ? 'line-through text-[var(--space-text-secondary)]' : isActive ? 'text-white' : 'text-[var(--space-text-primary)]')}>
           {task.title}
         </p>
         {/* Description preview */}
@@ -316,9 +316,9 @@ function TaskCard({
           const desc = extractPlainText(task.description)
           return desc ? (
             isActive ? (
-              <p className="text-xs text-[#7A7A7A] mt-1.5 leading-relaxed">{desc}</p>
+              <p className="text-xs text-[var(--space-text-secondary)] mt-1.5 leading-relaxed">{desc}</p>
             ) : (
-              <p className="text-xs text-[#4A4A4A] mt-0.5 truncate leading-snug">{desc}</p>
+              <p className="text-xs text-[var(--space-text-muted)] mt-0.5 truncate leading-snug">{desc}</p>
             )
           ) : null
         })()}
@@ -343,7 +343,7 @@ function TaskCard({
             </span>
           )}
           {task.dueDate && (
-            <span className={`text-xs ${over ? 'text-red-400' : 'text-[#6B6B6B]'}`}>
+            <span className={`text-xs ${over ? 'text-red-400' : 'text-[var(--space-text-secondary)]'}`}>
               {fmtDate(task.dueDate)}
               {over ? ' · overdue' : ''}
             </span>
@@ -356,7 +356,7 @@ function TaskCard({
         <button
           type="button"
           onClick={() => onEditStart(task)}
-          className="shrink-0 mt-0.5 p-1 rounded-md text-[#4A4A4A] hover:text-[#A0A0A0] hover:bg-[#2D2D2D] transition-colors opacity-0 group-hover:opacity-100"
+          className="shrink-0 mt-0.5 p-1 rounded-md text-[var(--space-text-muted)] hover:text-[var(--space-text-tertiary)] hover:bg-[var(--space-bg-card-hover)] transition-colors opacity-0 group-hover:opacity-100"
           title="Edit task"
         >
           <Pencil className="size-3" />
@@ -407,7 +407,7 @@ function InlineAdd({
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="flex items-center gap-1.5 w-full px-3 py-2 text-xs text-[#4A4A4A] hover:text-[#6B6B6B] hover:bg-[rgba(255,255,255,0.02)] transition-colors border-t border-[#404040] shrink-0"
+        className="flex items-center gap-1.5 w-full px-3 py-2 text-xs text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)] hover:bg-[rgba(255,255,255,0.02)] transition-colors border-t border-[var(--space-border-hard)] shrink-0"
       >
         <Plus className="size-3" />
         Add task
@@ -418,7 +418,7 @@ function InlineAdd({
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex items-center gap-2 px-3 py-2 border-t border-[#404040] shrink-0 bg-[#252525]"
+      className="flex items-center gap-2 px-3 py-2 border-t border-[var(--space-border-hard)] shrink-0 bg-[var(--space-bg-card)]"
       onKeyDown={(e) => { if (e.key === 'Escape') { setIsOpen(false); setTitle('') } }}
     >
       <Input
@@ -427,7 +427,7 @@ function InlineAdd({
         onChange={(e) => setTitle(e.target.value)}
         placeholder="Task title…"
         disabled={isPending}
-        className="flex-1 bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] placeholder:text-[#4A4A4A] focus:border-[rgba(139,156,182,0.25)] h-7 text-xs"
+        className="flex-1 bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)] focus:border-[rgba(139,156,182,0.25)] h-7 text-xs"
       />
       <button
         type="submit"
@@ -439,7 +439,7 @@ function InlineAdd({
       <button
         type="button"
         onClick={() => { setIsOpen(false); setTitle('') }}
-        className="p-1.5 rounded-lg text-[#4A4A4A] hover:text-[#6B6B6B] transition-colors shrink-0"
+        className="p-1.5 rounded-lg text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)] transition-colors shrink-0"
       >
         <X className="size-3" />
       </button>
@@ -476,7 +476,7 @@ function SprintColumn({
   updatingIds,
   onToggle,
   readOnly,
-  bg = 'bg-[#252525]',
+  bg = 'bg-[var(--space-bg-card)]',
   projectId,
   onTaskCreated,
   onTaskSaved,
@@ -546,16 +546,16 @@ function SprintColumn({
   return (
     <div className={`flex-1 flex flex-col min-w-0 ${bg}`}>
       {/* column header */}
-      <div className="px-5 pt-5 pb-4 border-b border-[#404040] shrink-0">
+      <div className="px-5 pt-5 pb-4 border-b border-[var(--space-border-hard)] shrink-0">
         <div className="flex items-center justify-between mb-2.5">
-          <span className="text-xs font-bold text-[#F0F0F0] uppercase tracking-[0.12em]">{label}</span>
+          <span className="text-xs font-bold text-[var(--space-text-primary)] uppercase tracking-[0.12em]">{label}</span>
           <div className="flex items-center gap-2">
             {sCfg && <span className={`text-xs font-medium ${sCfg.text}`}>{sCfg.label}</span>}
             <button
               type="button"
               onClick={isExpanded ? onCollapse : onExpand}
               title={isExpanded ? 'Collapse column' : 'Expand column'}
-              className="p-1 rounded-md text-[#4A4A4A] hover:text-[#A0A0A0] hover:bg-[#2D2D2D] transition-colors"
+              className="p-1 rounded-md text-[var(--space-text-muted)] hover:text-[var(--space-text-tertiary)] hover:bg-[var(--space-bg-card-hover)] transition-colors"
             >
               {isExpanded
                 ? <Minimize2 className="size-3.5" />
@@ -568,25 +568,25 @@ function SprintColumn({
           value={selectedSprintId ?? UNASSIGNED}
           onValueChange={(v) => onSelect(v === UNASSIGNED ? null : v)}
         >
-          <SelectTrigger className="h-8 bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] text-sm focus:border-[rgba(139,156,182,0.25)]">
+          <SelectTrigger className="h-8 bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] text-sm focus:border-[rgba(139,156,182,0.25)]">
             <SelectValue placeholder="Select sprint" />
           </SelectTrigger>
-          <SelectContent className="bg-[#1C1C1C] border-[#404040]">
-            <SelectItem value={UNASSIGNED} className="text-[#6B6B6B]">Unassigned tasks</SelectItem>
+          <SelectContent className="bg-[var(--space-bg-base)] border-[var(--space-border-hard)]">
+            <SelectItem value={UNASSIGNED} className="text-[var(--space-text-secondary)]">Unassigned tasks</SelectItem>
             {sprints.map((s) => (
-              <SelectItem key={s.id} value={s.id} className="text-[#F0F0F0]">{s.name}</SelectItem>
+              <SelectItem key={s.id} value={s.id} className="text-[var(--space-text-primary)]">{s.name}</SelectItem>
             ))}
           </SelectContent>
         </Select>
         {columnTasks.length > 0 && (
           <div className="flex items-center gap-2 mt-2.5">
-            <div className="flex-1 h-[3px] bg-[#333333] rounded-full overflow-hidden">
+            <div className="flex-1 h-[3px] bg-[var(--space-divider)] rounded-full overflow-hidden">
               <div
                 className={`h-full rounded-full transition-all duration-500 ${sCfg?.bar ?? 'bg-[var(--space-accent)]/60'}`}
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <span className="text-sm text-[#F0F0F0] font-semibold shrink-0 tabular-nums">
+            <span className="text-sm text-[var(--space-text-primary)] font-semibold shrink-0 tabular-nums">
               {completedCount}/{columnTasks.length}
             </span>
           </div>
@@ -595,30 +595,30 @@ function SprintColumn({
 
       {/* sprint info block — expanded only */}
       {isExpanded && sprint && (sprint.goalDescription || sprint.description || sprint.startDate || sprint.endDate) && (
-        <div className="mx-4 mt-4 mb-1 rounded-xl border border-[#404040] bg-[#252525] overflow-hidden shrink-0">
+        <div className="mx-4 mt-4 mb-1 rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] overflow-hidden shrink-0">
           {/* header strip */}
-          <div className="flex items-center gap-2 px-4 py-2.5 border-b border-[#404040] bg-[#2D2D2D]">
+          <div className="flex items-center gap-2 px-4 py-2.5 border-b border-[var(--space-border-hard)] bg-[var(--space-bg-card-hover)]">
             <span className="size-1 rounded-full bg-[var(--space-accent)] opacity-60" />
-            <span className="text-[10px] font-bold text-[#6B6B6B] uppercase tracking-[0.12em]">Sprint Overview</span>
+            <span className="text-[10px] font-bold text-[var(--space-text-secondary)] uppercase tracking-[0.12em]">Sprint Overview</span>
           </div>
           <div className="px-4 py-3 space-y-3">
             {/* dates */}
             {(sprint.startDate || sprint.endDate) && (
               <div className="flex items-center gap-4">
-                <Calendar className="size-3 text-[#4A4A4A] shrink-0" />
+                <Calendar className="size-3 text-[var(--space-text-muted)] shrink-0" />
                 <div className="flex items-center gap-3 text-xs">
                   {sprint.startDate && (
-                    <span className="text-[#6B6B6B]">
-                      Start <span className="text-[#A0A0A0] ml-1">{fmtDate(sprint.startDate)}</span>
+                    <span className="text-[var(--space-text-secondary)]">
+                      Start <span className="text-[var(--space-text-tertiary)] ml-1">{fmtDate(sprint.startDate)}</span>
                     </span>
                   )}
                   {sprint.startDate && sprint.endDate && (
-                    <span className="text-[#4A4A4A]">·</span>
+                    <span className="text-[var(--space-text-muted)]">·</span>
                   )}
                   {sprint.endDate && (
-                    <span className="text-[#6B6B6B]">
+                    <span className="text-[var(--space-text-secondary)]">
                       End{' '}
-                      <span className={cn('ml-1', isOverdue(sprint.endDate) && sprint.status !== 'finished' ? 'text-red-400' : 'text-[#A0A0A0]')}>
+                      <span className={cn('ml-1', isOverdue(sprint.endDate) && sprint.status !== 'finished' ? 'text-red-400' : 'text-[var(--space-text-tertiary)]')}>
                         {fmtDate(sprint.endDate)}
                         {isOverdue(sprint.endDate) && sprint.status !== 'finished' && ' · overdue'}
                       </span>
@@ -632,18 +632,18 @@ function SprintColumn({
               <div className="flex items-start gap-2.5">
                 <Target className="size-3 text-[var(--space-accent)] opacity-50 shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-[10px] font-bold text-[#4A4A4A] uppercase tracking-wider mb-1">Goal</p>
-                  <p className="text-sm text-[#A0A0A0] leading-relaxed">{sprint.goalDescription}</p>
+                  <p className="text-[10px] font-bold text-[var(--space-text-muted)] uppercase tracking-wider mb-1">Goal</p>
+                  <p className="text-sm text-[var(--space-text-tertiary)] leading-relaxed">{sprint.goalDescription}</p>
                 </div>
               </div>
             )}
             {/* description */}
             {sprint.description && (
               <div className="flex items-start gap-2.5">
-                <AlignLeft className="size-3 text-[#4A4A4A] shrink-0 mt-0.5" />
+                <AlignLeft className="size-3 text-[var(--space-text-muted)] shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-[10px] font-bold text-[#4A4A4A] uppercase tracking-wider mb-1">Description</p>
-                  <p className="text-sm text-[#6B6B6B] leading-relaxed">{sprint.description}</p>
+                  <p className="text-[10px] font-bold text-[var(--space-text-muted)] uppercase tracking-wider mb-1">Description</p>
+                  <p className="text-sm text-[var(--space-text-secondary)] leading-relaxed">{sprint.description}</p>
                 </div>
               </div>
             )}
@@ -655,7 +655,7 @@ function SprintColumn({
       <div className="flex-1 overflow-y-auto py-2">
         {columnTasks.length === 0 ? (
           <div className="flex items-center justify-center h-32 px-4">
-            <p className="text-sm text-[#A0A0A0] text-center">
+            <p className="text-sm text-[var(--space-text-tertiary)] text-center">
               {selectedSprintId === null
                 ? 'No unassigned tasks'
                 : sprint
@@ -669,10 +669,10 @@ function SprintColumn({
               <div key={status}>
                 <div className="flex items-center gap-1.5 px-3 py-1.5">
                   <span className={`size-1 rounded-full ${STATUS_DOT[status]}`} />
-                  <span className="text-xs font-bold text-[#F0F0F0] uppercase tracking-[0.08em]">
+                  <span className="text-xs font-bold text-[var(--space-text-primary)] uppercase tracking-[0.08em]">
                     {STATUS_LABEL[status]}
                   </span>
-                  <span className="text-xs text-[#A0A0A0]">· {tasks.length}</span>
+                  <span className="text-xs text-[var(--space-text-tertiary)]">· {tasks.length}</span>
                 </div>
                 {tasks.map((task) => (
                   <TaskCard
@@ -697,7 +697,7 @@ function SprintColumn({
               <button
                 type="button"
                 onClick={onExpand}
-                className="flex items-center gap-1.5 w-full px-4 py-2 text-xs text-[#4A4A4A] hover:text-[#6B6B6B] hover:bg-[rgba(255,255,255,0.02)] transition-colors"
+                className="flex items-center gap-1.5 w-full px-4 py-2 text-xs text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)] hover:bg-[rgba(255,255,255,0.02)] transition-colors"
               >
                 <span className="size-1 rounded-full bg-green-400/40" />
                 {hiddenDoneCount} completed — expand to view
@@ -770,15 +770,15 @@ function CreateTaskSheet({ projectId, sprints, open, onOpenChange }: CreateTaskS
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="bg-[#1C1C1C] border-[#404040] w-full sm:max-w-md overflow-y-auto">
+      <SheetContent className="bg-[var(--space-bg-base)] border-[var(--space-border-hard)] w-full sm:max-w-md overflow-y-auto">
         <SheetHeader className="pb-0">
-          <SheetTitle className="text-lg font-semibold text-[#F0F0F0]">New Task</SheetTitle>
-          <SheetDescription className="text-sm text-[#A0A0A0]">Add a task to this project.</SheetDescription>
+          <SheetTitle className="text-lg font-semibold text-[var(--space-text-primary)]">New Task</SheetTitle>
+          <SheetDescription className="text-sm text-[var(--space-text-tertiary)]">Add a task to this project.</SheetDescription>
         </SheetHeader>
 
         <form onSubmit={handleSubmit} className="space-y-5 mt-6 px-4 pb-6">
           <div className="space-y-1.5">
-            <Label htmlFor="task-title" className="text-xs font-medium text-[#6B6B6B] uppercase tracking-wider">
+            <Label htmlFor="task-title" className="text-xs font-medium text-[var(--space-text-secondary)] uppercase tracking-wider">
               Title <span className="text-red-400">*</span>
             </Label>
             <Input
@@ -786,7 +786,7 @@ function CreateTaskSheet({ projectId, sprints, open, onOpenChange }: CreateTaskS
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g., Fix login redirect issue"
-              className="bg-[#252525] border-[#404040] text-[#F0F0F0] placeholder:text-[#4A4A4A] focus:border-[rgba(139,156,182,0.25)] h-9 text-sm"
+              className="bg-[var(--space-bg-card)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)] focus:border-[rgba(139,156,182,0.25)] h-9 text-sm"
               disabled={isLoading}
               required
               autoFocus
@@ -794,7 +794,7 @@ function CreateTaskSheet({ projectId, sprints, open, onOpenChange }: CreateTaskS
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="task-desc" className="text-xs font-medium text-[#6B6B6B] uppercase tracking-wider">
+            <Label htmlFor="task-desc" className="text-xs font-medium text-[var(--space-text-secondary)] uppercase tracking-wider">
               Description
             </Label>
             <Textarea
@@ -803,20 +803,20 @@ function CreateTaskSheet({ projectId, sprints, open, onOpenChange }: CreateTaskS
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Optional notes or context..."
               rows={3}
-              className="bg-[#252525] border-[#404040] text-[#F0F0F0] placeholder:text-[#4A4A4A] focus:border-[rgba(139,156,182,0.25)] text-sm resize-none"
+              className="bg-[var(--space-bg-card)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)] focus:border-[rgba(139,156,182,0.25)] text-sm resize-none"
               disabled={isLoading}
             />
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="task-priority" className="text-xs font-medium text-[#6B6B6B] uppercase tracking-wider">
+            <Label htmlFor="task-priority" className="text-xs font-medium text-[var(--space-text-secondary)] uppercase tracking-wider">
               Priority
             </Label>
             <Select value={priority} onValueChange={(v) => setPriority(v as Priority)} disabled={isLoading}>
-              <SelectTrigger id="task-priority" className="bg-[#252525] border-[#404040] text-[#F0F0F0] focus:border-[rgba(139,156,182,0.25)] h-9 text-sm">
+              <SelectTrigger id="task-priority" className="bg-[var(--space-bg-card)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] focus:border-[rgba(139,156,182,0.25)] h-9 text-sm">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-[#1C1C1C] border-[#404040]">
+              <SelectContent className="bg-[var(--space-bg-base)] border-[var(--space-border-hard)]">
                 <SelectItem value="low" className="text-gray-500">Low</SelectItem>
                 <SelectItem value="medium" className="text-blue-400">Medium</SelectItem>
                 <SelectItem value="high" className="text-yellow-400">High</SelectItem>
@@ -826,7 +826,7 @@ function CreateTaskSheet({ projectId, sprints, open, onOpenChange }: CreateTaskS
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="task-due" className="text-xs font-medium text-[#6B6B6B] uppercase tracking-wider">
+            <Label htmlFor="task-due" className="text-xs font-medium text-[var(--space-text-secondary)] uppercase tracking-wider">
               Due Date
             </Label>
             <Input
@@ -834,24 +834,24 @@ function CreateTaskSheet({ projectId, sprints, open, onOpenChange }: CreateTaskS
               type="date"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
-              className="bg-[#252525] border-[#404040] text-[#F0F0F0] focus:border-[rgba(139,156,182,0.25)] h-9 text-sm"
+              className="bg-[var(--space-bg-card)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] focus:border-[rgba(139,156,182,0.25)] h-9 text-sm"
               disabled={isLoading}
             />
           </div>
 
           {sprints.length > 0 && (
             <div className="space-y-1.5">
-              <Label htmlFor="task-sprint" className="text-xs font-medium text-[#6B6B6B] uppercase tracking-wider">
+              <Label htmlFor="task-sprint" className="text-xs font-medium text-[var(--space-text-secondary)] uppercase tracking-wider">
                 Sprint
               </Label>
               <Select value={sprintId} onValueChange={setSprintId} disabled={isLoading}>
-                <SelectTrigger id="task-sprint" className="bg-[#252525] border-[#404040] text-[#F0F0F0] focus:border-[rgba(139,156,182,0.25)] h-9 text-sm">
+                <SelectTrigger id="task-sprint" className="bg-[var(--space-bg-card)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] focus:border-[rgba(139,156,182,0.25)] h-9 text-sm">
                   <SelectValue placeholder="No sprint" />
                 </SelectTrigger>
-                <SelectContent className="bg-[#1C1C1C] border-[#404040]">
-                  <SelectItem value="none" className="text-[#6B6B6B]">No sprint</SelectItem>
+                <SelectContent className="bg-[var(--space-bg-base)] border-[var(--space-border-hard)]">
+                  <SelectItem value="none" className="text-[var(--space-text-secondary)]">No sprint</SelectItem>
                   {sprints.map((sprint) => (
-                    <SelectItem key={sprint.id} value={sprint.id} className="text-[#F0F0F0]">{sprint.name}</SelectItem>
+                    <SelectItem key={sprint.id} value={sprint.id} className="text-[var(--space-text-primary)]">{sprint.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -870,7 +870,7 @@ function CreateTaskSheet({ projectId, sprints, open, onOpenChange }: CreateTaskS
               variant="outline"
               onClick={() => { reset(); onOpenChange(false) }}
               disabled={isLoading}
-              className="flex-1 bg-[#252525] border-[#404040] text-[#A0A0A0] hover:bg-[#2D2D2D] hover:text-[#F0F0F0] text-sm h-9"
+              className="flex-1 bg-[var(--space-bg-card)] border-[var(--space-border-hard)] text-[var(--space-text-tertiary)] hover:bg-[var(--space-bg-card-hover)] hover:text-[var(--space-text-primary)] text-sm h-9"
             >
               Cancel
             </Button>
@@ -933,14 +933,14 @@ export function TasksTab({ tasks, sprints, projectId, readOnly }: TasksTabProps)
 
   return (
     <div
-      className="flex flex-col rounded-xl border border-[#404040] overflow-hidden"
+      className="flex flex-col rounded-xl border border-[var(--space-border-hard)] overflow-hidden"
       style={{ height: 'calc(100vh - 12rem)' }}
     >
       {/* top bar */}
-      <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#404040] bg-[#252525] shrink-0">
+      <div className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--space-border-hard)] bg-[var(--space-bg-card)] shrink-0">
         <div className="flex items-center gap-4">
-          <h2 className="text-sm font-semibold text-[#F0F0F0]">Tasks</h2>
-          <span className="text-sm text-[#A0A0A0]">
+          <h2 className="text-sm font-semibold text-[var(--space-text-primary)]">Tasks</h2>
+          <span className="text-sm text-[var(--space-text-tertiary)]">
             {tasks.length} total · {completedCount} done
           </span>
         </div>
@@ -949,7 +949,7 @@ export function TasksTab({ tasks, sprints, projectId, readOnly }: TasksTabProps)
             <Button
               onClick={() => setSprintModalOpen(true)}
               variant="outline"
-              className="bg-[#252525] border-[#404040] text-[#A0A0A0] hover:bg-[#2D2D2D] hover:text-[#F0F0F0] font-medium text-xs h-7 px-3"
+              className="bg-[var(--space-bg-card)] border-[var(--space-border-hard)] text-[var(--space-text-tertiary)] hover:bg-[var(--space-bg-card-hover)] hover:text-[var(--space-text-primary)] font-medium text-xs h-7 px-3"
             >
               <Zap className="size-3 mr-1" />
               New Sprint
@@ -966,19 +966,19 @@ export function TasksTab({ tasks, sprints, projectId, readOnly }: TasksTabProps)
       </div>
 
       {/* three-panel layout */}
-      <div className="flex-1 flex divide-x divide-[#333333] min-h-0 overflow-hidden">
+      <div className="flex-1 flex divide-x divide-[var(--space-divider)] min-h-0 overflow-hidden">
         {/* left sidebar — active sprints overview */}
         <aside
           className={cn(
-            'shrink-0 bg-[#2D2D2D] flex flex-col transition-all duration-200',
+            'shrink-0 bg-[var(--space-bg-card-hover)] flex flex-col transition-all duration-200',
             sidebarCollapsed ? 'w-10' : 'w-60',
           )}
         >
-          <div className="flex items-center px-2.5 py-3.5 border-b border-[#404040] shrink-0">
+          <div className="flex items-center px-2.5 py-3.5 border-b border-[var(--space-border-hard)] shrink-0">
             {!sidebarCollapsed && (
               <>
                 <Zap className="size-3 text-[var(--space-accent)] shrink-0 mr-2" />
-                <span className="text-xs font-bold text-[#F0F0F0] uppercase tracking-[0.08em] flex-1 truncate">Active Sprints</span>
+                <span className="text-xs font-bold text-[var(--space-text-primary)] uppercase tracking-[0.08em] flex-1 truncate">Active Sprints</span>
               </>
             )}
             <button
@@ -986,7 +986,7 @@ export function TasksTab({ tasks, sprints, projectId, readOnly }: TasksTabProps)
               onClick={() => setSidebarCollapsed((v) => !v)}
               title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
               className={cn(
-                'p-1 rounded-md text-[#4A4A4A] hover:text-[#A0A0A0] hover:bg-[#2D2D2D] transition-colors shrink-0',
+                'p-1 rounded-md text-[var(--space-text-muted)] hover:text-[var(--space-text-tertiary)] hover:bg-[var(--space-bg-card-hover)] transition-colors shrink-0',
                 sidebarCollapsed && 'mx-auto',
               )}
             >
@@ -1000,7 +1000,7 @@ export function TasksTab({ tasks, sprints, projectId, readOnly }: TasksTabProps)
             <div className="flex-1 overflow-y-auto">
               {activeSprints.length === 0 ? (
                 <div className="flex items-center justify-center h-32 px-4">
-                  <p className="text-sm text-[#A0A0A0] text-center">No active sprints</p>
+                  <p className="text-sm text-[var(--space-text-tertiary)] text-center">No active sprints</p>
                 </div>
               ) : (
                 <div className="py-2">
@@ -1013,26 +1013,26 @@ export function TasksTab({ tasks, sprints, projectId, readOnly }: TasksTabProps)
                       <div key={sprint.id} className="mb-4">
                         <div className="px-3 py-1.5">
                           <div className="flex items-center justify-between gap-1 mb-1.5">
-                            <span className="text-sm font-semibold text-[#F0F0F0] truncate leading-tight">{sprint.name}</span>
+                            <span className="text-sm font-semibold text-[var(--space-text-primary)] truncate leading-tight">{sprint.name}</span>
                             <span className={`shrink-0 text-[9px] font-bold ${cfg.text}`}>{cfg.label}</span>
                           </div>
                           {sTasks.length > 0 && (
                             <div className="flex items-center gap-1.5 mb-1">
-                              <div className="flex-1 h-[2px] bg-[#333333] rounded-full overflow-hidden">
+                              <div className="flex-1 h-[2px] bg-[var(--space-divider)] rounded-full overflow-hidden">
                                 <div className={`h-full rounded-full ${cfg.bar}`} style={{ width: `${pct}%` }} />
                               </div>
-                              <span className="text-xs text-[#A0A0A0] shrink-0 tabular-nums">{pct}%</span>
+                              <span className="text-xs text-[var(--space-text-tertiary)] shrink-0 tabular-nums">{pct}%</span>
                             </div>
                           )}
                         </div>
                         <div className="px-1">
                           {sTasks.length === 0 ? (
-                            <p className="text-xs text-[#A0A0A0] px-2 py-1">No tasks</p>
+                            <p className="text-xs text-[var(--space-text-tertiary)] px-2 py-1">No tasks</p>
                           ) : (
                             <>
                               {sortByUrgency(sTasks).slice(0, 10).map((t) => <SidebarTask key={t.id} task={t} />)}
                               {sTasks.length > 10 && (
-                                <p className="text-xs text-[#A0A0A0] px-2 py-1">+{sTasks.length - 10} more</p>
+                                <p className="text-xs text-[var(--space-text-tertiary)] px-2 py-1">+{sTasks.length - 10} more</p>
                               )}
                             </>
                           )}
@@ -1052,7 +1052,7 @@ export function TasksTab({ tasks, sprints, projectId, readOnly }: TasksTabProps)
             label="Sprint A"
             selectedSprintId={colAId}
             onSelect={setColAId}
-            bg="bg-[#252525]"
+            bg="bg-[var(--space-bg-card)]"
             isExpanded={expandedCol === 'A'}
             onExpand={() => setExpandedCol('A')}
             onCollapse={() => setExpandedCol(null)}
@@ -1066,7 +1066,7 @@ export function TasksTab({ tasks, sprints, projectId, readOnly }: TasksTabProps)
             label="Sprint B"
             selectedSprintId={colBId}
             onSelect={setColBId}
-            bg="bg-[#252525]"
+            bg="bg-[var(--space-bg-card)]"
             isExpanded={expandedCol === 'B'}
             onExpand={() => setExpandedCol('B')}
             onCollapse={() => setExpandedCol(null)}

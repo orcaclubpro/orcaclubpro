@@ -104,12 +104,12 @@ function DueDateEditor({
             value={value}
             onChange={(e) => { setValue(e.target.value); setSaved(false); setWarning(null); setError(null) }}
             className={cn(
-              'h-8 px-3 pr-8 text-xs rounded-lg border bg-transparent text-[#F0F0F0]',
+              'h-8 px-3 pr-8 text-xs rounded-lg border bg-transparent text-[var(--space-text-primary)]',
               'focus:outline-none focus:ring-1 focus:ring-[var(--space-accent)]/40 [color-scheme:light]',
-              isDirty ? 'border-[var(--space-accent)]/30 bg-[rgba(139,156,182,0.06)]' : 'border-[#404040]',
+              isDirty ? 'border-[var(--space-accent)]/30 bg-[rgba(139,156,182,0.06)]' : 'border-[var(--space-border-hard)]',
             )}
           />
-          <CalendarDays className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 size-3 text-[#4A4A4A]" />
+          <CalendarDays className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 size-3 text-[var(--space-text-muted)]" />
         </div>
         {isDirty && (
           <button
@@ -126,9 +126,9 @@ function DueDateEditor({
             <Check className="size-3" />{warning ? 'Saved' : 'Saved & synced'}
           </span>
         )}
-        {!value && !isDirty && <span className="text-xs text-[#4A4A4A]">No due date set</span>}
+        {!value && !isDirty && <span className="text-xs text-[var(--space-text-muted)]">No due date set</span>}
         {hasStripe && !saving && (
-          <span className="ml-auto flex items-center gap-1 text-[10px] text-[#4A4A4A]">
+          <span className="ml-auto flex items-center gap-1 text-[10px] text-[var(--space-text-muted)]">
             <Zap className="size-3" />Syncs to Stripe
           </span>
         )}
@@ -248,19 +248,19 @@ function LineItemsEditor({
   if (!editing) {
     return (
       <div className="space-y-3">
-        <div className="rounded-xl border border-[#404040] overflow-hidden divide-y divide-[#333333]">
+        <div className="rounded-xl border border-[var(--space-border-hard)] overflow-hidden divide-y divide-[var(--space-divider)]">
           {lineItems.map((item, i) => {
             const total = (item.price ?? 0) * (item.quantity ?? 1)
             return (
               <div key={i} className="flex items-start gap-4 px-4 py-3.5">
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-[#F0F0F0] font-medium leading-snug">{item.title}</p>
+                  <p className="text-sm text-[var(--space-text-primary)] font-medium leading-snug">{item.title}</p>
                   {item.description && (
-                    <p className="text-xs text-[#6B6B6B] mt-1 leading-relaxed">{item.description}</p>
+                    <p className="text-xs text-[var(--space-text-secondary)] mt-1 leading-relaxed">{item.description}</p>
                   )}
                   <div className="flex items-center gap-2 mt-1.5">
                     {(item.quantity ?? 1) > 1 && (
-                      <span className="text-[11px] text-[#4A4A4A]">×{item.quantity}</span>
+                      <span className="text-[11px] text-[var(--space-text-muted)]">×{item.quantity}</span>
                     )}
                     {item.isRecurring && (
                       <span className="text-[10px] border rounded-full px-1.5 py-0.5 uppercase tracking-wide border-[rgba(139,156,182,0.15)] bg-[rgba(139,156,182,0.06)]" style={{ color: 'var(--space-accent)' }}>
@@ -270,24 +270,24 @@ function LineItemsEditor({
                   </div>
                 </div>
                 <div className="text-right shrink-0 pt-0.5">
-                  <p className="text-sm font-bold font-mono text-[#F0F0F0] tabular-nums">
+                  <p className="text-sm font-bold font-mono text-[var(--space-text-primary)] tabular-nums">
                     {fmt(total)}
                     {item.isRecurring && (
-                      <span className="text-xs font-normal text-[#6B6B6B] font-sans">
+                      <span className="text-xs font-normal text-[var(--space-text-secondary)] font-sans">
                         /{item.recurringInterval === 'year' ? 'yr' : 'mo'}
                       </span>
                     )}
                   </p>
                   {(item.quantity ?? 1) > 1 && (
-                    <p className="text-[10px] text-[#4A4A4A] mt-0.5">{fmt(item.price)} ea.</p>
+                    <p className="text-[10px] text-[var(--space-text-muted)] mt-0.5">{fmt(item.price)} ea.</p>
                   )}
                 </div>
               </div>
             )
           })}
           <div className="flex items-center justify-between px-4 py-3 bg-[rgba(255,255,255,0.02)]">
-            <span className="text-xs font-semibold text-[#6B6B6B] uppercase tracking-widest">Total</span>
-            <span className="text-base font-bold text-[#F0F0F0] font-mono tabular-nums">
+            <span className="text-xs font-semibold text-[var(--space-text-secondary)] uppercase tracking-widest">Total</span>
+            <span className="text-base font-bold text-[var(--space-text-primary)] font-mono tabular-nums">
               {fmt(lineItems.reduce((s, it) => s + it.price * (it.quantity ?? 1), 0))}
             </span>
           </div>
@@ -297,7 +297,7 @@ function LineItemsEditor({
         <div className="flex items-center gap-3">
           <button
             onClick={handleEdit}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[#6B6B6B] border border-[#404040] rounded-lg hover:text-[#F0F0F0] hover:border-[#404040] hover:bg-[#2D2D2D] transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[var(--space-text-secondary)] border border-[var(--space-border-hard)] rounded-lg hover:text-[var(--space-text-primary)] hover:border-[var(--space-border-hard)] hover:bg-[var(--space-bg-card-hover)] transition-all"
           >
             <Pencil className="size-3" />Edit Items
           </button>
@@ -312,7 +312,7 @@ function LineItemsEditor({
             </div>
           )}
           {hasStripe && !warning && !synced && (
-            <span className="ml-auto flex items-center gap-1 text-[10px] text-[#4A4A4A]">
+            <span className="ml-auto flex items-center gap-1 text-[10px] text-[var(--space-text-muted)]">
               <Zap className="size-3" />Syncs to Stripe if draft
             </span>
           )}
@@ -329,11 +329,11 @@ function LineItemsEditor({
         {items.map((item, i) => (
           <div
             key={i}
-            className="rounded-xl border border-[#404040] bg-[rgba(255,255,255,0.02)] p-4 space-y-3"
+            className="rounded-xl border border-[var(--space-border-hard)] bg-[rgba(255,255,255,0.02)] p-4 space-y-3"
           >
             {/* Title row */}
             <div className="flex items-center gap-2">
-              <span className="text-[10px] text-[#4A4A4A] font-semibold uppercase tracking-widest w-4 shrink-0">
+              <span className="text-[10px] text-[var(--space-text-muted)] font-semibold uppercase tracking-widest w-4 shrink-0">
                 {i + 1}
               </span>
               <input
@@ -341,12 +341,12 @@ function LineItemsEditor({
                 value={item.title}
                 onChange={(e) => updateItem(i, { title: e.target.value })}
                 placeholder="Item title"
-                className="flex-1 h-8 px-3 text-sm bg-[#252525] border border-[#404040] rounded-lg text-[#F0F0F0] placeholder:text-[#4A4A4A] focus:outline-none focus:ring-1 focus:ring-[var(--space-accent)]/30"
+                className="flex-1 h-8 px-3 text-sm bg-[var(--space-bg-card)] border border-[var(--space-border-hard)] rounded-lg text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--space-accent)]/30"
               />
               {items.length > 1 && (
                 <button
                   onClick={() => removeItem(i)}
-                  className="size-8 flex items-center justify-center rounded-lg text-[#4A4A4A] hover:text-red-400 hover:bg-red-400/10 transition-colors shrink-0"
+                  className="size-8 flex items-center justify-center rounded-lg text-[var(--space-text-muted)] hover:text-red-400 hover:bg-red-400/10 transition-colors shrink-0"
                 >
                   <X className="size-3.5" />
                 </button>
@@ -359,43 +359,43 @@ function LineItemsEditor({
               onChange={(e) => updateItem(i, { description: e.target.value })}
               placeholder="Description (optional — shown on invoice)"
               rows={2}
-              className="w-full px-3 py-2 text-xs bg-[#252525] border border-[#404040] rounded-lg text-[#A0A0A0] placeholder:text-[#4A4A4A] resize-none focus:outline-none focus:ring-1 focus:ring-[var(--space-accent)]/30"
+              className="w-full px-3 py-2 text-xs bg-[var(--space-bg-card)] border border-[var(--space-border-hard)] rounded-lg text-[var(--space-text-tertiary)] placeholder:text-[var(--space-text-muted)] resize-none focus:outline-none focus:ring-1 focus:ring-[var(--space-accent)]/30"
             />
 
             {/* Qty × Price = Total */}
             <div className="flex items-center gap-2 flex-wrap">
               <div className="flex items-center gap-1.5">
-                <label className="text-[10px] text-[#4A4A4A] uppercase tracking-widest font-semibold">Qty</label>
+                <label className="text-[10px] text-[var(--space-text-muted)] uppercase tracking-widest font-semibold">Qty</label>
                 <input
                   type="number"
                   min={1}
                   step={1}
                   value={item.quantity}
                   onChange={(e) => updateItem(i, { quantity: Math.max(1, parseInt(e.target.value) || 1) })}
-                  className="w-16 h-8 px-2 text-sm text-center bg-[#252525] border border-[#404040] rounded-lg text-[#F0F0F0] focus:outline-none focus:ring-1 focus:ring-[var(--space-accent)]/30 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
+                  className="w-16 h-8 px-2 text-sm text-center bg-[var(--space-bg-card)] border border-[var(--space-border-hard)] rounded-lg text-[var(--space-text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--space-accent)]/30 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
                 />
               </div>
 
-              <span className="text-[#4A4A4A] text-xs">×</span>
+              <span className="text-[var(--space-text-muted)] text-xs">×</span>
 
               <div className="flex items-center gap-1.5">
-                <label className="text-[10px] text-[#4A4A4A] uppercase tracking-widest font-semibold">Price</label>
+                <label className="text-[10px] text-[var(--space-text-muted)] uppercase tracking-widest font-semibold">Price</label>
                 <div className="relative">
-                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-[#4A4A4A]">$</span>
+                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-[var(--space-text-muted)]">$</span>
                   <input
                     type="number"
                     min={0}
                     step={0.01}
                     value={item.price}
                     onChange={(e) => updateItem(i, { price: Math.max(0, parseFloat(e.target.value) || 0) })}
-                    className="w-28 h-8 pl-6 pr-3 text-sm bg-[#252525] border border-[#404040] rounded-lg text-[#F0F0F0] focus:outline-none focus:ring-1 focus:ring-[var(--space-accent)]/30 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
+                    className="w-28 h-8 pl-6 pr-3 text-sm bg-[var(--space-bg-card)] border border-[var(--space-border-hard)] rounded-lg text-[var(--space-text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--space-accent)]/30 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
                   />
                 </div>
               </div>
 
-              <span className="text-[#4A4A4A] text-xs">=</span>
+              <span className="text-[var(--space-text-muted)] text-xs">=</span>
 
-              <span className="text-sm font-bold text-[#F0F0F0] font-mono tabular-nums">
+              <span className="text-sm font-bold text-[var(--space-text-primary)] font-mono tabular-nums">
                 {fmt(item.price * (item.quantity || 1))}
               </span>
             </div>
@@ -406,20 +406,20 @@ function LineItemsEditor({
       {/* Add item */}
       <button
         onClick={addItem}
-        className="flex items-center gap-1.5 text-xs text-[#6B6B6B] hover:text-[var(--space-accent)] transition-colors"
+        className="flex items-center gap-1.5 text-xs text-[var(--space-text-secondary)] hover:text-[var(--space-accent)] transition-colors"
       >
         <Plus className="size-3.5" />Add item
       </button>
 
       {/* Running total */}
-      <div className="flex items-center justify-between px-4 py-2.5 rounded-lg bg-[#2D2D2D] border border-[#404040]">
-        <span className="text-xs text-[#6B6B6B] uppercase tracking-widest font-semibold">New Total</span>
-        <span className="text-base font-bold text-[#F0F0F0] font-mono tabular-nums">{fmt(editTotal)}</span>
+      <div className="flex items-center justify-between px-4 py-2.5 rounded-lg bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)]">
+        <span className="text-xs text-[var(--space-text-secondary)] uppercase tracking-widest font-semibold">New Total</span>
+        <span className="text-base font-bold text-[var(--space-text-primary)] font-mono tabular-nums">{fmt(editTotal)}</span>
       </div>
 
       {/* Stripe note */}
       {hasStripe && (
-        <p className="flex items-center gap-1.5 text-[10px] text-[#4A4A4A]">
+        <p className="flex items-center gap-1.5 text-[10px] text-[var(--space-text-muted)]">
           <Zap className="size-3" />
           Changes sync to Stripe only if the invoice is still a draft. Finalized invoices are updated in Payload only.
         </p>
@@ -443,7 +443,7 @@ function LineItemsEditor({
         <button
           onClick={handleCancel}
           disabled={saving}
-          className="px-3 py-1.5 text-xs text-[#6B6B6B] hover:text-[#A0A0A0] transition-colors"
+          className="px-3 py-1.5 text-xs text-[var(--space-text-secondary)] hover:text-[var(--space-text-tertiary)] transition-colors"
         >
           Cancel
         </button>
@@ -478,7 +478,7 @@ function MarkAsPaidButton({ orderId, onPaid }: { orderId: string; onPaid: () => 
           'flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition-all disabled:opacity-50',
           confirm
             ? 'text-emerald-400 border-emerald-500/40 bg-emerald-500/10'
-            : 'text-[#6B6B6B] border-[#404040] hover:text-emerald-400 hover:border-emerald-500/30',
+            : 'text-[var(--space-text-secondary)] border-[var(--space-border-hard)] hover:text-emerald-400 hover:border-emerald-500/30',
         )}
       >
         {saving ? <Loader2 className="size-3 animate-spin" /> : <CheckCircle className="size-3.5" />}
@@ -525,7 +525,7 @@ function DeleteOrderButton({ orderId, onDeleted }: { orderId: string; onDeleted:
           'flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition-all disabled:opacity-50',
           confirm
             ? 'text-red-400 border-red-500/40 bg-red-500/10'
-            : 'text-[#4A4A4A] border-[#404040] hover:text-red-400 hover:border-red-500/30',
+            : 'text-[var(--space-text-muted)] border-[var(--space-border-hard)] hover:text-red-400 hover:border-red-500/30',
         )}
       >
         {deleting ? <Loader2 className="size-3 animate-spin" /> : <Trash2 className="size-3.5" />}
@@ -572,9 +572,9 @@ function OrderCard({
     <div
       className={cn(
         'rounded-2xl border overflow-hidden transition-all duration-300',
-        expanded ? 'border-[rgba(139,156,182,0.15)]' : 'border-[#404040] hover:border-[#404040]',
+        expanded ? 'border-[rgba(139,156,182,0.15)]' : 'border-[var(--space-border-hard)] hover:border-[var(--space-border-hard)]',
       )}
-      style={{ background: 'linear-gradient(145deg, #252525 0%, #2D2D2D 100%)' }}
+      style={{ background: 'var(--space-bg-card)' }}
     >
       {/* Top accent line */}
       <div className={cn(
@@ -590,10 +590,10 @@ function OrderCard({
           <div className="flex-1 min-w-0">
             {/* Primary: line item title */}
             <div className="flex items-center gap-2.5 mb-1 flex-wrap">
-              <span className="text-base font-semibold text-[#F0F0F0] leading-snug truncate">
+              <span className="text-base font-semibold text-[var(--space-text-primary)] leading-snug truncate">
                 {lineItems[0]?.title ?? 'Invoice'}
                 {lineItems.length > 1 && (
-                  <span className="text-xs text-[#4A4A4A] font-normal ml-1.5">+{lineItems.length - 1} more</span>
+                  <span className="text-xs text-[var(--space-text-muted)] font-normal ml-1.5">+{lineItems.length - 1} more</span>
                 )}
               </span>
               <Badge
@@ -606,29 +606,29 @@ function OrderCard({
 
             {/* Project reference */}
             {order.projectRef && typeof order.projectRef !== 'string' && (
-              <p className="text-xs text-[#6B6B6B] mb-1 truncate">{order.projectRef.name}</p>
+              <p className="text-xs text-[var(--space-text-secondary)] mb-1 truncate">{order.projectRef.name}</p>
             )}
 
             {/* Order number */}
-            <p className="text-[11px] font-mono text-[#4A4A4A] mb-2">#{order.orderNumber}</p>
+            <p className="text-[11px] font-mono text-[var(--space-text-muted)] mb-2">#{order.orderNumber}</p>
 
             {/* Dates */}
             <div className="flex items-center gap-4 flex-wrap">
-              <span className="flex items-center gap-1 text-xs text-[#4A4A4A]">
+              <span className="flex items-center gap-1 text-xs text-[var(--space-text-muted)]">
                 <Calendar className="size-3" />{fmtDate(order.createdAt)}
               </span>
               {order.dueDate && (
-                <span className={cn('flex items-center gap-1 text-xs', order.status === 'pending' ? 'text-amber-600/80' : 'text-[#4A4A4A]')}>
+                <span className={cn('flex items-center gap-1 text-xs', order.status === 'pending' ? 'text-amber-600/80' : 'text-[var(--space-text-muted)]')}>
                   <CalendarDays className="size-3" />Due {fmtDate(order.dueDate)}
                 </span>
               )}
             </div>
           </div>
           <div className="flex items-start gap-2 shrink-0">
-            <p className="text-2xl font-bold text-[#F0F0F0] font-mono tabular-nums">{fmt(order.amount)}</p>
+            <p className="text-2xl font-bold text-[var(--space-text-primary)] font-mono tabular-nums">{fmt(order.amount)}</p>
             {expanded
-              ? <ChevronUp className="size-4 text-[#6B6B6B] mt-1.5" />
-              : <ChevronDown className="size-4 text-[#6B6B6B] mt-1.5" />
+              ? <ChevronUp className="size-4 text-[var(--space-text-secondary)] mt-1.5" />
+              : <ChevronDown className="size-4 text-[var(--space-text-secondary)] mt-1.5" />
             }
           </div>
         </div>
@@ -638,7 +638,7 @@ function OrderCard({
       {expanded && (
         <>
           <div className="h-px bg-gradient-to-r from-transparent via-[#333333] to-transparent" />
-          <div className="px-7 py-6 space-y-6 bg-[#1C1C1C]/90">
+          <div className="px-7 py-6 space-y-6 bg-[var(--space-bg-base)]/90">
 
             {/* Payment actions */}
             <div className="flex items-center gap-2 flex-wrap">
@@ -657,24 +657,24 @@ function OrderCard({
                   </a>
                   <button
                     onClick={handleCopyLink}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[#6B6B6B] border border-[#404040] rounded-lg hover:text-[#F0F0F0] hover:border-[#404040] transition-all"
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[var(--space-text-secondary)] border border-[var(--space-border-hard)] rounded-lg hover:text-[var(--space-text-primary)] hover:border-[var(--space-border-hard)] transition-all"
                   >
                     {copied ? <CheckCheck className="size-3.5 text-emerald-400" /> : <Copy className="size-3.5" />}
                     {copied ? 'Copied!' : 'Copy Link'}
                   </button>
                 </>
               ) : order.status === 'pending' ? (
-                <p className="text-xs text-[#4A4A4A] italic">No payment link yet — contact your project manager.</p>
+                <p className="text-xs text-[var(--space-text-muted)] italic">No payment link yet — contact your project manager.</p>
               ) : null}
             </div>
 
             {/* Due date */}
             <div className="space-y-2">
-              <p className="text-[10px] text-[#6B6B6B] uppercase tracking-widest font-semibold">Due Date</p>
+              <p className="text-[10px] text-[var(--space-text-secondary)] uppercase tracking-widest font-semibold">Due Date</p>
               {canEditDueDate ? (
                 <DueDateEditor orderId={order.id} dueDate={order.dueDate} hasStripe={!!order.stripeInvoiceId} />
               ) : (
-                <p className={cn('text-sm', order.dueDate ? 'text-[#F0F0F0]' : 'text-[#4A4A4A]')}>
+                <p className={cn('text-sm', order.dueDate ? 'text-[var(--space-text-primary)]' : 'text-[var(--space-text-muted)]')}>
                   {order.dueDate ? fmtDate(order.dueDate) : '—'}
                 </p>
               )}
@@ -682,7 +682,7 @@ function OrderCard({
 
             {/* Line items */}
             <div className="space-y-2">
-              <p className="text-[10px] text-[#6B6B6B] uppercase tracking-widest font-semibold">Line Items</p>
+              <p className="text-[10px] text-[var(--space-text-secondary)] uppercase tracking-widest font-semibold">Line Items</p>
               {canEditLineItems ? (
                 <LineItemsEditor
                   orderId={order.id}
@@ -692,16 +692,16 @@ function OrderCard({
                 />
               ) : (
                 /* Client read-only */
-                <div className="rounded-xl border border-[#404040] overflow-hidden divide-y divide-[#333333]">
+                <div className="rounded-xl border border-[var(--space-border-hard)] overflow-hidden divide-y divide-[var(--space-divider)]">
                   {lineItems.map((item, i) => {
                     const total = (item.price ?? 0) * (item.quantity ?? 1)
                     return (
                       <div key={i} className="flex items-start gap-4 px-4 py-3.5">
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm text-[#F0F0F0] font-medium">{item.title}</p>
-                          {item.description && <p className="text-xs text-[#6B6B6B] mt-1 leading-relaxed">{item.description}</p>}
+                          <p className="text-sm text-[var(--space-text-primary)] font-medium">{item.title}</p>
+                          {item.description && <p className="text-xs text-[var(--space-text-secondary)] mt-1 leading-relaxed">{item.description}</p>}
                           <div className="flex items-center gap-2 mt-1.5">
-                            {(item.quantity ?? 1) > 1 && <span className="text-[11px] text-[#4A4A4A]">×{item.quantity}</span>}
+                            {(item.quantity ?? 1) > 1 && <span className="text-[11px] text-[var(--space-text-muted)]">×{item.quantity}</span>}
                             {item.isRecurring && (
                               <span className="text-[10px] border rounded-full px-1.5 py-0.5 uppercase tracking-wide border-[rgba(139,156,182,0.15)] bg-[rgba(139,156,182,0.06)]" style={{ color: 'var(--space-accent)' }}>
                                 {item.recurringInterval === 'year' ? 'Annual' : 'Monthly'}
@@ -709,13 +709,13 @@ function OrderCard({
                             )}
                           </div>
                         </div>
-                        <p className="text-sm font-bold font-mono text-[#F0F0F0] tabular-nums pt-0.5">{fmt(total)}</p>
+                        <p className="text-sm font-bold font-mono text-[var(--space-text-primary)] tabular-nums pt-0.5">{fmt(total)}</p>
                       </div>
                     )
                   })}
                   <div className="flex items-center justify-between px-4 py-3 bg-[rgba(255,255,255,0.02)]">
-                    <span className="text-xs font-semibold text-[#6B6B6B] uppercase tracking-widest">Total</span>
-                    <span className="text-base font-bold text-[#F0F0F0] font-mono tabular-nums">{fmt(order.amount)}</span>
+                    <span className="text-xs font-semibold text-[var(--space-text-secondary)] uppercase tracking-widest">Total</span>
+                    <span className="text-base font-bold text-[var(--space-text-primary)] font-mono tabular-nums">{fmt(order.amount)}</span>
                   </div>
                 </div>
               )}
@@ -723,7 +723,7 @@ function OrderCard({
 
             {/* Mark as paid / Delete */}
             {(canMarkPaid || canDelete) && (
-              <div className="pt-2 border-t border-[#404040] flex items-center gap-3 flex-wrap">
+              <div className="pt-2 border-t border-[var(--space-border-hard)] flex items-center gap-3 flex-wrap">
                 {canMarkPaid && (
                   <MarkAsPaidButton orderId={order.id} onPaid={() => onPaid(order.id)} />
                 )}
@@ -772,18 +772,18 @@ export function ClientOrdersTab({
   if (orders.length === 0) {
     return (
       <div
-        className="relative overflow-hidden rounded-2xl border border-[#404040]"
-        style={{ background: 'linear-gradient(145deg, #252525 0%, #2D2D2D 100%)' }}
+        className="relative overflow-hidden rounded-2xl border border-[var(--space-border-hard)]"
+        style={{ background: 'var(--space-bg-card)' }}
       >
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="size-64 rounded-full bg-[rgba(255,255,255,0.02)] blur-3xl" />
         </div>
         <div className="relative z-10 flex flex-col items-center text-center py-14 px-6">
-          <div className="p-4 rounded-2xl bg-[#2D2D2D] border border-[#404040] mb-5">
-            <Receipt className="size-7 text-[#4A4A4A]" />
+          <div className="p-4 rounded-2xl bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] mb-5">
+            <Receipt className="size-7 text-[var(--space-text-muted)]" />
           </div>
-          <h3 className="text-base font-semibold text-[#F0F0F0] mb-2">No orders yet</h3>
-          <p className="text-[#6B6B6B] text-sm max-w-xs leading-relaxed">
+          <h3 className="text-base font-semibold text-[var(--space-text-primary)] mb-2">No orders yet</h3>
+          <p className="text-[var(--space-text-secondary)] text-sm max-w-xs leading-relaxed">
             {role === 'client' ? 'You have no invoices on record yet.' : 'This client has no orders on record.'}
           </p>
         </div>
@@ -803,7 +803,7 @@ export function ClientOrdersTab({
         <div key={section.label} className="space-y-3">
           <div className="flex items-center gap-2">
             <section.icon className={`size-3.5 ${section.color}`} />
-            <span className="text-[10px] font-bold uppercase tracking-widest text-[#6B6B6B]">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--space-text-secondary)]">
               {section.label} · {section.items.length}
             </span>
           </div>

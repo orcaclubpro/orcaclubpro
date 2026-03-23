@@ -109,10 +109,10 @@ export function NewClientModal({ username }: { username: string }) {
       </Button>
 
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="bg-[#1C1C1C] border border-[#404040] text-[#F0F0F0] max-w-md">
+        <DialogContent className="bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] text-[var(--space-text-primary)] max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-[#F0F0F0]">New Client Account</DialogTitle>
-            <DialogDescription className="text-[#6B6B6B] text-sm">
+            <DialogTitle className="text-xl font-bold text-[var(--space-text-primary)]">New Client Account</DialogTitle>
+            <DialogDescription className="text-[var(--space-text-secondary)] text-sm">
               Creates a Stripe customer and a linked client account.
             </DialogDescription>
           </DialogHeader>
@@ -121,12 +121,12 @@ export function NewClientModal({ username }: { username: string }) {
             <div className="py-4 flex flex-col items-center gap-4 text-center">
               <CheckCircle className="size-12 text-green-500" />
               <div>
-                <p className="font-semibold text-[#F0F0F0] text-lg">
+                <p className="font-semibold text-[var(--space-text-primary)] text-lg">
                   {result.action === 'updated' ? 'Account Updated' : 'Account Created'}
                 </p>
-                <p className="text-[#6B6B6B] text-sm mt-1">{result.message}</p>
+                <p className="text-[var(--space-text-secondary)] text-sm mt-1">{result.message}</p>
                 {result.emailSent && form.email && (
-                  <p className="text-xs text-[#6B6B6B] mt-1">
+                  <p className="text-xs text-[var(--space-text-secondary)] mt-1">
                     A setup email was sent to {form.email}
                   </p>
                 )}
@@ -135,7 +135,7 @@ export function NewClientModal({ username }: { username: string }) {
                 <Button
                   variant="outline"
                   onClick={() => handleOpenChange(false)}
-                  className="border-[#404040] text-[#F0F0F0] hover:bg-[#2D2D2D]"
+                  className="border-[var(--space-border-hard)] text-[var(--space-text-primary)] hover:bg-[var(--space-bg-card-hover)]"
                 >
                   Close
                 </Button>
@@ -154,7 +154,7 @@ export function NewClientModal({ username }: { username: string }) {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="firstName" className="text-[#A0A0A0] text-sm">
+                  <Label htmlFor="firstName" className="text-[var(--space-text-tertiary)] text-sm">
                     First Name <span className="text-red-400">*</span>
                   </Label>
                   <Input
@@ -164,11 +164,11 @@ export function NewClientModal({ username }: { username: string }) {
                     onChange={handleChange}
                     required
                     placeholder="Jane"
-                    className="bg-[rgba(255,255,255,0.06)] border-[#404040] text-[#F0F0F0] placeholder:text-[#6B6B6B] focus-visible:ring-[rgba(139,156,182,0.30)]"
+                    className="bg-[rgba(255,255,255,0.06)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] placeholder:text-[var(--space-text-secondary)] focus-visible:ring-[rgba(139,156,182,0.30)]"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="lastName" className="text-[#A0A0A0] text-sm">
+                  <Label htmlFor="lastName" className="text-[var(--space-text-tertiary)] text-sm">
                     Last Name <span className="text-red-400">*</span>
                   </Label>
                   <Input
@@ -178,13 +178,13 @@ export function NewClientModal({ username }: { username: string }) {
                     onChange={handleChange}
                     required
                     placeholder="Doe"
-                    className="bg-[rgba(255,255,255,0.06)] border-[#404040] text-[#F0F0F0] placeholder:text-[#6B6B6B] focus-visible:ring-[rgba(139,156,182,0.30)]"
+                    className="bg-[rgba(255,255,255,0.06)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] placeholder:text-[var(--space-text-secondary)] focus-visible:ring-[rgba(139,156,182,0.30)]"
                   />
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="name" className="text-[#A0A0A0] text-sm">
+                <Label htmlFor="name" className="text-[var(--space-text-tertiary)] text-sm">
                   Display Name <span className="text-red-400">*</span>
                 </Label>
                 <Input
@@ -194,12 +194,12 @@ export function NewClientModal({ username }: { username: string }) {
                   onChange={handleChange}
                   required
                   placeholder="Jane Doe"
-                  className="bg-[rgba(255,255,255,0.06)] border-[#404040] text-[#F0F0F0] placeholder:text-[#6B6B6B] focus-visible:ring-[rgba(139,156,182,0.30)]"
+                  className="bg-[rgba(255,255,255,0.06)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] placeholder:text-[var(--space-text-secondary)] focus-visible:ring-[rgba(139,156,182,0.30)]"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="email" className="text-[#A0A0A0] text-sm">
+                <Label htmlFor="email" className="text-[var(--space-text-tertiary)] text-sm">
                   Email
                 </Label>
                 <Input
@@ -209,12 +209,12 @@ export function NewClientModal({ username }: { username: string }) {
                   value={form.email}
                   onChange={handleChange}
                   placeholder="jane@example.com"
-                  className="bg-[rgba(255,255,255,0.06)] border-[#404040] text-[#F0F0F0] placeholder:text-[#6B6B6B] focus-visible:ring-[rgba(139,156,182,0.30)]"
+                  className="bg-[rgba(255,255,255,0.06)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] placeholder:text-[var(--space-text-secondary)] focus-visible:ring-[rgba(139,156,182,0.30)]"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="company" className="text-[#A0A0A0] text-sm">
+                <Label htmlFor="company" className="text-[var(--space-text-tertiary)] text-sm">
                   Company
                 </Label>
                 <Input
@@ -223,7 +223,7 @@ export function NewClientModal({ username }: { username: string }) {
                   value={form.company}
                   onChange={handleChange}
                   placeholder="Acme Corp"
-                  className="bg-[rgba(255,255,255,0.06)] border-[#404040] text-[#F0F0F0] placeholder:text-[#6B6B6B] focus-visible:ring-[rgba(139,156,182,0.30)]"
+                  className="bg-[rgba(255,255,255,0.06)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] placeholder:text-[var(--space-text-secondary)] focus-visible:ring-[rgba(139,156,182,0.30)]"
                 />
               </div>
 
@@ -240,7 +240,7 @@ export function NewClientModal({ username }: { username: string }) {
                   variant="outline"
                   onClick={() => handleOpenChange(false)}
                   disabled={loading}
-                  className="border-[#404040] text-[#F0F0F0] hover:bg-[#2D2D2D]"
+                  className="border-[var(--space-border-hard)] text-[var(--space-text-primary)] hover:bg-[var(--space-bg-card-hover)]"
                 >
                   Cancel
                 </Button>

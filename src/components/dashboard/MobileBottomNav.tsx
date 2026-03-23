@@ -115,11 +115,11 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
         onClick={(e) => { e.preventDefault(); handleNav(item.href, item.tab) }}
         className={cn(
           'relative flex flex-col items-center gap-1.5 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-95 flex-1 cursor-pointer',
-          active ? 'bg-white/10' : 'hover:bg-white/[0.06]',
+          active ? 'bg-[var(--space-bg-card-hover)]' : 'hover:bg-[var(--space-bg-card-hover)]',
         )}
       >
         <div className="relative">
-          <Icon className={cn('size-5 transition-all duration-200', active ? 'text-white' : 'text-white/40')} />
+          <Icon className={cn('size-5 transition-all duration-200', active ? 'text-[var(--space-nav-fg)]' : 'text-[var(--space-nav-fg-dim)]')} />
           {item.tab === 'packages' && isClient && packageCount > 0 && (
             <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] rounded-full bg-red-500 text-white text-[8px] font-bold flex items-center justify-center px-0.5 leading-none shadow-sm">
               {packageCount > 9 ? '9+' : packageCount}
@@ -128,7 +128,7 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
         </div>
         <span className={cn(
           'text-[10px] font-semibold uppercase tracking-widest transition-colors duration-200 leading-none',
-          active ? 'text-white' : 'text-white/40',
+          active ? 'text-[var(--space-nav-fg)]' : 'text-[var(--space-nav-fg-dim)]',
         )}>
           {item.label}
         </span>
@@ -152,8 +152,8 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
             : 'opacity-0 scale-95 translate-y-2 pointer-events-none',
         )}
         style={{
-          background: '#1C1C1C',
-          border: '1px solid rgba(255,255,255,0.08)',
+          background: 'var(--space-bg-base)',
+          border: '1px solid var(--space-border)',
           borderRadius: '16px',
           boxShadow: '0 -8px 32px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.3)',
           padding: '8px',
@@ -170,13 +170,13 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
                 onClick={(e) => { e.preventDefault(); handleNav(item.href, item.tab) }}
                 className={cn(
                   'flex flex-col items-center gap-2 px-4 py-3 rounded-xl transition-all duration-200 active:scale-95 cursor-pointer',
-                  active ? 'bg-white/10' : 'hover:bg-white/[0.06]',
+                  active ? 'bg-[var(--space-bg-card-hover)]' : 'hover:bg-[var(--space-bg-card-hover)]',
                 )}
               >
-                <Icon className={cn('size-5', active ? 'text-white' : 'text-white/40')} />
+                <Icon className={cn('size-5', active ? 'text-[var(--space-nav-fg)]' : 'text-[var(--space-nav-fg-dim)]')} />
                 <span className={cn(
                   'text-[10px] font-semibold uppercase tracking-widest leading-none',
-                  active ? 'text-white' : 'text-white/40',
+                  active ? 'text-[var(--space-nav-fg)]' : 'text-[var(--space-nav-fg-dim)]',
                 )}>
                   {item.label}
                 </span>
@@ -192,7 +192,7 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
         className="pointer-events-auto flex items-center gap-1 p-1.5 rounded-2xl max-w-[calc(100vw-1.5rem)]"
         style={{
           opacity: 0,
-          background: '#222222',
+          background: 'var(--space-bg-base)',
           border: '1px solid var(--space-border)',
           boxShadow: '0 4px 24px rgba(0,0,0,0.30), 0 1px 4px rgba(0,0,0,0.20)',
         }}
@@ -212,13 +212,13 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
           onClick={() => setMenuOpen(v => !v)}
           className={cn(
             'md:hidden flex flex-col items-center gap-1.5 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-95 cursor-pointer',
-            menuOpen || anySecondaryActive ? 'bg-white/10' : 'hover:bg-white/[0.06]',
+            menuOpen || anySecondaryActive ? 'bg-[var(--space-bg-card-hover)]' : 'hover:bg-[var(--space-bg-card-hover)]',
           )}
         >
-          <MoreHorizontal className={cn('size-5 transition-all duration-200', menuOpen || anySecondaryActive ? 'text-white' : 'text-white/40')} />
+          <MoreHorizontal className={cn('size-5 transition-all duration-200', menuOpen || anySecondaryActive ? 'text-[var(--space-nav-fg)]' : 'text-[var(--space-nav-fg-dim)]')} />
           <span className={cn(
             'text-[10px] font-semibold uppercase tracking-widest leading-none',
-            menuOpen || anySecondaryActive ? 'text-white' : 'text-white/40',
+            menuOpen || anySecondaryActive ? 'text-[var(--space-nav-fg)]' : 'text-[var(--space-nav-fg-dim)]',
           )}>
             More
           </span>
@@ -227,16 +227,16 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
         {/* Back button — detail sub-pages */}
         {onDetailPage && (
           <>
-            <div className="w-px h-6 bg-white/10 mx-1 self-center" />
+            <div className="w-px h-6 bg-[var(--space-border)] mx-1 self-center" />
             <button
               onClick={() => {
                 if (onProjectPage) router.push(`/u/${username}?tab=projects`)
                 else if (onClientPage) router.push(`/u/${username}?tab=clients`)
               }}
-              className="flex flex-col items-center justify-center size-9 rounded-full bg-white/[0.08] border border-white/20 hover:border-white/40 hover:bg-white/10 active:scale-95 transition-all duration-200"
+              className="flex flex-col items-center justify-center size-9 rounded-full bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] hover:border-[var(--space-border-hard)] hover:bg-[var(--space-bg-card-hover)] active:scale-95 transition-all duration-200"
               aria-label="Go back"
             >
-              <ChevronLeft className="size-4 text-white/40" />
+              <ChevronLeft className="size-4 text-[var(--space-nav-fg-dim)]" />
             </button>
           </>
         )}

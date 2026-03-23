@@ -150,14 +150,14 @@ export function ClientSettingsCard({
   const emailChanged = form.email && form.email !== (email ?? '')
 
   return (
-    <div className="rounded-xl border border-[#333333] bg-[#1E1E1E] overflow-hidden transition-all duration-300">
+    <div className="rounded-xl border border-[var(--space-divider)] bg-[var(--space-bg-base)] overflow-hidden transition-all duration-300">
 
       {/* ── Header strip ── */}
       <div className="flex items-start justify-between gap-4 px-5 pt-5 pb-4">
         <div className="min-w-0 flex-1">
           {/* Name */}
           <div className="flex items-center gap-2.5 flex-wrap">
-            <h2 className="text-xl font-semibold text-[#F0F0F0] leading-tight truncate">{name}</h2>
+            <h2 className="text-xl font-semibold text-[var(--space-text-primary)] leading-tight truncate">{name}</h2>
             {stripeCustomerId && (
               <span
                 className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider"
@@ -171,7 +171,7 @@ export function ClientSettingsCard({
 
           {/* Company */}
           {company && (
-            <p className="text-sm text-[#5A5A5A] mt-0.5 flex items-center gap-1.5">
+            <p className="text-sm text-[var(--space-text-secondary)] mt-0.5 flex items-center gap-1.5">
               <Building2 className="size-3 shrink-0" />
               {company}
             </p>
@@ -182,8 +182,8 @@ export function ClientSettingsCard({
         <div className="flex items-center gap-1.5 shrink-0">
           <button
             onClick={handleOpenEdit}
-            className="group flex items-center gap-1.5 px-3 py-1.5 text-xs text-[#5A5A5A] border border-[#333333] rounded-lg
-              hover:text-[#F0F0F0] hover:border-[#555555] hover:bg-[#2A2A2A]
+            className="group flex items-center gap-1.5 px-3 py-1.5 text-xs text-[var(--space-text-secondary)] border border-[var(--space-divider)] rounded-lg
+              hover:text-[var(--space-text-primary)] hover:border-[var(--space-border-hard)] hover:bg-[var(--space-divider)]
               transition-all duration-200"
           >
             <Pencil className="size-3 transition-transform duration-200 group-hover:rotate-12" />
@@ -200,7 +200,7 @@ export function ClientSettingsCard({
                   ? 'text-emerald-400 border-emerald-400/20 bg-emerald-400/[0.06]'
                   : resendResult === 'error'
                   ? 'text-red-400 border-red-400/20 bg-red-400/[0.06]'
-                  : 'text-[#5A5A5A] border-[#333333] hover:text-[#F0F0F0] hover:border-[#555555] hover:bg-[#2A2A2A]',
+                  : 'text-[var(--space-text-secondary)] border-[var(--space-divider)] hover:text-[var(--space-text-primary)] hover:border-[var(--space-border-hard)] hover:bg-[var(--space-divider)]',
               ].join(' ')}
             >
               {resending
@@ -221,7 +221,7 @@ export function ClientSettingsCard({
           {email && (
             <a
               href={`mailto:${email}`}
-              className="flex items-center gap-1.5 text-xs text-[#5A5A5A] hover:text-[#A0A0A0] transition-colors duration-150"
+              className="flex items-center gap-1.5 text-xs text-[var(--space-text-secondary)] hover:text-[var(--space-text-tertiary)] transition-colors duration-150"
             >
               <Mail className="size-3 shrink-0" />
               <span>{email}</span>
@@ -230,14 +230,14 @@ export function ClientSettingsCard({
           {phone && (
             <a
               href={`tel:${phone}`}
-              className="flex items-center gap-1.5 text-xs text-[#5A5A5A] hover:text-[#A0A0A0] transition-colors duration-150"
+              className="flex items-center gap-1.5 text-xs text-[var(--space-text-secondary)] hover:text-[var(--space-text-tertiary)] transition-colors duration-150"
             >
               <Phone className="size-3 shrink-0" />
               <span>{phone}</span>
             </a>
           )}
           {(address?.line1 || address?.city) && (
-            <span className="flex items-start gap-1.5 text-xs text-[#5A5A5A]">
+            <span className="flex items-start gap-1.5 text-xs text-[var(--space-text-secondary)]">
               <MapPin className="size-3 shrink-0 mt-0.5" />
               <span>
                 {address?.line1 && `${address.line1}${address.line2 ? `, ${address.line2}` : ''}, `}
@@ -250,8 +250,8 @@ export function ClientSettingsCard({
 
       {/* ── Team ── */}
       {allUsers.length > 0 && (
-        <div className="px-5 py-3.5 border-t border-[#2A2A2A] flex items-center gap-3 flex-wrap">
-          <span className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-[#3A3A3A] font-semibold shrink-0">
+        <div className="px-5 py-3.5 border-t border-[var(--space-border-hard)] flex items-center gap-3 flex-wrap">
+          <span className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-[var(--space-text-tertiary)] font-semibold shrink-0">
             <Users className="size-3" />
             Team
           </span>
@@ -259,14 +259,14 @@ export function ClientSettingsCard({
             {allUsers.map((u) => (
               <div
                 key={u.id}
-                className="flex items-center gap-1.5 px-2 py-0.5 rounded-md border border-[#2A2A2A] bg-[#252525] text-xs
-                  hover:border-[#3A3A3A] hover:bg-[#2D2D2D] transition-all duration-150"
+                className="flex items-center gap-1.5 px-2 py-0.5 rounded-md border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] text-xs
+                  hover:border-[#3A3A3A] hover:bg-[var(--space-bg-card-hover)] transition-all duration-150"
               >
                 {u.type === 'developer'
-                  ? <Shield className="size-2.5 text-[#4A4A4A] shrink-0" />
+                  ? <Shield className="size-2.5 text-[var(--space-text-muted)] shrink-0" />
                   : <User className="size-2.5 shrink-0" style={{ color: 'var(--space-accent)' }} />
                 }
-                <span className={u.type === 'developer' ? 'text-[#6B6B6B]' : 'text-[#A0A0A0]'}>
+                <span className={u.type === 'developer' ? 'text-[var(--space-text-secondary)]' : 'text-[var(--space-text-tertiary)]'}>
                   {u.name}
                 </span>
               </div>
@@ -277,57 +277,57 @@ export function ClientSettingsCard({
 
       {/* ── Edit Dialog ── */}
       <Dialog open={editOpen} onOpenChange={(v) => { if (!v) handleCloseEdit(); else setEditOpen(true) }}>
-        <DialogContent className="bg-[#1C1C1C] border border-[#404040] text-[#F0F0F0] sm:max-w-[480px] rounded-2xl max-h-[90vh] overflow-y-auto">
-          <DialogTitle className="text-base font-semibold text-[#F0F0F0]">Edit Client Info</DialogTitle>
+        <DialogContent className="bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] text-[var(--space-text-primary)] sm:max-w-[480px] rounded-2xl max-h-[90vh] overflow-y-auto">
+          <DialogTitle className="text-base font-semibold text-[var(--space-text-primary)]">Edit Client Info</DialogTitle>
           <div className="space-y-3 pt-1">
             <div className="grid grid-cols-2 gap-2.5">
               <div className="space-y-1.5">
-                <Label className="text-[#6B6B6B] text-xs uppercase tracking-wide">First Name</Label>
+                <Label className="text-[var(--space-text-secondary)] text-xs uppercase tracking-wide">First Name</Label>
                 <Input
                   value={form.firstName}
                   onChange={(e) => {
                     const val = e.target.value
                     setForm((f) => ({ ...f, firstName: val, name: `${val} ${f.lastName}`.trim() }))
                   }}
-                  className="h-9 bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] focus-visible:ring-[var(--space-accent)]/30 text-sm"
+                  className="h-9 bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] focus-visible:ring-[var(--space-accent)]/30 text-sm"
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-[#6B6B6B] text-xs uppercase tracking-wide">Last Name</Label>
+                <Label className="text-[var(--space-text-secondary)] text-xs uppercase tracking-wide">Last Name</Label>
                 <Input
                   value={form.lastName}
                   onChange={(e) => {
                     const val = e.target.value
                     setForm((f) => ({ ...f, lastName: val, name: `${f.firstName} ${val}`.trim() }))
                   }}
-                  className="h-9 bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] focus-visible:ring-[var(--space-accent)]/30 text-sm"
+                  className="h-9 bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] focus-visible:ring-[var(--space-accent)]/30 text-sm"
                 />
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-[#6B6B6B] text-xs uppercase tracking-wide">Display Name</Label>
+              <Label className="text-[var(--space-text-secondary)] text-xs uppercase tracking-wide">Display Name</Label>
               <Input
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                className="h-9 bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] focus-visible:ring-[var(--space-accent)]/30 text-sm"
+                className="h-9 bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] focus-visible:ring-[var(--space-accent)]/30 text-sm"
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-[#6B6B6B] text-xs uppercase tracking-wide">Email</Label>
+              <Label className="text-[var(--space-text-secondary)] text-xs uppercase tracking-wide">Email</Label>
               <Input
                 type="email"
                 value={form.email}
                 onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
                 placeholder="client@example.com"
-                className="h-9 bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] placeholder:text-[#4A4A4A] focus-visible:ring-[var(--space-accent)]/30 text-sm"
+                className="h-9 bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)] focus-visible:ring-[var(--space-accent)]/30 text-sm"
               />
             </div>
 
             {form.email && (
-              <div className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-[#2D2D2D] border border-[#404040]">
+              <div className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)]">
                 <div className="space-y-0.5">
-                  <p className="text-xs font-medium text-[#A0A0A0]">Send setup email</p>
-                  <p className="text-[10px] text-[#4A4A4A] leading-snug">
+                  <p className="text-xs font-medium text-[var(--space-text-tertiary)]">Send setup email</p>
+                  <p className="text-[10px] text-[var(--space-text-muted)] leading-snug">
                     {emailChanged
                       ? 'Sends a new setup link to the updated address'
                       : 'Resends a setup link on save (only if email changes)'}
@@ -342,64 +342,64 @@ export function ClientSettingsCard({
             )}
 
             <div className="space-y-1.5">
-              <Label className="text-[#6B6B6B] text-xs uppercase tracking-wide">Company</Label>
+              <Label className="text-[var(--space-text-secondary)] text-xs uppercase tracking-wide">Company</Label>
               <Input
                 value={form.company}
                 onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))}
                 placeholder="Optional"
-                className="h-9 bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] placeholder:text-[#4A4A4A] focus-visible:ring-[var(--space-accent)]/30 text-sm"
+                className="h-9 bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)] focus-visible:ring-[var(--space-accent)]/30 text-sm"
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-[#6B6B6B] text-xs uppercase tracking-wide">Phone</Label>
+              <Label className="text-[var(--space-text-secondary)] text-xs uppercase tracking-wide">Phone</Label>
               <Input
                 type="tel"
                 value={form.phone}
                 onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
                 placeholder="+1 555-000-0000"
-                className="h-9 bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] placeholder:text-[#4A4A4A] focus-visible:ring-[var(--space-accent)]/30 text-sm"
+                className="h-9 bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)] focus-visible:ring-[var(--space-accent)]/30 text-sm"
               />
             </div>
 
             <div className="space-y-2 pt-1">
-              <p className="text-[#6B6B6B] text-xs uppercase tracking-wide font-medium">Address</p>
+              <p className="text-[var(--space-text-secondary)] text-xs uppercase tracking-wide font-medium">Address</p>
               <Input
                 value={form.address.line1 ?? ''}
                 onChange={(e) => setAddr('line1', e.target.value)}
                 placeholder="Street address"
-                className="h-9 bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] placeholder:text-[#4A4A4A] focus-visible:ring-[var(--space-accent)]/30 text-sm"
+                className="h-9 bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)] focus-visible:ring-[var(--space-accent)]/30 text-sm"
               />
               <Input
                 value={form.address.line2 ?? ''}
                 onChange={(e) => setAddr('line2', e.target.value)}
                 placeholder="Suite, unit, etc. (optional)"
-                className="h-9 bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] placeholder:text-[#4A4A4A] focus-visible:ring-[var(--space-accent)]/30 text-sm"
+                className="h-9 bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)] focus-visible:ring-[var(--space-accent)]/30 text-sm"
               />
               <div className="grid grid-cols-5 gap-2">
                 <Input
                   value={form.address.city ?? ''}
                   onChange={(e) => setAddr('city', e.target.value)}
                   placeholder="City"
-                  className="col-span-2 h-9 bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] placeholder:text-[#4A4A4A] focus-visible:ring-[var(--space-accent)]/30 text-sm"
+                  className="col-span-2 h-9 bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)] focus-visible:ring-[var(--space-accent)]/30 text-sm"
                 />
                 <Input
                   value={form.address.state ?? ''}
                   onChange={(e) => setAddr('state', e.target.value)}
                   placeholder="State"
-                  className="col-span-1 h-9 bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] placeholder:text-[#4A4A4A] focus-visible:ring-[var(--space-accent)]/30 text-sm"
+                  className="col-span-1 h-9 bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)] focus-visible:ring-[var(--space-accent)]/30 text-sm"
                 />
                 <Input
                   value={form.address.zip ?? ''}
                   onChange={(e) => setAddr('zip', e.target.value)}
                   placeholder="ZIP"
-                  className="col-span-2 h-9 bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] placeholder:text-[#4A4A4A] focus-visible:ring-[var(--space-accent)]/30 text-sm"
+                  className="col-span-2 h-9 bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)] focus-visible:ring-[var(--space-accent)]/30 text-sm"
                 />
               </div>
               <Input
                 value={form.address.country ?? ''}
                 onChange={(e) => setAddr('country', e.target.value)}
                 placeholder="Country"
-                className="h-9 bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] placeholder:text-[#4A4A4A] focus-visible:ring-[var(--space-accent)]/30 text-sm"
+                className="h-9 bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)] focus-visible:ring-[var(--space-accent)]/30 text-sm"
               />
             </div>
 
@@ -420,7 +420,7 @@ export function ClientSettingsCard({
                 variant="ghost"
                 onClick={handleCloseEdit}
                 disabled={loading}
-                className="text-[#6B6B6B] hover:text-[#A0A0A0] hover:bg-[#2D2D2D] h-9 text-sm"
+                className="text-[var(--space-text-secondary)] hover:text-[var(--space-text-tertiary)] hover:bg-[var(--space-bg-card-hover)] h-9 text-sm"
               >
                 Cancel
               </Button>

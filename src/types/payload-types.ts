@@ -486,7 +486,7 @@ export interface User {
   /**
    * Dashboard color preset
    */
-  dashboardTheme?: ('void' | 'arctic' | 'ember' | 'emerald' | 'dusk' | 'chrome') | null;
+  dashboardTheme?: ('void' | 'arctic' | 'ember' | 'emerald' | 'dusk' | 'chrome' | 'light' | 'paper') | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -908,48 +908,6 @@ export interface Package {
         id?: string | null;
       }[]
     | null;
-  /**
-   * ORCACLUB representative who authorized this proposal
-   */
-  orcaclubSignature?: {
-    /**
-     * Authorizing representative full name
-     */
-    authorizedByName?: string | null;
-    authorizedByEmail?: string | null;
-    authorizedByUserId?: string | null;
-    authorizedAt?: string | null;
-  };
-  /**
-   * Client e-signature record — immutable once set
-   */
-  clientSignature?: {
-    /**
-     * Exactly as typed by the client
-     */
-    typedName?: string | null;
-    signedByEmail?: string | null;
-    signedByUserId?: string | null;
-    signedAt?: string | null;
-    ipAddress?: string | null;
-    userAgent?: string | null;
-    /**
-     * SHA-256 of signed document content
-     */
-    documentHash?: string | null;
-    /**
-     * Exact ESIGN disclosure shown to signer
-     */
-    consentText?: string | null;
-    /**
-     * SHA-256 of the full signing certificate JSON
-     */
-    certificateHash?: string | null;
-    /**
-     * Full signing certificate JSON (tamper-evident)
-     */
-    signingCertificate?: string | null;
-  };
   lineItems?:
     | {
         name: string;
@@ -978,209 +936,6 @@ export interface Package {
         id?: string | null;
       }[]
     | null;
-  /**
-   * Auto-generated signed contract PDF (populated when both parties sign)
-   */
-  contractFile?: (string | null) | File;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * Manage documents and files linked to projects and sprints
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "files".
- */
-export interface File {
-  id: string;
-  /**
-   * File or document name (auto-populated from filename if not provided)
-   */
-  name: string;
-  /**
-   * Type of file
-   */
-  fileType?: ('document' | 'image' | 'spreadsheet' | 'presentation' | 'pdf' | 'other') | null;
-  /**
-   * Description of the file contents or purpose
-   */
-  description?: string | null;
-  /**
-   * Upload a file or document (optional for generated documents)
-   */
-  file?: (string | null) | Media;
-  /**
-   * Template type for generated documents
-   */
-  documentTemplate?: ('nda' | 'sow') | null;
-  /**
-   * Branding used when document was generated
-   */
-  documentBrand?: ('personal' | 'orcaclub') | null;
-  /**
-   * Stored form data for regenerating this document
-   */
-  documentData?:
-    | {
-        [k: string]: unknown;
-      }
-    | unknown[]
-    | string
-    | number
-    | boolean
-    | null;
-  /**
-   * Project this file belongs to (optional)
-   */
-  project?: (string | null) | Project;
-  /**
-   * Sprint this file is a deliverable for (optional)
-   */
-  sprint?: (string | null) | Sprint;
-  /**
-   * Version number (e.g., "1.0", "2.1")
-   */
-  version?: string | null;
-  /**
-   * Tags for organization (e.g., "contract", "design", "invoice")
-   */
-  tags?: string[] | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * Manage project sprints with tasks and timeframes
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "sprints".
- */
-export interface Sprint {
-  id: string;
-  /**
-   * Sprint name (e.g., "Sprint 1", "Q1 2026")
-   */
-  name: string;
-  /**
-   * Sprint description and objectives
-   */
-  description?: string | null;
-  /**
-   * Project this sprint belongs to
-   */
-  project: string | Project;
-  /**
-   * Current sprint status
-   */
-  status: 'pending' | 'in-progress' | 'delayed' | 'finished';
-  /**
-   * Sprint start date
-   */
-  startDate?: string | null;
-  /**
-   * Sprint end date (leave blank for ongoing sprints)
-   */
-  endDate?: string | null;
-  /**
-   * What should be accomplished in this sprint
-   */
-  goalDescription?: string | null;
-  /**
-   * Running notes and observations for this sprint
-   */
-  notes?:
-    | {
-        /**
-         * Note content
-         */
-        text: string;
-        /**
-         * Auto-set when the note is created
-         */
-        createdAt?: string | null;
-        id?: string | null;
-      }[]
-    | null;
-  /**
-   * Tasks included in this sprint
-   */
-  tasks?: (string | Task)[] | null;
-  /**
-   * Number of completed tasks (auto-calculated)
-   */
-  completedTasksCount?: number | null;
-  /**
-   * Total number of tasks (auto-calculated)
-   */
-  totalTasksCount?: number | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * Manage tasks within projects with status, priority, and time tracking
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "tasks".
- */
-export interface Task {
-  id: string;
-  /**
-   * Task title or summary
-   */
-  title: string;
-  /**
-   * Detailed task description with formatting
-   */
-  description?: {
-    root: {
-      type: string;
-      children: {
-        type: string;
-        version: number;
-        [k: string]: unknown;
-      }[];
-      direction: ('ltr' | 'rtl') | null;
-      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-      indent: number;
-      version: number;
-    };
-    [k: string]: unknown;
-  } | null;
-  /**
-   * Current task status
-   */
-  status: 'pending' | 'in-progress' | 'completed' | 'cancelled';
-  /**
-   * Task priority level
-   */
-  priority?: ('low' | 'medium' | 'high' | 'urgent') | null;
-  /**
-   * Project this task belongs to
-   */
-  project: string | Project;
-  /**
-   * User assigned to this task
-   */
-  assignedTo: string | User;
-  /**
-   * Optional: Sprint this task is part of
-   */
-  sprint?: (string | null) | Sprint;
-  /**
-   * When this task is due
-   */
-  dueDate?: string | null;
-  /**
-   * When this task was completed (auto-set)
-   */
-  completedAt?: string | null;
-  /**
-   * Estimated hours to complete
-   */
-  estimatedHours?: number | null;
-  /**
-   * Actual hours spent on task
-   */
-  actualHours?: number | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1521,6 +1276,205 @@ export interface WebhookEvent {
   errorMessage?: string | null;
   processingStartedAt?: string | null;
   processingCompletedAt?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Manage tasks within projects with status, priority, and time tracking
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "tasks".
+ */
+export interface Task {
+  id: string;
+  /**
+   * Task title or summary
+   */
+  title: string;
+  /**
+   * Detailed task description with formatting
+   */
+  description?: {
+    root: {
+      type: string;
+      children: {
+        type: string;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * Current task status
+   */
+  status: 'pending' | 'in-progress' | 'completed' | 'cancelled';
+  /**
+   * Task priority level
+   */
+  priority?: ('low' | 'medium' | 'high' | 'urgent') | null;
+  /**
+   * Project this task belongs to
+   */
+  project: string | Project;
+  /**
+   * User assigned to this task
+   */
+  assignedTo: string | User;
+  /**
+   * Optional: Sprint this task is part of
+   */
+  sprint?: (string | null) | Sprint;
+  /**
+   * When this task is due
+   */
+  dueDate?: string | null;
+  /**
+   * When this task was completed (auto-set)
+   */
+  completedAt?: string | null;
+  /**
+   * Estimated hours to complete
+   */
+  estimatedHours?: number | null;
+  /**
+   * Actual hours spent on task
+   */
+  actualHours?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Manage project sprints with tasks and timeframes
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "sprints".
+ */
+export interface Sprint {
+  id: string;
+  /**
+   * Sprint name (e.g., "Sprint 1", "Q1 2026")
+   */
+  name: string;
+  /**
+   * Sprint description and objectives
+   */
+  description?: string | null;
+  /**
+   * Project this sprint belongs to
+   */
+  project: string | Project;
+  /**
+   * Current sprint status
+   */
+  status: 'pending' | 'in-progress' | 'delayed' | 'finished';
+  /**
+   * Sprint start date
+   */
+  startDate?: string | null;
+  /**
+   * Sprint end date (leave blank for ongoing sprints)
+   */
+  endDate?: string | null;
+  /**
+   * What should be accomplished in this sprint
+   */
+  goalDescription?: string | null;
+  /**
+   * Running notes and observations for this sprint
+   */
+  notes?:
+    | {
+        /**
+         * Note content
+         */
+        text: string;
+        /**
+         * Auto-set when the note is created
+         */
+        createdAt?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Tasks included in this sprint
+   */
+  tasks?: (string | Task)[] | null;
+  /**
+   * Number of completed tasks (auto-calculated)
+   */
+  completedTasksCount?: number | null;
+  /**
+   * Total number of tasks (auto-calculated)
+   */
+  totalTasksCount?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Manage documents and files linked to projects and sprints
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "files".
+ */
+export interface File {
+  id: string;
+  /**
+   * File or document name (auto-populated from filename if not provided)
+   */
+  name: string;
+  /**
+   * Type of file
+   */
+  fileType?: ('document' | 'image' | 'spreadsheet' | 'presentation' | 'pdf' | 'other') | null;
+  /**
+   * Description of the file contents or purpose
+   */
+  description?: string | null;
+  /**
+   * Upload a file or document (optional for generated documents)
+   */
+  file?: (string | null) | Media;
+  /**
+   * Template type for generated documents
+   */
+  documentTemplate?: ('nda' | 'sow') | null;
+  /**
+   * Branding used when document was generated
+   */
+  documentBrand?: ('personal' | 'orcaclub') | null;
+  /**
+   * Stored form data for regenerating this document
+   */
+  documentData?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
+   * Project this file belongs to (optional)
+   */
+  project?: (string | null) | Project;
+  /**
+   * Sprint this file is a deliverable for (optional)
+   */
+  sprint?: (string | null) | Sprint;
+  /**
+   * Version number (e.g., "1.0", "2.1")
+   */
+  version?: string | null;
+  /**
+   * Tags for organization (e.g., "contract", "design", "invoice")
+   */
+  tags?: string[] | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -2367,28 +2321,6 @@ export interface PackagesSelect<T extends boolean = true> {
         invoicedAt?: T;
         id?: T;
       };
-  orcaclubSignature?:
-    | T
-    | {
-        authorizedByName?: T;
-        authorizedByEmail?: T;
-        authorizedByUserId?: T;
-        authorizedAt?: T;
-      };
-  clientSignature?:
-    | T
-    | {
-        typedName?: T;
-        signedByEmail?: T;
-        signedByUserId?: T;
-        signedAt?: T;
-        ipAddress?: T;
-        userAgent?: T;
-        documentHash?: T;
-        consentText?: T;
-        certificateHash?: T;
-        signingCertificate?: T;
-      };
   lineItems?:
     | T
     | {
@@ -2402,7 +2334,6 @@ export interface PackagesSelect<T extends boolean = true> {
         stripePriceId?: T;
         id?: T;
       };
-  contractFile?: T;
   updatedAt?: T;
   createdAt?: T;
 }

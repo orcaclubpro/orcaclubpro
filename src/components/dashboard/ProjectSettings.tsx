@@ -121,18 +121,18 @@ export function ProjectSettings({ project }: ProjectSettingsProps) {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="p-2.5 rounded-lg bg-[rgba(255,255,255,0.06)] border border-[#404040]">
+        <div className="p-2.5 rounded-lg bg-[rgba(255,255,255,0.06)] border border-[var(--space-border-hard)]">
           <Settings className="size-5 text-[var(--space-accent)]" />
         </div>
         <div>
-          <h2 className="text-2xl font-semibold text-[#F0F0F0]">Project Settings</h2>
-          <p className="text-sm text-[#6B6B6B]">Update project details and configuration</p>
+          <h2 className="text-2xl font-semibold text-[var(--space-text-primary)]">Project Settings</h2>
+          <p className="text-sm text-[var(--space-text-secondary)]">Update project details and configuration</p>
         </div>
       </div>
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="relative overflow-hidden rounded-xl border border-[#404040] bg-[rgba(255,255,255,0.06)] p-6">
+        <div className="relative overflow-hidden rounded-xl border border-[var(--space-border-hard)] bg-[rgba(255,255,255,0.06)] p-6">
           <div className="absolute top-0 right-0 w-48 h-48 bg-[var(--space-accent)]/[0.04] rounded-full blur-3xl" />
 
           <div className="relative z-10 space-y-6">
@@ -140,14 +140,14 @@ export function ProjectSettings({ project }: ProjectSettingsProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Project Name */}
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="name" className="text-sm font-medium text-[#A0A0A0]">
+                <Label htmlFor="name" className="text-sm font-medium text-[var(--space-text-tertiary)]">
                   Project Name <span className="text-red-400">*</span>
                 </Label>
                 <Input
                   id="name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="bg-[rgba(255,255,255,0.06)] border-[#404040] text-[#F0F0F0] focus:border-[rgba(139,156,182,0.30)]"
+                  className="bg-[rgba(255,255,255,0.06)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] focus:border-[rgba(139,156,182,0.30)]"
                   disabled={isLoading}
                   required
                 />
@@ -155,7 +155,7 @@ export function ProjectSettings({ project }: ProjectSettingsProps) {
 
               {/* Description */}
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="description" className="text-sm font-medium text-[#A0A0A0]">
+                <Label htmlFor="description" className="text-sm font-medium text-[var(--space-text-tertiary)]">
                   Description
                 </Label>
                 <Textarea
@@ -163,14 +163,14 @@ export function ProjectSettings({ project }: ProjectSettingsProps) {
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={4}
-                  className="bg-[rgba(255,255,255,0.06)] border-[#404040] text-[#F0F0F0] placeholder:text-[#6B6B6B] focus:border-[rgba(139,156,182,0.30)] resize-none"
+                  className="bg-[rgba(255,255,255,0.06)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] placeholder:text-[var(--space-text-secondary)] focus:border-[rgba(139,156,182,0.30)] resize-none"
                   disabled={isLoading}
                 />
               </div>
 
               {/* Status */}
               <div className="space-y-2">
-                <Label htmlFor="status" className="text-sm font-medium text-[#A0A0A0]">
+                <Label htmlFor="status" className="text-sm font-medium text-[var(--space-text-tertiary)]">
                   Status
                 </Label>
                 <Select
@@ -182,10 +182,10 @@ export function ProjectSettings({ project }: ProjectSettingsProps) {
                   }
                   disabled={isLoading}
                 >
-                  <SelectTrigger className="bg-[rgba(255,255,255,0.06)] border-[#404040] text-[#F0F0F0] focus:border-[rgba(139,156,182,0.30)]">
+                  <SelectTrigger className="bg-[rgba(255,255,255,0.06)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] focus:border-[rgba(139,156,182,0.30)]">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#1C1C1C] border-[#404040]">
+                  <SelectContent className="bg-[var(--space-bg-base)] border-[var(--space-border-hard)]">
                     <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="in-progress">In Progress</SelectItem>
                     <SelectItem value="on-hold">On Hold</SelectItem>
@@ -197,7 +197,7 @@ export function ProjectSettings({ project }: ProjectSettingsProps) {
 
               {/* Start Date */}
               <div className="space-y-2">
-                <Label htmlFor="startDate" className="text-sm font-medium text-[#A0A0A0]">
+                <Label htmlFor="startDate" className="text-sm font-medium text-[var(--space-text-tertiary)]">
                   Start Date
                 </Label>
                 <Input
@@ -205,14 +205,14 @@ export function ProjectSettings({ project }: ProjectSettingsProps) {
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="bg-[rgba(255,255,255,0.06)] border-[#404040] text-[#F0F0F0] focus:border-[rgba(139,156,182,0.30)]"
+                  className="bg-[rgba(255,255,255,0.06)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] focus:border-[rgba(139,156,182,0.30)]"
                   disabled={isLoading}
                 />
               </div>
 
               {/* Projected End Date */}
               <div className="space-y-2">
-                <Label htmlFor="projectedEndDate" className="text-sm font-medium text-[#A0A0A0]">
+                <Label htmlFor="projectedEndDate" className="text-sm font-medium text-[var(--space-text-tertiary)]">
                   Projected End Date
                 </Label>
                 <Input
@@ -220,7 +220,7 @@ export function ProjectSettings({ project }: ProjectSettingsProps) {
                   type="date"
                   value={projectedEndDate}
                   onChange={(e) => setProjectedEndDate(e.target.value)}
-                  className="bg-[rgba(255,255,255,0.06)] border-[#404040] text-[#F0F0F0] focus:border-[rgba(139,156,182,0.30)]"
+                  className="bg-[rgba(255,255,255,0.06)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] focus:border-[rgba(139,156,182,0.30)]"
                   disabled={isLoading}
                 />
               </div>
@@ -228,7 +228,7 @@ export function ProjectSettings({ project }: ProjectSettingsProps) {
               {/* Actual End Date (conditional) */}
               {status === 'completed' && (
                 <div className="space-y-2">
-                  <Label htmlFor="actualEndDate" className="text-sm font-medium text-[#A0A0A0]">
+                  <Label htmlFor="actualEndDate" className="text-sm font-medium text-[var(--space-text-tertiary)]">
                     Actual End Date
                   </Label>
                   <Input
@@ -236,7 +236,7 @@ export function ProjectSettings({ project }: ProjectSettingsProps) {
                     type="date"
                     value={actualEndDate}
                     onChange={(e) => setActualEndDate(e.target.value)}
-                    className="bg-[rgba(255,255,255,0.06)] border-[#404040] text-[#F0F0F0] focus:border-[rgba(139,156,182,0.30)]"
+                    className="bg-[rgba(255,255,255,0.06)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] focus:border-[rgba(139,156,182,0.30)]"
                     disabled={isLoading}
                   />
                 </div>
@@ -244,7 +244,7 @@ export function ProjectSettings({ project }: ProjectSettingsProps) {
 
               {/* Budget Amount */}
               <div className="space-y-2">
-                <Label htmlFor="budgetAmount" className="text-sm font-medium text-[#A0A0A0]">
+                <Label htmlFor="budgetAmount" className="text-sm font-medium text-[var(--space-text-tertiary)]">
                   Budget Amount
                 </Label>
                 <Input
@@ -255,14 +255,14 @@ export function ProjectSettings({ project }: ProjectSettingsProps) {
                   value={budgetAmount}
                   onChange={(e) => setBudgetAmount(e.target.value)}
                   placeholder="0.00"
-                  className="bg-[rgba(255,255,255,0.06)] border-[#404040] text-[#F0F0F0] placeholder:text-[#6B6B6B] focus:border-[rgba(139,156,182,0.30)]"
+                  className="bg-[rgba(255,255,255,0.06)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] placeholder:text-[var(--space-text-secondary)] focus:border-[rgba(139,156,182,0.30)]"
                   disabled={isLoading}
                 />
               </div>
 
               {/* Currency */}
               <div className="space-y-2">
-                <Label htmlFor="currency" className="text-sm font-medium text-[#A0A0A0]">
+                <Label htmlFor="currency" className="text-sm font-medium text-[var(--space-text-tertiary)]">
                   Currency
                 </Label>
                 <Select
@@ -270,10 +270,10 @@ export function ProjectSettings({ project }: ProjectSettingsProps) {
                   onValueChange={(value) => setCurrency(value as 'USD' | 'EUR' | 'GBP')}
                   disabled={isLoading}
                 >
-                  <SelectTrigger className="bg-[rgba(255,255,255,0.06)] border-[#404040] text-[#F0F0F0] focus:border-[rgba(139,156,182,0.30)]">
+                  <SelectTrigger className="bg-[rgba(255,255,255,0.06)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] focus:border-[rgba(139,156,182,0.30)]">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#1C1C1C] border-[#404040]">
+                  <SelectContent className="bg-[var(--space-bg-base)] border-[var(--space-border-hard)]">
                     <SelectItem value="USD">USD ($)</SelectItem>
                     <SelectItem value="EUR">EUR (€)</SelectItem>
                     <SelectItem value="GBP">GBP (£)</SelectItem>
@@ -304,14 +304,14 @@ export function ProjectSettings({ project }: ProjectSettingsProps) {
                 variant="outline"
                 onClick={handleReset}
                 disabled={isLoading}
-                className="bg-[rgba(255,255,255,0.06)] border-[#404040] hover:bg-[rgba(255,255,255,0.06)]"
+                className="bg-[rgba(255,255,255,0.06)] border-[var(--space-border-hard)] hover:bg-[rgba(255,255,255,0.06)]"
               >
                 Reset
               </Button>
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="bg-[var(--space-accent)] text-[#F0F0F0] hover:bg-[var(--space-accent)]/90 font-medium shadow-lg shadow-[rgba(139,156,182,0.10)]"
+                className="bg-[var(--space-accent)] text-[var(--space-text-primary)] hover:bg-[var(--space-accent)]/90 font-medium shadow-lg shadow-[rgba(139,156,182,0.10)]"
               >
                 {isLoading ? (
                   <>

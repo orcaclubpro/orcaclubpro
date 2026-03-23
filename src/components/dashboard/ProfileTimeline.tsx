@@ -37,7 +37,7 @@ const PRIORITY_COLOR: Record<string, string> = {
 }
 
 const SPRINT_CFG = {
-  pending:       { label: 'Planned',  dot: 'bg-gray-500',          bg: 'bg-[rgba(255,255,255,0.03)]',            border: 'border-[#404040]',                text: 'text-[#6B6B6B]'                 },
+  pending:       { label: 'Planned',  dot: 'bg-gray-500',          bg: 'bg-[rgba(255,255,255,0.03)]',            border: 'border-[var(--space-border-hard)]',                text: 'text-[var(--space-text-secondary)]'                 },
   'in-progress': { label: 'Active',   dot: 'bg-[var(--space-accent)]', bg: 'bg-[rgba(139,156,182,0.06)]', border: 'border-[rgba(139,156,182,0.12)]', text: 'text-[var(--space-accent)]' },
   delayed:       { label: 'Delayed',  dot: 'bg-orange-400',        bg: 'bg-orange-400/[0.07]',        border: 'border-orange-400/[0.18]',        text: 'text-orange-400'        },
   finished:      { label: 'Finished', dot: 'bg-green-400',         bg: 'bg-green-400/[0.06]',         border: 'border-green-400/[0.15]',         text: 'text-green-400'         },
@@ -203,17 +203,17 @@ export function ProfileTimeline({ project, username }: { project: SerializedProj
 
       {/* ── No timeline state ──────────────────────────────────────────────── */}
       {!hasTimeline ? (
-        <div className="flex flex-col items-center justify-center py-16 rounded-xl border border-[#404040] bg-[rgba(255,255,255,0.03)] text-center">
-          <Calendar className="size-8 text-[#6B6B6B] mb-4" />
-          <p className="text-sm text-[#A0A0A0] font-semibold">No timeline configured</p>
-          <p className="text-xs text-[#6B6B6B] mt-1 max-w-xs">
+        <div className="flex flex-col items-center justify-center py-16 rounded-xl border border-[var(--space-border-hard)] bg-[rgba(255,255,255,0.03)] text-center">
+          <Calendar className="size-8 text-[var(--space-text-secondary)] mb-4" />
+          <p className="text-sm text-[var(--space-text-tertiary)] font-semibold">No timeline configured</p>
+          <p className="text-xs text-[var(--space-text-secondary)] mt-1 max-w-xs">
             Set a start and projected end date on this project to see the full timeline.
           </p>
         </div>
       ) : (
 
         /* ── Scrollable timeline card ────────────────────────────────────── */
-        <div className="relative rounded-xl border border-[#404040] bg-[#252525]">
+        <div className="relative rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card)]">
 
           {/* Ambient glow */}
           <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[rgba(139,156,182,0.10)] to-transparent pointer-events-none" />
@@ -222,21 +222,21 @@ export function ProfileTimeline({ project, username }: { project: SerializedProj
           {/* Corner geometry */}
           <svg width="80" height="80" viewBox="0 0 80 80" fill="none"
             className="absolute top-0 right-0 opacity-[0.04] pointer-events-none select-none" aria-hidden="true">
-            <path d="M80 0 L80 80 L0 80" stroke="#333333" strokeWidth="1" />
-            <path d="M80 24 L80 80 L24 80" stroke="#333333" strokeWidth="0.5" />
+            <path d="M80 0 L80 80 L0 80" stroke="var(--space-divider)" strokeWidth="1" />
+            <path d="M80 24 L80 80 L24 80" stroke="var(--space-divider)" strokeWidth="0.5" />
           </svg>
 
           {/* Card header */}
-          <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-[#404040]">
+          <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-[var(--space-border-hard)]">
             <div className="flex items-center gap-3">
-              <p className="text-[10px] tracking-[0.3em] uppercase text-[#6B6B6B] font-medium">Project Track</p>
+              <p className="text-[10px] tracking-[0.3em] uppercase text-[var(--space-text-secondary)] font-medium">Project Track</p>
               {sprintBands.length > 0 && (
-                <span className="text-[10px] text-[#6B6B6B]">
+                <span className="text-[10px] text-[var(--space-text-secondary)]">
                   {sprintBands.length} sprint{sprintBands.length > 1 ? 's' : ''}
                 </span>
               )}
               {datedMilestones.length > 0 && (
-                <span className="text-[10px] text-[#6B6B6B]">
+                <span className="text-[10px] text-[var(--space-text-secondary)]">
                   {datedMilestones.length} milestone{datedMilestones.length > 1 ? 's' : ''}
                 </span>
               )}
@@ -257,8 +257,8 @@ export function ProfileTimeline({ project, username }: { project: SerializedProj
 
           {/* Scroll wrapper — overflow-x clips canvas; no overflow-hidden on card so tooltips escape */}
           <div className="relative overflow-x-hidden">
-            <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-[#252525] to-transparent z-30 pointer-events-none" />
-            <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-[#252525] to-transparent z-30 pointer-events-none" />
+            <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-[var(--space-bg-card)] to-transparent z-30 pointer-events-none" />
+            <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-[var(--space-bg-card)] to-transparent z-30 pointer-events-none" />
 
             <div
               ref={scrollRef}
@@ -404,11 +404,11 @@ export function ProfileTimeline({ project, username }: { project: SerializedProj
                       >
                         <p className={cn(
                           'text-[9px] font-medium truncate leading-tight',
-                          m.completed ? 'text-[#6B6B6B]' : isNext ? 'text-[var(--space-accent)]' : 'text-[#6B6B6B]',
+                          m.completed ? 'text-[var(--space-text-secondary)]' : isNext ? 'text-[var(--space-accent)]' : 'text-[var(--space-text-secondary)]',
                         )}>
                           {m.title}
                         </p>
-                        <p className="text-[8px] text-[#6B6B6B] mt-0.5">{formatDate(m.date)}</p>
+                        <p className="text-[8px] text-[var(--space-text-secondary)] mt-0.5">{formatDate(m.date)}</p>
                       </div>
 
                       {/* Upper whisker */}
@@ -426,14 +426,14 @@ export function ProfileTimeline({ project, username }: { project: SerializedProj
                           />
                         ) : isNext ? (
                           <div
-                            className="rounded-full border-2 border-[var(--space-accent)] bg-[#252525] flex items-center justify-center"
+                            className="rounded-full border-2 border-[var(--space-accent)] bg-[var(--space-bg-card)] flex items-center justify-center"
                             style={{ width: ICON_SIZE, height: ICON_SIZE }}
                           >
                             <div className="size-1.5 rounded-full bg-[var(--space-accent)] animate-pulse" />
                           </div>
                         ) : (
                           <Circle
-                            className="text-[#6B6B6B]"
+                            className="text-[var(--space-text-secondary)]"
                             style={{ width: ICON_SIZE, height: ICON_SIZE }}
                           />
                         )}
@@ -463,18 +463,18 @@ export function ProfileTimeline({ project, username }: { project: SerializedProj
                     className="absolute pointer-events-none"
                     style={{ left: tick.px, top: dynamicTickY }}
                   >
-                    <div className="w-px h-3 bg-[#333333] mx-auto" />
-                    <p className="text-[8px] text-[#6B6B6B] text-center mt-1 whitespace-nowrap -translate-x-1/2">
+                    <div className="w-px h-3 bg-[var(--space-divider)] mx-auto" />
+                    <p className="text-[8px] text-[var(--space-text-secondary)] text-center mt-1 whitespace-nowrap -translate-x-1/2">
                       {tick.label}
                     </p>
                   </div>
                 ))}
 
                 {/* Start / End date labels */}
-                <div className="absolute text-[9px] text-[#6B6B6B] pointer-events-none" style={{ left: 6, top: dynamicTickY + 16 }}>
+                <div className="absolute text-[9px] text-[var(--space-text-secondary)] pointer-events-none" style={{ left: 6, top: dynamicTickY + 16 }}>
                   {project.startDate ? formatDate(project.startDate) : 'Today'}
                 </div>
-                <div className="absolute text-[9px] text-[#6B6B6B] pointer-events-none text-right" style={{ right: 0, top: dynamicTickY + 16 }}>
+                <div className="absolute text-[9px] text-[var(--space-text-secondary)] pointer-events-none text-right" style={{ right: 0, top: dynamicTickY + 16 }}>
                   {isOngoing ? '∞ Rolling' : formatDate(project.endDate)}
                 </div>
 
@@ -483,37 +483,37 @@ export function ProfileTimeline({ project, username }: { project: SerializedProj
           </div>
 
           {/* Legend strip */}
-          <div className="flex items-center flex-wrap gap-x-5 gap-y-1.5 px-6 py-4 border-t border-[#404040]">
+          <div className="flex items-center flex-wrap gap-x-5 gap-y-1.5 px-6 py-4 border-t border-[var(--space-border-hard)]">
             <div className="flex items-center gap-2">
               <div className="h-[3px] w-6 rounded-full bg-gradient-to-r from-[#1E3A6E] to-[#2B4A8A]" />
-              <span className="text-[10px] text-[#6B6B6B]">Elapsed</span>
+              <span className="text-[10px] text-[var(--space-text-secondary)]">Elapsed</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="size-2 rounded-full bg-[var(--space-accent)] shadow-[0_0_4px_rgba(139,156,182,0.25)]" />
-              <span className="text-[10px] text-[#6B6B6B]">Today</span>
+              <span className="text-[10px] text-[var(--space-text-secondary)]">Today</span>
             </div>
             {datedMilestones.length > 0 && (
               <>
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="size-3 text-green-400" />
-                  <span className="text-[10px] text-[#6B6B6B]">Completed</span>
+                  <span className="text-[10px] text-[var(--space-text-secondary)]">Completed</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Circle className="size-3 text-[#6B6B6B]" />
-                  <span className="text-[10px] text-[#6B6B6B]">Milestone</span>
+                  <Circle className="size-3 text-[var(--space-text-secondary)]" />
+                  <span className="text-[10px] text-[var(--space-text-secondary)]">Milestone</span>
                 </div>
               </>
             )}
             {datedTasks.length > 0 && (
               <div className="flex items-center gap-2">
                 <div className="size-2 rounded-full bg-green-400 shadow-[0_0_4px_rgba(74,222,128,0.5)]" />
-                <span className="text-[10px] text-[#6B6B6B]">Task (hover for details)</span>
+                <span className="text-[10px] text-[var(--space-text-secondary)]">Task (hover for details)</span>
               </div>
             )}
             {sprintBands.length > 0 && (
               <div className="flex items-center gap-2">
                 <Image src="/orcaclubpro.png" alt="" width={12} height={12} className="opacity-40" />
-                <span className="text-[10px] text-[#6B6B6B]">Sprint (click to open)</span>
+                <span className="text-[10px] text-[var(--space-text-secondary)]">Sprint (click to open)</span>
               </div>
             )}
           </div>
@@ -524,7 +524,7 @@ export function ProfileTimeline({ project, username }: { project: SerializedProj
       {/* ── Milestone list ────────────────────────────────────────────────── */}
       {allMilestones.length > 0 && (
         <div className="space-y-1">
-          <p className="text-[10px] tracking-[0.3em] uppercase text-[#6B6B6B] font-medium mb-5">Milestones</p>
+          <p className="text-[10px] tracking-[0.3em] uppercase text-[var(--space-text-secondary)] font-medium mb-5">Milestones</p>
           <div className="space-y-0">
             {allMilestones.map((m, i) => {
               const isNext = i === nextMilestoneIdx
@@ -540,7 +540,7 @@ export function ProfileTimeline({ project, username }: { project: SerializedProj
                           style={{ filter: 'drop-shadow(0 0 4px rgba(74,222,128,0.4))' }}
                         />
                       ) : isNext ? (
-                        <div className="size-5 rounded-full border-2 border-[var(--space-accent)]/60 bg-[#252525] flex items-center justify-center">
+                        <div className="size-5 rounded-full border-2 border-[var(--space-accent)]/60 bg-[var(--space-bg-card)] flex items-center justify-center">
                           <div className="size-1.5 rounded-full bg-[var(--space-accent)] animate-pulse" />
                         </div>
                       ) : (
@@ -548,7 +548,7 @@ export function ProfileTimeline({ project, username }: { project: SerializedProj
                       )}
                     </div>
                     {!isLast && (
-                      <div className="w-px flex-1 mt-2 bg-gradient-to-b from-[#333333] to-[#222222]" style={{ minHeight: 24 }} />
+                      <div className="w-px flex-1 mt-2 bg-gradient-to-b from-[var(--space-divider)] to-[var(--space-bg-base)]" style={{ minHeight: 24 }} />
                     )}
                   </div>
 
@@ -557,19 +557,19 @@ export function ProfileTimeline({ project, username }: { project: SerializedProj
                       <div className="min-w-0 flex-1">
                         <p className={cn(
                           'text-sm font-medium leading-snug',
-                          m.completed ? 'text-[#6B6B6B] line-through decoration-[#555555]' : isNext ? 'text-[#F0F0F0]' : 'text-[#A0A0A0]',
+                          m.completed ? 'text-[var(--space-text-secondary)] line-through decoration-[#555555]' : isNext ? 'text-[var(--space-text-primary)]' : 'text-[var(--space-text-tertiary)]',
                         )}>
                           {m.title}
                         </p>
                         {m.description && (
-                          <p className="text-xs text-[#6B6B6B] mt-0.5 leading-relaxed">{m.description}</p>
+                          <p className="text-xs text-[var(--space-text-secondary)] mt-0.5 leading-relaxed">{m.description}</p>
                         )}
                         {isNext && (
                           <p className="text-[10px] tracking-[0.2em] uppercase text-[var(--space-accent)]/50 mt-1.5">Next up</p>
                         )}
                       </div>
                       {m.date && (
-                        <span className={cn('text-xs tabular-nums shrink-0', m.completed ? 'text-[#6B6B6B]' : isNext ? 'text-[var(--space-accent)]/70' : 'text-[#6B6B6B]')}>
+                        <span className={cn('text-xs tabular-nums shrink-0', m.completed ? 'text-[var(--space-text-secondary)]' : isNext ? 'text-[var(--space-accent)]/70' : 'text-[var(--space-text-secondary)]')}>
                           {formatDate(m.date)}
                         </span>
                       )}
@@ -583,8 +583,8 @@ export function ProfileTimeline({ project, username }: { project: SerializedProj
       )}
 
       {allMilestones.length === 0 && hasTimeline && (
-        <div className="flex items-center gap-2 text-sm text-[#6B6B6B]">
-          <div className="size-5 rounded-full border border-dashed border-[#404040] flex items-center justify-center shrink-0">
+        <div className="flex items-center gap-2 text-sm text-[var(--space-text-secondary)]">
+          <div className="size-5 rounded-full border border-dashed border-[var(--space-border-hard)] flex items-center justify-center shrink-0">
             <Flag className="size-2.5" />
           </div>
           No milestones added yet
@@ -601,16 +601,16 @@ export function ProfileTimeline({ project, username }: { project: SerializedProj
             transform: 'translate(-50%, calc(-100% - 10px))',
           }}
         >
-          <div className="animate-in fade-in slide-in-from-bottom-1 duration-150 bg-[#252525] border border-[#404040] rounded-xl overflow-hidden shadow-2xl text-left"
+          <div className="animate-in fade-in slide-in-from-bottom-1 duration-150 bg-[var(--space-bg-card)] border border-[var(--space-border-hard)] rounded-xl overflow-hidden shadow-2xl text-left"
             style={{ minWidth: 190, maxWidth: 260 }}
           >
             <div className={cn('h-0.5 w-full', TASK_STATUS_CFG[taskTooltip.task.status]?.dot ?? 'bg-gray-500')} />
             <div className="px-4 py-3 space-y-1.5">
-              <p className="text-sm font-semibold text-[#F0F0F0] leading-snug">{taskTooltip.task.title}</p>
+              <p className="text-sm font-semibold text-[var(--space-text-primary)] leading-snug">{taskTooltip.task.title}</p>
               <div className="flex items-center gap-2 flex-wrap">
                 <span className={cn(
-                  'text-[9px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full border border-[#404040] bg-[rgba(255,255,255,0.03)]',
-                  TASK_STATUS_CFG[taskTooltip.task.status]?.dot.replace('bg-', 'text-').replace('/40', '') ?? 'text-[#6B6B6B]',
+                  'text-[9px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full border border-[var(--space-border-hard)] bg-[rgba(255,255,255,0.03)]',
+                  TASK_STATUS_CFG[taskTooltip.task.status]?.dot.replace('bg-', 'text-').replace('/40', '') ?? 'text-[var(--space-text-secondary)]',
                 )}>
                   {TASK_STATUS_CFG[taskTooltip.task.status]?.label}
                 </span>
@@ -621,7 +621,7 @@ export function ProfileTimeline({ project, username }: { project: SerializedProj
                 )}
               </div>
               {taskTooltip.task.dueDate && (
-                <p className="text-xs text-[#6B6B6B] flex items-center gap-1.5">
+                <p className="text-xs text-[var(--space-text-secondary)] flex items-center gap-1.5">
                   <Calendar className="size-3 shrink-0" />
                   Due {formatDate(taskTooltip.task.dueDate)}
                 </p>
@@ -641,13 +641,13 @@ export function ProfileTimeline({ project, username }: { project: SerializedProj
             transform: 'translate(-50%, calc(-100% - 10px))',
           }}
         >
-          <div className="animate-in fade-in slide-in-from-bottom-1 duration-150 bg-[#252525] border border-[#404040] rounded-xl overflow-hidden shadow-2xl text-left"
+          <div className="animate-in fade-in slide-in-from-bottom-1 duration-150 bg-[var(--space-bg-card)] border border-[var(--space-border-hard)] rounded-xl overflow-hidden shadow-2xl text-left"
             style={{ minWidth: 210, maxWidth: 280 }}
           >
             <div className={cn('h-0.5 w-full', fixedTooltip.sprint.cfg.dot)} />
             <div className="px-4 py-3 space-y-1.5">
               <div className="flex items-center justify-between gap-2">
-                <p className="text-sm font-semibold text-[#F0F0F0] leading-snug truncate">{fixedTooltip.sprint.name}</p>
+                <p className="text-sm font-semibold text-[var(--space-text-primary)] leading-snug truncate">{fixedTooltip.sprint.name}</p>
                 <span className={cn(
                   'shrink-0 text-[9px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded-full border',
                   fixedTooltip.sprint.cfg.text, fixedTooltip.sprint.cfg.bg, fixedTooltip.sprint.cfg.border,
@@ -655,23 +655,23 @@ export function ProfileTimeline({ project, username }: { project: SerializedProj
                   {fixedTooltip.sprint.cfg.label}
                 </span>
               </div>
-              <p className="text-xs text-[#6B6B6B]">
+              <p className="text-xs text-[var(--space-text-secondary)]">
                 {formatDate(fixedTooltip.sprint.startDate)} → {formatDate(fixedTooltip.sprint.endDate)}
               </p>
               {(fixedTooltip.sprint.goalDescription || fixedTooltip.sprint.description) && (
-                <p className="text-xs text-[#A0A0A0] leading-relaxed border-t border-[#404040] pt-2 mt-1">
+                <p className="text-xs text-[var(--space-text-tertiary)] leading-relaxed border-t border-[var(--space-border-hard)] pt-2 mt-1">
                   {fixedTooltip.sprint.goalDescription || fixedTooltip.sprint.description}
                 </p>
               )}
               {(fixedTooltip.sprint.totalTasksCount ?? 0) > 0 && (
-                <div className="flex items-center gap-2 border-t border-[#404040] pt-2 mt-1">
+                <div className="flex items-center gap-2 border-t border-[var(--space-border-hard)] pt-2 mt-1">
                   <div className="flex-1 h-1 rounded-full bg-[rgba(255,255,255,0.06)]">
                     <div
                       className={cn('h-full rounded-full transition-all', fixedTooltip.sprint.cfg.dot)}
                       style={{ width: `${((fixedTooltip.sprint.completedTasksCount ?? 0) / (fixedTooltip.sprint.totalTasksCount ?? 1)) * 100}%` }}
                     />
                   </div>
-                  <span className="text-[10px] text-[#6B6B6B] whitespace-nowrap">
+                  <span className="text-[10px] text-[var(--space-text-secondary)] whitespace-nowrap">
                     {fixedTooltip.sprint.completedTasksCount ?? 0}/{fixedTooltip.sprint.totalTasksCount} tasks
                   </span>
                 </div>

@@ -6,7 +6,7 @@ import { TabProvider } from "./TabContext"
 import { HeaderTitleProvider } from "./HeaderTitleContext"
 import { PackageCountProvider } from "./PackageCountContext"
 import { ThemeProvider } from "./ThemeContext"
-import { THEMES } from "./themes"
+import { THEMES, DEFAULT_THEME } from "./themes"
 import type { ThemeId } from "./themes"
 
 export default async function SpacesLayout({
@@ -16,10 +16,8 @@ export default async function SpacesLayout({
 }) {
   const user = await getCurrentUser()
   const isDeveloper = user?.role === 'admin' || user?.role === 'user'
-  // Default to paper (gray); only use user's saved theme if it's not a dark theme
   const savedTheme = (user as any)?.dashboardTheme as ThemeId | undefined
-  const darkThemes: ThemeId[] = ['void', 'arctic', 'ember', 'emerald', 'dusk', 'chrome']
-  const initialTheme = savedTheme && !darkThemes.includes(savedTheme) ? savedTheme : 'paper'
+  const initialTheme: ThemeId = (savedTheme && THEMES[savedTheme]) ? savedTheme : DEFAULT_THEME
 
   // Build inline CSS vars from the initial theme so the correct background
   // renders on the server — before ThemeContext's useEffect fires on the client.

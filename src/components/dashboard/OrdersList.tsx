@@ -78,20 +78,20 @@ export async function OrdersList({ accountId }: { accountId: string }) {
       <div className="space-y-8">
         {/* Section Header */}
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-lg bg-[#252525] border border-[#404040]">
+          <div className="p-2.5 rounded-lg bg-[var(--space-bg-card)] border border-[var(--space-border-hard)]">
             <Receipt className="size-5" style={{ color: 'var(--space-accent)' }} />
           </div>
-          <h2 className="text-2xl font-semibold text-[#F0F0F0]">Recent Orders</h2>
+          <h2 className="text-2xl font-semibold text-[var(--space-text-primary)]">Recent Orders</h2>
         </div>
 
         {/* Empty State */}
-        <div className="relative overflow-hidden rounded-xl border border-[#404040] bg-[#252525] p-12 fluid-enter">
+        <div className="relative overflow-hidden rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] p-12 fluid-enter">
           <div className="relative z-10 text-center">
-            <div className="inline-flex p-5 rounded-xl bg-[#252525] border border-[#404040] mb-6">
-              <Package className="size-10 text-[#4A4A4A]" />
+            <div className="inline-flex p-5 rounded-xl bg-[var(--space-bg-card)] border border-[var(--space-border-hard)] mb-6">
+              <Package className="size-10 text-[var(--space-text-muted)]" />
             </div>
-            <h3 className="text-xl font-semibold text-[#F0F0F0] mb-2">No Orders Yet</h3>
-            <p className="text-[#A0A0A0] text-sm max-w-md mx-auto">
+            <h3 className="text-xl font-semibold text-[var(--space-text-primary)] mb-2">No Orders Yet</h3>
+            <p className="text-[var(--space-text-tertiary)] text-sm max-w-md mx-auto">
               Your order history will appear here once you place your first order.
             </p>
           </div>
@@ -104,14 +104,14 @@ export async function OrdersList({ accountId }: { accountId: string }) {
     <div className="space-y-8">
       {/* Section Header */}
       <div className="flex items-center gap-3">
-        <div className="p-2.5 rounded-lg bg-[#252525] border border-[#404040]">
+        <div className="p-2.5 rounded-lg bg-[var(--space-bg-card)] border border-[var(--space-border-hard)]">
           <Receipt className="size-5" style={{ color: 'var(--space-accent)' }} />
         </div>
-        <h2 className="text-2xl font-semibold text-[#F0F0F0]">Recent Orders</h2>
+        <h2 className="text-2xl font-semibold text-[var(--space-text-primary)]">Recent Orders</h2>
       </div>
 
       {/* Orders Container */}
-      <div className="relative overflow-hidden rounded-xl border border-[#404040] bg-[#252525] fluid-enter">
+      <div className="relative overflow-hidden rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] fluid-enter">
         <div className="absolute bottom-0 right-0 w-48 h-48 bg-[rgba(139,156,182,0.06)] rounded-full blur-3xl" />
 
         <div className="relative z-10">
@@ -124,16 +124,16 @@ export async function OrdersList({ accountId }: { accountId: string }) {
               return (
                 <div
                   key={order.id}
-                  className="relative overflow-hidden rounded-lg border border-[#404040] bg-[#252525] p-4 hover:bg-[#2D2D2D] transition-all duration-300 animate-in fade-in slide-in-from-bottom-2"
+                  className="relative overflow-hidden rounded-lg border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] p-4 hover:bg-[var(--space-bg-card-hover)] transition-all duration-300 animate-in fade-in slide-in-from-bottom-2"
                   style={{ animationDelay: `${Math.min(index * 40, 200)}ms`, animationDuration: '300ms' }}
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div>
-                      <p className="font-semibold text-[#F0F0F0] text-base">
+                      <p className="font-semibold text-[var(--space-text-primary)] text-base">
                         {(order.lineItems as any[])?.[0]?.title ?? order.orderNumber}
                       </p>
                       {(order.lineItems as any[])?.[0]?.title && (
-                        <p className="text-xs text-[#4A4A4A] font-mono mt-0.5">#{order.orderNumber}</p>
+                        <p className="text-xs text-[var(--space-text-muted)] font-mono mt-0.5">#{order.orderNumber}</p>
                       )}
                     </div>
                     <Badge
@@ -146,18 +146,18 @@ export async function OrdersList({ accountId }: { accountId: string }) {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <p className="text-xs text-[#4A4A4A] uppercase tracking-wider font-medium mb-1">
+                      <p className="text-xs text-[var(--space-text-muted)] uppercase tracking-wider font-medium mb-1">
                         Amount
                       </p>
-                      <p className="text-[#F0F0F0] font-semibold text-sm">
+                      <p className="text-[var(--space-text-primary)] font-semibold text-sm">
                         {formatCurrency(order.amount || 0)}
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs text-[#4A4A4A] uppercase tracking-wider font-medium mb-1">
+                      <p className="text-xs text-[var(--space-text-muted)] uppercase tracking-wider font-medium mb-1">
                         Date
                       </p>
-                      <p className="text-[#A0A0A0] font-medium text-sm">
+                      <p className="text-[var(--space-text-tertiary)] font-medium text-sm">
                         {formatDate(order.createdAt)}
                       </p>
                     </div>
@@ -171,17 +171,17 @@ export async function OrdersList({ accountId }: { accountId: string }) {
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-[#404040]">
-                  <th className="text-left py-4 px-6 text-xs font-semibold text-[#A0A0A0] uppercase tracking-wider">
+                <tr className="border-b border-[var(--space-border-hard)]">
+                  <th className="text-left py-4 px-6 text-xs font-semibold text-[var(--space-text-tertiary)] uppercase tracking-wider">
                     Order
                   </th>
-                  <th className="text-left py-4 px-6 text-xs font-semibold text-[#A0A0A0] uppercase tracking-wider">
+                  <th className="text-left py-4 px-6 text-xs font-semibold text-[var(--space-text-tertiary)] uppercase tracking-wider">
                     Amount
                   </th>
-                  <th className="text-left py-4 px-6 text-xs font-semibold text-[#A0A0A0] uppercase tracking-wider">
+                  <th className="text-left py-4 px-6 text-xs font-semibold text-[var(--space-text-tertiary)] uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="text-left py-4 px-6 text-xs font-semibold text-[#A0A0A0] uppercase tracking-wider">
+                  <th className="text-left py-4 px-6 text-xs font-semibold text-[var(--space-text-tertiary)] uppercase tracking-wider">
                     Date
                   </th>
                 </tr>
@@ -194,18 +194,18 @@ export async function OrdersList({ accountId }: { accountId: string }) {
                   return (
                     <tr
                       key={order.id}
-                      className="border-b border-[#404040] hover:bg-[#2D2D2D] transition-all duration-300 animate-in fade-in slide-in-from-bottom-2"
+                      className="border-b border-[var(--space-border-hard)] hover:bg-[var(--space-bg-card-hover)] transition-all duration-300 animate-in fade-in slide-in-from-bottom-2"
                       style={{ animationDelay: `${Math.min(index * 40, 200)}ms`, animationDuration: '300ms' }}
                     >
                       <td className="py-4 px-6">
-                        <p className="text-[#F0F0F0] font-semibold text-sm">
+                        <p className="text-[var(--space-text-primary)] font-semibold text-sm">
                           {(order.lineItems as any[])?.[0]?.title ?? order.orderNumber}
                         </p>
                         {(order.lineItems as any[])?.[0]?.title && (
-                          <p className="text-xs text-[#4A4A4A] font-mono mt-0.5">#{order.orderNumber}</p>
+                          <p className="text-xs text-[var(--space-text-muted)] font-mono mt-0.5">#{order.orderNumber}</p>
                         )}
                       </td>
-                      <td className="py-4 px-6 text-[#F0F0F0] font-semibold text-base">
+                      <td className="py-4 px-6 text-[var(--space-text-primary)] font-semibold text-base">
                         {formatCurrency(order.amount || 0)}
                       </td>
                       <td className="py-4 px-6">
@@ -217,7 +217,7 @@ export async function OrdersList({ accountId }: { accountId: string }) {
                           {statusConfig.label}
                         </Badge>
                       </td>
-                      <td className="py-4 px-6 text-[#A0A0A0] font-medium text-sm">
+                      <td className="py-4 px-6 text-[var(--space-text-tertiary)] font-medium text-sm">
                         {formatDate(order.createdAt)}
                       </td>
                     </tr>

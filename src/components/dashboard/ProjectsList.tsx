@@ -118,10 +118,10 @@ export function ProjectsList({ projects }: { projects: any[] }) {
       {/* Section Header with Upcoming Deadlines Badge */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-lg bg-white border border-[#404040]">
+          <div className="p-2.5 rounded-lg bg-white border border-[var(--space-border-hard)]">
             <Folder className="size-5 text-[var(--space-accent)]" />
           </div>
-          <h2 className="text-2xl font-bold text-[#F0F0F0]">Your Projects</h2>
+          <h2 className="text-2xl font-bold text-[var(--space-text-primary)]">Your Projects</h2>
         </div>
         {upcomingDeadlines.length > 0 && (
           <MetricBadge
@@ -145,7 +145,7 @@ export function ProjectsList({ projects }: { projects: any[] }) {
             <Link
               key={index}
               href={`/u/${username}/projects/${project.id}`}
-              className="block group relative overflow-hidden rounded-xl border border-[#404040] bg-[#252525] p-6 hover:border-[#404040] hover:bg-[#2D2D2D] transition-all duration-500 hover:scale-[1.01] animate-in fade-in slide-in-from-bottom-2 duration-300 cursor-pointer"
+              className="block group relative overflow-hidden rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] p-6 hover:border-[var(--space-border-hard)] hover:bg-[var(--space-bg-card-hover)] transition-all duration-500 hover:scale-[1.01] animate-in fade-in slide-in-from-bottom-2 duration-300 cursor-pointer"
               style={{ animationDelay: `${Math.min(index * 40, 200)}ms` }}
             >
               {/* Subtle glow orb */}
@@ -156,7 +156,7 @@ export function ProjectsList({ projects }: { projects: any[] }) {
                 <div className="flex items-start justify-between mb-6">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-2xl font-bold text-[#F0F0F0]">
+                      <h3 className="text-2xl font-bold text-[var(--space-text-primary)]">
                         {project.name}
                       </h3>
                       <Badge
@@ -168,7 +168,7 @@ export function ProjectsList({ projects }: { projects: any[] }) {
                       </Badge>
                     </div>
                     {project.description && (
-                      <p className="text-[#A0A0A0] text-sm leading-relaxed">
+                      <p className="text-[var(--space-text-tertiary)] text-sm leading-relaxed">
                         {project.description}
                       </p>
                     )}
@@ -195,14 +195,14 @@ export function ProjectsList({ projects }: { projects: any[] }) {
                 {project.status !== 'cancelled' && (
                   <div className="mb-6">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-semibold text-[#A0A0A0] uppercase tracking-wider">
+                      <span className="text-xs font-semibold text-[var(--space-text-tertiary)] uppercase tracking-wider">
                         Progress
                       </span>
-                      <span className="text-xs font-semibold text-[#F0F0F0]">
+                      <span className="text-xs font-semibold text-[var(--space-text-primary)]">
                         {progress}%
                       </span>
                     </div>
-                    <div className="relative h-2 bg-[#2D2D2D] rounded-full overflow-hidden border border-[#404040]">
+                    <div className="relative h-2 bg-[var(--space-bg-card-hover)] rounded-full overflow-hidden border border-[var(--space-border-hard)]">
                       <div
                         className={`absolute inset-y-0 left-0 rounded-full transition-all duration-1000 ${
                           project.status === 'on-hold'
@@ -219,29 +219,29 @@ export function ProjectsList({ projects }: { projects: any[] }) {
 
                 {/* Details Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  <div className="flex items-start gap-2.5 p-3 rounded-lg bg-white border border-[#404040]">
-                    <div className="p-2 rounded-md bg-[#252525] border border-[#404040]">
+                  <div className="flex items-start gap-2.5 p-3 rounded-lg bg-white border border-[var(--space-border-hard)]">
+                    <div className="p-2 rounded-md bg-[var(--space-bg-card)] border border-[var(--space-border-hard)]">
                       <Calendar className="size-3.5 text-[var(--space-accent)]" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-[#A0A0A0] uppercase tracking-wider mb-0.5">
+                      <p className="text-xs font-semibold text-[var(--space-text-tertiary)] uppercase tracking-wider mb-0.5">
                         Start Date
                       </p>
-                      <p className="text-sm text-[#F0F0F0] font-medium">
+                      <p className="text-sm text-[var(--space-text-primary)] font-medium">
                         {formatDate(project.startDate)}
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-2.5 p-3 rounded-lg bg-white border border-[#404040]">
-                    <div className="p-2 rounded-md bg-[#252525] border border-[#404040]">
+                  <div className="flex items-start gap-2.5 p-3 rounded-lg bg-white border border-[var(--space-border-hard)]">
+                    <div className="p-2 rounded-md bg-[var(--space-bg-card)] border border-[var(--space-border-hard)]">
                       <Clock className="size-3.5 text-blue-400" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-[#A0A0A0] uppercase tracking-wider mb-0.5">
+                      <p className="text-xs font-semibold text-[var(--space-text-tertiary)] uppercase tracking-wider mb-0.5">
                         End Date
                       </p>
-                      <p className="text-sm text-[#F0F0F0] font-medium">
+                      <p className="text-sm text-[var(--space-text-primary)] font-medium">
                         {formatDate(project.endDate)}
                       </p>
                       {daysRemaining !== null &&
@@ -262,15 +262,15 @@ export function ProjectsList({ projects }: { projects: any[] }) {
                   </div>
 
                   {project.budget && (
-                    <div className="flex items-start gap-2.5 p-3 rounded-lg bg-[#252525] border border-[#404040]">
-                      <div className="p-2 rounded-md bg-white border border-[#404040]">
+                    <div className="flex items-start gap-2.5 p-3 rounded-lg bg-[var(--space-bg-card)] border border-[var(--space-border-hard)]">
+                      <div className="p-2 rounded-md bg-white border border-[var(--space-border-hard)]">
                         <DollarSign className="size-3.5 text-green-400" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-[#A0A0A0] uppercase tracking-wider mb-0.5">
+                        <p className="text-xs font-semibold text-[var(--space-text-tertiary)] uppercase tracking-wider mb-0.5">
                           Budget
                         </p>
-                        <p className="text-sm text-[#F0F0F0] font-medium">
+                        <p className="text-sm text-[var(--space-text-primary)] font-medium">
                           {new Intl.NumberFormat('en-US', {
                             style: 'currency',
                             currency: 'USD',

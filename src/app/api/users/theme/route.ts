@@ -9,7 +9,7 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { theme } = await req.json()
-  const validThemes = ['void', 'arctic', 'ember', 'emerald', 'dusk', 'chrome']
+  const validThemes = ['void', 'arctic', 'ember', 'emerald', 'dusk', 'chrome', 'light', 'paper']
   if (!validThemes.includes(theme)) return NextResponse.json({ error: 'Invalid theme' }, { status: 400 })
 
   await payload.update({

@@ -48,7 +48,7 @@ export function ProjectSidebar({ project, tasks, username, readOnly, clientProje
       {/* Back nav */}
       <Link
         href={`/u/${username}/projects`}
-        className="flex items-center gap-1.5 text-sm text-[#6B6B6B] hover:text-[#F0F0F0] transition-colors group"
+        className="flex items-center gap-1.5 text-sm text-[var(--space-text-secondary)] hover:text-[var(--space-text-primary)] transition-colors group"
       >
         <ArrowLeft className="size-3 group-hover:-translate-x-0.5 transition-transform" />
         All Projects
@@ -57,7 +57,7 @@ export function ProjectSidebar({ project, tasks, username, readOnly, clientProje
       {/* ── Client project navigator ────────────────────────────────────── */}
       {clientProjects && clientProjects.length > 0 && (
         <div className="space-y-0.5">
-          <p className="text-sm font-bold text-[#F0F0F0] uppercase tracking-widest px-1 mb-3">
+          <p className="text-sm font-bold text-[var(--space-text-primary)] uppercase tracking-widest px-1 mb-3">
             Your Projects
           </p>
           {clientProjects.map((p) => {
@@ -69,8 +69,8 @@ export function ProjectSidebar({ project, tasks, username, readOnly, clientProje
                 href={`/u/${username}/projects/${p.id}`}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-base transition-colors ${
                   isCurrent
-                    ? 'bg-[#2D2D2D] text-[#F0F0F0]'
-                    : 'text-[#6B6B6B] hover:text-[#F0F0F0] hover:bg-[#252525]'
+                    ? 'bg-[var(--space-bg-card-hover)] text-[var(--space-text-primary)]'
+                    : 'text-[var(--space-text-secondary)] hover:text-[var(--space-text-primary)] hover:bg-[var(--space-bg-card)]'
                 }`}
               >
                 <span className={`size-2 rounded-full shrink-0 ${pStatus.dot}`} />
@@ -81,14 +81,14 @@ export function ProjectSidebar({ project, tasks, username, readOnly, clientProje
               </Link>
             )
           })}
-          <div className="border-t border-[#404040] pt-2 mt-2" />
+          <div className="border-t border-[var(--space-border-hard)] pt-2 mt-2" />
         </div>
       )}
 
       {/* ── Staff / admin assigned projects navigator ────────────────────── */}
       {!readOnly && staffProjects && staffProjects.length > 0 && (
         <div className="space-y-0.5">
-          <p className="text-sm font-bold text-[#F0F0F0] uppercase tracking-widest px-1 mb-3">
+          <p className="text-sm font-bold text-[var(--space-text-primary)] uppercase tracking-widest px-1 mb-3">
             Assigned
           </p>
           {staffProjects.map((p) => {
@@ -100,8 +100,8 @@ export function ProjectSidebar({ project, tasks, username, readOnly, clientProje
                 href={`/u/${username}/projects/${p.id}`}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-base transition-colors ${
                   isCurrent
-                    ? 'bg-[#2D2D2D] text-[#F0F0F0]'
-                    : 'text-[#6B6B6B] hover:text-[#F0F0F0] hover:bg-[#252525]'
+                    ? 'bg-[var(--space-bg-card-hover)] text-[var(--space-text-primary)]'
+                    : 'text-[var(--space-text-secondary)] hover:text-[var(--space-text-primary)] hover:bg-[var(--space-bg-card)]'
                 }`}
               >
                 <span className={`size-2 rounded-full shrink-0 ${pStatus.dot}`} />
@@ -112,13 +112,13 @@ export function ProjectSidebar({ project, tasks, username, readOnly, clientProje
               </Link>
             )
           })}
-          <div className="border-t border-[#404040] pt-2 mt-2" />
+          <div className="border-t border-[var(--space-border-hard)] pt-2 mt-2" />
         </div>
       )}
 
       {/* Project title + status */}
       <div className="space-y-2 pt-1">
-        <h1 className="text-base font-semibold text-[#F0F0F0] leading-snug">{project.name}</h1>
+        <h1 className="text-base font-semibold text-[var(--space-text-primary)] leading-snug">{project.name}</h1>
         <div className="flex items-center gap-1.5">
           <div className={`size-1.5 rounded-full ${status.dot}`} />
           <span className={`text-xs font-medium ${status.color}`}>{status.label}</span>
@@ -127,63 +127,63 @@ export function ProjectSidebar({ project, tasks, username, readOnly, clientProje
 
       {/* Description */}
       {project.description && (
-        <p className="text-sm text-[#A0A0A0] leading-relaxed">{project.description}</p>
+        <p className="text-sm text-[var(--space-text-tertiary)] leading-relaxed">{project.description}</p>
       )}
 
       {/* Task progress */}
       {totalTasks > 0 && (
         <div className="space-y-1.5">
           <div className="flex items-center justify-between text-xs">
-            <span className="text-[#F0F0F0] font-semibold">Progress</span>
-            <span className="text-[#F0F0F0] font-bold tabular-nums">{completedTasks}/{totalTasks} tasks</span>
+            <span className="text-[var(--space-text-primary)] font-semibold">Progress</span>
+            <span className="text-[var(--space-text-primary)] font-bold tabular-nums">{completedTasks}/{totalTasks} tasks</span>
           </div>
-          <div className="h-2 bg-[#333333] rounded-full overflow-hidden">
+          <div className="h-2 bg-[var(--space-divider)] rounded-full overflow-hidden">
             <div
               className="h-full bg-[var(--space-accent)] rounded-full"
               style={{ width: `${progress}%` }}
             />
           </div>
-          <p className="text-xs text-[#6B6B6B]">{progress}% complete</p>
+          <p className="text-xs text-[var(--space-text-secondary)]">{progress}% complete</p>
         </div>
       )}
 
-      <div className="border-t border-[#404040]" />
+      <div className="border-t border-[var(--space-border-hard)]" />
 
       {/* Metadata */}
       <div className="space-y-3.5">
         {/* Client name — only shown to admins/staff, not to clients themselves */}
         {!readOnly && clientAccount && (
           <div className="flex items-start gap-3">
-            <Building2 className="size-4 text-[#A0A0A0] mt-0.5 shrink-0" />
+            <Building2 className="size-4 text-[var(--space-text-tertiary)] mt-0.5 shrink-0" />
             <div>
-              <p className="text-sm text-[#6B6B6B] mb-1">Client</p>
-              <p className="text-sm text-[#F0F0F0] font-bold">{(clientAccount as any).name}</p>
+              <p className="text-sm text-[var(--space-text-secondary)] mb-1">Client</p>
+              <p className="text-sm text-[var(--space-text-primary)] font-bold">{(clientAccount as any).name}</p>
             </div>
           </div>
         )}
 
         <div className="flex items-start gap-3">
-          <Calendar className="size-4 text-[#A0A0A0] mt-0.5 shrink-0" />
+          <Calendar className="size-4 text-[var(--space-text-tertiary)] mt-0.5 shrink-0" />
           <div>
-            <p className="text-sm text-[#6B6B6B] mb-1">Start date</p>
-            <p className="text-sm text-[#F0F0F0] font-medium">{fmt(project.startDate)}</p>
+            <p className="text-sm text-[var(--space-text-secondary)] mb-1">Start date</p>
+            <p className="text-sm text-[var(--space-text-primary)] font-medium">{fmt(project.startDate)}</p>
           </div>
         </div>
 
         <div className="flex items-start gap-3">
-          <Calendar className="size-4 text-[#A0A0A0] mt-0.5 shrink-0" />
+          <Calendar className="size-4 text-[var(--space-text-tertiary)] mt-0.5 shrink-0" />
           <div>
-            <p className="text-sm text-[#6B6B6B] mb-1">Target completion</p>
-            <p className="text-sm text-[#F0F0F0] font-medium">{fmt(project.projectedEndDate)}</p>
+            <p className="text-sm text-[var(--space-text-secondary)] mb-1">Target completion</p>
+            <p className="text-sm text-[var(--space-text-primary)] font-medium">{fmt(project.projectedEndDate)}</p>
           </div>
         </div>
 
         {project.budgetAmount && (
           <div className="flex items-start gap-3">
-            <DollarSign className="size-4 text-[#A0A0A0] mt-0.5 shrink-0" />
+            <DollarSign className="size-4 text-[var(--space-text-tertiary)] mt-0.5 shrink-0" />
             <div>
-              <p className="text-sm text-[#6B6B6B] mb-1">Budget</p>
-              <p className="text-sm text-[#F0F0F0] font-medium">
+              <p className="text-sm text-[var(--space-text-secondary)] mb-1">Budget</p>
+              <p className="text-sm text-[var(--space-text-primary)] font-medium">
                 {fmtCurrency(project.budgetAmount, project.currency || 'USD')}
               </p>
             </div>
@@ -193,10 +193,10 @@ export function ProjectSidebar({ project, tasks, username, readOnly, clientProje
         {/* Assigned users — only shown to admins/staff */}
         {!readOnly && assignedUsers.length > 0 && (
           <div className="flex items-start gap-3">
-            <Users className="size-4 text-[#A0A0A0] mt-0.5 shrink-0" />
+            <Users className="size-4 text-[var(--space-text-tertiary)] mt-0.5 shrink-0" />
             <div>
-              <p className="text-sm text-[#6B6B6B] mb-1">Assigned to</p>
-              <p className="text-sm text-[#F0F0F0] leading-relaxed">{assignedUsers.join(', ')}</p>
+              <p className="text-sm text-[var(--space-text-secondary)] mb-1">Assigned to</p>
+              <p className="text-sm text-[var(--space-text-primary)] leading-relaxed">{assignedUsers.join(', ')}</p>
             </div>
           </div>
         )}

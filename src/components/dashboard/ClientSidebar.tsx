@@ -174,18 +174,18 @@ function TeamModal({
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) { onClose(); resetAddForm() } }}>
-      <DialogContent className="bg-[#1C1C1C] border border-[#404040] text-[#F0F0F0] p-0 overflow-hidden sm:max-w-[520px] gap-0">
+      <DialogContent className="bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] text-[var(--space-text-primary)] p-0 overflow-hidden sm:max-w-[520px] gap-0">
         <DialogTitle className="sr-only">Manage Team</DialogTitle>
 
         {/* Header */}
         <div className="px-7 pt-7 pb-0">
-          <p className="text-xs uppercase tracking-widest text-[#4A4A4A] font-semibold mb-1">Team</p>
-          <h3 className="text-lg font-bold text-[#F0F0F0] mb-5">
+          <p className="text-xs uppercase tracking-widest text-[var(--space-text-muted)] font-semibold mb-1">Team</p>
+          <h3 className="text-lg font-bold text-[var(--space-text-primary)] mb-5">
             {clientAccountName}
           </h3>
 
           {/* Tabs */}
-          <div className="flex gap-1 border-b border-[#404040]">
+          <div className="flex gap-1 border-b border-[var(--space-border-hard)]">
             {([
               { key: 'admin' as const,   label: 'Admin / Developer', Icon: Shield, count: teamMembers.length  },
               { key: 'clients' as const, label: 'Clients',       Icon: User,   count: clientList.length  },
@@ -196,13 +196,13 @@ function TeamModal({
                 className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold border-b-2 -mb-px transition-colors ${
                   tab === key
                     ? 'border-[var(--space-accent)] text-[var(--space-accent)]'
-                    : 'border-transparent text-[#4A4A4A] hover:text-[#6B6B6B]'
+                    : 'border-transparent text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)]'
                 }`}
               >
                 <Icon className="size-3.5" />
                 {label}
                 <span className={`text-[10px] tabular-nums px-1.5 py-0.5 rounded-full font-normal ${
-                  tab === key ? 'bg-[rgba(139,156,182,0.06)] text-[var(--space-accent)]' : 'bg-[#2D2D2D] text-[#4A4A4A]'
+                  tab === key ? 'bg-[rgba(139,156,182,0.06)] text-[var(--space-accent)]' : 'bg-[var(--space-bg-card-hover)] text-[var(--space-text-muted)]'
                 }`}>
                   {count}
                 </span>
@@ -218,17 +218,17 @@ function TeamModal({
           {tab === 'admin' && (
             <div className="space-y-2">
               {teamMembers.length === 0 ? (
-                <p className="text-sm text-[#4A4A4A] py-4 text-center">No developers assigned to this account.</p>
+                <p className="text-sm text-[var(--space-text-muted)] py-4 text-center">No developers assigned to this account.</p>
               ) : (
                 teamMembers.map((m) => (
-                  <div key={m.id} className="flex items-center gap-3 rounded-lg bg-[#252525] border border-[#404040] px-4 py-3">
-                    <div className="size-7 rounded-lg bg-[#2D2D2D] flex items-center justify-center shrink-0">
-                      <Shield className="size-3.5 text-[#4A4A4A]" />
+                  <div key={m.id} className="flex items-center gap-3 rounded-lg bg-[var(--space-bg-card)] border border-[var(--space-border-hard)] px-4 py-3">
+                    <div className="size-7 rounded-lg bg-[var(--space-bg-card-hover)] flex items-center justify-center shrink-0">
+                      <Shield className="size-3.5 text-[var(--space-text-muted)]" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-[#A0A0A0] truncate">{m.name}</p>
+                      <p className="text-sm text-[var(--space-text-tertiary)] truncate">{m.name}</p>
                       {m.title && (
-                        <p className="text-[11px] text-[#4A4A4A] truncate">{m.title}</p>
+                        <p className="text-[11px] text-[var(--space-text-muted)] truncate">{m.title}</p>
                       )}
                     </div>
                   </div>
@@ -243,28 +243,28 @@ function TeamModal({
               {/* Existing clients */}
               <div className="space-y-2">
                 {clientList.length === 0 ? (
-                  <p className="text-sm text-[#4A4A4A] py-2 text-center">No client users yet.</p>
+                  <p className="text-sm text-[var(--space-text-muted)] py-2 text-center">No client users yet.</p>
                 ) : (
                   clientList.map((u) => {
                     const rs = resetStates[u.email] ?? 'idle'
                     const isEditing = emailEditing?.id === u.id
                     return (
-                      <div key={u.id} className="rounded-lg bg-[#252525] border border-[#404040] px-4 py-3">
+                      <div key={u.id} className="rounded-lg bg-[var(--space-bg-card)] border border-[var(--space-border-hard)] px-4 py-3">
                         <div className="flex items-center gap-3">
                           <div className="size-7 rounded-lg bg-[rgba(139,156,182,0.06)] flex items-center justify-center shrink-0">
                             <User className="size-3.5" style={{ color: 'var(--space-accent)', opacity: 0.6 }} />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm text-[#A0A0A0] truncate">{u.name}</p>
+                            <p className="text-sm text-[var(--space-text-tertiary)] truncate">{u.name}</p>
                             {!isEditing && (
-                              <p className="text-[11px] text-[#4A4A4A] truncate">{u.email}</p>
+                              <p className="text-[11px] text-[var(--space-text-muted)] truncate">{u.email}</p>
                             )}
                           </div>
                           {!isEditing && (
                             <>
                               <button
                                 onClick={() => { setEmailEditing({ id: u.id, value: u.email }); setEmailError(null) }}
-                                className="flex items-center gap-1 px-2 py-1.5 rounded-md border border-[#404040] text-[10px] text-[#4A4A4A] hover:text-[#F0F0F0] hover:border-[#404040] hover:bg-[#2D2D2D] transition-all shrink-0"
+                                className="flex items-center gap-1 px-2 py-1.5 rounded-md border border-[var(--space-border-hard)] text-[10px] text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] hover:border-[var(--space-border-hard)] hover:bg-[var(--space-bg-card-hover)] transition-all shrink-0"
                               >
                                 <Pencil className="size-3" />
                                 Email
@@ -272,7 +272,7 @@ function TeamModal({
                               <button
                                 onClick={() => handlePasswordReset(u.email)}
                                 disabled={rs === 'loading' || rs === 'sent'}
-                                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-[#404040] text-[10px] text-[#4A4A4A] hover:text-[#F0F0F0] hover:border-[#404040] hover:bg-[#2D2D2D] transition-all disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-[var(--space-border-hard)] text-[10px] text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] hover:border-[var(--space-border-hard)] hover:bg-[var(--space-bg-card-hover)] transition-all disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
                               >
                                 {rs === 'loading' ? (
                                   <Loader2 className="size-3 animate-spin" />
@@ -289,7 +289,7 @@ function TeamModal({
                                 onClick={() => handleRemoveClient(u.id)}
                                 disabled={removingClientId === u.id}
                                 title="Remove client access"
-                                className="flex items-center justify-center size-7 rounded-md border border-[#404040] text-[#4A4A4A] hover:text-red-400 hover:border-red-500/20 hover:bg-red-500/[0.05] transition-all shrink-0 disabled:opacity-40"
+                                className="flex items-center justify-center size-7 rounded-md border border-[var(--space-border-hard)] text-[var(--space-text-muted)] hover:text-red-400 hover:border-red-500/20 hover:bg-red-500/[0.05] transition-all shrink-0 disabled:opacity-40"
                               >
                                 {removingClientId === u.id
                                   ? <Loader2 className="size-3 animate-spin" />
@@ -311,7 +311,7 @@ function TeamModal({
                                   if (e.key === 'Enter') handleSaveEmail()
                                   if (e.key === 'Escape') { setEmailEditing(null); setEmailError(null) }
                                 }}
-                                className="flex-1 h-8 text-xs bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] focus-visible:ring-[rgba(139,156,182,0.20)] focus-visible:ring-1"
+                                className="flex-1 h-8 text-xs bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] focus-visible:ring-[rgba(139,156,182,0.20)] focus-visible:ring-1"
                               />
                               <button
                                 onClick={handleSaveEmail}
@@ -323,7 +323,7 @@ function TeamModal({
                               <button
                                 onClick={() => { setEmailEditing(null); setEmailError(null) }}
                                 disabled={emailSaving}
-                                className="flex items-center justify-center size-8 rounded-md border border-[#404040] text-[#4A4A4A] hover:text-[#F0F0F0] hover:bg-[#2D2D2D] transition-colors shrink-0"
+                                className="flex items-center justify-center size-8 rounded-md border border-[var(--space-border-hard)] text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] hover:bg-[var(--space-bg-card-hover)] transition-colors shrink-0"
                               >
                                 <X className="size-3" />
                               </button>
@@ -340,7 +340,7 @@ function TeamModal({
               </div>
 
               {/* Divider */}
-              <div className="border-t border-[#404040]" />
+              <div className="border-t border-[var(--space-border-hard)]" />
 
               {/* Add client form */}
               {addSuccess ? (
@@ -349,9 +349,9 @@ function TeamModal({
                     <Check className="size-5 text-emerald-400" strokeWidth={2.5} />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-[#F0F0F0]">Invite sent</p>
-                    <p className="text-xs text-[#4A4A4A] mt-0.5">
-                      <span className="text-[#A0A0A0]">{addSuccess}</span> will receive a setup email.
+                    <p className="text-sm font-semibold text-[var(--space-text-primary)]">Invite sent</p>
+                    <p className="text-xs text-[var(--space-text-muted)] mt-0.5">
+                      <span className="text-[var(--space-text-tertiary)]">{addSuccess}</span> will receive a setup email.
                     </p>
                   </div>
                   <button
@@ -364,35 +364,35 @@ function TeamModal({
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <p className="text-[10px] uppercase tracking-widest text-[#4A4A4A] font-semibold">Add Client</p>
+                  <p className="text-[10px] uppercase tracking-widest text-[var(--space-text-muted)] font-semibold">Add Client</p>
                   <div className="grid grid-cols-2 gap-2.5">
                     <div className="space-y-1.5">
-                      <Label className="text-[#4A4A4A] text-xs">First name</Label>
+                      <Label className="text-[var(--space-text-muted)] text-xs">First name</Label>
                       <Input
                         value={addForm.firstName}
                         onChange={(e) => setAddForm((f) => ({ ...f, firstName: e.target.value }))}
                         placeholder="Jane"
-                        className="bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] placeholder:text-[#4A4A4A] h-9 text-sm focus-visible:ring-[rgba(139,156,182,0.20)]"
+                        className="bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)] h-9 text-sm focus-visible:ring-[rgba(139,156,182,0.20)]"
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-[#4A4A4A] text-xs">Last name</Label>
+                      <Label className="text-[var(--space-text-muted)] text-xs">Last name</Label>
                       <Input
                         value={addForm.lastName}
                         onChange={(e) => setAddForm((f) => ({ ...f, lastName: e.target.value }))}
                         placeholder="Doe"
-                        className="bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] placeholder:text-[#4A4A4A] h-9 text-sm focus-visible:ring-[rgba(139,156,182,0.20)]"
+                        className="bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)] h-9 text-sm focus-visible:ring-[rgba(139,156,182,0.20)]"
                       />
                     </div>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-[#4A4A4A] text-xs">Email</Label>
+                    <Label className="text-[var(--space-text-muted)] text-xs">Email</Label>
                     <Input
                       type="email"
                       value={addForm.email}
                       onChange={(e) => setAddForm((f) => ({ ...f, email: e.target.value }))}
                       placeholder="jane@example.com"
-                      className="bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] placeholder:text-[#4A4A4A] h-9 text-sm focus-visible:ring-[rgba(139,156,182,0.20)]"
+                      className="bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)] h-9 text-sm focus-visible:ring-[rgba(139,156,182,0.20)]"
                       onKeyDown={(e) => e.key === 'Enter' && handleAddClient()}
                     />
                   </div>
@@ -402,7 +402,7 @@ function TeamModal({
                   <Button
                     onClick={handleAddClient}
                     disabled={addLoading}
-                    className="w-full bg-[var(--space-accent)] hover:bg-[#1E3A6E]/90 text-white font-semibold gap-2 h-9"
+                    className="w-full bg-[var(--space-accent)] hover:bg-[var(--space-accent)]/90 text-white font-semibold gap-2 h-9"
                   >
                     {addLoading ? (
                       <><Loader2 className="size-3.5 animate-spin" /> Adding...</>
@@ -417,11 +417,11 @@ function TeamModal({
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end px-7 py-4 border-t border-[#404040]">
+        <div className="flex justify-end px-7 py-4 border-t border-[var(--space-border-hard)]">
           <Button
             variant="ghost"
             onClick={() => { onClose(); resetAddForm() }}
-            className="text-[#4A4A4A] hover:text-[#F0F0F0] hover:bg-[#2D2D2D] text-sm"
+            className="text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] hover:bg-[var(--space-bg-card-hover)] text-sm"
           >
             Close
           </Button>
@@ -496,10 +496,10 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
     <div className="flex flex-col h-full">
 
       {/* ── Nav ── */}
-      <div className="px-5 pt-4 pb-3 border-b border-[#404040] shrink-0">
+      <div className="px-5 pt-4 pb-3 border-b border-[var(--space-border-hard)] shrink-0">
         <Link
           href={`/u/${username}/clients`}
-          className="text-[11px] text-[#4A4A4A] hover:text-[#6B6B6B] transition-colors"
+          className="text-[11px] text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)] transition-colors"
         >
           ← All clients
         </Link>
@@ -507,14 +507,14 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
 
       {/* ── All clients hover-expand accordion ── */}
       {allClients && allClients.length > 0 && (
-        <div className="group border-b border-[#404040] shrink-0">
+        <div className="group border-b border-[var(--space-border-hard)] shrink-0">
           {/* Compact header — always visible */}
           <div className="px-4 py-2.5 flex items-center gap-2 cursor-default select-none">
-            <p className="text-[10px] font-semibold text-[#4A4A4A] uppercase tracking-widest flex-1">Clients</p>
-            <span className="text-[10px] tabular-nums text-[#4A4A4A] bg-[#2D2D2D] border border-[#404040] px-1.5 py-0.5 rounded-md">
+            <p className="text-[10px] font-semibold text-[var(--space-text-muted)] uppercase tracking-widest flex-1">Clients</p>
+            <span className="text-[10px] tabular-nums text-[var(--space-text-muted)] bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] px-1.5 py-0.5 rounded-md">
               {allClients.length}
             </span>
-            <ChevronDown className="size-3 text-[#4A4A4A] transition-transform duration-200 group-hover:rotate-180" />
+            <ChevronDown className="size-3 text-[var(--space-text-muted)] transition-transform duration-200 group-hover:rotate-180" />
           </div>
           {/* Expandable list */}
           <div className="max-h-0 overflow-hidden group-hover:max-h-[320px] transition-[max-height] duration-300 ease-in-out">
@@ -528,8 +528,8 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
                     href={`/u/${username}/clients/${c.id}`}
                     className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
                       isCurrent
-                        ? 'bg-[#2D2D2D] text-[#F0F0F0]'
-                        : 'text-[#6B6B6B] hover:text-[#F0F0F0] hover:bg-[#2D2D2D]'
+                        ? 'bg-[var(--space-bg-card-hover)] text-[var(--space-text-primary)]'
+                        : 'text-[var(--space-text-secondary)] hover:text-[var(--space-text-primary)] hover:bg-[var(--space-bg-card-hover)]'
                     }`}
                   >
                     <div className="size-6 rounded-md bg-[rgba(139,156,182,0.06)] border border-[rgba(139,156,182,0.10)] flex items-center justify-center shrink-0">
@@ -538,7 +538,7 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
                     <div className="flex-1 min-w-0">
                       <p className="truncate leading-tight">{c.name}</p>
                       {c.company && (
-                        <p className="text-[10px] text-[#4A4A4A] truncate leading-tight">{c.company}</p>
+                        <p className="text-[10px] text-[var(--space-text-muted)] truncate leading-tight">{c.company}</p>
                       )}
                     </div>
                     {isCurrent && (
@@ -556,14 +556,14 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
       <div className="flex-1 overflow-y-auto">
 
         {/* ── Identity / Edit ── */}
-        <div className="px-5 py-4 border-b border-[#404040]">
+        <div className="px-5 py-4 border-b border-[var(--space-border-hard)]">
           <div className="flex items-start justify-between mb-3">
             <div className="relative">
               <div className="size-10 rounded-xl bg-[rgba(139,156,182,0.06)] border border-[rgba(139,156,182,0.10)] flex items-center justify-center">
                 <span className="text-sm font-bold tracking-tight" style={{ color: 'var(--space-accent)' }}>{initials}</span>
               </div>
               {stripeCustomerId && (
-                <div className="absolute -bottom-1 -right-1 size-4 rounded-full bg-emerald-500 border-2 border-[#252525] flex items-center justify-center">
+                <div className="absolute -bottom-1 -right-1 size-4 rounded-full bg-emerald-500 border-2 border-[var(--space-bg-card)] flex items-center justify-center">
                   <Check className="size-2.5 text-white" strokeWidth={3} />
                 </div>
               )}
@@ -572,7 +572,7 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
             {!editing && (
               <button
                 onClick={() => setEditing(true)}
-                className="text-[11px] text-[#4A4A4A] hover:text-[#A0A0A0] transition-colors px-2.5 py-1 rounded-md border border-transparent hover:border-[#404040] hover:bg-[#2D2D2D]"
+                className="text-[11px] text-[var(--space-text-muted)] hover:text-[var(--space-text-tertiary)] transition-colors px-2.5 py-1 rounded-md border border-transparent hover:border-[var(--space-border-hard)] hover:bg-[var(--space-bg-card-hover)]"
               >
                 Edit
               </button>
@@ -583,53 +583,53 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
-                  <Label className="text-[#4A4A4A] text-[10px] uppercase tracking-wider font-semibold">First</Label>
+                  <Label className="text-[var(--space-text-muted)] text-[10px] uppercase tracking-wider font-semibold">First</Label>
                   <Input
                     value={form.firstName}
                     onChange={(e) => {
                       const val = e.target.value
                       setForm((f) => ({ ...f, firstName: val, name: `${val} ${f.lastName}`.trim() }))
                     }}
-                    className="h-8 text-sm bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] focus-visible:ring-[rgba(139,156,182,0.20)] focus-visible:ring-1"
+                    className="h-8 text-sm bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] focus-visible:ring-[rgba(139,156,182,0.20)] focus-visible:ring-1"
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-[#4A4A4A] text-[10px] uppercase tracking-wider font-semibold">Last</Label>
+                  <Label className="text-[var(--space-text-muted)] text-[10px] uppercase tracking-wider font-semibold">Last</Label>
                   <Input
                     value={form.lastName}
                     onChange={(e) => {
                       const val = e.target.value
                       setForm((f) => ({ ...f, lastName: val, name: `${f.firstName} ${val}`.trim() }))
                     }}
-                    className="h-8 text-sm bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] focus-visible:ring-[rgba(139,156,182,0.20)] focus-visible:ring-1"
+                    className="h-8 text-sm bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] focus-visible:ring-[rgba(139,156,182,0.20)] focus-visible:ring-1"
                   />
                 </div>
               </div>
               <div className="space-y-1">
-                <Label className="text-[#4A4A4A] text-[10px] uppercase tracking-wider font-semibold">Display Name</Label>
+                <Label className="text-[var(--space-text-muted)] text-[10px] uppercase tracking-wider font-semibold">Display Name</Label>
                 <Input
                   value={form.name}
                   onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                  className="h-8 text-sm bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] focus-visible:ring-[rgba(139,156,182,0.20)] focus-visible:ring-1"
+                  className="h-8 text-sm bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] focus-visible:ring-[rgba(139,156,182,0.20)] focus-visible:ring-1"
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-[#4A4A4A] text-[10px] uppercase tracking-wider font-semibold">Email</Label>
+                <Label className="text-[var(--space-text-muted)] text-[10px] uppercase tracking-wider font-semibold">Email</Label>
                 <Input
                   type="email"
                   value={form.email}
                   onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
                   placeholder="client@example.com"
-                  className="h-8 text-sm bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] placeholder:text-[#4A4A4A] focus-visible:ring-[rgba(139,156,182,0.20)] focus-visible:ring-1"
+                  className="h-8 text-sm bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)] focus-visible:ring-[rgba(139,156,182,0.20)] focus-visible:ring-1"
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-[#4A4A4A] text-[10px] uppercase tracking-wider font-semibold">Company</Label>
+                <Label className="text-[var(--space-text-muted)] text-[10px] uppercase tracking-wider font-semibold">Company</Label>
                 <Input
                   value={form.company}
                   onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))}
                   placeholder="Optional"
-                  className="h-8 text-sm bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] placeholder:text-[#4A4A4A] focus-visible:ring-[rgba(139,156,182,0.20)] focus-visible:ring-1"
+                  className="h-8 text-sm bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)] focus-visible:ring-[rgba(139,156,182,0.20)] focus-visible:ring-1"
                 />
               </div>
               {error && <p className="text-xs text-red-400">{error}</p>}
@@ -638,7 +638,7 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
                   size="sm"
                   onClick={handleSave}
                   disabled={loading}
-                  className="flex-1 bg-[var(--space-accent)] hover:bg-[#1E3A6E]/90 text-white font-semibold text-xs h-8"
+                  className="flex-1 bg-[var(--space-accent)] hover:bg-[var(--space-accent)]/90 text-white font-semibold text-xs h-8"
                 >
                   {loading ? <Loader2 className="size-3 animate-spin" /> : 'Save'}
                 </Button>
@@ -647,7 +647,7 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
                   variant="ghost"
                   onClick={handleCancel}
                   disabled={loading}
-                  className="flex-1 text-[#4A4A4A] hover:text-[#F0F0F0] hover:bg-[#2D2D2D] text-xs h-8"
+                  className="flex-1 text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] hover:bg-[var(--space-bg-card-hover)] text-xs h-8"
                 >
                   Cancel
                 </Button>
@@ -655,15 +655,15 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
             </div>
           ) : (
             <div>
-              <h2 className="text-base font-bold text-[#F0F0F0] leading-tight">{name}</h2>
-              {company && <p className="text-xs text-[#4A4A4A] mt-0.5">{company}</p>}
-              {email && <p className="text-xs text-[#4A4A4A] mt-1 truncate">{email}</p>}
+              <h2 className="text-base font-bold text-[var(--space-text-primary)] leading-tight">{name}</h2>
+              {company && <p className="text-xs text-[var(--space-text-muted)] mt-0.5">{company}</p>}
+              {email && <p className="text-xs text-[var(--space-text-muted)] mt-1 truncate">{email}</p>}
             </div>
           )}
         </div>
 
         {/* ── Overview ── */}
-        <div className="px-5 py-4 space-y-5 border-b border-[#404040]">
+        <div className="px-5 py-4 space-y-5 border-b border-[var(--space-border-hard)]">
 
           {/* Outstanding alert */}
           {hasOutstanding && (
@@ -684,12 +684,12 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
               { label: 'Orders',   value: String(ordersCount),  Icon: ShoppingCart, amber: false          },
               { label: 'Projects', value: String(projectsCount),Icon: FolderKanban, amber: false          },
             ].map(({ label, value, Icon, amber }) => (
-              <div key={label} className="rounded-lg bg-[#252525] border border-[#404040] p-3">
+              <div key={label} className="rounded-lg bg-[var(--space-bg-card)] border border-[var(--space-border-hard)] p-3">
                 <div className="flex items-center gap-1.5 mb-1.5">
-                  <Icon className="size-3 text-[#4A4A4A]" />
-                  <span className="text-[10px] uppercase tracking-widest text-[#4A4A4A] font-semibold">{label}</span>
+                  <Icon className="size-3 text-[var(--space-text-muted)]" />
+                  <span className="text-[10px] uppercase tracking-widest text-[var(--space-text-muted)] font-semibold">{label}</span>
                 </div>
-                <p className={`text-sm font-bold font-mono tabular-nums truncate ${amber ? 'text-amber-400' : 'text-[#F0F0F0]'}`}>
+                <p className={`text-sm font-bold font-mono tabular-nums truncate ${amber ? 'text-amber-400' : 'text-[var(--space-text-primary)]'}`}>
                   {value}
                 </p>
               </div>
@@ -698,16 +698,16 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
 
           {/* Contact */}
           <div className="space-y-2.5">
-            <p className="text-[10px] uppercase tracking-widest text-[#4A4A4A] font-semibold">Contact</p>
+            <p className="text-[10px] uppercase tracking-widest text-[var(--space-text-muted)] font-semibold">Contact</p>
             <div className="space-y-2">
               {email && (
-                <div className="flex items-center gap-2 text-[#4A4A4A] text-xs">
+                <div className="flex items-center gap-2 text-[var(--space-text-muted)] text-xs">
                   <Mail className="size-3 shrink-0" />
                   <span className="truncate">{email}</span>
                 </div>
               )}
               {company && (
-                <div className="flex items-center gap-2 text-[#4A4A4A] text-xs">
+                <div className="flex items-center gap-2 text-[var(--space-text-muted)] text-xs">
                   <Building2 className="size-3 shrink-0" />
                   <span className="truncate">{company}</span>
                 </div>
@@ -718,15 +718,15 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
           {/* Team */}
           <div className="space-y-2.5">
             <div className="flex items-center justify-between">
-              <p className="text-[10px] uppercase tracking-widest text-[#4A4A4A] font-semibold">
+              <p className="text-[10px] uppercase tracking-widest text-[var(--space-text-muted)] font-semibold">
                 Team
                 {allUsers.length > 0 && (
-                  <span className="ml-1.5 text-[#4A4A4A] font-normal">{allUsers.length}</span>
+                  <span className="ml-1.5 text-[var(--space-text-muted)] font-normal">{allUsers.length}</span>
                 )}
               </p>
               <button
                 onClick={() => setTeamModalOpen(true)}
-                className="text-[10px] text-[#4A4A4A] hover:text-[var(--space-accent)] transition-colors flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-[rgba(139,156,182,0.04)]"
+                className="text-[10px] text-[var(--space-text-muted)] hover:text-[var(--space-accent)] transition-colors flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-[rgba(139,156,182,0.04)]"
               >
                 <Users className="size-3" />
                 Modify
@@ -734,21 +734,21 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
             </div>
 
             {allUsers.length === 0 ? (
-              <p className="text-[11px] text-[#4A4A4A]">No users associated.</p>
+              <p className="text-[11px] text-[var(--space-text-muted)]">No users associated.</p>
             ) : (
               <div className="space-y-1.5">
                 {allUsers.map((u) => (
                   <div key={u.id} className="flex items-center gap-2 text-xs">
                     {u.type === 'developer' ? (
-                      <Shield className="size-3 shrink-0 text-[#4A4A4A]" />
+                      <Shield className="size-3 shrink-0 text-[var(--space-text-muted)]" />
                     ) : (
                       <User className="size-3 shrink-0" style={{ color: 'var(--space-accent)', opacity: 0.5 }} />
                     )}
-                    <span className={`truncate ${u.type === 'developer' ? 'text-[#4A4A4A]' : 'text-[#6B6B6B]'}`}>
+                    <span className={`truncate ${u.type === 'developer' ? 'text-[var(--space-text-muted)]' : 'text-[var(--space-text-secondary)]'}`}>
                       {u.name}
                     </span>
                     <span className={`ml-auto text-[9px] uppercase tracking-wider font-semibold shrink-0 ${
-                      u.type === 'developer' ? 'text-[#4A4A4A]' : 'text-[#6B6B6B]'
+                      u.type === 'developer' ? 'text-[var(--space-text-muted)]' : 'text-[var(--space-text-secondary)]'
                     }`}>
                       {u.type === 'developer' ? (u.title ?? 'developer') : 'client'}
                     </span>
@@ -788,14 +788,14 @@ export function ClientSidebar(props: ClientSidebarProps) {
         className="lg:hidden fixed right-0 top-1/2 -translate-y-1/2 z-40
                    flex flex-col items-center gap-2
                    pl-2.5 pr-2 py-4
-                   bg-[#1C1C1C]/90 border border-r-0 border-[#404040]
+                   bg-[var(--space-bg-base)]/90 border border-r-0 border-[var(--space-border-hard)]
                    rounded-l-xl
-                   hover:border-[rgba(139,156,182,0.20)] hover:bg-[#1C1C1C]
+                   hover:border-[rgba(139,156,182,0.20)] hover:bg-[var(--space-bg-base)]
                    transition-all duration-300 active:scale-95"
         aria-label="Open client details"
       >
         <SlidersHorizontal className="size-3.5" style={{ color: 'var(--space-accent)' }} />
-        <span className="text-[8px] font-semibold text-[#4A4A4A] uppercase tracking-[0.15em] [writing-mode:vertical-rl] rotate-180">
+        <span className="text-[8px] font-semibold text-[var(--space-text-muted)] uppercase tracking-[0.15em] [writing-mode:vertical-rl] rotate-180">
           Details
         </span>
       </button>
@@ -812,21 +812,21 @@ export function ClientSidebar(props: ClientSidebarProps) {
       {/* Slide-up bottom sheet */}
       <div
         className={`lg:hidden fixed bottom-0 left-0 right-0 z-[55] flex flex-col
-                    bg-[#1C1C1C] border-t border-[#404040] rounded-t-2xl
+                    bg-[var(--space-bg-base)] border-t border-[var(--space-border-hard)] rounded-t-2xl
                     transition-transform duration-300 ease-in-out
                     ${open ? 'translate-y-0' : 'translate-y-full'}`}
         style={{ maxHeight: '82vh' }}
       >
         {/* Drag handle */}
         <div className="flex justify-center pt-3 pb-1 shrink-0">
-          <div className="w-9 h-1 rounded-full bg-[#333333]" />
+          <div className="w-9 h-1 rounded-full bg-[var(--space-divider)]" />
         </div>
         {/* Sheet header */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#404040] shrink-0">
-          <h3 className="text-sm font-semibold text-[#F0F0F0]">{props.name}</h3>
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--space-border-hard)] shrink-0">
+          <h3 className="text-sm font-semibold text-[var(--space-text-primary)]">{props.name}</h3>
           <button
             onClick={() => setOpen(false)}
-            className="p-1.5 rounded-lg hover:bg-[#2D2D2D] text-[#4A4A4A] hover:text-[#A0A0A0] transition-all"
+            className="p-1.5 rounded-lg hover:bg-[var(--space-bg-card-hover)] text-[var(--space-text-muted)] hover:text-[var(--space-text-tertiary)] transition-all"
             aria-label="Close"
           >
             <X className="size-4" />

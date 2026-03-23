@@ -18,7 +18,7 @@ import { CreateSprintModal } from './CreateSprintModal'
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const SPRINT_STATUS = {
-  pending:       { dot: 'bg-gray-500',          text: 'text-[#6B6B6B]',          label: 'Planned',  bg: 'bg-[rgba(255,255,255,0.02)]',             border: 'border-[#404040]'             },
+  pending:       { dot: 'bg-gray-500',          text: 'text-[var(--space-text-secondary)]',          label: 'Planned',  bg: 'bg-[rgba(255,255,255,0.02)]',             border: 'border-[var(--space-border-hard)]'             },
   'in-progress': { dot: 'bg-[var(--space-accent)]', text: 'text-[var(--space-accent)]', label: 'Active',   bg: 'bg-[rgba(139,156,182,0.06)]', border: 'border-[rgba(139,156,182,0.15)]' },
   delayed:       { dot: 'bg-orange-400',        text: 'text-orange-400',        label: 'Delayed',  bg: 'bg-orange-400/[0.04]',        border: 'border-orange-400/[0.15]'        },
   finished:      { dot: 'bg-green-400',         text: 'text-green-400',         label: 'Finished', bg: 'bg-green-400/[0.03]',         border: 'border-green-400/[0.12]'         },
@@ -115,12 +115,12 @@ function StatTile({ icon: Icon, value, label, sub, accent }: {
   accent: string
 }) {
   return (
-    <div className="rounded-lg border border-[#404040] bg-[rgba(255,255,255,0.02)] p-4 flex flex-col gap-3">
+    <div className="rounded-lg border border-[var(--space-border-hard)] bg-[rgba(255,255,255,0.02)] p-4 flex flex-col gap-3">
       <Icon className={cn('size-3.5', accent)} />
       <p className={cn('text-2xl font-bold tabular-nums leading-none', accent)}>{value}</p>
       <div>
-        <p className="text-sm text-[#F0F0F0] leading-tight">{label}</p>
-        <p className="text-xs text-[#A0A0A0] leading-tight mt-0.5">{sub}</p>
+        <p className="text-sm text-[var(--space-text-primary)] leading-tight">{label}</p>
+        <p className="text-xs text-[var(--space-text-tertiary)] leading-tight mt-0.5">{sub}</p>
       </div>
     </div>
   )
@@ -149,14 +149,14 @@ function SprintMenu({ sprint, openMenuId, setOpenMenuId, onDelete, deletingId }:
         className={cn(
           'p-1.5 rounded-lg transition-colors',
           openMenuId === sprint.id
-            ? 'bg-[#2D2D2D] text-[#A0A0A0]'
-            : 'text-[#4A4A4A] hover:text-[#A0A0A0] hover:bg-[#2D2D2D]'
+            ? 'bg-[var(--space-bg-card-hover)] text-[var(--space-text-tertiary)]'
+            : 'text-[var(--space-text-muted)] hover:text-[var(--space-text-tertiary)] hover:bg-[var(--space-bg-card-hover)]'
         )}
       >
         <MoreHorizontal className="size-3.5" />
       </button>
       {openMenuId === sprint.id && (
-        <div className="absolute top-full right-0 mt-1 bg-[#1C1C1C] border border-[#404040] rounded-xl shadow-2xl z-50 overflow-hidden min-w-[150px]">
+        <div className="absolute top-full right-0 mt-1 bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] rounded-xl shadow-2xl z-50 overflow-hidden min-w-[150px]">
           <button
             type="button"
             onClick={() => onDelete(sprint.id)}
@@ -212,9 +212,9 @@ export function SprintsTab({ sprints: initialSprints, tasks, projectId, username
       {/* ── Header ──────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-[#F0F0F0]">Sprints</h2>
+          <h2 className="text-xl font-bold text-[var(--space-text-primary)]">Sprints</h2>
           {tasks.length > 0 && (
-            <p className="text-sm text-[#A0A0A0] mt-0.5">
+            <p className="text-sm text-[var(--space-text-tertiary)] mt-0.5">
               {stats.doneTasks} of {stats.totalTasks} tasks completed
             </p>
           )}
@@ -234,12 +234,12 @@ export function SprintsTab({ sprints: initialSprints, tasks, projectId, username
       {sprints.length === 0 ? (
 
         /* ── Empty state ──────────────────────────────────────────── */
-        <div className="rounded-xl border border-[#333333] bg-[#252525] p-12 text-center">
-          <div className="inline-flex p-4 rounded-xl bg-[#252525] border border-[#404040] mb-5">
-            <Zap className="size-8 text-[#6B6B6B]" />
+        <div className="rounded-xl border border-[var(--space-divider)] bg-[var(--space-bg-card)] p-12 text-center">
+          <div className="inline-flex p-4 rounded-xl bg-[var(--space-bg-card)] border border-[var(--space-border-hard)] mb-5">
+            <Zap className="size-8 text-[var(--space-text-secondary)]" />
           </div>
-          <h3 className="text-xl font-bold text-[#F0F0F0] mb-2">No sprints yet</h3>
-          <p className="text-base text-[#F0F0F0] max-w-xs mx-auto mb-5">
+          <h3 className="text-xl font-bold text-[var(--space-text-primary)] mb-2">No sprints yet</h3>
+          <p className="text-base text-[var(--space-text-primary)] max-w-xs mx-auto mb-5">
             {readOnly
               ? 'No sprints have been created for this project yet.'
               : 'Organize work into sprints to track progress and keep the team focused.'}
@@ -261,7 +261,7 @@ export function SprintsTab({ sprints: initialSprints, tasks, projectId, username
 
           {/* ── Section 1: Active Sprints ─────────────────────────── */}
           <section className="space-y-3">
-            <p className="text-sm font-bold text-[#F0F0F0] uppercase tracking-widest">Active Sprints</p>
+            <p className="text-sm font-bold text-[var(--space-text-primary)] uppercase tracking-widest">Active Sprints</p>
 
             {active.length > 0 ? (
               <div className={cn(
@@ -284,7 +284,7 @@ export function SprintsTab({ sprints: initialSprints, tasks, projectId, username
                       className={cn(
                         'group block rounded-xl border flex flex-col gap-4 p-7',
                         'transition-all duration-200',
-                        'hover:-translate-y-px hover:shadow-lg hover:shadow-[#000000]/[0.40] hover:border-[#404040]',
+                        'hover:-translate-y-px hover:shadow-lg hover:shadow-[#000000]/[0.40] hover:border-[var(--space-border-hard)]',
                         cfg.bg, cfg.border,
                       )}
                     >
@@ -299,9 +299,9 @@ export function SprintsTab({ sprints: initialSprints, tasks, projectId, username
 
                       {/* Name + goal */}
                       <div>
-                        <h4 className="text-xl font-bold text-[#F0F0F0] leading-snug">{sprint.name}</h4>
+                        <h4 className="text-xl font-bold text-[var(--space-text-primary)] leading-snug">{sprint.name}</h4>
                         {(sprint.goalDescription || sprint.description) && (
-                          <p className="text-sm text-[#F0F0F0] mt-1.5 leading-relaxed line-clamp-2">
+                          <p className="text-sm text-[var(--space-text-primary)] mt-1.5 leading-relaxed line-clamp-2">
                             {sprint.goalDescription || sprint.description}
                           </p>
                         )}
@@ -310,10 +310,10 @@ export function SprintsTab({ sprints: initialSprints, tasks, projectId, username
                       {/* Progress */}
                       <div className="space-y-2">
                         <div className="flex justify-between text-xs">
-                          <span className="text-[#F0F0F0]">{done}/{total} tasks</span>
+                          <span className="text-[var(--space-text-primary)]">{done}/{total} tasks</span>
                           <span className={cn('font-medium tabular-nums', cfg.text)}>{pct}%</span>
                         </div>
-                        <div className="h-1.5 w-full rounded-full bg-[#2D2D2D]">
+                        <div className="h-1.5 w-full rounded-full bg-[var(--space-bg-card-hover)]">
                           <div
                             className={cn('h-full rounded-full transition-all duration-500', cfg.dot)}
                             style={{ width: `${pct}%` }}
@@ -330,7 +330,7 @@ export function SprintsTab({ sprints: initialSprints, tasks, projectId, username
                             </span>
                           )}
                           {pending > 0 && (
-                            <span className="text-xs text-[#A0A0A0] bg-[#2D2D2D] border border-[#404040] rounded-full px-2 py-0.5">
+                            <span className="text-xs text-[var(--space-text-tertiary)] bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] rounded-full px-2 py-0.5">
                               {pending} pending
                             </span>
                           )}
@@ -343,29 +343,29 @@ export function SprintsTab({ sprints: initialSprints, tasks, projectId, username
                       )}
 
                       {/* Footer: dates + arrow */}
-                      <div className="flex items-center justify-between mt-auto pt-2.5 border-t border-[#404040]">
+                      <div className="flex items-center justify-between mt-auto pt-2.5 border-t border-[var(--space-border-hard)]">
                         {sprint.startDate || sprint.endDate ? (
-                          <span className="flex items-center gap-1 text-sm text-[#F0F0F0]">
+                          <span className="flex items-center gap-1 text-sm text-[var(--space-text-primary)]">
                             <Calendar className="size-3 shrink-0" />
                             {fmtDate(sprint.startDate) ?? 'TBD'} → {fmtDate(sprint.endDate) ?? 'TBD'}
                           </span>
                         ) : (
-                          <span className="text-sm text-[#A0A0A0]">No timeline</span>
+                          <span className="text-sm text-[var(--space-text-tertiary)]">No timeline</span>
                         )}
-                        <ArrowRight className="size-4 text-[#4A4A4A] transition-all duration-200 group-hover:text-[#6B6B6B] group-hover:translate-x-1" />
+                        <ArrowRight className="size-4 text-[var(--space-text-muted)] transition-all duration-200 group-hover:text-[var(--space-text-secondary)] group-hover:translate-x-1" />
                       </div>
                     </Link>
                   )
                 })}
               </div>
             ) : (
-              <div className="rounded-xl border border-[#404040] bg-[rgba(255,255,255,0.02)] p-5 flex items-center gap-3">
-                <div className="size-8 rounded-lg bg-[#2D2D2D] border border-[#404040] flex items-center justify-center shrink-0">
-                  <Zap className="size-4 text-[#6B6B6B]" />
+              <div className="rounded-xl border border-[var(--space-border-hard)] bg-[rgba(255,255,255,0.02)] p-5 flex items-center gap-3">
+                <div className="size-8 rounded-lg bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] flex items-center justify-center shrink-0">
+                  <Zap className="size-4 text-[var(--space-text-secondary)]" />
                 </div>
                 <div>
-                  <p className="text-sm text-[#A0A0A0]">No active sprint</p>
-                  <p className="text-sm text-[#A0A0A0] mt-0.5">Start a sprint to track live progress</p>
+                  <p className="text-sm text-[var(--space-text-tertiary)]">No active sprint</p>
+                  <p className="text-sm text-[var(--space-text-tertiary)] mt-0.5">Start a sprint to track live progress</p>
                 </div>
               </div>
             )}
@@ -374,11 +374,11 @@ export function SprintsTab({ sprints: initialSprints, tasks, projectId, username
           {/* ── Section 2: Analytics strip ───────────────────────── */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-bold text-[#F0F0F0] uppercase tracking-widest">Stats</p>
-              <span className="text-sm text-[#A0A0A0]">{stats.monthLabel}</span>
+              <p className="text-sm font-bold text-[var(--space-text-primary)] uppercase tracking-widest">Stats</p>
+              <span className="text-sm text-[var(--space-text-tertiary)]">{stats.monthLabel}</span>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              <StatTile icon={ListChecks} value={stats.tasksThisMonth}    label="Tasks done"     sub="this month"     accent="text-[#1E3A6E]" />
+              <StatTile icon={ListChecks} value={stats.tasksThisMonth}    label="Tasks done"     sub="this month"     accent="text-[var(--space-accent)]" />
               <StatTile icon={Zap}        value={stats.sprintsThisMonth}  label="Sprints done"   sub="this month"     accent="text-green-400"         />
               <StatTile icon={Target}     value={`${stats.rate}%`}        label="Completion"     sub="overall rate"   accent="text-blue-400"          />
               <StatTile icon={TrendingUp} value={stats.velocity ?? '—'}   label="Velocity"       sub="tasks / sprint" accent="text-orange-400"        />
@@ -387,13 +387,13 @@ export function SprintsTab({ sprints: initialSprints, tasks, projectId, username
 
           {/* ── Section 3: Latest Sprints ────────────────────────── */}
           <section className="space-y-3">
-            <p className="text-sm font-bold text-[#F0F0F0] uppercase tracking-widest">
+            <p className="text-sm font-bold text-[var(--space-text-primary)] uppercase tracking-widest">
               Latest Sprints{' '}
-              <span className="normal-case font-normal text-[#6B6B6B]">· {latest.length}</span>
+              <span className="normal-case font-normal text-[var(--space-text-secondary)]">· {latest.length}</span>
             </p>
 
             {latest.length > 0 ? (
-              <div className="rounded-xl border border-[#404040] overflow-hidden divide-y divide-[#333333]">
+              <div className="rounded-xl border border-[var(--space-border-hard)] overflow-hidden divide-y divide-[var(--space-divider)]">
                 {latest.map((sprint) => {
                   const st         = getSprintTasks(sprint, tasks)
                   const done       = st.filter((t) => t.status === 'completed').length
@@ -407,7 +407,7 @@ export function SprintsTab({ sprints: initialSprints, tasks, projectId, username
                     <Link
                       key={sprint.id}
                       href={`/u/${username}/projects/${projectId}/sprints/${sprint.id}`}
-                      className="group flex items-center gap-3 px-4 py-3.5 transition-all duration-150 hover:bg-[#2D2D2D] border-l-2 border-l-transparent hover:border-l-[rgba(139,156,182,0.30)]"
+                      className="group flex items-center gap-3 px-4 py-3.5 transition-all duration-150 hover:bg-[var(--space-bg-card-hover)] border-l-2 border-l-transparent hover:border-l-[rgba(139,156,182,0.30)]"
                     >
                       {/* Status dot + label */}
                       <span className={cn('flex items-center gap-1.5 text-xs font-medium shrink-0 w-[60px]', cfg.text)}>
@@ -416,18 +416,18 @@ export function SprintsTab({ sprints: initialSprints, tasks, projectId, username
                       </span>
 
                       {/* Name */}
-                      <span className="flex-1 text-base font-semibold text-[#6B6B6B] group-hover:text-[#F0F0F0] truncate min-w-0 transition-colors duration-150">
+                      <span className="flex-1 text-base font-semibold text-[var(--space-text-secondary)] group-hover:text-[var(--space-text-primary)] truncate min-w-0 transition-colors duration-150">
                         {sprint.name}
                       </span>
 
                       {/* Dates */}
-                      <span className="text-sm text-[#A0A0A0] shrink-0 w-[130px] hidden sm:block tabular-nums">
+                      <span className="text-sm text-[var(--space-text-tertiary)] shrink-0 w-[130px] hidden sm:block tabular-nums">
                         {startLabel ? `${startLabel} → ${endLabel ?? '…'}` : '—'}
                       </span>
 
                       {/* Mini progress bar */}
                       <div className="w-16 shrink-0 hidden md:block">
-                        <div className="h-1 w-full rounded-full bg-[#2D2D2D]">
+                        <div className="h-1 w-full rounded-full bg-[var(--space-bg-card-hover)]">
                           <div
                             className={cn('h-full rounded-full', cfg.dot)}
                             style={{ width: `${pct}%` }}
@@ -436,12 +436,12 @@ export function SprintsTab({ sprints: initialSprints, tasks, projectId, username
                       </div>
 
                       {/* % */}
-                      <span className="text-sm text-[#A0A0A0] shrink-0 w-8 text-right tabular-nums">
+                      <span className="text-sm text-[var(--space-text-tertiary)] shrink-0 w-8 text-right tabular-nums">
                         {pct}%
                       </span>
 
                       {/* Task count */}
-                      <span className="text-sm text-[#A0A0A0] shrink-0 w-10 text-right tabular-nums hidden sm:block">
+                      <span className="text-sm text-[var(--space-text-tertiary)] shrink-0 w-10 text-right tabular-nums hidden sm:block">
                         {done}/{total}
                       </span>
 
@@ -459,7 +459,7 @@ export function SprintsTab({ sprints: initialSprints, tasks, projectId, username
                 })}
               </div>
             ) : (
-              <p className="text-sm text-[#A0A0A0] py-2">No other sprints.</p>
+              <p className="text-sm text-[var(--space-text-tertiary)] py-2">No other sprints.</p>
             )}
           </section>
 

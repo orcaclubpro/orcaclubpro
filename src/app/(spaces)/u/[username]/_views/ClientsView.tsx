@@ -29,7 +29,7 @@ interface ClientsViewProps {
 // ─── Palette ──────────────────────────────────────────────────────────────────
 
 const PALETTES = [
-  { text: 'text-blue-500',    dot: 'bg-[#1E3A6E]'   },
+  { text: 'text-blue-500',    dot: 'bg-[var(--space-accent)]'   },
   { text: 'text-blue-400',    dot: 'bg-blue-400'    },
   { text: 'text-violet-400',  dot: 'bg-violet-400'  },
   { text: 'text-emerald-400', dot: 'bg-emerald-400' },
@@ -72,7 +72,7 @@ function ClientNavRow({
         'w-full flex items-center gap-3 px-5 py-3.5 text-left transition-all duration-150 border-l-2 group',
         'animate-in fade-in slide-in-from-left-1 duration-300',
         isSelected
-          ? 'border-l-[rgba(139,156,182,0.50)] bg-[#2D2D2D]'
+          ? 'border-l-[rgba(139,156,182,0.50)] bg-[var(--space-bg-card-hover)]'
           : 'border-l-transparent hover:bg-[rgba(255,255,255,0.02)] hover:border-l-[#404040]',
       )}
       style={{ animationDelay: `${animationDelay}ms` }}
@@ -90,12 +90,12 @@ function ClientNavRow({
         <p
           className={cn(
             'text-sm font-semibold truncate transition-colors duration-150',
-            isSelected ? 'text-[#F0F0F0]' : 'text-[#6B6B6B] group-hover:text-[#A0A0A0]',
+            isSelected ? 'text-[var(--space-text-primary)]' : 'text-[var(--space-text-secondary)] group-hover:text-[var(--space-text-tertiary)]',
           )}
         >
           {client.name}
         </p>
-        <p className="text-[10px] text-[#4A4A4A] truncate mt-0.5">
+        <p className="text-[10px] text-[var(--space-text-muted)] truncate mt-0.5">
           {client.company || client.email}
         </p>
       </div>
@@ -207,14 +207,14 @@ function ClientEditModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#1C1C1C] border-[#404040] max-w-lg p-0 overflow-hidden">
+      <DialogContent className="bg-[var(--space-bg-base)] border-[var(--space-border-hard)] max-w-lg p-0 overflow-hidden">
 
         {/* Header */}
-        <div className="px-8 pt-8 pb-6 border-b border-[#404040]">
-          <p className="text-[10px] tracking-[0.4em] uppercase text-[#1E3A6E] font-medium mb-2">
+        <div className="px-8 pt-8 pb-6 border-b border-[var(--space-border-hard)]">
+          <p className="text-[10px] tracking-[0.4em] uppercase text-[var(--space-accent)] font-medium mb-2">
             Client Settings
           </p>
-          <DialogTitle className="text-xl font-bold text-[#F0F0F0] leading-tight line-clamp-1">
+          <DialogTitle className="text-xl font-bold text-[var(--space-text-primary)] leading-tight line-clamp-1">
             {client.name}
           </DialogTitle>
           <DialogDescription className="sr-only">Edit client account settings</DialogDescription>
@@ -226,55 +226,55 @@ function ClientEditModal({
 
           {/* Identity */}
           <section className="space-y-4">
-            <p className="text-[10px] tracking-[0.4em] uppercase text-[#1E3A6E] font-medium">Identity</p>
+            <p className="text-[10px] tracking-[0.4em] uppercase text-[var(--space-accent)] font-medium">Identity</p>
             <div className="space-y-1.5">
-              <label className="text-[11px] text-[#4A4A4A] tracking-wide">Display Name <span className="text-red-400/60">*</span></label>
+              <label className="text-[11px] text-[var(--space-text-muted)] tracking-wide">Display Name <span className="text-red-400/60">*</span></label>
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] focus:border-[rgba(139,156,182,0.20)] focus-visible:ring-0"
+                className="bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] focus:border-[rgba(139,156,182,0.20)] focus-visible:ring-0"
                 disabled={isSaving}
                 required
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label className="text-[11px] text-[#4A4A4A] tracking-wide">First Name</label>
+                <label className="text-[11px] text-[var(--space-text-muted)] tracking-wide">First Name</label>
                 <Input
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
-                  className="bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] focus:border-[rgba(139,156,182,0.20)] focus-visible:ring-0"
+                  className="bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] focus:border-[rgba(139,156,182,0.20)] focus-visible:ring-0"
                   disabled={isSaving}
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[11px] text-[#4A4A4A] tracking-wide">Last Name</label>
+                <label className="text-[11px] text-[var(--space-text-muted)] tracking-wide">Last Name</label>
                 <Input
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
-                  className="bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] focus:border-[rgba(139,156,182,0.20)] focus-visible:ring-0"
+                  className="bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] focus:border-[rgba(139,156,182,0.20)] focus-visible:ring-0"
                   disabled={isSaving}
                 />
               </div>
             </div>
             <div className="space-y-1.5">
-              <label className="text-[11px] text-[#4A4A4A] tracking-wide">Company</label>
+              <label className="text-[11px] text-[var(--space-text-muted)] tracking-wide">Company</label>
               <Input
                 value={company}
                 onChange={(e) => setCompany(e.target.value)}
                 placeholder="Optional"
-                className="bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] placeholder:text-[#4A4A4A] focus:border-[rgba(139,156,182,0.20)] focus-visible:ring-0"
+                className="bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)] focus:border-[rgba(139,156,182,0.20)] focus-visible:ring-0"
                 disabled={isSaving}
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[11px] text-[#4A4A4A] tracking-wide">Email</label>
+              <label className="text-[11px] text-[var(--space-text-muted)] tracking-wide">Email</label>
               <Input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="client@example.com"
-                className="bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] placeholder:text-[#4A4A4A] focus:border-[rgba(139,156,182,0.20)] focus-visible:ring-0"
+                className="bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)] focus:border-[rgba(139,156,182,0.20)] focus-visible:ring-0"
                 disabled={isSaving}
               />
             </div>
@@ -282,25 +282,25 @@ function ClientEditModal({
 
           {/* Team Members */}
           {members.length > 0 && (
-            <section className="space-y-3 border-t border-[#404040] pt-5">
-              <p className="text-[10px] tracking-[0.4em] uppercase text-[#1E3A6E] font-medium">Team Members</p>
+            <section className="space-y-3 border-t border-[var(--space-border-hard)] pt-5">
+              <p className="text-[10px] tracking-[0.4em] uppercase text-[var(--space-accent)] font-medium">Team Members</p>
               <div className="space-y-1.5">
                 {members.map((m) => (
                   <div
                     key={m.id}
-                    className="flex items-center gap-3 px-4 py-2.5 rounded-lg bg-[#2D2D2D] border border-[#404040]"
+                    className="flex items-center gap-3 px-4 py-2.5 rounded-lg bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)]"
                   >
-                    <Shield className="size-3.5 text-[#4A4A4A] shrink-0" />
+                    <Shield className="size-3.5 text-[var(--space-text-muted)] shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs text-[#A0A0A0] truncate">{m.name}</p>
-                      {m.title && <p className="text-[10px] text-[#6B6B6B] truncate">{m.title}</p>}
+                      <p className="text-xs text-[var(--space-text-tertiary)] truncate">{m.name}</p>
+                      {m.title && <p className="text-[10px] text-[var(--space-text-secondary)] truncate">{m.title}</p>}
                     </div>
                     <button
                       type="button"
                       onClick={() => handleRemoveMember(m.id)}
                       disabled={removingId === m.id || isSaving}
                       title="Remove from team"
-                      className="size-6 rounded-full flex items-center justify-center text-[#4A4A4A] hover:text-red-400/70 hover:bg-red-500/10 transition-all duration-150 disabled:opacity-30"
+                      className="size-6 rounded-full flex items-center justify-center text-[var(--space-text-muted)] hover:text-red-400/70 hover:bg-red-500/10 transition-all duration-150 disabled:opacity-30"
                     >
                       {removingId === m.id
                         ? <Loader2 className="size-3 animate-spin" />
@@ -333,15 +333,15 @@ function ClientEditModal({
               <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-5 space-y-4 animate-in fade-in slide-in-from-bottom-1 duration-200">
                 <div className="space-y-1">
                   <p className="text-xs text-red-400/80 font-medium">This is permanent and cannot be undone.</p>
-                  <p className="text-[11px] text-[#6B6B6B]">
-                    Type <span className="font-mono text-[#A0A0A0]">{client.name}</span> to confirm.
+                  <p className="text-[11px] text-[var(--space-text-secondary)]">
+                    Type <span className="font-mono text-[var(--space-text-tertiary)]">{client.name}</span> to confirm.
                   </p>
                 </div>
                 <Input
                   value={deleteInput}
                   onChange={(e) => setDeleteInput(e.target.value)}
                   placeholder={client.name}
-                  className="bg-[#2D2D2D] border-red-500/20 text-[#F0F0F0] placeholder:text-[#4A4A4A] focus:border-red-400/40 focus-visible:ring-0 font-mono text-sm"
+                  className="bg-[var(--space-bg-card-hover)] border-red-500/20 text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)] focus:border-red-400/40 focus-visible:ring-0 font-mono text-sm"
                   disabled={isDeleting}
                 />
                 {deleteError && <p className="text-xs text-red-400/75">{deleteError}</p>}
@@ -350,7 +350,7 @@ function ClientEditModal({
                     type="button"
                     onClick={() => { setShowDelete(false); setDeleteInput(''); setDeleteError(null) }}
                     disabled={isDeleting}
-                    className="flex-1 text-xs text-[#6B6B6B] hover:text-[#A0A0A0] bg-[#2D2D2D] hover:bg-[#E5E1D9] border border-[#404040] rounded-lg px-3 py-2 transition-all duration-150"
+                    className="flex-1 text-xs text-[var(--space-text-secondary)] hover:text-[var(--space-text-tertiary)] bg-[var(--space-bg-card-hover)] hover:bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] rounded-lg px-3 py-2 transition-all duration-150"
                   >
                     Cancel
                   </button>
@@ -372,7 +372,7 @@ function ClientEditModal({
         </form>
 
         {/* Footer */}
-        <div className="px-8 pb-7 pt-5 border-t border-[#404040] space-y-3">
+        <div className="px-8 pb-7 pt-5 border-t border-[var(--space-border-hard)] space-y-3">
           {saveError && (
             <p className="text-xs text-red-400/75 animate-in fade-in duration-200">{saveError}</p>
           )}
@@ -388,7 +388,7 @@ function ClientEditModal({
               variant="ghost"
               onClick={() => onOpenChange(false)}
               disabled={isSaving}
-              className="flex-1 text-[#6B6B6B] hover:text-[#A0A0A0] hover:bg-[#2D2D2D] border border-[#404040] transition-all duration-150"
+              className="flex-1 text-[var(--space-text-secondary)] hover:text-[var(--space-text-tertiary)] hover:bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] transition-all duration-150"
             >
               <X className="size-3.5 mr-2" />
               Cancel
@@ -418,10 +418,10 @@ function EmptyState({ canCreate, username }: { canCreate: boolean; username: str
     <div className="flex-1 flex flex-col items-center justify-center px-12 text-center">
       <div className="relative mb-8">
         <div className="absolute inset-0 bg-[rgba(139,156,182,0.04)] rounded-full blur-3xl scale-150" />
-        <Users className="size-12 text-[#4A4A4A] relative z-10" />
+        <Users className="size-12 text-[var(--space-text-muted)] relative z-10" />
       </div>
-      <p className="text-[10px] tracking-[0.4em] uppercase text-[#1E3A6E] font-medium mb-3">No Clients</p>
-      <p className="text-sm text-[#6B6B6B] mb-8 leading-relaxed">
+      <p className="text-[10px] tracking-[0.4em] uppercase text-[var(--space-accent)] font-medium mb-3">No Clients</p>
+      <p className="text-sm text-[var(--space-text-secondary)] mb-8 leading-relaxed">
         Client accounts will appear here once created.
       </p>
       {canCreate && (
@@ -473,7 +473,7 @@ function ClientDetail({
           <button
             type="button"
             onClick={() => setEditOpen(true)}
-            className="flex items-center gap-2.5 bg-[#2D2D2D] hover:bg-[#E5E1D9] border border-[#404040] hover:border-[#404040] text-[#A0A0A0] hover:text-[#F0F0F0] font-semibold rounded-full px-7 py-3 text-sm transition-all duration-200"
+            className="flex items-center gap-2.5 bg-[var(--space-bg-card-hover)] hover:bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] hover:border-[var(--space-border-hard)] text-[var(--space-text-tertiary)] hover:text-[var(--space-text-primary)] font-semibold rounded-full px-7 py-3 text-sm transition-all duration-200"
           >
             <Settings className="size-4" />
             Edit
@@ -498,12 +498,12 @@ function ClientDetail({
         >
           <div className="absolute top-6 right-6 opacity-[0.04]">
             <svg width="240" height="240" viewBox="0 0 240 240" fill="none">
-              <circle cx="120" cy="120" r="119" stroke="#333333" strokeWidth="1" />
-              <circle cx="120" cy="120" r="89" stroke="#333333" strokeWidth="0.5" />
-              <circle cx="120" cy="120" r="52" stroke="#333333" strokeWidth="0.5" />
-              <line x1="120" y1="0" x2="120" y2="240" stroke="#333333" strokeWidth="0.5" />
-              <line x1="0" y1="120" x2="240" y2="120" stroke="#333333" strokeWidth="0.5" />
-              <circle cx="120" cy="120" r="2.5" stroke="#333333" strokeWidth="0.5" fill="none" />
+              <circle cx="120" cy="120" r="119" stroke="var(--space-divider)" strokeWidth="1" />
+              <circle cx="120" cy="120" r="89" stroke="var(--space-divider)" strokeWidth="0.5" />
+              <circle cx="120" cy="120" r="52" stroke="var(--space-divider)" strokeWidth="0.5" />
+              <line x1="120" y1="0" x2="120" y2="240" stroke="var(--space-divider)" strokeWidth="0.5" />
+              <line x1="0" y1="120" x2="240" y2="120" stroke="var(--space-divider)" strokeWidth="0.5" />
+              <circle cx="120" cy="120" r="2.5" stroke="var(--space-divider)" strokeWidth="0.5" fill="none" />
             </svg>
           </div>
         </div>
@@ -549,9 +549,9 @@ function ClientDetail({
 
                 {/* Company chip */}
                 {client.company && (
-                  <div className="flex items-center gap-2 text-xs bg-[#2D2D2D] border border-[#404040] rounded-full px-3.5 py-1.5">
+                  <div className="flex items-center gap-2 text-xs bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] rounded-full px-3.5 py-1.5">
                     <Building2 className="size-3.5 text-[rgba(139,156,182,0.30)] shrink-0" />
-                    <span className="text-[#6B6B6B] font-medium">{client.company}</span>
+                    <span className="text-[var(--space-text-secondary)] font-medium">{client.company}</span>
                   </div>
                 )}
               </div>
@@ -560,13 +560,13 @@ function ClientDetail({
             </div>
 
             {/* Large name */}
-            <h2 className="text-6xl xl:text-7xl font-bold text-[#1E3A6E] leading-none mb-4">
+            <h2 className="text-6xl xl:text-7xl font-bold text-[var(--space-accent)] leading-none mb-4">
               {client.name}
             </h2>
             <div className="w-10 h-px bg-[rgba(139,156,182,0.20)] mb-5" />
 
             {/* Email */}
-            <p className="text-base text-[#6B6B6B] leading-relaxed">{client.email}</p>
+            <p className="text-base text-[var(--space-text-secondary)] leading-relaxed">{client.email}</p>
           </div>
 
           {/* ── Stats grid ── */}
@@ -590,16 +590,16 @@ function ClientDetail({
                   'rounded-2xl px-5 py-4 border',
                   s.accent && s.accentColor === 'amber'
                     ? 'bg-amber-400/5 border-amber-400/15'
-                    : 'bg-[#2D2D2D] border-[#404040]',
+                    : 'bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)]',
                 )}
               >
-                <p className="text-[10px] uppercase tracking-[0.3em] text-[#1E3A6E] mb-2.5">
+                <p className="text-[10px] uppercase tracking-[0.3em] text-[var(--space-accent)] mb-2.5">
                   {s.label}
                 </p>
                 <p
                   className={cn(
                     'text-base font-semibold',
-                    s.accent && s.accentColor === 'amber' ? 'text-amber-300/80' : 'text-[#A0A0A0]',
+                    s.accent && s.accentColor === 'amber' ? 'text-amber-300/80' : 'text-[var(--space-text-tertiary)]',
                   )}
                 >
                   {s.value}
@@ -615,15 +615,15 @@ function ClientDetail({
           >
             {clientProjects.length > 0 ? (
               <>
-                <p className="text-[11px] tracking-[0.4em] uppercase text-[#1E3A6E] font-medium mb-5">
+                <p className="text-[11px] tracking-[0.4em] uppercase text-[var(--space-accent)] font-medium mb-5">
                   Project Timeline
                 </p>
                 <PortfolioTimeline projects={clientProjects} allOrders={clientOrders} username={username} />
               </>
             ) : (
-              <div className="rounded-2xl border border-dashed border-[#404040] px-6 py-8 text-center">
-                <FolderOpen className="size-8 text-[#4A4A4A] mx-auto mb-3" />
-                <p className="text-sm text-[#6B6B6B]">No projects assigned yet</p>
+              <div className="rounded-2xl border border-dashed border-[var(--space-border-hard)] px-6 py-8 text-center">
+                <FolderOpen className="size-8 text-[var(--space-text-muted)] mx-auto mb-3" />
+                <p className="text-sm text-[var(--space-text-secondary)]">No projects assigned yet</p>
               </div>
             )}
           </div>
@@ -669,9 +669,9 @@ function MobileClientCard({
 
       <div
         className="relative flex items-center gap-3 px-4 py-3.5 rounded-xl overflow-hidden
-          border border-[#242424] bg-[#161616]
+          border border-[var(--space-border-hard)] bg-[var(--space-bg-card)]
           transition-all duration-200
-          group-hover:-translate-y-px group-hover:border-[rgba(103,232,249,0.18)] group-hover:bg-[#1A1A1A]
+          group-hover:-translate-y-px group-hover:border-[rgba(103,232,249,0.18)] group-hover:bg-[var(--space-bg-base)]
           group-hover:shadow-[0_4px_24px_rgba(0,0,0,0.4)]
           active:scale-[0.99] active:transition-none"
       >
@@ -695,7 +695,7 @@ function MobileClientCard({
 
         {/* Text */}
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-[#E8E8E8] group-hover:text-white truncate transition-colors duration-200 leading-snug">
+          <p className="text-sm font-semibold text-[var(--space-text-primary)] group-hover:text-white truncate transition-colors duration-200 leading-snug">
             {client.name}
           </p>
           <p className="text-[11px] text-[#666666] group-hover:text-[#777777] truncate mt-0.5 transition-colors duration-200">
@@ -790,24 +790,24 @@ export function ClientsView({
   return (
     <>
       {/* ── DESKTOP: split panel ──────────────────────────────────────────── */}
-      <div className="hidden lg:flex h-[calc(100vh-4rem)] overflow-hidden border-t border-[#404040]">
+      <div className="hidden lg:flex h-[calc(100vh-4rem)] overflow-hidden border-t border-[var(--space-border-hard)]">
 
         {/* Left panel — navigator */}
-        <div className="relative w-[272px] xl:w-[296px] bg-[#252525] flex flex-col overflow-hidden border-r border-[#404040] shrink-0">
+        <div className="relative w-[272px] xl:w-[296px] bg-[var(--space-bg-card)] flex flex-col overflow-hidden border-r border-[var(--space-border-hard)] shrink-0">
 
           <div className="h-px w-full bg-gradient-to-r from-transparent via-[rgba(139,156,182,0.10)] to-transparent shrink-0" />
 
           {/* Header */}
           <div className="px-6 pt-8 pb-5 shrink-0">
-            <p className="text-[10px] tracking-[0.4em] uppercase text-[#1E3A6E] font-medium mb-3">
+            <p className="text-[10px] tracking-[0.4em] uppercase text-[var(--space-accent)] font-medium mb-3">
               Workspace
             </p>
-            <h1 className="text-2xl font-bold text-[#F0F0F0] uppercase tracking-wide">Clients</h1>
+            <h1 className="text-2xl font-bold text-[var(--space-text-primary)] uppercase tracking-wide">Clients</h1>
             <div className="mt-3 w-5 h-px bg-[rgba(139,156,182,0.18)]" />
           </div>
 
           {/* Summary counts */}
-          <div className="px-5 pb-3 shrink-0 flex items-center gap-3 text-[10px] text-[#4A4A4A]">
+          <div className="px-5 pb-3 shrink-0 flex items-center gap-3 text-[10px] text-[var(--space-text-muted)]">
             {balanceCount > 0 && (
               <span className="flex items-center gap-1.5">
                 <span className="size-1 rounded-full bg-amber-400/60" />
@@ -817,12 +817,12 @@ export function ClientsView({
             <span>{clientAccounts.length} total</span>
           </div>
 
-          <div className="mx-5 mb-1 h-px bg-[#333333] shrink-0" />
+          <div className="mx-5 mb-1 h-px bg-[var(--space-divider)] shrink-0" />
 
           {/* Client list */}
           <div ref={listRef} className="flex-1 overflow-y-auto py-1">
             {clientAccounts.length === 0 ? (
-              <p className="text-xs text-[#6B6B6B] px-5 py-6 text-center">No clients yet.</p>
+              <p className="text-xs text-[var(--space-text-secondary)] px-5 py-6 text-center">No clients yet.</p>
             ) : (
               clientAccounts.map((client, i) => (
                 <ClientNavRow
@@ -839,7 +839,7 @@ export function ClientsView({
           </div>
 
           {userRole === 'admin' && (
-            <div className="shrink-0 px-5 py-5 border-t border-[#404040] [&>button]:w-full">
+            <div className="shrink-0 px-5 py-5 border-t border-[var(--space-border-hard)] [&>button]:w-full">
               <NewClientModal username={username} />
             </div>
           )}
@@ -847,14 +847,14 @@ export function ClientsView({
           {/* Corner geometry */}
           <div className="absolute bottom-0 right-0 pointer-events-none select-none" aria-hidden="true">
             <svg width="52" height="52" viewBox="0 0 52 52" fill="none" className="opacity-[0.08]">
-              <path d="M52 0 L52 52 L0 52" stroke="#333333" strokeWidth="1" />
-              <path d="M52 16 L52 52 L16 52" stroke="#333333" strokeWidth="0.5" />
+              <path d="M52 0 L52 52 L0 52" stroke="var(--space-divider)" strokeWidth="1" />
+              <path d="M52 16 L52 52 L16 52" stroke="var(--space-divider)" strokeWidth="0.5" />
             </svg>
           </div>
         </div>
 
         {/* Right panel — detail */}
-        <div className="flex-1 bg-[#1C1C1C] flex flex-col min-h-0 overflow-hidden">
+        <div className="flex-1 bg-[var(--space-bg-base)] flex flex-col min-h-0 overflow-hidden">
           <div className="h-px w-full bg-gradient-to-r from-transparent via-[rgba(139,156,182,0.06)] to-transparent shrink-0" />
 
           {selectedClient ? (
@@ -880,17 +880,17 @@ export function ClientsView({
       {/* ── MOBILE: stacked list ───────────────────────────────────────────── */}
       <div className="lg:hidden px-4 pt-6 pb-28 space-y-4">
         <div className="mb-6">
-          <p className="text-[10px] tracking-[0.4em] uppercase text-[#1E3A6E] font-medium mb-2">
+          <p className="text-[10px] tracking-[0.4em] uppercase text-[var(--space-accent)] font-medium mb-2">
             Workspace
           </p>
-          <h1 className="text-2xl font-bold text-[#F0F0F0] uppercase tracking-wide">Clients</h1>
+          <h1 className="text-2xl font-bold text-[var(--space-text-primary)] uppercase tracking-wide">Clients</h1>
           <div className="mt-3 w-5 h-px bg-[rgba(139,156,182,0.18)]" />
         </div>
 
         {clientAccounts.length === 0 ? (
-          <div className="rounded-xl border border-[#404040] bg-[#1C1C1C] p-10 text-center">
-            <Users className="size-8 text-[#4A4A4A] mx-auto mb-3" />
-            <p className="text-sm text-[#4A4A4A]">No clients yet.</p>
+          <div className="rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-base)] p-10 text-center">
+            <Users className="size-8 text-[var(--space-text-muted)] mx-auto mb-3" />
+            <p className="text-sm text-[var(--space-text-muted)]">No clients yet.</p>
             {userRole === 'admin' && (
               <div className="mt-5">
                 <NewClientModal username={username} />

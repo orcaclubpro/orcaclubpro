@@ -52,7 +52,7 @@ export function ClientTabNav({ activeTab, basePath, onTabChange }: ClientTabNavP
         const isActive = activeTab === tab.key
         const sharedClassName = cn(
           'px-4 h-full flex items-center text-sm font-medium transition-colors duration-150',
-          isActive ? 'text-[#F0F0F0]' : 'text-[#4A4A4A] hover:text-[#A0A0A0]'
+          isActive ? 'text-[var(--space-text-primary)]' : 'text-[var(--space-text-muted)] hover:text-[var(--space-text-tertiary)]'
         )
 
         if (onTabChange) {

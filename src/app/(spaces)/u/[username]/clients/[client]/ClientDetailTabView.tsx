@@ -105,9 +105,9 @@ function ProjectRow({
   username: string
 }) {
   const cfg = STATUS_CFG[project.status] ?? {
-    color: 'text-[#6B6B6B]',
-    bg: 'bg-[#2D2D2D]',
-    border: 'border-[#404040]',
+    color: 'text-[var(--space-text-secondary)]',
+    bg: 'bg-[var(--space-bg-card-hover)]',
+    border: 'border-[var(--space-border-hard)]',
     icon: Package,
     label: project.status,
   }
@@ -116,7 +116,7 @@ function ProjectRow({
   const totalMilestones = project.milestones?.length ?? 0
 
   return (
-    <div className="relative flex items-center group hover:bg-[#2D2D2D] transition-colors">
+    <div className="relative flex items-center group hover:bg-[var(--space-bg-card-hover)] transition-colors">
       <Link
         href={`/u/${username}/projects/${project.id}`}
         className="flex-1 flex items-center gap-4 px-5 py-4 min-w-0"
@@ -131,7 +131,7 @@ function ProjectRow({
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-            <span className="text-sm font-semibold text-[#F0F0F0] transition-colors duration-150">
+            <span className="text-sm font-semibold text-[var(--space-text-primary)] transition-colors duration-150">
               {project.name}
             </span>
             <Badge
@@ -142,11 +142,11 @@ function ProjectRow({
             </Badge>
           </div>
           {project.description && (
-            <p className="text-xs text-[#4A4A4A] truncate">{project.description}</p>
+            <p className="text-xs text-[var(--space-text-muted)] truncate">{project.description}</p>
           )}
         </div>
 
-        <div className="hidden sm:flex items-center gap-5 shrink-0 text-xs text-[#4A4A4A]">
+        <div className="hidden sm:flex items-center gap-5 shrink-0 text-xs text-[var(--space-text-muted)]">
           {project.projectedEndDate && (
             <span className="flex items-center gap-1">
               <Calendar className="size-3" />
@@ -159,13 +159,13 @@ function ProjectRow({
             </span>
           )}
           {project.budgetAmount && (
-            <span className="font-mono tabular-nums text-[#6B6B6B]">
+            <span className="font-mono tabular-nums text-[var(--space-text-secondary)]">
               {fmt(project.budgetAmount)}
             </span>
           )}
         </div>
 
-        <ChevronRight className="size-4 text-[#4A4A4A] group-hover:translate-x-0.5 transition-all duration-150 shrink-0" />
+        <ChevronRight className="size-4 text-[var(--space-text-muted)] group-hover:translate-x-0.5 transition-all duration-150 shrink-0" />
       </Link>
       <div className="pr-3 shrink-0">
         <ProjectRowActions project={project} username={username} />
@@ -186,13 +186,13 @@ function EmptyState({
   action?: React.ReactNode
 }) {
   return (
-    <div className="relative overflow-hidden rounded-xl border border-[#404040] bg-[#252525]">
+    <div className="relative overflow-hidden rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card)]">
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
         <div className="size-48 rounded-full bg-[rgba(255,255,255,0.01)] blur-3xl" />
       </div>
       <div className="relative z-10 flex flex-col items-center text-center py-12 px-6">
-        <h3 className="text-sm font-semibold text-[#F0F0F0] mb-1">{title}</h3>
-        <p className="text-[#4A4A4A] text-xs max-w-xs mb-5">{description}</p>
+        <h3 className="text-sm font-semibold text-[var(--space-text-primary)] mb-1">{title}</h3>
+        <p className="text-[var(--space-text-muted)] text-xs max-w-xs mb-5">{description}</p>
         {action}
       </div>
     </div>
@@ -342,7 +342,7 @@ export function ClientDetailTabView({
 
   return (
     <>
-      <div className="sticky top-[49px] z-10 bg-[#252525] border-b border-[#404040]">
+      <div className="sticky top-[49px] z-10 bg-[var(--space-bg-card)] border-b border-[var(--space-border-hard)]">
         <ClientTabNav activeTab={activeTab} onTabChange={(tab) => navigate(tab as Tab)} />
       </div>
 
@@ -379,7 +379,7 @@ export function ClientDetailTabView({
                 <p className="text-sm text-amber-400 font-medium">
                   {fmt(clientAccount.accountBalance ?? 0)} outstanding
                 </p>
-                <span className="text-[#4A4A4A] text-xs">
+                <span className="text-[var(--space-text-muted)] text-xs">
                   · {pendingOrders.length} pending{' '}
                   {pendingOrders.length === 1 ? 'order' : 'orders'}
                 </span>
@@ -433,7 +433,7 @@ export function ClientDetailTabView({
               ].map((stat) => (
                 <div
                   key={stat.label}
-                  className="group relative rounded-xl border bg-[#1E1E1E] px-4 py-4 overflow-hidden
+                  className="group relative rounded-xl border bg-[var(--space-bg-base)] px-4 py-4 overflow-hidden
                     transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
                   style={{
                     borderColor: '#2A2A2A',
@@ -445,7 +445,7 @@ export function ClientDetailTabView({
                     style={{ background: `linear-gradient(90deg, transparent, ${stat.accent}, transparent)` }}
                   />
                   <div className="flex items-start justify-between gap-2 mb-3">
-                    <p className="text-[10px] text-[#3A3A3A] uppercase tracking-widest font-semibold">
+                    <p className="text-[10px] text-[var(--space-text-tertiary)] uppercase tracking-widest font-semibold">
                       {stat.label}
                     </p>
                     <div
@@ -458,7 +458,7 @@ export function ClientDetailTabView({
                   <p className="text-2xl font-bold tabular-nums leading-none" style={{ color: '#F0F0F0' }}>
                     {stat.value}
                   </p>
-                  <p className="text-[11px] text-[#3A3A3A] mt-1.5">{stat.sub}</p>
+                  <p className="text-[11px] text-[var(--space-text-tertiary)] mt-1.5">{stat.sub}</p>
                 </div>
               ))}
             </div>
@@ -479,14 +479,14 @@ export function ClientDetailTabView({
           <section className="space-y-4">
             <div className="flex items-baseline justify-between gap-4">
               <div className="flex items-baseline gap-3">
-                <h2 className="text-base font-semibold text-[#F0F0F0]">Projects</h2>
-                <span className="text-xs text-[#4A4A4A] tabular-nums">{projects.length}</span>
+                <h2 className="text-base font-semibold text-[var(--space-text-primary)]">Projects</h2>
+                <span className="text-xs text-[var(--space-text-muted)] tabular-nums">{projects.length}</span>
               </div>
               <CreateProjectModal clientId={clientId} clientName={clientAccount.name} />
             </div>
 
             {projects.length > 0 ? (
-              <div className="rounded-xl border border-[#404040] bg-[#252525] overflow-hidden divide-y divide-[#333333]">
+              <div className="rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] overflow-hidden divide-y divide-[var(--space-divider)]">
                 {projects.map((project) => (
                   <ProjectRow
                     key={project.id}
@@ -510,8 +510,8 @@ export function ClientDetailTabView({
           <section className="space-y-6">
             <div className="flex items-baseline justify-between gap-4">
               <div className="flex items-baseline gap-3">
-                <h2 className="text-base font-semibold text-[#F0F0F0]">Orders</h2>
-                <span className="text-xs text-[#4A4A4A] tabular-nums">{orders.length}</span>
+                <h2 className="text-base font-semibold text-[var(--space-text-primary)]">Orders</h2>
+                <span className="text-xs text-[var(--space-text-muted)] tabular-nums">{orders.length}</span>
               </div>
               {orders.length > 0 && (
                 <div className="flex items-center gap-4 text-xs">

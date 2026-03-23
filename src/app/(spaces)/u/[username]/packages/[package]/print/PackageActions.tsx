@@ -7,7 +7,7 @@ export function PackageActions() {
     <div className="print:hidden fixed bottom-20 sm:bottom-6 left-6 z-50">
       <button
         onClick={() => window.print()}
-        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#252525] text-[#F0F0F0] text-sm font-medium hover:bg-[#2D2D2D] transition-colors shadow-xl border border-[#404040]"
+        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--space-bg-card)] text-[var(--space-text-primary)] text-sm font-medium hover:bg-[var(--space-bg-card-hover)] transition-colors shadow-xl border border-[var(--space-border-hard)]"
       >
         <Printer className="size-4" />
         Save as PDF

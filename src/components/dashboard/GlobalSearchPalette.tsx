@@ -204,12 +204,12 @@ export function GlobalSearchPalette({ username }: GlobalSearchPaletteProps) {
         <div
           className="overflow-hidden rounded-2xl shadow-[0_32px_80px_rgba(0,0,0,0.7)]"
           style={{
-            background: '#111111',
+            background: 'var(--space-bg-card)',
             border: '1px solid rgba(255,255,255,0.07)',
           }}
         >
           {/* Search input row */}
-          <div className="flex items-center gap-3 px-4 py-3.5 border-b border-[#1E1E1E]">
+          <div className="flex items-center gap-3 px-4 py-3.5 border-b border-[var(--space-border-hard)]">
             <div className="size-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'rgba(103,232,249,0.07)', border: '1px solid rgba(103,232,249,0.12)' }}>
               {isLoading
                 ? <Loader2 className="size-3.5 animate-spin" style={{ color: 'var(--space-accent)' }} />
@@ -227,12 +227,12 @@ export function GlobalSearchPalette({ username }: GlobalSearchPaletteProps) {
               {query ? (
                 <button
                   onClick={() => { setQuery(''); inputRef.current?.focus() }}
-                  className="size-5 rounded flex items-center justify-center text-[#3A3A3A] hover:text-[#6B6B6B] hover:bg-[#222222] transition-all"
+                  className="size-5 rounded flex items-center justify-center text-[var(--space-text-tertiary)] hover:text-[var(--space-text-secondary)] hover:bg-[var(--space-bg-base)] transition-all"
                 >
                   <X className="size-3" />
                 </button>
               ) : (
-                <kbd className="hidden sm:inline text-[10px] text-[#2A2A2A] bg-[#1A1A1A] border border-[#252525] rounded px-1.5 py-0.5 font-mono tracking-wide">
+                <kbd className="hidden sm:inline text-[10px] text-[var(--space-text-muted)] bg-[var(--space-bg-base)] border border-[var(--space-bg-card)] rounded px-1.5 py-0.5 font-mono tracking-wide">
                   L
                 </kbd>
               )}
@@ -248,7 +248,7 @@ export function GlobalSearchPalette({ username }: GlobalSearchPaletteProps) {
                 <p className="text-sm text-red-400/60">{fetchError}</p>
                 <button
                   onClick={() => { dataLoadedRef.current = false; loadData() }}
-                  className="text-xs text-[#3A3A3A] hover:text-[#6B6B6B] transition-colors"
+                  className="text-xs text-[var(--space-text-tertiary)] hover:text-[var(--space-text-secondary)] transition-colors"
                 >
                   Retry
                 </button>
@@ -258,8 +258,8 @@ export function GlobalSearchPalette({ username }: GlobalSearchPaletteProps) {
             {/* Loading */}
             {!fetchError && isLoading && (
               <div className="px-5 py-12 flex flex-col items-center gap-3">
-                <Loader2 className="size-4 text-[#2A2A2A] animate-spin" />
-                <p className="text-xs text-[#2A2A2A]">Loading workspace…</p>
+                <Loader2 className="size-4 text-[var(--space-text-muted)] animate-spin" />
+                <p className="text-xs text-[var(--space-text-muted)]">Loading workspace…</p>
               </div>
             )}
 
@@ -278,7 +278,7 @@ export function GlobalSearchPalette({ username }: GlobalSearchPaletteProps) {
                     <div
                       key={label}
                       className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl"
-                      style={{ background: '#1A1A1A', border: '1px solid #252525' }}
+                      style={{ background: 'var(--space-bg-base)', border: '1px solid var(--space-border-hard)' }}
                     >
                       <Icon className="size-3.5 shrink-0" style={{ color: 'rgba(103,232,249,0.5)' }} />
                       <div>
@@ -301,9 +301,9 @@ export function GlobalSearchPalette({ username }: GlobalSearchPaletteProps) {
             {/* No results */}
             {!fetchError && !isLoading && query.trim() && results.length === 0 && (
               <div className="px-5 py-12 text-center">
-                <p className="text-sm text-[#2A2A2A]">
+                <p className="text-sm text-[var(--space-text-muted)]">
                   No results for{' '}
-                  <span className="text-[#4A4A4A] font-mono">&ldquo;{query}&rdquo;</span>
+                  <span className="text-[var(--space-text-muted)] font-mono">&ldquo;{query}&rdquo;</span>
                 </p>
               </div>
             )}
@@ -340,7 +340,7 @@ export function GlobalSearchPalette({ username }: GlobalSearchPaletteProps) {
 
                 {/* ── Projects ── */}
                 {projectResults.length > 0 && (
-                  <div className={clientResults.length > 0 ? 'mt-1 border-t border-[#181818]' : ''}>
+                  <div className={clientResults.length > 0 ? 'mt-1 border-t border-[var(--space-border-hard)]' : ''}>
                     <div className="flex items-center gap-2 px-4 py-2 mt-1">
                       <FolderKanban className="size-2.5 text-[#555555]" />
                       <span className="text-[9px] font-semibold uppercase tracking-[0.4em] text-[#555555]">Projects</span>
@@ -366,7 +366,7 @@ export function GlobalSearchPalette({ username }: GlobalSearchPaletteProps) {
 
                 {/* ── Sprints ── */}
                 {sprintResults.length > 0 && (
-                  <div className={(clientResults.length > 0 || projectResults.length > 0) ? 'mt-1 border-t border-[#181818]' : ''}>
+                  <div className={(clientResults.length > 0 || projectResults.length > 0) ? 'mt-1 border-t border-[var(--space-border-hard)]' : ''}>
                     <div className="flex items-center gap-2 px-4 py-2 mt-1">
                       <Zap className="size-2.5 text-[#555555]" />
                       <span className="text-[9px] font-semibold uppercase tracking-[0.4em] text-[#555555]">Sprints</span>
@@ -394,14 +394,14 @@ export function GlobalSearchPalette({ username }: GlobalSearchPaletteProps) {
           </div>
 
           {/* Footer */}
-          <div className="px-4 py-2.5 border-t border-[#1E1E1E] flex items-center gap-4">
+          <div className="px-4 py-2.5 border-t border-[var(--space-border-hard)] flex items-center gap-4">
             {[
               { key: '↑↓', label: 'navigate' },
               { key: '↵',  label: 'open'     },
               { key: 'esc', label: 'close'   },
             ].map(({ key, label }) => (
               <span key={key} className="flex items-center gap-1.5 text-[10px] text-[#555555]">
-                <kbd className="font-mono text-[#888888] bg-[#1A1A1A] border border-[#2A2A2A] rounded px-1.5 py-0.5">
+                <kbd className="font-mono text-[#888888] bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] rounded px-1.5 py-0.5">
                   {key}
                 </kbd>
                 {label}
@@ -438,7 +438,7 @@ function ResultRow({
       onClick={onClick}
       className={cn(
         'w-full flex items-center gap-3 px-4 py-2.5 text-left transition-all duration-100 group relative',
-        isSelected ? 'bg-[#161616]' : 'hover:bg-[#141414]',
+        isSelected ? 'bg-[var(--space-bg-card)]' : 'hover:bg-[var(--space-bg-base)]',
       )}
     >
       {/* Selected left bar */}

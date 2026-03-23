@@ -177,18 +177,18 @@ function OptionCard({
       'w-full flex flex-col rounded-xl border text-left transition-all duration-150',
       selected
         ? 'bg-[rgba(255,255,255,0.03)] border-[rgba(139,156,182,0.15)]'
-        : 'border-[#404040] hover:border-[#404040] hover:bg-[#2D2D2D]',
+        : 'border-[var(--space-border-hard)] hover:border-[var(--space-border-hard)] hover:bg-[var(--space-bg-card-hover)]',
     )}>
       <button type="button" onClick={onToggle} className="flex flex-col gap-2.5 p-4 text-left w-full">
         <div className="flex items-start gap-3">
           <div className={cn(
             'mt-0.5 size-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all',
-            selected ? 'bg-[rgba(139,156,182,0.10)] border-[rgba(139,156,182,0.30)]' : 'border-[#404040]',
+            selected ? 'bg-[rgba(139,156,182,0.10)] border-[rgba(139,156,182,0.30)]' : 'border-[var(--space-border-hard)]',
           )}>
             {selected && <Check className="size-3" style={{ color: 'var(--space-accent)' }} />}
           </div>
           <div className="flex-1 min-w-0">
-            <p className={cn('text-sm font-semibold leading-snug', selected ? 'text-[#F0F0F0]' : 'text-[#6B6B6B]')}>
+            <p className={cn('text-sm font-semibold leading-snug', selected ? 'text-[var(--space-text-primary)]' : 'text-[var(--space-text-secondary)]')}>
               {item.name}
             </p>
             {requested && !selected && (
@@ -204,14 +204,14 @@ function OptionCard({
               'text-[10px] rounded-full px-1.5 py-0.5 uppercase tracking-wide font-medium',
               selected
                 ? 'border border-[rgba(139,156,182,0.15)] bg-[rgba(139,156,182,0.06)]'
-                : 'text-[#4A4A4A] bg-[#2D2D2D] border border-[#404040]',
+                : 'text-[var(--space-text-muted)] bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)]',
             )} style={selected ? { color: 'var(--space-accent)', opacity: 0.8 } : {}}>
               {item.recurringInterval === 'year' ? 'Annual' : 'Monthly'}
             </span>
           )}
           <div className="ml-auto flex flex-col items-end gap-0.5">
             {hasDiscount && (
-              <span className="text-[11px] font-mono tabular-nums text-[#4A4A4A] line-through leading-none">
+              <span className="text-[11px] font-mono tabular-nums text-[var(--space-text-muted)] line-through leading-none">
                 {fmt(baseTotal)}
                 {item.isRecurring && (
                   <span className="font-sans">/{item.recurringInterval === 'year' ? 'yr' : 'mo'}</span>
@@ -220,11 +220,11 @@ function OptionCard({
             )}
             <span className={cn(
               'text-sm font-bold font-mono tabular-nums leading-none',
-              hasDiscount ? '' : selected ? 'text-[#F0F0F0]' : 'text-[#4A4A4A]'
+              hasDiscount ? '' : selected ? 'text-[var(--space-text-primary)]' : 'text-[var(--space-text-muted)]'
             )} style={hasDiscount ? { color: 'var(--space-accent)' } : {}}>
               {fmt(total)}
               {item.isRecurring && (
-                <span className="text-xs font-normal text-[#4A4A4A] font-sans">/{item.recurringInterval === 'year' ? 'yr' : 'mo'}</span>
+                <span className="text-xs font-normal text-[var(--space-text-muted)] font-sans">/{item.recurringInterval === 'year' ? 'yr' : 'mo'}</span>
               )}
             </span>
           </div>
@@ -233,17 +233,17 @@ function OptionCard({
 
       {selected && (onQuantityChange || onDescriptionChange || onAdjustedPriceChange) && (
         <div className="px-4 pb-4 pt-0" onClick={e => e.stopPropagation()}>
-          <div className="h-px bg-[#333333] mb-3" />
+          <div className="h-px bg-[var(--space-divider)] mb-3" />
           <div className="flex flex-col gap-2">
             {onAdjustedPriceChange && (
               <div className="flex items-center justify-between">
-                <span className="text-[10px] text-[#4A4A4A] uppercase tracking-widest font-medium">Adjusted Price</span>
+                <span className="text-[10px] text-[var(--space-text-muted)] uppercase tracking-widest font-medium">Adjusted Price</span>
                 <div className="flex items-center gap-1.5">
                   <div className={cn(
                     'flex items-center gap-1 border rounded-md px-2 h-7 transition-colors',
-                    item.adjustedPrice != null ? 'border-[rgba(139,156,182,0.20)] bg-[rgba(139,156,182,0.04)]' : 'border-[#404040] bg-[#2D2D2D]'
+                    item.adjustedPrice != null ? 'border-[rgba(139,156,182,0.20)] bg-[rgba(139,156,182,0.04)]' : 'border-[var(--space-border-hard)] bg-[var(--space-bg-card-hover)]'
                   )}>
-                    <span className={cn('text-[10px] shrink-0', item.adjustedPrice != null ? '' : 'text-[#4A4A4A]')} style={item.adjustedPrice != null ? { color: 'var(--space-accent)', opacity: 0.7 } : {}}>$</span>
+                    <span className={cn('text-[10px] shrink-0', item.adjustedPrice != null ? '' : 'text-[var(--space-text-muted)]')} style={item.adjustedPrice != null ? { color: 'var(--space-accent)', opacity: 0.7 } : {}}>$</span>
                     <input
                       type="number"
                       min={0}
@@ -254,14 +254,14 @@ function OptionCard({
                         onAdjustedPriceChange(v === '' ? null : parseFloat(v))
                       }}
                       placeholder={String(item.price ?? 0)}
-                      className="w-20 text-xs bg-transparent text-[#F0F0F0] focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      className="w-20 text-xs bg-transparent text-[var(--space-text-primary)] focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
                   </div>
                   {item.adjustedPrice != null && (
                     <button
                       type="button"
                       onClick={() => onAdjustedPriceChange(null)}
-                      className="size-5 flex items-center justify-center text-[#4A4A4A] hover:text-[#A0A0A0] transition-colors"
+                      className="size-5 flex items-center justify-center text-[var(--space-text-muted)] hover:text-[var(--space-text-tertiary)] transition-colors"
                       title="Reset to base price"
                     >
                       <X className="size-3" />
@@ -272,12 +272,12 @@ function OptionCard({
             )}
             {onQuantityChange && (
               <div className="flex items-center justify-between">
-                <span className="text-[10px] text-[#4A4A4A] uppercase tracking-widest font-medium">Quantity</span>
+                <span className="text-[10px] text-[var(--space-text-muted)] uppercase tracking-widest font-medium">Quantity</span>
                 <div className="flex items-center gap-1">
                   <button
                     type="button"
                     onClick={() => onQuantityChange(Math.max(1, qty - 1))}
-                    className="size-6 flex items-center justify-center rounded-md text-[#4A4A4A] hover:text-[#F0F0F0] hover:bg-[#2D2D2D] transition-colors text-sm leading-none"
+                    className="size-6 flex items-center justify-center rounded-md text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] hover:bg-[var(--space-bg-card-hover)] transition-colors text-sm leading-none"
                   >−</button>
                   <input
                     type="number"
@@ -287,15 +287,15 @@ function OptionCard({
                       const v = parseInt(e.target.value, 10)
                       if (!isNaN(v) && v >= 1) onQuantityChange(v)
                     }}
-                    className="w-10 text-center text-xs bg-[#2D2D2D] border border-[#404040] rounded-md text-[#F0F0F0] py-1 focus:outline-none focus:border-[rgba(139,156,182,0.20)] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    className="w-10 text-center text-xs bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] rounded-md text-[var(--space-text-primary)] py-1 focus:outline-none focus:border-[rgba(139,156,182,0.20)] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
                   <button
                     type="button"
                     onClick={() => onQuantityChange(qty + 1)}
-                    className="size-6 flex items-center justify-center rounded-md text-[#4A4A4A] hover:text-[#F0F0F0] hover:bg-[#2D2D2D] transition-colors text-sm leading-none"
+                    className="size-6 flex items-center justify-center rounded-md text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] hover:bg-[var(--space-bg-card-hover)] transition-colors text-sm leading-none"
                   >+</button>
                   {qty > 1 && (
-                    <span className="text-[10px] text-[#4A4A4A] ml-1 tabular-nums">× {fmt(unitPrice)} ea</span>
+                    <span className="text-[10px] text-[var(--space-text-muted)] ml-1 tabular-nums">× {fmt(unitPrice)} ea</span>
                   )}
                 </div>
               </div>
@@ -306,7 +306,7 @@ function OptionCard({
                 onChange={e => onDescriptionChange(e.target.value)}
                 placeholder="Add a description… (shown on invoice)"
                 rows={2}
-                className="w-full px-3 py-2 text-xs bg-[#2D2D2D] border border-[#404040] rounded-lg text-[#A0A0A0] placeholder:text-[#4A4A4A] focus:outline-none focus:border-[rgba(139,156,182,0.20)] resize-none leading-relaxed transition-colors"
+                className="w-full px-3 py-2 text-xs bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] rounded-lg text-[var(--space-text-tertiary)] placeholder:text-[var(--space-text-muted)] focus:outline-none focus:border-[rgba(139,156,182,0.20)] resize-none leading-relaxed transition-colors"
               />
             )}
           </div>
@@ -596,8 +596,8 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
     <section className="space-y-4">
       <div className="flex items-baseline justify-between gap-4">
         <div className="flex items-baseline gap-3">
-          <h2 className="text-base font-semibold text-[#F0F0F0]">Packages</h2>
-          <span className="text-xs text-[#4A4A4A] tabular-nums">{packages.length}</span>
+          <h2 className="text-base font-semibold text-[var(--space-text-primary)]">Packages</h2>
+          <span className="text-xs text-[var(--space-text-muted)] tabular-nums">{packages.length}</span>
         </div>
         <AssignPackageModal clientId={clientId} />
       </div>
@@ -644,9 +644,9 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                 key={pkg.id}
                 className={cn(
                   'rounded-2xl border overflow-hidden transition-all duration-300',
-                  isExpanded ? 'border-[rgba(139,156,182,0.15)]' : 'border-[#404040] hover:border-[#404040]',
+                  isExpanded ? 'border-[rgba(139,156,182,0.15)]' : 'border-[var(--space-border-hard)] hover:border-[var(--space-border-hard)]',
                 )}
-                style={{ background: '#252525' }}
+                style={{ background: 'var(--space-bg-card)' }}
               >
                 {/* Glow bar */}
                 <div className={cn(
@@ -663,7 +663,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                   </p>
 
                   <div className="flex items-start justify-between gap-3 mb-2">
-                    <h3 className="text-xl font-bold text-[#F0F0F0] leading-tight">{pkg.name}</h3>
+                    <h3 className="text-xl font-bold text-[var(--space-text-primary)] leading-tight">{pkg.name}</h3>
                     <div className="flex items-center gap-2 shrink-0 mt-1">
                       {pendingRequests > 0 && (
                         <span className="text-[10px] text-amber-400 bg-amber-400/[0.08] border border-amber-400/25 rounded px-1.5 py-0.5 font-medium">
@@ -671,14 +671,14 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                         </span>
                       )}
                       {isExpanded
-                        ? <ChevronUp className="size-4 text-[#4A4A4A]" />
-                        : <ChevronDown className="size-4 text-[#4A4A4A]" />
+                        ? <ChevronUp className="size-4 text-[var(--space-text-muted)]" />
+                        : <ChevronDown className="size-4 text-[var(--space-text-muted)]" />
                       }
                     </div>
                   </div>
 
                   {pkg.description && (
-                    <p className="text-sm text-[#6B6B6B] leading-relaxed mb-6">{pkg.description}</p>
+                    <p className="text-sm text-[var(--space-text-secondary)] leading-relaxed mb-6">{pkg.description}</p>
                   )}
 
                   {/* Pricing */}
@@ -686,48 +686,48 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                     <div className="flex items-end gap-8 flex-wrap">
                       {oneTime > 0 && (
                         <div>
-                          <p className="text-3xl font-bold text-[#F0F0F0] tabular-nums tracking-tight">{fmt(oneTime)}</p>
-                          <p className="text-xs text-[#4A4A4A] mt-1 uppercase tracking-widest">one-time</p>
+                          <p className="text-3xl font-bold text-[var(--space-text-primary)] tabular-nums tracking-tight">{fmt(oneTime)}</p>
+                          <p className="text-xs text-[var(--space-text-muted)] mt-1 uppercase tracking-widest">one-time</p>
                         </div>
                       )}
                       {monthly > 0 && (
                         <div>
                           <div className="flex items-baseline gap-0.5">
-                            <p className="text-3xl font-bold text-[#F0F0F0] tabular-nums tracking-tight">{fmt(monthly)}</p>
-                            <p className="text-lg text-[#4A4A4A] font-normal">/mo</p>
+                            <p className="text-3xl font-bold text-[var(--space-text-primary)] tabular-nums tracking-tight">{fmt(monthly)}</p>
+                            <p className="text-lg text-[var(--space-text-muted)] font-normal">/mo</p>
                           </div>
-                          <p className="text-xs text-[#4A4A4A] mt-1 uppercase tracking-widest">per month</p>
+                          <p className="text-xs text-[var(--space-text-muted)] mt-1 uppercase tracking-widest">per month</p>
                         </div>
                       )}
                       {annual > 0 && (
                         <div>
                           <div className="flex items-baseline gap-0.5">
-                            <p className="text-3xl font-bold text-[#F0F0F0] tabular-nums tracking-tight">{fmt(annual)}</p>
-                            <p className="text-lg text-[#4A4A4A] font-normal">/yr</p>
+                            <p className="text-3xl font-bold text-[var(--space-text-primary)] tabular-nums tracking-tight">{fmt(annual)}</p>
+                            <p className="text-lg text-[var(--space-text-muted)] font-normal">/yr</p>
                           </div>
-                          <p className="text-xs text-[#4A4A4A] mt-1 uppercase tracking-widest">per year</p>
+                          <p className="text-xs text-[var(--space-text-muted)] mt-1 uppercase tracking-widest">per year</p>
                         </div>
                       )}
                       <div className="pb-0.5">
-                        <p className="text-3xl font-bold text-[#F0F0F0]">{lineItems.length}</p>
-                        <p className="text-xs text-[#4A4A4A] mt-1 uppercase tracking-widest">
+                        <p className="text-3xl font-bold text-[var(--space-text-primary)]">{lineItems.length}</p>
+                        <p className="text-xs text-[var(--space-text-muted)] mt-1 uppercase tracking-widest">
                           {lineItems.length === 1 ? 'service' : 'services'}
                         </p>
                       </div>
                     </div>
                   ) : !hasItems ? (
-                    <p className="text-sm text-[#4A4A4A] italic">No options selected — configure below</p>
+                    <p className="text-sm text-[var(--space-text-muted)] italic">No options selected — configure below</p>
                   ) : (
                     <div>
-                      <p className="text-3xl font-bold text-[#F0F0F0]">{lineItems.length}</p>
-                      <p className="text-xs text-[#4A4A4A] mt-1 uppercase tracking-widest">services</p>
+                      <p className="text-3xl font-bold text-[var(--space-text-primary)]">{lineItems.length}</p>
+                      <p className="text-xs text-[var(--space-text-muted)] mt-1 uppercase tracking-widest">services</p>
                     </div>
                   )}
 
                   {/* Progress bar */}
                   {pkgOrders.length > 0 && packageTotal > 0 && (
                     <div className="mt-5 space-y-1.5" onClick={e => e.stopPropagation()}>
-                      <div className="h-1.5 w-full rounded-full bg-[#333333] overflow-hidden">
+                      <div className="h-1.5 w-full rounded-full bg-[var(--space-divider)] overflow-hidden">
                         <div className="h-full rounded-full flex">
                           {paidPct > 0 && (
                             <div className="h-full bg-emerald-400 transition-all duration-500" style={{ width: `${paidPct}%` }} />
@@ -737,7 +737,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center justify-between text-[10px] text-[#4A4A4A] tabular-nums">
+                      <div className="flex items-center justify-between text-[10px] text-[var(--space-text-muted)] tabular-nums">
                         <span>
                           <span className={paidAmount > 0 ? 'text-emerald-400' : ''}>{fmt(invoicedAmount)}</span>
                           {' '}invoiced
@@ -752,20 +752,20 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                 {isExpanded && (
                   <>
                     <div className="h-px bg-gradient-to-r from-transparent via-[#333333] to-transparent" />
-                    <div className="px-7 py-6 space-y-6 bg-[#2D2D2D]">
+                    <div className="px-7 py-6 space-y-6 bg-[var(--space-bg-card-hover)]">
 
                       {/* Share row */}
                       <div className="flex items-center gap-2 flex-wrap">
                         <button
                           onClick={() => handleCopy(pkg.id)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[#6B6B6B] border border-[#404040] rounded-lg hover:text-[#F0F0F0] hover:border-[#404040] transition-all"
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[var(--space-text-secondary)] border border-[var(--space-border-hard)] rounded-lg hover:text-[var(--space-text-primary)] hover:border-[var(--space-border-hard)] transition-all"
                         >
                           {copied ? <CheckCheck className="size-3.5 text-emerald-400" /> : <Copy className="size-3.5" />}
                           {copied ? 'Copied!' : 'Copy Link'}
                         </button>
                         <Link
                           href={`/u/${username}/packages/${pkg.id}/print`}
-                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[#6B6B6B] border border-[#404040] rounded-lg hover:border-[rgba(139,156,182,0.18)] transition-all"
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[var(--space-text-secondary)] border border-[var(--space-border-hard)] rounded-lg hover:border-[rgba(139,156,182,0.18)] transition-all"
                           style={{ color: undefined }}
                         >
                           <FileText className="size-3.5" />
@@ -774,7 +774,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                         </Link>
                         <button
                           onClick={() => { setEmailModalPkgId(pkg.id); setEmailAddresses(''); setEmailResult(null) }}
-                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[#6B6B6B] border border-[#404040] rounded-lg hover:border-[rgba(139,156,182,0.18)] transition-all"
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[var(--space-text-secondary)] border border-[var(--space-border-hard)] rounded-lg hover:border-[rgba(139,156,182,0.18)] transition-all"
                         >
                           <Mail className="size-3.5" />
                           Email Proposal
@@ -783,14 +783,14 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
 
                       {/* Project link */}
                       <div className="flex items-center justify-between gap-3">
-                        <span className="text-[10px] text-[#4A4A4A] uppercase tracking-widest font-semibold shrink-0">
+                        <span className="text-[10px] text-[var(--space-text-muted)] uppercase tracking-widest font-semibold shrink-0">
                           Link to project
                         </span>
                         {projects && projects.length > 0 ? (
                           <select
                             value={selectedProjectId[pkg.id] ?? ''}
                             onChange={e => setSelectedProjectId(prev => ({ ...prev, [pkg.id]: e.target.value }))}
-                            className="flex-1 max-w-[220px] appearance-none px-3 py-1.5 text-xs bg-[#252525] border border-[#404040] rounded-lg text-[#F0F0F0] focus:outline-none focus:border-[rgba(139,156,182,0.20)]"
+                            className="flex-1 max-w-[220px] appearance-none px-3 py-1.5 text-xs bg-[var(--space-bg-card)] border border-[var(--space-border-hard)] rounded-lg text-[var(--space-text-primary)] focus:outline-none focus:border-[rgba(139,156,182,0.20)]"
                           >
                             <option value="">No project</option>
                             {projects.map(p => (
@@ -798,21 +798,21 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                             ))}
                           </select>
                         ) : (
-                          <span className="text-[10px] text-[#4A4A4A] italic">No projects yet</span>
+                          <span className="text-[10px] text-[var(--space-text-muted)] italic">No projects yet</span>
                         )}
                       </div>
 
                       {/* Line item checklist */}
                       {loadingTemplate ? (
                         <div className="flex items-center gap-2 py-2">
-                          <Loader2 className="size-3.5 text-[#4A4A4A] animate-spin" />
-                          <span className="text-xs text-[#4A4A4A]">Loading options…</span>
+                          <Loader2 className="size-3.5 text-[var(--space-text-muted)] animate-spin" />
+                          <span className="text-xs text-[var(--space-text-muted)]">Loading options…</span>
                         </div>
                       ) : (
                         <>
                           {templateItems.length > 0 && (
                             <div>
-                              <p className="text-[10px] text-[#4A4A4A] uppercase tracking-widest font-semibold mb-3">
+                              <p className="text-[10px] text-[var(--space-text-muted)] uppercase tracking-widest font-semibold mb-3">
                                 Select services to include
                               </p>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -841,7 +841,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
 
                           {extraItems.length > 0 && (
                             <div>
-                              <p className="text-[10px] text-[#4A4A4A] uppercase tracking-widest font-semibold mb-3">
+                              <p className="text-[10px] text-[var(--space-text-muted)] uppercase tracking-widest font-semibold mb-3">
                                 Custom Items
                               </p>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -849,26 +849,26 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                                   const globalIdx = editItems.findIndex(ei => ei.name === item.name)
                                   const total = (item.price ?? 0) * (item.quantity ?? 1)
                                   return (
-                                    <div key={i} className="flex flex-col gap-2.5 p-4 rounded-xl bg-[#252525] border border-[#404040]">
+                                    <div key={i} className="flex flex-col gap-2.5 p-4 rounded-xl bg-[var(--space-bg-card)] border border-[var(--space-border-hard)]">
                                       <div className="flex items-start justify-between gap-2">
                                         <div className="flex-1 min-w-0">
-                                          <p className="text-sm font-semibold text-[#F0F0F0]">{item.name}</p>
+                                          <p className="text-sm font-semibold text-[var(--space-text-primary)]">{item.name}</p>
                                           {item.description && (
-                                            <p className="text-[11px] text-[#4A4A4A] mt-0.5 line-clamp-2">{item.description}</p>
+                                            <p className="text-[11px] text-[var(--space-text-muted)] mt-0.5 line-clamp-2">{item.description}</p>
                                           )}
                                         </div>
                                         <button
                                           onClick={() => removeExtra(globalIdx)}
-                                          className="size-6 flex items-center justify-center rounded-md text-[#4A4A4A] hover:text-red-400 hover:bg-red-400/10 transition-colors shrink-0"
+                                          className="size-6 flex items-center justify-center rounded-md text-[var(--space-text-muted)] hover:text-red-400 hover:bg-red-400/10 transition-colors shrink-0"
                                         >
                                           <X className="size-3.5" />
                                         </button>
                                       </div>
                                       <div className="flex items-center justify-end">
-                                        <span className="text-sm font-bold text-[#F0F0F0] tabular-nums font-mono">
+                                        <span className="text-sm font-bold text-[var(--space-text-primary)] tabular-nums font-mono">
                                           {fmt(total)}
                                           {item.isRecurring && (
-                                            <span className="text-xs font-normal text-[#4A4A4A] font-sans">/{item.recurringInterval === 'year' ? 'yr' : 'mo'}</span>
+                                            <span className="text-xs font-normal text-[var(--space-text-muted)] font-sans">/{item.recurringInterval === 'year' ? 'yr' : 'mo'}</span>
                                           )}
                                         </span>
                                       </div>
@@ -880,32 +880,32 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                           )}
 
                           {templateItems.length === 0 && editItems.length === 0 && (
-                            <p className="text-xs text-[#4A4A4A] py-1">No source package found. Add items via the task manager.</p>
+                            <p className="text-xs text-[var(--space-text-muted)] py-1">No source package found. Add items via the task manager.</p>
                           )}
                         </>
                       )}
 
                       {/* ── Payment Schedule Overview ────────────────────── */}
                       {pkg.paymentSchedule && pkg.paymentSchedule.length > 0 && (
-                        <div className="space-y-2 pt-1 border-t border-[#404040]">
+                        <div className="space-y-2 pt-1 border-t border-[var(--space-border-hard)]">
                           <div className="flex items-center justify-between">
-                            <p className="text-[10px] text-[#4A4A4A] uppercase tracking-widest font-semibold">
+                            <p className="text-[10px] text-[var(--space-text-muted)] uppercase tracking-widest font-semibold">
                               Payment Schedule
                             </p>
-                            <span className="text-[10px] text-[#4A4A4A] tabular-nums">
+                            <span className="text-[10px] text-[var(--space-text-muted)] tabular-nums">
                               {pkg.paymentSchedule.filter(e => e.orderId && e.invoicedAt).length}/{pkg.paymentSchedule.length} invoiced
                             </span>
                           </div>
-                          <div className="rounded-xl border border-[#404040] overflow-hidden divide-y divide-[#333333]">
+                          <div className="rounded-xl border border-[var(--space-border-hard)] overflow-hidden divide-y divide-[var(--space-divider)]">
                             {pkg.paymentSchedule.map((entry) => {
                               const isInvoiced = !!(entry.orderId && entry.invoicedAt)
                               return (
                                 <div key={entry.id} className="flex items-center gap-3 px-3.5 py-2.5">
                                   <div className="flex-1 min-w-0 flex items-center gap-3 flex-wrap">
-                                    <span className="text-xs text-[#A0A0A0] font-medium">{entry.label}</span>
-                                    <span className="text-xs text-[#F0F0F0] tabular-nums font-mono shrink-0">{fmtExact(entry.amount)}</span>
+                                    <span className="text-xs text-[var(--space-text-tertiary)] font-medium">{entry.label}</span>
+                                    <span className="text-xs text-[var(--space-text-primary)] tabular-nums font-mono shrink-0">{fmtExact(entry.amount)}</span>
                                     {entry.dueDate && (
-                                      <span className="flex items-center gap-1 text-[10px] text-[#4A4A4A] shrink-0">
+                                      <span className="flex items-center gap-1 text-[10px] text-[var(--space-text-muted)] shrink-0">
                                         <CalendarDays className="size-3" />
                                         {formatDisplayDate(entry.dueDate)}
                                       </span>
@@ -925,7 +925,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                                           type="button"
                                           disabled={removingEntryId === entry.id}
                                           onClick={() => handleRemoveScheduleEntry(pkg.id, entry.id)}
-                                          className="flex items-center justify-center size-6 text-[#4A4A4A] hover:text-red-400 hover:bg-red-400/[0.08] rounded transition-all disabled:opacity-40"
+                                          className="flex items-center justify-center size-6 text-[var(--space-text-muted)] hover:text-red-400 hover:bg-red-400/[0.08] rounded transition-all disabled:opacity-40"
                                           title="Remove entry"
                                         >
                                           {removingEntryId === entry.id
@@ -944,12 +944,12 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                       )}
 
                       {/* ── Invoice type selector ───────────────────────────── */}
-                      <div className="space-y-4 pt-1 border-t border-[#404040]">
+                      <div className="space-y-4 pt-1 border-t border-[var(--space-border-hard)]">
                         <div className="flex items-center gap-3">
-                          <span className="text-[10px] text-[#4A4A4A] uppercase tracking-widest font-semibold shrink-0">
+                          <span className="text-[10px] text-[var(--space-text-muted)] uppercase tracking-widest font-semibold shrink-0">
                             Invoice Type
                           </span>
-                          <div className="flex items-center rounded-lg border border-[#404040] overflow-hidden">
+                          <div className="flex items-center rounded-lg border border-[var(--space-border-hard)] overflow-hidden">
                             <button
                               type="button"
                               onClick={() => setInvoiceMode(prev => ({ ...prev, [pkg.id]: 'full' }))}
@@ -957,7 +957,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                                 'px-3 py-1.5 text-xs font-medium transition-all border-r',
                                 mode === 'full'
                                   ? 'bg-[rgba(139,156,182,0.10)] border-[rgba(139,156,182,0.15)]'
-                                  : 'text-[#4A4A4A] hover:text-[#A0A0A0] border-[#404040]',
+                                  : 'text-[var(--space-text-muted)] hover:text-[var(--space-text-tertiary)] border-[var(--space-border-hard)]',
                               )}
                               style={mode === 'full' ? { color: 'var(--space-accent)' } : {}}
                             >
@@ -970,7 +970,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                                 'px-3 py-1.5 text-xs font-medium transition-all',
                                 mode === 'schedule'
                                   ? 'bg-[rgba(139,156,182,0.10)]'
-                                  : 'text-[#4A4A4A] hover:text-[#A0A0A0]',
+                                  : 'text-[var(--space-text-muted)] hover:text-[var(--space-text-tertiary)]',
                               )}
                               style={mode === 'schedule' ? { color: 'var(--space-accent)' } : {}}
                             >
@@ -985,10 +985,10 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
 
                             {/* Row 1: Deposit amount + due date */}
                             <div className="space-y-2">
-                              <p className="text-[10px] text-[#4A4A4A] uppercase tracking-widest font-semibold">Deposit</p>
+                              <p className="text-[10px] text-[var(--space-text-muted)] uppercase tracking-widest font-semibold">Deposit</p>
                               <div className="flex items-center gap-2 flex-wrap">
-                                <div className="flex items-center rounded-lg border border-[#404040] overflow-hidden">
-                                  <span className="px-2.5 py-1.5 text-xs text-[#4A4A4A] bg-[#2D2D2D] border-r border-[#404040]">$</span>
+                                <div className="flex items-center rounded-lg border border-[var(--space-border-hard)] overflow-hidden">
+                                  <span className="px-2.5 py-1.5 text-xs text-[var(--space-text-muted)] bg-[var(--space-bg-card-hover)] border-r border-[var(--space-border-hard)]">$</span>
                                   <input
                                     type="number"
                                     min={0}
@@ -996,17 +996,17 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                                     value={scheduleDeposit[pkg.id] ?? ''}
                                     onChange={e => setScheduleDeposit(prev => ({ ...prev, [pkg.id]: e.target.value }))}
                                     placeholder="0.00"
-                                    className="w-28 px-2 py-1.5 text-xs bg-[#252525] text-[#F0F0F0] focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                    className="w-28 px-2 py-1.5 text-xs bg-[var(--space-bg-card)] text-[var(--space-text-primary)] focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                   />
                                 </div>
                                 <input
                                   type="date"
                                   value={scheduleDepositDate[pkg.id] ?? ''}
                                   onChange={e => setScheduleDepositDate(prev => ({ ...prev, [pkg.id]: e.target.value }))}
-                                  className="px-3 py-1.5 text-xs bg-[#252525] border border-[#404040] rounded-lg text-[#F0F0F0] focus:outline-none focus:border-[rgba(139,156,182,0.20)] [color-scheme:light]"
+                                  className="px-3 py-1.5 text-xs bg-[var(--space-bg-card)] border border-[var(--space-border-hard)] rounded-lg text-[var(--space-text-primary)] focus:outline-none focus:border-[rgba(139,156,182,0.20)] [color-scheme:light]"
                                 />
                                 {packageTotal > 0 && schDeposit > 0 && (
-                                  <span className="text-[10px] text-[#4A4A4A] tabular-nums">
+                                  <span className="text-[10px] text-[var(--space-text-muted)] tabular-nums">
                                     {fmt(schDeposit)} of {fmt(packageTotal)}
                                   </span>
                                 )}
@@ -1015,23 +1015,23 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
 
                             {/* Row 2: Installments count + frequency (always visible) */}
                             <div className="space-y-2">
-                              <p className="text-[10px] text-[#4A4A4A] uppercase tracking-widest font-semibold">
+                              <p className="text-[10px] text-[var(--space-text-muted)] uppercase tracking-widest font-semibold">
                                 Installments
                                 {packageTotal > 0 && (
-                                  <span className="ml-2 font-mono normal-case text-[#F0F0F0]">
+                                  <span className="ml-2 font-mono normal-case text-[var(--space-text-primary)]">
                                     {schDeposit > 0 ? `${fmt(schRemaining)} remaining` : fmt(packageTotal)}
                                   </span>
                                 )}
                               </p>
                               <div className="flex items-center gap-2 flex-wrap">
-                                <div className="flex items-center rounded-lg border border-[#404040] overflow-hidden">
-                                  <span className="px-2.5 py-1.5 text-[10px] text-[#4A4A4A] bg-[#2D2D2D] border-r border-[#404040] uppercase tracking-wide">
+                                <div className="flex items-center rounded-lg border border-[var(--space-border-hard)] overflow-hidden">
+                                  <span className="px-2.5 py-1.5 text-[10px] text-[var(--space-text-muted)] bg-[var(--space-bg-card-hover)] border-r border-[var(--space-border-hard)] uppercase tracking-wide">
                                     Split into
                                   </span>
                                   <select
                                     value={schInstallments}
                                     onChange={e => handleInstallmentCountChange(pkg.id, Number(e.target.value))}
-                                    className="appearance-none px-2 py-1.5 text-xs bg-[#252525] text-[#F0F0F0] focus:outline-none pr-5"
+                                    className="appearance-none px-2 py-1.5 text-xs bg-[var(--space-bg-card)] text-[var(--space-text-primary)] focus:outline-none pr-5"
                                   >
                                     {[1, 2, 3, 4, 5, 6, 8, 10, 12].map(n => (
                                       <option key={n} value={n}>{n} {n === 1 ? 'payment' : 'payments'}</option>
@@ -1040,7 +1040,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                                 </div>
 
                                 {/* Frequency tabs */}
-                                <div className="flex items-center rounded-lg border border-[#404040] overflow-hidden">
+                                <div className="flex items-center rounded-lg border border-[var(--space-border-hard)] overflow-hidden">
                                   {(['monthly', 'biweekly', 'weekly', 'custom'] as const).map((freq, fi, arr) => (
                                     <button
                                       key={freq}
@@ -1050,8 +1050,8 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                                         'px-2.5 py-1.5 text-xs font-medium transition-all',
                                         fi < arr.length - 1 ? 'border-r' : '',
                                         schFrequency === freq
-                                          ? 'bg-[#2D2D2D] text-[#F0F0F0] border-[#404040]'
-                                          : 'text-[#4A4A4A] hover:text-[#A0A0A0] border-[#404040]',
+                                          ? 'bg-[var(--space-bg-card-hover)] text-[var(--space-text-primary)] border-[var(--space-border-hard)]'
+                                          : 'text-[var(--space-text-muted)] hover:text-[var(--space-text-tertiary)] border-[var(--space-border-hard)]',
                                       )}
                                     >
                                       {freq === 'biweekly' ? 'Bi-weekly'
@@ -1066,15 +1066,15 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                               {/* Start date (non-custom) */}
                               {schFrequency !== 'custom' && (
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="text-[10px] text-[#4A4A4A]">First payment due:</span>
+                                  <span className="text-[10px] text-[var(--space-text-muted)]">First payment due:</span>
                                   <input
                                     type="date"
                                     value={schStartDate}
                                     onChange={e => setScheduleStartDate(prev => ({ ...prev, [pkg.id]: e.target.value }))}
-                                    className="px-3 py-1.5 text-xs bg-[#252525] border border-[#404040] rounded-lg text-[#F0F0F0] focus:outline-none focus:border-[rgba(139,156,182,0.20)] [color-scheme:light]"
+                                    className="px-3 py-1.5 text-xs bg-[var(--space-bg-card)] border border-[var(--space-border-hard)] rounded-lg text-[var(--space-text-primary)] focus:outline-none focus:border-[rgba(139,156,182,0.20)] [color-scheme:light]"
                                   />
                                   {schAmounts[0] > 0 && (
-                                    <span className="text-[10px] text-[#4A4A4A] tabular-nums">
+                                    <span className="text-[10px] text-[var(--space-text-muted)] tabular-nums">
                                       = {fmtExact(schAmounts[0])} each
                                     </span>
                                   )}
@@ -1084,18 +1084,18 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
 
                             {/* Schedule Preview */}
                             <div className="space-y-1.5">
-                              <p className="text-[10px] text-[#4A4A4A] uppercase tracking-widest font-semibold">Schedule Preview</p>
+                              <p className="text-[10px] text-[var(--space-text-muted)] uppercase tracking-widest font-semibold">Schedule Preview</p>
 
-                              <div className="rounded-xl border border-[#404040] overflow-hidden divide-y divide-[#333333]">
+                              <div className="rounded-xl border border-[var(--space-border-hard)] overflow-hidden divide-y divide-[var(--space-divider)]">
                                 {/* Deposit row — only shown when a deposit amount is entered */}
                                 {schDeposit > 0 && (
-                                  <div className="flex items-center gap-3 px-4 py-2.5 bg-[#252525]">
-                                    <span className="text-xs text-[#6B6B6B] flex-1 font-medium">Deposit</span>
-                                    <span className="text-xs text-[#F0F0F0] tabular-nums font-mono shrink-0">{fmtExact(schDeposit)}</span>
-                                    <span className="text-[10px] text-[#4A4A4A] w-24 text-right shrink-0">
+                                  <div className="flex items-center gap-3 px-4 py-2.5 bg-[var(--space-bg-card)]">
+                                    <span className="text-xs text-[var(--space-text-secondary)] flex-1 font-medium">Deposit</span>
+                                    <span className="text-xs text-[var(--space-text-primary)] tabular-nums font-mono shrink-0">{fmtExact(schDeposit)}</span>
+                                    <span className="text-[10px] text-[var(--space-text-muted)] w-24 text-right shrink-0">
                                       {scheduleDepositDate[pkg.id]
                                         ? formatDisplayDate(scheduleDepositDate[pkg.id])
-                                        : <em className="text-[#4A4A4A]">no date set</em>}
+                                        : <em className="text-[var(--space-text-muted)]">no date set</em>}
                                     </span>
                                   </div>
                                 )}
@@ -1111,19 +1111,19 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                                   const date = schComputedDates[i] ?? ''
                                   return (
                                     <div key={i} className="flex items-center gap-3 px-4 py-2.5">
-                                      <span className="text-xs text-[#6B6B6B] flex-1">{label}</span>
-                                      <span className="text-xs text-[#F0F0F0] tabular-nums font-mono shrink-0">{fmtExact(amount)}</span>
+                                      <span className="text-xs text-[var(--space-text-secondary)] flex-1">{label}</span>
+                                      <span className="text-xs text-[var(--space-text-primary)] tabular-nums font-mono shrink-0">{fmtExact(amount)}</span>
                                       <div className="w-24 flex justify-end shrink-0">
                                         {schFrequency === 'custom' ? (
                                           <input
                                             type="date"
                                             value={date}
                                             onChange={e => handleCustomDateChange(pkg.id, i, e.target.value)}
-                                            className="w-full px-2 py-1 text-[10px] bg-[#2D2D2D] border border-[#404040] rounded-lg text-[#F0F0F0] focus:outline-none focus:border-[rgba(139,156,182,0.20)] [color-scheme:light]"
+                                            className="w-full px-2 py-1 text-[10px] bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] rounded-lg text-[var(--space-text-primary)] focus:outline-none focus:border-[rgba(139,156,182,0.20)] [color-scheme:light]"
                                           />
                                         ) : (
-                                          <span className="text-[10px] text-[#4A4A4A]">
-                                            {date ? formatDisplayDate(date) : <em className="text-[#4A4A4A]">set start date</em>}
+                                          <span className="text-[10px] text-[var(--space-text-muted)]">
+                                            {date ? formatDisplayDate(date) : <em className="text-[var(--space-text-muted)]">set start date</em>}
                                           </span>
                                         )}
                                       </div>
@@ -1161,8 +1161,8 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
 
                             {/* Saved schedule entries */}
                             {pkg.paymentSchedule && pkg.paymentSchedule.length > 0 && (
-                              <div className="space-y-2 pt-4 border-t border-[#404040]">
-                                <p className="text-[10px] text-[#4A4A4A] uppercase tracking-widest font-semibold">
+                              <div className="space-y-2 pt-4 border-t border-[var(--space-border-hard)]">
+                                <p className="text-[10px] text-[var(--space-text-muted)] uppercase tracking-widest font-semibold">
                                   Saved Schedule
                                 </p>
                                 {pkg.paymentSchedule.map((entry) => {
@@ -1172,12 +1172,12 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                                     : null
                                   const entryResult = entryResults[entry.id]
                                   return (
-                                    <div key={entry.id} className="flex items-center gap-3 py-2.5 px-3 rounded-lg bg-[#252525] border border-[#404040]">
+                                    <div key={entry.id} className="flex items-center gap-3 py-2.5 px-3 rounded-lg bg-[var(--space-bg-card)] border border-[var(--space-border-hard)]">
                                       <div className="flex-1 min-w-0 flex items-center gap-3 flex-wrap">
-                                        <span className="text-xs text-[#A0A0A0] font-medium">{entry.label}</span>
-                                        <span className="text-xs text-[#F0F0F0] tabular-nums font-mono shrink-0">{fmtExact(entry.amount)}</span>
+                                        <span className="text-xs text-[var(--space-text-tertiary)] font-medium">{entry.label}</span>
+                                        <span className="text-xs text-[var(--space-text-primary)] tabular-nums font-mono shrink-0">{fmtExact(entry.amount)}</span>
                                         {entry.dueDate && (
-                                          <span className="flex items-center gap-1 text-[10px] text-[#4A4A4A] shrink-0">
+                                          <span className="flex items-center gap-1 text-[10px] text-[var(--space-text-muted)] shrink-0">
                                             <CalendarDays className="size-3" />
                                             {formatDisplayDate(entry.dueDate)}
                                           </span>
@@ -1191,7 +1191,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                                             </span>
                                             {invoicedOrder?.stripeInvoiceUrl && (
                                               <a href={invoicedOrder.stripeInvoiceUrl} target="_blank" rel="noopener noreferrer"
-                                                className="text-[#4A4A4A] hover:text-[#6B6B6B] transition-colors">
+                                                className="text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)] transition-colors">
                                                 <ExternalLink className="size-3" />
                                               </a>
                                             )}
@@ -1225,7 +1225,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                                               type="button"
                                               disabled={sendingEntryId === entry.id || removingEntryId === entry.id}
                                               onClick={() => handleRemoveScheduleEntry(pkg.id, entry.id)}
-                                              className="flex items-center justify-center size-6 text-[#4A4A4A] hover:text-red-400 hover:bg-red-400/[0.08] rounded transition-all disabled:opacity-40"
+                                              className="flex items-center justify-center size-6 text-[var(--space-text-muted)] hover:text-red-400 hover:bg-red-400/[0.08] rounded transition-all disabled:opacity-40"
                                               title="Remove entry"
                                             >
                                               {removingEntryId === entry.id
@@ -1252,7 +1252,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                       )}
 
                       {/* Footer */}
-                      <div className="flex items-center justify-between pt-2 border-t border-[#404040]">
+                      <div className="flex items-center justify-between pt-2 border-t border-[var(--space-border-hard)]">
                         <button
                           onClick={() => handleDelete(pkg.id)}
                           onBlur={() => setTimeout(() => setConfirmDeleteId(null), 300)}
@@ -1261,7 +1261,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                             'flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition-all disabled:opacity-50',
                             confirmDeleteId === pkg.id
                               ? 'text-red-400 border-red-500/40 bg-red-500/10'
-                              : 'text-[#4A4A4A] border-[#404040] hover:text-red-400 hover:border-red-500/30',
+                              : 'text-[var(--space-text-muted)] border-[var(--space-border-hard)] hover:text-red-400 hover:border-red-500/30',
                           )}
                         >
                           {deletingId === pkg.id ? <Loader2 className="size-3 animate-spin" /> : <Trash2 className="size-3.5" />}
@@ -1297,7 +1297,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
 
                           <button
                             onClick={() => setExpandedId(null)}
-                            className="px-3 py-1.5 text-xs text-[#4A4A4A] hover:text-[#A0A0A0] transition-colors"
+                            className="px-3 py-1.5 text-xs text-[var(--space-text-muted)] hover:text-[var(--space-text-tertiary)] transition-colors"
                           >
                             Cancel
                           </button>
@@ -1306,7 +1306,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                           <button
                             onClick={() => handleSave(pkg)}
                             disabled={saving}
-                            className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold bg-[#2D2D2D] border border-[#404040] text-[#A0A0A0] rounded-lg hover:bg-[#E5E1D9] disabled:opacity-50 transition-colors"
+                            className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] text-[var(--space-text-tertiary)] rounded-lg hover:bg-[var(--space-bg-card-hover)] disabled:opacity-50 transition-colors"
                           >
                             {saving && <Loader2 className="size-3 animate-spin" />}
                             Save
@@ -1317,7 +1317,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                               <select
                                 value={getDays(pkg.id)}
                                 onChange={e => setDaysUntilDue(prev => ({ ...prev, [pkg.id]: Number(e.target.value) }))}
-                                className="appearance-none pl-2 pr-5 py-1.5 text-xs bg-[#252525] border border-[#404040] rounded-lg text-[#6B6B6B] focus:outline-none focus:border-[rgba(139,156,182,0.20)] cursor-pointer"
+                                className="appearance-none pl-2 pr-5 py-1.5 text-xs bg-[var(--space-bg-card)] border border-[var(--space-border-hard)] rounded-lg text-[var(--space-text-secondary)] focus:outline-none focus:border-[rgba(139,156,182,0.20)] cursor-pointer"
                               >
                                 <option value={7}>7 days</option>
                                 <option value={14}>14 days</option>
@@ -1364,17 +1364,17 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
           })}
         </div>
       ) : (
-        <div className="relative overflow-hidden rounded-2xl border border-[#404040]"
-          style={{ background: '#252525' }}>
+        <div className="relative overflow-hidden rounded-2xl border border-[var(--space-border-hard)]"
+          style={{ background: 'var(--space-bg-card)' }}>
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="size-64 rounded-full bg-[rgba(255,255,255,0.01)] blur-3xl" />
           </div>
           <div className="relative z-10 flex flex-col items-center text-center py-14 px-6">
-            <div className="p-4 rounded-2xl bg-[#2D2D2D] border border-[#404040] mb-5">
-              <Sparkles className="size-7 text-[#4A4A4A]" />
+            <div className="p-4 rounded-2xl bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] mb-5">
+              <Sparkles className="size-7 text-[var(--space-text-muted)]" />
             </div>
-            <h3 className="text-base font-semibold text-[#F0F0F0] mb-2">No packages assigned</h3>
-            <p className="text-[#4A4A4A] text-sm max-w-xs mb-6 leading-relaxed">
+            <h3 className="text-base font-semibold text-[var(--space-text-primary)] mb-2">No packages assigned</h3>
+            <p className="text-[var(--space-text-muted)] text-sm max-w-xs mb-6 leading-relaxed">
               Assign a service package to start building a custom offering for this client.
             </p>
             <AssignPackageModal clientId={clientId} />
@@ -1391,22 +1391,22 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
             onClick={() => { setEmailModalPkgId(null); setEmailAddresses(''); setEmailResult(null) }}
           />
           {/* Dialog */}
-          <div className="relative z-10 w-full max-w-sm rounded-2xl border border-[#404040] bg-[#1C1C1C] p-6 space-y-4 shadow-[0_8px_40px_rgba(255,255,255,0.06)]">
+          <div className="relative z-10 w-full max-w-sm rounded-2xl border border-[var(--space-border-hard)] bg-[var(--space-bg-base)] p-6 space-y-4 shadow-[0_8px_40px_rgba(255,255,255,0.06)]">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Mail className="size-4" style={{ color: 'var(--space-accent)' }} />
-                <h3 className="text-sm font-semibold text-[#F0F0F0]">Email Proposal</h3>
+                <h3 className="text-sm font-semibold text-[var(--space-text-primary)]">Email Proposal</h3>
               </div>
               <button
                 onClick={() => { setEmailModalPkgId(null); setEmailAddresses(''); setEmailResult(null) }}
-                className="p-1 text-[#4A4A4A] hover:text-[#A0A0A0] transition-colors rounded-lg hover:bg-[#2D2D2D]"
+                className="p-1 text-[var(--space-text-muted)] hover:text-[var(--space-text-tertiary)] transition-colors rounded-lg hover:bg-[var(--space-bg-card-hover)]"
               >
                 <X className="size-4" />
               </button>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-[10px] font-semibold uppercase tracking-widest text-[#4A4A4A]">
+              <label className="text-[10px] font-semibold uppercase tracking-widest text-[var(--space-text-muted)]">
                 Email addresses
               </label>
               <textarea
@@ -1414,9 +1414,9 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                 onChange={e => setEmailAddresses(e.target.value)}
                 placeholder="client@example.com, another@example.com"
                 rows={3}
-                className="w-full px-3 py-2.5 text-sm bg-[#2D2D2D] border border-[#404040] rounded-xl text-[#F0F0F0] placeholder-[#555555] focus:outline-none focus:border-[rgba(139,156,182,0.20)] resize-none"
+                className="w-full px-3 py-2.5 text-sm bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] rounded-xl text-[var(--space-text-primary)] placeholder-[#555555] focus:outline-none focus:border-[rgba(139,156,182,0.20)] resize-none"
               />
-              <p className="text-[10px] text-[#4A4A4A]">Separate multiple addresses with commas</p>
+              <p className="text-[10px] text-[var(--space-text-muted)]">Separate multiple addresses with commas</p>
             </div>
 
             {emailResult && (
@@ -1435,7 +1435,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
             <div className="flex items-center gap-2 pt-1">
               <button
                 onClick={() => { setEmailModalPkgId(null); setEmailAddresses(''); setEmailResult(null) }}
-                className="flex-1 px-4 py-2 text-xs font-medium text-[#4A4A4A] border border-[#404040] rounded-xl hover:text-[#A0A0A0] hover:border-[#404040] transition-all"
+                className="flex-1 px-4 py-2 text-xs font-medium text-[var(--space-text-muted)] border border-[var(--space-border-hard)] rounded-xl hover:text-[var(--space-text-tertiary)] hover:border-[var(--space-border-hard)] transition-all"
               >
                 Cancel
               </button>

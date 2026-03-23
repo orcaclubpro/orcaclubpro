@@ -127,7 +127,7 @@ export function CreateSprintModal({ projectId, open, onOpenChange, onSuccess }: 
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="bg-[#252525] border-[#404040] sm:max-w-[520px] p-0 overflow-hidden gap-0">
+      <DialogContent className="bg-[var(--space-bg-card)] border-[var(--space-border-hard)] sm:max-w-[520px] p-0 overflow-hidden gap-0">
         <DialogTitle className="sr-only">New Sprint</DialogTitle>
         <DialogDescription className="sr-only">Create a new sprint step by step</DialogDescription>
 
@@ -140,10 +140,10 @@ export function CreateSprintModal({ projectId, open, onOpenChange, onSuccess }: 
                   className={cn(
                     'size-6 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 transition-all duration-300',
                     step === i + 1
-                      ? 'bg-[var(--space-accent)] text-[#F0F0F0] ring-4 ring-[rgba(139,156,182,0.10)]'
+                      ? 'bg-[var(--space-accent)] text-[var(--space-text-primary)] ring-4 ring-[rgba(139,156,182,0.10)]'
                       : i + 1 < step
                       ? 'bg-[rgba(139,156,182,0.15)] text-[var(--space-accent)]'
-                      : 'bg-[rgba(255,255,255,0.06)] text-[#6B6B6B]'
+                      : 'bg-[rgba(255,255,255,0.06)] text-[var(--space-text-secondary)]'
                   )}
                 >
                   {i + 1 < step ? '✓' : i + 1}
@@ -152,7 +152,7 @@ export function CreateSprintModal({ projectId, open, onOpenChange, onSuccess }: 
                   <div
                     className={cn(
                       'flex-1 h-px mx-2 transition-all duration-500',
-                      i + 1 < step ? 'bg-[rgba(139,156,182,0.25)]' : 'bg-[#333333]'
+                      i + 1 < step ? 'bg-[rgba(139,156,182,0.25)]' : 'bg-[var(--space-divider)]'
                     )}
                   />
                 )}
@@ -165,7 +165,7 @@ export function CreateSprintModal({ projectId, open, onOpenChange, onSuccess }: 
                 key={i}
                 className={cn(
                   'flex-1 last:flex-none text-[10px] font-medium transition-colors duration-300',
-                  step === i + 1 ? 'text-[#6B6B6B]' : i + 1 < step ? 'text-[#6B6B6B]' : 'text-[#6B6B6B]'
+                  step === i + 1 ? 'text-[var(--space-text-secondary)]' : i + 1 < step ? 'text-[var(--space-text-secondary)]' : 'text-[var(--space-text-secondary)]'
                 )}
               >
                 {label}
@@ -179,8 +179,8 @@ export function CreateSprintModal({ projectId, open, onOpenChange, onSuccess }: 
           {step === 1 && (
             <div className="space-y-5">
               <div>
-                <h2 className="text-xl font-semibold text-[#F0F0F0] mb-1.5">Name your sprint</h2>
-                <p className="text-sm text-[#6B6B6B]">Give this sprint a clear, memorable name.</p>
+                <h2 className="text-xl font-semibold text-[var(--space-text-primary)] mb-1.5">Name your sprint</h2>
+                <p className="text-sm text-[var(--space-text-secondary)]">Give this sprint a clear, memorable name.</p>
               </div>
               <Input
                 autoFocus
@@ -188,7 +188,7 @@ export function CreateSprintModal({ projectId, open, onOpenChange, onSuccess }: 
                 onChange={(e) => setName(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') goNext() }}
                 placeholder="Sprint 1 — Foundation"
-                className="bg-transparent border-0 border-b border-[#404040] rounded-none px-0 text-xl font-semibold text-[#F0F0F0] placeholder:text-[#6B6B6B] focus-visible:ring-0 focus-visible:border-[rgba(139,156,182,0.50)] h-auto py-3 transition-colors"
+                className="bg-transparent border-0 border-b border-[var(--space-border-hard)] rounded-none px-0 text-xl font-semibold text-[var(--space-text-primary)] placeholder:text-[var(--space-text-secondary)] focus-visible:ring-0 focus-visible:border-[rgba(139,156,182,0.50)] h-auto py-3 transition-colors"
               />
             </div>
           )}
@@ -196,10 +196,10 @@ export function CreateSprintModal({ projectId, open, onOpenChange, onSuccess }: 
           {step === 2 && (
             <div className="space-y-5">
               <div>
-                <h2 className="text-xl font-semibold text-[#F0F0F0] mb-1.5">What&apos;s the goal?</h2>
-                <p className="text-sm text-[#6B6B6B]">
+                <h2 className="text-xl font-semibold text-[var(--space-text-primary)] mb-1.5">What&apos;s the goal?</h2>
+                <p className="text-sm text-[var(--space-text-secondary)]">
                   What should be done by the end of{' '}
-                  <span className="text-[#A0A0A0]">&ldquo;{name}&rdquo;</span>?
+                  <span className="text-[var(--space-text-tertiary)]">&ldquo;{name}&rdquo;</span>?
                 </p>
               </div>
               <Textarea
@@ -208,24 +208,24 @@ export function CreateSprintModal({ projectId, open, onOpenChange, onSuccess }: 
                 onChange={(e) => setGoal(e.target.value)}
                 placeholder="Ship the initial foundation, set up CI/CD, get the first feature into staging..."
                 rows={4}
-                className="bg-[rgba(255,255,255,0.06)] border-[#404040] text-[#F0F0F0] placeholder:text-[#6B6B6B] focus:border-[#404040] resize-none text-sm leading-relaxed"
+                className="bg-[rgba(255,255,255,0.06)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] placeholder:text-[var(--space-text-secondary)] focus:border-[var(--space-border-hard)] resize-none text-sm leading-relaxed"
               />
-              <p className="text-xs text-[#6B6B6B]">Optional — skip to continue without a goal.</p>
+              <p className="text-xs text-[var(--space-text-secondary)]">Optional — skip to continue without a goal.</p>
             </div>
           )}
 
           {step === 3 && (
             <div className="space-y-5">
               <div>
-                <h2 className="text-xl font-semibold text-[#F0F0F0] mb-1.5">When does it run?</h2>
-                <p className="text-sm text-[#6B6B6B]">
+                <h2 className="text-xl font-semibold text-[var(--space-text-primary)] mb-1.5">When does it run?</h2>
+                <p className="text-sm text-[var(--space-text-secondary)]">
                   Set a timeframe.{' '}
-                  <span className="text-[#6B6B6B]">Optional — leave blank if not decided yet.</span>
+                  <span className="text-[var(--space-text-secondary)]">Optional — leave blank if not decided yet.</span>
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <label htmlFor="sprint-modal-start" className="text-xs text-[#6B6B6B] flex items-center gap-1.5">
+                  <label htmlFor="sprint-modal-start" className="text-xs text-[var(--space-text-secondary)] flex items-center gap-1.5">
                     <Calendar className="size-3" /> Start
                   </label>
                   <Input
@@ -233,11 +233,11 @@ export function CreateSprintModal({ projectId, open, onOpenChange, onSuccess }: 
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="bg-[rgba(255,255,255,0.06)] border-[#404040] text-[#F0F0F0] focus:border-[#404040] text-sm"
+                    className="bg-[rgba(255,255,255,0.06)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] focus:border-[var(--space-border-hard)] text-sm"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label htmlFor="sprint-modal-end" className="text-xs text-[#6B6B6B] flex items-center gap-1.5">
+                  <label htmlFor="sprint-modal-end" className="text-xs text-[var(--space-text-secondary)] flex items-center gap-1.5">
                     <Calendar className="size-3" /> End
                   </label>
                   <Input
@@ -245,7 +245,7 @@ export function CreateSprintModal({ projectId, open, onOpenChange, onSuccess }: 
                     type="date"
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
-                    className="bg-[rgba(255,255,255,0.06)] border-[#404040] text-[#F0F0F0] focus:border-[#404040] text-sm"
+                    className="bg-[rgba(255,255,255,0.06)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] focus:border-[var(--space-border-hard)] text-sm"
                   />
                 </div>
               </div>
@@ -255,11 +255,11 @@ export function CreateSprintModal({ projectId, open, onOpenChange, onSuccess }: 
           {step === 4 && (
             <div className="space-y-4">
               <div>
-                <h2 className="text-xl font-semibold text-[#F0F0F0] mb-1.5">Add some tasks</h2>
-                <p className="text-sm text-[#6B6B6B]">
+                <h2 className="text-xl font-semibold text-[var(--space-text-primary)] mb-1.5">Add some tasks</h2>
+                <p className="text-sm text-[var(--space-text-secondary)]">
                   Kickoff tasks for{' '}
-                  <span className="text-[#A0A0A0]">&ldquo;{name}&rdquo;</span>.{' '}
-                  <span className="text-[#6B6B6B]">Optional.</span>
+                  <span className="text-[var(--space-text-tertiary)]">&ldquo;{name}&rdquo;</span>.{' '}
+                  <span className="text-[var(--space-text-secondary)]">Optional.</span>
                 </p>
               </div>
 
@@ -268,7 +268,7 @@ export function CreateSprintModal({ projectId, open, onOpenChange, onSuccess }: 
                   {draftTasks.map((task, i) => (
                     <div
                       key={i}
-                      className="rounded-lg border border-[#404040] bg-[rgba(255,255,255,0.06)] p-3 space-y-2.5 group"
+                      className="rounded-lg border border-[var(--space-border-hard)] bg-[rgba(255,255,255,0.06)] p-3 space-y-2.5 group"
                     >
                       {/* Title row */}
                       <div className="flex items-start gap-2.5">
@@ -277,12 +277,12 @@ export function CreateSprintModal({ projectId, open, onOpenChange, onSuccess }: 
                           value={task.title}
                           onChange={(e) => updateDraftTask(i, 'title', e.target.value)}
                           placeholder="Task title..."
-                          className="flex-1 bg-transparent border-0 border-b border-[#404040] rounded-none px-0 text-sm font-medium text-[#F0F0F0] placeholder:text-[#6B6B6B] focus-visible:ring-0 focus-visible:border-[rgba(139,156,182,0.30)] h-auto py-1 transition-colors"
+                          className="flex-1 bg-transparent border-0 border-b border-[var(--space-border-hard)] rounded-none px-0 text-sm font-medium text-[var(--space-text-primary)] placeholder:text-[var(--space-text-secondary)] focus-visible:ring-0 focus-visible:border-[rgba(139,156,182,0.30)] h-auto py-1 transition-colors"
                         />
                         <button
                           type="button"
                           onClick={() => removeDraftTask(i)}
-                          className="shrink-0 p-0.5 text-[#6B6B6B] hover:text-[#A0A0A0] opacity-0 group-hover:opacity-100 transition-all mt-1"
+                          className="shrink-0 p-0.5 text-[var(--space-text-secondary)] hover:text-[var(--space-text-tertiary)] opacity-0 group-hover:opacity-100 transition-all mt-1"
                         >
                           <X className="size-3.5" />
                         </button>
@@ -294,12 +294,12 @@ export function CreateSprintModal({ projectId, open, onOpenChange, onSuccess }: 
                         onChange={(e) => updateDraftTask(i, 'description', e.target.value)}
                         placeholder="Add a description... (optional)"
                         rows={2}
-                        className="w-full bg-transparent border-0 text-[#6B6B6B] placeholder:text-[#6B6B6B] resize-none text-xs leading-relaxed focus-visible:ring-0 focus-visible:outline-none p-0 ml-[18px] min-h-0"
+                        className="w-full bg-transparent border-0 text-[var(--space-text-secondary)] placeholder:text-[var(--space-text-secondary)] resize-none text-xs leading-relaxed focus-visible:ring-0 focus-visible:outline-none p-0 ml-[18px] min-h-0"
                       />
 
                       {/* Priority pills */}
                       <div className="flex items-center gap-1 ml-[18px]">
-                        <span className="text-[10px] text-[#6B6B6B] mr-1">Priority:</span>
+                        <span className="text-[10px] text-[var(--space-text-secondary)] mr-1">Priority:</span>
                         {(Object.keys(PRIORITY_CONFIG) as Priority[]).map((p) => (
                           <button
                             key={p}
@@ -309,7 +309,7 @@ export function CreateSprintModal({ projectId, open, onOpenChange, onSuccess }: 
                               'text-[10px] font-semibold px-2 py-0.5 rounded-full border transition-all',
                               task.priority === p
                                 ? PRIORITY_CONFIG[p].activeClass
-                                : 'text-[#6B6B6B] border-transparent hover:border-[#404040] hover:text-[#A0A0A0]'
+                                : 'text-[var(--space-text-secondary)] border-transparent hover:border-[var(--space-border-hard)] hover:text-[var(--space-text-tertiary)]'
                             )}
                           >
                             {PRIORITY_CONFIG[p].label}
@@ -326,14 +326,14 @@ export function CreateSprintModal({ projectId, open, onOpenChange, onSuccess }: 
                   <button
                     type="button"
                     onClick={addDraftTask}
-                    className="flex items-center gap-1.5 text-sm text-[#6B6B6B] hover:text-[#A0A0A0] transition-colors"
+                    className="flex items-center gap-1.5 text-sm text-[var(--space-text-secondary)] hover:text-[var(--space-text-tertiary)] transition-colors"
                   >
                     <Plus className="size-3.5" />
                     Add a task
                   </button>
                 )}
                 {draftTasks.length === 0 && (
-                  <p className="text-xs text-[#6B6B6B]">Skip to create the sprint now.</p>
+                  <p className="text-xs text-[var(--space-text-secondary)]">Skip to create the sprint now.</p>
                 )}
               </div>
             </div>
@@ -348,13 +348,13 @@ export function CreateSprintModal({ projectId, open, onOpenChange, onSuccess }: 
         )}
 
         {/* Footer nav */}
-        <div className="flex items-center justify-between px-8 py-6 mt-2 border-t border-[#404040]">
+        <div className="flex items-center justify-between px-8 py-6 mt-2 border-t border-[var(--space-border-hard)]">
           {step > 1 ? (
             <button
               type="button"
               onClick={goBack}
               disabled={isLoading}
-              className="flex items-center gap-1.5 text-sm text-[#6B6B6B] hover:text-[#A0A0A0] transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 text-sm text-[var(--space-text-secondary)] hover:text-[var(--space-text-tertiary)] transition-colors disabled:opacity-50"
             >
               <ChevronLeft className="size-4" /> Back
             </button>
@@ -365,7 +365,7 @@ export function CreateSprintModal({ projectId, open, onOpenChange, onSuccess }: 
           {step < 4 ? (
             <Button
               onClick={goNext}
-              className="bg-[rgba(255,255,255,0.06)] border border-[#404040] hover:bg-[rgba(255,255,255,0.06)] text-[#F0F0F0] font-medium"
+              className="bg-[rgba(255,255,255,0.06)] border border-[var(--space-border-hard)] hover:bg-[rgba(255,255,255,0.06)] text-[var(--space-text-primary)] font-medium"
             >
               Next <ChevronRight className="size-4 ml-1" />
             </Button>
@@ -373,7 +373,7 @@ export function CreateSprintModal({ projectId, open, onOpenChange, onSuccess }: 
             <Button
               onClick={handleSubmit}
               disabled={isLoading || !name.trim()}
-              className="bg-[var(--space-accent)] text-[#F0F0F0] hover:bg-[var(--space-accent)]/90 font-semibold disabled:opacity-40"
+              className="bg-[var(--space-accent)] text-[var(--space-text-primary)] hover:bg-[var(--space-accent)]/90 font-semibold disabled:opacity-40"
             >
               {isLoading
                 ? <><Loader2 className="size-4 mr-2 animate-spin" />Creating...</>

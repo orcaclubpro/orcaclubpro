@@ -121,10 +121,10 @@ export function AccountOverview({
               <AlertCircle className="size-5 text-yellow-400" />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold text-[#F0F0F0] mb-1.5 text-base">
+              <h3 className="font-semibold text-[var(--space-text-primary)] mb-1.5 text-base">
                 Payment Due
               </h3>
-              <p className="text-sm text-[#A0A0A0] leading-relaxed">
+              <p className="text-sm text-[var(--space-text-tertiary)] leading-relaxed">
                 You have an outstanding balance of{' '}
                 <span className="font-semibold text-yellow-400">
                   {formatCurrency(account.accountBalance || 0)}
@@ -143,7 +143,7 @@ export function AccountOverview({
           return (
             <div
               key={index}
-              className="group relative overflow-hidden rounded-xl border border-[#404040] bg-[#252525] p-6 hover:border-[#404040] hover:bg-[#2D2D2D] transition-all duration-500 hover:scale-[1.01] fluid-enter"
+              className="group relative overflow-hidden rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] p-6 hover:border-[var(--space-border-hard)] hover:bg-[var(--space-bg-card-hover)] transition-all duration-500 hover:scale-[1.01] fluid-enter"
               style={{
                 animationDelay: `${index * 100}ms`,
                 borderLeft: index === 0
@@ -164,7 +164,7 @@ export function AccountOverview({
 
               <div className="relative z-10">
                 <div className="flex items-start justify-between mb-8">
-                  <div className="p-2.5 rounded-lg bg-white border border-[#404040] transition-all duration-300 group-hover:scale-105 group-hover:shadow-[0_0_12px_rgba(139,156,182,0.10)]">
+                  <div className="p-2.5 rounded-lg bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] transition-all duration-300 group-hover:scale-105 group-hover:shadow-[0_0_12px_rgba(139,156,182,0.10)]">
                     <Icon className={`size-5 ${stat.color}`} />
                   </div>
                   {stat.showAlert && (
@@ -172,14 +172,14 @@ export function AccountOverview({
                   )}
                 </div>
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold text-[#6B6B6B] uppercase tracking-wider">
+                  <p className="text-xs font-semibold text-[var(--space-text-secondary)] uppercase tracking-wider">
                     {stat.label}
                   </p>
                   <p className={`text-3xl font-bold ${stat.color} tracking-tight`}>
                     {stat.value}
                   </p>
                   <div className="flex items-center justify-between">
-                    <p className="text-xs text-[#6B6B6B]">
+                    <p className="text-xs text-[var(--space-text-secondary)]">
                       {stat.description}
                     </p>
                     {/* Show sparkline for balance card */}
@@ -202,30 +202,30 @@ export function AccountOverview({
 
       {/* Quick Stats Summary with Order Distribution - Minimal Glass */}
       {account.totalOrders && account.totalOrders > 0 && (
-        <div className="relative overflow-hidden rounded-xl border border-[#404040] bg-[#252525] p-6 fluid-enter">
+        <div className="relative overflow-hidden rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] p-6 fluid-enter">
           <div className="absolute bottom-0 right-0 w-64 h-64 bg-[rgba(139,156,182,0.06)] rounded-full blur-3xl" />
 
           <div className="relative z-10 space-y-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-lg bg-white border border-[#404040]">
+                <div className="p-2.5 rounded-lg bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)]">
                   <TrendingUp className="size-4 text-[var(--space-accent)]" />
                 </div>
-                <h3 className="font-semibold text-[#F0F0F0] text-base">Account Summary</h3>
+                <h3 className="font-semibold text-[var(--space-text-primary)] text-base">Account Summary</h3>
               </div>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               <div className="space-y-1.5">
-                <p className="text-xs text-[#6B6B6B] uppercase tracking-wider font-semibold">
+                <p className="text-xs text-[var(--space-text-secondary)] uppercase tracking-wider font-semibold">
                   Projects
                 </p>
-                <p className="text-2xl font-bold text-[#F0F0F0]">
+                <p className="text-2xl font-bold text-[var(--space-text-primary)]">
                   {account.projects?.length || 0}
                 </p>
               </div>
               <div className="space-y-1.5">
-                <p className="text-xs text-[#6B6B6B] uppercase tracking-wider font-semibold">
+                <p className="text-xs text-[var(--space-text-secondary)] uppercase tracking-wider font-semibold">
                   Active
                 </p>
                 <p className="text-2xl font-bold text-green-400">
@@ -233,7 +233,7 @@ export function AccountOverview({
                 </p>
               </div>
               <div className="space-y-1.5">
-                <p className="text-xs text-[#6B6B6B] uppercase tracking-wider font-semibold">
+                <p className="text-xs text-[var(--space-text-secondary)] uppercase tracking-wider font-semibold">
                   Completed
                 </p>
                 <p className="text-2xl font-bold text-blue-400">
@@ -242,7 +242,7 @@ export function AccountOverview({
                 </p>
               </div>
               <div className="space-y-1.5">
-                <p className="text-xs text-[#6B6B6B] uppercase tracking-wider font-semibold">
+                <p className="text-xs text-[var(--space-text-secondary)] uppercase tracking-wider font-semibold">
                   Total Orders
                 </p>
                 <p className="text-2xl font-bold text-[var(--space-accent)]">
@@ -253,8 +253,8 @@ export function AccountOverview({
 
             {/* Order Status Distribution */}
             {orders.length > 0 && (
-              <div className="pt-4 border-t border-[#404040]">
-                <p className="text-xs text-[#6B6B6B] uppercase tracking-wider font-semibold mb-3">
+              <div className="pt-4 border-t border-[var(--space-border-hard)]">
+                <p className="text-xs text-[var(--space-text-secondary)] uppercase tracking-wider font-semibold mb-3">
                   Order Status Distribution
                 </p>
                 <MiniBar segments={orderDistribution} height={6} showLabels={true} />

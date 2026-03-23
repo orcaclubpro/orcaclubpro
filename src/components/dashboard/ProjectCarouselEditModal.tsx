@@ -26,8 +26,8 @@ export function ProjectCarouselEditModal({ project, large }: { project: Serializ
         type="button"
         onClick={() => setOpen(true)}
         className={large
-          ? "flex items-center gap-2.5 bg-[#252525] hover:bg-[#2D2D2D] border border-[#404040] hover:border-[#404040] text-[#A0A0A0] hover:text-[#F0F0F0] font-bold rounded-full px-5 py-2 text-sm transition-all duration-200"
-          : "flex items-center gap-1.5 text-xs text-[#6B6B6B] hover:text-[#A0A0A0] bg-[#252525] hover:bg-[#2D2D2D] border border-[#404040] hover:border-[#404040] rounded-lg px-3.5 py-2.5 transition-all duration-150"
+          ? "flex items-center gap-2.5 bg-[var(--space-bg-card)] hover:bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] hover:border-[var(--space-border-hard)] text-[var(--space-text-tertiary)] hover:text-[var(--space-text-primary)] font-bold rounded-full px-5 py-2 text-sm transition-all duration-200"
+          : "flex items-center gap-1.5 text-xs text-[var(--space-text-secondary)] hover:text-[var(--space-text-tertiary)] bg-[var(--space-bg-card)] hover:bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] hover:border-[var(--space-border-hard)] rounded-lg px-3.5 py-2.5 transition-all duration-150"
         }
       >
         <Settings className={large ? "size-4" : "size-3.5"} />

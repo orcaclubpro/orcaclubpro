@@ -71,23 +71,23 @@ export function DeleteClientButton({ clientId, clientEmail, clientName }: Props)
       </button>
 
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="bg-[#1C1C1C] border border-[#404040] text-[#F0F0F0] max-w-md">
+        <DialogContent className="bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] text-[var(--space-text-primary)] max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-[#F0F0F0]">
+            <DialogTitle className="text-lg font-bold text-[var(--space-text-primary)]">
               Delete Client Account
             </DialogTitle>
-            <DialogDescription className="text-[#6B6B6B] text-sm leading-relaxed pt-1">
+            <DialogDescription className="text-[var(--space-text-secondary)] text-sm leading-relaxed pt-1">
               This will permanently delete{' '}
-              <span className="text-[#A0A0A0] font-medium">{clientName}</span>
+              <span className="text-[var(--space-text-tertiary)] font-medium">{clientName}</span>
               &apos;s account and remove them from Stripe. This cannot be undone.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 pt-2">
             <div className="space-y-1.5">
-              <Label className="text-[#6B6B6B] text-sm">
+              <Label className="text-[var(--space-text-secondary)] text-sm">
                 Type{' '}
-                <span className="text-[#F0F0F0] font-mono text-xs bg-[rgba(255,255,255,0.06)] px-1.5 py-0.5 rounded">
+                <span className="text-[var(--space-text-primary)] font-mono text-xs bg-[rgba(255,255,255,0.06)] px-1.5 py-0.5 rounded">
                   {clientEmail}
                 </span>{' '}
                 to confirm
@@ -98,7 +98,7 @@ export function DeleteClientButton({ clientId, clientEmail, clientName }: Props)
                 placeholder={clientEmail}
                 autoComplete="off"
                 spellCheck={false}
-                className="bg-[rgba(255,255,255,0.06)] border-[#404040] text-[#F0F0F0] placeholder:text-[#6B6B6B] focus-visible:ring-red-400/30 focus-visible:ring-1 font-mono text-sm"
+                className="bg-[rgba(255,255,255,0.06)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] placeholder:text-[var(--space-text-secondary)] focus-visible:ring-red-400/30 focus-visible:ring-1 font-mono text-sm"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && confirmed) handleDelete()
                 }}
@@ -116,7 +116,7 @@ export function DeleteClientButton({ clientId, clientEmail, clientName }: Props)
                 variant="outline"
                 onClick={() => handleOpenChange(false)}
                 disabled={loading}
-                className="flex-1 border-[#404040] text-[#F0F0F0] hover:bg-[#2D2D2D]"
+                className="flex-1 border-[var(--space-border-hard)] text-[var(--space-text-primary)] hover:bg-[var(--space-bg-card-hover)]"
               >
                 Cancel
               </Button>

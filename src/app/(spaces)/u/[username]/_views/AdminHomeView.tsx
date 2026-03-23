@@ -47,7 +47,7 @@ const SPRINT_STATUS_CFG: Record<string, { label: string; badge: string; bar: str
     label: 'In Progress',
     badge: 'text-[var(--space-accent)] bg-[var(--space-accent)]/[0.08] border-[var(--space-accent)]/20',
     bar:   'bg-[var(--space-accent)]/70',
-    daysColor: 'text-[#6B6B6B]',
+    daysColor: 'text-[var(--space-text-secondary)]',
   },
   delayed: {
     label: 'Delayed',
@@ -123,10 +123,10 @@ function SprintCarousel({ sprints, username }: { sprints: ActiveSprint[]; userna
   if (sprints.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center" role="status">
-        <div className="size-12 rounded-2xl bg-[#111] border border-[#1C1C1C] flex items-center justify-center mb-4" aria-hidden="true">
-          <Zap className="size-5 text-[#2A2A2A]" />
+        <div className="size-12 rounded-2xl bg-[var(--space-bg-card)] border border-[var(--space-border-hard)] flex items-center justify-center mb-4" aria-hidden="true">
+          <Zap className="size-5 text-[var(--space-text-muted)]" />
         </div>
-        <p className="text-sm text-[#4A4A4A] font-medium">No active sprints</p>
+        <p className="text-sm text-[var(--space-text-muted)] font-medium">No active sprints</p>
         <p className="text-xs text-[#333] mt-1">Sprints in progress or delayed will appear here</p>
       </div>
     )
@@ -157,14 +157,14 @@ function SprintCarousel({ sprints, username }: { sprints: ActiveSprint[]; userna
             <button
               onClick={prev} disabled={safeIdx === 0}
               aria-label="Previous sprint"
-              className="flex items-center justify-center size-7 rounded-lg border border-[#1C1C1C] bg-[#0D0D0D] text-[#555] hover:text-[#E0E0E0] hover:border-[#2A2A2A] hover:bg-[#141414] disabled:opacity-20 disabled:pointer-events-none transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--space-accent)]/40"
+              className="flex items-center justify-center size-7 rounded-lg border border-[var(--space-border-hard)] bg-[var(--space-bg-base)] text-[#555] hover:text-[var(--space-text-primary)] hover:border-[var(--space-border-hard)] hover:bg-[var(--space-bg-base)] disabled:opacity-20 disabled:pointer-events-none transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--space-accent)]/40"
             >
               <ChevronLeft className="size-3.5" />
             </button>
             <button
               onClick={next} disabled={safeIdx === sprints.length - 1}
               aria-label="Next sprint"
-              className="flex items-center justify-center size-7 rounded-lg border border-[#1C1C1C] bg-[#0D0D0D] text-[#555] hover:text-[#E0E0E0] hover:border-[#2A2A2A] hover:bg-[#141414] disabled:opacity-20 disabled:pointer-events-none transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--space-accent)]/40"
+              className="flex items-center justify-center size-7 rounded-lg border border-[var(--space-border-hard)] bg-[var(--space-bg-base)] text-[#555] hover:text-[var(--space-text-primary)] hover:border-[var(--space-border-hard)] hover:bg-[var(--space-bg-base)] disabled:opacity-20 disabled:pointer-events-none transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--space-accent)]/40"
             >
               <ChevronRight className="size-3.5" />
             </button>
@@ -175,7 +175,7 @@ function SprintCarousel({ sprints, username }: { sprints: ActiveSprint[]; userna
       <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
         <Link
           href={`/u/${username}/projects/${sprint.projectId}/sprints/${sprint.id}`}
-          className="block rounded-2xl border border-[#1C1C1C] bg-[#0D0D0D] overflow-hidden hover:border-[#262626] hover:bg-[#111] transition-all duration-200 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--space-accent)]/40"
+          className="block rounded-2xl border border-[var(--space-border-hard)] bg-[var(--space-bg-base)] overflow-hidden hover:border-[#262626] hover:bg-[var(--space-bg-card)] transition-all duration-200 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--space-accent)]/40"
           aria-label={`Sprint: ${sprint.name} — ${sprint.projectName}`}
         >
           <div className="p-5">
@@ -187,13 +187,13 @@ function SprintCarousel({ sprints, username }: { sprints: ActiveSprint[]; userna
                 <span className={`text-[11px] font-medium tabular-nums ${daysLeft < 0 ? 'text-red-400' : daysLeft <= 3 ? 'text-amber-500' : cfg.daysColor}`}>
                   {daysLeft < 0 ? `${Math.abs(daysLeft)}d overdue` : daysLeft === 0 ? 'Due today' : daysLeft === 1 ? 'Due tomorrow' : `${daysLeft}d left`}
                 </span>
-                <span className="flex items-center gap-0.5 text-[10px] text-[#3A3A3A] group-hover:text-[#555] transition-colors" aria-hidden="true">
+                <span className="flex items-center gap-0.5 text-[10px] text-[var(--space-text-tertiary)] group-hover:text-[#555] transition-colors" aria-hidden="true">
                   Open <ArrowRight className="size-2.5 group-hover:translate-x-0.5 transition-transform" />
                 </span>
               </div>
             </div>
 
-            <h3 className="text-xl font-bold text-[#F0F0F0] leading-snug mb-1">{sprint.name}</h3>
+            <h3 className="text-xl font-bold text-[var(--space-text-primary)] leading-snug mb-1">{sprint.name}</h3>
             <p className="text-[11px] text-[#444] mb-4">
               {sprint.projectName}
               <span className="mx-1.5 text-[#333]">·</span>
@@ -210,11 +210,11 @@ function SprintCarousel({ sprints, username }: { sprints: ActiveSprint[]; userna
                   <span className="text-[9px] uppercase tracking-[0.15em] text-[#444] font-semibold">Tasks</span>
                   <span className="text-[11px] text-[#555] tabular-nums">
                     {sprint.completedTasksCount}/{sprint.totalTasksCount}
-                    <span className="ml-1.5 text-[#3A3A3A]">· {pct}%</span>
+                    <span className="ml-1.5 text-[var(--space-text-tertiary)]">· {pct}%</span>
                   </span>
                 </div>
                 <div
-                  className="h-[3px] rounded-full bg-[#1A1A1A] overflow-hidden"
+                  className="h-[3px] rounded-full bg-[var(--space-bg-base)] overflow-hidden"
                   role="progressbar"
                   aria-valuenow={pct}
                   aria-valuemin={0}
@@ -229,7 +229,7 @@ function SprintCarousel({ sprints, username }: { sprints: ActiveSprint[]; userna
 
           {sprints.length > 1 && (
             <div
-              className="flex items-center justify-center gap-1.5 px-5 py-3 border-t border-[#141414]"
+              className="flex items-center justify-center gap-1.5 px-5 py-3 border-t border-[var(--space-border-hard)]"
               aria-hidden="true"
               onClick={e => e.preventDefault()}
             >
@@ -238,7 +238,7 @@ function SprintCarousel({ sprints, username }: { sprints: ActiveSprint[]; userna
                   key={i}
                   tabIndex={-1}
                   onClick={e => { e.preventDefault(); setIdx(i) }}
-                  className={`rounded-full transition-all duration-200 ${i === safeIdx ? 'size-1.5 bg-[var(--space-accent)]/70' : 'size-1 bg-[#242424] hover:bg-[#444]'}`}
+                  className={`rounded-full transition-all duration-200 ${i === safeIdx ? 'size-1.5 bg-[var(--space-accent)]/70' : 'size-1 bg-[var(--space-bg-card-hover)] hover:bg-[#444]'}`}
                 />
               ))}
             </div>
@@ -261,7 +261,7 @@ function MiniBarChart({ data }: { data: { label: string; revenue: number }[] }) 
     >
       {data.map((d, i) => (
         <div key={i} className="flex-1 flex flex-col items-center gap-1.5 group/bar">
-          <div className="w-full rounded-t bg-[#141414] relative overflow-hidden" style={{ height: 56 }}>
+          <div className="w-full rounded-t bg-[var(--space-bg-base)] relative overflow-hidden" style={{ height: 56 }}>
             <div
               className="absolute bottom-0 w-full rounded-t transition-all duration-700 group-hover/bar:opacity-80"
               style={{
@@ -272,7 +272,7 @@ function MiniBarChart({ data }: { data: { label: string; revenue: number }[] }) 
               }}
             />
           </div>
-          <span className="text-[9px] text-[#3A3A3A] whitespace-nowrap">{d.label}</span>
+          <span className="text-[9px] text-[var(--space-text-tertiary)] whitespace-nowrap">{d.label}</span>
         </div>
       ))}
     </div>
@@ -395,7 +395,7 @@ export function AdminHomeView({
 
       {/* ── Page header ────────────────────────────────────────────────── */}
       <div className="mb-5">
-        <p className="text-[11px] font-semibold text-[#1E3A6E] uppercase tracking-[0.25em]">
+        <p className="text-[11px] font-semibold text-[var(--space-accent)] uppercase tracking-[0.25em]">
           {user.role === 'admin' ? 'Admin' : 'Workspace'} · ORCACLUB Spaces
         </p>
       </div>
@@ -408,7 +408,7 @@ export function AdminHomeView({
 
           <div>
             <DynamicGreeting />
-            <p className="text-[10px] text-[#3A3A3A] text-center mt-1">
+            <p className="text-[10px] text-[var(--space-text-tertiary)] text-center mt-1">
               {user.role === 'admin'
                 ? `Overseeing ${clientAccounts.length} client${clientAccounts.length !== 1 ? 's' : ''} · ${activeProjects} active project${activeProjects !== 1 ? 's' : ''}`
                 : `${clientAccounts.length} assigned client${clientAccounts.length !== 1 ? 's' : ''} · ${activeProjects} active project${activeProjects !== 1 ? 's' : ''}`
@@ -425,26 +425,26 @@ export function AdminHomeView({
                 variants={stagger}
                 initial="initial"
                 animate="animate"
-                className="rounded-2xl border border-[#1C1C1C] bg-[#0D0D0D] overflow-hidden"
+                className="rounded-2xl border border-[var(--space-border-hard)] bg-[var(--space-bg-base)] overflow-hidden"
               >
                 {/* Collected */}
-                <motion.div variants={fadeUp} className="px-4 py-4 border-b border-[#141414]">
+                <motion.div variants={fadeUp} className="px-4 py-4 border-b border-[var(--space-border-hard)]">
                   <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#333] mb-2">Collected</p>
                   <p className="text-2xl font-black tabular-nums text-[var(--space-accent)] leading-none">
                     {fmtUsd(orderPipeline.paidAmount)}
                   </p>
-                  <p className="text-[10px] text-[#3A3A3A] mt-1">
+                  <p className="text-[10px] text-[var(--space-text-tertiary)] mt-1">
                     {orderPipeline.paidCount} paid order{orderPipeline.paidCount !== 1 ? 's' : ''}
                   </p>
                 </motion.div>
 
                 {/* Pending orders */}
-                <motion.div variants={fadeUp} className="px-4 py-4 border-b border-[#141414]">
+                <motion.div variants={fadeUp} className="px-4 py-4 border-b border-[var(--space-border-hard)]">
                   <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#333] mb-2">Pending Orders</p>
-                  <p className="text-2xl font-black tabular-nums text-[#F0F0F0] leading-none">
+                  <p className="text-2xl font-black tabular-nums text-[var(--space-text-primary)] leading-none">
                     {fmtUsd(totalPendingAmount)}
                   </p>
-                  <p className="text-[10px] text-[#3A3A3A] mt-1">
+                  <p className="text-[10px] text-[var(--space-text-tertiary)] mt-1">
                     {orderPipeline.pendingCount > 0 && `${orderPipeline.pendingCount} open invoice${orderPipeline.pendingCount !== 1 ? 's' : ''}`}
                     {orderPipeline.pendingCount > 0 && uninvoicedCount > 0 && ' · '}
                     {uninvoicedCount > 0 && `${uninvoicedCount} scheduled`}
@@ -455,16 +455,16 @@ export function AdminHomeView({
                 {/* Active sprints */}
                 <motion.div variants={fadeUp} className="px-4 py-4">
                   <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#333] mb-2">Active Sprints</p>
-                  <p className="text-2xl font-black tabular-nums text-[#F0F0F0] leading-none">
+                  <p className="text-2xl font-black tabular-nums text-[var(--space-text-primary)] leading-none">
                     {activeSprints.length}
                   </p>
                   {activeSprints.length > 0 ? (
-                    <p className="text-[10px] text-[#3A3A3A] mt-1 truncate">
+                    <p className="text-[10px] text-[var(--space-text-tertiary)] mt-1 truncate">
                       {activeSprints.slice(0, 2).map(s => s.name).join(' · ')}
                       {activeSprints.length > 2 ? ` +${activeSprints.length - 2}` : ''}
                     </p>
                   ) : (
-                    <p className="text-[10px] text-[#3A3A3A] mt-1">no sprints in progress</p>
+                    <p className="text-[10px] text-[var(--space-text-tertiary)] mt-1">no sprints in progress</p>
                   )}
                 </motion.div>
               </motion.div>
@@ -476,7 +476,7 @@ export function AdminHomeView({
             <motion.div key="sprints" variants={tabVariants} initial="initial" animate="animate" exit="exit" className="space-y-4">
               <motion.div variants={fadeUp} className="flex items-center gap-2">
                 <Zap className="size-3.5 text-[var(--space-accent)]/40" aria-hidden="true" />
-                <span className="text-[10px] font-bold text-[#3A3A3A] uppercase tracking-[0.25em]">
+                <span className="text-[10px] font-bold text-[var(--space-text-tertiary)] uppercase tracking-[0.25em]">
                   {activeSprints.length} Active Sprint{activeSprints.length !== 1 ? 's' : ''}
                 </span>
               </motion.div>
@@ -491,8 +491,8 @@ export function AdminHomeView({
             <motion.div key="payments" variants={tabVariants} initial="initial" animate="animate" exit="exit" className="space-y-4">
 
               {/* Open invoices */}
-              <motion.div variants={fadeUp} className="rounded-2xl border border-[#1C1C1C] bg-[#0D0D0D] overflow-hidden">
-                <div className="flex items-center justify-between px-4 py-3 border-b border-[#141414]">
+              <motion.div variants={fadeUp} className="rounded-2xl border border-[var(--space-border-hard)] bg-[var(--space-bg-base)] overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--space-border-hard)]">
                   <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#444]">Open Invoices</p>
                   <span className="text-[9px] font-bold tabular-nums text-amber-400/70">
                     {orderPipeline.pendingCount > 0 ? fmtUsd(orderPipeline.pendingAmount) : 'none'}
@@ -517,9 +517,9 @@ export function AdminHomeView({
                             i < allPendingOrders.length - 1 && 'border-b border-[#111]',
                           )}
                         >
-                          <ReceiptText className="size-3.5 text-[#2A2A2A] shrink-0" aria-hidden="true" />
+                          <ReceiptText className="size-3.5 text-[var(--space-text-muted)] shrink-0" aria-hidden="true" />
                           <div className="flex-1 min-w-0">
-                            <div className="text-[11px] font-semibold text-[#C0C0C0] truncate leading-none">
+                            <div className="text-[11px] font-semibold text-[var(--space-text-tertiary)] truncate leading-none">
                               {order.orderNumber}
                             </div>
                             <div className="text-[9px] text-[#444] mt-0.5 truncate">{name}</div>
@@ -545,8 +545,8 @@ export function AdminHomeView({
               </motion.div>
 
               {/* Uninvoiced schedule entries */}
-              <motion.div variants={fadeUp} className="rounded-2xl border border-[#1C1C1C] bg-[#0D0D0D] overflow-hidden">
-                <div className="flex items-center justify-between px-4 py-3 border-b border-[#141414]">
+              <motion.div variants={fadeUp} className="rounded-2xl border border-[var(--space-border-hard)] bg-[var(--space-bg-base)] overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--space-border-hard)]">
                   <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#444]">Scheduled</p>
                   <span className="text-[9px] font-bold tabular-nums text-[var(--space-accent)]/70">
                     {uninvoicedCount > 0 ? fmtUsd(uninvoicedAmount) : 'none'}
@@ -569,9 +569,9 @@ export function AdminHomeView({
                             i < uninvoicedEntries.length - 1 && 'border-b border-[#111]',
                           )}
                         >
-                          <Wallet className="size-3.5 text-[#2A2A2A] shrink-0" aria-hidden="true" />
+                          <Wallet className="size-3.5 text-[var(--space-text-muted)] shrink-0" aria-hidden="true" />
                           <div className="flex-1 min-w-0">
-                            <div className="text-[11px] font-semibold text-[#C0C0C0] truncate leading-none">
+                            <div className="text-[11px] font-semibold text-[var(--space-text-tertiary)] truncate leading-none">
                               {entry.label || 'Payment'}
                             </div>
                             <div className="text-[9px] text-[#444] mt-0.5 truncate">{entry.packageName}</div>
@@ -603,9 +603,9 @@ export function AdminHomeView({
           {homeTab === 'schedule' && (
             <motion.div key="schedule" variants={tabVariants} initial="initial" animate="animate" exit="exit" className="space-y-6">
               <div className="flex items-center justify-between">
-                <p className="text-[10px] font-bold text-[#3A3A3A] uppercase tracking-[0.25em]">Schedule</p>
+                <p className="text-[10px] font-bold text-[var(--space-text-tertiary)] uppercase tracking-[0.25em]">Schedule</p>
                 <div
-                  className="flex items-center p-1 bg-[#0D0D0D] rounded-xl border border-[#1C1C1C]"
+                  className="flex items-center p-1 bg-[var(--space-bg-base)] rounded-xl border border-[var(--space-border-hard)]"
                   role="group"
                   aria-label="Time range"
                 >
@@ -618,7 +618,7 @@ export function AdminHomeView({
                         'px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all duration-150',
                         'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--space-accent)]/40',
                         range === r
-                          ? 'bg-[#1C1C1C] text-[#E0E0E0] shadow-sm'
+                          ? 'bg-[var(--space-bg-base)] text-[var(--space-text-primary)] shadow-sm'
                           : 'text-[#555] hover:text-[#888]',
                       )}
                     >
@@ -649,10 +649,10 @@ export function AdminHomeView({
               )}
               {serializedProjects.length === 0 && clientAccounts.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-20 text-center" role="status">
-                  <div className="size-12 rounded-2xl bg-[#111] border border-[#1C1C1C] flex items-center justify-center mb-4" aria-hidden="true">
-                    <CalendarDays className="size-5 text-[#2A2A2A]" />
+                  <div className="size-12 rounded-2xl bg-[var(--space-bg-card)] border border-[var(--space-border-hard)] flex items-center justify-center mb-4" aria-hidden="true">
+                    <CalendarDays className="size-5 text-[var(--space-text-muted)]" />
                   </div>
-                  <p className="text-sm text-[#4A4A4A] font-medium">No schedule data yet</p>
+                  <p className="text-sm text-[var(--space-text-muted)] font-medium">No schedule data yet</p>
                   <p className="text-xs text-[#333] mt-1">Projects and clients with active sprints will appear here</p>
                 </div>
               )}
@@ -664,15 +664,15 @@ export function AdminHomeView({
             <motion.div key="analytics" variants={tabVariants} initial="initial" animate="animate" exit="exit">
               <motion.div variants={stagger} initial="initial" animate="animate" className="space-y-5">
 
-              <motion.div variants={fadeUp} className="bg-[#0D0D0D] border border-[#1C1C1C] rounded-2xl p-5 space-y-4">
+              <motion.div variants={fadeUp} className="bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] rounded-2xl p-5 space-y-4">
                 <div className="flex items-center justify-between">
                   <p className="text-[10px] font-bold text-[#444] uppercase tracking-[0.2em]">Weekly Revenue</p>
-                  <span className="text-sm font-bold text-[#E0E0E0] tabular-nums">{fmtUsd(pulseKpis.revenue30d)}</span>
+                  <span className="text-sm font-bold text-[var(--space-text-primary)] tabular-nums">{fmtUsd(pulseKpis.revenue30d)}</span>
                 </div>
                 <MiniBarChart data={weeklyRevenue} />
               </motion.div>
 
-              <motion.div variants={fadeUp} className="bg-[#0D0D0D] border border-[#1C1C1C] rounded-2xl p-5 space-y-4">
+              <motion.div variants={fadeUp} className="bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] rounded-2xl p-5 space-y-4">
                 <p className="text-[10px] font-bold text-[#444] uppercase tracking-[0.2em]">Order Pipeline · All Time</p>
                 <div
                   className="h-[5px] rounded-full overflow-hidden flex gap-px"
@@ -681,13 +681,13 @@ export function AdminHomeView({
                 >
                   {paidPct > 0    && <div className="bg-emerald-500/60 rounded-l-full" style={{ width: `${paidPct}%` }} />}
                   {pendingPct > 0 && <div className="bg-amber-500/60"                  style={{ width: `${pendingPct}%` }} />}
-                  <div className="bg-[#1C1C1C] flex-1 rounded-r-full" />
+                  <div className="bg-[var(--space-bg-base)] flex-1 rounded-r-full" />
                 </div>
                 <dl className="grid grid-cols-3 gap-4">
                   {[
                     { label: 'Collected', amount: orderPipeline.paidAmount,      count: orderPipeline.paidCount,      color: 'text-emerald-400', dot: 'bg-emerald-500/60' },
                     { label: 'Pending',   amount: orderPipeline.pendingAmount,   count: orderPipeline.pendingCount,   color: 'text-amber-400',   dot: 'bg-amber-500/60' },
-                    { label: 'Cancelled', amount: orderPipeline.cancelledAmount, count: orderPipeline.cancelledCount, color: 'text-[#444]',      dot: 'bg-[#1C1C1C]' },
+                    { label: 'Cancelled', amount: orderPipeline.cancelledAmount, count: orderPipeline.cancelledCount, color: 'text-[#444]',      dot: 'bg-[var(--space-bg-base)]' },
                   ].map(s => (
                     <div key={s.label} className="space-y-1.5">
                       <div className="flex items-center gap-1.5">
@@ -701,7 +701,7 @@ export function AdminHomeView({
                 </dl>
               </motion.div>
 
-              <motion.div variants={fadeUp} className="bg-[#0D0D0D] border border-[#1C1C1C] rounded-2xl p-5 space-y-4">
+              <motion.div variants={fadeUp} className="bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] rounded-2xl p-5 space-y-4">
                 <p className="text-[10px] font-bold text-[#444] uppercase tracking-[0.2em]">Project Health</p>
                 <dl className="grid grid-cols-3 gap-4">
                   {[
@@ -710,9 +710,9 @@ export function AdminHomeView({
                     { label: 'Completed', value: projectStatus.completed, color: 'text-emerald-400',           bar: 'bg-emerald-400/50' },
                   ].map(s => (
                     <div key={s.label} className="space-y-2">
-                      <dd className="text-2xl font-bold tabular-nums text-[#E0E0E0]">{s.value}</dd>
+                      <dd className="text-2xl font-bold tabular-nums text-[var(--space-text-primary)]">{s.value}</dd>
                       <div
-                        className="h-[3px] rounded-full bg-[#1A1A1A] overflow-hidden"
+                        className="h-[3px] rounded-full bg-[var(--space-bg-base)] overflow-hidden"
                         role="progressbar"
                         aria-valuenow={s.value}
                         aria-valuemax={Math.max(allProjects.length, 1)}
@@ -722,7 +722,7 @@ export function AdminHomeView({
                           style={{ width: `${Math.min(100, (s.value / Math.max(allProjects.length, 1)) * 100)}%` }}
                         />
                       </div>
-                      <dt className="text-[9px] text-[#3A3A3A] uppercase tracking-widest">{s.label}</dt>
+                      <dt className="text-[9px] text-[var(--space-text-tertiary)] uppercase tracking-widest">{s.label}</dt>
                     </div>
                   ))}
                 </dl>
@@ -731,8 +731,8 @@ export function AdminHomeView({
               </motion.div>
 
               {pendingOrders.length > 0 && (
-                <div className="bg-[#0D0D0D] border border-[#1C1C1C] rounded-2xl overflow-hidden">
-                  <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#141414]">
+                <div className="bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] rounded-2xl overflow-hidden">
+                  <div className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--space-border-hard)]">
                     <p className="text-[10px] font-bold text-[#444] uppercase tracking-[0.2em]">Pending Invoices</p>
                     <span className="text-[11px] text-amber-500/80 tabular-nums font-medium">{orderPipeline.pendingCount} open</span>
                   </div>
@@ -743,11 +743,11 @@ export function AdminHomeView({
                       return (
                         <li
                           key={order.id}
-                          className={cn('flex items-center gap-3 px-5 py-3.5', i < pendingOrders.length - 1 && 'border-b border-[#141414]')}
+                          className={cn('flex items-center gap-3 px-5 py-3.5', i < pendingOrders.length - 1 && 'border-b border-[var(--space-border-hard)]')}
                         >
-                          <ReceiptText className="size-3.5 text-[#2A2A2A] shrink-0" aria-hidden="true" />
+                          <ReceiptText className="size-3.5 text-[var(--space-text-muted)] shrink-0" aria-hidden="true" />
                           <div className="flex-1 min-w-0">
-                            <div className="text-[12px] text-[#C0C0C0] font-medium truncate">{order.orderNumber}</div>
+                            <div className="text-[12px] text-[var(--space-text-tertiary)] font-medium truncate">{order.orderNumber}</div>
                             <div className="text-[10px] text-[#444] truncate">{name}</div>
                           </div>
                           <div className="text-[12px] font-semibold text-amber-400 tabular-nums shrink-0">
@@ -786,7 +786,7 @@ export function AdminHomeView({
                 className={cn(
                   'relative flex items-center justify-center size-10 rounded-xl transition-colors duration-150',
                   'active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--space-accent)]/40',
-                  isActive ? 'text-[var(--space-accent)]' : 'text-[#383838] hover:text-[#555]',
+                  isActive ? 'text-[var(--space-accent)]' : 'text-[var(--space-text-tertiary)] hover:text-[#555]',
                 )}
               >
                 {isActive && (
@@ -801,7 +801,7 @@ export function AdminHomeView({
                   <span
                     className={cn(
                       'absolute top-1.5 right-1.5 size-[4px] rounded-full',
-                      isActive ? 'bg-[var(--space-accent)]' : 'bg-[#3A3A3A]',
+                      isActive ? 'bg-[var(--space-accent)]' : 'bg-[var(--space-text-muted)]',
                     )}
                     aria-hidden="true"
                   />
@@ -820,14 +820,14 @@ export function AdminHomeView({
           })}
 
           {/* Divider */}
-          <div className="w-5 h-px bg-[#1C1C1C] mt-3 mb-1" aria-hidden="true" />
+          <div className="w-5 h-px bg-[var(--space-bg-base)] mt-3 mb-1" aria-hidden="true" />
 
           {/* KPI mini stats */}
           {kpiStats.map(({ label, value, accent }) => (
             <div key={label} className="flex flex-col items-center text-center w-full py-2">
               <span className={cn(
                 'text-[11px] font-bold tabular-nums leading-none',
-                accent ? 'text-[var(--space-accent)]' : 'text-[#C0C0C0]',
+                accent ? 'text-[var(--space-accent)]' : 'text-[var(--space-text-tertiary)]',
               )}>
                 {value}
               </span>
@@ -847,6 +847,7 @@ export function AdminHomeView({
         projectStatus={projectStatus}
         kpis={pulseKpis}
         allOrders={allOrders}
+        allPackages={allPackages}
       />
 
     </div>

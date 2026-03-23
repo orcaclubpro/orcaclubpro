@@ -29,7 +29,7 @@ export function CollapsibleSidebar({ children }: CollapsibleSidebarProps) {
     // border-r extends the full page length for visual continuity
     <aside
       className={cn(
-        'hidden lg:block shrink-0 border-r border-[#404040] bg-[#252525] transition-[width] duration-300 ease-in-out',
+        'hidden lg:block shrink-0 border-r border-[var(--space-border-hard)] bg-[var(--space-bg-card)] transition-[width] duration-300 ease-in-out',
         isOpen ? 'w-72 xl:w-80' : 'w-12',
       )}
       onMouseEnter={handleMouseEnter}
@@ -52,7 +52,7 @@ export function CollapsibleSidebar({ children }: CollapsibleSidebarProps) {
           <div className={cn('flex shrink-0 pt-3', isOpen ? 'justify-end pr-3' : 'justify-center')}>
             <button
               onClick={() => setPinned((p) => !p)}
-              className="p-1.5 rounded-md text-[#4A4A4A] hover:text-[#A0A0A0] hover:bg-[#2D2D2D] transition-colors"
+              className="p-1.5 rounded-md text-[var(--space-text-muted)] hover:text-[var(--space-text-tertiary)] hover:bg-[var(--space-bg-card-hover)] transition-colors"
               aria-label={pinned ? 'Unpin sidebar' : 'Pin sidebar open'}
             >
               {pinned ? (

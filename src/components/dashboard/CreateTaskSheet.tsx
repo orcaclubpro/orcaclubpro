@@ -89,12 +89,12 @@ export function CreateTaskSheet({ projectId, open, onOpenChange }: CreateTaskShe
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="bg-[#1C1C1C] border-[#404040] w-full sm:max-w-md overflow-y-auto">
+      <SheetContent className="bg-[var(--space-bg-base)] border-[var(--space-border-hard)] w-full sm:max-w-md overflow-y-auto">
         <SheetHeader>
-          <SheetTitle className="text-2xl font-semibold text-[#F0F0F0]">
+          <SheetTitle className="text-2xl font-semibold text-[var(--space-text-primary)]">
             Create New Task
           </SheetTitle>
-          <SheetDescription className="text-[#6B6B6B]">
+          <SheetDescription className="text-[var(--space-text-secondary)]">
             Add a new task to this project. The task will be automatically assigned to you.
           </SheetDescription>
         </SheetHeader>
@@ -102,7 +102,7 @@ export function CreateTaskSheet({ projectId, open, onOpenChange }: CreateTaskShe
         <form onSubmit={handleSubmit} className="space-y-6 mt-6">
           {/* Title */}
           <div className="space-y-2">
-            <Label htmlFor="title" className="text-sm font-medium text-[#A0A0A0]">
+            <Label htmlFor="title" className="text-sm font-medium text-[var(--space-text-tertiary)]">
               Task Title <span className="text-red-400">*</span>
             </Label>
             <Input
@@ -110,7 +110,7 @@ export function CreateTaskSheet({ projectId, open, onOpenChange }: CreateTaskShe
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g., Fix authentication bug"
-              className="bg-[rgba(255,255,255,0.06)] border-[#404040] text-[#F0F0F0] placeholder:text-[#6B6B6B] focus:border-[rgba(139,156,182,0.30)]"
+              className="bg-[rgba(255,255,255,0.06)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] placeholder:text-[var(--space-text-secondary)] focus:border-[rgba(139,156,182,0.30)]"
               disabled={isLoading}
               required
             />
@@ -118,7 +118,7 @@ export function CreateTaskSheet({ projectId, open, onOpenChange }: CreateTaskShe
 
           {/* Description */}
           <div className="space-y-2">
-            <Label htmlFor="description" className="text-sm font-medium text-[#A0A0A0]">
+            <Label htmlFor="description" className="text-sm font-medium text-[var(--space-text-tertiary)]">
               Description
             </Label>
             <Textarea
@@ -127,14 +127,14 @@ export function CreateTaskSheet({ projectId, open, onOpenChange }: CreateTaskShe
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Optional: Add more details about this task..."
               rows={4}
-              className="bg-[rgba(255,255,255,0.06)] border-[#404040] text-[#F0F0F0] placeholder:text-[#6B6B6B] focus:border-[rgba(139,156,182,0.30)] resize-none"
+              className="bg-[rgba(255,255,255,0.06)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] placeholder:text-[var(--space-text-secondary)] focus:border-[rgba(139,156,182,0.30)] resize-none"
               disabled={isLoading}
             />
           </div>
 
           {/* Priority */}
           <div className="space-y-2">
-            <Label htmlFor="priority" className="text-sm font-medium text-[#A0A0A0]">
+            <Label htmlFor="priority" className="text-sm font-medium text-[var(--space-text-tertiary)]">
               Priority
             </Label>
             <Select
@@ -144,11 +144,11 @@ export function CreateTaskSheet({ projectId, open, onOpenChange }: CreateTaskShe
               }
               disabled={isLoading}
             >
-              <SelectTrigger className="bg-[rgba(255,255,255,0.06)] border-[#404040] text-[#F0F0F0] focus:border-[rgba(139,156,182,0.30)]">
+              <SelectTrigger className="bg-[rgba(255,255,255,0.06)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] focus:border-[rgba(139,156,182,0.30)]">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-[#1C1C1C] border-[#404040]">
-                <SelectItem value="low" className="text-[#6B6B6B]">
+              <SelectContent className="bg-[var(--space-bg-base)] border-[var(--space-border-hard)]">
+                <SelectItem value="low" className="text-[var(--space-text-secondary)]">
                   Low Priority
                 </SelectItem>
                 <SelectItem value="medium" className="text-blue-400">
@@ -162,7 +162,7 @@ export function CreateTaskSheet({ projectId, open, onOpenChange }: CreateTaskShe
                 </SelectItem>
               </SelectContent>
             </Select>
-            <p className="text-xs text-[#6B6B6B]">
+            <p className="text-xs text-[var(--space-text-secondary)]">
               {priority === 'low' && 'Can be completed later'}
               {priority === 'medium' && 'Normal priority (default)'}
               {priority === 'high' && 'Should be completed soon'}
@@ -172,7 +172,7 @@ export function CreateTaskSheet({ projectId, open, onOpenChange }: CreateTaskShe
 
           {/* Due Date */}
           <div className="space-y-2">
-            <Label htmlFor="dueDate" className="text-sm font-medium text-[#A0A0A0]">
+            <Label htmlFor="dueDate" className="text-sm font-medium text-[var(--space-text-tertiary)]">
               Due Date
             </Label>
             <Input
@@ -180,7 +180,7 @@ export function CreateTaskSheet({ projectId, open, onOpenChange }: CreateTaskShe
               type="date"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
-              className="bg-[rgba(255,255,255,0.06)] border-[#404040] text-[#F0F0F0] focus:border-[rgba(139,156,182,0.30)]"
+              className="bg-[rgba(255,255,255,0.06)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] focus:border-[rgba(139,156,182,0.30)]"
               disabled={isLoading}
             />
           </div>
@@ -199,14 +199,14 @@ export function CreateTaskSheet({ projectId, open, onOpenChange }: CreateTaskShe
               variant="outline"
               onClick={handleCancel}
               disabled={isLoading}
-              className="flex-1 bg-[rgba(255,255,255,0.06)] border-[#404040] hover:bg-[rgba(255,255,255,0.06)]"
+              className="flex-1 bg-[rgba(255,255,255,0.06)] border-[var(--space-border-hard)] hover:bg-[rgba(255,255,255,0.06)]"
             >
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={isLoading}
-              className="flex-1 bg-[var(--space-accent)] text-[#F0F0F0] hover:bg-[var(--space-accent)]/90 font-medium shadow-lg shadow-[rgba(139,156,182,0.10)]"
+              className="flex-1 bg-[var(--space-accent)] text-[var(--space-text-primary)] hover:bg-[var(--space-accent)]/90 font-medium shadow-lg shadow-[rgba(139,156,182,0.10)]"
             >
               {isLoading ? (
                 <>

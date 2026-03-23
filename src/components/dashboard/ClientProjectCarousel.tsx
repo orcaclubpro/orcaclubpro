@@ -38,7 +38,7 @@ function ProjectCard({ project, username }: { project: CarouselProject; username
   const budget = fmtCurrency(project.budgetAmount, project.currency ?? 'USD')
 
   return (
-    <div className="relative flex flex-col shrink-0 w-[calc(100vw-3rem)] sm:w-80 lg:w-72 xl:w-80 rounded-2xl border border-[#404040] bg-[#252525] overflow-hidden group hover:border-[#404040] transition-all duration-300">
+    <div className="relative flex flex-col shrink-0 w-[calc(100vw-3rem)] sm:w-80 lg:w-72 xl:w-80 rounded-2xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] overflow-hidden group hover:border-[var(--space-border-hard)] transition-all duration-300">
 
       {/* Top accent stripe based on status */}
       <div className={`h-0.5 w-full ${status.stripe}`} />
@@ -55,21 +55,21 @@ function ProjectCard({ project, username }: { project: CarouselProject; username
 
         {/* Project name */}
         <div className="flex-1">
-          <h3 className="text-lg font-bold text-[#F0F0F0] leading-snug group-hover:text-[var(--space-accent)] transition-colors duration-200">
+          <h3 className="text-lg font-bold text-[var(--space-text-primary)] leading-snug group-hover:text-[var(--space-accent)] transition-colors duration-200">
             {project.name}
           </h3>
           {project.description && (
-            <p className="text-sm text-[#A0A0A0] mt-2 leading-relaxed line-clamp-2">
+            <p className="text-sm text-[var(--space-text-tertiary)] mt-2 leading-relaxed line-clamp-2">
               {project.description}
             </p>
           )}
         </div>
 
         {/* Meta info */}
-        <div className="space-y-2 pt-1 border-t border-[#404040]">
+        <div className="space-y-2 pt-1 border-t border-[var(--space-border-hard)]">
           {(startFmt || endFmt) && (
-            <div className="flex items-center gap-1.5 text-sm text-[#A0A0A0]">
-              <Calendar className="size-3 shrink-0 text-[#6B6B6B]" />
+            <div className="flex items-center gap-1.5 text-sm text-[var(--space-text-tertiary)]">
+              <Calendar className="size-3 shrink-0 text-[var(--space-text-secondary)]" />
               <span>
                 {startFmt && endFmt
                   ? `${startFmt} → ${endFmt}`
@@ -80,8 +80,8 @@ function ProjectCard({ project, username }: { project: CarouselProject; username
             </div>
           )}
           {budget && (
-            <div className="flex items-center gap-1.5 text-sm text-[#A0A0A0]">
-              <DollarSign className="size-3 shrink-0 text-[#6B6B6B]" />
+            <div className="flex items-center gap-1.5 text-sm text-[var(--space-text-tertiary)]">
+              <DollarSign className="size-3 shrink-0 text-[var(--space-text-secondary)]" />
               <span>{budget}</span>
             </div>
           )}
@@ -95,12 +95,12 @@ function ProjectCard({ project, username }: { project: CarouselProject; username
           const pct = end > start ? Math.min(100, Math.max(0, Math.round(((now - start) / (end - start)) * 100))) : 0
           const statusCfg = PROJECT_STATUS_CFG[project.status as keyof typeof PROJECT_STATUS_CFG] ?? PROJECT_STATUS_CFG.pending
           return (
-            <div className="space-y-1 pt-2 border-t border-[#404040]">
-              <div className="flex justify-between text-[9px] text-[#4A4A4A]">
+            <div className="space-y-1 pt-2 border-t border-[var(--space-border-hard)]">
+              <div className="flex justify-between text-[9px] text-[var(--space-text-muted)]">
                 <span>Timeline</span>
                 <span>{pct}%</span>
               </div>
-              <div className="h-0.5 rounded-full bg-[#333333] overflow-hidden">
+              <div className="h-0.5 rounded-full bg-[var(--space-divider)] overflow-hidden">
                 <div
                   className={`h-full rounded-full transition-all duration-500 ${statusCfg.stripe}`}
                   style={{ width: `${pct}%` }}
@@ -113,7 +113,7 @@ function ProjectCard({ project, username }: { project: CarouselProject; username
         {/* View link */}
         <Link
           href={`/u/${username}/projects/${project.id}`}
-          className="flex items-center justify-between text-sm font-medium text-[#6B6B6B] hover:text-[#F0F0F0] transition-colors duration-200 group/link"
+          className="flex items-center justify-between text-sm font-medium text-[var(--space-text-secondary)] hover:text-[var(--space-text-primary)] transition-colors duration-200 group/link"
         >
           <span>View project</span>
           <ArrowRight className="size-3 group-hover/link:translate-x-0.5 transition-transform duration-150" />
@@ -164,7 +164,7 @@ export function ClientProjectCarousel({ projects, username }: ClientProjectCarou
           <button
             type="button"
             onClick={() => scroll('left')}
-            className="flex items-center justify-center size-7 rounded-full border border-[#404040] bg-[#252525] text-[#4A4A4A] hover:text-[#F0F0F0] hover:border-[#404040] transition-colors duration-150"
+            className="flex items-center justify-center size-7 rounded-full border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] hover:border-[var(--space-border-hard)] transition-colors duration-150"
             aria-label="Previous projects"
           >
             <ChevronLeft className="size-3.5" />
@@ -172,7 +172,7 @@ export function ClientProjectCarousel({ projects, username }: ClientProjectCarou
           <button
             type="button"
             onClick={() => scroll('right')}
-            className="flex items-center justify-center size-7 rounded-full border border-[#404040] bg-[#252525] text-[#4A4A4A] hover:text-[#F0F0F0] hover:border-[#404040] transition-colors duration-150"
+            className="flex items-center justify-center size-7 rounded-full border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] hover:border-[var(--space-border-hard)] transition-colors duration-150"
             aria-label="Next projects"
           >
             <ChevronRight className="size-3.5" />

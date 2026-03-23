@@ -79,7 +79,7 @@ export function WelcomeInfoButton({ firstName, showTips }: WelcomeInfoButtonProp
         onClick={closeModal}
       >
         <div
-          className="relative w-full max-w-[340px] rounded-2xl border border-[#404040] bg-[#1C1C1C] shadow-2xl overflow-hidden"
+          className="relative w-full max-w-[340px] rounded-2xl border border-[var(--space-border-hard)] bg-[var(--space-bg-base)] shadow-2xl overflow-hidden"
           onClick={e => e.stopPropagation()}
           style={{
             transition: 'opacity 300ms ease-out, transform 300ms cubic-bezier(0.34,1.56,0.64,1)',
@@ -119,14 +119,14 @@ export function WelcomeInfoButton({ firstName, showTips }: WelcomeInfoButtonProp
                   <p className="text-[9px] font-semibold uppercase tracking-[0.25em] text-blue-400/60 mb-0.5">
                     Client Portal
                   </p>
-                  <h3 className="text-sm font-bold text-[#F0F0F0]">
+                  <h3 className="text-sm font-bold text-[var(--space-text-primary)]">
                     Welcome to ORCACLUB{firstName ? `, ${firstName}` : ''}
                   </h3>
                 </div>
               </div>
               <button
                 onClick={closeModal}
-                className="p-1.5 text-[#4A4A4A] hover:text-[#A0A0A0] rounded-lg hover:bg-[#2D2D2D] transition-colors shrink-0 mt-0.5"
+                className="p-1.5 text-[var(--space-text-muted)] hover:text-[var(--space-text-tertiary)] rounded-lg hover:bg-[var(--space-bg-card-hover)] transition-colors shrink-0 mt-0.5"
                 aria-label="Close"
               >
                 <X className="size-3.5" />
@@ -135,7 +135,7 @@ export function WelcomeInfoButton({ firstName, showTips }: WelcomeInfoButtonProp
 
             {/* ── Description ─────────────────────────────────────────────── */}
             <p
-              className="text-xs text-[#6B6B6B] leading-relaxed"
+              className="text-xs text-[var(--space-text-secondary)] leading-relaxed"
               style={{
                 opacity: visible ? 1 : 0,
                 transform: visible ? 'translateY(0)' : 'translateY(4px)',
@@ -158,26 +158,26 @@ export function WelcomeInfoButton({ firstName, showTips }: WelcomeInfoButtonProp
             >
               <button
                 onClick={() => handleNavigate('projects')}
-                className="w-full flex items-center gap-3 p-3 rounded-xl border border-[#404040] bg-[#252525] hover:border-blue-500/25 hover:bg-blue-500/[0.04] transition-all duration-150 text-left group"
+                className="w-full flex items-center gap-3 p-3 rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] hover:border-blue-500/25 hover:bg-blue-500/[0.04] transition-all duration-150 text-left group"
               >
-                <FolderOpen className="size-3.5 text-[#4A4A4A] group-hover:text-blue-400 transition-colors shrink-0" />
+                <FolderOpen className="size-3.5 text-[var(--space-text-muted)] group-hover:text-blue-400 transition-colors shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-[#F0F0F0]">Track milestones &amp; sprints</p>
-                  <p className="text-[10px] text-[#4A4A4A] mt-0.5">View your project progress</p>
+                  <p className="text-xs font-semibold text-[var(--space-text-primary)]">Track milestones &amp; sprints</p>
+                  <p className="text-[10px] text-[var(--space-text-muted)] mt-0.5">View your project progress</p>
                 </div>
-                <ArrowRight className="size-3 text-[#4A4A4A] group-hover:text-blue-400 transition-colors shrink-0" />
+                <ArrowRight className="size-3 text-[var(--space-text-muted)] group-hover:text-blue-400 transition-colors shrink-0" />
               </button>
 
               <button
                 onClick={() => handleNavigate('invoices')}
-                className="w-full flex items-center gap-3 p-3 rounded-xl border border-[#404040] bg-[#252525] hover:border-blue-500/25 hover:bg-blue-500/[0.04] transition-all duration-150 text-left group"
+                className="w-full flex items-center gap-3 p-3 rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] hover:border-blue-500/25 hover:bg-blue-500/[0.04] transition-all duration-150 text-left group"
               >
-                <Receipt className="size-3.5 text-[#4A4A4A] group-hover:text-blue-400 transition-colors shrink-0" />
+                <Receipt className="size-3.5 text-[var(--space-text-muted)] group-hover:text-blue-400 transition-colors shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-[#F0F0F0]">View and pay invoices</p>
-                  <p className="text-[10px] text-[#4A4A4A] mt-0.5">Manage your payments</p>
+                  <p className="text-xs font-semibold text-[var(--space-text-primary)]">View and pay invoices</p>
+                  <p className="text-[10px] text-[var(--space-text-muted)] mt-0.5">Manage your payments</p>
                 </div>
-                <ArrowRight className="size-3 text-[#4A4A4A] group-hover:text-blue-400 transition-colors shrink-0" />
+                <ArrowRight className="size-3 text-[var(--space-text-muted)] group-hover:text-blue-400 transition-colors shrink-0" />
               </button>
 
               {/* View Packages — blue CTA with count badge */}
@@ -203,7 +203,7 @@ export function WelcomeInfoButton({ firstName, showTips }: WelcomeInfoButtonProp
 
             {/* ── Don't show again ─────────────────────────────────────────── */}
             <div
-              className="flex items-center gap-2.5 pt-1 border-t border-[#404040]"
+              className="flex items-center gap-2.5 pt-1 border-t border-[var(--space-border-hard)]"
               style={{
                 opacity: visible ? 1 : 0,
                 transition: 'opacity 280ms ease',
@@ -216,14 +216,14 @@ export function WelcomeInfoButton({ firstName, showTips }: WelcomeInfoButtonProp
                 className={`flex items-center justify-center size-4 rounded border-2 shrink-0 transition-all duration-150 ${
                   dontShow
                     ? 'bg-blue-500 border-blue-500'
-                    : 'bg-transparent border-[#404040] hover:border-[#404040]'
+                    : 'bg-transparent border-[var(--space-border-hard)] hover:border-[var(--space-border-hard)]'
                 }`}
                 aria-label="Don't show again"
               >
                 {dontShow && <Check className="size-2.5 text-white" strokeWidth={3} />}
               </button>
               <span
-                className="text-[10px] text-[#4A4A4A] select-none cursor-pointer"
+                className="text-[10px] text-[var(--space-text-muted)] select-none cursor-pointer"
                 onClick={() => setDontShow(v => !v)}
               >
                 Don&apos;t show again

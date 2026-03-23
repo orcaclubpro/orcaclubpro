@@ -28,12 +28,12 @@ export function ClientInvoiceTimeline({ orders }: ClientInvoiceTimelineProps) {
 
   if (orders.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-[#404040] bg-[#252525] py-12 text-center">
-        <div className="inline-flex p-3 rounded-full bg-[rgba(255,255,255,0.06)] border border-[#404040] mb-4">
-          <Receipt className="size-6 text-[#6B6B6B]" />
+      <div className="rounded-xl border border-dashed border-[var(--space-border-hard)] bg-[var(--space-bg-card)] py-12 text-center">
+        <div className="inline-flex p-3 rounded-full bg-[rgba(255,255,255,0.06)] border border-[var(--space-border-hard)] mb-4">
+          <Receipt className="size-6 text-[var(--space-text-secondary)]" />
         </div>
-        <p className="text-sm font-medium text-[#A0A0A0]">No invoices yet</p>
-        <p className="text-xs text-[#6B6B6B] mt-1">Invoices will appear here once work begins.</p>
+        <p className="text-sm font-medium text-[var(--space-text-tertiary)]">No invoices yet</p>
+        <p className="text-xs text-[var(--space-text-secondary)] mt-1">Invoices will appear here once work begins.</p>
       </div>
     )
   }
@@ -57,7 +57,7 @@ export function ClientInvoiceTimeline({ orders }: ClientInvoiceTimelineProps) {
       </div>
 
       {/* Invoice list */}
-      <div className="rounded-xl border border-[#404040] bg-[#252525] overflow-hidden divide-y divide-[#333333]">
+      <div className="rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] overflow-hidden divide-y divide-[var(--space-divider)]">
         {displayed.map(order => {
           const cfg = ORDER_STATUS_CFG[order.status] ?? ORDER_STATUS_CFG.cancelled
           const Icon = cfg.icon
@@ -73,15 +73,15 @@ export function ClientInvoiceTimeline({ orders }: ClientInvoiceTimelineProps) {
               <Icon className={`size-3.5 shrink-0 ${cfg.iconColor}`} />
 
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-[#F0F0F0] truncate">
+                <p className="text-sm font-medium text-[var(--space-text-primary)] truncate">
                   {order.title ?? order.orderNumber ?? `INV-${order.id.slice(-6).toUpperCase()}`}
                 </p>
-                <p className="text-xs text-[#A0A0A0] mt-0.5">
+                <p className="text-xs text-[var(--space-text-tertiary)] mt-0.5">
                   {order.orderNumber ? `#${order.orderNumber} · ` : ''}{fmtDate(order.createdAt)}
                 </p>
               </div>
 
-              <span className={`text-sm font-semibold tabular-nums shrink-0 ${isPending ? 'text-amber-400' : 'text-[#F0F0F0]'}`}>
+              <span className={`text-sm font-semibold tabular-nums shrink-0 ${isPending ? 'text-amber-400' : 'text-[var(--space-text-primary)]'}`}>
                 {fmtCurrency(order.amount)}
               </span>
 
@@ -105,7 +105,7 @@ export function ClientInvoiceTimeline({ orders }: ClientInvoiceTimelineProps) {
       </div>
 
       {orders.length > 8 && (
-        <p className="text-xs text-[#A0A0A0] text-center">
+        <p className="text-xs text-[var(--space-text-tertiary)] text-center">
           Showing {Math.min(8, orders.length)} of {orders.length} invoices
         </p>
       )}

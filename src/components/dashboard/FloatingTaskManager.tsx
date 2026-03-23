@@ -205,12 +205,12 @@ export function FloatingTaskManager({ project, tasks, sprints }: FloatingTaskMan
 
       {/* Task Manager Slide Panel - Higher z-index */}
       <div
-        className={`fixed top-0 right-0 h-full w-full md:w-[480px] bg-[#1C1C1C] border-l border-[#404040] z-[90] transform transition-transform duration-300 ${
+        className={`fixed top-0 right-0 h-full w-full md:w-[480px] bg-[var(--space-bg-base)] border-l border-[var(--space-border-hard)] z-[90] transform transition-transform duration-300 ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         } overflow-hidden flex flex-col`}
       >
         {/* Header */}
-        <div className="relative overflow-hidden border-b border-[#404040] p-6">
+        <div className="relative overflow-hidden border-b border-[var(--space-border-hard)] p-6">
           <div className="absolute top-0 right-0 w-48 h-48 bg-[rgba(255,255,255,0.02)] rounded-full blur-3xl" />
           <div className="relative z-10">
             <div className="flex items-center justify-between mb-4">
@@ -218,20 +218,20 @@ export function FloatingTaskManager({ project, tasks, sprints }: FloatingTaskMan
                 <div className="p-2 rounded-lg bg-[rgba(139,156,182,0.06)] border border-[rgba(139,156,182,0.15)]">
                   <ListTodo className="size-5" style={{ color: 'var(--space-accent)' }} />
                 </div>
-                <h2 className="text-xl font-bold text-[#F0F0F0]">Task Manager</h2>
+                <h2 className="text-xl font-bold text-[var(--space-text-primary)]">Task Manager</h2>
               </div>
               <button
                 onClick={() => setIsOpen(false)}
-                className="p-2 rounded-lg hover:bg-[#2D2D2D] transition-colors"
+                className="p-2 rounded-lg hover:bg-[var(--space-bg-card-hover)] transition-colors"
               >
-                <X className="size-5 text-[#6B6B6B]" />
+                <X className="size-5 text-[var(--space-text-secondary)]" />
               </button>
             </div>
 
             {/* Sprint Selector */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label className="text-xs text-[#6B6B6B] uppercase tracking-wider">
+                <Label className="text-xs text-[var(--space-text-secondary)] uppercase tracking-wider">
                   Filter by Sprint
                 </Label>
                 <Dialog open={showSprintModal} onOpenChange={setShowSprintModal}>
@@ -241,13 +241,13 @@ export function FloatingTaskManager({ project, tasks, sprints }: FloatingTaskMan
                       New Sprint
                     </button>
                   </DialogTrigger>
-                  <DialogContent className="bg-[#1C1C1C] border-[#404040] max-w-md">
+                  <DialogContent className="bg-[var(--space-bg-base)] border-[var(--space-border-hard)] max-w-md">
                     <DialogHeader>
-                      <DialogTitle className="text-xl font-bold text-[#F0F0F0] flex items-center gap-2">
+                      <DialogTitle className="text-xl font-bold text-[var(--space-text-primary)] flex items-center gap-2">
                         <Layers className="size-5" style={{ color: 'var(--space-accent)' }} />
                         Create Sprint
                       </DialogTitle>
-                      <DialogDescription className="text-[#6B6B6B]">
+                      <DialogDescription className="text-[var(--space-text-secondary)]">
                         Create a new sprint to organize tasks
                       </DialogDescription>
                     </DialogHeader>
@@ -255,7 +255,7 @@ export function FloatingTaskManager({ project, tasks, sprints }: FloatingTaskMan
                     <form onSubmit={handleCreateSprint} className="space-y-4 pt-4">
                       {/* Sprint Name */}
                       <div className="space-y-2">
-                        <Label htmlFor="sprintName" className="text-sm text-[#A0A0A0]">
+                        <Label htmlFor="sprintName" className="text-sm text-[var(--space-text-tertiary)]">
                           Sprint Name <span className="text-red-400">*</span>
                         </Label>
                         <Input
@@ -263,7 +263,7 @@ export function FloatingTaskManager({ project, tasks, sprints }: FloatingTaskMan
                           value={sprintName}
                           onChange={(e) => setSprintName(e.target.value)}
                           placeholder="e.g., Sprint 1, Q1 2026"
-                          className="bg-[#2D2D2D] border-[#404040] text-[#F0F0F0]"
+                          className="bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)]"
                           disabled={isCreatingSprint}
                           required
                         />
@@ -271,7 +271,7 @@ export function FloatingTaskManager({ project, tasks, sprints }: FloatingTaskMan
 
                       {/* Description */}
                       <div className="space-y-2">
-                        <Label htmlFor="sprintDescription" className="text-sm text-[#A0A0A0]">
+                        <Label htmlFor="sprintDescription" className="text-sm text-[var(--space-text-tertiary)]">
                           Description
                         </Label>
                         <Textarea
@@ -280,7 +280,7 @@ export function FloatingTaskManager({ project, tasks, sprints }: FloatingTaskMan
                           onChange={(e) => setSprintDescription(e.target.value)}
                           placeholder="Sprint objectives..."
                           rows={2}
-                          className="bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] resize-none"
+                          className="bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] resize-none"
                           disabled={isCreatingSprint}
                         />
                       </div>
@@ -288,7 +288,7 @@ export function FloatingTaskManager({ project, tasks, sprints }: FloatingTaskMan
                       {/* Dates */}
                       <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-2">
-                          <Label htmlFor="sprintStartDate" className="text-sm text-[#A0A0A0]">
+                          <Label htmlFor="sprintStartDate" className="text-sm text-[var(--space-text-tertiary)]">
                             Start Date <span className="text-red-400">*</span>
                           </Label>
                           <Input
@@ -296,14 +296,14 @@ export function FloatingTaskManager({ project, tasks, sprints }: FloatingTaskMan
                             type="date"
                             value={sprintStartDate}
                             onChange={(e) => setSprintStartDate(e.target.value)}
-                            className="bg-[#2D2D2D] border-[#404040] text-[#F0F0F0]"
+                            className="bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)]"
                             disabled={isCreatingSprint}
                             required
                           />
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="sprintEndDate" className="text-sm text-[#A0A0A0]">
+                          <Label htmlFor="sprintEndDate" className="text-sm text-[var(--space-text-tertiary)]">
                             End Date <span className="text-red-400">*</span>
                           </Label>
                           <Input
@@ -311,7 +311,7 @@ export function FloatingTaskManager({ project, tasks, sprints }: FloatingTaskMan
                             type="date"
                             value={sprintEndDate}
                             onChange={(e) => setSprintEndDate(e.target.value)}
-                            className="bg-[#2D2D2D] border-[#404040] text-[#F0F0F0]"
+                            className="bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)]"
                             disabled={isCreatingSprint}
                             required
                           />
@@ -320,7 +320,7 @@ export function FloatingTaskManager({ project, tasks, sprints }: FloatingTaskMan
 
                       {/* Goal */}
                       <div className="space-y-2">
-                        <Label htmlFor="sprintGoal" className="text-sm text-[#A0A0A0]">
+                        <Label htmlFor="sprintGoal" className="text-sm text-[var(--space-text-tertiary)]">
                           Sprint Goal
                         </Label>
                         <Textarea
@@ -329,7 +329,7 @@ export function FloatingTaskManager({ project, tasks, sprints }: FloatingTaskMan
                           onChange={(e) => setSprintGoal(e.target.value)}
                           placeholder="What should be accomplished..."
                           rows={2}
-                          className="bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] resize-none"
+                          className="bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] resize-none"
                           disabled={isCreatingSprint}
                         />
                       </div>
@@ -346,7 +346,7 @@ export function FloatingTaskManager({ project, tasks, sprints }: FloatingTaskMan
                           variant="outline"
                           onClick={() => setShowSprintModal(false)}
                           disabled={isCreatingSprint}
-                          className="flex-1 bg-[#2D2D2D] border-[#404040] hover:bg-[#E5E1D9] text-[#A0A0A0]"
+                          className="flex-1 bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] hover:bg-[var(--space-bg-card-hover)] text-[var(--space-text-tertiary)]"
                         >
                           Cancel
                         </Button>
@@ -377,10 +377,10 @@ export function FloatingTaskManager({ project, tasks, sprints }: FloatingTaskMan
                 value={selectedSprint || 'all'}
                 onValueChange={(value) => setSelectedSprint(value === 'all' ? null : value)}
               >
-                <SelectTrigger className="bg-[#2D2D2D] border-[#404040] text-[#F0F0F0]">
+                <SelectTrigger className="bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)]">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-[#1C1C1C] border-[#404040]">
+                <SelectContent className="bg-[var(--space-bg-base)] border-[var(--space-border-hard)]">
                   <SelectItem value="all">All Tasks</SelectItem>
                   {sprints.map((sprint) => (
                     <SelectItem key={sprint.id} value={sprint.id}>
@@ -410,17 +410,17 @@ export function FloatingTaskManager({ project, tasks, sprints }: FloatingTaskMan
           {showCreateForm && (
             <form
               onSubmit={handleCreateTask}
-              className="relative overflow-hidden rounded-xl border border-[#404040] bg-[#2D2D2D] p-4 space-y-4"
+              className="relative overflow-hidden rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card-hover)] p-4 space-y-4"
             >
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-semibold text-[#F0F0F0]">Create New Task</h3>
+                <h3 className="text-sm font-semibold text-[var(--space-text-primary)]">Create New Task</h3>
                 <button
                   type="button"
                   onClick={() => {
                     setShowCreateForm(false)
                     setError(null)
                   }}
-                  className="text-[#6B6B6B] hover:text-[#F0F0F0]"
+                  className="text-[var(--space-text-secondary)] hover:text-[var(--space-text-primary)]"
                 >
                   <X className="size-4" />
                 </button>
@@ -428,7 +428,7 @@ export function FloatingTaskManager({ project, tasks, sprints }: FloatingTaskMan
 
               {/* Title */}
               <div className="space-y-1">
-                <Label htmlFor="title" className="text-xs text-[#6B6B6B]">
+                <Label htmlFor="title" className="text-xs text-[var(--space-text-secondary)]">
                   Title *
                 </Label>
                 <Input
@@ -436,7 +436,7 @@ export function FloatingTaskManager({ project, tasks, sprints }: FloatingTaskMan
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Task title..."
-                  className="bg-[#1C1C1C] border-[#404040] text-[#F0F0F0] text-sm placeholder:text-[#4A4A4A]"
+                  className="bg-[var(--space-bg-base)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] text-sm placeholder:text-[var(--space-text-muted)]"
                   disabled={isLoading}
                   required
                 />
@@ -444,7 +444,7 @@ export function FloatingTaskManager({ project, tasks, sprints }: FloatingTaskMan
 
               {/* Description */}
               <div className="space-y-1">
-                <Label htmlFor="description" className="text-xs text-[#6B6B6B]">
+                <Label htmlFor="description" className="text-xs text-[var(--space-text-secondary)]">
                   Description
                 </Label>
                 <Textarea
@@ -453,7 +453,7 @@ export function FloatingTaskManager({ project, tasks, sprints }: FloatingTaskMan
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Task details..."
                   rows={3}
-                  className="bg-[#1C1C1C] border-[#404040] text-[#F0F0F0] text-sm resize-none placeholder:text-[#4A4A4A]"
+                  className="bg-[var(--space-bg-base)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] text-sm resize-none placeholder:text-[var(--space-text-muted)]"
                   disabled={isLoading}
                 />
               </div>
@@ -461,7 +461,7 @@ export function FloatingTaskManager({ project, tasks, sprints }: FloatingTaskMan
               {/* Priority & Due Date */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <Label htmlFor="priority" className="text-xs text-[#6B6B6B]">
+                  <Label htmlFor="priority" className="text-xs text-[var(--space-text-secondary)]">
                     Priority
                   </Label>
                   <Select
@@ -471,10 +471,10 @@ export function FloatingTaskManager({ project, tasks, sprints }: FloatingTaskMan
                     }
                     disabled={isLoading}
                   >
-                    <SelectTrigger className="bg-[#1C1C1C] border-[#404040] text-[#F0F0F0] text-sm">
+                    <SelectTrigger className="bg-[var(--space-bg-base)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] text-sm">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#1C1C1C] border-[#404040]">
+                    <SelectContent className="bg-[var(--space-bg-base)] border-[var(--space-border-hard)]">
                       <SelectItem value="low">Low</SelectItem>
                       <SelectItem value="medium">Medium</SelectItem>
                       <SelectItem value="high">High</SelectItem>
@@ -484,7 +484,7 @@ export function FloatingTaskManager({ project, tasks, sprints }: FloatingTaskMan
                 </div>
 
                 <div className="space-y-1">
-                  <Label htmlFor="dueDate" className="text-xs text-[#6B6B6B]">
+                  <Label htmlFor="dueDate" className="text-xs text-[var(--space-text-secondary)]">
                     Due Date
                   </Label>
                   <Input
@@ -492,7 +492,7 @@ export function FloatingTaskManager({ project, tasks, sprints }: FloatingTaskMan
                     type="date"
                     value={dueDate}
                     onChange={(e) => setDueDate(e.target.value)}
-                    className="bg-[#1C1C1C] border-[#404040] text-[#F0F0F0] text-sm"
+                    className="bg-[var(--space-bg-base)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] text-sm"
                     disabled={isLoading}
                   />
                 </div>
@@ -501,7 +501,7 @@ export function FloatingTaskManager({ project, tasks, sprints }: FloatingTaskMan
               {/* Sprint Assignment */}
               {!selectedSprint && (
                 <div className="space-y-1">
-                  <Label htmlFor="taskSprint" className="text-xs text-[#6B6B6B]">
+                  <Label htmlFor="taskSprint" className="text-xs text-[var(--space-text-secondary)]">
                     Assign to Sprint (Optional)
                   </Label>
                   <Select
@@ -509,10 +509,10 @@ export function FloatingTaskManager({ project, tasks, sprints }: FloatingTaskMan
                     onValueChange={(value) => setTaskSprint(value === 'none' ? null : value)}
                     disabled={isLoading}
                   >
-                    <SelectTrigger className="bg-[#1C1C1C] border-[#404040] text-[#F0F0F0] text-sm">
+                    <SelectTrigger className="bg-[var(--space-bg-base)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] text-sm">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#1C1C1C] border-[#404040]">
+                    <SelectContent className="bg-[var(--space-bg-base)] border-[var(--space-border-hard)]">
                       <SelectItem value="none">No Sprint</SelectItem>
                       {sprints.map((sprint) => (
                         <SelectItem key={sprint.id} value={sprint.id}>
@@ -552,7 +552,7 @@ export function FloatingTaskManager({ project, tasks, sprints }: FloatingTaskMan
 
           {/* Task List */}
           {filteredTasks.length === 0 ? (
-            <div className="text-center py-12 text-[#4A4A4A]">
+            <div className="text-center py-12 text-[var(--space-text-muted)]">
               <ListTodo className="size-12 mx-auto mb-4 opacity-50" />
               <p className="text-sm">
                 {selectedSprint ? 'No tasks in this sprint' : 'No tasks yet'}
@@ -604,7 +604,7 @@ export function FloatingTaskManager({ project, tasks, sprints }: FloatingTaskMan
       {isOpen && (
         <div
           onClick={() => setIsOpen(false)}
-          className="fixed inset-0 bg-[#333333]/20 z-[80] animate-in fade-in duration-200"
+          className="fixed inset-0 bg-[var(--space-divider)]/20 z-[80] animate-in fade-in duration-200"
         />
       )}
     </>
@@ -630,14 +630,14 @@ function TaskGroup({
       >
         <div className="flex items-center gap-2">
           <ChevronRight
-            className={`size-4 text-[#6B6B6B] transition-transform ${
+            className={`size-4 text-[var(--space-text-secondary)] transition-transform ${
               isExpanded ? 'rotate-90' : ''
             }`}
           />
-          <h3 className="text-sm font-semibold text-[#F0F0F0]">{title}</h3>
+          <h3 className="text-sm font-semibold text-[var(--space-text-primary)]">{title}</h3>
           <Badge
             variant="outline"
-            className="bg-[#2D2D2D] border-[#404040] text-[#6B6B6B] text-xs"
+            className="bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-secondary)] text-xs"
           >
             {tasks.length}
           </Badge>
@@ -668,7 +668,7 @@ function TaskCard({
 
   return (
     <div
-      className={`relative overflow-hidden rounded-lg border ${priorityConfig.border} ${priorityConfig.bg} p-3 hover:border-[#404040] transition-all duration-200 group`}
+      className={`relative overflow-hidden rounded-lg border ${priorityConfig.border} ${priorityConfig.bg} p-3 hover:border-[var(--space-border-hard)] transition-all duration-200 group`}
     >
       <div className="flex items-start gap-3">
         {/* Checkbox */}
@@ -679,7 +679,7 @@ function TaskCard({
           {isCompleted ? (
             <CheckCircle className="size-5 text-green-400" />
           ) : (
-            <Circle className="size-5 text-[#4A4A4A] hover:text-[var(--space-accent)]" />
+            <Circle className="size-5 text-[var(--space-text-muted)] hover:text-[var(--space-accent)]" />
           )}
         </button>
 
@@ -687,13 +687,13 @@ function TaskCard({
         <div className="flex-1 min-w-0 space-y-1">
           <h4
             className={`text-sm font-medium ${
-              isCompleted ? 'text-[#4A4A4A] line-through' : 'text-[#F0F0F0]'
+              isCompleted ? 'text-[var(--space-text-muted)] line-through' : 'text-[var(--space-text-primary)]'
             }`}
           >
             {task.title}
           </h4>
 
-          <div className="flex items-center gap-3 text-xs text-[#6B6B6B]">
+          <div className="flex items-center gap-3 text-xs text-[var(--space-text-secondary)]">
             {/* Priority */}
             <div className="flex items-center gap-1">
               <Flag className={`size-3 ${priorityConfig.color}`} />

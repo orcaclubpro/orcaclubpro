@@ -139,11 +139,11 @@ function SidebarTask({ task }: { task: any }) {
   const over = isOverdue(task.dueDate) && task.status !== 'completed'
   const projectName = getProjectName(task)
   return (
-    <div className="flex items-center gap-2 px-2 py-[5px] rounded hover:bg-[#2D2D2D] transition-colors">
+    <div className="flex items-center gap-2 px-2 py-[5px] rounded hover:bg-[var(--space-bg-card-hover)] transition-colors">
       <span className={`shrink-0 size-1.5 rounded-full ${STATUS_DOT[task.status] ?? 'bg-gray-500'}`} />
       <div className="flex-1 min-w-0">
-        <p className="text-[11px] text-[#6B6B6B] truncate leading-tight">{task.title}</p>
-        {projectName && <p className="text-[9px] text-[#6B6B6B] truncate">{projectName}</p>}
+        <p className="text-[11px] text-[var(--space-text-secondary)] truncate leading-tight">{task.title}</p>
+        {projectName && <p className="text-[9px] text-[var(--space-text-secondary)] truncate">{projectName}</p>}
       </div>
       {over && <span className="shrink-0 size-1 rounded-full bg-red-400/70" />}
       <span className={`shrink-0 text-[9px] font-bold px-1 rounded border leading-4 ${pc.color} ${pc.bg}`}>
@@ -196,14 +196,14 @@ function TaskCard({
 
   if (isEditing && editState) {
     return (
-      <div className="mx-1 mb-1 px-3 py-3 bg-[#2D2D2D] rounded-lg border border-[#404040] space-y-2">
+      <div className="mx-1 mb-1 px-3 py-3 bg-[var(--space-bg-card-hover)] rounded-lg border border-[var(--space-border-hard)] space-y-2">
         <div className="flex items-center gap-2">
           <Input
             ref={titleRef}
             value={editState.title}
             onChange={(e) => onEditChange({ title: e.target.value })}
             placeholder="Task title…"
-            className="flex-1 bg-[#252525] border-[#404040] text-[#F0F0F0] placeholder:text-[#4A4A4A] focus:border-[var(--space-accent)] h-7 text-sm"
+            className="flex-1 bg-[var(--space-bg-card)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)] focus:border-[var(--space-accent)] h-7 text-sm"
             onKeyDown={(e) => {
               if (e.key === 'Enter') onEditSave(task)
               if (e.key === 'Escape') onEditCancel()
@@ -217,7 +217,7 @@ function TaskCard({
           >
             {isSaving ? <Loader2 className="size-3 animate-spin" /> : <Check className="size-3.5" />}
           </button>
-          <button type="button" onClick={onEditCancel} className="p-1.5 rounded-lg text-[#4A4A4A] hover:text-[#6B6B6B] hover:bg-[#2D2D2D] transition-colors">
+          <button type="button" onClick={onEditCancel} className="p-1.5 rounded-lg text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)] hover:bg-[var(--space-bg-card-hover)] transition-colors">
             <X className="size-3.5" />
           </button>
         </div>
@@ -226,7 +226,7 @@ function TaskCard({
           onChange={(e) => onEditChange({ description: e.target.value })}
           placeholder="Description (optional)…"
           rows={2}
-          className="w-full bg-[#252525] border-[#404040] text-[#A0A0A0] placeholder:text-[#4A4A4A] focus:border-[var(--space-accent)] resize-none text-xs leading-relaxed"
+          className="w-full bg-[var(--space-bg-card)] border-[var(--space-border-hard)] text-[var(--space-text-tertiary)] placeholder:text-[var(--space-text-muted)] focus:border-[var(--space-accent)] resize-none text-xs leading-relaxed"
         />
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex gap-1">
@@ -239,7 +239,7 @@ function TaskCard({
                   'text-[10px] font-medium px-2 py-0.5 rounded-full border transition-colors',
                   editState.priority === p
                     ? cn(PRIORITY_CFG[p].text, 'border-current bg-current/10')
-                    : 'text-[#4A4A4A] border-[#404040] hover:border-[#404040]',
+                    : 'text-[var(--space-text-muted)] border-[var(--space-border-hard)] hover:border-[var(--space-border-hard)]',
                 )}
               >
                 {PRIORITY_CFG[p].label}
@@ -250,7 +250,7 @@ function TaskCard({
             type="date"
             value={editState.dueDate}
             onChange={(e) => onEditChange({ dueDate: e.target.value })}
-            className="ml-auto text-[11px] text-[#6B6B6B] bg-transparent border border-[#404040] rounded px-2 py-0.5 focus:outline-none focus:border-[#404040]"
+            className="ml-auto text-[11px] text-[var(--space-text-secondary)] bg-transparent border border-[var(--space-border-hard)] rounded px-2 py-0.5 focus:outline-none focus:border-[var(--space-border-hard)]"
           />
         </div>
       </div>
@@ -263,7 +263,7 @@ function TaskCard({
         'group relative flex items-start gap-2.5 px-3 py-2.5 rounded-lg transition-all cursor-pointer select-none border-l-2',
         isLocallyActive
           ? 'bg-[var(--space-accent)]/[0.04] border-[var(--space-accent)]/40 hover:bg-[var(--space-accent)]/[0.07]'
-          : 'border-transparent hover:bg-[#2D2D2D]',
+          : 'border-transparent hover:bg-[var(--space-bg-card-hover)]',
         (updating || isSaving) && 'opacity-50 pointer-events-none',
         done && 'opacity-55',
       )}
@@ -279,7 +279,7 @@ function TaskCard({
             ? 'bg-green-400/80 border-green-400/80 hover:bg-green-300/70'
             : task.status === 'in-progress'
             ? 'border-[var(--space-accent)]/50 hover:border-[var(--space-accent)]'
-            : 'border-[#404040] hover:border-[var(--space-accent)]/50 hover:bg-[var(--space-accent)]/5',
+            : 'border-[var(--space-border-hard)] hover:border-[var(--space-accent)]/50 hover:bg-[var(--space-accent)]/5',
         )}
       >
         {done ? (
@@ -290,18 +290,18 @@ function TaskCard({
       </button>
 
       <div className="flex-1 min-w-0">
-        <p className={cn('text-sm leading-snug', done ? 'line-through text-[#4A4A4A]' : isLocallyActive ? 'text-[#F0F0F0]' : 'text-[#A0A0A0]')}>
+        <p className={cn('text-sm leading-snug', done ? 'line-through text-[var(--space-text-muted)]' : isLocallyActive ? 'text-[var(--space-text-primary)]' : 'text-[var(--space-text-tertiary)]')}>
           {task.title}
         </p>
         {(() => {
           const desc = extractPlainText(task.description)
           if (!desc) return null
           return isLocallyActive
-            ? <p className="text-xs text-[#6B6B6B] mt-1 leading-relaxed">{desc}</p>
-            : <p className="text-xs text-[#4A4A4A] mt-0.5 truncate leading-snug">{desc}</p>
+            ? <p className="text-xs text-[var(--space-text-secondary)] mt-1 leading-relaxed">{desc}</p>
+            : <p className="text-xs text-[var(--space-text-muted)] mt-0.5 truncate leading-snug">{desc}</p>
         })()}
         <div className="flex items-center gap-2 mt-1 flex-wrap">
-          {projectName && <span className="text-[10px] text-[#4A4A4A]">{projectName}</span>}
+          {projectName && <span className="text-[10px] text-[var(--space-text-muted)]">{projectName}</span>}
           {priorityPickerOpen ? (
             <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
               {(['low', 'medium', 'high', 'urgent'] as Priority[]).map((p) => {
@@ -313,7 +313,7 @@ function TaskCard({
                     onClick={(e) => { e.stopPropagation(); onPriorityChange(task, p); setPriorityPickerOpen(false) }}
                     className={cn(
                       'text-[9px] font-bold px-1.5 rounded border leading-4 transition-all',
-                      task.priority === p ? cn(cfg.color, cfg.bg) : 'text-[#4A4A4A] border-[#404040] hover:text-[#A0A0A0] hover:border-[#404040]',
+                      task.priority === p ? cn(cfg.color, cfg.bg) : 'text-[var(--space-text-muted)] border-[var(--space-border-hard)] hover:text-[var(--space-text-tertiary)] hover:border-[var(--space-border-hard)]',
                     )}
                   >
                     {cfg.short}
@@ -332,31 +332,31 @@ function TaskCard({
             </button>
           )}
           {task.dueDate && (
-            <span className={`text-[10px] ${over ? 'text-red-400' : 'text-[#4A4A4A]'}`}>
+            <span className={`text-[10px] ${over ? 'text-red-400' : 'text-[var(--space-text-muted)]'}`}>
               {fmtDate(task.dueDate)}{over ? ' · overdue' : ''}
             </span>
           )}
         </div>
         {isLocallyActive && (
-          <div className="mt-2 pt-2 border-t border-[#404040] flex flex-wrap gap-x-3 gap-y-1">
+          <div className="mt-2 pt-2 border-t border-[var(--space-border-hard)] flex flex-wrap gap-x-3 gap-y-1">
             <span className={`text-[10px] font-medium ${STATUS_DOT[task.status] ? '' : ''}`}>
               <span className={`inline-block size-1.5 rounded-full mr-1 ${STATUS_DOT[task.status] ?? 'bg-gray-500'}`} />
-              <span className="text-[#6B6B6B]">{STATUS_LABEL[task.status] ?? 'Pending'}</span>
+              <span className="text-[var(--space-text-secondary)]">{STATUS_LABEL[task.status] ?? 'Pending'}</span>
             </span>
             {task.estimatedHours != null && (
-              <span className="text-[10px] text-[#4A4A4A]">
-                Est <span className="text-[#6B6B6B]">{task.estimatedHours}h</span>
+              <span className="text-[10px] text-[var(--space-text-muted)]">
+                Est <span className="text-[var(--space-text-secondary)]">{task.estimatedHours}h</span>
               </span>
             )}
             {task.actualHours != null && (
-              <span className="text-[10px] text-[#4A4A4A]">
-                Actual <span className="text-[#6B6B6B]">{task.actualHours}h</span>
+              <span className="text-[10px] text-[var(--space-text-muted)]">
+                Actual <span className="text-[var(--space-text-secondary)]">{task.actualHours}h</span>
               </span>
             )}
             {(() => {
               const sprint = getSprintObj(task)
               return sprint?.name
-                ? <span className="text-[10px] text-[#4A4A4A]">Sprint <span className="text-[#6B6B6B]">{sprint.name}</span></span>
+                ? <span className="text-[10px] text-[var(--space-text-muted)]">Sprint <span className="text-[var(--space-text-secondary)]">{sprint.name}</span></span>
                 : null
             })()}
           </div>
@@ -366,7 +366,7 @@ function TaskCard({
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); onEditStart(task) }}
-        className="shrink-0 mt-0.5 p-1 rounded-md text-[#4A4A4A] hover:text-[#A0A0A0] hover:bg-[#2D2D2D] transition-colors opacity-0 group-hover:opacity-100"
+        className="shrink-0 mt-0.5 p-1 rounded-md text-[var(--space-text-muted)] hover:text-[var(--space-text-tertiary)] hover:bg-[var(--space-bg-card-hover)] transition-colors opacity-0 group-hover:opacity-100"
         title="Edit task"
       >
         <Pencil className="size-3" />
@@ -406,7 +406,7 @@ function InlineAdd({ projectId, sprintId, onCreated }: { projectId: string; spri
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="flex items-center gap-1.5 w-full px-3 py-2 text-[11px] text-[#4A4A4A] hover:text-[#6B6B6B] hover:bg-[#2D2D2D] transition-colors shrink-0"
+        className="flex items-center gap-1.5 w-full px-3 py-2 text-[11px] text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)] hover:bg-[var(--space-bg-card-hover)] transition-colors shrink-0"
       >
         <Plus className="size-3" />
         Add task
@@ -417,7 +417,7 @@ function InlineAdd({ projectId, sprintId, onCreated }: { projectId: string; spri
   return (
     <form
       onSubmit={handleSubmit}
-      className="mx-3 my-2 rounded-lg border border-[#404040] bg-[#2D2D2D] overflow-hidden shrink-0"
+      className="mx-3 my-2 rounded-lg border border-[var(--space-border-hard)] bg-[var(--space-bg-card-hover)] overflow-hidden shrink-0"
       onKeyDown={(e) => { if (e.key === 'Escape') handleClose() }}
     >
       <Input
@@ -426,7 +426,7 @@ function InlineAdd({ projectId, sprintId, onCreated }: { projectId: string; spri
         onChange={(e) => setTitle(e.target.value)}
         placeholder="Task title…"
         disabled={isPending}
-        className="border-0 border-b border-[#404040] rounded-none bg-transparent text-[#F0F0F0] placeholder:text-[#4A4A4A] focus-visible:ring-0 h-8 text-xs px-3"
+        className="border-0 border-b border-[var(--space-border-hard)] rounded-none bg-transparent text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)] focus-visible:ring-0 h-8 text-xs px-3"
       />
       <Textarea
         value={description}
@@ -434,7 +434,7 @@ function InlineAdd({ projectId, sprintId, onCreated }: { projectId: string; spri
         placeholder="Description (optional)…"
         disabled={isPending}
         rows={2}
-        className="border-0 border-b border-[#404040] rounded-none bg-transparent text-[#F0F0F0] placeholder:text-[#4A4A4A] focus-visible:ring-0 text-xs px-3 py-2 resize-none min-h-0"
+        className="border-0 border-b border-[var(--space-border-hard)] rounded-none bg-transparent text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)] focus-visible:ring-0 text-xs px-3 py-2 resize-none min-h-0"
       />
       <div className="flex items-center gap-1.5 px-2 py-1.5">
         <div className="flex items-center gap-1 flex-1">
@@ -447,7 +447,7 @@ function InlineAdd({ projectId, sprintId, onCreated }: { projectId: string; spri
                 onClick={() => setPriority(p)}
                 className={cn(
                   'text-[9px] font-bold px-1.5 rounded border leading-4 transition-colors',
-                  priority === p ? `${pc.color} ${pc.bg}` : 'text-[#4A4A4A] border-[#404040] hover:text-[#6B6B6B]',
+                  priority === p ? `${pc.color} ${pc.bg}` : 'text-[var(--space-text-muted)] border-[var(--space-border-hard)] hover:text-[var(--space-text-secondary)]',
                 )}
               >
                 {pc.short}
@@ -458,7 +458,7 @@ function InlineAdd({ projectId, sprintId, onCreated }: { projectId: string; spri
         <button type="submit" disabled={isPending || !title.trim()} className="p-1.5 rounded-lg bg-[var(--space-accent)]/10 text-[var(--space-accent)] hover:bg-[var(--space-accent)]/20 transition-colors disabled:opacity-40 shrink-0">
           {isPending ? <Loader2 className="size-3 animate-spin" /> : <Check className="size-3" />}
         </button>
-        <button type="button" onClick={handleClose} className="p-1.5 rounded-lg text-[#4A4A4A] hover:text-[#6B6B6B] transition-colors shrink-0">
+        <button type="button" onClick={handleClose} className="p-1.5 rounded-lg text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)] transition-colors shrink-0">
           <X className="size-3" />
         </button>
       </div>
@@ -509,7 +509,7 @@ function UnassignedInlineAdd({
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="flex items-center gap-1.5 w-full px-3 py-2 text-[11px] text-[#4A4A4A] hover:text-[#6B6B6B] hover:bg-[#2D2D2D] transition-colors shrink-0"
+        className="flex items-center gap-1.5 w-full px-3 py-2 text-[11px] text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)] hover:bg-[var(--space-bg-card-hover)] transition-colors shrink-0"
       >
         <Plus className="size-3" />
         Add task
@@ -520,17 +520,17 @@ function UnassignedInlineAdd({
   return (
     <form
       onSubmit={handleSubmit}
-      className="mx-3 my-2 rounded-lg border border-[#404040] bg-[#2D2D2D] overflow-hidden shrink-0"
+      className="mx-3 my-2 rounded-lg border border-[var(--space-border-hard)] bg-[var(--space-bg-card-hover)] overflow-hidden shrink-0"
       onKeyDown={(e) => { if (e.key === 'Escape') handleClose() }}
     >
       {projects.length > 1 && (
         <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
-          <SelectTrigger className="h-7 border-0 border-b border-[#404040] rounded-none bg-transparent text-[#6B6B6B] focus:ring-0 text-[11px] px-3">
+          <SelectTrigger className="h-7 border-0 border-b border-[var(--space-border-hard)] rounded-none bg-transparent text-[var(--space-text-secondary)] focus:ring-0 text-[11px] px-3">
             <SelectValue placeholder="Select project" />
           </SelectTrigger>
-          <SelectContent className="bg-[#1C1C1C] border-[#404040] z-[300]">
+          <SelectContent className="bg-[var(--space-bg-base)] border-[var(--space-border-hard)] z-[300]">
             {projects.map((p) => (
-              <SelectItem key={p.id} value={p.id} className="text-[#F0F0F0] text-xs">{p.name}</SelectItem>
+              <SelectItem key={p.id} value={p.id} className="text-[var(--space-text-primary)] text-xs">{p.name}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -541,7 +541,7 @@ function UnassignedInlineAdd({
         onChange={(e) => setTitle(e.target.value)}
         placeholder="Task title…"
         disabled={isPending}
-        className="border-0 border-b border-[#404040] rounded-none bg-transparent text-[#F0F0F0] placeholder:text-[#4A4A4A] focus-visible:ring-0 h-8 text-xs px-3"
+        className="border-0 border-b border-[var(--space-border-hard)] rounded-none bg-transparent text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)] focus-visible:ring-0 h-8 text-xs px-3"
       />
       <Textarea
         value={description}
@@ -549,7 +549,7 @@ function UnassignedInlineAdd({
         placeholder="Description (optional)…"
         disabled={isPending}
         rows={2}
-        className="border-0 border-b border-[#404040] rounded-none bg-transparent text-[#F0F0F0] placeholder:text-[#4A4A4A] focus-visible:ring-0 text-xs px-3 py-2 resize-none min-h-0"
+        className="border-0 border-b border-[var(--space-border-hard)] rounded-none bg-transparent text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)] focus-visible:ring-0 text-xs px-3 py-2 resize-none min-h-0"
       />
       <div className="flex items-center gap-1.5 px-2 py-1.5">
         <div className="flex items-center gap-1 flex-1">
@@ -562,7 +562,7 @@ function UnassignedInlineAdd({
                 onClick={() => setPriority(p)}
                 className={cn(
                   'text-[9px] font-bold px-1.5 rounded border leading-4 transition-colors',
-                  priority === p ? `${pc.color} ${pc.bg}` : 'text-[#4A4A4A] border-[#404040] hover:text-[#6B6B6B]',
+                  priority === p ? `${pc.color} ${pc.bg}` : 'text-[var(--space-text-muted)] border-[var(--space-border-hard)] hover:text-[var(--space-text-secondary)]',
                 )}
               >
                 {pc.short}
@@ -577,7 +577,7 @@ function UnassignedInlineAdd({
         >
           {isPending ? <Loader2 className="size-3 animate-spin" /> : <Check className="size-3" />}
         </button>
-        <button type="button" onClick={handleClose} className="p-1.5 rounded-lg text-[#4A4A4A] hover:text-[#6B6B6B] transition-colors shrink-0">
+        <button type="button" onClick={handleClose} className="p-1.5 rounded-lg text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)] transition-colors shrink-0">
           <X className="size-3" />
         </button>
       </div>
@@ -634,10 +634,10 @@ function ColumnBody({
   return (
     <>
       {/* Sticky header group: sprint selector + timeline (when expanded) */}
-      <div className="sticky top-0 z-10 bg-[#252525]">
-        <div className="px-4 pt-4 pb-3 border-b border-[#404040] shrink-0">
+      <div className="sticky top-0 z-10 bg-[var(--space-bg-card)]">
+        <div className="px-4 pt-4 pb-3 border-b border-[var(--space-border-hard)] shrink-0">
           <div className="flex items-center justify-between mb-2.5">
-            <span className="text-[9px] font-bold text-[#1E3A6E] uppercase tracking-[0.15em]">{label}</span>
+            <span className="text-[9px] font-bold text-[var(--space-accent)] uppercase tracking-[0.15em]">{label}</span>
             <div className="flex items-center gap-2">
               {sCfg && <span className={`text-[10px] font-medium ${sCfg.text}`}>{sCfg.label}</span>}
               <button
@@ -646,8 +646,8 @@ function ColumnBody({
                 className={cn(
                   'flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium transition-colors',
                   isExpanded
-                    ? 'text-[#6B6B6B] hover:text-[#F0F0F0] bg-[#2D2D2D] hover:bg-[#E5E1D9]'
-                    : 'text-[#4A4A4A] hover:text-[#A0A0A0] hover:bg-[#2D2D2D]'
+                    ? 'text-[var(--space-text-secondary)] hover:text-[var(--space-text-primary)] bg-[var(--space-bg-card-hover)] hover:bg-[var(--space-bg-card-hover)]'
+                    : 'text-[var(--space-text-muted)] hover:text-[var(--space-text-tertiary)] hover:bg-[var(--space-bg-card-hover)]'
                 )}
               >
                 {isExpanded
@@ -658,17 +658,17 @@ function ColumnBody({
             </div>
           </div>
           <Select value={selectedSprintId ?? UNASSIGNED} onValueChange={(v) => onSelect(v === UNASSIGNED ? null : v)}>
-            <SelectTrigger className="h-8 bg-[#2D2D2D] border-[#404040] text-[#F0F0F0] text-sm focus:border-[var(--space-accent)]">
+            <SelectTrigger className="h-8 bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] text-sm focus:border-[var(--space-accent)]">
               <SelectValue placeholder="Select sprint" />
             </SelectTrigger>
-            <SelectContent className="bg-[#1C1C1C] border-[#404040] z-[300]">
-              <SelectItem value={UNASSIGNED} className="text-[#6B6B6B]">Unassigned tasks</SelectItem>
+            <SelectContent className="bg-[var(--space-bg-base)] border-[var(--space-border-hard)] z-[300]">
+              <SelectItem value={UNASSIGNED} className="text-[var(--space-text-secondary)]">Unassigned tasks</SelectItem>
               {allSprints.map((s) => {
                 const projName = typeof s.project === 'object' ? (s.project?.name ?? '') : ''
                 return (
-                  <SelectItem key={s.id} value={s.id} className="text-[#F0F0F0]">
+                  <SelectItem key={s.id} value={s.id} className="text-[var(--space-text-primary)]">
                     {s.name}
-                    {projName && <span className="text-[#4A4A4A] ml-1.5 text-xs">· {projName}</span>}
+                    {projName && <span className="text-[var(--space-text-muted)] ml-1.5 text-xs">· {projName}</span>}
                   </SelectItem>
                 )
               })}
@@ -676,10 +676,10 @@ function ColumnBody({
           </Select>
           {columnTasks.length > 0 && (
             <div className="flex items-center gap-2 mt-2.5">
-              <div className="flex-1 h-[3px] bg-[#333333] rounded-full overflow-hidden">
+              <div className="flex-1 h-[3px] bg-[var(--space-divider)] rounded-full overflow-hidden">
                 <div className={`h-full rounded-full transition-all duration-500 ${sCfg?.bar ?? 'bg-[var(--space-accent)]/60'}`} style={{ width: `${progress}%` }} />
               </div>
-              <span className="text-[10px] text-[#A0A0A0] shrink-0 tabular-nums">{completedCount}/{columnTasks.length}</span>
+              <span className="text-[10px] text-[var(--space-text-tertiary)] shrink-0 tabular-nums">{completedCount}/{columnTasks.length}</span>
             </div>
           )}
         </div>
@@ -698,7 +698,7 @@ function ColumnBody({
       <div className="py-2 space-y-1 px-1">
         {selectedSprintId === null && columnTasks.length === 0 && projects.length === 0 ? (
           <div className="flex items-center justify-center py-10 px-4">
-            <p className="text-xs text-[#6B6B6B] text-center">Select a sprint above</p>
+            <p className="text-xs text-[var(--space-text-secondary)] text-center">Select a sprint above</p>
           </div>
         ) : (
           <>
@@ -707,10 +707,10 @@ function ColumnBody({
               <div className="flex items-center gap-1.5 px-3 py-1.5">
                 <span className="size-1.5 rounded-full bg-[var(--space-accent)] shrink-0" style={{ boxShadow: '0 0 6px rgba(139,156,182,0.25)' }} />
                 <span className="text-[9px] font-semibold text-[var(--space-accent)] uppercase tracking-[0.12em]">Active</span>
-                {activeTasks.length > 0 && <span className="text-[9px] text-[#6B6B6B]">· {activeTasks.length}</span>}
+                {activeTasks.length > 0 && <span className="text-[9px] text-[var(--space-text-secondary)]">· {activeTasks.length}</span>}
               </div>
               {activeTasks.length === 0 ? (
-                <p className="text-[10px] text-[#4A4A4A] px-3 pb-1">Click a task to focus it here</p>
+                <p className="text-[10px] text-[var(--space-text-muted)] px-3 pb-1">Click a task to focus it here</p>
               ) : (
                 activeTasks.map((task) => (
                   <TaskCard
@@ -737,7 +737,7 @@ function ColumnBody({
                   ? <UnassignedInlineAdd projects={projects} onCreated={onTaskCreated} />
                   : null
               }
-              {statusGroups.length > 0 && <div className="mx-3 my-1.5 h-px bg-[#333333]" />}
+              {statusGroups.length > 0 && <div className="mx-3 my-1.5 h-px bg-[var(--space-divider)]" />}
             </div>
 
             {/* Status groups */}
@@ -745,8 +745,8 @@ function ColumnBody({
               <div key={status}>
                 <div className="flex items-center gap-1.5 px-3 py-1.5">
                   <span className={`size-1 rounded-full ${STATUS_DOT[status] ?? 'bg-gray-500'}`} />
-                  <span className="text-[9px] font-semibold text-[#1E3A6E] uppercase tracking-[0.12em]">{STATUS_LABEL[status]}</span>
-                  <span className="text-[9px] text-[#6B6B6B]">· {tasks.length}</span>
+                  <span className="text-[9px] font-semibold text-[var(--space-accent)] uppercase tracking-[0.12em]">{STATUS_LABEL[status]}</span>
+                  <span className="text-[9px] text-[var(--space-text-secondary)]">· {tasks.length}</span>
                 </div>
                 {tasks.map((task) => (
                   <TaskCard
@@ -772,7 +772,7 @@ function ColumnBody({
               <button
                 type="button"
                 onClick={onExpand}
-                className="w-full flex items-center gap-2 px-3 py-2 text-[10px] text-[#4A4A4A] hover:text-[#6B6B6B] transition-colors"
+                className="w-full flex items-center gap-2 px-3 py-2 text-[10px] text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)] transition-colors"
               >
                 <span className="size-1 rounded-full bg-green-400/40 shrink-0" />
                 {hiddenDoneCount} completed · expand to view
@@ -780,12 +780,12 @@ function ColumnBody({
             )}
 
             {columnTasks.length === 0 && selectedSprintId && (
-              <p className="text-xs text-[#6B6B6B] text-center py-8 px-4">
+              <p className="text-xs text-[var(--space-text-secondary)] text-center py-8 px-4">
                 {sprint ? `No tasks in ${sprint.name}` : 'No tasks'}
               </p>
             )}
             {columnTasks.length === 0 && selectedSprintId === null && projects.length > 0 && (
-              <p className="text-xs text-[#4A4A4A] text-center py-4 px-4">No unassigned tasks</p>
+              <p className="text-xs text-[var(--space-text-muted)] text-center py-4 px-4">No unassigned tasks</p>
             )}
           </>
         )}
@@ -882,13 +882,13 @@ function TaskTimeline({
   }, [tlStart, tlEnd])
 
   return (
-    <div className="border-b border-[#404040] bg-[#252525]">
+    <div className="border-b border-[var(--space-border-hard)] bg-[var(--space-bg-card)]">
       {/* Header row */}
       <div className="flex items-center justify-between px-4 py-2">
         <div className="flex items-center gap-2">
-          <span className="text-[8px] font-bold text-[#4A4A4A] uppercase tracking-[0.16em]">Project Track</span>
+          <span className="text-[8px] font-bold text-[var(--space-text-muted)] uppercase tracking-[0.16em]">Project Track</span>
           {sprintBands.length > 0 && (
-            <span className="text-[8px] text-[#4A4A4A]">{sprintBands.length} sprint{sprintBands.length !== 1 ? 's' : ''}</span>
+            <span className="text-[8px] text-[var(--space-text-muted)]">{sprintBands.length} sprint{sprintBands.length !== 1 ? 's' : ''}</span>
           )}
         </div>
         <div className="flex items-center gap-2">
@@ -900,7 +900,7 @@ function TaskTimeline({
           )}
           <button type="button" onClick={() => setIsOpen((p) => !p)}
             title={isOpen ? 'Minimize timeline' : 'Expand timeline'}
-            className="p-0.5 rounded text-[#4A4A4A] hover:text-[#A0A0A0] hover:bg-[#2D2D2D] transition-colors">
+            className="p-0.5 rounded text-[var(--space-text-muted)] hover:text-[var(--space-text-tertiary)] hover:bg-[var(--space-bg-card-hover)] transition-colors">
             {isOpen ? <Minimize2 className="size-3" /> : <Maximize2 className="size-3" />}
           </button>
         </div>
@@ -941,7 +941,7 @@ function TaskTimeline({
               })}
 
               {/* Track bar */}
-              <div className="absolute left-0 right-0 bg-[#333333] rounded-full" style={{ top: TL_TRACK_Y, height: TL_TRACK_H }} />
+              <div className="absolute left-0 right-0 bg-[var(--space-divider)] rounded-full" style={{ top: TL_TRACK_Y, height: TL_TRACK_H }} />
               {todayPx > 0 && (
                 <div className="absolute left-0 rounded-full" style={{ top: TL_TRACK_Y, height: TL_TRACK_H, width: todayPx, background: 'linear-gradient(to right, #1E3A6E, #2B4A8A)' }} />
               )}
@@ -963,7 +963,7 @@ function TaskTimeline({
               {monthTicks.map((tick) => (
                 <div key={tick.px} className="absolute pointer-events-none" style={{ left: tick.px, top: tickY }}>
                   <div className="w-px h-2 bg-[#555555] mx-auto" />
-                  <p className="text-[7px] text-[#4A4A4A] text-center mt-0.5 whitespace-nowrap -translate-x-1/2">{tick.label}</p>
+                  <p className="text-[7px] text-[var(--space-text-muted)] text-center mt-0.5 whitespace-nowrap -translate-x-1/2">{tick.label}</p>
                 </div>
               ))}
 
@@ -1030,12 +1030,12 @@ function SprintDonutChart({
       </svg>
       <div className="absolute flex flex-col items-center pointer-events-none select-none">
         {total === 0 ? (
-          <span className="text-xs text-[#4A4A4A]">No tasks</span>
+          <span className="text-xs text-[var(--space-text-muted)]">No tasks</span>
         ) : (
           <>
-            <span className="text-3xl font-bold text-[#F0F0F0] tabular-nums leading-none">{pct}%</span>
-            <span className="text-[9px] text-[#4A4A4A] uppercase tracking-[0.1em] mt-1">complete</span>
-            <span className="text-[10px] text-[#6B6B6B] tabular-nums mt-0.5">{completed}/{total}</span>
+            <span className="text-3xl font-bold text-[var(--space-text-primary)] tabular-nums leading-none">{pct}%</span>
+            <span className="text-[9px] text-[var(--space-text-muted)] uppercase tracking-[0.1em] mt-1">complete</span>
+            <span className="text-[10px] text-[var(--space-text-secondary)] tabular-nums mt-0.5">{completed}/{total}</span>
           </>
         )}
       </div>
@@ -1047,7 +1047,7 @@ function SprintDonutChart({
 
 function SprintColumn({
   label, sprintMap, allTasks, selectedSprintId, onSelect,
-  updatingIds, onToggle, bg = 'bg-[#252525]',
+  updatingIds, onToggle, bg = 'bg-[var(--space-bg-card)]',
   activeTaskIds, onActivate,
   editState, onEditStart, onEditChange, onEditSave, onEditCancel,
   savingId, onTaskCreated, onPriorityChange,
@@ -1182,12 +1182,12 @@ function SprintColumn({
 
       {/* Sprint detail sidebar — LEFT side, expanded only, independent scroll */}
       {isExpanded && sprint && (
-        <div className="w-80 shrink-0 border-r border-[#404040] flex flex-col min-h-0 overflow-hidden bg-[#2D2D2D]">
+        <div className="w-80 shrink-0 border-r border-[var(--space-border-hard)] flex flex-col min-h-0 overflow-hidden bg-[var(--space-bg-card-hover)]">
           {/* ── Scrollable sprint details + notes list ── */}
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
 
           {/* Header: status + name + edit toggle */}
-          <div className="px-6 pt-6 pb-5 border-b border-[#404040]">
+          <div className="px-6 pt-6 pb-5 border-b border-[var(--space-border-hard)]">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-1.5">
                 <span className={cn('size-1.5 rounded-full', sCfg?.dot ?? 'bg-gray-500')} />
@@ -1195,7 +1195,7 @@ function SprintColumn({
               </div>
               {!editMode ? (
                 <button type="button" onClick={() => enterEditMode(sprint)} title="Edit sprint"
-                  className="p-1 rounded text-[#4A4A4A] hover:text-[#A0A0A0] hover:bg-[#333333] transition-colors">
+                  className="p-1 rounded text-[var(--space-text-muted)] hover:text-[var(--space-text-tertiary)] hover:bg-[var(--space-divider)] transition-colors">
                   <Pencil className="size-3.5" />
                 </button>
               ) : (
@@ -1206,7 +1206,7 @@ function SprintColumn({
                     Save
                   </button>
                   <button type="button" onClick={() => setEditMode(false)}
-                    className="px-2 py-1 rounded-lg text-[10px] text-[#4A4A4A] hover:text-[#A0A0A0] hover:bg-[#333333] transition-colors">
+                    className="px-2 py-1 rounded-lg text-[10px] text-[var(--space-text-muted)] hover:text-[var(--space-text-tertiary)] hover:bg-[var(--space-divider)] transition-colors">
                     Cancel
                   </button>
                 </div>
@@ -1215,18 +1215,18 @@ function SprintColumn({
             {editMode ? (
               <Input value={editDraft.name} onChange={(e) => setEditDraft((p) => ({ ...p, name: e.target.value }))}
                 disabled={isSavingSprint}
-                className="bg-[#252525] border-[#404040] text-[#F0F0F0] font-bold focus:border-[var(--space-accent)] h-8 text-sm" />
+                className="bg-[var(--space-bg-card)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] font-bold focus:border-[var(--space-accent)] h-8 text-sm" />
             ) : (
-              <h3 className="text-lg font-bold text-[#F0F0F0] leading-snug">{sprint.name}</h3>
+              <h3 className="text-lg font-bold text-[var(--space-text-primary)] leading-snug">{sprint.name}</h3>
             )}
             {typeof sprint.project === 'object' && sprint.project?.name && (
-              <p className="text-xs text-[#4A4A4A] mt-1">{sprint.project.name}</p>
+              <p className="text-xs text-[var(--space-text-muted)] mt-1">{sprint.project.name}</p>
             )}
           </div>
 
           {/* Goal */}
           {(sprint.goalDescription || editMode) && (
-            <div className="px-6 py-5 border-b border-[#404040]">
+            <div className="px-6 py-5 border-b border-[var(--space-border-hard)]">
               <div className="flex items-start gap-3">
                 <div className="w-0.5 self-stretch bg-[var(--space-accent)]/50 rounded-full shrink-0" />
                 <div className="flex-1 min-w-0">
@@ -1236,9 +1236,9 @@ function SprintColumn({
                       onChange={(e) => setEditDraft((p) => ({ ...p, goalDescription: e.target.value }))}
                       placeholder="Describe the goal…"
                       rows={3} disabled={isSavingSprint}
-                      className="bg-[#252525] border-[#404040] text-[#F0F0F0] text-sm font-semibold placeholder:text-[#4A4A4A] focus:border-[var(--space-accent)] resize-none" />
+                      className="bg-[var(--space-bg-card)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] text-sm font-semibold placeholder:text-[var(--space-text-muted)] focus:border-[var(--space-accent)] resize-none" />
                   ) : (
-                    <p className="text-base font-semibold text-[#F0F0F0] leading-relaxed">{sprint.goalDescription}</p>
+                    <p className="text-base font-semibold text-[var(--space-text-primary)] leading-relaxed">{sprint.goalDescription}</p>
                   )}
                 </div>
               </div>
@@ -1246,7 +1246,7 @@ function SprintColumn({
           )}
 
           {/* Donut chart + task pills */}
-          <div className="px-6 py-5 border-b border-[#404040] flex flex-col items-center gap-4">
+          <div className="px-6 py-5 border-b border-[var(--space-border-hard)] flex flex-col items-center gap-4">
             <SprintDonutChart total={columnTasks.length} completed={completedCount} inProg={inProg} />
             {columnTasks.length > 0 && (
               <div className="flex flex-wrap justify-center gap-1.5">
@@ -1256,7 +1256,7 @@ function SprintColumn({
                   </span>
                 )}
                 {pendingC > 0 && (
-                  <span className="text-[10px] text-[#A0A0A0] bg-[#2D2D2D] border border-[#404040] rounded-full px-2.5 py-0.5">
+                  <span className="text-[10px] text-[var(--space-text-tertiary)] bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] rounded-full px-2.5 py-0.5">
                     {pendingC} pending
                   </span>
                 )}
@@ -1267,7 +1267,7 @@ function SprintColumn({
                 )}
               </div>
             )}
-            <div className="flex items-center gap-3 text-[9px] text-[#4A4A4A]">
+            <div className="flex items-center gap-3 text-[9px] text-[var(--space-text-muted)]">
               <span className="flex items-center gap-1.5">
                 <span className="size-2 rounded-full shrink-0" style={{ background: 'linear-gradient(to right, #1E3A6E, #2B4A8A)' }} />
                 Completed
@@ -1277,30 +1277,30 @@ function SprintColumn({
                 In progress
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="size-2 rounded-full bg-[#333333] shrink-0" />
+                <span className="size-2 rounded-full bg-[var(--space-divider)] shrink-0" />
                 Pending
               </span>
             </div>
           </div>
 
           {/* Notes list — inside scroll area, under project progression */}
-          <div className="px-6 pt-5 pb-4 border-b border-[#404040]">
+          <div className="px-6 pt-5 pb-4 border-b border-[var(--space-border-hard)]">
             <div className="flex items-center gap-2 mb-3">
-              <span className="text-[9px] font-bold text-[#6B6B6B] uppercase tracking-[0.14em]">Notes</span>
+              <span className="text-[9px] font-bold text-[var(--space-text-secondary)] uppercase tracking-[0.14em]">Notes</span>
               {localNotes.length > 0 && (
-                <span className="text-[9px] text-[#4A4A4A] tabular-nums">{localNotes.length}</span>
+                <span className="text-[9px] text-[var(--space-text-muted)] tabular-nums">{localNotes.length}</span>
               )}
             </div>
             {localNotes.length === 0 && (
-              <p className="text-xs text-[#4A4A4A] py-1">No notes yet</p>
+              <p className="text-xs text-[var(--space-text-muted)] py-1">No notes yet</p>
             )}
             <div className="space-y-3">
               {localNotes.map((note, i) => (
                 <div key={i} className="flex items-start gap-2 group">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-[#A0A0A0] leading-relaxed break-words">{note.text}</p>
+                    <p className="text-sm text-[var(--space-text-tertiary)] leading-relaxed break-words">{note.text}</p>
                     {note.createdAt && (
-                      <p className="text-[9px] text-[#4A4A4A] mt-0.5">
+                      <p className="text-[9px] text-[var(--space-text-muted)] mt-0.5">
                         {new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(note.createdAt))}
                       </p>
                     )}
@@ -1308,7 +1308,7 @@ function SprintColumn({
                   <button
                     type="button"
                     onClick={() => handleDeleteNote(sprint, i)}
-                    className="shrink-0 p-0.5 rounded text-[#4A4A4A] hover:text-red-400 hover:bg-red-400/[0.08] opacity-0 group-hover:opacity-100 transition-all"
+                    className="shrink-0 p-0.5 rounded text-[var(--space-text-muted)] hover:text-red-400 hover:bg-red-400/[0.08] opacity-0 group-hover:opacity-100 transition-all"
                     title="Delete note"
                   >
                     <X className="size-3" />
@@ -1320,17 +1320,17 @@ function SprintColumn({
 
           {/* Description */}
           {(sprint.description || editMode) && (
-            <div className="px-6 py-5 border-b border-[#404040]">
+            <div className="px-6 py-5 border-b border-[var(--space-border-hard)]">
               <div className="flex items-start gap-2">
-                <AlignLeft className="size-3.5 text-[#4A4A4A] shrink-0 mt-0.5" />
+                <AlignLeft className="size-3.5 text-[var(--space-text-muted)] shrink-0 mt-0.5" />
                 {editMode ? (
                   <Textarea value={editDraft.description}
                     onChange={(e) => setEditDraft((p) => ({ ...p, description: e.target.value }))}
                     placeholder="Add a description…"
                     rows={3} disabled={isSavingSprint}
-                    className="flex-1 bg-[#252525] border-[#404040] text-[#F0F0F0] text-xs placeholder:text-[#4A4A4A] focus:border-[var(--space-accent)] resize-none" />
+                    className="flex-1 bg-[var(--space-bg-card)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] text-xs placeholder:text-[var(--space-text-muted)] focus:border-[var(--space-accent)] resize-none" />
                 ) : (
-                  <p className="text-xs text-[#A0A0A0] leading-relaxed">{sprint.description}</p>
+                  <p className="text-xs text-[var(--space-text-tertiary)] leading-relaxed">{sprint.description}</p>
                 )}
               </div>
             </div>
@@ -1338,22 +1338,22 @@ function SprintColumn({
 
           {/* Dates */}
           {(sprint.startDate || sprint.endDate || editMode) && (
-            <div className="px-6 py-5 border-b border-[#404040]">
+            <div className="px-6 py-5 border-b border-[var(--space-border-hard)]">
               {editMode ? (
                 <div className="space-y-2">
-                  <p className="text-[9px] text-[#4A4A4A] uppercase tracking-wider">Timeline</p>
+                  <p className="text-[9px] text-[var(--space-text-muted)] uppercase tracking-wider">Timeline</p>
                   <div className="flex items-center gap-2">
                     <Input type="date" value={editDraft.startDate} disabled={isSavingSprint}
                       onChange={(e) => setEditDraft((p) => ({ ...p, startDate: e.target.value }))}
-                      className="flex-1 bg-[#252525] border-[#404040] text-[#F0F0F0] text-xs focus:border-[var(--space-accent)] h-7" />
-                    <span className="text-[#4A4A4A] text-xs shrink-0">→</span>
+                      className="flex-1 bg-[var(--space-bg-card)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] text-xs focus:border-[var(--space-accent)] h-7" />
+                    <span className="text-[var(--space-text-muted)] text-xs shrink-0">→</span>
                     <Input type="date" value={editDraft.endDate} disabled={isSavingSprint}
                       onChange={(e) => setEditDraft((p) => ({ ...p, endDate: e.target.value }))}
-                      className="flex-1 bg-[#252525] border-[#404040] text-[#F0F0F0] text-xs focus:border-[var(--space-accent)] h-7" />
+                      className="flex-1 bg-[var(--space-bg-card)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] text-xs focus:border-[var(--space-accent)] h-7" />
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center gap-2 text-sm text-[#6B6B6B]">
+                <div className="flex items-center gap-2 text-sm text-[var(--space-text-secondary)]">
                   <Calendar className="size-3.5 shrink-0" />
                   <span>{fmtDate(sprint.startDate) ?? 'TBD'} → {fmtDate(sprint.endDate) ?? 'TBD'}</span>
                 </div>
@@ -1369,7 +1369,7 @@ function SprintColumn({
                   type="button"
                   onClick={() => handleFinishSprint(sprint, 'in-progress')}
                   disabled={isFinishingSprint}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-[#2D2D2D] border border-[#404040] text-[#F0F0F0] text-sm font-semibold hover:bg-[#E5E1D9] transition-colors disabled:opacity-50"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] text-[var(--space-text-primary)] text-sm font-semibold hover:bg-[var(--space-bg-card-hover)] transition-colors disabled:opacity-50"
                 >
                   {isFinishingSprint ? <Loader2 className="size-4 animate-spin" /> : <Zap className="size-4" />}
                   Reopen Sprint
@@ -1391,7 +1391,7 @@ function SprintColumn({
           </div>{/* end scrollable area */}
 
           {/* ── Pinned add-note input ── */}
-          <div className="shrink-0 px-6 py-4 border-t border-[#404040] bg-[#2D2D2D]">
+          <div className="shrink-0 px-6 py-4 border-t border-[var(--space-border-hard)] bg-[var(--space-bg-card-hover)]">
             <div className="flex items-start gap-2">
               <Textarea
                 ref={noteInputRef}
@@ -1404,7 +1404,7 @@ function SprintColumn({
                 placeholder="Add a note… (Enter to save)"
                 rows={2}
                 disabled={isAddingNote}
-                className="flex-1 bg-[#252525] border-[#404040] text-[#F0F0F0] text-sm placeholder:text-[#4A4A4A] focus:border-[#404040] resize-none min-h-0"
+                className="flex-1 bg-[var(--space-bg-card)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] text-sm placeholder:text-[var(--space-text-muted)] focus:border-[var(--space-border-hard)] resize-none min-h-0"
               />
               {newNoteText.trim() && (
                 <button type="button" onClick={() => handleAddNote(sprint)} disabled={isAddingNote}
@@ -1420,21 +1420,21 @@ function SprintColumn({
 
       {/* Unassigned session panel — shown when expanded and no sprint is selected */}
       {isExpanded && selectedSprintId === null && (
-        <div className="w-80 shrink-0 border-r border-[#404040] flex flex-col min-h-0 overflow-hidden bg-[#2D2D2D]">
+        <div className="w-80 shrink-0 border-r border-[var(--space-border-hard)] flex flex-col min-h-0 overflow-hidden bg-[var(--space-bg-card-hover)]">
           {/* Scrollable area */}
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
             {/* Header */}
-            <div className="px-6 pt-6 pb-5 border-b border-[#404040]">
+            <div className="px-6 pt-6 pb-5 border-b border-[var(--space-border-hard)]">
               <div className="flex items-center gap-1.5 mb-2">
                 <span className="size-1.5 rounded-full bg-gray-500 shrink-0" />
-                <span className="text-[9px] font-bold uppercase tracking-[0.14em] text-[#4A4A4A]">Unassigned</span>
+                <span className="text-[9px] font-bold uppercase tracking-[0.14em] text-[var(--space-text-muted)]">Unassigned</span>
               </div>
-              <h3 className="text-lg font-bold text-[#F0F0F0] leading-snug">Session</h3>
-              <p className="text-xs text-[#4A4A4A] mt-0.5">In-memory only · resets on refresh</p>
+              <h3 className="text-lg font-bold text-[var(--space-text-primary)] leading-snug">Session</h3>
+              <p className="text-xs text-[var(--space-text-muted)] mt-0.5">In-memory only · resets on refresh</p>
             </div>
 
             {/* Session Goal */}
-            <div className="px-6 py-5 border-b border-[#404040]">
+            <div className="px-6 py-5 border-b border-[var(--space-border-hard)]">
               <div className="flex items-start gap-3">
                 <div className="w-0.5 self-stretch bg-[var(--space-accent)]/50 rounded-full shrink-0" />
                 <div className="flex-1 min-w-0">
@@ -1447,14 +1447,14 @@ function SprintColumn({
                     onChange={(e) => setSessionGoal(e.target.value)}
                     placeholder="What do you want to accomplish this session?"
                     rows={3}
-                    className="bg-[#252525] border-[#404040] text-[#F0F0F0] text-sm font-semibold placeholder:text-[#4A4A4A] focus:border-[var(--space-accent)] resize-none"
+                    className="bg-[var(--space-bg-card)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] text-sm font-semibold placeholder:text-[var(--space-text-muted)] focus:border-[var(--space-accent)] resize-none"
                   />
                 </div>
               </div>
             </div>
 
             {/* Stats */}
-            <div className="px-6 py-5 border-b border-[#404040] flex flex-col items-center gap-4">
+            <div className="px-6 py-5 border-b border-[var(--space-border-hard)] flex flex-col items-center gap-4">
               <SprintDonutChart total={columnTasks.length} completed={completedCount} inProg={inProg} />
               {columnTasks.length > 0 && (
                 <div className="flex flex-wrap justify-center gap-1.5">
@@ -1464,7 +1464,7 @@ function SprintColumn({
                     </span>
                   )}
                   {pendingC > 0 && (
-                    <span className="text-[10px] text-[#6B6B6B] bg-[#252525] border border-[#404040] rounded-full px-2.5 py-0.5">
+                    <span className="text-[10px] text-[var(--space-text-secondary)] bg-[var(--space-bg-card)] border border-[var(--space-border-hard)] rounded-full px-2.5 py-0.5">
                       {pendingC} pending
                     </span>
                   )}
@@ -1480,13 +1480,13 @@ function SprintColumn({
             {/* Session Notes list */}
             <div className="px-6 pt-5 pb-4">
               <div className="flex items-center gap-2 mb-3">
-                <span className="text-[9px] font-bold text-[#6B6B6B] uppercase tracking-[0.14em]">Session Notes</span>
+                <span className="text-[9px] font-bold text-[var(--space-text-secondary)] uppercase tracking-[0.14em]">Session Notes</span>
                 {sessionNotes.length > 0 && (
-                  <span className="text-[9px] text-[#4A4A4A] tabular-nums">{sessionNotes.length}</span>
+                  <span className="text-[9px] text-[var(--space-text-muted)] tabular-nums">{sessionNotes.length}</span>
                 )}
               </div>
               {sessionNotes.length === 0 && (
-                <p className="text-xs text-[#4A4A4A] py-1">No notes yet</p>
+                <p className="text-xs text-[var(--space-text-muted)] py-1">No notes yet</p>
               )}
               <div className="space-y-3">
                 {sessionNotes.map((note, i) => (
@@ -1500,7 +1500,7 @@ function SprintColumn({
                     <button
                       type="button"
                       onClick={() => setSessionNotes((prev) => prev.filter((_, idx) => idx !== i))}
-                      className="shrink-0 p-0.5 rounded text-[#4A4A4A] hover:text-red-400 hover:bg-red-400/[0.08] opacity-0 group-hover:opacity-100 transition-all"
+                      className="shrink-0 p-0.5 rounded text-[var(--space-text-muted)] hover:text-red-400 hover:bg-red-400/[0.08] opacity-0 group-hover:opacity-100 transition-all"
                       title="Delete note"
                     >
                       <X className="size-3" />
@@ -1512,7 +1512,7 @@ function SprintColumn({
           </div>
 
           {/* Pinned note input */}
-          <div className="shrink-0 px-6 py-4 border-t border-[#404040] bg-[#2D2D2D]">
+          <div className="shrink-0 px-6 py-4 border-t border-[var(--space-border-hard)] bg-[var(--space-bg-card-hover)]">
             <div className="flex items-start gap-2">
               <Textarea
                 ref={sessionNoteInputRef}
@@ -1530,7 +1530,7 @@ function SprintColumn({
                 }}
                 placeholder="Add a note… (Enter to save)"
                 rows={2}
-                className="flex-1 bg-[#252525] border-[#404040] text-[#F0F0F0] text-sm placeholder:text-[#4A4A4A] focus:border-[#404040] resize-none min-h-0"
+                className="flex-1 bg-[var(--space-bg-card)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] text-sm placeholder:text-[var(--space-text-muted)] focus:border-[var(--space-border-hard)] resize-none min-h-0"
               />
               {newSessionNoteText.trim() && (
                 <button
@@ -1593,13 +1593,13 @@ function MobileOverview({
       {/* Stats row */}
       <div className="grid grid-cols-3 gap-2">
         {[
-          { label: 'Total', value: tasks.length, color: 'text-[#F0F0F0]' },
+          { label: 'Total', value: tasks.length, color: 'text-[var(--space-text-primary)]' },
           { label: 'Done', value: completedCount, color: 'text-green-400' },
-          { label: 'Pending', value: pendingCount, color: 'text-[#A0A0A0]' },
+          { label: 'Pending', value: pendingCount, color: 'text-[var(--space-text-tertiary)]' },
         ].map(({ label, value, color }) => (
-          <div key={label} className="rounded-xl border border-[#404040] bg-[#2D2D2D] px-3 py-3 text-center">
+          <div key={label} className="rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card-hover)] px-3 py-3 text-center">
             <p className={`text-xl font-bold tabular-nums ${color}`}>{value}</p>
-            <p className="text-[9px] text-[#4A4A4A] uppercase tracking-widest mt-0.5">{label}</p>
+            <p className="text-[9px] text-[var(--space-text-muted)] uppercase tracking-widest mt-0.5">{label}</p>
           </div>
         ))}
       </div>
@@ -1613,7 +1613,7 @@ function MobileOverview({
               Active Focus · {focusedTasks.length}
             </p>
           </div>
-          <div className="rounded-xl border border-[var(--space-accent)]/15 bg-[var(--space-accent)]/[0.02] divide-y divide-[#333333] overflow-hidden">
+          <div className="rounded-xl border border-[var(--space-accent)]/15 bg-[var(--space-accent)]/[0.02] divide-y divide-[var(--space-divider)] overflow-hidden">
             {focusedTasks.map((t) => {
               const pc = PRIORITY_CFG[t.priority] ?? PRIORITY_CFG.medium
               const projName = getProjectName(t)
@@ -1621,8 +1621,8 @@ function MobileOverview({
                 <div key={t.id} className="flex items-center gap-3 px-4 py-3">
                   <span className={`shrink-0 size-1.5 rounded-full ${STATUS_DOT[t.status] ?? 'bg-gray-500'}`} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-[#F0F0F0] font-medium truncate">{t.title}</p>
-                    {projName && <p className="text-[10px] text-[#4A4A4A] mt-0.5 truncate">{projName}</p>}
+                    <p className="text-sm text-[var(--space-text-primary)] font-medium truncate">{t.title}</p>
+                    {projName && <p className="text-[10px] text-[var(--space-text-muted)] mt-0.5 truncate">{projName}</p>}
                   </div>
                   <span className={`shrink-0 text-[9px] font-bold px-1.5 rounded border leading-4 ${pc.color} ${pc.bg}`}>{pc.short}</span>
                 </div>
@@ -1635,12 +1635,12 @@ function MobileOverview({
       {/* Sprint cards */}
       {allSprints.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-center">
-          <Zap className="size-6 text-[#4A4A4A] mb-3" />
-          <p className="text-sm text-[#4A4A4A]">No sprints yet</p>
+          <Zap className="size-6 text-[var(--space-text-muted)] mb-3" />
+          <p className="text-sm text-[var(--space-text-muted)]">No sprints yet</p>
         </div>
       ) : (
         <div>
-          <p className="text-[9px] font-bold text-[#1E3A6E] uppercase tracking-[0.2em] mb-3">
+          <p className="text-[9px] font-bold text-[var(--space-accent)] uppercase tracking-[0.2em] mb-3">
             All Sprints · {allSprints.length}
           </p>
           <div className="space-y-2.5">
@@ -1656,22 +1656,22 @@ function MobileOverview({
                   key={sprint.id}
                   className={cn(
                     'rounded-xl border px-4 py-3.5 space-y-2',
-                    isActive ? 'border-[var(--space-accent)]/15 bg-[var(--space-accent)]/[0.02]' : 'border-[#404040] bg-[#2D2D2D]',
+                    isActive ? 'border-[var(--space-accent)]/15 bg-[var(--space-accent)]/[0.02]' : 'border-[var(--space-border-hard)] bg-[var(--space-bg-card-hover)]',
                   )}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-[#F0F0F0] leading-snug truncate">{sprint.name}</p>
-                      {projName && <p className="text-[10px] text-[#4A4A4A] mt-0.5 truncate">{projName}</p>}
+                      <p className="text-sm font-semibold text-[var(--space-text-primary)] leading-snug truncate">{sprint.name}</p>
+                      {projName && <p className="text-[10px] text-[var(--space-text-muted)] mt-0.5 truncate">{projName}</p>}
                     </div>
                     <span className={`shrink-0 text-[9px] font-bold uppercase tracking-wide ${cfg.text}`}>{cfg.label}</span>
                   </div>
                   {sTasks.length > 0 && (
                     <div className="flex items-center gap-2">
-                      <div className="flex-1 h-[3px] bg-[#333333] rounded-full overflow-hidden">
+                      <div className="flex-1 h-[3px] bg-[var(--space-divider)] rounded-full overflow-hidden">
                         <div className={`h-full rounded-full ${cfg.bar}`} style={{ width: `${pct}%` }} />
                       </div>
-                      <span className="text-[10px] text-[#4A4A4A] shrink-0 tabular-nums">{done}/{sTasks.length}</span>
+                      <span className="text-[10px] text-[var(--space-text-muted)] shrink-0 tabular-nums">{done}/{sTasks.length}</span>
                     </div>
                   )}
                 </div>
@@ -1873,13 +1873,13 @@ function TaskBoard({
   ]
 
   return (
-    <div className="flex flex-col h-full bg-[#252525]">
+    <div className="flex flex-col h-full bg-[var(--space-bg-card)]">
 
       {/* ── TOP BAR ─────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-[#404040] shrink-0">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--space-border-hard)] shrink-0">
         <div className="flex items-center gap-2.5">
-          <span className="text-[10px] font-bold text-[#1E3A6E] uppercase tracking-[0.14em]">Tasks</span>
-          <span className="text-[10px] text-[#A0A0A0] tabular-nums">{tasks.length} · {completedCount} done</span>
+          <span className="text-[10px] font-bold text-[var(--space-accent)] uppercase tracking-[0.14em]">Tasks</span>
+          <span className="text-[10px] text-[var(--space-text-tertiary)] tabular-nums">{tasks.length} · {completedCount} done</span>
           {(activeTaskIdsA.size + activeTaskIdsB.size) > 0 && (
             <span className="text-[10px] text-[var(--space-accent)] tabular-nums">· {activeTaskIdsA.size + activeTaskIdsB.size} active</span>
           )}
@@ -1889,14 +1889,14 @@ function TaskBoard({
           type="button"
           onClick={onExpandToggle}
           title={isPopup ? 'Close' : 'Open in popup'}
-          className="hidden lg:flex items-center gap-1.5 px-2 py-1 rounded text-[#4A4A4A] hover:text-[#A0A0A0] hover:bg-[#2D2D2D] transition-colors text-[10px]"
+          className="hidden lg:flex items-center gap-1.5 px-2 py-1 rounded text-[var(--space-text-muted)] hover:text-[var(--space-text-tertiary)] hover:bg-[var(--space-bg-card-hover)] transition-colors text-[10px]"
         >
           {isPopup ? <><X className="size-3" /><span>Close</span></> : <><Maximize2 className="size-3" /><span>Expand</span></>}
         </button>
       </div>
 
       {/* ── MOBILE TAB STRIP ────────────────────────────────────────────── */}
-      <div className="lg:hidden flex items-center gap-1 px-3 py-2 border-b border-[#404040] shrink-0 bg-[#2D2D2D]">
+      <div className="lg:hidden flex items-center gap-1 px-3 py-2 border-b border-[var(--space-border-hard)] shrink-0 bg-[var(--space-bg-card-hover)]">
         {mobileTabs.map((tab) => (
           <button
             key={tab.id}
@@ -1905,8 +1905,8 @@ function TaskBoard({
             className={cn(
               'flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-all duration-150',
               mobileTab === tab.id
-                ? 'bg-[#333333] text-[#F0F0F0]'
-                : 'text-[#4A4A4A] hover:text-[#6B6B6B]',
+                ? 'bg-[var(--space-divider)] text-[var(--space-text-primary)]'
+                : 'text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)]',
             )}
           >
             {tab.label}
@@ -1915,7 +1915,7 @@ function TaskBoard({
       </div>
 
       {/* ── MOBILE CONTENT ──────────────────────────────────────────────── */}
-      <div className="lg:hidden flex-1 overflow-y-auto bg-[#252525]">
+      <div className="lg:hidden flex-1 overflow-y-auto bg-[var(--space-bg-card)]">
         {mobileTab === 'overview' && (
           <MobileOverview
             tasks={localTasks}
@@ -1948,12 +1948,12 @@ function TaskBoard({
       </div>
 
       {/* ── DESKTOP 3-PANEL LAYOUT ──────────────────────────────────────── */}
-      <div className="hidden lg:flex flex-1 divide-x divide-[#333333] min-h-0 overflow-hidden">
+      <div className="hidden lg:flex flex-1 divide-x divide-[var(--space-divider)] min-h-0 overflow-hidden">
 
         {/* Sidebar — hover to expand */}
         <aside
           className={cn(
-            'shrink-0 bg-[#2D2D2D] flex flex-col transition-[width] duration-200 overflow-hidden',
+            'shrink-0 bg-[var(--space-bg-card-hover)] flex flex-col transition-[width] duration-200 overflow-hidden',
             sidebarExpanded ? 'w-52' : 'w-8',
           )}
           onMouseEnter={() => setSidebarHovered(true)}
@@ -1962,28 +1962,28 @@ function TaskBoard({
           {sidebarExpanded ? (
             <>
               {/* Header */}
-              <div className="flex items-center gap-2 px-3 py-2.5 border-b border-[#404040] shrink-0">
+              <div className="flex items-center gap-2 px-3 py-2.5 border-b border-[var(--space-border-hard)] shrink-0">
                 <Zap className="size-3 text-[var(--space-accent)] shrink-0" />
-                <span className="text-[9px] font-bold text-[#1E3A6E] uppercase tracking-[0.12em]">Active Sprints</span>
+                <span className="text-[9px] font-bold text-[var(--space-accent)] uppercase tracking-[0.12em]">Active Sprints</span>
               </div>
 
               {/* New Sprint — top of sidebar */}
               {projects.length > 0 && (
-                <div className="shrink-0 border-b border-[#404040]">
+                <div className="shrink-0 border-b border-[var(--space-border-hard)]">
                   {showProjectPicker ? (
                     <div className="p-2 space-y-1">
-                      <p className="text-[9px] text-[#4A4A4A] px-1 pb-0.5 uppercase tracking-wider">Select project</p>
+                      <p className="text-[9px] text-[var(--space-text-muted)] px-1 pb-0.5 uppercase tracking-wider">Select project</p>
                       {projects.map((p) => (
                         <button
                           key={p.id}
                           type="button"
                           onClick={() => { setSprintProjectId(p.id); setSprintModalOpen(true); setShowProjectPicker(false) }}
-                          className="w-full text-left px-2 py-1.5 rounded text-xs text-[#6B6B6B] hover:text-[#F0F0F0] hover:bg-[#333333] transition-colors truncate"
+                          className="w-full text-left px-2 py-1.5 rounded text-xs text-[var(--space-text-secondary)] hover:text-[var(--space-text-primary)] hover:bg-[var(--space-divider)] transition-colors truncate"
                         >
                           {p.name}
                         </button>
                       ))}
-                      <button type="button" onClick={() => setShowProjectPicker(false)} className="text-[10px] text-[#4A4A4A] hover:text-[#6B6B6B] px-2 py-1 transition-colors">
+                      <button type="button" onClick={() => setShowProjectPicker(false)} className="text-[10px] text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)] px-2 py-1 transition-colors">
                         Cancel
                       </button>
                     </div>
@@ -1998,7 +1998,7 @@ function TaskBoard({
                           setShowProjectPicker(true)
                         }
                       }}
-                      className="flex items-center gap-1.5 w-full px-3 py-2.5 text-[10px] text-[#6B6B6B] hover:text-[#F0F0F0] hover:bg-[#333333] transition-colors"
+                      className="flex items-center gap-1.5 w-full px-3 py-2.5 text-[10px] text-[var(--space-text-secondary)] hover:text-[var(--space-text-primary)] hover:bg-[var(--space-divider)] transition-colors"
                     >
                       <Plus className="size-3" />
                       New Sprint
@@ -2011,7 +2011,7 @@ function TaskBoard({
               <div className="flex-1 overflow-y-auto">
                 {activeSprints.length === 0 ? (
                   <div className="flex items-center justify-center h-32 px-4">
-                    <p className="text-xs text-[#6B6B6B] text-center">No active sprints</p>
+                    <p className="text-xs text-[var(--space-text-secondary)] text-center">No active sprints</p>
                   </div>
                 ) : (
                   <div className="py-2">
@@ -2036,18 +2036,18 @@ function TaskBoard({
                           <button
                             type="button"
                             onClick={toggleExpanded}
-                            className="w-full flex items-center gap-1.5 px-3 py-1.5 hover:bg-[#333333] transition-colors text-left group"
+                            className="w-full flex items-center gap-1.5 px-3 py-1.5 hover:bg-[var(--space-divider)] transition-colors text-left group"
                           >
                             {isExpanded
-                              ? <ChevronDown className="size-3 text-[#4A4A4A] shrink-0 group-hover:text-[#6B6B6B] transition-colors" />
-                              : <ChevronRight className="size-3 text-[#4A4A4A] shrink-0 group-hover:text-[#6B6B6B] transition-colors" />
+                              ? <ChevronDown className="size-3 text-[var(--space-text-muted)] shrink-0 group-hover:text-[var(--space-text-secondary)] transition-colors" />
+                              : <ChevronRight className="size-3 text-[var(--space-text-muted)] shrink-0 group-hover:text-[var(--space-text-secondary)] transition-colors" />
                             }
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center justify-between gap-1">
-                                <span className="text-xs font-medium text-[#F0F0F0] truncate leading-tight">{sprint.name}</span>
+                                <span className="text-xs font-medium text-[var(--space-text-primary)] truncate leading-tight">{sprint.name}</span>
                                 <span className={`shrink-0 text-[9px] font-bold ${cfg.text}`}>{cfg.label}</span>
                               </div>
-                              {projName && <p className="text-[9px] text-[#6B6B6B] truncate">{projName}</p>}
+                              {projName && <p className="text-[9px] text-[var(--space-text-secondary)] truncate">{projName}</p>}
                             </div>
                           </button>
 
@@ -2056,7 +2056,7 @@ function TaskBoard({
                             <div className="pb-2 space-y-2">
                               {/* Goal / description */}
                               {(sprint.goalDescription || sprint.description) && (
-                                <p className="text-[10px] text-[#A0A0A0] px-3 leading-relaxed line-clamp-3">
+                                <p className="text-[10px] text-[var(--space-text-tertiary)] px-3 leading-relaxed line-clamp-3">
                                   {sprint.goalDescription || sprint.description}
                                 </p>
                               )}
@@ -2064,10 +2064,10 @@ function TaskBoard({
                               {/* Progress bar */}
                               {sTasks.length > 0 && (
                                 <div className="flex items-center gap-1.5 px-3">
-                                  <div className="flex-1 h-[2px] bg-[#333333] rounded-full overflow-hidden">
+                                  <div className="flex-1 h-[2px] bg-[var(--space-divider)] rounded-full overflow-hidden">
                                     <div className={`h-full rounded-full ${cfg.bar}`} style={{ width: `${pct}%` }} />
                                   </div>
-                                  <span className="text-[9px] text-[#6B6B6B] shrink-0 tabular-nums">{done}/{sTasks.length} · {pct}%</span>
+                                  <span className="text-[9px] text-[var(--space-text-secondary)] shrink-0 tabular-nums">{done}/{sTasks.length} · {pct}%</span>
                                 </div>
                               )}
 
@@ -2080,7 +2080,7 @@ function TaskBoard({
                                     </span>
                                   )}
                                   {pendingC > 0 && (
-                                    <span className="text-[9px] text-[#A0A0A0] bg-[#2D2D2D] border border-[#404040] rounded-full px-1.5 py-0.5">
+                                    <span className="text-[9px] text-[var(--space-text-tertiary)] bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] rounded-full px-1.5 py-0.5">
                                       {pendingC} pending
                                     </span>
                                   )}
@@ -2094,7 +2094,7 @@ function TaskBoard({
 
                               {/* Date footer */}
                               {(sprint.startDate || sprint.endDate) && (
-                                <div className="flex items-center gap-1 px-3 text-[9px] text-[#4A4A4A]">
+                                <div className="flex items-center gap-1 px-3 text-[9px] text-[var(--space-text-muted)]">
                                   <Calendar className="size-2.5 shrink-0" />
                                   <span>{fmtDate(sprint.startDate) ?? 'TBD'} → {fmtDate(sprint.endDate) ?? 'TBD'}</span>
                                 </div>
@@ -2102,7 +2102,7 @@ function TaskBoard({
 
                               {/* Task list */}
                               {sTasks.length > 0 && (
-                                <div className="px-1 pt-1 border-t border-[#404040]">
+                                <div className="px-1 pt-1 border-t border-[var(--space-border-hard)]">
                                   {sTasks.slice(0, 8).map((t) => <SidebarTask key={t.id} task={t} />)}
                                   {sTasks.length > 8 && <p className="text-[10px] text-gray-400 px-2 py-1">+{sTasks.length - 8} more</p>}
                                 </div>
@@ -2129,14 +2129,14 @@ function TaskBoard({
 
         {/* Column A */}
         {expandedCol !== 'B' && (
-          <SprintColumn label="Sprint A" selectedSprintId={colAId} onSelect={setColAId} bg="bg-[#252525]" {...columnProps}
+          <SprintColumn label="Sprint A" selectedSprintId={colAId} onSelect={setColAId} bg="bg-[var(--space-bg-card)]" {...columnProps}
             activeTaskIds={activeTaskIdsA} onActivate={(id) => handleActivate(id, 'a')}
             isExpanded={expandedCol === 'A'} onExpand={() => setExpandedCol('A')} onCollapse={() => setExpandedCol(null)} />
         )}
 
         {/* Column B */}
         {expandedCol !== 'A' && (
-          <SprintColumn label="Sprint B" selectedSprintId={colBId} onSelect={setColBId} bg="bg-[#252525]" {...columnProps}
+          <SprintColumn label="Sprint B" selectedSprintId={colBId} onSelect={setColBId} bg="bg-[var(--space-bg-card)]" {...columnProps}
             activeTaskIds={activeTaskIdsB} onActivate={(id) => handleActivate(id, 'b')}
             isExpanded={expandedCol === 'B'} onExpand={() => setExpandedCol('B')} onCollapse={() => setExpandedCol(null)} />
         )}
@@ -2188,7 +2188,7 @@ export function TasksView({ tasks, sprints = [], projects = [] }: TasksViewProps
     <>
       {/* main has zoom:1.3 — divide by zoom factor so visual height = viewport minus header */}
       <div
-        className="rounded-xl border border-[#404040] overflow-hidden"
+        className="rounded-xl border border-[var(--space-border-hard)] overflow-hidden"
         style={{ height: 'calc(100svh / 1.3 - 49px)' }}
       >
         <TaskBoard {...boardProps} isPopup={false} onExpandToggle={() => setPopup(true)} />
@@ -2197,11 +2197,11 @@ export function TasksView({ tasks, sprints = [], projects = [] }: TasksViewProps
       {mounted && popup &&
         createPortal(
           <div
-            className="fixed inset-0 z-[200] bg-[#1C1C1C]/90 flex items-center justify-center p-4"
+            className="fixed inset-0 z-[200] bg-[var(--space-bg-base)]/90 flex items-center justify-center p-4"
             onClick={(e) => { if (e.target === e.currentTarget) setPopup(false) }}
           >
             <div
-              className="w-full h-full rounded-xl border border-[#404040] overflow-hidden shadow-2xl"
+              className="w-full h-full rounded-xl border border-[var(--space-border-hard)] overflow-hidden shadow-2xl"
               style={{ height: 'calc(100vh - 2rem)', maxWidth: 'calc(100vw - 2rem)' }}
             >
               <TaskBoard {...boardProps} isPopup onExpandToggle={() => setPopup(false)} />

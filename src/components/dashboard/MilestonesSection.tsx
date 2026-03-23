@@ -62,12 +62,12 @@ export function MilestonesSection({ project }: MilestonesSectionProps) {
       {/* Header */}
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-lg bg-[rgba(255,255,255,0.03)] border border-[#404040]">
+          <div className="p-2.5 rounded-lg bg-[rgba(255,255,255,0.03)] border border-[var(--space-border-hard)]">
             <Flag className="size-5 text-[var(--space-accent)]" />
           </div>
           <div>
-            <h2 className="text-2xl font-semibold text-[#F0F0F0]">Timeline & Milestones</h2>
-            <p className="text-sm text-[#A0A0A0]">
+            <h2 className="text-2xl font-semibold text-[var(--space-text-primary)]">Timeline & Milestones</h2>
+            <p className="text-sm text-[var(--space-text-tertiary)]">
               {milestones.length > 0
                 ? `${completedCount} of ${milestones.length} completed`
                 : 'Track project milestones and deliverables'}
@@ -85,11 +85,11 @@ export function MilestonesSection({ project }: MilestonesSectionProps) {
 
       {/* Timeline Visualization (Desktop) */}
       {hasTimeline && milestones.length > 0 && (
-        <div className="hidden md:block relative overflow-hidden rounded-xl border border-[#404040] bg-[#252525] p-8">
+        <div className="hidden md:block relative overflow-hidden rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] p-8">
           <div className="absolute top-0 right-0 w-48 h-48 bg-[var(--space-accent)]/[0.04] rounded-full blur-3xl" />
 
           <div className="relative z-10 space-y-6">
-            <div className="flex items-center justify-between text-sm text-[#A0A0A0]">
+            <div className="flex items-center justify-between text-sm text-[var(--space-text-tertiary)]">
               <div className="flex items-center gap-2">
                 <Calendar className="size-4" />
                 <span>{formatDate(project.startDate)}</span>
@@ -127,14 +127,14 @@ export function MilestonesSection({ project }: MilestonesSectionProps) {
                       {milestone.completed ? (
                         <CheckCircle className="size-6 text-green-400 group-hover:scale-110 transition-transform" />
                       ) : (
-                        <Circle className="size-6 text-[#6B6B6B] group-hover:text-[var(--space-accent)] group-hover:scale-110 transition-all" />
+                        <Circle className="size-6 text-[var(--space-text-secondary)] group-hover:text-[var(--space-accent)] group-hover:scale-110 transition-all" />
                       )}
                       <div className="absolute top-8 left-1/2 -translate-x-1/2 w-32 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <div className="bg-[#252525] border border-[#404040] rounded-lg p-2 text-center">
-                          <p className="text-xs font-medium text-[#F0F0F0]">
+                        <div className="bg-[var(--space-bg-card)] border border-[var(--space-border-hard)] rounded-lg p-2 text-center">
+                          <p className="text-xs font-medium text-[var(--space-text-primary)]">
                             {milestone.title}
                           </p>
-                          <p className="text-xs text-[#A0A0A0] mt-1">
+                          <p className="text-xs text-[var(--space-text-tertiary)] mt-1">
                             {formatDate(milestone.date)}
                           </p>
                         </div>
@@ -145,7 +145,7 @@ export function MilestonesSection({ project }: MilestonesSectionProps) {
               })}
             </div>
 
-            <p className="text-xs text-[#6B6B6B] text-center">
+            <p className="text-xs text-[var(--space-text-secondary)] text-center">
               Click milestones to toggle completion
             </p>
           </div>
@@ -158,7 +158,7 @@ export function MilestonesSection({ project }: MilestonesSectionProps) {
           {sortedMilestones.map((milestone, index) => (
             <div
               key={milestone.id || index}
-              className="relative overflow-hidden rounded-xl border border-[#404040] bg-[#252525] p-5 hover:border-[#555555]/20 transition-all duration-300"
+              className="relative overflow-hidden rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] p-5 hover:border-[var(--space-border-hard)]/20 transition-all duration-300"
             >
               <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--space-accent)]/[0.03] rounded-full blur-3xl" />
 
@@ -172,7 +172,7 @@ export function MilestonesSection({ project }: MilestonesSectionProps) {
                   {milestone.completed ? (
                     <CheckCircle className="size-6 text-green-400" />
                   ) : (
-                    <Circle className="size-6 text-[#6B6B6B] hover:text-[var(--space-accent)] transition-colors" />
+                    <Circle className="size-6 text-[var(--space-text-secondary)] hover:text-[var(--space-accent)] transition-colors" />
                   )}
                 </button>
 
@@ -182,18 +182,18 @@ export function MilestonesSection({ project }: MilestonesSectionProps) {
                     <div>
                       <h3
                         className={`text-lg font-semibold ${
-                          milestone.completed ? 'text-[#6B6B6B] line-through' : 'text-[#F0F0F0]'
+                          milestone.completed ? 'text-[var(--space-text-secondary)] line-through' : 'text-[var(--space-text-primary)]'
                         }`}
                       >
                         {milestone.title}
                       </h3>
                       {milestone.description && (
-                        <p className="text-sm text-[#A0A0A0] mt-1">
+                        <p className="text-sm text-[var(--space-text-tertiary)] mt-1">
                           {milestone.description}
                         </p>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-[#A0A0A0]">
+                    <div className="flex items-center gap-2 text-sm text-[var(--space-text-tertiary)]">
                       <Calendar className="size-4" />
                       {formatDate(milestone.date)}
                     </div>
@@ -204,21 +204,21 @@ export function MilestonesSection({ project }: MilestonesSectionProps) {
           ))}
         </div>
       ) : (
-        <div className="relative overflow-hidden rounded-xl border border-[#404040] bg-[#252525] p-12 text-center">
+        <div className="relative overflow-hidden rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] p-12 text-center">
           <div className="relative z-10">
-            <div className="inline-flex p-5 rounded-xl bg-[rgba(255,255,255,0.03)] border border-[#404040] mb-6">
-              <Award className="size-10 text-[#6B6B6B]" />
+            <div className="inline-flex p-5 rounded-xl bg-[rgba(255,255,255,0.03)] border border-[var(--space-border-hard)] mb-6">
+              <Award className="size-10 text-[var(--space-text-secondary)]" />
             </div>
-            <h3 className="text-xl font-semibold text-[#F0F0F0] mb-2">
+            <h3 className="text-xl font-semibold text-[var(--space-text-primary)] mb-2">
               No Milestones Yet
             </h3>
-            <p className="text-[#A0A0A0] text-sm max-w-md mx-auto mb-6">
+            <p className="text-[var(--space-text-tertiary)] text-sm max-w-md mx-auto mb-6">
               Add milestones to track important deliverables and project progress.
             </p>
             <Button
               onClick={() => setIsCreateOpen(true)}
               variant="outline"
-              className="bg-[rgba(255,255,255,0.03)] border-[#404040] hover:bg-[rgba(255,255,255,0.06)]"
+              className="bg-[rgba(255,255,255,0.03)] border-[var(--space-border-hard)] hover:bg-[rgba(255,255,255,0.06)]"
             >
               <Plus className="size-4 mr-2" />
               Add First Milestone
@@ -229,16 +229,16 @@ export function MilestonesSection({ project }: MilestonesSectionProps) {
 
       {/* Progress Summary */}
       {milestones.length > 0 && (
-        <div className="relative overflow-hidden rounded-xl border border-[#404040] bg-[#252525] p-6">
+        <div className="relative overflow-hidden rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] p-6">
           <div className="flex items-center gap-4">
             <div className="p-3 rounded-lg bg-[rgba(139,156,182,0.10)] border border-[rgba(139,156,182,0.15)]">
               <Award className="size-6 text-[var(--space-accent)]" />
             </div>
             <div className="flex-1">
-              <h3 className="text-lg font-semibold text-[#F0F0F0] mb-1">
+              <h3 className="text-lg font-semibold text-[var(--space-text-primary)] mb-1">
                 Milestone Progress
               </h3>
-              <p className="text-sm text-[#A0A0A0]">
+              <p className="text-sm text-[var(--space-text-tertiary)]">
                 {completedCount} of {milestones.length} milestones completed (
                 {Math.round((completedCount / milestones.length) * 100)}%)
               </p>

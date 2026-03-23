@@ -80,7 +80,7 @@ export function EnhancedTaskCard({ task }: EnhancedTaskCardProps) {
 
   return (
     <div
-      className={`relative overflow-hidden rounded-xl border ${priorityConfig.border} ${priorityConfig.bg} p-5 hover:border-[#404040] transition-all duration-300`}
+      className={`relative overflow-hidden rounded-xl border ${priorityConfig.border} ${priorityConfig.bg} p-5 hover:border-[var(--space-border-hard)] transition-all duration-300`}
     >
       <div className="absolute top-0 right-0 w-32 h-32 ${priorityConfig.color} opacity-5 rounded-full blur-3xl" />
 
@@ -89,7 +89,7 @@ export function EnhancedTaskCard({ task }: EnhancedTaskCardProps) {
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="flex-1 space-y-2">
             <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="text-lg font-semibold text-[#F0F0F0]">{task.title}</h3>
+              <h3 className="text-lg font-semibold text-[var(--space-text-primary)]">{task.title}</h3>
 
               {/* Priority Badge */}
               <Badge

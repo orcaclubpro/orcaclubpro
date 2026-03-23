@@ -55,7 +55,7 @@ function phaseLabel(phase: TimelinePhase): string {
 
 function PhaseDots({ phases }: { phases: TimelinePhase[] }) {
   if (!phases.length) {
-    return <span className="text-[9px] text-[#4A4A4A] italic">no phases</span>
+    return <span className="text-[9px] text-[var(--space-text-muted)] italic">no phases</span>
   }
   const visible = phases.slice(0, 6)
   const rest = phases.length - visible.length
@@ -81,7 +81,7 @@ function PhaseDots({ phases }: { phases: TimelinePhase[] }) {
         )
       })}
       {rest > 0 && (
-        <span className="text-[9px] text-[#4A4A4A] ml-0.5">+{rest}</span>
+        <span className="text-[9px] text-[var(--space-text-muted)] ml-0.5">+{rest}</span>
       )}
     </div>
   )
@@ -103,7 +103,7 @@ function CopyButton({ text, className }: { text: string; className?: string }) {
       title="Copy link"
       className={cn(
         'flex items-center justify-center size-6 rounded-lg',
-        'text-[#4A4A4A] hover:text-[#F0F0F0] hover:bg-[#333333]',
+        'text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] hover:bg-[var(--space-divider)]',
         'transition-all duration-150',
         className,
       )}
@@ -187,8 +187,8 @@ function TimelineRow({
   return (
     <div
       className={cn(
-        'group border-b border-[#222222] last:border-b-0 transition-colors duration-150',
-        expanded ? 'bg-[#1E1E1E]' : 'hover:bg-[#1A1A1A]',
+        'group border-b border-[var(--space-border-hard)] last:border-b-0 transition-colors duration-150',
+        expanded ? 'bg-[var(--space-bg-base)]' : 'hover:bg-[var(--space-bg-base)]',
       )}
     >
       {/* ── Main row ── */}
@@ -199,7 +199,7 @@ function TimelineRow({
         {/* Expand chevron */}
         <ChevronDown
           className={cn(
-            'size-3.5 text-[#4A4A4A] shrink-0 transition-transform duration-200',
+            'size-3.5 text-[var(--space-text-muted)] shrink-0 transition-transform duration-200',
             expanded && 'rotate-180',
           )}
         />
@@ -219,13 +219,13 @@ function TimelineRow({
               {timeline.eyebrow}
             </span>
             {timeline.style && timeline.style !== 'cinematic' && (
-              <span className="hidden sm:inline text-[7.5px] font-medium tracking-wide uppercase text-[#4A4A4A] border border-[#333333] px-1.5 py-px rounded shrink-0">
+              <span className="hidden sm:inline text-[7.5px] font-medium tracking-wide uppercase text-[var(--space-text-muted)] border border-[var(--space-divider)] px-1.5 py-px rounded shrink-0">
                 {timeline.style.replace('-', ' ')}
               </span>
             )}
           </div>
           <div className="flex items-baseline gap-1.5 min-w-0">
-            <span className="text-sm font-semibold text-[#E8E8E8] truncate leading-tight">
+            <span className="text-sm font-semibold text-[var(--space-text-primary)] truncate leading-tight">
               {timeline.title}
             </span>
             {timeline.titleEmphasis && (
@@ -243,15 +243,15 @@ function TimelineRow({
         <div className="hidden lg:flex items-center gap-1 shrink-0 min-w-[120px]">
           {timeline.dateRange
             ? <>
-                <CalendarRange className="size-3 text-[#4A4A4A] shrink-0" />
-                <span className="text-[10px] text-[#6B6B6B] truncate">{timeline.dateRange}</span>
+                <CalendarRange className="size-3 text-[var(--space-text-muted)] shrink-0" />
+                <span className="text-[10px] text-[var(--space-text-secondary)] truncate">{timeline.dateRange}</span>
               </>
-            : <span className="text-[10px] text-[#333333]">—</span>}
+            : <span className="text-[10px] text-[var(--space-text-secondary)]">—</span>}
         </div>
 
         {/* Phase count */}
         <div className="shrink-0 hidden sm:block">
-          <span className="text-[9px] font-medium tabular-nums text-[#4A4A4A]">
+          <span className="text-[9px] font-medium tabular-nums text-[var(--space-text-muted)]">
             {phases.length} {phases.length === 1 ? 'phase' : 'phases'}
           </span>
         </div>
@@ -259,7 +259,7 @@ function TimelineRow({
         {/* Access code indicator */}
         <div className="shrink-0">
           <KeyRound
-            className={cn('size-3', accessCode ? 'text-amber-400/40' : 'text-[#333333]')}
+            className={cn('size-3', accessCode ? 'text-amber-400/40' : 'text-[var(--space-text-secondary)]')}
             aria-label={accessCode ? 'Access code set' : 'No access code'}
           />
         </div>
@@ -288,7 +288,7 @@ function TimelineRow({
             href={`/api/timelines/${timeline.slug}/pdf`}
             download={`timeline-${timeline.slug}.pdf`}
             title="Download PDF"
-            className="flex items-center justify-center size-7 rounded-lg text-[#4A4A4A] hover:text-[#F0F0F0] hover:bg-[#2D2D2D] transition-all duration-150"
+            className="flex items-center justify-center size-7 rounded-lg text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] hover:bg-[var(--space-bg-card-hover)] transition-all duration-150"
           >
             <FileDown className="size-3.5" />
           </a>
@@ -298,7 +298,7 @@ function TimelineRow({
             target="_blank"
             rel="noopener noreferrer"
             title="Preview"
-            className="flex items-center justify-center size-7 rounded-lg text-[#4A4A4A] hover:text-[#F0F0F0] hover:bg-[#2D2D2D] transition-all duration-150"
+            className="flex items-center justify-center size-7 rounded-lg text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] hover:bg-[var(--space-bg-card-hover)] transition-all duration-150"
           >
             <ExternalLink className="size-3.5" />
           </a>
@@ -314,7 +314,7 @@ function TimelineRow({
               'flex items-center justify-center gap-1 rounded-lg transition-all duration-150 disabled:opacity-40',
               confirmDelete
                 ? 'px-2 py-1 text-[9px] font-bold uppercase tracking-wide bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20'
-                : 'size-7 text-[#4A4A4A] hover:text-red-400 hover:bg-red-400/10',
+                : 'size-7 text-[var(--space-text-muted)] hover:text-red-400 hover:bg-red-400/10',
             )}
           >
             {deleting
@@ -328,12 +328,12 @@ function TimelineRow({
 
       {/* ── Expanded panel ── */}
       {expanded && (
-        <div className="px-4 pb-4 pt-1 border-t border-[#252525] space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
+        <div className="px-4 pb-4 pt-1 border-t border-[var(--space-bg-card)] space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
 
           {/* Slug + share link */}
-          <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#141414] border border-[#2A2A2A]">
-            <Link2 className="size-3 shrink-0 text-[#4A4A4A]" />
-            <span className="flex-1 font-mono text-[9px] text-[#4A4A4A] truncate tracking-wide">
+          <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--space-bg-base)] border border-[var(--space-border-hard)]">
+            <Link2 className="size-3 shrink-0 text-[var(--space-text-muted)]" />
+            <span className="flex-1 font-mono text-[9px] text-[var(--space-text-muted)] truncate tracking-wide">
               {shareUrl}
             </span>
             <CopyButton text={`https://${shareUrl}`} />
@@ -355,7 +355,7 @@ function TimelineRow({
                   placeholder="e.g. ORCA-2026 (blank to remove)"
                   className={cn(
                     'flex-1 px-2.5 py-1 text-[10px] font-mono tracking-widest',
-                    'bg-[#141414] border rounded-lg text-[#F0F0F0] placeholder:text-[#4A4A4A]',
+                    'bg-[var(--space-bg-base)] border rounded-lg text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)]',
                     'focus:outline-none focus:border-amber-400/30 transition-all',
                     saveError ? 'border-red-500/40' : 'border-amber-400/20',
                   )}
@@ -371,7 +371,7 @@ function TimelineRow({
                 </button>
                 <button
                   onClick={() => setEditingCode(false)}
-                  className="size-6 rounded-lg flex items-center justify-center text-[#4A4A4A] hover:text-[#A0A0A0] transition-colors"
+                  className="size-6 rounded-lg flex items-center justify-center text-[var(--space-text-muted)] hover:text-[var(--space-text-tertiary)] transition-colors"
                 >
                   <X className="size-3" />
                 </button>
@@ -379,21 +379,21 @@ function TimelineRow({
               {saveError && <p className="text-[9px] text-red-400 pl-4">{saveError}</p>}
             </div>
           ) : accessCode ? (
-            <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#141414] border border-[#2A2A2A]">
+            <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--space-bg-base)] border border-[var(--space-border-hard)]">
               <KeyRound className="size-3 shrink-0 text-amber-400/40" />
-              <span className="flex-1 font-mono text-[9px] tracking-widest text-[#6B6B6B] select-none">
+              <span className="flex-1 font-mono text-[9px] tracking-widest text-[var(--space-text-secondary)] select-none">
                 {showCode ? accessCode : '•'.repeat(Math.min(accessCode.length, 10))}
               </span>
               <button
                 onClick={() => setShowCode(v => !v)}
-                className="flex items-center justify-center size-5 rounded-md text-[#4A4A4A] hover:text-[#A0A0A0] transition-colors"
+                className="flex items-center justify-center size-5 rounded-md text-[var(--space-text-muted)] hover:text-[var(--space-text-tertiary)] transition-colors"
               >
                 {showCode ? <EyeOff className="size-3" /> : <Eye className="size-3" />}
               </button>
               <CopyButton text={accessCode} />
               <button
                 onClick={openCodeEditor}
-                className="flex items-center justify-center size-5 rounded-md text-[#4A4A4A] hover:text-amber-400/70 transition-colors"
+                className="flex items-center justify-center size-5 rounded-md text-[var(--space-text-muted)] hover:text-amber-400/70 transition-colors"
               >
                 <Pencil className="size-3" />
               </button>
@@ -401,10 +401,10 @@ function TimelineRow({
           ) : (
             <button
               onClick={openCodeEditor}
-              className="w-full flex items-center gap-1.5 px-3 py-2 rounded-lg border border-dashed border-[#2A2A2A] hover:border-amber-400/18 hover:bg-amber-400/[0.02] transition-all group/code"
+              className="w-full flex items-center gap-1.5 px-3 py-2 rounded-lg border border-dashed border-[var(--space-border-hard)] hover:border-amber-400/18 hover:bg-amber-400/[0.02] transition-all group/code"
             >
-              <KeyRound className="size-3 shrink-0 text-[#333333] group-hover/code:text-amber-400/35 transition-colors" />
-              <span className="text-[9px] text-[#3A3A3A] italic group-hover/code:text-[#5A5A5A] transition-colors">
+              <KeyRound className="size-3 shrink-0 text-[var(--space-text-secondary)] group-hover/code:text-amber-400/35 transition-colors" />
+              <span className="text-[9px] text-[var(--space-text-tertiary)] italic group-hover/code:text-[var(--space-text-secondary)] transition-colors">
                 Add access code…
               </span>
             </button>
@@ -412,7 +412,7 @@ function TimelineRow({
 
           {/* Meta / date row */}
           {(timeline.metaLabel || timeline.dateRange) && (
-            <div className="flex items-center gap-4 text-[9px] text-[#4A4A4A] pl-0.5">
+            <div className="flex items-center gap-4 text-[9px] text-[var(--space-text-muted)] pl-0.5">
               {timeline.dateRange && (
                 <span className="flex items-center gap-1">
                   <CalendarRange className="size-2.5 opacity-50" />
@@ -529,33 +529,33 @@ function CreateModal({
       <div
         className={cn(
           'relative z-10 w-full sm:max-w-lg',
-          'rounded-t-3xl sm:rounded-2xl border border-[#2A2A2A] overflow-hidden',
+          'rounded-t-3xl sm:rounded-2xl border border-[var(--space-border-hard)] overflow-hidden',
           'animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-250',
         )}
-        style={{ background: '#141414' }}
+        style={{ background: 'var(--space-bg-card)' }}
       >
         {/* Accent line */}
         <div className="h-px bg-gradient-to-r from-transparent via-[rgba(139,156,182,0.2)] to-transparent" />
 
         {/* Mobile drag handle */}
         <div className="flex justify-center pt-3 pb-1 sm:hidden">
-          <div className="w-9 h-1 rounded-full bg-[#333333]" />
+          <div className="w-9 h-1 rounded-full bg-[var(--space-divider)]" />
         </div>
 
         {/* Header */}
-        <div className="flex items-start justify-between px-5 pt-5 pb-4 border-b border-[#222222]">
+        <div className="flex items-start justify-between px-5 pt-5 pb-4 border-b border-[var(--space-border-hard)]">
           <div>
             <p className="text-[8px] font-bold tracking-[0.3em] uppercase mb-1.5" style={{ color: 'var(--space-accent)', opacity: 0.5 }}>
               New Timeline
             </p>
-            <h2 className="text-base font-bold text-[#E8E8E8] leading-none">Create Timeline</h2>
-            <p className="text-xs text-[#4A4A4A] mt-1">
+            <h2 className="text-base font-bold text-[var(--space-text-primary)] leading-none">Create Timeline</h2>
+            <p className="text-xs text-[var(--space-text-muted)] mt-1">
               You&apos;ll add phases in the block editor right after.
             </p>
           </div>
           <button
             onClick={onClose}
-            className="size-7 rounded-lg border border-[#2A2A2A] flex items-center justify-center text-[#4A4A4A] hover:text-[#F0F0F0] hover:border-[#404040] transition-all mt-0.5"
+            className="size-7 rounded-lg border border-[var(--space-border-hard)] flex items-center justify-center text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] hover:border-[var(--space-border-hard)] transition-all mt-0.5"
           >
             <X className="size-3.5" />
           </button>
@@ -572,85 +572,85 @@ function CreateModal({
           {/* Title + Emphasis */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[8.5px] font-bold tracking-[0.2em] uppercase text-[#4A4A4A] mb-1.5">
+              <label className="block text-[8.5px] font-bold tracking-[0.2em] uppercase text-[var(--space-text-muted)] mb-1.5">
                 Title <span className="opacity-60">*</span>
               </label>
               <input
                 value={form.title}
                 onChange={e => update('title', e.target.value)}
                 placeholder="Launch"
-                className="w-full px-3 py-2 text-sm bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl text-[#E8E8E8] placeholder:text-[#3A3A3A] focus:outline-none focus:border-[rgba(139,156,182,0.25)] transition-all"
+                className="w-full px-3 py-2 text-sm bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] rounded-xl text-[var(--space-text-primary)] placeholder:text-[var(--space-text-tertiary)] focus:outline-none focus:border-[rgba(139,156,182,0.25)] transition-all"
               />
             </div>
             <div>
-              <label className="block text-[8.5px] font-bold tracking-[0.2em] uppercase text-[#4A4A4A] mb-1.5">
+              <label className="block text-[8.5px] font-bold tracking-[0.2em] uppercase text-[var(--space-text-muted)] mb-1.5">
                 Emphasis <span className="font-normal italic normal-case tracking-normal opacity-60">italic</span>
               </label>
               <input
                 value={form.titleEmphasis}
                 onChange={e => update('titleEmphasis', e.target.value)}
                 placeholder="Roadmap"
-                className="w-full px-3 py-2 text-sm bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl text-[#E8E8E8] placeholder:text-[#3A3A3A] focus:outline-none focus:border-[rgba(139,156,182,0.25)] transition-all"
+                className="w-full px-3 py-2 text-sm bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] rounded-xl text-[var(--space-text-primary)] placeholder:text-[var(--space-text-tertiary)] focus:outline-none focus:border-[rgba(139,156,182,0.25)] transition-all"
               />
             </div>
           </div>
 
           {/* Eyebrow */}
           <div>
-            <label className="block text-[8.5px] font-bold tracking-[0.2em] uppercase text-[#4A4A4A] mb-1.5">
+            <label className="block text-[8.5px] font-bold tracking-[0.2em] uppercase text-[var(--space-text-muted)] mb-1.5">
               Eyebrow <span className="opacity-60">*</span>
             </label>
             <input
               value={form.eyebrow}
               onChange={e => update('eyebrow', e.target.value)}
               placeholder="Kawai Digital · Site Relaunch"
-              className="w-full px-3 py-2 text-sm bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl text-[#E8E8E8] placeholder:text-[#3A3A3A] focus:outline-none focus:border-[rgba(139,156,182,0.25)] transition-all"
+              className="w-full px-3 py-2 text-sm bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] rounded-xl text-[var(--space-text-primary)] placeholder:text-[var(--space-text-tertiary)] focus:outline-none focus:border-[rgba(139,156,182,0.25)] transition-all"
             />
           </div>
 
           {/* Date range + meta */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[8.5px] font-bold tracking-[0.2em] uppercase text-[#4A4A4A] mb-1.5">Date Range</label>
+              <label className="block text-[8.5px] font-bold tracking-[0.2em] uppercase text-[var(--space-text-muted)] mb-1.5">Date Range</label>
               <input
                 value={form.dateRange}
                 onChange={e => update('dateRange', e.target.value)}
                 placeholder="March – April 2026"
-                className="w-full px-3 py-2 text-sm bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl text-[#E8E8E8] placeholder:text-[#3A3A3A] focus:outline-none focus:border-[rgba(139,156,182,0.25)] transition-all"
+                className="w-full px-3 py-2 text-sm bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] rounded-xl text-[var(--space-text-primary)] placeholder:text-[var(--space-text-tertiary)] focus:outline-none focus:border-[rgba(139,156,182,0.25)] transition-all"
               />
             </div>
             <div>
-              <label className="block text-[8.5px] font-bold tracking-[0.2em] uppercase text-[#4A4A4A] mb-1.5">Meta Label</label>
+              <label className="block text-[8.5px] font-bold tracking-[0.2em] uppercase text-[var(--space-text-muted)] mb-1.5">Meta Label</label>
               <input
                 value={form.metaLabel}
                 onChange={e => update('metaLabel', e.target.value)}
                 placeholder="Internal Planning Doc"
-                className="w-full px-3 py-2 text-sm bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl text-[#E8E8E8] placeholder:text-[#3A3A3A] focus:outline-none focus:border-[rgba(139,156,182,0.25)] transition-all"
+                className="w-full px-3 py-2 text-sm bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] rounded-xl text-[var(--space-text-primary)] placeholder:text-[var(--space-text-tertiary)] focus:outline-none focus:border-[rgba(139,156,182,0.25)] transition-all"
               />
             </div>
           </div>
 
           {/* Slug */}
           <div>
-            <label className="block text-[8.5px] font-bold tracking-[0.2em] uppercase text-[#4A4A4A] mb-1.5">Slug</label>
+            <label className="block text-[8.5px] font-bold tracking-[0.2em] uppercase text-[var(--space-text-muted)] mb-1.5">Slug</label>
             <input
               value={form.slug}
               onChange={e => { setSlugTouched(true); update('slug', e.target.value) }}
               placeholder="launch-roadmap"
-              className="w-full px-3 py-2 text-sm font-mono bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl text-[#6B6B6B] placeholder:text-[#3A3A3A] focus:outline-none focus:border-[rgba(139,156,182,0.25)] transition-all"
+              className="w-full px-3 py-2 text-sm font-mono bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] rounded-xl text-[var(--space-text-secondary)] placeholder:text-[var(--space-text-tertiary)] focus:outline-none focus:border-[rgba(139,156,182,0.25)] transition-all"
             />
             {form.slug && (
-              <p className="mt-1 text-[9px] text-[#3A3A3A] font-mono pl-0.5">/timelines/{form.slug}</p>
+              <p className="mt-1 text-[9px] text-[var(--space-text-tertiary)] font-mono pl-0.5">/timelines/{form.slug}</p>
             )}
           </div>
 
           {/* Visual Style */}
           <div>
-            <label className="block text-[8.5px] font-bold tracking-[0.2em] uppercase text-[#4A4A4A] mb-1.5">Visual Style</label>
+            <label className="block text-[8.5px] font-bold tracking-[0.2em] uppercase text-[var(--space-text-muted)] mb-1.5">Visual Style</label>
             <select
               value={form.style}
               onChange={e => update('style', e.target.value)}
-              className="w-full px-3 py-2 text-sm bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl text-[#E8E8E8] focus:outline-none focus:border-[rgba(139,156,182,0.25)] transition-all"
+              className="w-full px-3 py-2 text-sm bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] rounded-xl text-[var(--space-text-primary)] focus:outline-none focus:border-[rgba(139,156,182,0.25)] transition-all"
             >
               <option value="cinematic">Cinematic — Dark gold horizontal</option>
               <option value="vertical-clean">Vertical Clean — Minimal scrollable</option>
@@ -662,10 +662,10 @@ function CreateModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center gap-3 px-5 py-3.5 border-t border-[#222222] bg-[#111111]">
+        <div className="flex items-center gap-3 px-5 py-3.5 border-t border-[var(--space-border-hard)] bg-[var(--space-bg-card)]">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm text-[#4A4A4A] hover:text-[#A0A0A0] rounded-xl hover:bg-[#1A1A1A] transition-all"
+            className="px-4 py-2 text-sm text-[var(--space-text-muted)] hover:text-[var(--space-text-tertiary)] rounded-xl hover:bg-[var(--space-bg-base)] transition-all"
           >
             Cancel
           </button>
@@ -696,11 +696,11 @@ function CreateModal({
 function EmptyState({ onNew }: { onNew: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center py-24 px-8 text-center">
-      <div className="inline-flex p-4 rounded-2xl bg-[#111111] border border-[#222222] mb-5">
-        <CalendarRange className="size-6 text-[#3A3A3A]" />
+      <div className="inline-flex p-4 rounded-2xl bg-[var(--space-bg-card)] border border-[var(--space-border-hard)] mb-5">
+        <CalendarRange className="size-6 text-[var(--space-text-tertiary)]" />
       </div>
-      <p className="text-sm font-semibold text-[#6B6B6B] mb-1.5">No timelines yet</p>
-      <p className="text-xs text-[#3A3A3A] max-w-xs mb-7 leading-relaxed">
+      <p className="text-sm font-semibold text-[var(--space-text-secondary)] mb-1.5">No timelines yet</p>
+      <p className="text-xs text-[var(--space-text-tertiary)] max-w-xs mb-7 leading-relaxed">
         Build visual project roadmaps to share with clients. Each timeline shows phases, checklists, and a launch milestone.
       </p>
       <button
@@ -754,8 +754,8 @@ export function TimelinesAdminView({ username: _username }: Props) {
           <p className="text-[8.5px] font-bold tracking-[0.32em] uppercase mb-1" style={{ color: 'var(--space-accent)', opacity: 0.6 }}>
             Operations
           </p>
-          <h1 className="text-xl font-bold text-[#E8E8E8] tracking-tight leading-none">Timelines</h1>
-          <p className="text-xs text-[#4A4A4A] mt-1">Build &amp; share client project roadmaps</p>
+          <h1 className="text-xl font-bold text-[var(--space-text-primary)] tracking-tight leading-none">Timelines</h1>
+          <p className="text-xs text-[var(--space-text-muted)] mt-1">Build &amp; share client project roadmaps</p>
         </div>
         <button
           onClick={() => setShowCreate(true)}
@@ -770,15 +770,15 @@ export function TimelinesAdminView({ username: _username }: Props) {
       {/* ── Stats bar (only when data loaded) ── */}
       {!loading && timelines.length > 0 && (
         <div className="flex items-center gap-5 mb-5 px-1">
-          <div className="flex items-center gap-1.5 text-[10px] text-[#4A4A4A]">
+          <div className="flex items-center gap-1.5 text-[10px] text-[var(--space-text-muted)]">
             <CalendarRange className="size-3 opacity-60" />
-            <span className="tabular-nums font-semibold text-[#6B6B6B]">{timelines.length}</span>
+            <span className="tabular-nums font-semibold text-[var(--space-text-secondary)]">{timelines.length}</span>
             <span>timeline{timelines.length !== 1 ? 's' : ''}</span>
           </div>
-          <div className="w-px h-3 bg-[#2A2A2A]" />
-          <div className="flex items-center gap-1.5 text-[10px] text-[#4A4A4A]">
+          <div className="w-px h-3 bg-[var(--space-divider)]" />
+          <div className="flex items-center gap-1.5 text-[10px] text-[var(--space-text-muted)]">
             <Layers className="size-3 opacity-60" />
-            <span className="tabular-nums font-semibold text-[#6B6B6B]">{totalPhases}</span>
+            <span className="tabular-nums font-semibold text-[var(--space-text-secondary)]">{totalPhases}</span>
             <span>phase{totalPhases !== 1 ? 's' : ''}</span>
           </div>
         </div>
@@ -787,17 +787,17 @@ export function TimelinesAdminView({ username: _username }: Props) {
       {/* ── Search ── */}
       {!loading && timelines.length > 1 && (
         <div className="relative mb-4">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3 text-[#3A3A3A] pointer-events-none" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3 text-[var(--space-text-tertiary)] pointer-events-none" />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search timelines…"
-            className="w-full pl-8 pr-8 py-2 text-sm bg-[#111111] border border-[#222222] rounded-xl text-[#E8E8E8] placeholder:text-[#3A3A3A] focus:outline-none focus:border-[rgba(139,156,182,0.2)] transition-all"
+            className="w-full pl-8 pr-8 py-2 text-sm bg-[var(--space-bg-card)] border border-[var(--space-border-hard)] rounded-xl text-[var(--space-text-primary)] placeholder:text-[var(--space-text-tertiary)] focus:outline-none focus:border-[rgba(139,156,182,0.2)] transition-all"
           />
           {search && (
             <button
               onClick={() => setSearch('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#3A3A3A] hover:text-[#A0A0A0] transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--space-text-tertiary)] hover:text-[var(--space-text-tertiary)] transition-colors"
             >
               <X className="size-3" />
             </button>
@@ -817,34 +817,34 @@ export function TimelinesAdminView({ username: _username }: Props) {
               />
             ))}
           </div>
-          <span className="text-[9px] text-[#3A3A3A] uppercase tracking-widest">Loading</span>
+          <span className="text-[9px] text-[var(--space-text-tertiary)] uppercase tracking-widest">Loading</span>
         </div>
       ) : timelines.length === 0 ? (
         <EmptyState onNew={() => setShowCreate(true)} />
       ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
-          <p className="text-sm text-[#4A4A4A] mb-2">No results for &ldquo;{search}&rdquo;</p>
-          <button onClick={() => setSearch('')} className="text-xs text-[#4A4A4A] hover:text-[#A0A0A0] transition-colors">
+          <p className="text-sm text-[var(--space-text-muted)] mb-2">No results for &ldquo;{search}&rdquo;</p>
+          <button onClick={() => setSearch('')} className="text-xs text-[var(--space-text-muted)] hover:text-[var(--space-text-tertiary)] transition-colors">
             Clear search
           </button>
         </div>
       ) : (
         /* ── Table ── */
-        <div className="rounded-xl border border-[#222222] overflow-hidden bg-[#111111]">
+        <div className="rounded-xl border border-[var(--space-border-hard)] overflow-hidden bg-[var(--space-bg-card)]">
           {/* Column header */}
-          <div className="flex items-center gap-3 px-4 py-2 border-b border-[#1A1A1A] bg-[#0D0D0D]">
+          <div className="flex items-center gap-3 px-4 py-2 border-b border-[var(--space-divider)] bg-[var(--space-bg-base)]">
             <div className="w-3.5 shrink-0" /> {/* chevron spacer */}
             <div className="w-[72px] shrink-0">
-              <span className="text-[8px] font-bold tracking-[0.2em] uppercase text-[#333333]">Phases</span>
+              <span className="text-[8px] font-bold tracking-[0.2em] uppercase text-[var(--space-text-secondary)]">Phases</span>
             </div>
             <div className="flex-1">
-              <span className="text-[8px] font-bold tracking-[0.2em] uppercase text-[#333333]">Timeline</span>
+              <span className="text-[8px] font-bold tracking-[0.2em] uppercase text-[var(--space-text-secondary)]">Timeline</span>
             </div>
             <div className="hidden lg:block w-[120px] shrink-0">
-              <span className="text-[8px] font-bold tracking-[0.2em] uppercase text-[#333333]">Date Range</span>
+              <span className="text-[8px] font-bold tracking-[0.2em] uppercase text-[var(--space-text-secondary)]">Date Range</span>
             </div>
             <div className="hidden sm:block">
-              <span className="text-[8px] font-bold tracking-[0.2em] uppercase text-[#333333] whitespace-nowrap">Count</span>
+              <span className="text-[8px] font-bold tracking-[0.2em] uppercase text-[var(--space-text-secondary)] whitespace-nowrap">Count</span>
             </div>
             <div className="w-4 shrink-0" /> {/* key icon spacer */}
             <div className="w-[88px] shrink-0" /> {/* actions spacer */}

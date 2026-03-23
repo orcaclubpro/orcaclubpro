@@ -54,7 +54,7 @@ const PROJECT_STATUS = {
 } as const
 
 const SPRINT_CFG = {
-  pending:       { label: 'Planned',  dot: 'bg-gray-500',          bg: 'bg-[#2D2D2D]',                       border: 'border-[#404040]',                  text: 'text-gray-500'          },
+  pending:       { label: 'Planned',  dot: 'bg-gray-500',          bg: 'bg-[var(--space-bg-card-hover)]',                       border: 'border-[var(--space-border-hard)]',                  text: 'text-gray-500'          },
   'in-progress': { label: 'Active',   dot: 'bg-[var(--space-accent)]', bg: 'bg-[rgba(139,156,182,0.06)]',         border: 'border-[rgba(139,156,182,0.12)]',  text: 'text-[var(--space-accent)]' },
   delayed:       { label: 'Delayed',  dot: 'bg-orange-400',        bg: 'bg-orange-400/[0.07]',                border: 'border-orange-400/[0.18]',         text: 'text-orange-400'        },
   finished:      { label: 'Finished', dot: 'bg-green-400',         bg: 'bg-green-400/[0.06]',                 border: 'border-green-400/[0.15]',          text: 'text-green-400'         },
@@ -226,7 +226,7 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
             <span className={cn('text-base font-semibold', statusCfg.text)}>{statusCfg.label}</span>
             {isOngoing && (
               <>
-                <span className="text-[#6B6B6B]">·</span>
+                <span className="text-[var(--space-text-secondary)]">·</span>
                 <span className="text-xs tracking-[0.2em] uppercase font-semibold border px-2 py-0.5 rounded-full border-[rgba(139,156,182,0.15)]" style={{ color: 'var(--space-accent)' }}>
                   Ongoing
                 </span>
@@ -234,8 +234,8 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
             )}
             {daysLeft !== null && !isOngoing && (
               <>
-                <span className="text-[#6B6B6B]">·</span>
-                <span className={cn('text-base font-medium', daysLeft < 0 ? 'text-red-400' : daysLeft < 14 ? 'text-orange-400' : 'text-[#F0F0F0]')}>
+                <span className="text-[var(--space-text-secondary)]">·</span>
+                <span className={cn('text-base font-medium', daysLeft < 0 ? 'text-red-400' : daysLeft < 14 ? 'text-orange-400' : 'text-[var(--space-text-primary)]')}>
                   {daysLeft < 0 ? `${Math.abs(daysLeft)}d overdue` : `${daysLeft} days remaining`}
                 </span>
               </>
@@ -244,22 +244,22 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
             {/* Client chip — staff only */}
             {!readOnly && client && username && (
               <>
-                <span className="text-[#6B6B6B]">·</span>
+                <span className="text-[var(--space-text-secondary)]">·</span>
                 <Link
                   href={`/u/${username}/clients/${client.id}`}
-                  className="flex items-center gap-1.5 text-xs bg-[#2D2D2D] hover:bg-[#E5E1D9] border border-[#404040] hover:border-[#404040] rounded-full px-3 py-1 transition-all duration-150 group"
+                  className="flex items-center gap-1.5 text-xs bg-[var(--space-bg-card-hover)] hover:bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] hover:border-[var(--space-border-hard)] rounded-full px-3 py-1 transition-all duration-150 group"
                 >
                   <Building2 className="size-3 text-cyan-500/50 group-hover:text-cyan-600 transition-colors shrink-0" />
-                  <span className="text-[#6B6B6B] group-hover:text-[#A0A0A0] font-medium transition-colors">
+                  <span className="text-[var(--space-text-secondary)] group-hover:text-[var(--space-text-tertiary)] font-medium transition-colors">
                     {client.name}
                   </span>
                 </Link>
               </>
             )}
           </div>
-          <h1 className="text-6xl font-bold tracking-tight text-[#1E3A6E] leading-none">{project.name}</h1>
+          <h1 className="text-6xl font-bold tracking-tight text-[var(--space-accent)] leading-none">{project.name}</h1>
           {project.description && (
-            <p className="text-[#A0A0A0] max-w-2xl leading-relaxed text-base">{project.description}</p>
+            <p className="text-[var(--space-text-tertiary)] max-w-2xl leading-relaxed text-base">{project.description}</p>
           )}
         </div>
 
@@ -268,7 +268,7 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
           <button
             type="button"
             onClick={() => setSettingsOpen(true)}
-            className="shrink-0 flex items-center gap-1.5 text-sm text-[#6B6B6B] hover:text-[#A0A0A0] bg-[rgba(255,255,255,0.02)] hover:bg-[#2D2D2D] border border-[#404040] hover:border-[#404040] rounded-lg px-3.5 py-2.5 transition-all duration-150 mt-1"
+            className="shrink-0 flex items-center gap-1.5 text-sm text-[var(--space-text-secondary)] hover:text-[var(--space-text-tertiary)] bg-[rgba(255,255,255,0.02)] hover:bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] hover:border-[var(--space-border-hard)] rounded-lg px-3.5 py-2.5 transition-all duration-150 mt-1"
           >
             <Settings className="size-3.5" />
             Edit
@@ -287,7 +287,7 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
         />
       )}
 
-      <div className="h-px bg-[#333333]" />
+      <div className="h-px bg-[var(--space-divider)]" />
 
       {/* ── Active Sprints carousel ───────────────────────────────────────── */}
       {currentSprints.length > 0 && (() => {
@@ -308,15 +308,15 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
           <div className="space-y-4">
             {/* Header row */}
             <div className="flex items-center justify-between">
-              <p className="text-sm tracking-[0.2em] uppercase text-[#F0F0F0] font-bold">Active Sprints</p>
+              <p className="text-sm tracking-[0.2em] uppercase text-[var(--space-text-primary)] font-bold">Active Sprints</p>
               {currentSprints.length > 1 && (
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-[#6B6B6B] tabular-nums">{idx + 1} / {currentSprints.length}</span>
+                  <span className="text-xs text-[var(--space-text-secondary)] tabular-nums">{idx + 1} / {currentSprints.length}</span>
                   <button
                     type="button"
                     onClick={() => setActiveSprintIdx((i) => Math.max(0, i - 1))}
                     disabled={idx === 0}
-                    className="p-1 rounded-lg text-[#6B6B6B] hover:text-[#A0A0A0] hover:bg-[#2D2D2D] transition-colors disabled:opacity-25 disabled:cursor-not-allowed"
+                    className="p-1 rounded-lg text-[var(--space-text-secondary)] hover:text-[var(--space-text-tertiary)] hover:bg-[var(--space-bg-card-hover)] transition-colors disabled:opacity-25 disabled:cursor-not-allowed"
                   >
                     <ChevronLeft className="size-4" />
                   </button>
@@ -324,7 +324,7 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
                     type="button"
                     onClick={() => setActiveSprintIdx((i) => Math.min(currentSprints.length - 1, i + 1))}
                     disabled={idx === currentSprints.length - 1}
-                    className="p-1 rounded-lg text-[#6B6B6B] hover:text-[#A0A0A0] hover:bg-[#2D2D2D] transition-colors disabled:opacity-25 disabled:cursor-not-allowed"
+                    className="p-1 rounded-lg text-[var(--space-text-secondary)] hover:text-[var(--space-text-tertiary)] hover:bg-[var(--space-bg-card-hover)] transition-colors disabled:opacity-25 disabled:cursor-not-allowed"
                   >
                     <ChevronRight className="size-4" />
                   </button>
@@ -338,7 +338,7 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
               className={cn(
                 'group block rounded-xl border p-7 space-y-5',
                 'transition-all duration-200',
-                'hover:-translate-y-px hover:shadow-lg hover:shadow-[#000000]/[0.30] hover:border-[#404040]',
+                'hover:-translate-y-px hover:shadow-lg hover:shadow-[#000000]/[0.30] hover:border-[var(--space-border-hard)]',
                 cfg.bg, cfg.border,
               )}
             >
@@ -351,16 +351,16 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
                       {cfg.label}
                     </span>
                   </div>
-                  <p className="text-xl font-bold text-[#F0F0F0] leading-snug">{sprint.name}</p>
+                  <p className="text-xl font-bold text-[var(--space-text-primary)] leading-snug">{sprint.name}</p>
                 </div>
                 <div className="text-right shrink-0">
-                  <p className="text-sm text-[#A0A0A0]">
+                  <p className="text-sm text-[var(--space-text-tertiary)]">
                     {formatDate(sprint.startDate)} → {formatDate(sprint.endDate)}
                   </p>
                   {daysLeft !== null && (
                     <p className={cn(
                       'text-xs mt-0.5 tabular-nums',
-                      daysLeft < 0 ? 'text-red-400' : daysLeft < 7 ? 'text-orange-400' : 'text-[#A0A0A0]',
+                      daysLeft < 0 ? 'text-red-400' : daysLeft < 7 ? 'text-orange-400' : 'text-[var(--space-text-tertiary)]',
                     )}>
                       {daysLeft < 0 ? `${Math.abs(daysLeft)}d overdue` : `${daysLeft}d left`}
                     </p>
@@ -370,7 +370,7 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
 
               {/* Goal / description */}
               {(sprint.goalDescription || sprint.description) && (
-                <p className="text-sm text-[#A0A0A0] leading-relaxed -mt-1">
+                <p className="text-sm text-[var(--space-text-tertiary)] leading-relaxed -mt-1">
                   {sprint.goalDescription || sprint.description}
                 </p>
               )}
@@ -379,10 +379,10 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
               {totalCount > 0 && (
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-[#A0A0A0] tracking-wide">Progress</span>
-                    <span className="text-sm text-[#F0F0F0] font-medium">{completedCount}/{totalCount} tasks</span>
+                    <span className="text-sm text-[var(--space-text-tertiary)] tracking-wide">Progress</span>
+                    <span className="text-sm text-[var(--space-text-primary)] font-medium">{completedCount}/{totalCount} tasks</span>
                   </div>
-                  <div className="h-1.5 rounded-full bg-[#333333]">
+                  <div className="h-1.5 rounded-full bg-[var(--space-divider)]">
                     <div
                       className={cn('h-full rounded-full transition-all duration-500', cfg.dot)}
                       style={{ width: `${progress}%` }}
@@ -393,7 +393,7 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
 
               {/* Task list */}
               {sprintTasks.length > 0 && (
-                <div className="space-y-1.5 border-t border-[#404040] pt-3">
+                <div className="space-y-1.5 border-t border-[var(--space-border-hard)] pt-3">
                   {sprintTasks.slice(0, 6).map((task) => {
                     const ts = task.status as string
                     const dot =
@@ -405,12 +405,12 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
                         <div className={cn('size-1.5 rounded-full shrink-0', dot)} />
                         <span className={cn(
                           'text-sm flex-1 min-w-0 truncate',
-                          ts === 'completed' ? 'text-[#4A4A4A] line-through decoration-[#555555]' : 'text-[#F0F0F0]',
+                          ts === 'completed' ? 'text-[var(--space-text-muted)] line-through decoration-[#555555]' : 'text-[var(--space-text-primary)]',
                         )}>
                           {task.title}
                         </span>
                         {task.dueDate && (
-                          <span className="text-sm text-[#6B6B6B] shrink-0 tabular-nums">
+                          <span className="text-sm text-[var(--space-text-secondary)] shrink-0 tabular-nums">
                             {formatDate(task.dueDate)}
                           </span>
                         )}
@@ -418,14 +418,14 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
                     )
                   })}
                   {sprintTasks.length > 6 && (
-                    <p className="text-sm text-[#6B6B6B] pl-4">+{sprintTasks.length - 6} more</p>
+                    <p className="text-sm text-[var(--space-text-secondary)] pl-4">+{sprintTasks.length - 6} more</p>
                   )}
                 </div>
               )}
 
               {/* Clickable hint */}
-              <div className="flex justify-end pt-1 border-t border-[#404040] -mb-1">
-                <span className="flex items-center gap-1 text-xs text-[#4A4A4A] group-hover:text-[#6B6B6B] transition-colors duration-200">
+              <div className="flex justify-end pt-1 border-t border-[var(--space-border-hard)] -mb-1">
+                <span className="flex items-center gap-1 text-xs text-[var(--space-text-muted)] group-hover:text-[var(--space-text-secondary)] transition-colors duration-200">
                   View sprint <ArrowRight className="size-3 transition-transform duration-200 group-hover:translate-x-0.5" />
                 </span>
               </div>
@@ -454,19 +454,19 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
       })()}
 
       {/* ── Timeline label ────────────────────────────────────────────────── */}
-      <p className="text-sm tracking-[0.2em] uppercase text-[#F0F0F0] font-bold">Timeline</p>
+      <p className="text-sm tracking-[0.2em] uppercase text-[var(--space-text-primary)] font-bold">Timeline</p>
 
       {/* ── No dates state ────────────────────────────────────────────────── */}
       {!hasTimeline ? (
-        <div className="flex flex-col items-center justify-center py-24 rounded-xl border border-[#404040] bg-[rgba(255,255,255,0.02)] text-center">
-          <Calendar className="size-10 text-[#4A4A4A] mb-4" />
-          <p className="text-[#F0F0F0] font-semibold">No timeline configured</p>
-          <p className="text-sm text-[#A0A0A0] mt-1 max-w-xs">Set a start and projected end date, or mark the project as ongoing.</p>
+        <div className="flex flex-col items-center justify-center py-24 rounded-xl border border-[var(--space-border-hard)] bg-[rgba(255,255,255,0.02)] text-center">
+          <Calendar className="size-10 text-[var(--space-text-muted)] mb-4" />
+          <p className="text-[var(--space-text-primary)] font-semibold">No timeline configured</p>
+          <p className="text-sm text-[var(--space-text-tertiary)] mt-1 max-w-xs">Set a start and projected end date, or mark the project as ongoing.</p>
         </div>
       ) : (
 
         /* ── Scrollable timeline card ─────────────────────────────────────── */
-        <div className="relative rounded-xl border border-[#404040] bg-[#1C1C1C]">
+        <div className="relative rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-base)]">
 
           {/* Ambient glow */}
           <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[#1E3A6E]/10 to-transparent pointer-events-none" />
@@ -475,19 +475,19 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
           {/* Corner geometry */}
           <svg width="80" height="80" viewBox="0 0 80 80" fill="none"
             className="absolute top-0 right-0 opacity-[0.04] pointer-events-none select-none" aria-hidden="true">
-            <path d="M80 0 L80 80 L0 80" stroke="#333333" strokeWidth="1" />
-            <path d="M80 24 L80 80 L24 80" stroke="#333333" strokeWidth="0.5" />
+            <path d="M80 0 L80 80 L0 80" stroke="var(--space-divider)" strokeWidth="1" />
+            <path d="M80 24 L80 80 L24 80" stroke="var(--space-divider)" strokeWidth="0.5" />
           </svg>
 
           {/* Card header */}
-          <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-[#404040]">
+          <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-[var(--space-border-hard)]">
             <div className="flex items-center gap-3">
-              <p className="text-sm tracking-[0.2em] uppercase text-[#F0F0F0] font-bold">Project Track</p>
+              <p className="text-sm tracking-[0.2em] uppercase text-[var(--space-text-primary)] font-bold">Project Track</p>
               {sprintBands.length > 0 && (
-                <span className="text-sm text-[#A0A0A0]">{sprintBands.length} sprint{sprintBands.length > 1 ? 's' : ''}</span>
+                <span className="text-sm text-[var(--space-text-tertiary)]">{sprintBands.length} sprint{sprintBands.length > 1 ? 's' : ''}</span>
               )}
               {milestones.length > 0 && (
-                <span className="text-sm text-[#A0A0A0]">{milestones.length} milestone{milestones.length > 1 ? 's' : ''}</span>
+                <span className="text-sm text-[var(--space-text-tertiary)]">{milestones.length} milestone{milestones.length > 1 ? 's' : ''}</span>
               )}
             </div>
             {todayPx > 0 && todayPx < timelineWidth && (
@@ -497,7 +497,7 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
                   if (!el) return
                   el.scrollTo({ left: Math.max(0, todayPx - el.clientWidth * 0.35), behavior: 'smooth' })
                 }}
-                className="text-xs tracking-wide hover:text-[#A0A0A0] transition-colors flex items-center gap-1"
+                className="text-xs tracking-wide hover:text-[var(--space-text-tertiary)] transition-colors flex items-center gap-1"
                 style={{ color: 'var(--space-accent)' }}
               >
                 <ArrowRight className="size-3" />Jump to today
@@ -561,13 +561,13 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
                             </span>
                           </div>
                           {(sprint.goalDescription || sprint.description) && sprint.widthPx > 100 && (
-                            <p className="text-[9px] text-[#6B6B6B] truncate leading-tight pl-3"
+                            <p className="text-[9px] text-[var(--space-text-secondary)] truncate leading-tight pl-3"
                               style={{ maxWidth: sprint.widthPx - 36 }}>
                               {sprint.goalDescription || sprint.description}
                             </p>
                           )}
                           {sprint.widthPx > 120 && (
-                            <p className="text-[9px] text-[#4A4A4A] truncate leading-tight pl-3"
+                            <p className="text-[9px] text-[var(--space-text-muted)] truncate leading-tight pl-3"
                               style={{ maxWidth: sprint.widthPx - 36 }}>
                               {formatDate(sprint.startDate)} → {formatDate(sprint.endDate)}
                             </p>
@@ -618,7 +618,7 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
                     <div className="absolute left-1/2 z-30" style={{ top: TRACK_Y - 4, transform: 'translateX(-50%)' }}>
                       <div className="relative flex items-center justify-center">
                         <div className="absolute size-5 rounded-full bg-[rgba(139,156,182,0.10)] animate-pulse" />
-                        <div className="size-2.5 rounded-full bg-[#1E3A6E] shadow-[0_0_10px_rgba(139,156,182,0.30)]" />
+                        <div className="size-2.5 rounded-full bg-[var(--space-accent)] shadow-[0_0_10px_rgba(139,156,182,0.30)]" />
                       </div>
                     </div>
                   </div>
@@ -645,13 +645,13 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
                       >
                         <p className={cn(
                           'text-xs font-medium truncate leading-tight',
-                          m.completed ? 'text-[#4A4A4A]' : isNext ? 'text-[#F0F0F0]' : 'text-[#A0A0A0]',
+                          m.completed ? 'text-[var(--space-text-muted)]' : isNext ? 'text-[var(--space-text-primary)]' : 'text-[var(--space-text-tertiary)]',
                         )}
                           style={isNext ? { color: 'var(--space-accent)' } : undefined}
                         >
                           {m.title}
                         </p>
-                        <p className="text-xs text-[#6B6B6B] mt-0.5">{formatDate(m.date)}</p>
+                        <p className="text-xs text-[var(--space-text-secondary)] mt-0.5">{formatDate(m.date)}</p>
                       </div>
 
                       {/* Upper whisker (label → icon) */}
@@ -678,14 +678,14 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
                           />
                         ) : isNext ? (
                           <div
-                            className="rounded-full border-2 bg-[#1C1C1C] flex items-center justify-center"
+                            className="rounded-full border-2 bg-[var(--space-bg-base)] flex items-center justify-center"
                             style={{ width: ICON_SIZE, height: ICON_SIZE, borderColor: 'var(--space-accent)' }}
                           >
                             <div className="size-1.5 rounded-full animate-pulse" style={{ background: 'var(--space-accent)' }} />
                           </div>
                         ) : (
                           <Circle
-                            className="text-[#4A4A4A] group-hover:text-[#4A4A4A] transition-colors"
+                            className="text-[var(--space-text-muted)] group-hover:text-[var(--space-text-muted)] transition-colors"
                             style={{ width: ICON_SIZE, height: ICON_SIZE }}
                           />
                         )}
@@ -711,9 +711,9 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
                           className="absolute left-1/2 -translate-x-1/2 animate-in fade-in duration-150 z-50"
                           style={{ top: ICON_Y - 34 }}
                         >
-                          <div className="bg-[#1C1C1C] border border-[#404040] rounded-lg px-2.5 py-1.5 flex items-center gap-1.5 shadow-xl whitespace-nowrap">
-                            <Pencil className="size-3 text-[#6B6B6B]" />
-                            <span className="text-[10px] text-[#6B6B6B]">Edit</span>
+                          <div className="bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] rounded-lg px-2.5 py-1.5 flex items-center gap-1.5 shadow-xl whitespace-nowrap">
+                            <Pencil className="size-3 text-[var(--space-text-secondary)]" />
+                            <span className="text-[10px] text-[var(--space-text-secondary)]">Edit</span>
                           </div>
                         </div>
                       )}
@@ -729,17 +729,17 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
                     style={{ left: tick.px, top: dynamicTickY }}
                   >
                     <div className="w-px h-3 bg-[#555555] mx-auto" />
-                    <p className="text-xs text-[#6B6B6B] text-center mt-1 whitespace-nowrap -translate-x-1/2">
+                    <p className="text-xs text-[var(--space-text-secondary)] text-center mt-1 whitespace-nowrap -translate-x-1/2">
                       {tick.label}
                     </p>
                   </div>
                 ))}
 
                 {/* Start / End date labels */}
-                <div className="absolute text-xs text-[#6B6B6B] pointer-events-none" style={{ left: 6, top: dynamicTickY + 16 }}>
+                <div className="absolute text-xs text-[var(--space-text-secondary)] pointer-events-none" style={{ left: 6, top: dynamicTickY + 16 }}>
                   {project.startDate ? formatDate(project.startDate) : 'Today'}
                 </div>
-                <div className="absolute text-xs text-[#6B6B6B] pointer-events-none text-right" style={{ right: 0, top: dynamicTickY + 16 }}>
+                <div className="absolute text-xs text-[var(--space-text-secondary)] pointer-events-none text-right" style={{ right: 0, top: dynamicTickY + 16 }}>
                   {isOngoing ? '∞ Rolling' : formatDate(project.projectedEndDate)}
                 </div>
 
@@ -748,35 +748,35 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
           </div>
 
           {/* Legend strip */}
-          <div className="flex items-center flex-wrap gap-x-5 gap-y-1.5 px-6 py-4 border-t border-[#404040]">
+          <div className="flex items-center flex-wrap gap-x-5 gap-y-1.5 px-6 py-4 border-t border-[var(--space-border-hard)]">
             <div className="flex items-center gap-2">
               <div className="h-[3px] w-6 rounded-full bg-gradient-to-r from-[#1E3A6E] to-blue-500" />
-              <span className="text-sm text-[#A0A0A0]">Elapsed</span>
+              <span className="text-sm text-[var(--space-text-tertiary)]">Elapsed</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="size-2 rounded-full bg-[#1E3A6E] shadow-[0_0_4px_rgba(139,156,182,0.25)]" />
-              <span className="text-sm text-[#A0A0A0]">Today</span>
+              <div className="size-2 rounded-full bg-[var(--space-accent)] shadow-[0_0_4px_rgba(139,156,182,0.25)]" />
+              <span className="text-sm text-[var(--space-text-tertiary)]">Today</span>
             </div>
             {milestones.length > 0 && (
               <>
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="size-3 text-green-400" />
-                  <span className="text-sm text-[#A0A0A0]">Completed</span>
+                  <span className="text-sm text-[var(--space-text-tertiary)]">Completed</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Circle className="size-3 text-[#4A4A4A]" />
-                  <span className="text-sm text-[#A0A0A0]">Milestone</span>
+                  <Circle className="size-3 text-[var(--space-text-muted)]" />
+                  <span className="text-sm text-[var(--space-text-tertiary)]">Milestone</span>
                 </div>
               </>
             )}
             {sprintBands.length > 0 && (
               <div className="flex items-center gap-2">
                 <Image src="/orcaclubpro.png" alt="" width={12} height={12} className="opacity-50" />
-                <span className="text-sm text-[#A0A0A0]">Sprint</span>
+                <span className="text-sm text-[var(--space-text-tertiary)]">Sprint</span>
               </div>
             )}
             {milestones.length > 0 && !readOnly && (
-              <span className="text-sm text-[#6B6B6B] ml-auto hidden sm:block">Click milestone to edit</span>
+              <span className="text-sm text-[var(--space-text-secondary)] ml-auto hidden sm:block">Click milestone to edit</span>
             )}
           </div>
 
@@ -786,7 +786,7 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
       {/* ── Milestone list ────────────────────────────────────────────────── */}
       {milestones.length > 0 && (
         <div className="space-y-1">
-          <p className="text-sm tracking-[0.2em] uppercase text-[#F0F0F0] font-bold mb-6">Milestones</p>
+          <p className="text-sm tracking-[0.2em] uppercase text-[var(--space-text-primary)] font-bold mb-6">Milestones</p>
           <div className="space-y-0">
             {milestones.map((m, i) => {
               const isNext = i === nextMilestoneIdx
@@ -803,15 +803,15 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
                           style={{ filter: 'drop-shadow(0 0 4px rgba(74,222,128,0.4))' }}
                         />
                       ) : isNext ? (
-                        <div className="size-5 rounded-full border-2 bg-[#1C1C1C] flex items-center justify-center" style={{ borderColor: 'var(--space-accent)' }}>
+                        <div className="size-5 rounded-full border-2 bg-[var(--space-bg-base)] flex items-center justify-center" style={{ borderColor: 'var(--space-accent)' }}>
                           <div className="size-1.5 rounded-full animate-pulse" style={{ background: 'var(--space-accent)' }} />
                         </div>
                       ) : (
-                        <Circle className="size-5 text-[#4A4A4A]" />
+                        <Circle className="size-5 text-[var(--space-text-muted)]" />
                       )}
                     </div>
                     {!isLast && (
-                      <div className="w-px flex-1 mt-2 bg-gradient-to-b from-[#333333] to-[#222222]" style={{ minHeight: 24 }} />
+                      <div className="w-px flex-1 mt-2 bg-gradient-to-b from-[var(--space-divider)] to-[var(--space-bg-base)]" style={{ minHeight: 24 }} />
                     )}
                   </div>
 
@@ -821,12 +821,12 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
                       <div className="min-w-0 flex-1">
                         <p className={cn(
                           'text-base font-semibold leading-snug',
-                          m.completed ? 'text-[#4A4A4A] line-through decoration-[#555555]' : isNext ? 'text-[#F0F0F0]' : 'text-[#A0A0A0]',
+                          m.completed ? 'text-[var(--space-text-muted)] line-through decoration-[#555555]' : isNext ? 'text-[var(--space-text-primary)]' : 'text-[var(--space-text-tertiary)]',
                         )}>
                           {m.title}
                         </p>
                         {m.description && (
-                          <p className="text-sm text-[#A0A0A0] mt-0.5 leading-relaxed">{m.description}</p>
+                          <p className="text-sm text-[var(--space-text-tertiary)] mt-0.5 leading-relaxed">{m.description}</p>
                         )}
                         {isNext && (
                           <p className="text-xs tracking-[0.2em] uppercase mt-1.5" style={{ color: 'var(--space-accent)' }}>Next up</p>
@@ -834,7 +834,7 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
                       </div>
 
                       <div className="flex items-center gap-2 shrink-0">
-                        <span className={cn('text-xs tabular-nums', m.completed ? 'text-[#4A4A4A]' : isNext ? 'text-[#A0A0A0]' : 'text-[#6B6B6B]')}
+                        <span className={cn('text-xs tabular-nums', m.completed ? 'text-[var(--space-text-muted)]' : isNext ? 'text-[var(--space-text-tertiary)]' : 'text-[var(--space-text-secondary)]')}
                           style={isNext ? { color: 'var(--space-accent)' } : undefined}
                         >
                           {formatDate(m.date)}
@@ -842,7 +842,7 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
                         {!readOnly && (
                           <button
                             onClick={() => setEditState({ index: i, milestone: m })}
-                            className="p-1 rounded-md text-[#4A4A4A] hover:text-[#A0A0A0] hover:bg-[#2D2D2D] transition-colors"
+                            className="p-1 rounded-md text-[var(--space-text-muted)] hover:text-[var(--space-text-tertiary)] hover:bg-[var(--space-bg-card-hover)] transition-colors"
                             title="Edit milestone"
                           >
                             <Pencil className="size-3" />
@@ -862,10 +862,10 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
       {milestones.length === 0 && !readOnly && hasTimeline && (
         <button
           onClick={() => setMilestoneSheetOpen(true)}
-          className="flex items-center gap-2 text-sm text-[#6B6B6B] hover:text-[#A0A0A0] transition-colors group"
+          className="flex items-center gap-2 text-sm text-[var(--space-text-secondary)] hover:text-[var(--space-text-tertiary)] transition-colors group"
         >
-          <div className="size-5 rounded-full border border-dashed border-[#404040] group-hover:border-[#404040] transition-colors flex items-center justify-center">
-            <Flag className="size-2.5 text-[#4A4A4A] group-hover:text-[#6B6B6B]" />
+          <div className="size-5 rounded-full border border-dashed border-[var(--space-border-hard)] group-hover:border-[var(--space-border-hard)] transition-colors flex items-center justify-center">
+            <Flag className="size-2.5 text-[var(--space-text-muted)] group-hover:text-[var(--space-text-secondary)]" />
           </div>
           Add a milestone to track project progress
         </button>
@@ -882,13 +882,13 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
           }}
         >
           <div
-            className="animate-in fade-in slide-in-from-bottom-1 duration-150 bg-[#1C1C1C] border border-[#404040] rounded-xl overflow-hidden shadow-2xl text-left"
+            className="animate-in fade-in slide-in-from-bottom-1 duration-150 bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] rounded-xl overflow-hidden shadow-2xl text-left"
             style={{ minWidth: 210, maxWidth: 280 }}
           >
             <div className={cn('h-0.5 w-full', fixedTooltip.sprint.cfg.dot)} />
             <div className="px-4 py-3 space-y-1.5">
               <div className="flex items-center justify-between gap-2">
-                <p className="text-sm font-semibold text-[#F0F0F0] leading-snug truncate">{fixedTooltip.sprint.name}</p>
+                <p className="text-sm font-semibold text-[var(--space-text-primary)] leading-snug truncate">{fixedTooltip.sprint.name}</p>
                 <span className={cn(
                   'shrink-0 text-[9px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded-full border',
                   fixedTooltip.sprint.cfg.text, fixedTooltip.sprint.cfg.bg, fixedTooltip.sprint.cfg.border,
@@ -896,23 +896,23 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
                   {fixedTooltip.sprint.cfg.label}
                 </span>
               </div>
-              <p className="text-xs text-[#6B6B6B]">
+              <p className="text-xs text-[var(--space-text-secondary)]">
                 {formatDate(fixedTooltip.sprint.startDate)} → {formatDate(fixedTooltip.sprint.endDate)}
               </p>
               {(fixedTooltip.sprint.goalDescription || fixedTooltip.sprint.description) && (
-                <p className="text-sm text-[#A0A0A0] leading-relaxed border-t border-[#404040] pt-2 mt-1">
+                <p className="text-sm text-[var(--space-text-tertiary)] leading-relaxed border-t border-[var(--space-border-hard)] pt-2 mt-1">
                   {fixedTooltip.sprint.goalDescription || fixedTooltip.sprint.description}
                 </p>
               )}
               {(fixedTooltip.sprint.totalTasksCount ?? 0) > 0 && (
-                <div className="flex items-center gap-2 border-t border-[#404040] pt-2 mt-1">
-                  <div className="flex-1 h-1 rounded-full bg-[#333333]">
+                <div className="flex items-center gap-2 border-t border-[var(--space-border-hard)] pt-2 mt-1">
+                  <div className="flex-1 h-1 rounded-full bg-[var(--space-divider)]">
                     <div
                       className={cn('h-full rounded-full transition-all', fixedTooltip.sprint.cfg.dot)}
                       style={{ width: `${((fixedTooltip.sprint.completedTasksCount ?? 0) / (fixedTooltip.sprint.totalTasksCount ?? 1)) * 100}%` }}
                     />
                   </div>
-                  <span className="text-sm text-[#A0A0A0] whitespace-nowrap">
+                  <span className="text-sm text-[var(--space-text-tertiary)] whitespace-nowrap">
                     {fixedTooltip.sprint.completedTasksCount ?? 0}/{fixedTooltip.sprint.totalTasksCount} tasks
                   </span>
                 </div>

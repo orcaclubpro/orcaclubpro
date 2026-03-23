@@ -94,37 +94,37 @@ export function AssignPackageModal({ clientId }: AssignPackageModalProps) {
         size="sm"
         variant="outline"
         onClick={handleOpen}
-        className="gap-1.5 h-8 text-xs border-[#404040] bg-[#252525] text-[#A0A0A0] hover:bg-[#2D2D2D] hover:text-[#F0F0F0]"
+        className="gap-1.5 h-8 text-xs border-[var(--space-border-hard)] bg-[var(--space-bg-card)] text-[var(--space-text-tertiary)] hover:bg-[var(--space-bg-card-hover)] hover:text-[var(--space-text-primary)]"
       >
         <Plus className="size-3.5" />
         Assign Package
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-md bg-[#1C1C1C] border border-[#404040] text-[#F0F0F0] p-0 overflow-hidden">
-          <div className="px-6 pt-6 pb-4 border-b border-[#404040]">
-            <DialogTitle className="text-base font-semibold text-[#F0F0F0]">Assign Package</DialogTitle>
-            <p className="text-xs text-[#4A4A4A] mt-1">Select a package and optionally rename this proposal.</p>
+        <DialogContent className="sm:max-w-md bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] text-[var(--space-text-primary)] p-0 overflow-hidden">
+          <div className="px-6 pt-6 pb-4 border-b border-[var(--space-border-hard)]">
+            <DialogTitle className="text-base font-semibold text-[var(--space-text-primary)]">Assign Package</DialogTitle>
+            <p className="text-xs text-[var(--space-text-muted)] mt-1">Select a package and optionally rename this proposal.</p>
           </div>
 
           <div className="px-6 py-5 space-y-4">
             {loading ? (
               <div className="flex items-center justify-center py-8">
-                <Loader2 className="size-5 text-[#4A4A4A] animate-spin" />
+                <Loader2 className="size-5 text-[var(--space-text-muted)] animate-spin" />
               </div>
             ) : templates.length === 0 ? (
               <div className="flex flex-col items-center gap-2 py-8 text-center">
-                <div className="p-3 rounded-xl bg-[#252525] border border-[#404040]">
-                  <Package className="size-5 text-[#4A4A4A]" />
+                <div className="p-3 rounded-xl bg-[var(--space-bg-card)] border border-[var(--space-border-hard)]">
+                  <Package className="size-5 text-[var(--space-text-muted)]" />
                 </div>
-                <p className="text-sm text-[#6B6B6B]">No packages available</p>
-                <p className="text-xs text-[#4A4A4A]">Create a package in the admin panel first.</p>
+                <p className="text-sm text-[var(--space-text-secondary)]">No packages available</p>
+                <p className="text-xs text-[var(--space-text-muted)]">Create a package in the admin panel first.</p>
               </div>
             ) : (
               <>
                 {/* Template picker */}
                 <div className="space-y-2">
-                  <Label className="text-xs text-[#6B6B6B]">Select package</Label>
+                  <Label className="text-xs text-[var(--space-text-secondary)]">Select package</Label>
                   <div className="space-y-1.5 max-h-48 overflow-y-auto">
                     {templates.map((t) => {
                       const lineCount = t.lineItems?.length ?? 0
@@ -135,15 +135,15 @@ export function AssignPackageModal({ clientId }: AssignPackageModalProps) {
                           onClick={() => setSelectedId(t.id)}
                           className={`w-full text-left px-4 py-3 rounded-lg border transition-all duration-150 ${
                             selectedId === t.id
-                              ? 'border-[rgba(139,156,182,0.15)] bg-[rgba(139,156,182,0.06)] text-[#F0F0F0]'
-                              : 'border-[#404040] bg-[#252525] text-[#A0A0A0] hover:bg-[#2D2D2D] hover:border-[#404040]'
+                              ? 'border-[rgba(139,156,182,0.15)] bg-[rgba(139,156,182,0.06)] text-[var(--space-text-primary)]'
+                              : 'border-[var(--space-border-hard)] bg-[var(--space-bg-card)] text-[var(--space-text-tertiary)] hover:bg-[var(--space-bg-card-hover)] hover:border-[var(--space-border-hard)]'
                           }`}
                         >
                           <div className="font-medium text-sm">{t.name}</div>
                           {t.description && (
-                            <div className="text-xs text-[#4A4A4A] mt-0.5 truncate">{t.description}</div>
+                            <div className="text-xs text-[var(--space-text-muted)] mt-0.5 truncate">{t.description}</div>
                           )}
-                          <div className="text-[10px] text-[#4A4A4A] mt-1">{lineCount} line {lineCount === 1 ? 'item' : 'items'}</div>
+                          <div className="text-[10px] text-[var(--space-text-muted)] mt-1">{lineCount} line {lineCount === 1 ? 'item' : 'items'}</div>
                         </button>
                       )
                     })}
@@ -153,14 +153,14 @@ export function AssignPackageModal({ clientId }: AssignPackageModalProps) {
                 {/* Proposal name — shown once a template is picked */}
                 {selectedId && (
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-[#6B6B6B]">Proposal name</Label>
+                    <Label className="text-xs text-[var(--space-text-secondary)]">Proposal name</Label>
                     <Input
                       value={proposalName}
                       onChange={e => setProposalName(e.target.value)}
                       placeholder="Enter a name for this proposal…"
-                      className="bg-[#252525] border-[#404040] text-[#F0F0F0] placeholder:text-[#4A4A4A] focus-visible:ring-0 focus-visible:border-[rgba(139,156,182,0.15)] h-9 text-sm"
+                      className="bg-[var(--space-bg-card)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)] focus-visible:ring-0 focus-visible:border-[rgba(139,156,182,0.15)] h-9 text-sm"
                     />
-                    <p className="text-[10px] text-[#4A4A4A]">
+                    <p className="text-[10px] text-[var(--space-text-muted)]">
                       Defaults to the template name. Rename to personalise for this client.
                     </p>
                   </div>
@@ -175,13 +175,13 @@ export function AssignPackageModal({ clientId }: AssignPackageModalProps) {
             )}
           </div>
 
-          <div className="px-6 py-4 border-t border-[#404040] flex items-center justify-end gap-2">
+          <div className="px-6 py-4 border-t border-[var(--space-border-hard)] flex items-center justify-end gap-2">
             <Button
               size="sm"
               variant="ghost"
               onClick={() => setOpen(false)}
               disabled={submitting}
-              className="text-[#6B6B6B] hover:text-[#A0A0A0] hover:bg-[#2D2D2D]"
+              className="text-[var(--space-text-secondary)] hover:text-[var(--space-text-tertiary)] hover:bg-[var(--space-bg-card-hover)]"
             >
               Cancel
             </Button>

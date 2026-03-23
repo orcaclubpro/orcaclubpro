@@ -37,13 +37,13 @@ export function DashboardNav({ user }: { user: User }) {
   ]
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-[#1C1C1C] border-b border-[#404040]">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-[var(--space-bg-base)] border-b border-[var(--space-border-hard)]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href={`/u/${user.username}`} className="flex items-center gap-2">
-            <span className="font-bold text-[#F0F0F0] text-lg">ORCA</span>
-            <span className="font-bold text-[#1E3A6E] text-lg">CLUB</span>
+            <span className="font-bold text-[var(--space-text-primary)] text-lg">ORCA</span>
+            <span className="font-bold text-[var(--space-accent)] text-lg">CLUB</span>
           </Link>
 
           <div className="flex items-center gap-6">
@@ -59,7 +59,7 @@ export function DashboardNav({ user }: { user: User }) {
                       'flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200',
                       link.active
                         ? 'bg-[rgba(139,156,182,0.10)] text-[var(--space-accent)] border border-[rgba(139,156,182,0.15)]'
-                        : 'text-[#6B6B6B] hover:text-[#F0F0F0] hover:bg-[rgba(255,255,255,0.06)]'
+                        : 'text-[var(--space-text-secondary)] hover:text-[var(--space-text-primary)] hover:bg-[rgba(255,255,255,0.06)]'
                     )}
                   >
                     <Icon className="size-4" />
@@ -70,18 +70,18 @@ export function DashboardNav({ user }: { user: User }) {
             </div>
 
             {/* User Menu */}
-            <div className="flex items-center gap-4 ml-4 pl-4 border-l border-[#404040]">
+            <div className="flex items-center gap-4 ml-4 pl-4 border-l border-[var(--space-border-hard)]">
               <div className="text-right hidden md:block">
-                <p className="text-sm font-medium text-[#F0F0F0]">
+                <p className="text-sm font-medium text-[var(--space-text-primary)]">
                   {user.firstName} {user.lastName}
                 </p>
-                <p className="text-xs text-[#6B6B6B]">{user.email}</p>
+                <p className="text-xs text-[var(--space-text-secondary)]">{user.email}</p>
               </div>
               <Button
                 onClick={handleLogout}
                 variant="outline"
                 size="sm"
-                className="border-[#404040] hover:bg-[#2D2D2D] gap-2"
+                className="border-[var(--space-border-hard)] hover:bg-[var(--space-bg-card-hover)] gap-2"
               >
                 <LogOut className="size-4" />
                 <span className="hidden sm:inline">Logout</span>

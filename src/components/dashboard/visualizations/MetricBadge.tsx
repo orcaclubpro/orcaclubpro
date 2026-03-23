@@ -55,10 +55,10 @@ export function MetricBadge({
   const Icon = iconMap[iconName]
   const variantStyles = {
     default: {
-      bg: 'bg-[#252525]',
-      border: 'border-[#404040]',
+      bg: 'bg-[var(--space-bg-card)]',
+      border: 'border-[var(--space-border-hard)]',
       icon: 'text-[var(--space-accent)]',
-      text: 'text-[#F0F0F0]',
+      text: 'text-[var(--space-text-primary)]',
     },
     success: {
       bg: 'bg-green-400/[0.08]',
@@ -90,7 +90,7 @@ export function MetricBadge({
         <Icon className="size-3.5" />
       </div>
       <div className="flex flex-col">
-        <span className="text-xs text-[#6B6B6B] uppercase tracking-wider font-medium">
+        <span className="text-xs text-[var(--space-text-secondary)] uppercase tracking-wider font-medium">
           {label}
         </span>
         <div className="flex items-baseline gap-1.5">

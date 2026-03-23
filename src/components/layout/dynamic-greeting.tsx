@@ -180,7 +180,7 @@ export default function DynamicGreeting({ className = "" }: DynamicGreetingProps
               fontSize: 'clamp(1.5rem, 3.5vw, 3rem)',
             }}
           >
-            <span className="text-white">
+            <span className="text-[var(--space-nav-fg)]">
               {greetingContent.first}
             </span>
             <span className="ml-2 md:ml-3 lg:ml-4 xl:ml-6">

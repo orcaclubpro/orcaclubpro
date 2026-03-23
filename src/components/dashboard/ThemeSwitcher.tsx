@@ -14,6 +14,7 @@ const THEME_SWATCHES: Record<ThemeId, string> = {
   emerald: '#34d399',
   dusk:    '#a78bfa',
   chrome:  '#e2e8f0',
+  light:   '#0891b2',
 }
 
 export function ThemeSwitcher() {
@@ -58,13 +59,13 @@ export function ThemeSwitcher() {
         <div
           className="absolute top-full left-0 mt-2 w-64 rounded-2xl p-2 z-50"
           style={{
-            background: '#252525',
-            border: '1px solid var(--space-border)',
+            background: 'var(--space-bg-card)',
+            border: '1px solid var(--space-border-hard)',
             boxShadow: '0 8px 40px rgba(0,0,0,0.40), 0 2px 8px rgba(0,0,0,0.20)',
             animation: 'themeFadeIn 160ms cubic-bezier(0.22,1,0.36,1) forwards',
           }}
         >
-          <p className="text-[9px] uppercase tracking-[0.15em] text-[#6B6B6B] font-semibold px-2 pt-1 pb-2">
+          <p className="text-[9px] uppercase tracking-[0.15em] text-[var(--space-text-secondary)] font-semibold px-2 pt-1 pb-2">
             Color Preset
           </p>
           <div className="grid grid-cols-2 gap-1.5">
@@ -76,7 +77,7 @@ export function ThemeSwitcher() {
                   onClick={() => { setTheme(theme.id); setOpen(false) }}
                   className={cn(
                     'flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-left transition-all duration-150 active:scale-95',
-                    active ? 'bg-[#2D2D2D]' : 'hover:bg-[#2D2D2D]',
+                    active ? 'bg-[var(--space-bg-card-hover)]' : 'hover:bg-[var(--space-bg-card-hover)]',
                   )}
                   style={active ? { boxShadow: `0 0 0 1px ${THEME_SWATCHES[theme.id]}30` } : undefined}
                 >
@@ -88,8 +89,8 @@ export function ThemeSwitcher() {
                     }}
                   />
                   <div>
-                    <p className="text-[11px] font-semibold text-[#F0F0F0] leading-none mb-0.5">{theme.label}</p>
-                    <p className="text-[9px] text-[#6B6B6B] leading-none">{theme.description}</p>
+                    <p className="text-[11px] font-semibold text-[var(--space-text-primary)] leading-none mb-0.5">{theme.label}</p>
+                    <p className="text-[9px] text-[var(--space-text-secondary)] leading-none">{theme.description}</p>
                   </div>
                   {active && (
                     <span

@@ -136,12 +136,12 @@ export function ScheduledPaymentsSection({ packages, username }: ScheduledPaymen
       {/* Header */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-baseline gap-3">
-          <h3 className="text-sm font-semibold text-[#F0F0F0]">Scheduled Payments</h3>
+          <h3 className="text-sm font-semibold text-[var(--space-text-primary)]">Scheduled Payments</h3>
           <span className="text-xs text-gray-600 tabular-nums">
             {totalPending} pending{timeframe !== 'all' && ` · next ${timeframe}d`}
           </span>
         </div>
-        <div className="flex items-center rounded-lg border border-[#404040] overflow-hidden">
+        <div className="flex items-center rounded-lg border border-[var(--space-border-hard)] overflow-hidden">
           {TIMEFRAME_OPTS.map((opt, i, arr) => (
             <button
               key={opt.value}
@@ -149,7 +149,7 @@ export function ScheduledPaymentsSection({ packages, username }: ScheduledPaymen
               onClick={() => setTimeframe(opt.value)}
               className={[
                 'px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide transition-all',
-                i < arr.length - 1 ? 'border-r border-[#404040]' : '',
+                i < arr.length - 1 ? 'border-r border-[var(--space-border-hard)]' : '',
                 timeframe === opt.value
                   ? 'bg-[rgba(139,156,182,0.10)] text-[var(--space-accent)]'
                   : 'text-gray-600 hover:text-gray-400',
@@ -162,15 +162,15 @@ export function ScheduledPaymentsSection({ packages, username }: ScheduledPaymen
       </div>
 
       {scheduledPackages.length === 0 ? (
-        <div className="rounded-xl border border-[#404040] bg-[#252525] px-5 py-4 text-xs text-[#6B6B6B]">
+        <div className="rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] px-5 py-4 text-xs text-[var(--space-text-secondary)]">
           No scheduled payments due within {timeframe} days.
         </div>
       ) : (
-        <div className="rounded-xl border border-[#404040] bg-[#252525] overflow-hidden divide-y divide-[#333333]">
+        <div className="rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] overflow-hidden divide-y divide-[var(--space-divider)]">
           {scheduledPackages.map((pkg) => (
             <div key={pkg.id}>
-              <div className="px-5 py-2.5 bg-[#252525]">
-                <span className="text-[10px] text-[#6B6B6B] uppercase tracking-widest font-semibold">
+              <div className="px-5 py-2.5 bg-[var(--space-bg-card)]">
+                <span className="text-[10px] text-[var(--space-text-secondary)] uppercase tracking-widest font-semibold">
                   {pkg.name}
                 </span>
               </div>
@@ -180,8 +180,8 @@ export function ScheduledPaymentsSection({ packages, username }: ScheduledPaymen
                 return (
                   <div key={entry.id} className="flex items-center gap-4 px-5 py-3">
                     <div className="flex-1 min-w-0 flex items-center gap-4 flex-wrap">
-                      <span className="text-sm text-[#A0A0A0] font-medium">{entry.label}</span>
-                      <span className="text-sm text-[#F0F0F0] tabular-nums font-mono shrink-0">
+                      <span className="text-sm text-[var(--space-text-tertiary)] font-medium">{entry.label}</span>
+                      <span className="text-sm text-[var(--space-text-primary)] tabular-nums font-mono shrink-0">
                         {fmt(entry.amount)}
                       </span>
                       {entry.dueDate && (
@@ -261,7 +261,7 @@ export function ScheduledPaymentsSection({ packages, username }: ScheduledPaymen
       {mounted && openMenuId && menuPos && createPortal(
         <div
           style={{ position: 'fixed', top: menuPos.top, right: menuPos.right, zIndex: 9999 }}
-          className="min-w-[180px] rounded-xl border border-[#333] bg-[#1A1A1A] shadow-2xl overflow-hidden"
+          className="min-w-[180px] rounded-xl border border-[#333] bg-[var(--space-bg-base)] shadow-2xl overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
           <button
@@ -270,27 +270,27 @@ export function ScheduledPaymentsSection({ packages, username }: ScheduledPaymen
               const pkg = scheduledPackages.find(p => p.pendingEntries.some(e => e.id === openMenuId))
               if (pkg) handleSend(pkg.id, openMenuId, false)
             }}
-            className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs text-[#D0D0D0] hover:bg-[#242424] transition-colors text-left"
+            className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs text-[#D0D0D0] hover:bg-[var(--space-bg-card-hover)] transition-colors text-left"
           >
             <Receipt className="size-3.5 text-[var(--space-accent)] shrink-0" />
             <div>
               <div className="font-medium">Send Invoice</div>
-              <div className="text-[10px] text-[#5A5A5A] mt-0.5">Creates order + emails client</div>
+              <div className="text-[10px] text-[var(--space-text-secondary)] mt-0.5">Creates order + emails client</div>
             </div>
           </button>
-          <div className="h-px bg-[#252525]" />
+          <div className="h-px bg-[var(--space-bg-card)]" />
           <button
             type="button"
             onClick={() => {
               const pkg = scheduledPackages.find(p => p.pendingEntries.some(e => e.id === openMenuId))
               if (pkg) handleSend(pkg.id, openMenuId, true)
             }}
-            className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs text-[#D0D0D0] hover:bg-[#242424] transition-colors text-left"
+            className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs text-[#D0D0D0] hover:bg-[var(--space-bg-card-hover)] transition-colors text-left"
           >
             <FilePlus className="size-3.5 text-[#8A8A8A] shrink-0" />
             <div>
               <div className="font-medium">Create Invoice</div>
-              <div className="text-[10px] text-[#5A5A5A] mt-0.5">Creates order, no email sent</div>
+              <div className="text-[10px] text-[var(--space-text-secondary)] mt-0.5">Creates order, no email sent</div>
             </div>
           </button>
         </div>,

@@ -93,26 +93,26 @@ export function MilestoneEditSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="bg-[#1C1C1C] border-[#404040] w-full sm:max-w-md p-0 flex flex-col gap-0 overflow-hidden">
+      <SheetContent className="bg-[var(--space-bg-base)] border-[var(--space-border-hard)] w-full sm:max-w-md p-0 flex flex-col gap-0 overflow-hidden">
 
         <div className="h-px bg-gradient-to-r from-transparent via-green-400/50 to-transparent shrink-0" />
 
         <div className="absolute top-0 right-0 pointer-events-none select-none" aria-hidden="true">
           <svg width="80" height="80" viewBox="0 0 80 80" fill="none" className="opacity-[0.04]">
-            <path d="M80 0 L80 80 L0 80" stroke="#333333" strokeWidth="1" />
-            <path d="M80 24 L80 80 L24 80" stroke="#333333" strokeWidth="0.5" />
+            <path d="M80 0 L80 80 L0 80" stroke="var(--space-divider)" strokeWidth="1" />
+            <path d="M80 24 L80 80 L24 80" stroke="var(--space-divider)" strokeWidth="0.5" />
           </svg>
         </div>
 
-        <div className="px-7 pt-7 pb-6 border-b border-[#404040] shrink-0">
-          <p className="text-[10px] tracking-[0.35em] uppercase text-[#6B6B6B] font-light mb-4">Edit Milestone</p>
+        <div className="px-7 pt-7 pb-6 border-b border-[var(--space-border-hard)] shrink-0">
+          <p className="text-[10px] tracking-[0.35em] uppercase text-[var(--space-text-secondary)] font-light mb-4">Edit Milestone</p>
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-green-400/10 border border-green-400/20">
               <Flag className="size-4 text-green-400" />
             </div>
             <div className="min-w-0">
-              <h2 className="text-lg font-semibold text-[#F0F0F0] leading-snug truncate">{title || 'Milestone'}</h2>
-              <p className="text-xs text-[#6B6B6B] mt-0.5">Modify or remove this milestone</p>
+              <h2 className="text-lg font-semibold text-[var(--space-text-primary)] leading-snug truncate">{title || 'Milestone'}</h2>
+              <p className="text-xs text-[var(--space-text-secondary)] mt-0.5">Modify or remove this milestone</p>
             </div>
           </div>
           <div className="mt-5 w-6 h-px bg-green-400/40" />
@@ -122,32 +122,32 @@ export function MilestoneEditSheet({
           <div className="flex-1 overflow-y-auto px-7 py-6 space-y-5">
 
             <div className="space-y-1.5">
-              <label className="text-xs text-[#6B6B6B] font-medium tracking-wide">Milestone Title</label>
+              <label className="text-xs text-[var(--space-text-secondary)] font-medium tracking-wide">Milestone Title</label>
               <input
                 value={title}
                 onChange={(e) => { setTitle(e.target.value); clearField('title') }}
                 placeholder="Milestone title"
                 className={cn(
-                  'w-full bg-[rgba(255,255,255,0.06)] border rounded-lg px-4 py-2.5 text-[#F0F0F0] placeholder:text-[#6B6B6B] text-sm outline-none transition-all duration-200',
+                  'w-full bg-[rgba(255,255,255,0.06)] border rounded-lg px-4 py-2.5 text-[var(--space-text-primary)] placeholder:text-[var(--space-text-secondary)] text-sm outline-none transition-all duration-200',
                   'focus:bg-[rgba(255,255,255,0.06)] focus:ring-1 focus:ring-green-400/20 focus:border-green-400/35',
-                  fieldErrors.title ? 'border-red-400/50' : 'border-[#404040]',
+                  fieldErrors.title ? 'border-red-400/50' : 'border-[var(--space-border-hard)]',
                 )}
               />
               {fieldErrors.title && <p className="text-xs text-red-400">{fieldErrors.title}</p>}
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs text-[#6B6B6B] font-medium tracking-wide">Target Date</label>
+              <label className="text-xs text-[var(--space-text-secondary)] font-medium tracking-wide">Target Date</label>
               <div className="relative">
-                <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-[#6B6B6B] pointer-events-none" />
+                <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-[var(--space-text-secondary)] pointer-events-none" />
                 <input
                   type="date"
                   value={date}
                   onChange={(e) => { setDate(e.target.value); clearField('date') }}
                   className={cn(
-                    'w-full bg-[rgba(255,255,255,0.06)] border rounded-lg pl-10 pr-4 py-2.5 text-[#F0F0F0] text-sm outline-none transition-all duration-200 [color-scheme:light]',
+                    'w-full bg-[rgba(255,255,255,0.06)] border rounded-lg pl-10 pr-4 py-2.5 text-[var(--space-text-primary)] text-sm outline-none transition-all duration-200 [color-scheme:light]',
                     'focus:bg-[rgba(255,255,255,0.06)] focus:border-green-400/35',
-                    fieldErrors.date ? 'border-red-400/50' : 'border-[#404040]',
+                    fieldErrors.date ? 'border-red-400/50' : 'border-[var(--space-border-hard)]',
                   )}
                 />
               </div>
@@ -156,15 +156,15 @@ export function MilestoneEditSheet({
 
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <label className="text-xs text-[#6B6B6B] font-medium tracking-wide">Description</label>
-                <span className="text-[10px] text-[#6B6B6B]">Optional</span>
+                <label className="text-xs text-[var(--space-text-secondary)] font-medium tracking-wide">Description</label>
+                <span className="text-[10px] text-[var(--space-text-secondary)]">Optional</span>
               </div>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Notes about this milestone..."
                 rows={3}
-                className="w-full bg-[rgba(255,255,255,0.06)] border border-[#404040] rounded-lg px-4 py-2.5 text-[#F0F0F0] placeholder:text-[#6B6B6B] text-sm outline-none transition-all duration-200 resize-none focus:bg-[rgba(255,255,255,0.06)] focus:ring-1 focus:ring-green-400/20 focus:border-green-400/35"
+                className="w-full bg-[rgba(255,255,255,0.06)] border border-[var(--space-border-hard)] rounded-lg px-4 py-2.5 text-[var(--space-text-primary)] placeholder:text-[var(--space-text-secondary)] text-sm outline-none transition-all duration-200 resize-none focus:bg-[rgba(255,255,255,0.06)] focus:ring-1 focus:ring-green-400/20 focus:border-green-400/35"
               />
             </div>
 
@@ -182,11 +182,11 @@ export function MilestoneEditSheet({
             )}
           </div>
 
-          <div className="shrink-0 px-7 pb-7 pt-4 border-t border-[#404040] bg-[#1C1C1C] space-y-3">
+          <div className="shrink-0 px-7 pb-7 pt-4 border-t border-[var(--space-border-hard)] bg-[var(--space-bg-base)] space-y-3">
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-[rgba(255,255,255,0.06)] border border-green-400/20 text-[#F0F0F0] font-semibold py-3 rounded-xl hover:bg-[rgba(255,255,255,0.06)] hover:border-green-400/35 active:scale-[0.99] transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2 text-sm"
+              className="w-full bg-[rgba(255,255,255,0.06)] border border-green-400/20 text-[var(--space-text-primary)] font-semibold py-3 rounded-xl hover:bg-[rgba(255,255,255,0.06)] hover:border-green-400/35 active:scale-[0.99] transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2 text-sm"
             >
               {isLoading
                 ? <><Loader2 className="size-4 animate-spin" />Saving...</>
@@ -203,7 +203,7 @@ export function MilestoneEditSheet({
                 'w-full border font-medium py-2.5 rounded-xl active:scale-[0.99] transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2 text-sm',
                 confirmDelete
                   ? 'bg-red-500/10 border-red-500/40 text-red-400 hover:bg-red-500/15'
-                  : 'bg-transparent border-[#404040] text-[#6B6B6B] hover:border-red-500/30 hover:text-red-400',
+                  : 'bg-transparent border-[var(--space-border-hard)] text-[var(--space-text-secondary)] hover:border-red-500/30 hover:text-red-400',
               )}
             >
               {isDeleting

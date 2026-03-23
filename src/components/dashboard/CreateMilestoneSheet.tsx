@@ -63,7 +63,7 @@ export function CreateMilestoneSheet({ projectId, open, onOpenChange }: CreateMi
 
   return (
     <Sheet open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v) }}>
-      <SheetContent className="bg-[#1C1C1C] border-[#404040] w-full sm:max-w-md p-0 flex flex-col gap-0 overflow-hidden">
+      <SheetContent className="bg-[var(--space-bg-base)] border-[var(--space-border-hard)] w-full sm:max-w-md p-0 flex flex-col gap-0 overflow-hidden">
 
         {/* Green top accent */}
         <div className="h-px bg-gradient-to-r from-transparent via-green-400/50 to-transparent shrink-0" />
@@ -71,21 +71,21 @@ export function CreateMilestoneSheet({ projectId, open, onOpenChange }: CreateMi
         {/* Corner SVG */}
         <div className="absolute top-0 right-0 pointer-events-none select-none" aria-hidden="true">
           <svg width="80" height="80" viewBox="0 0 80 80" fill="none" className="opacity-[0.04]">
-            <path d="M80 0 L80 80 L0 80" stroke="#333333" strokeWidth="1" />
-            <path d="M80 24 L80 80 L24 80" stroke="#333333" strokeWidth="0.5" />
+            <path d="M80 0 L80 80 L0 80" stroke="var(--space-divider)" strokeWidth="1" />
+            <path d="M80 24 L80 80 L24 80" stroke="var(--space-divider)" strokeWidth="0.5" />
           </svg>
         </div>
 
         {/* Header */}
-        <div className="px-7 pt-7 pb-6 border-b border-[#404040] shrink-0">
-          <p className="text-[10px] tracking-[0.35em] uppercase text-[#6B6B6B] font-light mb-4">New Milestone</p>
+        <div className="px-7 pt-7 pb-6 border-b border-[var(--space-border-hard)] shrink-0">
+          <p className="text-[10px] tracking-[0.35em] uppercase text-[var(--space-text-secondary)] font-light mb-4">New Milestone</p>
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-green-400/10 border border-green-400/20">
               <Flag className="size-4 text-green-400" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-[#F0F0F0] leading-snug">Add a Milestone</h2>
-              <p className="text-xs text-[#6B6B6B] mt-0.5">Mark an important project deliverable</p>
+              <h2 className="text-lg font-semibold text-[var(--space-text-primary)] leading-snug">Add a Milestone</h2>
+              <p className="text-xs text-[var(--space-text-secondary)] mt-0.5">Mark an important project deliverable</p>
             </div>
           </div>
           <div className="mt-5 w-6 h-px bg-green-400/40" />
@@ -97,7 +97,7 @@ export function CreateMilestoneSheet({ projectId, open, onOpenChange }: CreateMi
 
             {/* Title */}
             <div className="space-y-1.5">
-              <label className="text-xs text-[#6B6B6B] font-medium tracking-wide">Milestone Title</label>
+              <label className="text-xs text-[var(--space-text-secondary)] font-medium tracking-wide">Milestone Title</label>
               <input
                 value={title}
                 onChange={(e) => { setTitle(e.target.value); clearField('title') }}
@@ -105,9 +105,9 @@ export function CreateMilestoneSheet({ projectId, open, onOpenChange }: CreateMi
                 disabled={isLoading}
                 autoFocus
                 className={cn(
-                  'w-full bg-[rgba(255,255,255,0.06)] border rounded-lg px-4 py-2.5 text-[#F0F0F0] placeholder:text-[#6B6B6B] text-sm outline-none transition-all duration-200',
+                  'w-full bg-[rgba(255,255,255,0.06)] border rounded-lg px-4 py-2.5 text-[var(--space-text-primary)] placeholder:text-[var(--space-text-secondary)] text-sm outline-none transition-all duration-200',
                   'focus:bg-[rgba(255,255,255,0.06)] focus:ring-1 focus:ring-green-400/20 focus:border-green-400/35',
-                  fieldErrors.title ? 'border-red-400/50' : 'border-[#404040]',
+                  fieldErrors.title ? 'border-red-400/50' : 'border-[var(--space-border-hard)]',
                 )}
               />
               {fieldErrors.title && <p className="text-xs text-red-400">{fieldErrors.title}</p>}
@@ -115,18 +115,18 @@ export function CreateMilestoneSheet({ projectId, open, onOpenChange }: CreateMi
 
             {/* Date */}
             <div className="space-y-1.5">
-              <label className="text-xs text-[#6B6B6B] font-medium tracking-wide">Target Date</label>
+              <label className="text-xs text-[var(--space-text-secondary)] font-medium tracking-wide">Target Date</label>
               <div className="relative">
-                <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-[#6B6B6B] pointer-events-none" />
+                <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-[var(--space-text-secondary)] pointer-events-none" />
                 <input
                   type="date"
                   value={date}
                   onChange={(e) => { setDate(e.target.value); clearField('date') }}
                   disabled={isLoading}
                   className={cn(
-                    'w-full bg-[rgba(255,255,255,0.06)] border rounded-lg pl-10 pr-4 py-2.5 text-[#F0F0F0] text-sm outline-none transition-all duration-200 [color-scheme:light]',
+                    'w-full bg-[rgba(255,255,255,0.06)] border rounded-lg pl-10 pr-4 py-2.5 text-[var(--space-text-primary)] text-sm outline-none transition-all duration-200 [color-scheme:light]',
                     'focus:bg-[rgba(255,255,255,0.06)] focus:border-green-400/35',
-                    fieldErrors.date ? 'border-red-400/50' : 'border-[#404040]',
+                    fieldErrors.date ? 'border-red-400/50' : 'border-[var(--space-border-hard)]',
                   )}
                 />
               </div>
@@ -136,8 +136,8 @@ export function CreateMilestoneSheet({ projectId, open, onOpenChange }: CreateMi
             {/* Description */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <label className="text-xs text-[#6B6B6B] font-medium tracking-wide">Description</label>
-                <span className="text-[10px] text-[#6B6B6B]">Optional</span>
+                <label className="text-xs text-[var(--space-text-secondary)] font-medium tracking-wide">Description</label>
+                <span className="text-[10px] text-[var(--space-text-secondary)]">Optional</span>
               </div>
               <textarea
                 value={description}
@@ -145,25 +145,25 @@ export function CreateMilestoneSheet({ projectId, open, onOpenChange }: CreateMi
                 placeholder="What does reaching this milestone mean for the project?"
                 rows={3}
                 disabled={isLoading}
-                className="w-full bg-[rgba(255,255,255,0.06)] border border-[#404040] rounded-lg px-4 py-2.5 text-[#F0F0F0] placeholder:text-[#6B6B6B] text-sm outline-none transition-all duration-200 resize-none focus:bg-[rgba(255,255,255,0.06)] focus:ring-1 focus:ring-green-400/20 focus:border-green-400/35"
+                className="w-full bg-[rgba(255,255,255,0.06)] border border-[var(--space-border-hard)] rounded-lg px-4 py-2.5 text-[var(--space-text-primary)] placeholder:text-[var(--space-text-secondary)] text-sm outline-none transition-all duration-200 resize-none focus:bg-[rgba(255,255,255,0.06)] focus:ring-1 focus:ring-green-400/20 focus:border-green-400/35"
               />
             </div>
 
             {/* Live preview */}
             {showPreview && (
-              <div className="relative overflow-hidden rounded-xl border border-[#404040] bg-[rgba(255,255,255,0.06)] p-4 animate-in fade-in slide-in-from-bottom-1 duration-200">
+              <div className="relative overflow-hidden rounded-xl border border-[var(--space-border-hard)] bg-[rgba(255,255,255,0.06)] p-4 animate-in fade-in slide-in-from-bottom-1 duration-200">
                 <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-green-400/50 via-green-400/20 to-transparent" />
                 <p className="text-[10px] tracking-[0.25em] uppercase text-green-400/50 mb-3">Preview</p>
                 <div className="flex items-start gap-3">
-                  <div className="mt-1 size-3 rounded-full border-2 border-[#555555] shrink-0" />
+                  <div className="mt-1 size-3 rounded-full border-2 border-[var(--space-border-hard)] shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-[#F0F0F0] truncate">{title}</p>
+                    <p className="text-sm font-semibold text-[var(--space-text-primary)] truncate">{title}</p>
                     <div className="flex items-center gap-1.5 mt-1">
-                      <Calendar className="size-3 text-[#6B6B6B] shrink-0" />
-                      <span className="text-xs text-[#6B6B6B]">{fmtFull(date)}</span>
+                      <Calendar className="size-3 text-[var(--space-text-secondary)] shrink-0" />
+                      <span className="text-xs text-[var(--space-text-secondary)]">{fmtFull(date)}</span>
                     </div>
                     {description.trim() && (
-                      <p className="text-xs text-[#6B6B6B] mt-2 leading-relaxed border-t border-[#404040] pt-2">
+                      <p className="text-xs text-[var(--space-text-secondary)] mt-2 leading-relaxed border-t border-[var(--space-border-hard)] pt-2">
                         {description}
                       </p>
                     )}
@@ -181,11 +181,11 @@ export function CreateMilestoneSheet({ projectId, open, onOpenChange }: CreateMi
           </div>
 
           {/* Sticky footer */}
-          <div className="shrink-0 px-7 pb-7 pt-4 border-t border-[#404040] bg-[#1C1C1C]">
+          <div className="shrink-0 px-7 pb-7 pt-4 border-t border-[var(--space-border-hard)] bg-[var(--space-bg-base)]">
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-[rgba(255,255,255,0.06)] border border-green-400/20 text-[#F0F0F0] font-semibold py-3 rounded-xl hover:bg-[rgba(255,255,255,0.06)] hover:border-green-400/35 active:scale-[0.99] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
+              className="w-full bg-[rgba(255,255,255,0.06)] border border-green-400/20 text-[var(--space-text-primary)] font-semibold py-3 rounded-xl hover:bg-[rgba(255,255,255,0.06)] hover:border-green-400/35 active:scale-[0.99] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
             >
               {isLoading ? (
                 <><Loader2 className="size-4 animate-spin" />Adding milestone...</>

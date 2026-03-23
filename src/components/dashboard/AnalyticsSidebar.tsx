@@ -18,9 +18,9 @@ const fmt = (n: number) =>
 function ChartTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null
   return (
-    <div className="bg-[#141414] border border-[#262626] rounded-lg px-3 py-2 text-xs shadow-2xl shadow-black/60">
+    <div className="bg-[var(--space-bg-base)] border border-[#262626] rounded-lg px-3 py-2 text-xs shadow-2xl shadow-black/60">
       <p className="text-[#555] mb-0.5 uppercase tracking-wider text-[10px]">{label}</p>
-      <p className="text-[#F0F0F0] font-semibold tabular-nums">{fmt(payload[0]?.value ?? 0)}</p>
+      <p className="text-[var(--space-text-primary)] font-semibold tabular-nums">{fmt(payload[0]?.value ?? 0)}</p>
       {payload[0]?.payload?.orders > 0 && (
         <p className="text-[#444] text-[10px]">{payload[0].payload.orders} order{payload[0].payload.orders !== 1 ? 's' : ''}</p>
       )}
@@ -36,7 +36,7 @@ function dueBadge(dueDate: string | null | undefined): { label: string; cls: str
   if (diff < 0)   return { label: `${Math.abs(diff)}d overdue`, cls: 'text-red-400 bg-red-400/10 border border-red-400/20 px-1.5 py-0.5 rounded' }
   if (diff === 0) return { label: 'Due today',                  cls: 'text-amber-400 bg-amber-400/10 border border-amber-400/20 px-1.5 py-0.5 rounded' }
   if (diff === 1) return { label: 'Tomorrow',                   cls: 'text-amber-400/70 bg-amber-400/[0.06] border border-amber-400/15 px-1.5 py-0.5 rounded' }
-  if (diff <= 7)  return { label: `${diff}d left`,              cls: 'text-[#555] bg-[#1C1C1C] border border-[#262626] px-1.5 py-0.5 rounded' }
+  if (diff <= 7)  return { label: `${diff}d left`,              cls: 'text-[#555] bg-[var(--space-bg-base)] border border-[#262626] px-1.5 py-0.5 rounded' }
   return {
     label: new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date(dueDate)),
     cls: 'text-[#444]',
@@ -88,19 +88,19 @@ function InvoiceCard({ order }: { order: any }) {
 
   return (
     <div
-      className="rounded-xl border border-[#1C1C1C] bg-[#0D0D0D] overflow-hidden transition-colors duration-150 hover:border-[#262626]"
+      className="rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-base)] overflow-hidden transition-colors duration-150 hover:border-[#262626]"
       role="article"
       aria-label={`Invoice for ${clientName}, ${fmt(order.amount ?? 0)}`}
     >
       {/* Content */}
       <div className="px-4 pt-3.5 pb-3 space-y-1.5">
         <div className="flex items-start justify-between gap-3">
-          <p className="text-[13px] font-semibold text-[#E8E8E8] leading-tight truncate">{clientName}</p>
+          <p className="text-[13px] font-semibold text-[var(--space-text-primary)] leading-tight truncate">{clientName}</p>
           <p className="text-[15px] font-bold text-amber-400 tabular-nums shrink-0 leading-tight">{fmt(order.amount ?? 0)}</p>
         </div>
         <div className="flex items-center justify-between gap-2">
           {projectName && <span className="text-[11px] text-[#555] truncate">{projectName}</span>}
-          <span className="text-[10px] text-[#383838] font-mono shrink-0 ml-auto">{invoiceLabel}</span>
+          <span className="text-[10px] text-[var(--space-text-tertiary)] font-mono shrink-0 ml-auto">{invoiceLabel}</span>
         </div>
         <span className={`inline-block text-[10px] font-semibold whitespace-nowrap ${dueCls}`}>{dueLabel}</span>
       </div>
@@ -118,7 +118,7 @@ function InvoiceCard({ order }: { order: any }) {
             : sendState === 'error'
             ? 'border-red-500/20 bg-red-500/[0.06] text-red-400 cursor-pointer hover:bg-red-500/10'
             : sendState === 'sending'
-            ? 'border-[#1C1C1C] bg-[#141414] text-[#444] cursor-wait'
+            ? 'border-[var(--space-border-hard)] bg-[var(--space-bg-base)] text-[#444] cursor-wait'
             : 'border-[var(--space-accent)]/20 bg-[var(--space-accent)]/[0.06] text-[var(--space-accent)] hover:bg-[var(--space-accent)]/10 cursor-pointer',
         ].join(' ')}
       >
@@ -138,7 +138,7 @@ function SectionHead({ label, aside }: { label: string; aside?: React.ReactNode 
   return (
     <div className="flex items-center justify-between">
       <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#555]">{label}</p>
-      {aside && <span className="text-[10px] text-[#3A3A3A] tabular-nums">{aside}</span>}
+      {aside && <span className="text-[10px] text-[var(--space-text-tertiary)] tabular-nums">{aside}</span>}
     </div>
   )
 }
@@ -148,7 +148,7 @@ function SectionHead({ label, aside }: { label: string; aside?: React.ReactNode 
 function SegBar({ segments }: { segments: { pct: number; color: string; label: string }[] }) {
   return (
     <div
-      className="h-[5px] w-full rounded-full overflow-hidden flex gap-px bg-[#1C1C1C]"
+      className="h-[5px] w-full rounded-full overflow-hidden flex gap-px bg-[var(--space-bg-base)]"
       role="img"
       aria-label={segments.map(s => `${s.label}: ${Math.round(s.pct)}%`).join(', ')}
     >
@@ -176,12 +176,12 @@ function KpiMini({
         'rounded-xl p-3.5 border transition-all duration-150 focus-within:ring-1',
         accent
           ? 'bg-[rgba(139,156,182,0.05)] border-[rgba(139,156,182,0.15)] hover:bg-[rgba(139,156,182,0.08)]'
-          : 'bg-[#0D0D0D] border-[#1C1C1C] hover:border-[#262626] hover:bg-[#111]',
+          : 'bg-[var(--space-bg-base)] border-[var(--space-border-hard)] hover:border-[#262626] hover:bg-[var(--space-bg-card)]',
       ].join(' ')}
     >
       <div className="flex items-center justify-between mb-2.5">
         <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#555]">{label}</span>
-        <Icon className={`size-3 ${accent ? 'text-[var(--space-accent)]/60' : 'text-[#2A2A2A]'}`} aria-hidden="true" />
+        <Icon className={`size-3 ${accent ? 'text-[var(--space-accent)]/60' : 'text-[var(--space-text-muted)]'}`} aria-hidden="true" />
       </div>
       <p className={`text-[18px] font-bold tabular-nums leading-none ${accent ? 'text-[var(--space-accent)]' : 'text-[#D0D0D0]'}`}>
         {value}
@@ -193,8 +193,8 @@ function KpiMini({
 // ─── Sidebar content ──────────────────────────────────────────────────────────
 
 function SidebarContent({
-  weeklyRevenue, orderPipeline, projectStatus, kpis, allOrders,
-}: BusinessPulseProps & { allOrders?: any[] }) {
+  weeklyRevenue, orderPipeline, projectStatus, kpis, allOrders, allPackages,
+}: BusinessPulseProps & { allOrders?: any[]; allPackages?: any[] }) {
   const pendingOrders = (allOrders ?? [])
     .filter((o: any) => o.status === 'pending')
     .sort((a: any, b: any) => {
@@ -204,6 +204,14 @@ function SidebarContent({
     })
 
   const pendingTotal = pendingOrders.reduce((s: number, o: any) => s + (o.amount ?? 0), 0)
+
+  // Uninvoiced schedule entries from sent/accepted proposals (same logic as AdminHomeView)
+  const uninvoicedAmount = (allPackages ?? [])
+    .filter((pkg: any) => pkg.type === 'proposal' && (pkg.status === 'sent' || pkg.status === 'accepted'))
+    .flatMap((pkg: any) => (pkg.paymentSchedule ?? []).filter((e: any) => !e.orderId))
+    .reduce((s: number, e: any) => s + (e.amount ?? 0), 0)
+
+  const projectedEarnings = orderPipeline.pendingAmount + uninvoicedAmount
   const maxRevenue   = Math.max(...weeklyRevenue.map(w => w.revenue), 1)
 
   const pipeTotal   = orderPipeline.paidAmount + orderPipeline.pendingAmount + orderPipeline.cancelledAmount || 1
@@ -223,7 +231,7 @@ function SidebarContent({
       <section aria-label="Key performance indicators">
         <div className="grid grid-cols-2 gap-2">
           <KpiMini label="30d Revenue"  value={fmt(kpis.revenue30d)}              icon={TrendingUp}  accent />
-          <KpiMini label="Pending"      value={fmt(orderPipeline.pendingAmount)}  icon={Clock} />
+          <KpiMini label="Projected Earnings" value={fmt(projectedEarnings)} icon={Clock} />
           <KpiMini label="Clients"      value={String(kpis.activeClients)}        icon={Users} />
           <KpiMini label="Projects"     value={String(kpis.activeProjects)}       icon={FolderKanban} />
         </div>
@@ -257,12 +265,12 @@ function SidebarContent({
             ))}
           </div>
           {pendingOrders.length > 5 && (
-            <p className="text-center text-[10px] text-[#3A3A3A] pt-1">
+            <p className="text-center text-[10px] text-[var(--space-text-tertiary)] pt-1">
               +{pendingOrders.length - 5} more not shown
             </p>
           )}
 
-          <div className="h-px bg-[#141414]" role="separator" />
+          <div className="h-px bg-[var(--space-bg-base)]" role="separator" />
         </section>
       )}
 
@@ -314,13 +322,13 @@ function SidebarContent({
               : []),
           ].map(({ dot, label, value, count }) => (
             <div key={label} className="flex items-center justify-between">
-              <dt className="flex items-center gap-2 text-[11px] text-[#4A4A4A]">
+              <dt className="flex items-center gap-2 text-[11px] text-[var(--space-text-muted)]">
                 <span className={`size-[5px] rounded-full ${dot} shrink-0`} aria-hidden="true" />
                 {label}
               </dt>
               <dd className="text-[11px] tabular-nums text-[#666] font-medium">
                 {value}
-                <span className="text-[9px] text-[#3A3A3A] ml-1.5">{count}</span>
+                <span className="text-[9px] text-[var(--space-text-tertiary)] ml-1.5">{count}</span>
               </dd>
             </div>
           ))}
@@ -342,7 +350,7 @@ function SidebarContent({
             { dot: 'bg-[#333]',                   label: 'Completed', value: projectStatus.completed },
           ].map(({ dot, label, value }) => (
             <div key={label} className="flex items-center justify-between">
-              <dt className="flex items-center gap-2 text-[11px] text-[#4A4A4A]">
+              <dt className="flex items-center gap-2 text-[11px] text-[var(--space-text-muted)]">
                 <span className={`size-[5px] rounded-full ${dot} shrink-0`} aria-hidden="true" />
                 {label}
               </dt>
@@ -360,11 +368,13 @@ function SidebarContent({
 
 export function AnalyticsSidebar({
   allOrders,
+  allPackages,
   open: externalOpen,
   onOpenChange,
   ...props
 }: BusinessPulseProps & {
   allOrders?: any[]
+  allPackages?: any[]
   open?: boolean
   onOpenChange?: (v: boolean) => void
 }) {
@@ -432,8 +442,8 @@ export function AnalyticsSidebar({
           'transition-all duration-300 group',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--space-accent)]/40 focus-visible:ring-offset-1 focus-visible:ring-offset-black',
           open
-            ? 'bg-[#111] border-[#262626]'
-            : 'bg-[#0A0A0A] border-[#1A1A1A] hover:bg-[#111] hover:border-[#242424]',
+            ? 'bg-[var(--space-bg-card)] border-[#262626]'
+            : 'bg-[var(--space-bg-base)] border-[var(--space-divider)] hover:bg-[var(--space-bg-card)] hover:border-[var(--space-border-hard)]',
         ].join(' ')}
       >
         {/* Amber pulse ring when pending */}
@@ -450,7 +460,7 @@ export function AnalyticsSidebar({
             'size-3.5 transition-colors duration-200',
             open
               ? 'text-[var(--space-accent)]'
-              : 'text-[#404040] group-hover:text-[var(--space-accent)]/70',
+              : 'text-[var(--space-text-muted)] group-hover:text-[var(--space-accent)]/70',
           ].join(' ')}
         />
 
@@ -499,7 +509,7 @@ export function AnalyticsSidebar({
         className={[
           'hidden md:flex fixed top-[65px] right-0 bottom-0 z-[70]',
           'w-[340px] xl:w-[380px] flex-col',
-          'bg-[#080808] border-l border-[#1C1C1C]',
+          'bg-[var(--space-bg-card)] border-l border-[var(--space-border-hard)]',
           'transition-transform duration-300 ease-[cubic-bezier(0.25,0,0.3,1)]',
           open ? 'translate-x-0' : 'translate-x-full',
         ].join(' ')}
@@ -512,7 +522,7 @@ export function AnalyticsSidebar({
         />
 
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#141414] shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--space-border-hard)] shrink-0">
           <div className="flex items-center gap-3">
             <div
               aria-hidden="true"
@@ -521,8 +531,8 @@ export function AnalyticsSidebar({
               <TrendingUp className="size-3.5 text-[var(--space-accent)]/70" />
             </div>
             <div>
-              <h2 id={titleId} className="text-[13px] font-semibold text-[#E0E0E0] leading-none">Analytics</h2>
-              <p className="text-[9px] text-[#383838] mt-1 uppercase tracking-[0.18em]">
+              <h2 id={titleId} className="text-[13px] font-semibold text-[var(--space-text-primary)] leading-none">Analytics</h2>
+              <p className="text-[9px] text-[var(--space-text-tertiary)] mt-1 uppercase tracking-[0.18em]">
                 Last 30 days{pendingCount > 0 ? ` · ${pendingCount} pending` : ''}
               </p>
             </div>
@@ -531,7 +541,7 @@ export function AnalyticsSidebar({
             ref={closeRef}
             onClick={handleClose}
             aria-label="Close analytics panel"
-            className="size-8 flex items-center justify-center rounded-lg text-[#383838] hover:text-[#888] hover:bg-[#141414] transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--space-accent)]/40"
+            className="size-8 flex items-center justify-center rounded-lg text-[var(--space-text-tertiary)] hover:text-[#888] hover:bg-[var(--space-bg-base)] transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--space-accent)]/40"
           >
             <X className="size-3.5" />
           </button>
@@ -543,7 +553,7 @@ export function AnalyticsSidebar({
           style={{ scrollbarWidth: 'none' }}
           tabIndex={-1}
         >
-          <SidebarContent {...props} allOrders={allOrders} />
+          <SidebarContent {...props} allOrders={allOrders} allPackages={allPackages} />
         </div>
       </aside>
 
@@ -556,7 +566,7 @@ export function AnalyticsSidebar({
         className={[
           'md:hidden fixed bottom-0 left-0 right-0 z-[70]',
           'flex flex-col',
-          'bg-[#080808] border-t border-[#1C1C1C] rounded-t-2xl',
+          'bg-[var(--space-bg-card)] border-t border-[var(--space-border-hard)] rounded-t-2xl',
           'transition-transform duration-300 ease-[cubic-bezier(0.25,0,0.3,1)]',
           open ? 'translate-y-0' : 'translate-y-full',
         ].join(' ')}
@@ -564,7 +574,7 @@ export function AnalyticsSidebar({
       >
         {/* Drag handle */}
         <div className="flex justify-center pt-4 pb-1 shrink-0" aria-hidden="true">
-          <div className="w-8 h-[3px] rounded-full bg-[#222]" />
+          <div className="w-8 h-[3px] rounded-full bg-[var(--space-bg-base)]" />
         </div>
 
         {/* Accent line */}
@@ -573,14 +583,14 @@ export function AnalyticsSidebar({
         />
 
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#141414] shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--space-border-hard)] shrink-0">
           <div className="flex items-center gap-3">
             <div aria-hidden="true" className="size-7 rounded-lg bg-[var(--space-accent)]/[0.08] border border-[var(--space-accent)]/15 flex items-center justify-center">
               <TrendingUp className="size-3.5 text-[var(--space-accent)]/70" />
             </div>
             <div>
-              <h2 id={`${titleId}-mobile`} className="text-[13px] font-semibold text-[#E0E0E0] leading-none">Analytics</h2>
-              <p className="text-[9px] text-[#383838] mt-1 uppercase tracking-[0.18em]">
+              <h2 id={`${titleId}-mobile`} className="text-[13px] font-semibold text-[var(--space-text-primary)] leading-none">Analytics</h2>
+              <p className="text-[9px] text-[var(--space-text-tertiary)] mt-1 uppercase tracking-[0.18em]">
                 Last 30 days{pendingCount > 0 ? ` · ${pendingCount} pending` : ''}
               </p>
             </div>
@@ -588,7 +598,7 @@ export function AnalyticsSidebar({
           <button
             onClick={handleClose}
             aria-label="Close analytics panel"
-            className="size-8 flex items-center justify-center rounded-lg text-[#383838] hover:text-[#888] hover:bg-[#141414] transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--space-accent)]/40"
+            className="size-8 flex items-center justify-center rounded-lg text-[var(--space-text-tertiary)] hover:text-[#888] hover:bg-[var(--space-bg-base)] transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--space-accent)]/40"
           >
             <X className="size-3.5" />
           </button>
@@ -598,7 +608,7 @@ export function AnalyticsSidebar({
           className="overflow-y-auto px-6 pb-12 pt-5"
           style={{ overscrollBehavior: 'contain', scrollbarWidth: 'none' }}
         >
-          <SidebarContent {...props} allOrders={allOrders} />
+          <SidebarContent {...props} allOrders={allOrders} allPackages={allPackages} />
         </div>
       </div>
     </>

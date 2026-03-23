@@ -75,10 +75,10 @@ export function EnhancedOrderCard({ order, isPending = false }: EnhancedOrderCar
 
   return (
     <div
-      className={`group relative overflow-hidden rounded-xl border bg-[#1C1C1C] transition-all duration-300 ${
+      className={`group relative overflow-hidden rounded-xl border bg-[var(--space-bg-base)] transition-all duration-300 ${
         isPending
-          ? 'border-yellow-400/20 hover:border-yellow-400/30 hover:bg-[#252525]'
-          : 'border-[#404040] hover:border-[#404040] hover:bg-[#2D2D2D]'
+          ? 'border-yellow-400/20 hover:border-yellow-400/30 hover:bg-[var(--space-bg-card)]'
+          : 'border-[var(--space-border-hard)] hover:border-[var(--space-border-hard)] hover:bg-[var(--space-bg-card-hover)]'
       }`}
     >
       {/* Subtle glow for pending orders */}
@@ -91,20 +91,20 @@ export function EnhancedOrderCard({ order, isPending = false }: EnhancedOrderCar
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-[#2D2D2D] border border-[#404040] shrink-0">
+              <div className="p-2 rounded-lg bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] shrink-0">
                 <Receipt className={`size-4 ${statusConfig.color}`} />
               </div>
               <div className="min-w-0">
-                <p className="text-[#F0F0F0] font-semibold text-lg leading-tight truncate">
+                <p className="text-[var(--space-text-primary)] font-semibold text-lg leading-tight truncate">
                   {primaryTitle}
                   {extraItems > 0 && (
-                    <span className="text-sm text-[#4A4A4A] font-normal ml-2">+{extraItems} more</span>
+                    <span className="text-sm text-[var(--space-text-muted)] font-normal ml-2">+{extraItems} more</span>
                   )}
                 </p>
                 {projectName && (
-                  <p className="text-xs text-[#4A4A4A] mt-0.5 truncate">{projectName}</p>
+                  <p className="text-xs text-[var(--space-text-muted)] mt-0.5 truncate">{projectName}</p>
                 )}
-                <p className="text-xs text-[#4A4A4A] mt-0.5">#{order.orderNumber}</p>
+                <p className="text-xs text-[var(--space-text-muted)] mt-0.5">#{order.orderNumber}</p>
               </div>
             </div>
           </div>
@@ -119,20 +119,20 @@ export function EnhancedOrderCard({ order, isPending = false }: EnhancedOrderCar
 
         {/* Amount and Date */}
         <div className="grid grid-cols-2 gap-4 mb-4">
-          <div className="p-3 rounded-lg bg-[#252525] border border-[#404040]">
-            <p className="text-xs text-[#4A4A4A] uppercase tracking-wider font-medium mb-1">
+          <div className="p-3 rounded-lg bg-[var(--space-bg-card)] border border-[var(--space-border-hard)]">
+            <p className="text-xs text-[var(--space-text-muted)] uppercase tracking-wider font-medium mb-1">
               Amount
             </p>
-            <p className="text-[#F0F0F0] font-bold text-xl">
+            <p className="text-[var(--space-text-primary)] font-bold text-xl">
               {formatCurrency(order.amount || 0)}
             </p>
           </div>
-          <div className="p-3 rounded-lg bg-[#252525] border border-[#404040]">
-            <p className="text-xs text-[#4A4A4A] uppercase tracking-wider font-medium mb-1">
+          <div className="p-3 rounded-lg bg-[var(--space-bg-card)] border border-[var(--space-border-hard)]">
+            <p className="text-xs text-[var(--space-text-muted)] uppercase tracking-wider font-medium mb-1">
               <Calendar className="size-3 inline mr-1" />
               Order Date
             </p>
-            <p className="text-[#A0A0A0] font-medium text-sm">
+            <p className="text-[var(--space-text-tertiary)] font-medium text-sm">
               {formatDate(order.createdAt)}
             </p>
           </div>
@@ -143,14 +143,14 @@ export function EnhancedOrderCard({ order, isPending = false }: EnhancedOrderCar
           <>
             <button
               onClick={() => setIsExpanded(!isExpanded)}
-              className="w-full flex items-center justify-between p-3 rounded-lg bg-[#252525] border border-[#404040] hover:bg-[#2D2D2D] transition-all duration-200"
+              className="w-full flex items-center justify-between p-3 rounded-lg bg-[var(--space-bg-card)] border border-[var(--space-border-hard)] hover:bg-[var(--space-bg-card-hover)] transition-all duration-200"
             >
-              <div className="flex items-center gap-2 text-sm text-[#A0A0A0] font-medium">
+              <div className="flex items-center gap-2 text-sm text-[var(--space-text-tertiary)] font-medium">
                 <Package className="size-4" style={{ color: 'var(--space-accent)' }} />
                 View Order Details ({order.lineItems?.length} {order.lineItems?.length === 1 ? 'item' : 'items'})
               </div>
               <ChevronDown
-                className={`size-4 text-[#6B6B6B] transition-transform duration-200 ${
+                className={`size-4 text-[var(--space-text-secondary)] transition-transform duration-200 ${
                   isExpanded ? 'rotate-180' : ''
                 }`}
               />
@@ -162,16 +162,16 @@ export function EnhancedOrderCard({ order, isPending = false }: EnhancedOrderCar
                 {order.lineItems?.map((item: any, index: number) => (
                   <div
                     key={index}
-                    className="p-3 rounded-lg bg-[#252525] border border-[#404040]"
+                    className="p-3 rounded-lg bg-[var(--space-bg-card)] border border-[var(--space-border-hard)]"
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <p className="text-[#F0F0F0] font-medium text-sm">{item.title}</p>
-                        <p className="text-xs text-[#4A4A4A] mt-1">
+                        <p className="text-[var(--space-text-primary)] font-medium text-sm">{item.title}</p>
+                        <p className="text-xs text-[var(--space-text-muted)] mt-1">
                           Quantity: {item.quantity} × {formatCurrency(item.price || 0)}
                         </p>
                       </div>
-                      <p className="text-[#F0F0F0] font-semibold">
+                      <p className="text-[var(--space-text-primary)] font-semibold">
                         {formatCurrency((item.quantity || 0) * (item.price || 0))}
                       </p>
                     </div>
@@ -184,7 +184,7 @@ export function EnhancedOrderCard({ order, isPending = false }: EnhancedOrderCar
 
         {/* Pay Now Button for Pending Orders */}
         {showPayButton && (
-          <div className="mt-6 pt-6 border-t border-[#404040]">
+          <div className="mt-6 pt-6 border-t border-[var(--space-border-hard)]">
             <PayNowButton
               paymentUrl={order.stripeInvoiceUrl!}
               orderNumber={order.orderNumber}

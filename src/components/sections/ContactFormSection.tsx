@@ -332,9 +332,9 @@ function Step3({
                     value={data.preferredTime} onChange={onChange}
                     className={selectCls}
                   >
-                    <option value="" className="bg-[#111]">Select a time...</option>
+                    <option value="" className="bg-[var(--space-bg-card)]">Select a time...</option>
                     {availableSlots.map((slot, i) => (
-                      <option key={i} value={slot.start} className="bg-[#111]">{slot.label}</option>
+                      <option key={i} value={slot.start} className="bg-[var(--space-bg-card)]">{slot.label}</option>
                     ))}
                   </select>
                 ) : (

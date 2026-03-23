@@ -26,7 +26,7 @@ export function TasksSection({ projectId, tasks }: TasksSectionProps) {
     <div className="space-y-6">
       {/* Stats Bar */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="relative overflow-hidden rounded-lg border border-[#404040] bg-[#252525] p-4">
+        <div className="relative overflow-hidden rounded-lg border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] p-4">
           <div className="absolute top-0 right-0 w-16 h-16 bg-[rgba(139,156,182,0.04)] rounded-full blur-2xl" />
           <div className="relative z-10">
             <p className="text-xs text-gray-500 uppercase tracking-wider font-medium mb-1">
@@ -36,7 +36,7 @@ export function TasksSection({ projectId, tasks }: TasksSectionProps) {
           </div>
         </div>
 
-        <div className="relative overflow-hidden rounded-lg border border-[#404040] bg-[#252525] p-4">
+        <div className="relative overflow-hidden rounded-lg border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] p-4">
           <div className="absolute top-0 right-0 w-16 h-16 bg-green-400/[0.05] rounded-full blur-2xl" />
           <div className="relative z-10">
             <p className="text-xs text-gray-500 uppercase tracking-wider font-medium mb-1">
@@ -46,7 +46,7 @@ export function TasksSection({ projectId, tasks }: TasksSectionProps) {
           </div>
         </div>
 
-        <div className="relative overflow-hidden rounded-lg border border-[#404040] bg-[#252525] p-4">
+        <div className="relative overflow-hidden rounded-lg border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] p-4">
           <div className="absolute top-0 right-0 w-16 h-16 bg-blue-400/[0.05] rounded-full blur-2xl" />
           <div className="relative z-10">
             <p className="text-xs text-gray-500 uppercase tracking-wider font-medium mb-1">
@@ -56,7 +56,7 @@ export function TasksSection({ projectId, tasks }: TasksSectionProps) {
           </div>
         </div>
 
-        <div className="relative overflow-hidden rounded-lg border border-[#404040] bg-[#252525] p-4">
+        <div className="relative overflow-hidden rounded-lg border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] p-4">
           <div className="absolute top-0 right-0 w-16 h-16 bg-yellow-400/[0.05] rounded-full blur-2xl" />
           <div className="relative z-10">
             <p className="text-xs text-gray-500 uppercase tracking-wider font-medium mb-1">
@@ -89,19 +89,19 @@ export function TasksSection({ projectId, tasks }: TasksSectionProps) {
 
       {/* Task Lists by Priority */}
       {totalTasks === 0 ? (
-        <div className="relative overflow-hidden rounded-xl border border-[#404040] bg-[#1C1C1C] p-12 text-center">
+        <div className="relative overflow-hidden rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-base)] p-12 text-center">
           <div className="relative z-10">
-            <div className="inline-flex p-5 rounded-xl bg-[#2D2D2D] border border-[#404040] mb-6">
-              <Inbox className="size-10 text-[#6B6B6B]" />
+            <div className="inline-flex p-5 rounded-xl bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] mb-6">
+              <Inbox className="size-10 text-[var(--space-text-secondary)]" />
             </div>
-            <h3 className="text-xl font-semibold text-[#F0F0F0] mb-2">No Tasks Yet</h3>
-            <p className="text-[#6B6B6B] text-sm max-w-md mx-auto mb-6">
+            <h3 className="text-xl font-semibold text-[var(--space-text-primary)] mb-2">No Tasks Yet</h3>
+            <p className="text-[var(--space-text-secondary)] text-sm max-w-md mx-auto mb-6">
               Get started by creating your first task for this project.
             </p>
             <Button
               onClick={() => setIsCreateOpen(true)}
               variant="outline"
-              className="bg-[#252525] border-[#404040] hover:bg-[#2D2D2D]"
+              className="bg-[var(--space-bg-card)] border-[var(--space-border-hard)] hover:bg-[var(--space-bg-card-hover)]"
             >
               <Plus className="size-4 mr-2" />
               Create First Task

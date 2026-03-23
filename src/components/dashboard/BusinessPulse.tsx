@@ -49,10 +49,10 @@ const fmt = (n: number) =>
 function CustomTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null
   return (
-    <div className="bg-[#252525] border border-[#404040] rounded-lg px-3 py-2 text-xs shadow-xl">
-      <p className="text-[#6B6B6B] mb-1">{label}</p>
-      <p className="text-[#F0F0F0] font-medium">{fmt(payload[0]?.value ?? 0)}</p>
-      <p className="text-[#A0A0A0]">{payload[0]?.payload?.orders} order{payload[0]?.payload?.orders !== 1 ? 's' : ''}</p>
+    <div className="bg-[var(--space-bg-card)] border border-[var(--space-border-hard)] rounded-lg px-3 py-2 text-xs shadow-xl">
+      <p className="text-[var(--space-text-secondary)] mb-1">{label}</p>
+      <p className="text-[var(--space-text-primary)] font-medium">{fmt(payload[0]?.value ?? 0)}</p>
+      <p className="text-[var(--space-text-tertiary)]">{payload[0]?.payload?.orders} order{payload[0]?.payload?.orders !== 1 ? 's' : ''}</p>
     </div>
   )
 }
@@ -78,25 +78,25 @@ export function BusinessPulse({ weeklyRevenue, orderPipeline, projectStatus, kpi
   ]
 
   return (
-    <div className="rounded-xl border border-[#404040] bg-[#252525] p-6 space-y-6">
+    <div className="rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] p-6 space-y-6">
 
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-sm font-semibold text-[#F0F0F0]">30-Day Pulse</h2>
-          <p className="text-xs text-[#A0A0A0] mt-0.5">Revenue · Pipeline · Projects</p>
+          <h2 className="text-sm font-semibold text-[var(--space-text-primary)]">30-Day Pulse</h2>
+          <p className="text-xs text-[var(--space-text-tertiary)] mt-0.5">Revenue · Pipeline · Projects</p>
         </div>
-        <span className="text-xs tracking-widest uppercase text-[#1E3A6E] font-medium">Last 30 days</span>
+        <span className="text-xs tracking-widest uppercase text-[var(--space-accent)] font-medium">Last 30 days</span>
       </div>
 
       {/* KPI row */}
       <div className="grid grid-cols-4 gap-3">
         {kpiItems.map((k) => (
-          <div key={k.label} className="flex-1 space-y-1 p-3 rounded-lg bg-[#2D2D2D] border border-[#404040] min-w-0">
-            <p className="text-[9px] uppercase tracking-widest text-[#6B6B6B] font-semibold truncate">{k.label}</p>
+          <div key={k.label} className="flex-1 space-y-1 p-3 rounded-lg bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] min-w-0">
+            <p className="text-[9px] uppercase tracking-widest text-[var(--space-text-secondary)] font-semibold truncate">{k.label}</p>
             <p
               className="text-xl font-bold tabular-nums tracking-tight"
-              style={k.accent ? { color: 'var(--space-accent)' } : { color: '#F0F0F0' }}
+              style={k.accent ? { color: 'var(--space-accent)' } : { color: 'var(--space-text-primary)' }}
             >
               {k.value}
             </p>
@@ -110,7 +110,7 @@ export function BusinessPulse({ weeklyRevenue, orderPipeline, projectStatus, kpi
           <BarChart data={weeklyRevenue} barSize={28} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
             <XAxis
               dataKey="label"
-              tick={{ fill: '#6B6B6B', fontSize: 11, fontFamily: 'inherit' }}
+              tick={{ fill: 'var(--space-text-secondary)', fontSize: 11, fontFamily: 'inherit' }}
               axisLine={false}
               tickLine={false}
             />
@@ -129,12 +129,12 @@ export function BusinessPulse({ weeklyRevenue, orderPipeline, projectStatus, kpi
       </div>
 
       {/* Pipeline + Projects breakdown */}
-      <div className="grid grid-cols-2 gap-6 pt-2 border-t border-[#404040]">
+      <div className="grid grid-cols-2 gap-6 pt-2 border-t border-[var(--space-border-hard)]">
 
         {/* Order pipeline */}
         <div className="space-y-2">
-          <p className="text-xs uppercase tracking-widest text-[#1E3A6E] font-medium">Order Pipeline</p>
-          <div className="h-1.5 w-full rounded-full overflow-hidden flex bg-[#333333]">
+          <p className="text-xs uppercase tracking-widest text-[var(--space-accent)] font-medium">Order Pipeline</p>
+          <div className="h-1.5 w-full rounded-full overflow-hidden flex bg-[var(--space-divider)]">
             {paidPct > 0 && (
               <div style={{ width: `${paidPct}%` }} className="bg-emerald-400/70 transition-all duration-500" />
             )}
@@ -145,7 +145,7 @@ export function BusinessPulse({ weeklyRevenue, orderPipeline, projectStatus, kpi
               <div style={{ width: `${cancelledPct}%` }} className="bg-red-400/40 transition-all duration-500" />
             )}
           </div>
-          <div className="flex items-center gap-3 text-xs text-[#A0A0A0]">
+          <div className="flex items-center gap-3 text-xs text-[var(--space-text-tertiary)]">
             <span className="flex items-center gap-1">
               <span className="size-1.5 rounded-full bg-emerald-400/70 inline-block" />
               Paid {fmt(orderPipeline.paidAmount)}
@@ -159,8 +159,8 @@ export function BusinessPulse({ weeklyRevenue, orderPipeline, projectStatus, kpi
 
         {/* Project health */}
         <div className="space-y-2">
-          <p className="text-xs uppercase tracking-widest text-[#1E3A6E] font-medium">Project Health</p>
-          <div className="h-1.5 w-full rounded-full overflow-hidden flex bg-[#333333]">
+          <p className="text-xs uppercase tracking-widest text-[var(--space-accent)] font-medium">Project Health</p>
+          <div className="h-1.5 w-full rounded-full overflow-hidden flex bg-[var(--space-divider)]">
             {activePct > 0 && (
               <div style={{ width: `${activePct}%` }} className="bg-[rgba(139,156,182,0.30)] transition-all duration-500" />
             )}
@@ -168,16 +168,16 @@ export function BusinessPulse({ weeklyRevenue, orderPipeline, projectStatus, kpi
               <div style={{ width: `${pendingProjPct}%` }} className="bg-amber-400/50 transition-all duration-500" />
             )}
             {completedPct > 0 && (
-              <div style={{ width: `${completedPct}%` }} className="bg-[#333333] transition-all duration-500" />
+              <div style={{ width: `${completedPct}%` }} className="bg-[var(--space-divider)] transition-all duration-500" />
             )}
           </div>
-          <div className="flex items-center gap-3 text-xs text-[#A0A0A0]">
+          <div className="flex items-center gap-3 text-xs text-[var(--space-text-tertiary)]">
             <span className="flex items-center gap-1">
               <span className="size-1.5 rounded-full bg-[rgba(139,156,182,0.30)] inline-block" />
               Active {projectStatus.active}
             </span>
             <span className="flex items-center gap-1">
-              <span className="size-1.5 rounded-full bg-[#333333] inline-block" />
+              <span className="size-1.5 rounded-full bg-[var(--space-divider)] inline-block" />
               Done {projectStatus.completed}
             </span>
           </div>

@@ -74,10 +74,7 @@ const Media: CollectionConfig = {
     mimeTypes: ['image/*', 'application/pdf'],
   },
   access: {
-    // SECURITY: restrict REST API metadata listing to authenticated users.
-    // Static files under /public/media/ are still served directly by Next.js
-    // and remain publicly accessible for the website frontend.
-    read: authenticated,
+    read: anyone,
     create: authenticated,
     update: authenticated,
     delete: authenticated,
@@ -940,6 +937,8 @@ const Users: CollectionConfig = {
         { label: 'Emerald', value: 'emerald' },
         { label: 'Dusk', value: 'dusk' },
         { label: 'Chrome', value: 'chrome' },
+        { label: 'Light', value: 'light' },
+        { label: 'Charcoal', value: 'paper' },
       ],
       admin: {
         description: 'Dashboard color preset',

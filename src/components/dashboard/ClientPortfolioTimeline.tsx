@@ -260,10 +260,10 @@ export function ClientPortfolioTimeline({
       {/* ── Section header ──────────────────────────────────────────────── */}
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-[10px] tracking-[0.4em] uppercase text-[#6B6B6B] font-semibold">
+          <p className="text-[10px] tracking-[0.4em] uppercase text-[var(--space-text-secondary)] font-semibold">
             Client Portfolio
           </p>
-          <p className="text-[10px] text-[#6B6B6B] mt-0.5">
+          <p className="text-[10px] text-[var(--space-text-secondary)] mt-0.5">
             {clientGroups.length} client{clientGroups.length !== 1 ? 's' : ''} · projects, sprints &amp; orders
           </p>
         </div>
@@ -271,21 +271,21 @@ export function ClientPortfolioTimeline({
         <div className="flex items-center gap-2">
           <button
             onClick={() => setSettingsOpen(true)}
-            className="p-2 rounded-lg bg-[rgba(255,255,255,0.06)] border border-[#404040] text-[#6B6B6B] hover:text-[#A0A0A0] transition-colors"
+            className="p-2 rounded-lg bg-[rgba(255,255,255,0.06)] border border-[var(--space-border-hard)] text-[var(--space-text-secondary)] hover:text-[var(--space-text-tertiary)] transition-colors"
             title="Portfolio settings"
           >
             <Settings2 className="size-3.5" />
           </button>
           {/* Show own picker only when not controlled externally */}
           {!externalRange && (
-            <div className="flex items-center p-1 bg-[rgba(255,255,255,0.06)] rounded-lg border border-[#404040]">
+            <div className="flex items-center p-1 bg-[rgba(255,255,255,0.06)] rounded-lg border border-[var(--space-border-hard)]">
               {(['week', 'month', 'year'] as Range[]).map((r) => (
                 <button
                   key={r}
                   onClick={() => handleRangeChange(r)}
                   className={cn(
                     'px-3.5 py-1.5 rounded-md text-[11px] font-medium transition-all duration-150',
-                    range === r ? 'bg-[rgba(255,255,255,0.06)] text-[#F0F0F0] shadow-sm' : 'text-[#6B6B6B] hover:text-[#A0A0A0]',
+                    range === r ? 'bg-[rgba(255,255,255,0.06)] text-[var(--space-text-primary)] shadow-sm' : 'text-[var(--space-text-secondary)] hover:text-[var(--space-text-tertiary)]',
                   )}
                 >
                   {RANGE_CFG[r].label}
@@ -297,16 +297,16 @@ export function ClientPortfolioTimeline({
       </div>
 
       {/* ── Timeline card ────────────────────────────────────────────────── */}
-      <div className="relative rounded-xl border border-[#404040] bg-[#252525] overflow-hidden">
+      <div className="relative rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] overflow-hidden">
 
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#333333] to-transparent pointer-events-none" />
         {isMobile && (
-          <div className="absolute top-0 right-0 bottom-0 w-8 bg-gradient-to-l from-[#252525] to-transparent pointer-events-none z-30" aria-hidden="true" />
+          <div className="absolute top-0 right-0 bottom-0 w-8 bg-gradient-to-l from-[var(--space-bg-card)] to-transparent pointer-events-none z-30" aria-hidden="true" />
         )}
 
         <svg width="60" height="60" viewBox="0 0 60 60" fill="none"
           className="absolute top-0 right-0 opacity-[0.04] pointer-events-none select-none" aria-hidden="true">
-          <path d="M60 0 L60 60 L0 60" stroke="#333333" strokeWidth="1" />
+          <path d="M60 0 L60 60 L0 60" stroke="var(--space-divider)" strokeWidth="1" />
         </svg>
 
         <div
@@ -318,12 +318,12 @@ export function ClientPortfolioTimeline({
           <div style={{ width: leftW + timelineWidth, minWidth: '100%' }}>
 
             {/* ── Header ─────────────────────────────────────────────────── */}
-            <div className="flex border-b border-[#404040]" style={{ height: HDR_H }}>
+            <div className="flex border-b border-[var(--space-border-hard)]" style={{ height: HDR_H }}>
               <div
-                className="sticky left-0 z-30 bg-[#252525] border-r border-[#404040] shrink-0 flex items-end pb-2"
+                className="sticky left-0 z-30 bg-[var(--space-bg-card)] border-r border-[var(--space-border-hard)] shrink-0 flex items-end pb-2"
                 style={{ width: leftW, minWidth: leftW, paddingLeft: isMobile ? 8 : 16 }}
               >
-                <p className="text-[9px] tracking-[0.3em] uppercase text-[#6B6B6B]">{isMobile ? 'Client' : 'Client / Project'}</p>
+                <p className="text-[9px] tracking-[0.3em] uppercase text-[var(--space-text-secondary)]">{isMobile ? 'Client' : 'Client / Project'}</p>
               </div>
               <div className="relative" style={{ width: timelineWidth }}>
                 {ticks.map((tick, i) => (
@@ -332,13 +332,13 @@ export function ClientPortfolioTimeline({
                       className={cn(
                         'absolute top-2 whitespace-nowrap leading-none',
                         range === 'week' ? 'text-[9px]' : 'text-[8px]',
-                        tick.major ? 'text-[#A0A0A0]' : 'text-[#6B6B6B]',
+                        tick.major ? 'text-[var(--space-text-tertiary)]' : 'text-[var(--space-text-secondary)]',
                       )}
                       style={{ transform: 'translateX(-50%)' }}
                     >
                       {tick.label}
                     </p>
-                    <div className={cn('absolute bottom-0 w-px', tick.major ? 'h-3 bg-[#404040]/30' : 'h-2 bg-[#333333]')} />
+                    <div className={cn('absolute bottom-0 w-px', tick.major ? 'h-3 bg-[#404040]/30' : 'h-2 bg-[var(--space-divider)]')} />
                   </div>
                 ))}
                 {todayPx >= 0 && todayPx <= timelineWidth && (
@@ -454,18 +454,18 @@ export function ClientPortfolioTimeline({
                     return (
                       <div
                         key={project.id}
-                        className="flex border-b border-[#404040] last:border-b-0 group/row"
+                        className="flex border-b border-[var(--space-border-hard)] last:border-b-0 group/row"
                         style={{ height: PROJECT_H }}
                       >
                         <div
-                          className="sticky left-0 z-20 bg-[#252525] border-r border-[#404040] shrink-0 flex items-center group-hover/row:bg-[#2D2D2D] transition-colors"
+                          className="sticky left-0 z-20 bg-[var(--space-bg-card)] border-r border-[var(--space-border-hard)] shrink-0 flex items-center group-hover/row:bg-[var(--space-bg-card-hover)] transition-colors"
                           style={{ width: leftW, minWidth: leftW, paddingLeft: isMobile ? 16 : 28, paddingRight: isMobile ? 4 : 12, gap: isMobile ? 4 : 8 }}
                         >
                           <div className="size-1.5 rounded-full shrink-0" style={{ background: rgba(color, 0.7) }} />
                           {/* Project name — link to project detail */}
                           <a
                             href={`/u/${username}/projects/${project.id}`}
-                            className="text-[#A0A0A0] truncate hover:text-[#F0F0F0] transition-colors leading-snug font-medium flex-1 min-w-0"
+                            className="text-[var(--space-text-tertiary)] truncate hover:text-[var(--space-text-primary)] transition-colors leading-snug font-medium flex-1 min-w-0"
                             style={{ fontSize: isMobile ? 9 : 10 }}
                             title={project.name}
                           >
@@ -562,8 +562,8 @@ export function ClientPortfolioTimeline({
             {/* "N more" row */}
             {hiddenCount > 0 && (
               <div className="flex" style={{ height: 30 }}>
-                <div className="sticky left-0 z-20 bg-[#252525] border-r border-[#404040] shrink-0 flex items-center" style={{ width: leftW, minWidth: leftW, paddingLeft: isMobile ? 8 : 16 }}>
-                  <button onClick={() => setSettingsOpen(true)} className="text-[10px] text-[#6B6B6B] hover:text-[#A0A0A0] transition-colors">
+                <div className="sticky left-0 z-20 bg-[var(--space-bg-card)] border-r border-[var(--space-border-hard)] shrink-0 flex items-center" style={{ width: leftW, minWidth: leftW, paddingLeft: isMobile ? 8 : 16 }}>
+                  <button onClick={() => setSettingsOpen(true)} className="text-[10px] text-[var(--space-text-secondary)] hover:text-[var(--space-text-tertiary)] transition-colors">
                     +{hiddenCount} more client{hiddenCount !== 1 ? 's' : ''}
                   </button>
                 </div>
@@ -577,42 +577,42 @@ export function ClientPortfolioTimeline({
         </div>
 
         {/* ── Legend ───────────────────────────────────────────────────────── */}
-        <div className="px-5 py-3 border-t border-[#404040] space-y-3">
+        <div className="px-5 py-3 border-t border-[var(--space-border-hard)] space-y-3">
           <div className="flex items-center flex-wrap gap-x-5 gap-y-1.5">
             <div className="flex items-center gap-2">
               <div className="w-5 rounded-sm shrink-0" style={{ height: 10, background: 'rgba(255,255,255,0.06)', borderTop: '2px solid rgba(255,255,255,0.10)' }} />
-              <span className="text-[9px] text-[#6B6B6B] uppercase tracking-wider">Sprint</span>
+              <span className="text-[9px] text-[var(--space-text-secondary)] uppercase tracking-wider">Sprint</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="shrink-0" style={{ width: 8, height: 8, background: 'rgba(255,255,255,0.12)', transform: 'rotate(45deg)', borderRadius: 2 }} />
-              <span className="text-[9px] text-[#6B6B6B] uppercase tracking-wider">Milestone ✓</span>
+              <span className="text-[9px] text-[var(--space-text-secondary)] uppercase tracking-wider">Milestone ✓</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="shrink-0" style={{ width: 8, height: 8, border: '2px solid rgba(255,255,255,0.10)', transform: 'rotate(45deg)', borderRadius: 2 }} />
-              <span className="text-[9px] text-[#6B6B6B] uppercase tracking-wider">Milestone</span>
+              <span className="text-[9px] text-[var(--space-text-secondary)] uppercase tracking-wider">Milestone</span>
             </div>
             <div className="flex items-center gap-1.5">
               <div className="w-1.5 rounded-sm" style={{ height: 11, background: 'rgba(251,191,36,0.8)' }} />
-              <span className="text-[9px] text-[#6B6B6B] uppercase tracking-wider">Pending</span>
+              <span className="text-[9px] text-[var(--space-text-secondary)] uppercase tracking-wider">Pending</span>
             </div>
             <div className="flex items-center gap-1.5">
               <div className="w-1.5 rounded-sm" style={{ height: 11, background: 'rgba(74,222,128,0.8)' }} />
-              <span className="text-[9px] text-[#6B6B6B] uppercase tracking-wider">Paid</span>
+              <span className="text-[9px] text-[var(--space-text-secondary)] uppercase tracking-wider">Paid</span>
             </div>
             <div className="flex items-center gap-2 ml-auto">
               <div className="w-px h-3 bg-[rgba(139,156,182,0.70)]" />
-              <span className="text-[9px] text-[#6B6B6B] uppercase tracking-wider">Today</span>
+              <span className="text-[9px] text-[var(--space-text-secondary)] uppercase tracking-wider">Today</span>
             </div>
           </div>
 
           {clientGroups.length > 1 && (
-            <div className="flex items-center flex-wrap gap-x-5 gap-y-1 pt-2 border-t border-[#404040]">
+            <div className="flex items-center flex-wrap gap-x-5 gap-y-1 pt-2 border-t border-[var(--space-border-hard)]">
               {clientGroups.map((g) => {
                 const c = CLIENT_COLORS[g.colorIdx % CLIENT_COLORS.length]
                 return (
                   <div key={g.id} className="flex items-center gap-1.5">
                     <div className="size-2.5 rounded-sm shrink-0" style={{ background: c.hex }} />
-                    <span className="text-[9px] text-[#6B6B6B] truncate max-w-[100px]">{g.name}</span>
+                    <span className="text-[9px] text-[var(--space-text-secondary)] truncate max-w-[100px]">{g.name}</span>
                   </div>
                 )
               })}
@@ -623,31 +623,31 @@ export function ClientPortfolioTimeline({
 
       {/* Settings modal */}
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-        <DialogContent className="bg-[#252525] border border-[#404040] text-[#F0F0F0] max-w-xs rounded-2xl">
+        <DialogContent className="bg-[var(--space-bg-card)] border border-[var(--space-border-hard)] text-[var(--space-text-primary)] max-w-xs rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="text-[13px] font-semibold text-[#A0A0A0] tracking-wide">
+            <DialogTitle className="text-[13px] font-semibold text-[var(--space-text-tertiary)] tracking-wide">
               Client Portfolio Settings
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-6 pt-1">
             <div>
-              <p className="text-[10px] text-[#6B6B6B] uppercase tracking-[0.25em] mb-4">Clients shown</p>
+              <p className="text-[10px] text-[var(--space-text-secondary)] uppercase tracking-[0.25em] mb-4">Clients shown</p>
               <div className="flex items-center gap-4">
                 <button
                   onClick={() => setClientLimit(l => Math.max(1, l - 1))}
-                  className="size-9 rounded-xl bg-[rgba(255,255,255,0.06)] border border-[#404040] text-[#6B6B6B] hover:text-[#F0F0F0] hover:bg-[rgba(255,255,255,0.06)] flex items-center justify-center transition-colors"
+                  className="size-9 rounded-xl bg-[rgba(255,255,255,0.06)] border border-[var(--space-border-hard)] text-[var(--space-text-secondary)] hover:text-[var(--space-text-primary)] hover:bg-[rgba(255,255,255,0.06)] flex items-center justify-center transition-colors"
                 >
                   <Minus className="size-3.5" />
                 </button>
-                <span className="text-3xl font-bold tabular-nums text-[#F0F0F0] w-8 text-center">{clientLimit}</span>
+                <span className="text-3xl font-bold tabular-nums text-[var(--space-text-primary)] w-8 text-center">{clientLimit}</span>
                 <button
                   onClick={() => setClientLimit(l => Math.min(totalClientGroups || 20, l + 1))}
-                  className="size-9 rounded-xl bg-[rgba(255,255,255,0.06)] border border-[#404040] text-[#6B6B6B] hover:text-[#F0F0F0] hover:bg-[rgba(255,255,255,0.06)] flex items-center justify-center transition-colors"
+                  className="size-9 rounded-xl bg-[rgba(255,255,255,0.06)] border border-[var(--space-border-hard)] text-[var(--space-text-secondary)] hover:text-[var(--space-text-primary)] hover:bg-[rgba(255,255,255,0.06)] flex items-center justify-center transition-colors"
                 >
                   <Plus className="size-3.5" />
                 </button>
               </div>
-              <p className="text-[10px] text-[#6B6B6B] mt-3">
+              <p className="text-[10px] text-[var(--space-text-secondary)] mt-3">
                 {totalClientGroups} total client{totalClientGroups !== 1 ? 's' : ''} · sorted by recent activity
               </p>
             </div>
@@ -661,13 +661,13 @@ export function ClientPortfolioTimeline({
           className="fixed z-50 pointer-events-none"
           style={{ left: tooltip.x + 14, top: tooltip.y - 8, transform: 'translateY(-100%)' }}
         >
-          <div className="bg-[#252525] border border-[#404040] rounded-lg px-3 py-2.5 shadow-2xl space-y-0.5 max-w-[220px]">
+          <div className="bg-[var(--space-bg-card)] border border-[var(--space-border-hard)] rounded-lg px-3 py-2.5 shadow-2xl space-y-0.5 max-w-[220px]">
             {tooltip.lines.map((l, i) => (
               <p
                 key={i}
                 className={cn(
                   'text-[10px] whitespace-nowrap',
-                  i === 0 ? 'text-[#F0F0F0] font-semibold' : 'text-[#6B6B6B]',
+                  i === 0 ? 'text-[var(--space-text-primary)] font-semibold' : 'text-[var(--space-text-secondary)]',
                 )}
               >
                 {l}

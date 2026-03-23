@@ -12,7 +12,7 @@ export function ClientAccountsGrid({ accounts }: ClientAccountsGridProps) {
 
   if (accounts.length === 0) {
     return (
-      <div className="text-center py-12 text-[#6B6B6B]">
+      <div className="text-center py-12 text-[var(--space-text-secondary)]">
         No assigned client accounts
       </div>
     )
@@ -23,21 +23,21 @@ export function ClientAccountsGrid({ accounts }: ClientAccountsGridProps) {
       {accounts.map((account) => (
         <div
           key={account.id}
-          className="relative overflow-hidden rounded-xl border border-[#404040] bg-[#2D2D2D] p-6"
+          className="relative overflow-hidden rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card-hover)] p-6"
         >
-          <h3 className="text-lg font-semibold text-[#F0F0F0] mb-2">{account.name}</h3>
-          <p className="text-sm text-[#6B6B6B] mb-4">{account.email}</p>
+          <h3 className="text-lg font-semibold text-[var(--space-text-primary)] mb-2">{account.name}</h3>
+          <p className="text-sm text-[var(--space-text-secondary)] mb-4">{account.email}</p>
 
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
-              <span className="text-[#6B6B6B]">Balance:</span>
-              <span className="text-[#F0F0F0] font-medium">
+              <span className="text-[var(--space-text-secondary)]">Balance:</span>
+              <span className="text-[var(--space-text-primary)] font-medium">
                 {formatCurrency(account.accountBalance || 0)}
               </span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-[#6B6B6B]">Total Orders:</span>
-              <span className="text-[#F0F0F0]">{account.totalOrders || 0}</span>
+              <span className="text-[var(--space-text-secondary)]">Total Orders:</span>
+              <span className="text-[var(--space-text-primary)]">{account.totalOrders || 0}</span>
             </div>
           </div>
         </div>

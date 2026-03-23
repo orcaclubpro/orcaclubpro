@@ -55,12 +55,12 @@ export function ProjectTimeline({ project, tasks }: ProjectTimelineProps) {
 
   if (!hasTimeline) {
     return (
-      <div className="relative overflow-hidden rounded-2xl border border-[#404040] bg-[#252525] p-16 text-center">
+      <div className="relative overflow-hidden rounded-2xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] p-16 text-center">
         <div className="absolute inset-0 bg-gradient-to-br from-[rgba(255,255,255,0.01)] to-transparent" />
         <div className="relative z-10">
-          <Calendar className="size-12 text-[#6B6B6B] mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-[#F0F0F0] mb-2">No Timeline Set</h3>
-          <p className="text-[#A0A0A0] text-sm max-w-md mx-auto">
+          <Calendar className="size-12 text-[var(--space-text-secondary)] mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-[var(--space-text-primary)] mb-2">No Timeline Set</h3>
+          <p className="text-[var(--space-text-tertiary)] text-sm max-w-md mx-auto">
             Set a start and end date to visualize the project timeline.
           </p>
         </div>
@@ -71,18 +71,18 @@ export function ProjectTimeline({ project, tasks }: ProjectTimelineProps) {
   return (
     <div className="space-y-12">
       {/* Main Timeline */}
-      <div className="relative overflow-hidden rounded-2xl border border-[#404040] bg-[#252525] p-12">
+      <div className="relative overflow-hidden rounded-2xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] p-12">
         {/* Background gradient */}
         <div className="absolute inset-0 bg-gradient-to-br from-[rgba(255,255,255,0.02)] via-transparent to-blue-500/[0.02]" />
 
         <div className="relative z-10 space-y-8">
           {/* Date Labels */}
           <div className="flex items-center justify-between text-sm">
-            <div className="flex items-center gap-2 text-[#A0A0A0]">
+            <div className="flex items-center gap-2 text-[var(--space-text-tertiary)]">
               <Calendar className="size-4" />
               <span className="font-medium">{formatDate(project.startDate)}</span>
             </div>
-            <div className="flex items-center gap-2 text-[#A0A0A0]">
+            <div className="flex items-center gap-2 text-[var(--space-text-tertiary)]">
               <Calendar className="size-4" />
               <span className="font-medium">{formatDate(project.projectedEndDate)}</span>
             </div>
@@ -147,13 +147,13 @@ export function ProjectTimeline({ project, tasks }: ProjectTimelineProps) {
                     {/* Hover tooltip */}
                     {isHovered && (
                       <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 w-64 animate-in fade-in slide-in-from-bottom-2 duration-200">
-                        <div className="relative overflow-hidden rounded-xl border border-[#404040] bg-[#252525] p-4 shadow-2xl">
+                        <div className="relative overflow-hidden rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] p-4 shadow-2xl">
                           {/* Glow effect */}
                           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[var(--space-accent)] to-transparent" />
 
                           <div className="space-y-2">
                             <div className="flex items-start justify-between gap-3">
-                              <h4 className="text-sm font-semibold text-[#F0F0F0] leading-tight">
+                              <h4 className="text-sm font-semibold text-[var(--space-text-primary)] leading-tight">
                                 {milestone.title}
                               </h4>
                               {milestone.completed && (
@@ -161,20 +161,20 @@ export function ProjectTimeline({ project, tasks }: ProjectTimelineProps) {
                               )}
                             </div>
 
-                            <div className="flex items-center gap-2 text-xs text-[#A0A0A0]">
+                            <div className="flex items-center gap-2 text-xs text-[var(--space-text-tertiary)]">
                               <Calendar className="size-3" />
                               {formatDate(milestone.date)}
                             </div>
 
                             {milestone.description && (
-                              <p className="text-xs text-[#A0A0A0] leading-relaxed pt-2 border-t border-[#404040]">
+                              <p className="text-xs text-[var(--space-text-tertiary)] leading-relaxed pt-2 border-t border-[var(--space-border-hard)]">
                                 {milestone.description}
                               </p>
                             )}
                           </div>
 
                           {/* Arrow */}
-                          <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 rotate-45 bg-[#252525] border-r border-b border-[#404040]" />
+                          <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 rotate-45 bg-[var(--space-bg-card)] border-r border-b border-[var(--space-border-hard)]" />
                         </div>
                       </div>
                     )}
@@ -200,7 +200,7 @@ export function ProjectTimeline({ project, tasks }: ProjectTimelineProps) {
           </div>
 
           {/* Legend */}
-          <div className="flex items-center justify-center gap-6 pt-4 text-xs text-[#6B6B6B]">
+          <div className="flex items-center justify-center gap-6 pt-4 text-xs text-[var(--space-text-secondary)]">
             <div className="flex items-center gap-2">
               <div className="size-2 rounded-full bg-[var(--space-accent)]" />
               <span>Current Progress</span>
