@@ -170,7 +170,7 @@ function PackageModal({
         </div>
 
         {/* ── BODY: single column mobile / two-column desktop ── */}
-        <div className="flex-1 overflow-hidden flex flex-col sm:flex-row min-h-0">
+        <div className="flex-1 overflow-y-auto sm:overflow-hidden flex flex-col sm:flex-row min-h-0">
 
           {/* ── LEFT COLUMN — identity + pricing (sticky on desktop) ── */}
           <div
@@ -232,7 +232,7 @@ function PackageModal({
           </div>
 
           {/* ── RIGHT COLUMN — scrollable details ── */}
-          <div className="flex-1 overflow-y-auto overscroll-contain min-w-0">
+          <div className="sm:flex-1 sm:overflow-y-auto overscroll-contain min-w-0">
 
             {/* What's Included */}
             {lineItems.length > 0 && (

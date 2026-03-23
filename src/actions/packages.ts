@@ -295,7 +295,8 @@ export async function updatePackage({
     const payload = await getPayload({ config })
 
     const existing = await payload.findByID({ collection: 'packages', id: packageId, depth: 0 })
-    const statusReset = (existing as any)?.status === 'accepted' ? { status: 'sent' as const } : {}
+    const currentStatus = (existing as any)?.status
+    const statusReset = currentStatus === 'accepted' ? { status: 'sent' as const } : currentStatus === 'draft' ? { status: 'sent' as const } : {}
 
     const pkg = await payload.update({
       collection: 'packages',
