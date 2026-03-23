@@ -11,8 +11,8 @@ interface ProjectTabNavProps {
 
 const tabs = [
   { key: 'overview', label: 'Overview' },
-  { key: 'credentials', label: 'Accounts' },
   { key: 'sprints', label: 'Sprints' },
+  { key: 'credentials', label: 'Accounts' },
 ]
 
 export function ProjectTabNav({ activeTab, basePath }: ProjectTabNavProps) {

@@ -12,6 +12,7 @@ interface ScheduledEntry {
   amount: number
   dueDate?: string | null
   orderId?: string | null
+  invoicedAt?: string | null
 }
 
 interface PackageWithSchedule {
@@ -81,7 +82,7 @@ export function ScheduledPaymentsSection({ packages, username }: ScheduledPaymen
     .map((pkg) => ({
       ...pkg,
       pendingEntries: (pkg.paymentSchedule ?? []).filter((e) => {
-        if (e.orderId) return false
+        if (e.orderId && e.invoicedAt) return false
         if (timeframe === 'all') return true
         return isWithinDays(e.dueDate, parseInt(timeframe))
       }),
@@ -91,7 +92,7 @@ export function ScheduledPaymentsSection({ packages, username }: ScheduledPaymen
   const totalPending = scheduledPackages.reduce((s, p) => s + p.pendingEntries.length, 0)
 
   const totalUnvoiced = packages.reduce(
-    (s, pkg) => s + (pkg.paymentSchedule ?? []).filter((e) => !e.orderId).length,
+    (s, pkg) => s + (pkg.paymentSchedule ?? []).filter((e) => !(e.orderId && e.invoicedAt)).length,
     0,
   )
 

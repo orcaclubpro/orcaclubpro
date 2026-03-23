@@ -35,6 +35,10 @@ export function SwipeTabRouter({ tabs, activeTab, basePath }: SwipeTabRouterProp
     const onWheel = (e: WheelEvent) => {
       if (inCooldown) return
 
+      // Don't hijack horizontal scrolling inside a scrollable container
+      const hScrollEl = (e.target as Element)?.closest('[data-h-scroll]')
+      if (hScrollEl && hScrollEl.scrollWidth > hScrollEl.clientWidth) return
+
       const absX = Math.abs(e.deltaX)
       const absY = Math.abs(e.deltaY)
 
@@ -86,6 +90,12 @@ export function SwipeTabRouter({ tabs, activeTab, basePath }: SwipeTabRouterProp
     }
 
     const onTouchStart = (e: TouchEvent) => {
+      // Don't intercept touches that start inside a horizontal scroll container
+      const hScrollEl = (e.target as Element)?.closest('[data-h-scroll]')
+      if (hScrollEl && hScrollEl.scrollWidth > hScrollEl.clientWidth) {
+        drag.active = false
+        return
+      }
       drag.active = true
       drag.startX = e.touches[0].clientX
       drag.startY = e.touches[0].clientY

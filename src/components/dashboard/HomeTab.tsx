@@ -25,7 +25,7 @@ const STEM_TOP   = ICON_Y + ICON_SIZE   // = 82
 const TRACK_Y    = 120  // progress bar top
 const TRACK_H    = 3
 const SPRINT_TOP = TRACK_Y + TRACK_H + 4  // = 127
-const SPRINT_H   = 52
+const SPRINT_H   = 68
 const TICK_Y     = SPRINT_TOP + SPRINT_H + 10  // = 189
 const INNER_H    = TICK_Y + 28                  // = 217
 
@@ -505,12 +505,8 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
             )}
           </div>
 
-          {/* Scroll wrapper with edge fade */}
+          {/* Scroll wrapper */}
           <div className="relative">
-            {/* Left fade */}
-            <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-[#1C1C1C] to-transparent z-30 pointer-events-none" />
-            {/* Right fade */}
-            <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-[#1C1C1C] to-transparent z-30 pointer-events-none" />
 
             <div
               ref={scrollRef}
@@ -545,23 +541,37 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
                     >
                       {/* Background tint matching status */}
                       <div className={cn('absolute inset-0 rounded-sm opacity-30', sprint.cfg.bg)} />
-                      {/* ORCACLUB logo */}
+                      {/* ORCACLUB logo — bottom-right, decorative */}
                       <Image
                         src="/orcaclubpro.png"
                         alt=""
-                        width={SPRINT_H - 8}
-                        height={SPRINT_H - 8}
-                        className="absolute inset-0 m-auto object-contain pointer-events-none group-hover:opacity-80 transition-opacity"
+                        width={SPRINT_H - 28}
+                        height={SPRINT_H - 28}
+                        className="absolute right-2 bottom-1.5 object-contain pointer-events-none opacity-15 group-hover:opacity-35 transition-opacity"
                         aria-hidden="true"
                       />
-                      {/* Sprint name + status dot */}
+                      {/* Sprint name + description */}
                       {sprint.widthPx > 54 && (
-                        <div className="absolute top-2 left-2.5 right-2 flex items-center gap-1.5">
-                          <div className={cn('size-1.5 rounded-full shrink-0', sprint.cfg.dot)} />
-                          <span className={cn('text-[10px] font-medium truncate', sprint.cfg.text)}
-                            style={{ maxWidth: sprint.widthPx - 28 }}>
-                            {sprint.name}
-                          </span>
+                        <div className="absolute top-2 left-2.5 right-2 flex flex-col gap-0.5">
+                          <div className="flex items-center gap-1.5">
+                            <div className={cn('size-1.5 rounded-full shrink-0', sprint.cfg.dot)} />
+                            <span className={cn('text-[10px] font-medium truncate', sprint.cfg.text)}
+                              style={{ maxWidth: sprint.widthPx - 28 }}>
+                              {sprint.name}
+                            </span>
+                          </div>
+                          {(sprint.goalDescription || sprint.description) && sprint.widthPx > 100 && (
+                            <p className="text-[9px] text-[#6B6B6B] truncate leading-tight pl-3"
+                              style={{ maxWidth: sprint.widthPx - 36 }}>
+                              {sprint.goalDescription || sprint.description}
+                            </p>
+                          )}
+                          {sprint.widthPx > 120 && (
+                            <p className="text-[9px] text-[#4A4A4A] truncate leading-tight pl-3"
+                              style={{ maxWidth: sprint.widthPx - 36 }}>
+                              {formatDate(sprint.startDate)} → {formatDate(sprint.endDate)}
+                            </p>
+                          )}
                         </div>
                       )}
                     </Link>

@@ -50,7 +50,6 @@ const Media: CollectionConfig = {
   slug: 'media',
   upload: {
     staticDir: 'public/media',
-    staticURL: '/media',
     imageSizes: [
       {
         name: 'thumbnail',

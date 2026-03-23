@@ -7,7 +7,7 @@ import {
   FileText, ArrowRight, ChevronDown, ChevronUp,
   X, Check, Loader2, Trash2, Copy, CheckCheck, Sparkles,
   Receipt, ExternalLink, CheckCircle2, CalendarDays, ListOrdered,
-  Mail, Plus, ShieldCheck, PenLine, Send,
+  Mail, Plus,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { AssignPackageModal } from './AssignPackageModal'
@@ -21,8 +21,6 @@ import {
   sendScheduledPayment,
   removeScheduleEntry,
   sendProposalEmail,
-  authorizeProposal,
-  sendSignedContract,
 } from '@/actions/packages'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -58,18 +56,6 @@ interface PackageDoc {
   paymentSchedule?: ScheduledEntry[]
   projectRef?: string | { id: string; name: string } | null
   createdAt: string
-  clientSignature?: {
-    typedName?: string | null
-    signedByEmail?: string | null
-    signedAt?: string | null
-    ipAddress?: string | null
-    documentHash?: string | null
-  } | null
-  orcaclubSignature?: {
-    authorizedByName?: string | null
-    authorizedByEmail?: string | null
-    authorizedAt?: string | null
-  } | null
 }
 
 interface PackageOrderSummary {
@@ -375,16 +361,6 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
   const [emailSending, setEmailSending]           = useState(false)
   const [emailResult, setEmailResult]             = useState<{ sent?: number; error?: string } | null>(null)
 
-  // Authorize proposal modal state
-  const [authModalPkgId, setAuthModalPkgId]     = useState<string | null>(null)
-  const [authName, setAuthName]                   = useState('')
-  const [authorizing, setAuthorizing]             = useState(false)
-  const [authResult, setAuthResult]               = useState<{ success?: boolean; error?: string } | null>(null)
-
-  // Send signed contract state (per-package)
-  const [sendingContract, setSendingContract]     = useState<string | null>(null) // packageId currently sending
-  const [contractSentFor, setContractSentFor]     = useState<Set<string>>(new Set())
-
   const getDays = (pkgId: string) => daysUntilDue[pkgId] ?? 30
   const getMode = (pkgId: string) => invoiceMode[pkgId] ?? 'full'
   const getFrequency = (pkgId: string): Frequency => scheduleFrequency[pkgId] ?? 'monthly'
@@ -478,32 +454,32 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
       return
     }
 
-    // In schedule mode, also persist the schedule entries to DB so the client can view them
+    // In schedule mode, recompute and persist schedule entries from the builder UI
     if (getMode(pkg.id) === 'schedule') {
       const frequency = getFrequency(pkg.id)
       const startDate = scheduleStartDate[pkg.id] ?? ''
-      if (frequency === 'custom' || startDate) {
-        const depositStr = scheduleDeposit[pkg.id] ?? ''
-        const depositVal = depositStr !== '' ? parseFloat(depositStr) : 0
-        const hasDeposit = depositStr !== '' && !isNaN(depositVal) && depositVal > 0
-        const deposit = hasDeposit ? depositVal : 0
-        const { oneTime } = computeTotals(editItems.length > 0 ? editItems : (pkg.lineItems ?? []))
-        const numInstallments = getNumInstallments(pkg.id)
-        const remaining = Math.max(0, oneTime - deposit)
-        const amounts = computeInstallmentAmounts(remaining, numInstallments)
-        const dates = frequency !== 'custom'
-          ? generateInstallmentDates(startDate, numInstallments, frequency, hasDeposit)
-          : (installmentDates[pkg.id] ?? [])
+      const depositStr = scheduleDeposit[pkg.id] ?? ''
+      const depositVal = depositStr !== '' ? parseFloat(depositStr) : 0
+      const hasDeposit = depositStr !== '' && !isNaN(depositVal) && depositVal > 0
+      const deposit = hasDeposit ? depositVal : 0
+      const { oneTime } = computeTotals(editItems.length > 0 ? editItems : (pkg.lineItems ?? []))
+      const numInstallments = getNumInstallments(pkg.id)
+      const remaining = Math.max(0, oneTime - deposit)
+      const amounts = computeInstallmentAmounts(remaining, numInstallments)
+      const dates = frequency !== 'custom'
+        ? (startDate ? generateInstallmentDates(startDate, numInstallments, frequency, hasDeposit) : Array(numInstallments).fill(''))
+        : (installmentDates[pkg.id] ?? [])
 
-        const entries: Array<{ label: string; amount: number; dueDate?: string }> = [
-          ...(hasDeposit ? [{ label: 'Deposit', amount: deposit, dueDate: scheduleDepositDate[pkg.id] || undefined }] : []),
-          ...Array.from({ length: numInstallments }, (_, i) => ({
-            label: numInstallments === 1 ? 'Balance' : i === numInstallments - 1 ? 'Final Payment' : `Installment ${i + 1}`,
-            amount: amounts[i],
-            dueDate: dates[i] || undefined,
-          })),
-        ]
+      const entries: Array<{ label: string; amount: number; dueDate?: string }> = [
+        ...(hasDeposit ? [{ label: 'Deposit', amount: deposit, dueDate: scheduleDepositDate[pkg.id] || undefined }] : []),
+        ...Array.from({ length: numInstallments }, (_, i) => ({
+          label: numInstallments === 1 ? 'Balance' : i === numInstallments - 1 ? 'Final Payment' : `Installment ${i + 1}`,
+          amount: amounts[i],
+          dueDate: dates[i] || undefined,
+        })),
+      ]
 
+      if (entries.length > 0) {
         await savePaymentScheduleOnly(pkg.id, entries)
       }
     }
@@ -548,25 +524,6 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
       }, 2500)
     } else {
       setEmailResult({ error: ('error' in result ? result.error : undefined) ?? 'Failed to send' })
-    }
-  }
-
-  const handleAuthorize = async () => {
-    if (!authModalPkgId || !authName.trim()) return
-    setAuthorizing(true)
-    setAuthResult(null)
-    const result = await authorizeProposal({ packageId: authModalPkgId, authorizedByName: authName })
-    setAuthorizing(false)
-    if (result.success) {
-      setAuthResult({ success: true })
-      setTimeout(() => {
-        setAuthModalPkgId(null)
-        setAuthName('')
-        setAuthResult(null)
-        router.refresh()
-      }, 2000)
-    } else {
-      setAuthResult({ error: result.error })
     }
   }
 
@@ -822,70 +779,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                           <Mail className="size-3.5" />
                           Email Proposal
                         </button>
-                        {/* ORCACLUB authorize button */}
-                        {pkg.orcaclubSignature?.authorizedAt ? (
-                          <span className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-emerald-400 border border-emerald-400/20 bg-emerald-400/[0.05] rounded-lg">
-                            <ShieldCheck className="size-3.5" />
-                            Authorized by {pkg.orcaclubSignature.authorizedByName}
-                          </span>
-                        ) : (
-                          <button
-                            onClick={() => { setAuthModalPkgId(pkg.id); setAuthName(''); setAuthResult(null) }}
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-[rgba(139,156,182,0.18)] bg-[rgba(139,156,182,0.06)] rounded-lg hover:bg-[rgba(139,156,182,0.10)] transition-all"
-                            style={{ color: 'var(--space-accent)' }}
-                          >
-                            <PenLine className="size-3.5" />
-                            Sign as ORCACLUB
-                          </button>
-                        )}
                       </div>
-
-                      {/* Signature status row */}
-                      {pkg.clientSignature?.signedAt && (
-                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-400/[0.04] border border-emerald-400/15">
-                          <ShieldCheck className="size-3.5 text-emerald-400 shrink-0" />
-                          <span className="text-[10px] text-emerald-400 font-medium">
-                            Client signed: {pkg.clientSignature.typedName} ({pkg.clientSignature.signedByEmail})
-                          </span>
-                          <span className="text-[10px] text-[#4A4A4A] ml-auto shrink-0">
-                            {new Date(pkg.clientSignature.signedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                          </span>
-                        </div>
-                      )}
-
-                      {/* Send Signed Contract — visible when both parties have signed */}
-                      {pkg.clientSignature?.signedAt && pkg.orcaclubSignature?.authorizedAt && (
-                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[rgba(255,255,255,0.02)] border border-[rgba(139,156,182,0.10)]">
-                          <Send className="size-3.5 shrink-0" style={{ color: 'var(--space-accent)' }} />
-                          <span className="text-[10px] font-medium flex-1" style={{ color: 'var(--space-accent)' }}>
-                            Contract fully executed
-                          </span>
-                          {contractSentFor.has(pkg.id) ? (
-                            <span className="flex items-center gap-1 text-[10px] text-emerald-400">
-                              <Check className="size-3" /> Sent
-                            </span>
-                          ) : (
-                            <button
-                              onClick={async () => {
-                                setSendingContract(pkg.id)
-                                const r = await sendSignedContract(pkg.id)
-                                setSendingContract(null)
-                                if (r.success) {
-                                  setContractSentFor(prev => new Set([...prev, pkg.id]))
-                                }
-                              }}
-                              disabled={sendingContract === pkg.id}
-                              className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold border border-[rgba(139,156,182,0.18)] rounded-md hover:bg-[rgba(139,156,182,0.10)] disabled:opacity-40 transition-all"
-                              style={{ color: 'var(--space-accent)' }}
-                            >
-                              {sendingContract === pkg.id
-                                ? <><Loader2 className="size-3 animate-spin" /> Sending…</>
-                                : <><Send className="size-3" /> Send Contract</>
-                              }
-                            </button>
-                          )}
-                        </div>
-                      )}
 
                       {/* Project link */}
                       <div className="flex items-center justify-between gap-3">
@@ -999,12 +893,12 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                               Payment Schedule
                             </p>
                             <span className="text-[10px] text-[#4A4A4A] tabular-nums">
-                              {pkg.paymentSchedule.filter(e => e.orderId).length}/{pkg.paymentSchedule.length} invoiced
+                              {pkg.paymentSchedule.filter(e => e.orderId && e.invoicedAt).length}/{pkg.paymentSchedule.length} invoiced
                             </span>
                           </div>
                           <div className="rounded-xl border border-[#404040] overflow-hidden divide-y divide-[#333333]">
                             {pkg.paymentSchedule.map((entry) => {
-                              const isInvoiced = !!entry.orderId
+                              const isInvoiced = !!(entry.orderId && entry.invoicedAt)
                               return (
                                 <div key={entry.id} className="flex items-center gap-3 px-3.5 py-2.5">
                                   <div className="flex-1 min-w-0 flex items-center gap-3 flex-wrap">
@@ -1272,7 +1166,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                                   Saved Schedule
                                 </p>
                                 {pkg.paymentSchedule.map((entry) => {
-                                  const isInvoiced = !!entry.orderId
+                                  const isInvoiced = !!(entry.orderId && entry.invoicedAt)
                                   const invoicedOrder = isInvoiced
                                     ? (packageOrders?.[pkg.id] ?? []).find(o => o.id === entry.orderId)
                                     : null
@@ -1445,7 +1339,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                           )}
 
                           {mode === 'schedule' && (() => {
-                            const hasPending = (pkg.paymentSchedule ?? []).some(e => !e.orderId)
+                            const hasPending = (pkg.paymentSchedule ?? []).some(e => !(e.orderId && e.invoicedAt))
                             return (
                               <button
                                 onClick={() => handlePushSchedule(pkg.id)}
@@ -1554,80 +1448,6 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                 {emailSending
                   ? <><Loader2 className="size-3.5 animate-spin" /> Sending…</>
                   : <><Mail className="size-3.5" /> Send Proposal</>
-                }
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      {/* ── Authorize Proposal Modal ──────────────────────────────────────── */}
-      {authModalPkgId && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-[#000000]/60"
-            onClick={() => { setAuthModalPkgId(null); setAuthName(''); setAuthResult(null) }}
-          />
-          <div className="relative z-10 w-full max-w-sm rounded-2xl border border-[#404040] bg-[#1C1C1C] p-6 space-y-4 shadow-[0_8px_40px_rgba(255,255,255,0.06)]">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <PenLine className="size-4" style={{ color: 'var(--space-accent)' }} />
-                <h3 className="text-sm font-semibold text-[#F0F0F0]">Sign as ORCACLUB</h3>
-              </div>
-              <button
-                onClick={() => { setAuthModalPkgId(null); setAuthName(''); setAuthResult(null) }}
-                className="p-1 text-[#4A4A4A] hover:text-[#A0A0A0] transition-colors rounded-lg hover:bg-[#2D2D2D]"
-              >
-                <X className="size-4" />
-              </button>
-            </div>
-
-            <p className="text-xs text-[#4A4A4A] leading-relaxed">
-              Enter your full name to authorize this proposal on behalf of ORCACLUB. This records you as the authorized representative.
-            </p>
-
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-semibold uppercase tracking-widest text-[#4A4A4A]">
-                Your Full Name
-              </label>
-              <input
-                type="text"
-                value={authName}
-                onChange={e => setAuthName(e.target.value)}
-                placeholder="e.g. Chance Noonan"
-                autoComplete="name"
-                className="w-full px-3 py-2.5 text-sm bg-[#2D2D2D] border border-[#404040] rounded-xl text-[#F0F0F0] placeholder-[#555555] focus:outline-none focus:border-[rgba(139,156,182,0.20)]"
-              />
-            </div>
-
-            {authResult && (
-              <div className={`rounded-xl px-3 py-2.5 text-xs font-medium ${
-                authResult.success
-                  ? 'bg-emerald-500/[0.08] border border-emerald-500/20 text-emerald-400'
-                  : 'bg-red-500/[0.08] border border-red-500/20 text-red-400'
-              }`}>
-                {authResult.success
-                  ? '✓ Proposal authorized — status set to Sent'
-                  : `✗ ${authResult.error ?? 'Failed to authorize'}`
-                }
-              </div>
-            )}
-
-            <div className="flex items-center gap-2 pt-1">
-              <button
-                onClick={() => { setAuthModalPkgId(null); setAuthName(''); setAuthResult(null) }}
-                className="flex-1 px-4 py-2 text-xs font-medium text-[#4A4A4A] border border-[#404040] rounded-xl hover:text-[#A0A0A0] hover:border-[#404040] transition-all"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAuthorize}
-                disabled={authorizing || !authName.trim()}
-                className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-semibold border border-[rgba(139,156,182,0.18)] bg-[rgba(139,156,182,0.06)] rounded-xl hover:bg-[rgba(139,156,182,0.10)] disabled:opacity-40 transition-all"
-                style={{ color: 'var(--space-accent)' }}
-              >
-                {authorizing
-                  ? <><Loader2 className="size-3.5 animate-spin" /> Saving…</>
-                  : <><ShieldCheck className="size-3.5" /> Authorize</>
                 }
               </button>
             </div>

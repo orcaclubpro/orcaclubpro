@@ -78,7 +78,7 @@ export default async function ProjectDetailPage({
   const activeTab =
     tab === 'sprints' ? 'sprints' : tab === 'credentials' ? 'credentials' : 'overview'
   const basePath = `/u/${username}/projects/${projectId}`
-  const PROJECT_TABS = ['overview', 'credentials', 'sprints'] as const
+  const PROJECT_TABS = ['overview', 'sprints', 'credentials'] as const
 
   return (
     <>

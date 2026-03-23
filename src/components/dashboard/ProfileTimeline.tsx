@@ -257,8 +257,8 @@ export function ProfileTimeline({ project, username }: { project: SerializedProj
 
           {/* Scroll wrapper — overflow-x clips canvas; no overflow-hidden on card so tooltips escape */}
           <div className="relative overflow-x-hidden">
-            <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-[#FFFFFF] to-transparent z-30 pointer-events-none" />
-            <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-[#FFFFFF] to-transparent z-30 pointer-events-none" />
+            <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-[#252525] to-transparent z-30 pointer-events-none" />
+            <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-[#252525] to-transparent z-30 pointer-events-none" />
 
             <div
               ref={scrollRef}

@@ -1,14 +1,11 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import Link from 'next/link'
 import {
-  ChevronLeft, ChevronRight, Check, X, Loader2,
-  Sparkles, FileText, ExternalLink, CheckCircle2, CalendarDays, Mail,
-  PenLine, ShieldCheck, AlertCircle, ChevronDown, ScrollText,
+  ChevronLeft, ChevronRight, Check,
+  Sparkles, CalendarDays,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { signProposal, emailPackageToSelf, emailContractToSelf } from '@/actions/packages'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -38,16 +35,6 @@ interface PackageDoc {
   lineItems?: LineItem[]
   paymentSchedule?: ScheduledEntry[]
   status?: string
-  clientSignature?: {
-    typedName?: string | null
-    signedByEmail?: string | null
-    signedAt?: string | null
-  } | null
-  orcaclubSignature?: {
-    authorizedByName?: string | null
-    authorizedByEmail?: string | null
-    authorizedAt?: string | null
-  } | null
 }
 
 interface PackagesClientViewProps {
@@ -97,133 +84,7 @@ function statusStyle(status?: string) {
   }
 }
 
-const CONSENT_DISCLOSURE = `By typing your full legal name and clicking "Sign Agreement", you:
-
-1. Consent to receive this agreement and related notices electronically. You may request a paper copy at any time by emailing carbon@orcaclub.pro.
-
-2. Acknowledge your right to withdraw consent at any time without penalty by contacting carbon@orcaclub.pro — withdrawal applies to future records only.
-
-3. Confirm that typing your name constitutes a legal electronic signature under the ESIGN Act and UETA, equivalent to a handwritten signature.
-
-4. Confirm you have read and agree to the Service Agreement Terms displayed on the full proposal.`
-
-// ── Canvas Signature Pad ──────────────────────────────────────────────────────
-
-function SignaturePad({
-  onSign,
-}: {
-  onSign: (dataUrl: string | null) => void
-}) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const drawing = useRef(false)
-  const lastPos = useRef<{ x: number; y: number } | null>(null)
-  const [hasSignature, setHasSignature] = useState(false)
-
-  const getPos = (e: MouseEvent | TouchEvent, canvas: HTMLCanvasElement) => {
-    const rect = canvas.getBoundingClientRect()
-    const scaleX = canvas.width / rect.width
-    const scaleY = canvas.height / rect.height
-    if (e instanceof MouseEvent) {
-      return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY }
-    } else {
-      const touch = e.touches[0]
-      return { x: (touch.clientX - rect.left) * scaleX, y: (touch.clientY - rect.top) * scaleY }
-    }
-  }
-
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-
-    ctx.fillStyle = 'transparent'
-    ctx.strokeStyle = '#A0A0A0'
-    ctx.lineWidth = 2
-    ctx.lineCap = 'round'
-    ctx.lineJoin = 'round'
-
-    const onStart = (e: MouseEvent | TouchEvent) => {
-      e.preventDefault()
-      drawing.current = true
-      lastPos.current = getPos(e, canvas)
-    }
-    const onMove = (e: MouseEvent | TouchEvent) => {
-      e.preventDefault()
-      if (!drawing.current || !lastPos.current) return
-      const pos = getPos(e, canvas)
-      ctx.beginPath()
-      ctx.moveTo(lastPos.current.x, lastPos.current.y)
-      ctx.lineTo(pos.x, pos.y)
-      ctx.stroke()
-      lastPos.current = pos
-      setHasSignature(true)
-      onSign(canvas.toDataURL('image/png'))
-    }
-    const onEnd = () => { drawing.current = false; lastPos.current = null }
-
-    canvas.addEventListener('mousedown', onStart)
-    canvas.addEventListener('mousemove', onMove)
-    canvas.addEventListener('mouseup', onEnd)
-    canvas.addEventListener('mouseleave', onEnd)
-    canvas.addEventListener('touchstart', onStart, { passive: false })
-    canvas.addEventListener('touchmove', onMove, { passive: false })
-    canvas.addEventListener('touchend', onEnd)
-
-    return () => {
-      canvas.removeEventListener('mousedown', onStart)
-      canvas.removeEventListener('mousemove', onMove)
-      canvas.removeEventListener('mouseup', onEnd)
-      canvas.removeEventListener('mouseleave', onEnd)
-      canvas.removeEventListener('touchstart', onStart)
-      canvas.removeEventListener('touchmove', onMove)
-      canvas.removeEventListener('touchend', onEnd)
-    }
-  }, [onSign])
-
-  const clear = () => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-    ctx.clearRect(0, 0, canvas.width, canvas.height)
-    setHasSignature(false)
-    onSign(null)
-  }
-
-  return (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-between">
-        <p className="text-[9px] font-bold tracking-[0.22em] uppercase text-[#4A4A4A]">Draw Signature <span className="text-[#4A4A4A] normal-case tracking-normal font-normal">(optional)</span></p>
-        {hasSignature && (
-          <button type="button" onClick={clear} className="text-[9px] text-[#4A4A4A] hover:text-[#6B6B6B] transition-colors uppercase tracking-widest">
-            Clear
-          </button>
-        )}
-      </div>
-      <div className="relative rounded-xl border border-[#404040] bg-[#252525] overflow-hidden" style={{ height: 100 }}>
-        <canvas
-          ref={canvasRef}
-          width={600}
-          height={200}
-          className="w-full h-full cursor-crosshair"
-          style={{ touchAction: 'none' }}
-        />
-        {!hasSignature && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <p className="text-xs text-[#4A4A4A] italic">Draw your signature here</p>
-          </div>
-        )}
-        {/* Baseline */}
-        <div className="absolute bottom-6 left-8 right-8 border-b border-dashed border-[#404040] pointer-events-none" />
-      </div>
-    </div>
-  )
-}
-
 // ── Package Detail Modal ────────────────────────────────────────────────────────
-
-type ModalStep = 'details' | 'sign' | 'signed'
 
 function PackageModal({
   pkg,
@@ -234,44 +95,10 @@ function PackageModal({
   username: string
   onClose: () => void
 }) {
-  const [step, setStep] = useState<ModalStep>(
-    pkg.clientSignature?.signedAt ? 'signed' : 'details'
-  )
-  const [signing, setSigning] = useState(false)
-  const [signError, setSignError] = useState<string | null>(null)
-  const [typedName, setTypedName] = useState('')
-  const [consentChecked, setConsentChecked] = useState(false)
-  const [invoiceUrls, setInvoiceUrls] = useState<string[]>([])
-
   const lineItems = pkg.lineItems ?? []
   const schedule = pkg.paymentSchedule ?? []
   const { oneTime, monthly, annual } = computeTotals(lineItems)
-
-  const pendingEntries = schedule.filter(e => !e.orderId)
-  const canSign =
-    pkg.status !== 'accepted' &&
-    !pkg.clientSignature?.signedAt &&
-    (pendingEntries.length > 0 || (schedule.length === 0 && lineItems.length > 0))
-
-  const pendingTotal = schedule.length > 0
-    ? pendingEntries.reduce((s, e) => s + e.amount, 0)
-    : oneTime + monthly + annual
-
-  const isSignValid = typedName.trim().length >= 2 && consentChecked
-
-  const handleSign = async () => {
-    if (!isSignValid) return
-    setSigning(true)
-    setSignError(null)
-    const result = await signProposal({ packageId: pkg.id, typedName })
-    setSigning(false)
-    if (result.success) {
-      setInvoiceUrls(result.invoiceUrls ?? [])
-      setStep('signed')
-    } else {
-      setSignError(result.error ?? 'Failed to sign agreement')
-    }
-  }
+  const scheduleTotal = schedule.reduce((s, e) => s + e.amount, 0)
 
   // ESC close
   useEffect(() => {
@@ -286,428 +113,262 @@ function PackageModal({
     return () => { document.body.style.overflow = '' }
   }, [])
 
+  const hasPricing = oneTime > 0 || monthly > 0 || annual > 0
+
   return (
-    <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center p-0 sm:p-4 pb-20 sm:pb-0">
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-[#000000]/60" onClick={onClose} />
+    /* ── Single overlay div that IS the constraint ── */
+    <div
+      className="fixed inset-0 z-[300] flex items-end sm:items-center justify-center"
+      style={{ background: 'rgba(0,0,0,0.82)', backdropFilter: 'blur(10px)' }}
+    >
+      {/* Tap-backdrop to close (only visible area outside panel) */}
+      <div className="absolute inset-0" onClick={onClose} />
 
-      {/* Panel */}
+      {/*
+        Panel:
+        • Mobile  — sits at bottom, max 96dvh tall (leaves a tiny gap at top so user can tap-dismiss)
+        • Desktop — centered card, 700px wide, max 82vh
+        `overflow-hidden` + explicit height constraints = flex children (flex-1) actually constrain
+      */}
       <div
-        className="relative z-10 w-full sm:max-w-[580px] max-h-[calc(92vh-80px)] sm:max-h-[88vh] flex flex-col rounded-t-3xl sm:rounded-2xl border border-[#404040] overflow-hidden"
-        style={{ background: '#1C1C1C' }}
+        className={cn(
+          'relative z-10 flex flex-col w-full overflow-hidden',
+          'rounded-t-3xl sm:rounded-2xl',
+          'border-t border-x border-white/[0.07] sm:border',
+          // height constraints — the only source of truth
+          'max-h-[96dvh] sm:max-h-[82vh] sm:max-w-[700px]',
+        )}
+        style={{ background: '#111111' }}
       >
-        {/* Top accent line */}
-        <div className="h-px bg-gradient-to-r from-transparent via-[var(--space-accent)]/30 to-transparent shrink-0" />
+        {/* ── CYAN ACCENT LINE ── */}
+        <div className="shrink-0 h-px" style={{ background: 'linear-gradient(90deg,transparent,rgba(103,232,249,0.4),transparent)' }} />
 
-        {/* Mobile handle */}
-        <div className="flex justify-center pt-3 pb-1 shrink-0 sm:hidden">
-          <div className="w-9 h-1 rounded-full bg-[#333333]" />
+        {/* ── HEADER BAR ── */}
+        <div
+          className="shrink-0 flex items-center gap-3 px-4 py-3.5 border-b border-white/[0.06]"
+          style={{ paddingTop: 'max(0.875rem, env(safe-area-inset-top))' }}
+        >
+          <button
+            onClick={onClose}
+            className="flex items-center justify-center size-8 rounded-lg transition-all active:scale-90 shrink-0"
+            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }}
+            aria-label="Close"
+          >
+            <ChevronLeft className="size-4 text-white/50" />
+          </button>
+
+          <div className="flex-1 min-w-0">
+            <p className="text-[9px] font-semibold tracking-[0.28em] uppercase text-white/30">Service Package</p>
+            <h2 className="text-sm font-semibold text-white/85 truncate leading-tight">{pkg.name}</h2>
+          </div>
+
+          {pkg.status === 'accepted' && (
+            <span className="shrink-0 text-[9px] font-bold uppercase tracking-[0.15em] px-2.5 py-1 rounded-full"
+              style={{ color: '#4ade80', background: 'rgba(74,222,128,0.09)', border: '1px solid rgba(74,222,128,0.18)' }}
+            >Accepted</span>
+          )}
         </div>
 
-        {/* Scrollable body */}
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+        {/* ── BODY: single column mobile / two-column desktop ── */}
+        <div className="flex-1 overflow-hidden flex flex-col sm:flex-row min-h-0">
 
-          {/* ── SIGNED CONFIRMATION ── */}
-          {step === 'signed' && (
-            <div className="py-4 space-y-5">
-              <div className="flex flex-col items-center text-center gap-4 py-6">
-                <div className="size-14 rounded-2xl bg-emerald-400/10 border border-emerald-400/25 flex items-center justify-center">
-                  <ShieldCheck className="size-7 text-emerald-400" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-[#F0F0F0] mb-1.5">Agreement Signed</h2>
-                  <p className="text-sm text-[#6B6B6B] leading-relaxed max-w-xs mx-auto">
-                    Your electronic signature has been recorded. A confirmation with your certificate hash has been sent to your email.
-                  </p>
-                </div>
-              </div>
-
-              {/* Signature record */}
-              {pkg.clientSignature?.signedAt && (
-                <div className="rounded-xl border border-emerald-400/20 bg-emerald-400/[0.04] p-4 space-y-2">
-                  <p className="text-[9px] font-bold uppercase tracking-[0.22em] text-emerald-400/80 mb-3">Signature Record</p>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <span className="text-[#4A4A4A]">Signed by</span>
-                    <span className="text-[#A0A0A0] text-right font-medium">{pkg.clientSignature.typedName}</span>
-                    <span className="text-[#4A4A4A]">Email</span>
-                    <span className="text-[#A0A0A0] text-right">{pkg.clientSignature.signedByEmail}</span>
-                    <span className="text-[#4A4A4A]">Date</span>
-                    <span className="text-[#A0A0A0] text-right">
-                      {new Date(pkg.clientSignature.signedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {invoiceUrls.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-[9px] font-bold uppercase tracking-[0.22em] text-[#4A4A4A]">Your Invoices</p>
-                  {invoiceUrls.map((url, i) => (
-                    <a key={i} href={url} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-[rgba(139,156,182,0.15)] bg-[rgba(139,156,182,0.06)] text-sm hover:bg-[rgba(139,156,182,0.10)] transition-all"
-                      style={{ color: 'var(--space-accent)' }}>
-                      <ExternalLink className="size-3.5 shrink-0" />
-                      View Invoice {invoiceUrls.length > 1 ? `#${i + 1}` : ''}
-                    </a>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── SIGN STEP ── */}
-          {step === 'sign' && (
-            <div className="space-y-5">
-              {/* Header */}
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-[9px] font-bold tracking-[0.32em] uppercase mb-2" style={{ color: 'var(--space-accent)' }}>Sign Agreement</p>
-                  <h2 className="text-lg font-bold text-[#F0F0F0] leading-tight">{pkg.name}</h2>
-                </div>
-                <button onClick={onClose} className="size-8 rounded-lg border border-[#404040] flex items-center justify-center text-[#4A4A4A] hover:text-[#F0F0F0] hover:border-[#404040] transition-all shrink-0">
-                  <X className="size-3.5" />
-                </button>
-              </div>
-
-              {/* Amount to authorize */}
-              {pendingTotal > 0 && (
-                <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-[#404040] bg-[#252525]">
-                  <div className="flex-1">
-                    <p className="text-[9px] text-[#4A4A4A] uppercase tracking-widest font-semibold mb-0.5">Total authorized</p>
-                    <p className="text-lg font-bold text-[#F0F0F0] tabular-nums font-mono">{fmt(pendingTotal)}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[9px] text-[#4A4A4A] uppercase tracking-widest font-semibold mb-0.5">Proposal</p>
-                    <p className="text-xs text-[#6B6B6B]">{pkg.name}</p>
-                  </div>
-                </div>
-              )}
-
-              {/* ESIGN Disclosure */}
-              <div className="rounded-xl border border-amber-400/20 bg-amber-400/[0.04] p-4">
-                <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-amber-400/80 mb-2">Electronic Signature Disclosure</p>
-                <p className="text-xs text-[#6B6B6B] leading-relaxed whitespace-pre-line">{CONSENT_DISCLOSURE}</p>
-              </div>
-
-              {/* Canvas signature pad */}
-              <SignaturePad onSign={() => {}} />
-
-              {/* Typed name */}
-              <div className="space-y-1.5">
-                <label className="text-[9px] font-bold tracking-[0.22em] uppercase text-[#4A4A4A]">
-                  Type Your Full Legal Name <span style={{ color: 'var(--space-accent)', opacity: 0.8 }}>*</span>
-                </label>
-                <input
-                  type="text"
-                  value={typedName}
-                  onChange={e => setTypedName(e.target.value)}
-                  placeholder="e.g. Jane Smith"
-                  autoComplete="name"
-                  className="w-full px-4 py-3 text-sm bg-[#252525] border border-[#404040] rounded-xl text-[#F0F0F0] placeholder-[#555555] focus:outline-none focus:border-[rgba(139,156,182,0.20)] focus:bg-[#1C1C1C] transition-all"
-                  style={{ fontFamily: 'Georgia, serif', fontSize: 15 }}
-                />
-                <p className="text-[10px] text-[#4A4A4A]">This constitutes your legal electronic signature</p>
-              </div>
-
-              {/* Consent checkbox */}
-              <label className="flex items-start gap-3 cursor-pointer group">
-                <div
-                  className={cn(
-                    'mt-0.5 size-4 rounded border-2 flex items-center justify-center shrink-0 transition-all',
-                    consentChecked
-                      ? 'bg-[rgba(139,156,182,0.10)] border-[rgba(139,156,182,0.30)]'
-                      : 'border-[#404040] group-hover:border-[#404040]',
-                  )}
-                  onClick={() => setConsentChecked(v => !v)}
-                >
-                  {consentChecked && <Check className="size-2.5" style={{ color: 'var(--space-accent)' }} />}
-                </div>
-                <span className="text-xs text-[#6B6B6B] leading-relaxed" onClick={() => setConsentChecked(v => !v)}>
-                  I agree to sign this agreement electronically, have read the{' '}
-                  <Link href={`/u/${username}/packages/${pkg.id}/print`} target="_blank" className="hover:underline" style={{ color: 'var(--space-accent)' }}>
-                    full proposal and service terms
-                  </Link>
-                  , and consent to receive records electronically.
-                </span>
-              </label>
-
-              {signError && (
-                <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl border border-red-400/25 bg-red-400/[0.06]">
-                  <AlertCircle className="size-3.5 text-red-400 shrink-0 mt-0.5" />
-                  <p className="text-xs text-red-400">{signError}</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── DETAILS STEP ── */}
-          {step === 'details' && (
-            <>
-              {/* Header */}
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <p className="text-[9px] font-bold tracking-[0.32em] uppercase mb-2" style={{ color: 'var(--space-accent)' }}>
-                    Service Package
-                  </p>
-                  <h2 className="text-xl font-bold text-[#F0F0F0] leading-tight">{pkg.name}</h2>
-                  {pkg.description && (
-                    <p className="text-sm text-[#6B6B6B] mt-2 leading-relaxed">{pkg.description}</p>
-                  )}
-                </div>
-                <div className="flex flex-col items-end gap-2 shrink-0">
-                  {pkg.status === 'accepted' && (
-                    <span className="text-[9px] font-bold uppercase tracking-[0.18em] px-2.5 py-1 rounded-full border text-emerald-400 border-emerald-400/25 bg-emerald-400/10">
-                      Signed
-                    </span>
-                  )}
-                  <button
-                    onClick={onClose}
-                    className="size-8 rounded-lg border border-[#404040] flex items-center justify-center text-[#4A4A4A] hover:text-[#F0F0F0] hover:border-[#404040] transition-all"
-                  >
-                    <X className="size-3.5" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Pricing summary */}
-              {(oneTime > 0 || monthly > 0 || annual > 0) && (
-                <div className="flex items-end gap-6 flex-wrap p-4 rounded-xl bg-[#252525] border border-[#404040]">
-                  {oneTime > 0 && (
-                    <div>
-                      <p className="text-2xl font-bold text-[#F0F0F0] tabular-nums">{fmt(oneTime)}</p>
-                      <p className="text-[9px] text-[#A0A0A0] mt-1 uppercase tracking-[0.18em]">one-time</p>
-                    </div>
-                  )}
-                  {monthly > 0 && (
-                    <div>
-                      <div className="flex items-baseline gap-0.5">
-                        <p className="text-2xl font-bold text-[#F0F0F0] tabular-nums">{fmt(monthly)}</p>
-                        <p className="text-sm text-[#4A4A4A]">/mo</p>
-                      </div>
-                      <p className="text-[9px] text-[#A0A0A0] mt-1 uppercase tracking-[0.18em]">monthly</p>
-                    </div>
-                  )}
-                  {annual > 0 && (
-                    <div>
-                      <div className="flex items-baseline gap-0.5">
-                        <p className="text-2xl font-bold text-[#F0F0F0] tabular-nums">{fmt(annual)}</p>
-                        <p className="text-sm text-[#4A4A4A]">/yr</p>
-                      </div>
-                      <p className="text-[9px] text-[#A0A0A0] mt-1 uppercase tracking-[0.18em]">annually</p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Cover message */}
-              {pkg.coverMessage && (
-                <div className="px-4 py-3.5 rounded-xl border-l-2 border-[rgba(139,156,182,0.20)] bg-[rgba(255,255,255,0.03)]">
-                  <p className="text-sm text-[#6B6B6B] leading-relaxed whitespace-pre-wrap">{pkg.coverMessage}</p>
-                </div>
-              )}
-
-              {/* Included services */}
-              {lineItems.length > 0 && (
-                <div>
-                  <p className="text-[9px] font-bold tracking-[0.25em] uppercase text-[#1E3A6E] mb-2.5">
-                    What&apos;s Included &middot; {lineItems.length}
-                  </p>
-                  <div className="space-y-1.5">
-                    {lineItems.map((item, i) => {
-                      const qty = item.quantity ?? 1
-                      const basePrice = item.price ?? 0
-                      const adjustedTotal = (item.adjustedPrice ?? basePrice) * qty
-                      const baseTotal = basePrice * qty
-                      const hasDiscount = item.adjustedPrice != null && item.adjustedPrice !== basePrice
-                      return (
-                        <div
-                          key={i}
-                          className="flex items-start gap-3 px-3.5 py-3 rounded-xl bg-[#2D2D2D] border border-[#404040]"
-                        >
-                          <div className="mt-0.5 size-4 rounded-full bg-[rgba(139,156,182,0.06)] border border-[rgba(139,156,182,0.15)] flex items-center justify-center shrink-0">
-                            <Check className="size-2.5" style={{ color: 'var(--space-accent)' }} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-baseline justify-between gap-2">
-                              <p className="text-sm font-semibold text-[#F0F0F0] leading-snug">{item.name}</p>
-                              <div className="flex flex-col items-end gap-0.5 shrink-0">
-                                {hasDiscount && (
-                                  <span className="text-xs text-[#A0A0A0] line-through tabular-nums font-mono">
-                                    {fmt(baseTotal)}
-                                  </span>
-                                )}
-                                <span className={cn('text-sm font-bold tabular-nums font-mono', hasDiscount ? '' : 'text-[#F0F0F0]')} style={hasDiscount ? { color: 'var(--space-accent)' } : {}}>
-                                  {fmt(adjustedTotal)}
-                                  {item.isRecurring && (
-                                    <span className="text-xs font-normal text-[#4A4A4A]">/{item.recurringInterval === 'year' ? 'yr' : 'mo'}</span>
-                                  )}
-                                </span>
-                              </div>
-                            </div>
-                            {item.description && (
-                              <p className="text-xs text-[#A0A0A0] mt-1 leading-relaxed">{item.description}</p>
-                            )}
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Payment schedule */}
-              {schedule.length > 0 && (
-                <div>
-                  <div className="flex items-center gap-2 mb-2.5">
-                    <CalendarDays className="size-3.5 text-[#4A4A4A]" />
-                    <p className="text-[9px] font-bold tracking-[0.25em] uppercase text-[#4A4A4A]">
-                      Payment Schedule
+          {/* ── LEFT COLUMN — identity + pricing (sticky on desktop) ── */}
+          <div
+            className={cn(
+              'shrink-0 flex flex-col gap-4 px-5 py-5',
+              'border-b sm:border-b-0 sm:border-r border-white/[0.06]',
+              // mobile: compact horizontal strip; desktop: fixed-width sidebar
+              'sm:w-[240px] sm:overflow-y-auto',
+            )}
+            style={{ background: 'rgba(103,232,249,0.015)' }}
+          >
+            {/* Pricing hero */}
+            {hasPricing && (
+              <div>
+                {oneTime > 0 && (
+                  <div className="mb-3">
+                    <p
+                      className="font-bold leading-none tabular-nums"
+                      style={{ fontSize: 'clamp(28px, 5vw, 36px)', color: '#F5F5F5', letterSpacing: '-0.02em' }}
+                    >
+                      {fmt(oneTime)}
                     </p>
+                    <p className="text-[10px] uppercase tracking-[0.22em] text-white/30 mt-1.5">one-time</p>
                   </div>
-                  <div className="space-y-1.5">
-                    {schedule.map((entry, i) => {
-                      const isInvoiced = !!entry.orderId
-                      return (
-                        <div
-                          key={entry.id ?? i}
-                          className={cn(
-                            'flex items-center gap-3 px-3.5 py-2.5 rounded-xl border',
-                            isInvoiced
-                              ? 'bg-[rgba(255,255,255,0.02)] border-[#404040]'
-                              : 'bg-[#2D2D2D] border-[#404040]',
-                          )}
-                        >
-                          <div className={`size-1.5 rounded-full shrink-0 ${isInvoiced ? 'bg-emerald-400' : ''}`} style={!isInvoiced ? { background: 'var(--space-accent)', opacity: 0.5 } : {}} />
-                          <div className="flex-1 min-w-0">
-                            <p className={cn('text-sm font-medium', isInvoiced ? 'text-[#4A4A4A]' : 'text-[#A0A0A0]')}>
-                              {entry.label}
-                            </p>
-                            {entry.dueDate && (
-                              <p className={cn('text-[10px] mt-0.5', isInvoiced ? 'text-[#4A4A4A]' : 'text-[#4A4A4A]')}>
-                                Due {formatDisplayDate(entry.dueDate)}
-                              </p>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            {isInvoiced && (
-                              <span className="text-[9px] font-bold text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 rounded px-1.5 py-0.5">
-                                Invoiced
-                              </span>
-                            )}
-                            <span className={cn('text-sm font-bold tabular-nums font-mono', isInvoiced ? 'text-[#4A4A4A]' : 'text-[#F0F0F0]')}>
-                              {fmt(entry.amount)}
-                            </span>
-                          </div>
-                        </div>
-                      )
-                    })}
-                    {/* Schedule total */}
-                    <div className="flex items-center justify-between px-3.5 py-2 rounded-lg bg-[#252525]">
-                      <span className="text-[10px] text-[#4A4A4A] font-semibold uppercase tracking-widest">Total</span>
-                      <span className="text-sm font-bold text-[#F0F0F0] tabular-nums font-mono">
-                        {fmt(schedule.reduce((s, e) => s + e.amount, 0))}
-                      </span>
+                )}
+                {monthly > 0 && (
+                  <div className="mb-3">
+                    <div className="flex items-baseline gap-1">
+                      <p className="text-3xl font-bold tabular-nums leading-none" style={{ color: '#F5F5F5', letterSpacing: '-0.02em' }}>{fmt(monthly)}</p>
+                      <span className="text-sm text-white/25">/mo</span>
                     </div>
+                    <p className="text-[10px] uppercase tracking-[0.22em] text-white/30 mt-1.5">monthly</p>
                   </div>
+                )}
+                {annual > 0 && (
+                  <div>
+                    <div className="flex items-baseline gap-1">
+                      <p className="text-3xl font-bold tabular-nums leading-none" style={{ color: '#F5F5F5', letterSpacing: '-0.02em' }}>{fmt(annual)}</p>
+                      <span className="text-sm text-white/25">/yr</span>
+                    </div>
+                    <p className="text-[10px] uppercase tracking-[0.22em] text-white/30 mt-1.5">annually</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Description */}
+            {pkg.description && (
+              <p className="text-[12px] text-white/35 leading-relaxed">{pkg.description}</p>
+            )}
+
+            {/* Cover message */}
+            {pkg.coverMessage && (
+              <div className="rounded-xl px-3.5 py-3" style={{ background: 'rgba(255,255,255,0.03)', borderLeft: '2px solid rgba(103,232,249,0.2)' }}>
+                <p className="text-[12px] text-white/40 leading-relaxed whitespace-pre-wrap">{pkg.coverMessage}</p>
+              </div>
+            )}
+
+          </div>
+
+          {/* ── RIGHT COLUMN — scrollable details ── */}
+          <div className="flex-1 overflow-y-auto overscroll-contain min-w-0">
+
+            {/* What's Included */}
+            {lineItems.length > 0 && (
+              <div className="px-5 py-5 border-b border-white/[0.05]">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[9px] font-bold tracking-[0.25em] uppercase text-white/25">Included</span>
+                  <span className="text-[9px] font-semibold tabular-nums" style={{ color: 'rgba(103,232,249,0.6)' }}>
+                    {lineItems.length} {lineItems.length === 1 ? 'item' : 'items'}
+                  </span>
                 </div>
-              )}
+                <div>
+                  {lineItems.map((item, i) => {
+                    const qty = item.quantity ?? 1
+                    const basePrice = item.price ?? 0
+                    const adjustedTotal = (item.adjustedPrice ?? basePrice) * qty
+                    const baseTotal = basePrice * qty
+                    const hasDiscount = item.adjustedPrice != null && item.adjustedPrice !== basePrice
+                    const isLast = i === lineItems.length - 1
+                    return (
+                      <div
+                        key={i}
+                        className={cn('flex items-start gap-3 py-3', !isLast && 'border-b border-white/[0.04]')}
+                      >
+                        <div
+                          className="mt-0.5 size-5 rounded-full flex items-center justify-center shrink-0"
+                          style={{ background: 'rgba(103,232,249,0.07)', border: '1px solid rgba(103,232,249,0.15)' }}
+                        >
+                          <Check className="size-3" style={{ color: '#67e8f9' }} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[13px] font-medium text-white/80 leading-snug">{item.name}</p>
+                          {item.description && (
+                            <p className="text-[11px] text-white/30 mt-0.5 leading-relaxed">{item.description}</p>
+                          )}
+                        </div>
+                        <div className="flex flex-col items-end shrink-0 gap-0.5 pl-2">
+                          {hasDiscount && (
+                            <span className="text-[11px] text-white/20 line-through tabular-nums">{fmt(baseTotal)}</span>
+                          )}
+                          <span
+                            className="text-[13px] font-semibold tabular-nums"
+                            style={{ color: hasDiscount ? '#67e8f9' : 'rgba(255,255,255,0.7)' }}
+                          >
+                            {fmt(adjustedTotal)}
+                            {item.isRecurring && (
+                              <span className="text-[11px] font-normal text-white/25">/{item.recurringInterval === 'year' ? 'yr' : 'mo'}</span>
+                            )}
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
 
-              {/* Empty state */}
-              {lineItems.length === 0 && schedule.length === 0 && (
-                <p className="text-xs text-[#A0A0A0] italic py-1">
-                  Your team is still configuring this package. Check back soon.
-                </p>
-              )}
+            {/* Payment Schedule */}
+            {schedule.length > 0 && (
+              <div className="px-5 py-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <CalendarDays className="size-3 text-white/20" />
+                  <span className="text-[9px] font-bold tracking-[0.25em] uppercase text-white/25">Payment Schedule</span>
+                </div>
+                <div className="space-y-1.5">
+                  {schedule.map((entry, i) => {
+                    const isInvoiced = !!entry.orderId
+                    return (
+                      <div
+                        key={entry.id ?? i}
+                        className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl"
+                        style={{
+                          background: isInvoiced ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.04)',
+                          border: `1px solid ${isInvoiced ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.07)'}`,
+                        }}
+                      >
+                        <div className="size-1.5 rounded-full shrink-0"
+                          style={{ background: isInvoiced ? '#4ade80' : 'rgba(103,232,249,0.55)' }}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className={cn('text-[13px] font-medium leading-snug', isInvoiced ? 'text-white/25' : 'text-white/60')}>
+                            {entry.label}
+                          </p>
+                          {entry.dueDate && (
+                            <p className="text-[10px] text-white/20 mt-0.5">Due {formatDisplayDate(entry.dueDate)}</p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {isInvoiced && (
+                            <span className="text-[9px] font-bold uppercase tracking-[0.1em] px-1.5 py-0.5 rounded"
+                              style={{ color: '#4ade80', background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.15)' }}
+                            >Invoiced</span>
+                          )}
+                          <span className="text-[13px] font-semibold tabular-nums"
+                            style={{ color: isInvoiced ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.75)' }}
+                          >{fmt(entry.amount)}</span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
 
-              {/* Full Package link — visible in body on mobile, hidden on sm+ (shown in footer instead) */}
-              <Link
-                href={`/u/${username}/packages/${pkg.id}/print`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="sm:hidden flex items-center gap-1.5 text-sm text-[#4A4A4A] hover:text-[#6B6B6B] transition-colors"
-              >
-                <FileText className="size-3.5" />
-                Full Package
-                <ExternalLink className="size-3" />
-              </Link>
-            </>
-          )}
+                {/* Total */}
+                {scheduleTotal > 0 && (
+                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/[0.06]">
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/20">Total</span>
+                    <span className="text-[15px] font-bold tabular-nums" style={{ color: 'rgba(255,255,255,0.8)' }}>{fmt(scheduleTotal)}</span>
+                  </div>
+                )}
+              </div>
+            )}
 
+            {/* Empty state */}
+            {lineItems.length === 0 && schedule.length === 0 && (
+              <div className="flex items-center justify-center px-6 py-12">
+                <p className="text-[13px] text-white/25 text-center">Your team is still configuring this package.</p>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Footer */}
-        <div className="shrink-0 border-t border-[#404040] bg-[#252525]">
-          {step === 'signed' ? (
-            <div className="flex items-center gap-3 px-6 py-4">
-              <Link
-                href={`/u/${username}/packages/${pkg.id}/print`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 px-4 py-2 text-sm rounded-xl border border-[#404040] text-[#6B6B6B] hover:text-[#F0F0F0] hover:border-[#404040] transition-all"
-              >
-                <FileText className="size-3.5" />
-                View Signed Contract
-              </Link>
-              <div className="flex-1" />
-              <button
-                onClick={onClose}
-                className="px-5 py-2 text-sm font-semibold text-[#F0F0F0] bg-[#2D2D2D] border border-[#404040] rounded-xl hover:bg-[#E5E1D9] transition-all"
-              >
-                Done
-              </button>
-            </div>
-          ) : step === 'sign' ? (
-            <div className="flex items-center gap-3 px-6 py-4">
-              <button
-                onClick={() => { setStep('details'); setSignError(null) }}
-                className="px-4 py-2 text-sm text-[#4A4A4A] hover:text-[#F0F0F0] transition-colors rounded-lg hover:bg-[#2D2D2D]"
-              >
-                Back
-              </button>
-              <div className="flex-1" />
-              <button
-                onClick={handleSign}
-                disabled={signing || !isSignValid}
-                className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-xl bg-[rgba(139,156,182,0.10)] border border-[rgba(139,156,182,0.18)] hover:bg-[rgba(139,156,182,0.12)] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-                style={{ color: 'var(--space-accent)' }}
-              >
-                {signing
-                  ? <><Loader2 className="size-3.5 animate-spin" /> Signing…</>
-                  : <><PenLine className="size-3.5" /> Sign Agreement</>
-                }
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-3 px-6 py-4">
-              <button
-                onClick={onClose}
-                className="px-4 py-2 text-sm text-[#4A4A4A] hover:text-[#F0F0F0] transition-colors rounded-lg hover:bg-[#2D2D2D]"
-              >
-                Close
-              </button>
-              <div className="flex-1" />
-              <Link
-                href={`/u/${username}/packages/${pkg.id}/print`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hidden sm:flex items-center gap-2 px-4 py-2 text-sm rounded-xl border border-[#404040] text-[#6B6B6B] hover:text-[#F0F0F0] hover:border-[#404040] transition-all"
-              >
-                <FileText className="size-3.5" />
-                Full Package
-                <ExternalLink className="size-3" />
-              </Link>
-              {canSign && (
-                <button
-                  onClick={() => setStep('sign')}
-                  className="flex items-center gap-2 px-5 py-2 text-sm font-semibold rounded-xl bg-[rgba(139,156,182,0.10)] border border-[rgba(139,156,182,0.18)] hover:bg-[rgba(139,156,182,0.12)] hover:border-[rgba(139,156,182,0.22)] transition-all duration-200"
-                  style={{ color: 'var(--space-accent)' }}
-                >
-                  <PenLine className="size-3.5" />
-                  Review & Sign
-                </button>
-              )}
-            </div>
-          )}
+        {/* ── FOOTER ── */}
+        <div
+          className="shrink-0 flex items-center gap-2.5 px-4 border-t border-white/[0.06]"
+          style={{
+            background: 'rgba(17,17,17,0.98)',
+            paddingTop: '0.75rem',
+            paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))',
+          }}
+        >
+          <button
+            onClick={onClose}
+            className="px-4 py-2.5 rounded-xl text-[13px] font-medium transition-all active:scale-95"
+            style={{ color: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)' }}
+          >
+            Close
+          </button>
         </div>
       </div>
     </div>
@@ -719,32 +380,7 @@ function PackageModal({
 export function PackagesClientView({ clientPackages, username }: PackagesClientViewProps) {
   const [activeIdx, setActiveIdx] = useState(0)
   const [modalPkg, setModalPkg] = useState<PackageDoc | null>(null)
-  const [emailingId, setEmailingId] = useState<string | null>(null)
-  const [emailSentIds, setEmailSentIds] = useState<Set<string>>(new Set())
-  const [emailPopupId, setEmailPopupId] = useState<string | null>(null)
-  const [emailOptPkg, setEmailOptPkg] = useState(true)
-  const [emailOptContract, setEmailOptContract] = useState(false)
   const total = clientPackages.length
-
-  const openEmailPopup = (pkg: PackageDoc) => {
-    const bothSigned = !!pkg.clientSignature?.signedAt && !!pkg.orcaclubSignature?.authorizedAt
-    setEmailOptPkg(!bothSigned)
-    setEmailOptContract(bothSigned)
-    setEmailPopupId(pkg.id)
-  }
-
-  const handleEmailSend = async (pkg: PackageDoc) => {
-    setEmailPopupId(null)
-    setEmailingId(pkg.id)
-    const result = emailOptContract
-      ? await emailContractToSelf(pkg.id)
-      : await emailPackageToSelf(pkg.id)
-    setEmailingId(null)
-    if (result.success) {
-      setEmailSentIds(prev => new Set(prev).add(pkg.id))
-      setTimeout(() => setEmailSentIds(prev => { const n = new Set(prev); n.delete(pkg.id); return n }), 4000)
-    }
-  }
   const containerRef = useRef<HTMLDivElement>(null)
 
   // Touch swipe on carousel
@@ -822,11 +458,6 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
 
   return (
     <>
-      {/* Backdrop to close email popup */}
-      {emailPopupId && (
-        <div className="fixed inset-0 z-40" onClick={() => setEmailPopupId(null)} />
-      )}
-
       <div className="flex flex-col">
 
         {/* Header */}
@@ -856,13 +487,7 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
             {clientPackages.map((pkg, i) => {
               const { oneTime, monthly, annual } = computeTotals(pkg.lineItems ?? [])
               const lineItems = pkg.lineItems ?? []
-              const schedule = pkg.paymentSchedule ?? []
               const isActive = i === activeIdx
-              const canSign =
-                pkg.status !== 'accepted' &&
-                !pkg.clientSignature?.signedAt &&
-                (schedule.some(e => !e.orderId) || (schedule.length === 0 && lineItems.length > 0))
-              const bothSigned = !!pkg.clientSignature?.signedAt && !!pkg.orcaclubSignature?.authorizedAt
 
               return (
                 <div key={pkg.id} className="min-w-full">
@@ -975,112 +600,6 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                         >
                           View Details
                         </button>
-
-                        {/* Sign state */}
-                        {canSign ? (
-                          <button
-                            onClick={() => setModalPkg(pkg)}
-                            className="flex items-center justify-center gap-2 w-full sm:w-auto px-5 py-2.5 rounded-xl text-sm font-semibold bg-[rgba(139,156,182,0.10)] border border-[rgba(139,156,182,0.18)] hover:bg-[rgba(139,156,182,0.12)] hover:border-[rgba(139,156,182,0.22)] transition-all duration-200"
-                            style={{ color: 'var(--space-accent)' }}
-                          >
-                            <PenLine className="size-3.5" />
-                            Review & Sign
-                          </button>
-                        ) : pkg.clientSignature?.signedAt ? (
-                          <span className="flex items-center gap-1.5 text-sm text-emerald-400 font-medium">
-                            <ShieldCheck className="size-3.5" />
-                            Signed
-                          </span>
-                        ) : null}
-
-                        {/* Secondary actions row */}
-                        <div className="flex items-center gap-3 sm:contents">
-                          {/* Full Package link */}
-                          <Link
-                            href={`/u/${username}/packages/${pkg.id}/print`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1.5 text-sm text-[#4A4A4A] hover:text-[#6B6B6B] transition-colors"
-                          >
-                            <FileText className="size-3.5" />
-                            Full Package
-                            <ExternalLink className="size-3" />
-                          </Link>
-
-                          {/* View Contract — only when both parties have signed */}
-                          {bothSigned && (
-                            <Link
-                              href={`/u/${username}/packages/${pkg.id}/print`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-1.5 text-sm text-[#4A4A4A] hover:text-[#6B6B6B] transition-colors"
-                            >
-                              <ScrollText className="size-3.5" />
-                              View Contract
-                              <ExternalLink className="size-3" />
-                            </Link>
-                          )}
-
-                          {/* Email with popup — always last */}
-                          <div className="relative">
-                          <button
-                            onClick={() => emailPopupId === pkg.id ? setEmailPopupId(null) : openEmailPopup(pkg)}
-                            disabled={emailingId === pkg.id}
-                            className={cn(
-                              'flex items-center gap-1.5 text-sm transition-colors',
-                              emailSentIds.has(pkg.id)
-                                ? 'text-emerald-400'
-                                : 'text-[#4A4A4A] hover:text-[#6B6B6B]',
-                            )}
-                          >
-                            {emailingId === pkg.id
-                              ? <Loader2 className="size-3.5 animate-spin" />
-                              : emailSentIds.has(pkg.id)
-                              ? <CheckCircle2 className="size-3.5" />
-                              : <Mail className="size-3.5" />}
-                            {emailingId === pkg.id ? 'Sending…' : emailSentIds.has(pkg.id) ? 'Sent!' : 'Email'}
-                            {!emailSentIds.has(pkg.id) && emailingId !== pkg.id && (
-                              <ChevronDown className={cn('size-3 transition-transform duration-200', emailPopupId === pkg.id && 'rotate-180')} />
-                            )}
-                          </button>
-
-                          {/* Popup */}
-                          {emailPopupId === pkg.id && (
-                            <div className="absolute bottom-full right-0 mb-2 min-w-max max-w-[calc(100vw-3rem)] rounded-xl bg-[#1C1C1C] border border-[#404040] shadow-[0_4px_24px_rgba(255,255,255,0.06)] p-3 z-50">
-                              <p className="text-xs font-semibold text-[#6B6B6B] mb-2 uppercase tracking-wide">Email me</p>
-                              <label className="flex items-center gap-2 py-1 cursor-pointer select-none">
-                                <input
-                                  type="checkbox"
-                                  checked={emailOptPkg}
-                                  onChange={e => setEmailOptPkg(e.target.checked)}
-                                  className="size-3.5"
-                                  style={{ accentColor: 'var(--space-accent)' }}
-                                />
-                                <span className="text-sm text-[#A0A0A0]">Package proposal</span>
-                              </label>
-                              {bothSigned && (
-                                <label className="flex items-center gap-2 py-1 cursor-pointer select-none">
-                                  <input
-                                    type="checkbox"
-                                    checked={emailOptContract}
-                                    onChange={e => setEmailOptContract(e.target.checked)}
-                                    className="size-3.5"
-                                    style={{ accentColor: 'var(--space-accent)' }}
-                                  />
-                                  <span className="text-sm text-[#A0A0A0]">Signed contract</span>
-                                </label>
-                              )}
-                              <button
-                                onClick={() => handleEmailSend(pkg)}
-                                disabled={!emailOptPkg && !emailOptContract}
-                                className="mt-2 w-full px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#2D2D2D] border border-[#404040] text-[#F0F0F0] hover:bg-[#E5E1D9] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                              >
-                                Send
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                        </div>
                       </div>
                     </div>
                   </div>
