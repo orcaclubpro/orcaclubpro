@@ -1,6 +1,18 @@
 import { redirect } from 'next/navigation'
+import type { Metadata } from 'next'
 import { getCurrentUser } from '@/actions/auth'
 import { DashboardTaskManager } from '@/components/dashboard/DashboardTaskManager'
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ username: string }>
+}): Promise<Metadata> {
+  const { username } = await params
+  return {
+    title: `SPACES | ${username}'s Dashboard`,
+  }
+}
 
 export default async function DashboardLayout({
   children,
