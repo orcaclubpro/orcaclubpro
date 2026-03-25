@@ -603,6 +603,7 @@ const Users: CollectionConfig = {
   auth: {
     // Email verification disabled - we use custom 2FA for admin users, clients don't need verification
     // verify: false, (commented out - this is the default)
+    tokenExpiration: 60 * 60 * 24 * 30, // 30 days
     forgotPassword: {
       generateEmailSubject: () => 'Password Reset | ORCACLUB',
       generateEmailHTML: (args) => {
