@@ -790,7 +790,7 @@ export function ClientsView({
   return (
     <>
       {/* ── DESKTOP: split panel ──────────────────────────────────────────── */}
-      <div className="hidden lg:flex h-[calc(100vh-4rem)] overflow-hidden border-t border-[var(--space-border-hard)]">
+      <div className="hidden lg:flex h-[calc((100vh-64px)/1.3)] overflow-hidden border-t border-[var(--space-border-hard)]">
 
         {/* Left panel — navigator */}
         <div className="relative w-[272px] xl:w-[296px] bg-[var(--space-bg-card)] flex flex-col overflow-hidden border-r border-[var(--space-border-hard)] shrink-0">

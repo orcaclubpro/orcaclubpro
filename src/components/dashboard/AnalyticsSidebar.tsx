@@ -507,8 +507,8 @@ export function AnalyticsSidebar({
         aria-labelledby={titleId}
         aria-hidden={!open}
         className={[
-          'hidden md:flex fixed top-[65px] right-0 bottom-0 z-[70]',
-          'w-[340px] xl:w-[380px] flex-col',
+          'hidden md:flex fixed top-16 right-0 bottom-0 z-[70]',
+          'w-[320px] lg:w-[340px] xl:w-[380px] flex-col',
           'bg-[var(--space-bg-card)] border-l border-[var(--space-border-hard)]',
           'transition-transform duration-300 ease-[cubic-bezier(0.25,0,0.3,1)]',
           open ? 'translate-x-0' : 'translate-x-full',
@@ -549,7 +549,7 @@ export function AnalyticsSidebar({
 
         {/* Scrollable content */}
         <div
-          className="flex-1 overflow-y-auto px-6 pt-6"
+          className="flex-1 overflow-y-auto overflow-x-hidden px-6 pt-6"
           style={{ scrollbarWidth: 'none' }}
           tabIndex={-1}
         >
@@ -605,7 +605,7 @@ export function AnalyticsSidebar({
         </div>
 
         <div
-          className="overflow-y-auto px-6 pb-12 pt-5"
+          className="overflow-y-auto overflow-x-hidden px-6 pb-12 pt-5"
           style={{ overscrollBehavior: 'contain', scrollbarWidth: 'none' }}
         >
           <SidebarContent {...props} allOrders={allOrders} allPackages={allPackages} />

@@ -102,7 +102,7 @@ export function NewClientModal({ username }: { username: string }) {
     <>
       <Button
         onClick={() => setOpen(true)}
-        className="bg-[var(--space-accent)] hover:bg-[var(--space-accent)]/90 text-white font-semibold gap-2"
+        className="bg-[var(--space-accent)] hover:bg-[var(--space-accent)]/90 text-black font-semibold gap-2"
       >
         <Plus className="size-4" />
         New Client Account
@@ -140,7 +140,7 @@ export function NewClientModal({ username }: { username: string }) {
                   Close
                 </Button>
                 <Button
-                  className="bg-[var(--space-accent)] hover:bg-[var(--space-accent)]/90 text-white font-semibold"
+                  className="bg-[var(--space-accent)] hover:bg-[var(--space-accent)]/90 text-black font-semibold"
                   onClick={() => {
                     setOpen(false)
                     router.push(`/u/${username}/clients/${result.id}`)
@@ -247,7 +247,7 @@ export function NewClientModal({ username }: { username: string }) {
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="bg-[var(--space-accent)] hover:bg-[var(--space-accent)]/90 text-white font-semibold"
+                  className="bg-[var(--space-accent)] hover:bg-[var(--space-accent)]/90 text-black font-semibold"
                 >
                   {loading ? (
                     <>
