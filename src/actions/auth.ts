@@ -4,6 +4,10 @@ import { login, logout } from '@payloadcms/next/auth'
 import config from '@payload-config'
 import { redirect } from 'next/navigation'
 import { getPayload } from 'payload'
+import { cookies } from 'next/headers'
+
+const SESSION_COOKIE = 'orcaclub-session'
+const SESSION_MAX_AGE = 60 * 60 * 24 * 2 // 2 days
 
 /**
  * Login action - authenticates users and returns their role and username
@@ -63,6 +67,16 @@ export async function loginAction({
     }
 
     // Admin/User roles can login even without username (they use /admin or their username)
+    // Set a short-lived session cookie so the home page can smart-redirect returning visitors
+    const cookieStore = await cookies()
+    cookieStore.set(SESSION_COOKIE, JSON.stringify({ username, role }), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: SESSION_MAX_AGE,
+    })
+
     return {
       success: true,
       username,
@@ -87,6 +101,8 @@ export async function logoutAction() {
       `Logout failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
     )
   }
+  const cookieStore = await cookies()
+  cookieStore.delete(SESSION_COOKIE)
   redirect('/login')
 }
 

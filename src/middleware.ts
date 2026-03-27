@@ -126,6 +126,26 @@ export function middleware(request: NextRequest) {
     }
   }
 
+  // Smart redirect: returning visitors with an active session go straight to their dashboard
+  if (pathname === '/') {
+    const payloadToken = request.cookies.get('payload-token')?.value
+    const sessionCookie = request.cookies.get('orcaclub-session')?.value
+
+    if (payloadToken && sessionCookie) {
+      try {
+        const session = JSON.parse(sessionCookie) as { username?: string; role?: string }
+        if (session.role === 'client' && session.username) {
+          return NextResponse.redirect(new URL(`/u/${session.username}`, request.url))
+        }
+        if (session.role === 'admin' || session.role === 'user') {
+          return NextResponse.redirect(new URL('/admin', request.url))
+        }
+      } catch {
+        // Malformed cookie — show the home page normally
+      }
+    }
+  }
+
   // Check if accessing a protected dashboard route
   const isProtectedRoute = pathname.startsWith('/u/')
 
@@ -137,6 +157,20 @@ export function middleware(request: NextRequest) {
       const loginUrl = new URL('/login', request.url)
       loginUrl.searchParams.set('callbackUrl', pathname + request.nextUrl.search)
       return NextResponse.redirect(loginUrl)
+    }
+
+    // Refresh the 2-day session window on each dashboard visit
+    const sessionCookie = request.cookies.get('orcaclub-session')?.value
+    if (sessionCookie) {
+      const response = NextResponse.next()
+      response.cookies.set('orcaclub-session', sessionCookie, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 60 * 60 * 24 * 2, // reset 2-day window on activity
+      })
+      return response
     }
   }
 
