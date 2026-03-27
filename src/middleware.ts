@@ -134,11 +134,8 @@ export function middleware(request: NextRequest) {
     if (payloadToken && sessionCookie) {
       try {
         const session = JSON.parse(sessionCookie) as { username?: string; role?: string }
-        if (session.role === 'client' && session.username) {
+        if (session.username) {
           return NextResponse.redirect(new URL(`/u/${session.username}`, request.url))
-        }
-        if (session.role === 'admin' || session.role === 'user') {
-          return NextResponse.redirect(new URL('/admin', request.url))
         }
       } catch {
         // Malformed cookie — show the home page normally
