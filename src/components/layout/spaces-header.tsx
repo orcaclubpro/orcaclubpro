@@ -28,7 +28,7 @@ export function SpacesHeader({ user, showTips }: SpacesHeaderProps) {
 
   const isDeveloper = user?.role === 'admin' || user?.role === 'user'
   const isClient = user?.role === 'client'
-  const homeHref = user?.username ? `/u/${user.username}` : '/'
+  const homeHref = '/'
   const { title, subtitle } = useHeaderTitle()
 
   return (
