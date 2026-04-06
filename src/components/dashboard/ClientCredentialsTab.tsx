@@ -54,6 +54,16 @@ function serviceBadge(title: string) {
   return { ...color, initials }
 }
 
+function parseDomain(url: string | null | undefined): string | null {
+  if (!url) return null
+  try {
+    const normalized = url.startsWith('http') ? url : `https://${url}`
+    return new URL(normalized).hostname.replace(/^www\./, '')
+  } catch {
+    return url
+  }
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface CredentialWithProject {
@@ -305,135 +315,134 @@ function CredentialCard({
   const secrets = credential.secrets?.filter((s) => s.key && s.value) ?? []
   const badge = serviceBadge(credential.title)
   const hasCredentials = credential.username || credential.password || secrets.length > 0
+  const domain = parseDomain(credential.website)
+  const displayName = domain ?? credential.title
+  const showEyebrow = !!domain
   const projectName =
     typeof credential.project === 'object' && credential.project !== null
       ? (credential.project as { id: string; name: string }).name
       : ''
 
   return (
-    <div className="group relative rounded-lg border border-[var(--space-border-hard)] bg-[var(--space-bg-base)] hover:border-[var(--space-border-hard)] transition-all duration-150 overflow-hidden">
-      {/* Left accent bar */}
-      <div className="absolute left-0 inset-y-0 w-[2px] bg-gradient-to-b from-transparent via-[#1E3A6E]/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+    <div className="group relative rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-base)] transition-all duration-200 overflow-hidden hover:border-[rgba(103,232,249,0.15)] hover:shadow-[0_0_0_1px_rgba(103,232,249,0.06),0_4px_20px_rgba(0,0,0,0.4)]">
 
-      <div className="p-4">
-        {/* Top row: badge | title + link */}
-        <div className="flex items-start gap-2.5">
-          <div
-            className={cn(
-              'size-8 rounded-md flex items-center justify-center text-xs font-bold border shrink-0',
-              badge.bg,
-              badge.border,
-              badge.text,
-            )}
-          >
-            {badge.initials}
-          </div>
+      {/* Top header */}
+      <div className="px-4 pt-4 pb-3 flex items-start gap-3">
+        {/* Logo/initial mark */}
+        <div
+          className={cn(
+            'size-9 rounded-lg flex items-center justify-center text-[13px] font-bold border shrink-0 mt-0.5',
+            badge.bg,
+            badge.border,
+            badge.text,
+          )}
+        >
+          {badge.initials}
+        </div>
 
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-[var(--space-text-primary)] truncate leading-tight">
+        {/* Name block */}
+        <div className="flex-1 min-w-0">
+          {showEyebrow && (
+            <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[var(--space-text-muted)] leading-none mb-1.5 truncate">
               {credential.title}
             </p>
-            {credential.website ? (
-              <a
-                href={
-                  credential.website.startsWith('http')
-                    ? credential.website
-                    : `https://${credential.website}`
-                }
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 text-[11px] text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] transition-colors mt-0.5"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <Globe className="size-2.5 shrink-0" />
-                <span className="truncate">{credential.website}</span>
-              </a>
-            ) : projectName ? (
-              <span className="inline-flex items-center gap-1 text-[11px] text-[var(--space-text-secondary)] font-medium mt-0.5">
-                <FolderKanban className="size-3" />
-                {projectName}
-              </span>
-            ) : null}
-          </div>
-
-          {onEdit && (
-            <button
-              onClick={onEdit}
-              className="size-6 flex items-center justify-center rounded text-[var(--space-text-muted)] hover:text-[var(--space-text-tertiary)] hover:bg-[var(--space-bg-card-hover)] transition-colors opacity-0 group-hover:opacity-100 shrink-0"
+          )}
+          {domain ? (
+            <a
+              href={credential.website!.startsWith('http') ? credential.website! : `https://${credential.website}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group/link flex items-baseline gap-1.5 min-w-0"
+              onClick={(e) => e.stopPropagation()}
             >
-              <Pencil className="size-3" />
-            </button>
+              <span className="text-[15px] font-semibold text-[var(--space-text-primary)] truncate leading-snug group-hover/link:text-[var(--space-accent)] transition-colors duration-150">
+                {displayName}
+              </span>
+              <Globe className="size-2.5 text-[var(--space-text-muted)] group-hover/link:text-[var(--space-accent)] transition-colors shrink-0 mb-px" />
+            </a>
+          ) : (
+            <p className="text-[15px] font-semibold text-[var(--space-text-primary)] truncate leading-snug">
+              {displayName}
+            </p>
+          )}
+          {projectName && (
+            <span className="inline-flex items-center gap-1 text-[10px] text-[var(--space-text-muted)] font-medium mt-1">
+              <FolderKanban className="size-2.5" />
+              {projectName}
+            </span>
           )}
         </div>
 
-        {/* Project badge (shown below website if website also present) */}
-        {credential.website && projectName && (
-          <div className="mt-1.5 ml-10">
-            <span className="inline-flex items-center gap-1 text-[11px] text-[var(--space-text-secondary)] font-medium">
-              <FolderKanban className="size-3" />
-              {projectName}
-            </span>
-          </div>
-        )}
-
-        {/* Divider */}
-        {hasCredentials && <div className="h-px bg-[var(--space-divider)] my-2.5" />}
-
-        {/* Username row */}
-        {credential.username && (
-          <div className="flex items-center gap-2 group/row py-1.5">
-            <User2 className="size-3.5 text-[var(--space-text-muted)] shrink-0" />
-            <span className="flex-1 font-mono text-[13px] text-[var(--space-text-tertiary)] min-w-0 truncate">
-              {credential.username}
-            </span>
-            <CopyButton value={credential.username} />
-          </div>
-        )}
-
-        {/* Password row */}
-        {credential.password && (
-          <div className="flex items-center gap-2 group/row py-1.5">
-            <Lock className="size-3.5 text-[var(--space-text-muted)] shrink-0" />
-            <span
-              className={cn(
-                'flex-1 font-mono text-[13px] min-w-0 truncate',
-                showPassword ? 'text-[var(--space-text-tertiary)]' : 'tracking-[0.2em] text-[var(--space-text-secondary)]',
-              )}
-            >
-              {showPassword ? credential.password : '••••••••'}
-            </span>
-            <button
-              onClick={() => setShowPassword((v) => !v)}
-              className="opacity-0 group-hover/row:opacity-100 transition-opacity size-5 flex items-center justify-center text-[var(--space-text-muted)] hover:text-[var(--space-text-tertiary)]"
-            >
-              {showPassword ? <EyeOff className="size-3" /> : <Eye className="size-3" />}
-            </button>
-            <CopyButton value={credential.password} />
-          </div>
-        )}
-
-        {/* Secrets collapsible */}
-        {secrets.length > 0 && (
-          <div>
-            <button
-              onClick={() => setShowSecrets((v) => !v)}
-              className="flex items-center gap-1.5 text-[11px] text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)] transition-colors mt-2.5"
-            >
-              {showSecrets ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
-              <span>
-                {secrets.length} secret{secrets.length !== 1 ? 's' : ''}
-              </span>
-            </button>
-            {showSecrets && (
-              <div className="rounded-md bg-[var(--space-bg-card)] border border-[var(--space-border-hard)] px-3 py-1.5 mt-1.5 space-y-1">
-                {secrets.map((secret, i) => (
-                  <SecretRow key={i} label={secret.key} value={secret.value} />
-                ))}
-              </div>
-            )}
-          </div>
+        {/* Edit button */}
+        {onEdit && (
+          <button
+            onClick={onEdit}
+            className="size-6 flex items-center justify-center rounded-md text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)] hover:bg-[var(--space-bg-card-hover)] transition-all opacity-0 group-hover:opacity-100 shrink-0"
+          >
+            <Pencil className="size-3" />
+          </button>
         )}
       </div>
+
+      {/* Credential fields */}
+      {hasCredentials && (
+        <div className="mx-4 mb-4 rounded-lg border border-[var(--space-border-hard)] bg-[rgba(0,0,0,0.2)] divide-y divide-[var(--space-divider)] overflow-hidden">
+          {credential.username && (
+            <div className="flex items-center gap-2 px-3 py-2 group/row">
+              <User2 className="size-3 text-[var(--space-text-muted)] shrink-0" />
+              <span className="flex-1 font-mono text-[12px] text-[var(--space-text-tertiary)] min-w-0 truncate">
+                {credential.username}
+              </span>
+              <CopyButton value={credential.username} />
+            </div>
+          )}
+
+          {credential.password && (
+            <div className="flex items-center gap-2 px-3 py-2 group/row">
+              <Lock className="size-3 text-[var(--space-text-muted)] shrink-0" />
+              <span
+                className={cn(
+                  'flex-1 font-mono text-[12px] min-w-0 truncate select-none',
+                  showPassword
+                    ? 'text-[var(--space-text-tertiary)]'
+                    : 'tracking-[0.18em] text-[var(--space-text-muted)]',
+                )}
+              >
+                {showPassword ? credential.password : '••••••••'}
+              </span>
+              <button
+                onClick={() => setShowPassword((v) => !v)}
+                className="opacity-0 group-hover/row:opacity-100 transition-opacity size-5 flex items-center justify-center text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)] shrink-0"
+              >
+                {showPassword ? <EyeOff className="size-3" /> : <Eye className="size-3" />}
+              </button>
+              <CopyButton value={credential.password} />
+            </div>
+          )}
+
+          {secrets.length > 0 && (
+            <div>
+              <button
+                onClick={() => setShowSecrets((v) => !v)}
+                className="w-full flex items-center gap-2 px-3 py-2 text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)] transition-colors"
+              >
+                <KeyRound className="size-3 shrink-0" />
+                <span className="flex-1 text-left text-[11px] font-medium">
+                  {secrets.length} secret{secrets.length !== 1 ? 's' : ''}
+                </span>
+                {showSecrets ? <ChevronUp className="size-3 shrink-0" /> : <ChevronDown className="size-3 shrink-0" />}
+              </button>
+              {showSecrets && (
+                <div className="border-t border-[var(--space-divider)] px-3 py-2 space-y-1.5">
+                  {secrets.map((secret, i) => (
+                    <SecretRow key={i} label={secret.key} value={secret.value} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
