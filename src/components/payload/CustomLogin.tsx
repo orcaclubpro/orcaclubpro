@@ -16,6 +16,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { startAuthentication } from '@simplewebauthn/browser'
 
 export default function CustomLogin() {
   const router = useRouter()
@@ -72,8 +73,7 @@ export default function CustomLogin() {
       const data = await response.json()
 
       if (data.success) {
-        // Redirect to admin dashboard
-        router.push('/admin')
+        router.push(`/u/${data.user.username}`)
         router.refresh()
       } else {
         setError(data.message || 'Invalid verification code')
@@ -103,6 +103,63 @@ export default function CustomLogin() {
         // Optionally show a success message
       } else {
         setError(data.message || 'Failed to resend code')
+      }
+    } catch (err) {
+      setError('An error occurred. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handlePasskeyLogin = async () => {
+    setError('')
+    setLoading(true)
+
+    try {
+      // Step 1: Get authentication options (discoverable credentials)
+      const optionsResponse = await fetch('/api/auth/passkey/authenticate-options', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      })
+
+      if (!optionsResponse.ok) {
+        const data = await optionsResponse.json()
+        setError(data.error || 'Failed to start passkey sign-in')
+        return
+      }
+
+      const { options } = await optionsResponse.json()
+
+      // Step 2: Prompt user to use their passkey
+      let credential
+      try {
+        credential = await startAuthentication({ optionsJSON: options })
+      } catch (err: unknown) {
+        const name = err instanceof Error ? err.name : ''
+        if (name === 'NotAllowedError' || name === 'AbortError') {
+          setError('Sign-in cancelled.')
+        } else {
+          setError('Passkey sign-in was cancelled.')
+        }
+        return
+      }
+
+      // Step 3: Verify with server (sets payload-token cookie)
+      const verifyResponse = await fetch('/api/auth/passkey/verify-authenticate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential }),
+      })
+
+      const data = await verifyResponse.json()
+
+      if (data.success) {
+        const { username } = data.user
+        router.push(`/u/${username}`)
+        router.refresh()
+      } else {
+        setError(data.error || 'Passkey sign-in failed. Please try again.')
       }
     } catch (err) {
       setError('An error occurred. Please try again.')
@@ -299,6 +356,57 @@ export default function CustomLogin() {
           margin-top: 0.5rem;
           text-align: center;
         }
+
+        .divider {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          margin: 1.5rem 0;
+        }
+
+        .divider-line {
+          flex: 1;
+          height: 1px;
+          background: #374151;
+        }
+
+        .divider-text {
+          color: #6b7280;
+          font-size: 13px;
+          white-space: nowrap;
+        }
+
+        .passkey-button {
+          width: 100%;
+          padding: 0.875rem;
+          background: transparent;
+          border: 1px solid #374151;
+          border-radius: 8px;
+          color: #9ca3af;
+          font-size: 14px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.5rem;
+        }
+
+        .passkey-button:hover {
+          border-color: #67e8f9;
+          color: #67e8f9;
+        }
+
+        .passkey-button:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .passkey-button:hover:disabled {
+          border-color: #374151;
+          color: #9ca3af;
+        }
       `}</style>
 
       <div className="login-card">
@@ -317,42 +425,80 @@ export default function CustomLogin() {
         {error && <div className="error">{error}</div>}
 
         {step === 'credentials' ? (
-          <form onSubmit={handleRequestCode}>
-            <div className="form-group">
-              <label htmlFor="email">Email</label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="your@email.com"
-                required
-                autoComplete="email"
-                autoFocus
-              />
+          <>
+            <form onSubmit={handleRequestCode}>
+              <div className="form-group">
+                <label htmlFor="email">Email</label>
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="your@email.com"
+                  required
+                  autoComplete="email"
+                  autoFocus
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="password">Password</label>
+                <input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  autoComplete="current-password"
+                />
+              </div>
+
+              <button type="submit" className="submit-button" disabled={loading}>
+                {loading ? 'Sending Code...' : 'Continue'}
+              </button>
+
+              <p className="help-text">
+                You'll receive a 6-digit verification code via email
+              </p>
+            </form>
+
+            <div className="divider">
+              <div className="divider-line" />
+              <span className="divider-text">or</span>
+              <div className="divider-line" />
             </div>
 
-            <div className="form-group">
-              <label htmlFor="password">Password</label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                autoComplete="current-password"
-              />
-            </div>
-
-            <button type="submit" className="submit-button" disabled={loading}>
-              {loading ? 'Sending Code...' : 'Continue'}
+            <button
+              type="button"
+              className="passkey-button"
+              onClick={handlePasskeyLogin}
+              disabled={loading}
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M12 2C8.5 2 5.5 4 4 7" />
+                <path d="M20 7c-1.5-3-4.5-5-8-5" />
+                <path d="M4 12c0-4.4 3.6-8 8-8" />
+                <path d="M20 12c0-1.7-.5-3.2-1.4-4.5" />
+                <path d="M12 8c2.2 0 4 1.8 4 4v1" />
+                <path d="M8 12c0-2.2 1.8-4 4-4" />
+                <path d="M8 15c0 .8.1 1.6.4 2.3" />
+                <path d="M16 13v3c0 1.7-.7 3.2-1.8 4.3" />
+                <path d="M12 12v4" />
+              </svg>
+              Sign in with a passkey
             </button>
-
-            <p className="help-text">
-              You'll receive a 6-digit verification code via email
-            </p>
-          </form>
+          </>
         ) : (
           <form onSubmit={handleVerifyCode}>
             <div className="form-group">

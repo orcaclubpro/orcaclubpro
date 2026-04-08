@@ -487,6 +487,30 @@ export interface User {
    * Dashboard color preset
    */
   dashboardTheme?: ('void' | 'arctic' | 'ember' | 'emerald' | 'dusk' | 'chrome' | 'light' | 'paper') | null;
+  /**
+   * Registered WebAuthn passkeys for this user
+   */
+  passkeyCredentials?:
+    | {
+        credentialID: string;
+        publicKey: string;
+        counter: number;
+        deviceName?: string | null;
+        transports?:
+          | {
+              [k: string]: unknown;
+            }
+          | unknown[]
+          | string
+          | number
+          | boolean
+          | null;
+        credentialDeviceType?: string | null;
+        credentialBackedUp?: boolean | null;
+        registeredAt?: string | null;
+        id?: string | null;
+      }[]
+    | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -2187,6 +2211,19 @@ export interface UsersSelect<T extends boolean = true> {
   loginTwoFactorExpiry?: T;
   showTips?: T;
   dashboardTheme?: T;
+  passkeyCredentials?:
+    | T
+    | {
+        credentialID?: T;
+        publicKey?: T;
+        counter?: T;
+        deviceName?: T;
+        transports?: T;
+        credentialDeviceType?: T;
+        credentialBackedUp?: T;
+        registeredAt?: T;
+        id?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
   email?: T;

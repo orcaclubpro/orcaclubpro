@@ -16,6 +16,7 @@ import React from 'react'
 import type { AdminViewProps } from 'payload'
 import { DefaultTemplate } from '@payloadcms/next/templates'
 import { Gutter } from '@payloadcms/ui'
+import PasskeyManager from './PasskeyManager'
 
 export default function CustomAccount({
   initPageResult,
@@ -202,6 +203,8 @@ export default function CustomAccount({
         <div className="account-card">
           {/* The actual account form content is handled by PayloadCMS */}
         </div>
+
+        <PasskeyManager />
       </Gutter>
     </DefaultTemplate>
   )

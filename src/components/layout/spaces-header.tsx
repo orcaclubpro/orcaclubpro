@@ -17,6 +17,7 @@ interface SpacesHeaderProps {
     name?: string | null
     email?: string | null
     title?: string | null
+    // lastName already present — no change needed
   } | null
   showTips?: boolean
 }
@@ -92,6 +93,15 @@ export function SpacesHeader({ user, showTips }: SpacesHeaderProps) {
                 name={user.name}
                 email={user.email}
                 title={user.title}
+                role={user.role}
+              />
+            )}
+
+            {isClient && user.email != null && (
+              <UserSettingsModal
+                name={`${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() || user.email}
+                email={user.email}
+                role="client"
               />
             )}
           </div>

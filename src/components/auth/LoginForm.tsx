@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { loginAction } from '@/actions/auth'
-import { Eye, EyeOff, Mail, Lock, Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
+import { Eye, EyeOff, Mail, Lock, Loader2, CheckCircle2, AlertCircle, Fingerprint } from 'lucide-react'
+import { startAuthentication } from '@simplewebauthn/browser'
 
 export function LoginForm({ callbackUrl }: { callbackUrl?: string }) {
   const router = useRouter()
@@ -72,15 +73,6 @@ export function LoginForm({ callbackUrl }: { callbackUrl?: string }) {
         }
 
         if (!result.username) {
-          if (result.role === 'admin' || result.role === 'user') {
-            setSuccess(true)
-            setTimeout(() => {
-              router.push('/admin')
-              router.refresh()
-            }, 500)
-            return
-          }
-
           setError('Your account does not have a username set. Please contact support.')
           setLoading(false)
           return
@@ -106,6 +98,41 @@ export function LoginForm({ callbackUrl }: { callbackUrl?: string }) {
       if (!success) {
         setLoading(false)
       }
+    }
+  }
+
+  const handlePasskeyLogin = async () => {
+    setError(null)
+    setLoading(true)
+    try {
+      const optRes = await fetch('/api/auth/passkey/authenticate-options', { method: 'POST', body: '{}', headers: { 'Content-Type': 'application/json' } })
+      if (!optRes.ok) throw new Error('Failed to get passkey options')
+      const { options } = await optRes.json()
+
+      const credential = await startAuthentication({ optionsJSON: options })
+
+      const verifyRes = await fetch('/api/auth/passkey/verify-authenticate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential }),
+      })
+      const data = await verifyRes.json()
+
+      if (data.success) {
+        setSuccess(true)
+        const dest = callbackUrl && callbackUrl.startsWith('/') ? callbackUrl : `/u/${data.user.username}`
+        setTimeout(() => { router.push(dest); router.refresh() }, 500)
+      } else {
+        setError(data.error || 'Passkey sign-in failed.')
+      }
+    } catch (err: any) {
+      if (err?.name === 'NotAllowedError' || err?.name === 'AbortError') {
+        setError(null)
+      } else {
+        setError('Passkey sign-in failed. Please try your password instead.')
+      }
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -278,6 +305,24 @@ export function LoginForm({ callbackUrl }: { callbackUrl?: string }) {
         </kbd>{' '}
         to sign in
       </p>
+
+      {/* Passkey divider */}
+      <div className="flex items-center gap-3">
+        <div className="flex-1 h-px bg-white/[0.07]" />
+        <span className="text-[11px] text-white/20 font-light tracking-wide">or</span>
+        <div className="flex-1 h-px bg-white/[0.07]" />
+      </div>
+
+      {/* Passkey button */}
+      <button
+        type="button"
+        onClick={handlePasskeyLogin}
+        disabled={loading || success}
+        className="w-full py-3 rounded-xl text-sm font-medium border border-white/[0.10] hover:border-[#67e8f9]/40 text-white/40 hover:text-[#67e8f9]/80 bg-transparent transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed"
+      >
+        <Fingerprint className="w-4 h-4" />
+        Sign in with a passkey
+      </button>
     </form>
   )
 }

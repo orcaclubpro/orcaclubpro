@@ -97,6 +97,7 @@ export async function POST(request: Request) {
             email: loginResult.user.email,
             name: loginResult.user.name,
             role: loginResult.user.role,
+            username: loginResult.user.username,
           },
           token: loginResult.token,
           exp: loginResult.exp,

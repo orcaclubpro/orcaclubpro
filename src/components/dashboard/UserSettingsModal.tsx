@@ -3,24 +3,36 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
-import { Loader2, Check, X, KeyRound, ChevronDown } from 'lucide-react'
+import { Loader2, Check, X, KeyRound, ChevronDown, Fingerprint, ShieldCheck, Trash2 } from 'lucide-react'
 import Image from 'next/image'
+import { startRegistration } from '@simplewebauthn/browser'
 import { updateUserProfile, changeUserPassword } from '@/actions/profile'
+
+interface PasskeyCredential {
+  id: string
+  credentialID: string
+  deviceName: string
+  registeredAt?: string
+  credentialDeviceType?: string
+  credentialBackedUp?: boolean
+}
 
 interface UserSettingsModalProps {
   name: string
   email: string
   title?: string | null
+  role?: string | null
 }
 
 const PANEL_BG = '#1C1C1C'
 const fieldClass =
   'w-full h-9 rounded-lg px-3 text-sm text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)] outline-none transition-colors duration-150 border border-[var(--space-border-hard)] focus:border-[rgba(139,156,182,0.15)] bg-[var(--space-bg-card)] focus:bg-[var(--space-bg-card-hover)]'
 
-export function UserSettingsModal({ name, email, title }: UserSettingsModalProps) {
+export function UserSettingsModal({ name, email, title, role }: UserSettingsModalProps) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [visible, setVisible] = useState(false)
+  const isClient = role === 'client'
 
   // Profile form
   const [form, setForm] = useState({ name, email, title: title ?? '' })
@@ -35,6 +47,13 @@ export function UserSettingsModal({ name, email, title }: UserSettingsModalProps
   const [pwError, setPwError] = useState<string | null>(null)
   const [pwSaved, setPwSaved] = useState(false)
 
+  // Passkey state
+  const [passkeys, setPasskeys] = useState<PasskeyCredential[] | null>(null)
+  const [passkeyLoading, setPasskeyLoading] = useState(false)
+  const [passkeyError, setPasskeyError] = useState<string | null>(null)
+  const [addingPasskey, setAddingPasskey] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
   useEffect(() => {
     if (open) requestAnimationFrame(() => setVisible(true))
     else setVisible(false)
@@ -47,13 +66,31 @@ export function UserSettingsModal({ name, email, title }: UserSettingsModalProps
     return () => document.removeEventListener('keydown', handler)
   }, [open, profileLoading, pwLoading])
 
+  async function fetchPasskeys() {
+    setPasskeyLoading(true)
+    setPasskeyError(null)
+    try {
+      const res = await fetch('/api/auth/passkey/credentials')
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to load passkeys')
+      setPasskeys(data.credentials)
+    } catch (err: any) {
+      setPasskeyError(err.message || 'Failed to load passkeys')
+      setPasskeys([])
+    } finally {
+      setPasskeyLoading(false)
+    }
+  }
+
   function handleOpen() {
     setForm({ name, email, title: title ?? '' })
     setProfileError(null); setProfileSaved(false)
     setPw({ current: '', next: '', confirm: '' })
     setPwError(null); setPwSaved(false)
     setShowPassword(false)
+    setPasskeyError(null)
     setOpen(true)
+    fetchPasskeys()
   }
 
   function handleClose() {
@@ -93,6 +130,56 @@ export function UserSettingsModal({ name, email, title }: UserSettingsModalProps
     } else {
       setPwError(result.error ?? 'Failed to change password')
     }
+  }
+
+  async function handleAddPasskey() {
+    setAddingPasskey(true)
+    setPasskeyError(null)
+    try {
+      const optRes = await fetch('/api/auth/passkey/register-options', { method: 'POST' })
+      if (!optRes.ok) throw new Error('Failed to get registration options')
+      const { options } = await optRes.json()
+      const credential = await startRegistration({ optionsJSON: options })
+      const deviceName = (typeof window !== 'undefined'
+        ? window.prompt('Name this passkey (e.g. "MacBook Touch ID"):', 'My Passkey')
+        : null) ?? 'My Passkey'
+      const verifyRes = await fetch('/api/auth/passkey/verify-register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential, deviceName }),
+      })
+      const verifyData = await verifyRes.json()
+      if (!verifyRes.ok || !verifyData.success) throw new Error(verifyData.error || 'Verification failed')
+      await fetchPasskeys()
+    } catch (err: any) {
+      if (err?.name !== 'NotAllowedError' && err?.name !== 'AbortError') {
+        setPasskeyError(err.message || 'Failed to add passkey')
+      }
+    } finally {
+      setAddingPasskey(false)
+    }
+  }
+
+  async function handleDeletePasskey(credentialID: string) {
+    if (!window.confirm('Remove this passkey? You can always add it again.')) return
+    setDeletingId(credentialID)
+    setPasskeyError(null)
+    try {
+      const res = await fetch(`/api/auth/passkey/credentials?credentialID=${encodeURIComponent(credentialID)}`, { method: 'DELETE' })
+      const data = await res.json()
+      if (!res.ok || !data.success) throw new Error(data.error || 'Failed to remove passkey')
+      setPasskeys(prev => prev?.filter(p => p.credentialID !== credentialID) ?? [])
+    } catch (err: any) {
+      setPasskeyError(err.message || 'Failed to remove passkey')
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  function fmtDate(dateStr?: string) {
+    if (!dateStr) return ''
+    try { return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }
+    catch { return '' }
   }
 
   const initial = (name || email || '?')[0].toUpperCase()
@@ -159,8 +246,8 @@ export function UserSettingsModal({ name, email, title }: UserSettingsModalProps
             {/* Form body */}
             <div>
 
-              {/* ── Profile section ── */}
-              <div className="px-6 py-6 space-y-4 border-b border-[var(--space-border-hard)]">
+              {/* ── Profile section — admin/staff only ── */}
+              {!isClient && <div className="px-6 py-6 space-y-4 border-b border-[var(--space-border-hard)]">
                 <p className="text-[10px] tracking-[0.15em] uppercase text-[var(--space-text-muted)] font-semibold">Profile</p>
 
                 <div className="space-y-1.5">
@@ -212,7 +299,7 @@ export function UserSettingsModal({ name, email, title }: UserSettingsModalProps
                     'Save Profile'
                   )}
                 </button>
-              </div>
+              </div>}
 
               {/* ── Password section ── */}
               <div className="px-6 py-5">
@@ -283,6 +370,87 @@ export function UserSettingsModal({ name, email, title }: UserSettingsModalProps
                   </div>
                 )}
               </div>
+
+              {/* ── Passkey section ── */}
+              <div className="px-6 py-5 border-t border-[var(--space-border-hard)]">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <Fingerprint className="size-3.5 text-[var(--space-text-muted)]" />
+                    <p className="text-[10px] tracking-[0.15em] uppercase text-[var(--space-text-muted)] font-semibold">Passkey</p>
+                  </div>
+                  {/* Status badge */}
+                  {passkeys !== null && !passkeyLoading && (
+                    passkeys.length > 0 ? (
+                      <div className="flex items-center gap-1.5">
+                        <ShieldCheck className="size-3.5" style={{ color: 'var(--space-accent)' }} />
+                        <span className="text-[11px] font-medium" style={{ color: 'var(--space-accent)' }}>
+                          {passkeys.length === 1 ? 'Passkey set' : `${passkeys.length} passkeys`}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-[11px] text-[var(--space-text-muted)]">Not set up</span>
+                    )
+                  )}
+                </div>
+
+                {passkeyLoading && (
+                  <div className="flex justify-center py-4">
+                    <Loader2 className="size-4 animate-spin text-[var(--space-text-muted)]" />
+                  </div>
+                )}
+
+                {passkeyError && (
+                  <div className="text-xs text-red-400 bg-red-400/[0.07] border border-red-400/20 rounded-lg px-3 py-2 mb-3">
+                    {passkeyError}
+                  </div>
+                )}
+
+                {/* Passkey list */}
+                {!passkeyLoading && passkeys !== null && passkeys.length > 0 && (
+                  <div className="space-y-2 mb-3">
+                    {passkeys.map((pk) => (
+                      <div
+                        key={pk.credentialID}
+                        className="flex items-center justify-between rounded-lg px-3 py-2.5 border border-[var(--space-border-hard)] bg-[var(--space-bg-card)]"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <Fingerprint className="size-3.5 shrink-0 text-[var(--space-text-muted)]" />
+                          <div className="min-w-0">
+                            <p className="text-xs font-medium text-[var(--space-text-primary)] truncate">{pk.deviceName}</p>
+                            {pk.registeredAt && (
+                              <p className="text-[10px] text-[var(--space-text-muted)]">Added {fmtDate(pk.registeredAt)}{pk.credentialBackedUp ? ' · Synced' : ''}</p>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleDeletePasskey(pk.credentialID)}
+                          disabled={deletingId === pk.credentialID}
+                          className="ml-2 shrink-0 p-1 rounded text-[var(--space-text-muted)] hover:text-red-400 transition-colors disabled:opacity-40"
+                          aria-label="Remove passkey"
+                        >
+                          {deletingId === pk.credentialID
+                            ? <Loader2 className="size-3.5 animate-spin" />
+                            : <Trash2 className="size-3.5" />}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Add passkey button */}
+                {!passkeyLoading && (
+                  <button
+                    onClick={handleAddPasskey}
+                    disabled={addingPasskey}
+                    className="w-full flex items-center justify-center gap-1.5 h-9 text-sm font-medium rounded-lg transition-all duration-200 disabled:opacity-60 border border-[var(--space-border-hard)] text-[var(--space-text-secondary)] hover:border-[var(--space-accent)]/40 hover:text-[var(--space-accent)] bg-transparent"
+                  >
+                    {addingPasskey
+                      ? <><Loader2 className="size-3.5 animate-spin" />Setting up…</>
+                      : <><Fingerprint className="size-3.5" />{passkeys?.length ? 'Add another passkey' : 'Set up passkey'}</>}
+                  </button>
+                )}
+              </div>
+
             </div>
           </div>
         </>,

@@ -946,6 +946,24 @@ const Users: CollectionConfig = {
         position: 'sidebar',
       },
     },
+    {
+      name: 'passkeyCredentials',
+      type: 'array',
+      admin: {
+        description: 'Registered WebAuthn passkeys for this user',
+        condition: () => false, // hidden from admin UI — managed via API
+      },
+      fields: [
+        { name: 'credentialID', type: 'text', required: true, index: true },
+        { name: 'publicKey', type: 'text', required: true }, // base64url encoded COSE key
+        { name: 'counter', type: 'number', required: true, defaultValue: 0 },
+        { name: 'deviceName', type: 'text' },
+        { name: 'transports', type: 'json' },
+        { name: 'credentialDeviceType', type: 'text' }, // 'singleDevice' | 'multiDevice'
+        { name: 'credentialBackedUp', type: 'checkbox', defaultValue: false },
+        { name: 'registeredAt', type: 'date' },
+      ],
+    },
   ],
 }
 

@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState, useLayoutEffect, useEffect } from 'react'
+import { PasskeySetupPrompt } from '@/components/dashboard/PasskeySetupPrompt'
 import { usePackageCount } from '@/app/(spaces)/PackageCountContext'
 import { AdminHomeView } from './_views/AdminHomeView'
 import { ClientHomeView } from './_views/ClientHomeView'
@@ -62,6 +63,7 @@ interface DashboardTabViewProps {
   username: string
   role: string
   timeframe?: '7d' | '30d' | '90d'
+  hasPasskey?: boolean
   adminData?: AdminDataBundle
   clientData?: ClientDataBundle
 }
@@ -79,6 +81,7 @@ export function DashboardTabView({
   username,
   role,
   timeframe = '7d',
+  hasPasskey = false,
   adminData,
   clientData,
 }: DashboardTabViewProps) {
@@ -437,6 +440,8 @@ export function DashboardTabView({
 
   return (
     <div style={{ position: 'relative', overflow: 'hidden' }}>
+
+      {!hasPasskey && <PasskeySetupPrompt />}
 
       {/* Entering / current view — slides in, then becomes the static view */}
       <div

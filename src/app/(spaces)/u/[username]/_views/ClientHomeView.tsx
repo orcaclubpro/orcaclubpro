@@ -111,7 +111,6 @@ export function ClientHomeView({
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12 pb-20 space-y-8 sm:space-y-10">
-
       {/* ── HERO: Greeting + (PaymentSchedule above balance on mobile, beside on desktop) ── */}
       <div className={`grid grid-cols-1 gap-6 lg:gap-8 ${hasSchedule ? 'lg:grid-cols-3' : 'lg:grid-cols-2'}`}>
 

@@ -204,6 +204,7 @@ export default async function DashboardPage({
         username={username}
         role={user.role}
         timeframe={timeframe}
+        hasPasskey={Boolean((user as any).passkeyCredentials?.length)}
         adminData={{
           firstName: user.firstName,
           clientAccounts,
@@ -347,6 +348,7 @@ export default async function DashboardPage({
     <DashboardTabView
       username={username}
       role={user.role}
+      hasPasskey={Boolean((user as any).passkeyCredentials?.length)}
       clientData={{
         firstName: user.firstName,
         showTips: (user as any).showTips !== false,
