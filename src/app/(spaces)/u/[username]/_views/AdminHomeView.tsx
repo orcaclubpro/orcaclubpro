@@ -14,6 +14,7 @@ import type { SerializedProject, SerializedSprint } from '@/components/dashboard
 import type { Range } from '@/components/dashboard/PortfolioTimeline'
 import { RANGE_CFG } from '@/components/dashboard/PortfolioTimeline'
 import { cn } from '@/lib/utils'
+import { tabVariants, stagger, fadeUp, fadeLeft } from '@/lib/animations'
 
 import dynamic from 'next/dynamic'
 const AnalyticsSidebar = dynamic(
@@ -64,28 +65,6 @@ const TABS: { id: HomeTab; label: string; icon: React.ElementType }[] = [
   { id: 'schedule',  label: 'Schedule',  icon: CalendarDays },
   { id: 'analytics', label: 'Analytics', icon: BarChart3 },
 ]
-
-// ─── Animation variants ───────────────────────────────────────────────────────
-
-const tabVariants = {
-  initial: { opacity: 0, y: 10, filter: 'blur(4px)' },
-  animate: { opacity: 1, y: 0,  filter: 'blur(0px)', transition: { duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] as const } },
-  exit:    { opacity: 0, y: -6, filter: 'blur(3px)', transition: { duration: 0.14, ease: [0.55, 0, 1, 0.45]    as const } },
-}
-
-const stagger = {
-  animate: { transition: { staggerChildren: 0.055, delayChildren: 0.04 } },
-}
-
-const fadeUp = {
-  initial: { opacity: 0, y: 8  },
-  animate: { opacity: 1, y: 0, transition: { duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] as const } },
-}
-
-const fadeLeft = {
-  initial: { opacity: 0, x: -10 },
-  animate: { opacity: 1, x: 0,  transition: { duration: 0.18, ease: 'easeOut' as const } },
-}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

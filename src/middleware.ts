@@ -138,8 +138,14 @@ export function middleware(request: NextRequest) {
           return NextResponse.redirect(new URL(`/u/${session.username}`, request.url))
         }
       } catch {
-        // Malformed cookie — show the home page normally
+        // Malformed cookie — fall through
       }
+    }
+
+    // Fallback: JWT is still valid but orcaclub-session expired (edge case after long inactivity).
+    // Redirect to /login — the login page calls getCurrentUser() and auto-redirects authenticated users.
+    if (payloadToken && !sessionCookie) {
+      return NextResponse.redirect(new URL('/login', request.url))
     }
   }
 
@@ -165,7 +171,7 @@ export function middleware(request: NextRequest) {
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
         path: '/',
-        maxAge: 60 * 60 * 24 * 2, // reset 2-day window on activity
+        maxAge: 60 * 60 * 24 * 30, // reset 30-day window on activity — matches JWT expiry
       })
       return response
     }

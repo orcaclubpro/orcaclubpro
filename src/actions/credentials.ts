@@ -4,6 +4,10 @@ import { getCurrentUser } from '@/actions/auth'
 import { getPayload } from 'payload'
 import config from '@payload-config'
 import { baseEmailTemplate } from '@/lib/email/templates/base'
+import { cookies } from 'next/headers'
+
+const VAULT_COOKIE = 'orcaclub-vault-session'
+const VAULT_MAX_AGE = 60 * 60 * 24 // 24 hours
 
 /** Verify the currently-authenticated user's account password.
  *  On success, fires a non-blocking security notification email to the account. */
@@ -100,6 +104,72 @@ export async function verifyCurrentPassword(password: string): Promise<{ success
   } catch {
     return { success: false, error: 'Incorrect password' }
   }
+}
+
+/**
+ * Verify password and persist a 24-hour vault session cookie.
+ * Returns `expiresAt` (ms timestamp) so the client can show a countdown.
+ */
+export async function unlockVault(
+  password: string,
+): Promise<{ success: boolean; error?: string; expiresAt?: number }> {
+  // Reuse existing verify logic (sends security email, validates via payload.login)
+  const result = await verifyCurrentPassword(password)
+  if (!result.success) return result
+
+  const user = await getCurrentUser()
+  if (!user?.id) return { success: false, error: 'Not authenticated' }
+
+  const unlockedAt = Date.now()
+  const expiresAt = unlockedAt + VAULT_MAX_AGE * 1000
+
+  const cookieStore = await cookies()
+  cookieStore.set(
+    VAULT_COOKIE,
+    JSON.stringify({ userId: String(user.id), unlockedAt: new Date(unlockedAt).toISOString() }),
+    {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: VAULT_MAX_AGE,
+    },
+  )
+
+  return { success: true, expiresAt }
+}
+
+/**
+ * Check whether the current user has an active vault session.
+ * Validates the cookie belongs to the authenticated user and hasn't expired.
+ */
+export async function checkVaultSession(): Promise<{ unlocked: boolean; expiresAt?: number }> {
+  try {
+    const user = await getCurrentUser()
+    if (!user?.id) return { unlocked: false }
+
+    const cookieStore = await cookies()
+    const raw = cookieStore.get(VAULT_COOKIE)?.value
+    if (!raw) return { unlocked: false }
+
+    const data = JSON.parse(raw) as { userId?: string; unlockedAt?: string }
+    // Ensure the cookie belongs to the currently authenticated user
+    if (data.userId !== String(user.id)) return { unlocked: false }
+
+    const unlockedAt = data.unlockedAt ? new Date(data.unlockedAt).getTime() : 0
+    const expiresAt = unlockedAt + VAULT_MAX_AGE * 1000
+    if (Date.now() > expiresAt) return { unlocked: false }
+
+    return { unlocked: true, expiresAt }
+  } catch {
+    return { unlocked: false }
+  }
+}
+
+/** Clear the vault session cookie (manual lock or logout). */
+export async function lockVault(): Promise<void> {
+  const cookieStore = await cookies()
+  cookieStore.delete(VAULT_COOKIE)
 }
 
 interface SecretInput {

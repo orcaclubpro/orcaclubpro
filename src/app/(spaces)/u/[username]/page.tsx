@@ -4,56 +4,15 @@ import { getPayload } from 'payload'
 import config from '@payload-config'
 import { Button } from '@/components/ui/button'
 import { HelpCircle, Mail } from 'lucide-react'
-import type { SerializedProject, SerializedSprint, SerializedTask } from '@/components/dashboard/ProjectsCarousel'
+import {
+  serializeProject,
+  serializeSprint,
+  groupSprintsByProject,
+  groupTasksByProject,
+  type SerializedProject,
+  type SerializedTask,
+} from '@/lib/serialization'
 import { DashboardTabView } from './DashboardTabView'
-
-// ── Serialization helpers ─────────────────────────────────────────────────────
-
-function serializeProject(p: any, sprints: SerializedSprint[] = [], tasks: SerializedTask[] = []): SerializedProject {
-  const clientRaw = p.client
-  const client =
-    clientRaw && typeof clientRaw === 'object'
-      ? { id: clientRaw.id ?? '', name: clientRaw.name ?? '' }
-      : null
-
-  return {
-    id: p.id,
-    name: p.name ?? '',
-    status: p.status ?? 'active',
-    description: p.description ?? null,
-    startDate: p.startDate ?? null,
-    endDate: p.projectedEndDate ?? null,
-    budget: p.budgetAmount ?? null,
-    currency: p.currency ?? 'USD',
-    updatedAt: p.updatedAt ?? new Date().toISOString(),
-    client,
-    milestones: (p.milestones ?? []).map((m: any) => ({
-      id: m.id ?? '',
-      title: m.title ?? '',
-      date: m.date ?? null,
-      description: m.description ?? null,
-      completed: m.completed ?? false,
-    })),
-    sprints,
-    tasks,
-  }
-}
-
-function serializeSprint(s: any): SerializedSprint {
-  const projectId = typeof s.project === 'string' ? s.project : s.project?.id ?? ''
-  return {
-    id: s.id,
-    name: s.name ?? '',
-    status: s.status ?? 'pending',
-    startDate: s.startDate ?? new Date().toISOString(),
-    endDate: s.endDate ?? new Date().toISOString(),
-    description: s.description ?? null,
-    goalDescription: s.goalDescription ?? null,
-    completedTasksCount: s.completedTasksCount ?? 0,
-    totalTasksCount: s.totalTasksCount ?? 0,
-    projectId,
-  }
-}
 
 // ── Metadata ──────────────────────────────────────────────────────────────────
 
@@ -170,27 +129,8 @@ export default async function DashboardPage({
       ])
 
     const allSprints = (sprintsResult as any).docs ?? []
-    const sprintsByProject: Record<string, SerializedSprint[]> = {}
-    for (const s of allSprints) {
-      const pid = typeof s.project === 'string' ? s.project : (s.project as any)?.id ?? ''
-      if (!sprintsByProject[pid]) sprintsByProject[pid] = []
-      sprintsByProject[pid].push(serializeSprint(s))
-    }
-
-    const tasksByProject: Record<string, SerializedTask[]> = {}
-    for (const t of allTasks) {
-      if (!t.dueDate) continue
-      const pid = typeof t.project === 'string' ? t.project : (t.project as any)?.id ?? ''
-      if (!pid) continue
-      if (!tasksByProject[pid]) tasksByProject[pid] = []
-      tasksByProject[pid].push({
-        id: t.id,
-        title: t.title ?? '',
-        status: (t.status ?? 'pending') as SerializedTask['status'],
-        priority: (t.priority ?? null) as SerializedTask['priority'],
-        dueDate: t.dueDate,
-      })
-    }
+    const sprintsByProject = groupSprintsByProject(allSprints)
+    const tasksByProject = groupTasksByProject(allTasks)
 
     const filteredOrders = clientAccountIds.length > 0
       ? allOrders.filter((o: any) => {
@@ -322,27 +262,10 @@ export default async function DashboardPage({
       }),
     ])
     clientSprints = sprints
-    for (const t of clientTasks) {
-      if (!t.dueDate) continue
-      const pid = typeof t.project === 'string' ? t.project : (t.project as any)?.id ?? ''
-      if (!pid) continue
-      if (!clientTasksByProject[pid]) clientTasksByProject[pid] = []
-      clientTasksByProject[pid].push({
-        id: t.id,
-        title: t.title ?? '',
-        status: (t.status ?? 'pending') as SerializedTask['status'],
-        priority: (t.priority ?? null) as SerializedTask['priority'],
-        dueDate: t.dueDate,
-      })
-    }
+    clientTasksByProject = groupTasksByProject(clientTasks)
   }
 
-  const clientSprintsByProject: Record<string, SerializedSprint[]> = {}
-  for (const s of clientSprints) {
-    const pid = typeof s.project === 'string' ? s.project : (s.project as any)?.id ?? ''
-    if (!clientSprintsByProject[pid]) clientSprintsByProject[pid] = []
-    clientSprintsByProject[pid].push(serializeSprint(s))
-  }
+  const clientSprintsByProject = groupSprintsByProject(clientSprints)
 
   return (
     <DashboardTabView

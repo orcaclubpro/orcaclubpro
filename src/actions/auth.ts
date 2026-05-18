@@ -5,9 +5,10 @@ import config from '@payload-config'
 import { redirect } from 'next/navigation'
 import { getPayload } from 'payload'
 import { cookies } from 'next/headers'
+import { getAuthenticatedUser } from '@/lib/payload/get-current-user'
 
 const SESSION_COOKIE = 'orcaclub-session'
-const SESSION_MAX_AGE = 60 * 60 * 24 * 2 // 2 days
+const SESSION_MAX_AGE = 60 * 60 * 24 * 30 // 30 days — matches payload-token JWT expiry
 
 /**
  * Login action - authenticates users and returns their role and username
@@ -103,21 +104,15 @@ export async function logoutAction() {
   }
   const cookieStore = await cookies()
   cookieStore.delete(SESSION_COOKIE)
+  cookieStore.delete('orcaclub-vault-session')
   redirect('/login')
 }
 
 /**
- * Get current authenticated user (server-side)
+ * Get current authenticated user (server-side).
+ * Delegates to a React-cached function so the DB is only hit once per render,
+ * even when called from SpacesLayout, DashboardLayout, and page.tsx in the same request.
  */
 export async function getCurrentUser() {
-  try {
-    const payload = await getPayload({ config })
-    const { user } = await payload.auth({
-      headers: await import('next/headers').then((mod) => mod.headers()),
-    })
-
-    return user
-  } catch (error) {
-    return null
-  }
+  return getAuthenticatedUser()
 }

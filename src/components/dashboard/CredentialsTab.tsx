@@ -29,7 +29,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { createCredential, updateCredential, deleteCredential, verifyCurrentPassword } from '@/actions/credentials'
+import { createCredential, updateCredential, deleteCredential, checkVaultSession, unlockVault, lockVault } from '@/actions/credentials'
 import { cn } from '@/lib/utils'
 
 // ─── Badge Colors ─────────────────────────────────────────────────────────────
@@ -61,6 +61,16 @@ function parseDomain(url: string | null | undefined): string | null {
   } catch {
     return url
   }
+}
+
+function formatTimeRemaining(expiresAt: number | null): string {
+  if (!expiresAt) return ''
+  const remaining = expiresAt - Date.now()
+  if (remaining <= 0) return 'expired'
+  const hours = Math.floor(remaining / (1000 * 60 * 60))
+  const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60))
+  if (hours > 0) return `${hours}h ${minutes}m`
+  return `${minutes}m`
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -613,7 +623,7 @@ function DeleteConfirmModal({
 
 // ─── Vault Lock Gate ──────────────────────────────────────────────────────────
 
-function VaultLockGate({ onUnlock }: { onUnlock: () => void }) {
+function VaultLockGate({ onUnlock }: { onUnlock: (expiresAt: number) => void }) {
   const [password, setPassword] = useState('')
   const [show, setShow] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -623,10 +633,10 @@ function VaultLockGate({ onUnlock }: { onUnlock: () => void }) {
     if (!password) return
     setLoading(true)
     setError(null)
-    const result = await verifyCurrentPassword(password)
+    const result = await unlockVault(password)
     setLoading(false)
-    if (result.success) {
-      onUnlock()
+    if (result.success && result.expiresAt) {
+      onUnlock(result.expiresAt)
     } else {
       setError(result.error ?? 'Incorrect password')
       setPassword('')
@@ -696,8 +706,28 @@ export function CredentialsTab({
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
-  // Vault lock — all users must confirm their password to access credential data
-  const [unlocked, setUnlocked] = useState(false)
+  // null = checking session on mount, false = locked, true = unlocked
+  const [unlocked, setUnlocked] = useState<boolean | null>(null)
+  const [vaultExpiresAt, setVaultExpiresAt] = useState<number | null>(null)
+
+  // Check for an existing valid vault session when the tab mounts
+  useEffect(() => {
+    checkVaultSession().then(({ unlocked: isUnlocked, expiresAt }) => {
+      setUnlocked(isUnlocked)
+      if (expiresAt) setVaultExpiresAt(expiresAt)
+    })
+  }, [])
+
+  const handleUnlock = (expiresAt: number) => {
+    setUnlocked(true)
+    setVaultExpiresAt(expiresAt)
+  }
+
+  const handleLock = async () => {
+    await lockVault()
+    setUnlocked(false)
+    setVaultExpiresAt(null)
+  }
 
   const [formOpen, setFormOpen] = useState(false)
   const [editingCredential, setEditingCredential] = useState<Credential | null>(null)
@@ -745,7 +775,21 @@ export function CredentialsTab({
         {unlocked && (
           <span className="flex items-center gap-1 text-[10px] text-emerald-500/70 font-medium ml-1">
             <ShieldCheck className="size-3" /> Unlocked
+            {vaultExpiresAt && (
+              <span className="text-[var(--space-text-muted)] font-normal">
+                · {formatTimeRemaining(vaultExpiresAt)}
+              </span>
+            )}
           </span>
+        )}
+        {unlocked && (
+          <button
+            onClick={handleLock}
+            className="flex items-center gap-1 text-[10px] text-[var(--space-text-muted)] hover:text-red-400 transition-colors font-medium"
+            title="Lock vault"
+          >
+            <Lock className="size-3" /> Lock
+          </button>
         )}
         {canCreate && unlocked && (
           <Button
@@ -758,8 +802,12 @@ export function CredentialsTab({
       </div>
 
       {/* Vault gate or content */}
-      {!unlocked ? (
-        <VaultLockGate onUnlock={() => setUnlocked(true)} />
+      {unlocked === null ? (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="size-5 animate-spin text-[var(--space-text-muted)]" />
+        </div>
+      ) : !unlocked ? (
+        <VaultLockGate onUnlock={handleUnlock} />
       ) : credentials.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <div className="size-10 rounded-xl bg-[var(--space-bg-card)] border border-[var(--space-border-hard)] flex items-center justify-center mb-3">

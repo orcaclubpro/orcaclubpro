@@ -21,44 +21,10 @@ import type { ClientOption } from './CreateProjectModal'
 import { ProjectCarouselEditModal } from './ProjectCarouselEditModal'
 import { ProfileTimeline } from './ProfileTimeline'
 
-// ─── Exported types ────────────────────────────────────────────────────────────
+// ─── Exported types (canonical source is src/lib/serialization.ts) ────────────
 
-export type SerializedSprint = {
-  id: string
-  name: string
-  status: 'pending' | 'in-progress' | 'delayed' | 'finished'
-  startDate: string
-  endDate: string
-  description: string | null
-  goalDescription: string | null
-  completedTasksCount: number
-  totalTasksCount: number
-  projectId: string
-}
-
-export type SerializedTask = {
-  id: string
-  title: string
-  status: 'pending' | 'in-progress' | 'completed' | 'cancelled'
-  priority: 'low' | 'medium' | 'high' | 'urgent' | null
-  dueDate: string | null
-}
-
-export type SerializedProject = {
-  id: string
-  name: string
-  status: string
-  description: string | null
-  startDate: string | null
-  endDate: string | null
-  budget: number | null
-  currency: string
-  updatedAt: string
-  client: { id: string; name: string } | null
-  milestones: Array<{ id: string; title: string; date: string | null; description: string | null; completed: boolean }>
-  sprints: SerializedSprint[]
-  tasks: SerializedTask[]
-}
+import type { SerializedSprint, SerializedTask, SerializedProject } from '@/lib/serialization'
+export type { SerializedSprint, SerializedTask, SerializedProject }
 
 // ─── Status config ─────────────────────────────────────────────────────────────
 

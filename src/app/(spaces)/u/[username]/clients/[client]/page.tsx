@@ -3,7 +3,13 @@ import { getCurrentUser } from '@/actions/auth'
 import { getPayload } from 'payload'
 import config from '@payload-config'
 import type { ClientAccount, Project, User as UserType } from '@/types/payload-types'
-import type { SerializedProject, SerializedSprint, SerializedTask } from '@/components/dashboard/ProjectsCarousel'
+import {
+  serializeSprint,
+  groupSprintsByProject,
+  type SerializedProject,
+  type SerializedSprint,
+  type SerializedTask,
+} from '@/lib/serialization'
 import { ClientDetailTabView } from './ClientDetailTabView'
 
 export async function generateMetadata({
@@ -129,26 +135,7 @@ export default async function ClientDetailPage({
         })
       : { docs: [] }
 
-  const sprintsByProject = new Map<string, SerializedSprint[]>()
-  for (const sprint of allSprints) {
-    const projectId =
-      typeof sprint.project === 'string' ? sprint.project : (sprint.project as any)?.id
-    if (!projectId) continue
-    const existing = sprintsByProject.get(projectId) ?? []
-    existing.push({
-      id: sprint.id,
-      name: sprint.name ?? '',
-      status: (sprint.status ?? 'pending') as SerializedSprint['status'],
-      startDate: sprint.startDate ?? new Date().toISOString(),
-      endDate: sprint.endDate ?? new Date().toISOString(),
-      description: sprint.description ?? null,
-      goalDescription: sprint.goalDescription ?? null,
-      completedTasksCount: sprint.completedTasksCount ?? 0,
-      totalTasksCount: sprint.totalTasksCount ?? 0,
-      projectId,
-    })
-    sprintsByProject.set(projectId, existing)
-  }
+  const sprintsByProject = groupSprintsByProject(allSprints)
 
   const serializedProjects: SerializedProject[] = projects.map((p) => ({
     id: p.id,
@@ -168,7 +155,7 @@ export default async function ClientDetailPage({
       description: m.description ?? null,
       completed: m.completed ?? false,
     })),
-    sprints: sprintsByProject.get(p.id) ?? [],
+    sprints: sprintsByProject[p.id] ?? [],
     tasks: [] as SerializedTask[],
   }))
 
