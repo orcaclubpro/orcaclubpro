@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SONAR — The Margin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,300;1,6..72,400&family=Jost:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --paper:#F1F0EA;
+    --panel:#FBFAF6;
+    --ink:#15191B;
+    --ink-soft:#565C5E;
+    --faint:#D3D2CA;
+    --hair:#E2E1DA;
+    --signal:#0E7C86;
+    --abyss:#10161A;
+    --serif:"Newsreader",Georgia,serif;
+    --sans:"Jost",system-ui,sans-serif;
+    --mono:"JetBrains Mono",monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--paper);color:var(--ink);
+    font-family:var(--serif);
+    -webkit-font-smoothing:antialiased;
+    line-height:1.6;
+  }
+  .label{
+    font-family:var(--sans);text-transform:uppercase;
+    letter-spacing:.22em;font-weight:400;font-size:11px;
+    color:var(--ink-soft);
+  }
+  .mono{font-family:var(--mono);font-size:11px;letter-spacing:.02em}
+
+  /* ---- reading-progress hairline (fixed, top of viewport) ---- */
+  .progress{
+    position:fixed;top:0;left:0;height:2px;width:42%;
+    background:var(--signal);z-index:200;
+    box-shadow:0 0 6px rgba(14,124,134,.4);
+  }
+  @media (prefers-reduced-motion:no-preference){
+    .progress{transition:width .12s linear}
+  }
+
+  /* ---- app shell — two zones now: spine + reading ---- */
+  .shell{display:grid;grid-template-columns:236px 1fr;min-height:100vh}
+
+  /* ---- spine (left) ---- */
+  .spine{
+    border-right:1px solid var(--hair);
+    padding:26px 22px;position:sticky;top:0;height:100vh;
+    display:flex;flex-direction:column;
+  }
+  /* real SONAR brand — background-keyed transparent assets (orca mark + wordmark) */
+  .brand{margin:0 auto 32px;display:flex;flex-direction:column;align-items:center;gap:12px;
+    text-decoration:none;cursor:pointer}
+  .brand .orca{width:50px;height:auto;display:block;transition:transform .3s ease}
+  .brand .word{width:128px;height:auto;display:block}
+  .brand:hover .orca,.brand:focus-visible .orca{transform:translateY(-2px)}
+  /* subline is a reward for hovering the mark — hidden until then */
+  .subline{text-align:center;opacity:0;transform:translateY(-3px);
+    transition:opacity .28s ease,transform .28s ease}
+  .brand:hover .subline,.brand:focus-visible .subline{opacity:1;transform:none}
+  @media (prefers-reduced-motion:reduce){.subline,.brand .orca{transition:opacity .28s ease}}
+  .subline .rule{display:inline-flex;align-items:center;gap:8px;color:var(--faint)}
+  .subline .rule::before,.subline .rule::after{content:"";width:14px;height:1px;background:var(--faint)}
+  .subline .by{font-family:var(--sans);font-size:9.5px;letter-spacing:.34em;color:var(--ink);
+    text-transform:uppercase}
+  .subline .tag{font-family:var(--sans);font-size:8px;letter-spacing:.26em;color:var(--ink-soft);
+    text-transform:uppercase;display:block;margin-top:8px}
+
+  .chapters{display:flex;flex-direction:column;gap:2px}
+  .chap{
+    display:flex;align-items:baseline;gap:12px;padding:10px 10px;
+    text-decoration:none;color:var(--ink-soft);border-radius:5px;
+    transition:background .15s,color .15s;
+  }
+  .chap:hover{background:#EAE9E1;color:var(--ink)}
+  .chap .tick{font-family:var(--mono);font-size:10px;color:var(--faint);width:26px;letter-spacing:0}
+  .chap .name{font-family:var(--sans);font-size:14px;letter-spacing:.04em}
+  .chap.active{color:var(--ink)}
+  .chap.active .name{font-weight:500}
+  .chap.active .tick{color:var(--signal)}
+  .chap.active{background:linear-gradient(90deg,rgba(14,110,110,.09),transparent)}
+  .chap.active::before{content:"";position:absolute;left:0;width:2px;height:20px;background:var(--signal);margin-top:1px}
+  .chap{position:relative}
+
+  .spine-foot{margin-top:auto;padding-top:22px;border-top:1px solid var(--hair);
+    display:flex;flex-direction:column;gap:16px}
+  /* quiet progress readout, mirrors the hairline */
+  .readout{display:flex;align-items:baseline;gap:8px;font-family:var(--mono);
+    font-size:11px;color:var(--ink-soft);letter-spacing:.02em}
+  .readout .pct{color:var(--signal);font-size:13px}
+  .readout .dot{color:var(--faint)}
+  .scan{
+    display:flex;align-items:center;gap:9px;width:100%;
+    background:var(--panel);border:1px solid var(--hair);border-radius:6px;
+    padding:9px 11px;color:var(--ink-soft);
+  }
+  .scan input{border:0;background:none;outline:none;font-family:var(--sans);font-size:13px;
+    letter-spacing:.03em;color:var(--ink);width:100%}
+  .scan input::placeholder{color:var(--faint)}
+  .scan .k{font-family:var(--mono);font-size:10px;border:1px solid var(--hair);border-radius:3px;
+    padding:1px 5px;color:var(--ink-soft)}
+
+  /* ---- reading zone (center) ---- */
+  .read{padding:78px 0 128px}
+  /* the article is a two-track grid: [ text ~62ch ] [ gap ] [ margin 232px ] */
+  .col{
+    display:grid;
+    grid-template-columns:minmax(0,62ch) 48px 232px;
+    justify-content:center;
+    align-items:start;
+    column-gap:0;
+    padding:0 44px;
+  }
+  /* every block lives in the text column unless told otherwise.
+     .body is display:contents, so its children are grid items too — cover both. */
+  .col > *,
+  .body > *{grid-column:1}
+
+  .eyebrow{display:flex;align-items:center;gap:10px;margin-bottom:26px}
+  .eyebrow .dot{width:5px;height:5px;border-radius:50%;background:var(--signal)}
+  .title{
+    font-family:var(--serif);font-weight:500;font-size:48px;line-height:1.07;
+    letter-spacing:-.015em;margin-bottom:18px;
+  }
+  .title em{font-style:italic;font-weight:400}
+  .standfirst{font-size:20px;line-height:1.5;color:var(--ink-soft);font-weight:300;margin-bottom:30px}
+  .byline{display:flex;gap:18px;align-items:center;padding:16px 0;
+    border-top:1px solid var(--hair);border-bottom:1px solid var(--hair);margin-bottom:46px}
+  .byline .who{font-family:var(--sans);font-size:13px;letter-spacing:.04em}
+  .byline .meta{color:var(--ink-soft)}
+
+  /* .body uses display:contents so its children join the .col grid directly,
+     letting each margin note sit on the same grid row as its paragraph. */
+  .body{display:contents}
+
+  .body p{font-size:18.5px;line-height:1.74;margin-bottom:28px}
+  .body p.lead::first-letter{
+    font-family:var(--serif);font-weight:500;float:left;font-size:78px;line-height:.72;
+    padding:8px 12px 0 0;color:var(--ink);
+  }
+  /* a term that carries a margin note gets a faint teal underline */
+  .ref{border-bottom:1px dotted var(--signal);cursor:help}
+  .sect{font-family:var(--sans);font-size:12px;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--ink-soft);margin:48px 0 22px;display:flex;align-items:center;gap:14px}
+  .sect::after{content:"";flex:1;height:1px;
+    background:repeating-linear-gradient(90deg,var(--faint) 0 3px,transparent 3px 7px)}
+  .pull{
+    font-family:var(--serif);font-style:italic;font-weight:300;font-size:28px;line-height:1.42;
+    margin:42px 0;padding-left:26px;border-left:2px solid var(--signal);color:var(--ink);
+  }
+  .fn{font-family:var(--mono);font-size:10px;vertical-align:super;color:var(--signal);text-decoration:none}
+
+  /* ---- Tufte-style margin notes (right column) ---- */
+  .note{
+    grid-column:3;
+    position:relative;
+    font-family:var(--serif);
+    color:var(--ink-soft);
+    margin-top:4px;margin-bottom:8px;
+    max-width:232px;
+  }
+  /* thin teal tick reaching back across the gutter toward the text */
+  .note::before{
+    content:"";position:absolute;left:-48px;top:11px;
+    width:40px;height:1px;background:var(--signal);opacity:.55;
+  }
+  .note .k{
+    display:block;font-family:var(--sans);text-transform:uppercase;
+    letter-spacing:.2em;font-size:9.5px;color:var(--signal);margin-bottom:7px;
+  }
+  .note .n{font-family:var(--mono);font-size:10px;color:var(--signal);margin-right:6px}
+  .note .b{font-size:14px;line-height:1.5;font-weight:300}
+  .note .b em{font-style:italic;color:var(--ink)}
+  .note .sig{display:block;margin-top:9px;font-family:var(--sans);font-size:10px;
+    letter-spacing:.14em;text-transform:uppercase;color:var(--ink)}
+  /* compact meta tag note */
+  .note.tag .b{display:inline-flex;align-items:center;gap:7px;
+    font-family:var(--mono);font-size:11px;color:var(--ink-soft);
+    border:1px solid var(--hair);border-radius:5px;padding:5px 9px;background:var(--panel)}
+  .note.tag .b b{color:var(--signal);font-weight:500}
+
+  /* funnel line back to ORCACLUB — spans the full reading width */
+  .funnel{grid-column:1 / -1;margin:70px 0 0;background:var(--abyss);border-radius:10px;
+    padding:38px 40px;color:#EDECE6;max-width:none}
+  .funnel .q{font-family:var(--serif);font-style:italic;font-weight:300;font-size:23px;line-height:1.4;color:#EDECE6;max-width:640px}
+  .funnel .cta{display:inline-flex;align-items:center;gap:9px;margin-top:20px;
+    font-family:var(--sans);font-size:13px;letter-spacing:.12em;text-transform:uppercase;
+    color:#7FE3E8;text-decoration:none}
+  .funnel .cta .ar{transition:transform .2s}
+  .funnel .cta:hover .ar{transform:translateX(4px)}
+  .funnel small{font-family:var(--sans);font-size:10px;letter-spacing:.22em;text-transform:uppercase;
+    color:#6A7378;display:block;margin-bottom:14px}
+
+  /* ---- responsive ---- */
+  /* sidenotes collapse inline under their paragraph (standard Tufte behavior) */
+  @media (max-width:1000px){
+    .col{grid-template-columns:minmax(0,64ch);justify-content:center}
+    .note{
+      grid-column:1;max-width:64ch;
+      margin:-14px 0 30px;padding-top:12px;
+      border-top:1px solid var(--hair);
+    }
+    .note::before{display:none}
+  }
+  @media (max-width:720px){
+    .shell{grid-template-columns:1fr}
+    .spine{position:static;height:auto;flex-direction:row;align-items:center;
+      border-right:0;border-bottom:1px solid var(--hair);padding:10px 20px}
+    .chapters,.subline,.spine-foot{display:none}
+    .brand{margin:0;flex-direction:row;gap:11px;align-items:center}
+    .brand .orca{width:30px}
+    .brand .word{width:92px}
+    .read{padding:44px 0 100px}
+    .col{padding:0 24px}
+    .title{font-size:34px}
+    .funnel{padding:28px 24px}
+  }
+</style>
+</head>
+<body>
+
+<!-- reading progress hairline -->
+<div class="progress" id="prog"></div>
+
+<div class="shell">
+
+  <!-- SPINE -->
+  <nav class="spine">
+    <a class="brand" href="#" aria-label="SONAR by ORCACLUB — home">
+      <img class="orca" src="./sonar-orca.png" alt="" />
+      <img class="word" src="./sonar-word.png" alt="SONAR" />
+      <div class="subline">
+        <span class="rule"><span class="by">by orcaclub</span></span>
+        <span class="tag">Signal from beneath the noise</span>
+      </div>
+    </a>
+
+    <div class="chapters">
+      <a class="chap" href="#"><span class="tick">∿</span><span class="name">AI</span></a>
+      <a class="chap" href="#"><span class="tick">∿</span><span class="name">Markets</span></a>
+      <a class="chap active" href="#"><span class="tick">∿</span><span class="name">Research</span></a>
+      <a class="chap" href="#"><span class="tick">★</span><span class="name">Field Notes</span></a>
+    </div>
+
+    <div class="spine-foot">
+      <div class="readout">
+        <span class="pct">42%</span>
+        <span class="dot">·</span>
+        <span>6m left</span>
+      </div>
+      <div class="scan">
+        <span class="mono">⌕</span>
+        <input placeholder="Scan the archive…" />
+        <span class="k">/</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- READING ZONE -->
+  <main class="read">
+    <article class="col">
+      <div class="eyebrow">
+        <span class="dot"></span>
+        <span class="label">Sonar / Research</span>
+        <span class="mono" style="color:var(--faint)">· decoded no. 038</span>
+      </div>
+
+      <h1 class="title">The Transformer, <em>Decoded</em></h1>
+      <p class="standfirst">Eight years of attention, read as one long sentence — what the paper actually said, and what everyone built on top of it since.</p>
+
+      <div class="byline">
+        <span class="who">The Sonar Desk</span>
+        <span class="mono meta">JUL 02 2026</span>
+        <span class="mono meta">11 MIN</span>
+        <span class="mono meta" style="color:var(--signal)">◆ HIGH SIGNAL</span>
+      </div>
+
+      <div class="body">
+        <p class="lead"><span class="ref">Attention</span> is not a metaphor here — it is the whole machine. Before the transformer, sequence models read left to right and forgot as they went. The premise underneath everything that followed was smaller and stranger than the hype: let every token look at every other token, all at once, and learn what to weight.</p>
+
+        <aside class="note">
+          <span class="k">Definition</span>
+          <p class="b"><em>Attention</em> — a learned, per-token weighting over all positions. Not focus in the human sense; a differentiable lookup that decides what to read.</p>
+        </aside>
+
+        <p>That single move — parallel, position-agnostic, differentiable — is why the architecture scaled where its predecessors stalled. The rest of this piece is bookkeeping on that idea<a class="fn" href="#note-1" id="ref-1">1</a>, but the idea itself fits in a breath.</p>
+
+        <aside class="note" id="note-1">
+          <span class="k"><span class="n">1</span>Footnote</span>
+          <p class="b">Bookkeeping, here, means engineering — the block stayed fixed; only the scale, the data, and the ambition kept moving.</p>
+        </aside>
+
+        <div class="sect">01 — The mechanism</div>
+        <p>Queries, keys, values. Three projections of the same input, multiplied so that similarity becomes routing. It reads like linear algebra because it is, but the consequence is behavioral: the model decides, per token, where to spend its attention budget.</p>
+
+        <aside class="note">
+          <span class="k">Editor's aside</span>
+          <p class="b">We keep the QKV framing because it survives contact with the code. Most explanations that drop it end up hand-waving at the exact place readers get stuck.</p>
+          <span class="sig">— the Desk</span>
+        </aside>
+
+        <p class="pull">Everything since — context windows, retrieval, agents — is a negotiation with the cost of looking everywhere at once.</p>
+
+        <div class="sect">02 — What scaled</div>
+        <p>The paper was a translation result. The lineage was a bet: that the same block, stacked and widened and fed the open internet, would keep paying off. It did, further than most of its authors will admit they expected.</p>
+
+        <aside class="note tag">
+          <p class="b"><b>SIGNAL</b> · high</p>
+        </aside>
+
+        <div class="funnel">
+          <small>we build what we write about</small>
+          <div class="q">“If the decode above is the capability, the redesign is the proof — identity, site, and system, rebuilt end-to-end.”</div>
+          <a class="cta" href="#">Work with ORCACLUB <span class="ar">→</span></a>
+        </div>
+      </div>
+    </article>
+  </main>
+
+</div>
+
+<script>
+  // live progress hairline + readout (falls back to the hardcoded 42%)
+  (function(){
+    var bar = document.getElementById('prog');
+    var pct = document.querySelector('.readout .pct');
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    function update(){
+      var el = document.documentElement;
+      var max = el.scrollHeight - el.clientHeight;
+      var p = max > 0 ? Math.min(100, Math.round(el.scrollTop / max * 100)) : 42;
+      bar.style.width = p + '%';
+      if (pct) pct.textContent = p + '%';
+    }
+    addEventListener('scroll', update, { passive:true });
+    addEventListener('resize', update, { passive:true });
+    if (!reduce) update();
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SONAR — The Deep</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,300;1,6..72,400&family=Jost:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --paper:#0E1417;
+    --panel:#141D21;
+    --ink:#E7EBE9;
+    --ink-body:#E4E8E6;
+    --ink-soft:#93A0A0;
+    --faint:#33403F;
+    --hair:#26302F;
+    --signal:#46D3DA;
+    --light-card:#F1F0EA;
+    --serif:"Newsreader",Georgia,serif;
+    --sans:"Jost",system-ui,sans-serif;
+    --mono:"JetBrains Mono",monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--paper);color:var(--ink);
+    font-family:var(--serif);
+    -webkit-font-smoothing:antialiased;
+    line-height:1.6;
+    /* very faint ambient depth — darker at the edges */
+    background-image:radial-gradient(120% 90% at 50% 0%,rgba(20,32,36,.55) 0%,transparent 55%),
+                     radial-gradient(140% 120% at 50% 120%,rgba(0,0,0,.45) 0%,transparent 60%);
+    background-attachment:fixed;
+  }
+  .label{
+    font-family:var(--sans);text-transform:uppercase;
+    letter-spacing:.22em;font-weight:400;font-size:11px;
+    color:var(--ink-soft);
+  }
+  .mono{font-family:var(--mono);font-size:11px;letter-spacing:.02em}
+
+  /* ---- app shell ---- */
+  .shell{display:grid;grid-template-columns:236px 1fr 220px;min-height:100vh}
+
+  /* ---- spine (left) ---- */
+  .spine{
+    border-right:1px solid var(--hair);
+    padding:26px 22px;position:sticky;top:0;height:100vh;
+    display:flex;flex-direction:column;
+  }
+  /* real SONAR brand — background-keyed transparent assets (orca mark + wordmark) */
+  .brand{margin:0 auto 32px;display:flex;flex-direction:column;align-items:center;gap:12px;
+    text-decoration:none;cursor:pointer}
+  /* assets are near-black transparent art — invert so the marks read as light on dark */
+  .brand .orca{width:50px;height:auto;display:block;transition:transform .3s ease;
+    filter:invert(1) brightness(1.08)}
+  .brand .word{width:128px;height:auto;display:block;
+    filter:invert(1) brightness(1.08)}
+  .brand:hover .orca,.brand:focus-visible .orca{transform:translateY(-2px)}
+  /* subline is a reward for hovering the mark — hidden until then */
+  .subline{text-align:center;opacity:0;transform:translateY(-3px);
+    transition:opacity .28s ease,transform .28s ease}
+  .brand:hover .subline,.brand:focus-visible .subline{opacity:1;transform:none}
+  @media (prefers-reduced-motion:reduce){.subline,.brand .orca{transition:opacity .28s ease}}
+  .subline .rule{display:inline-flex;align-items:center;gap:8px;color:var(--faint)}
+  .subline .rule::before,.subline .rule::after{content:"";width:14px;height:1px;background:var(--faint)}
+  .subline .by{font-family:var(--sans);font-size:9.5px;letter-spacing:.34em;color:var(--ink);
+    text-transform:uppercase}
+  .subline .tag{font-family:var(--sans);font-size:8px;letter-spacing:.26em;color:var(--ink-soft);
+    text-transform:uppercase;display:block;margin-top:8px}
+
+  .chapters{display:flex;flex-direction:column;gap:2px}
+  .chap{
+    display:flex;align-items:baseline;gap:12px;padding:10px 10px;
+    text-decoration:none;color:var(--ink-soft);border-radius:5px;
+    transition:background .15s,color .15s;
+  }
+  .chap:hover{background:#1B2529;color:var(--ink)}
+  .chap .tick{font-family:var(--mono);font-size:10px;color:var(--faint);width:26px;letter-spacing:0}
+  .chap .name{font-family:var(--sans);font-size:14px;letter-spacing:.04em}
+  .chap.active{color:var(--ink)}
+  .chap.active .name{font-weight:500}
+  .chap.active .tick{color:var(--signal)}
+  .chap.active{background:linear-gradient(90deg,rgba(70,211,218,.12),transparent)}
+  .chap.active::before{content:"";position:absolute;left:0;width:2px;height:20px;background:var(--signal);margin-top:1px;
+    box-shadow:0 0 10px rgba(70,211,218,.55)}
+  .chap{position:relative}
+
+  .spine-foot{margin-top:auto;padding-top:22px;border-top:1px solid var(--hair)}
+  .scan{
+    display:flex;align-items:center;gap:9px;width:100%;
+    background:var(--panel);border:1px solid var(--hair);border-radius:6px;
+    padding:9px 11px;color:var(--ink-soft);
+  }
+  .scan input{border:0;background:none;outline:none;font-family:var(--sans);font-size:13px;
+    letter-spacing:.03em;color:var(--ink);width:100%}
+  .scan input::placeholder{color:var(--ink-soft);opacity:.7}
+  .scan .k{font-family:var(--mono);font-size:10px;border:1px solid var(--hair);border-radius:3px;
+    padding:1px 5px;color:var(--ink-soft)}
+
+  /* ---- reading pane (center) ---- */
+  .read{padding:64px 0 120px}
+  .col{max-width:660px;margin:0 auto;padding:0 40px}
+  .eyebrow{display:flex;align-items:center;gap:10px;margin-bottom:26px}
+  .eyebrow .dot{width:5px;height:5px;border-radius:50%;background:var(--signal);
+    box-shadow:0 0 8px rgba(70,211,218,.6)}
+  .title{
+    font-family:var(--serif);font-weight:500;font-size:46px;line-height:1.08;
+    letter-spacing:-.015em;margin-bottom:18px;color:var(--ink);
+  }
+  .title em{font-style:italic;font-weight:400}
+  .standfirst{font-size:20px;line-height:1.5;color:var(--ink-soft);font-weight:300;margin-bottom:30px}
+  .byline{display:flex;gap:18px;align-items:center;padding:16px 0;
+    border-top:1px solid var(--hair);border-bottom:1px solid var(--hair);margin-bottom:40px}
+  .byline .who{font-family:var(--sans);font-size:13px;letter-spacing:.04em}
+  .byline .meta{color:var(--ink-soft)}
+
+  /* long-form on dark: lighter weight, slightly larger leading to stop the bloom */
+  .body p{font-size:18px;line-height:1.78;margin-bottom:24px;color:var(--ink-body);font-weight:300}
+  .body p.lead::first-letter{
+    font-family:var(--serif);font-weight:500;float:left;font-size:76px;line-height:.72;
+    padding:8px 12px 0 0;color:var(--signal);
+  }
+  .sect{font-family:var(--sans);font-size:12px;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--ink-soft);margin:44px 0 20px;display:flex;align-items:center;gap:14px}
+  .sect::after{content:"";flex:1;height:1px;
+    background:repeating-linear-gradient(90deg,var(--faint) 0 3px,transparent 3px 7px)}
+  .pull{
+    font-family:var(--serif);font-style:italic;font-weight:300;font-size:27px;line-height:1.42;
+    margin:38px 0;padding-left:26px;border-left:2px solid var(--signal);color:var(--ink);
+  }
+  .fn{font-family:var(--mono);font-size:10px;vertical-align:super;color:var(--signal);text-decoration:none}
+
+  /* funnel line back to ORCACLUB — the ONE light surface: surfacing from the deep */
+  .funnel{margin:64px 0 0;background:var(--light-card);border-radius:10px;padding:34px 36px;color:#15191B;
+    box-shadow:0 18px 50px -20px rgba(0,0,0,.7)}
+  .funnel .q{font-family:var(--serif);font-style:italic;font-weight:300;font-size:22px;line-height:1.4;color:#15191B}
+  .funnel .cta{display:inline-flex;align-items:center;gap:9px;margin-top:20px;
+    font-family:var(--sans);font-size:13px;letter-spacing:.12em;text-transform:uppercase;
+    color:#0E7C86;text-decoration:none}
+  .funnel .cta .ar{transition:transform .2s}
+  .funnel .cta:hover .ar{transform:translateX(4px)}
+  .funnel small{font-family:var(--sans);font-size:10px;letter-spacing:.22em;text-transform:uppercase;
+    color:#7B837F;display:block;margin-bottom:14px}
+
+  /* ---- sounding line (right) ---- */
+  .sound{
+    border-left:1px solid var(--hair);padding:64px 24px;position:sticky;top:0;height:100vh;
+    display:flex;flex-direction:column;
+  }
+  .sound .cap{margin-bottom:28px}
+  .gauge{position:relative;flex:1;margin-left:6px;padding-left:22px;
+    border-left:1px solid var(--faint)}
+  .gauge .fill{position:absolute;left:-1px;top:0;width:2px;height:42%;background:var(--signal);
+    box-shadow:0 0 10px rgba(70,211,218,.5)}
+  .gauge .fill::after{content:"";position:absolute;left:-3px;bottom:-1px;width:8px;height:8px;
+    border-radius:50%;background:var(--signal);box-shadow:0 0 0 4px rgba(70,211,218,.16),0 0 12px rgba(70,211,218,.6)}
+  .mark{position:absolute;left:22px;transform:translateY(-50%);display:flex;flex-direction:column;gap:2px}
+  .mark::before{content:"";position:absolute;left:-22px;top:50%;width:12px;height:1px;background:var(--faint)}
+  .mark .d{font-family:var(--mono);font-size:9px;color:var(--faint)}
+  .mark .t{font-family:var(--sans);font-size:11.5px;letter-spacing:.04em;color:var(--ink-soft)}
+  .mark.on .t{color:var(--ink)}
+  .mark.on::before{background:var(--signal);width:16px;left:-26px}
+  .sound-foot{margin-top:24px;display:flex;justify-content:space-between;align-items:baseline}
+  .sound-foot .big{font-family:var(--serif);font-size:22px;color:var(--ink)}
+
+  @media (max-width:1100px){
+    .shell{grid-template-columns:210px 1fr}
+    .sound{display:none}
+  }
+  @media (max-width:720px){
+    .shell{grid-template-columns:1fr}
+    .spine{position:static;height:auto;flex-direction:row;align-items:center;
+      border-right:0;border-bottom:1px solid var(--hair);padding:10px 20px}
+    .chapters,.subline,.spine-foot{display:none}
+    .brand{margin:0;flex-direction:row;gap:11px;align-items:center}
+    .brand .orca{width:30px}
+    .brand .word{width:92px}
+    .col{padding:0 24px}
+    .title{font-size:34px}
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- SPINE -->
+  <nav class="spine">
+    <a class="brand" href="#" aria-label="SONAR by ORCACLUB — home">
+      <img class="orca" src="./sonar-orca.png" alt="" />
+      <img class="word" src="./sonar-word.png" alt="SONAR" />
+      <div class="subline">
+        <span class="rule"><span class="by">by orcaclub</span></span>
+        <span class="tag">Signal from beneath the noise</span>
+      </div>
+    </a>
+
+    <div class="chapters">
+      <a class="chap" href="#"><span class="tick">∿</span><span class="name">AI</span></a>
+      <a class="chap" href="#"><span class="tick">∿</span><span class="name">Markets</span></a>
+      <a class="chap active" href="#"><span class="tick">∿</span><span class="name">Research</span></a>
+      <a class="chap" href="#"><span class="tick">★</span><span class="name">Field Notes</span></a>
+    </div>
+
+    <div class="spine-foot">
+      <div class="scan">
+        <span class="mono">⌕</span>
+        <input placeholder="Scan the archive…" />
+        <span class="k">/</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- READING PANE -->
+  <main class="read">
+    <article class="col">
+      <div class="eyebrow">
+        <span class="dot"></span>
+        <span class="label">Sonar / Research</span>
+        <span class="mono" style="color:var(--faint)">· decoded no. 038</span>
+      </div>
+
+      <h1 class="title">The Transformer, <em>Decoded</em></h1>
+      <p class="standfirst">Eight years of attention, read as one long sentence — what the paper actually said, and what everyone built on top of it since.</p>
+
+      <div class="byline">
+        <span class="who">The Sonar Desk</span>
+        <span class="mono meta">JUL 02 2026</span>
+        <span class="mono meta">11 MIN</span>
+        <span class="mono meta" style="color:var(--signal);text-shadow:0 0 10px rgba(70,211,218,.5)">◆ HIGH SIGNAL</span>
+      </div>
+
+      <div class="body">
+        <p class="lead">Attention is not a metaphor here — it is the whole machine. Before the transformer, sequence models read left to right and forgot as they went. The premise underneath everything that followed was smaller and stranger than the hype: let every token look at every other token, all at once, and learn what to weight.</p>
+
+        <p>That single move — parallel, position-agnostic, differentiable — is why the architecture scaled where its predecessors stalled. The rest of this piece is bookkeeping on that idea<a class="fn" href="#">1</a>, but the idea itself fits in a breath.</p>
+
+        <div class="sect">01 — The mechanism</div>
+        <p>Queries, keys, values. Three projections of the same input, multiplied so that similarity becomes routing. It reads like linear algebra because it is, but the consequence is behavioral: the model decides, per token, where to spend its attention budget.</p>
+
+        <p class="pull">Everything since — context windows, retrieval, agents — is a negotiation with the cost of looking everywhere at once.</p>
+
+        <div class="sect">02 — What scaled</div>
+        <p>The paper was a translation result. The lineage was a bet: that the same block, stacked and widened and fed the open internet, would keep paying off. It did, further than most of its authors will admit they expected.</p>
+
+        <div class="funnel">
+          <small>we build what we write about</small>
+          <div class="q">“If the decode above is the capability, the redesign is the proof — identity, site, and system, rebuilt end-to-end.”</div>
+          <a class="cta" href="#">Work with ORCACLUB <span class="ar">→</span></a>
+        </div>
+      </div>
+    </article>
+  </main>
+
+  <!-- SOUNDING LINE -->
+  <aside class="sound">
+    <div class="cap label">Sounding</div>
+    <div class="gauge">
+      <div class="fill"></div>
+      <div class="mark on" style="top:6%"><span class="d">0m</span><span class="t">Premise</span></div>
+      <div class="mark on" style="top:32%"><span class="d">4m</span><span class="t">The mechanism</span></div>
+      <div class="mark" style="top:60%"><span class="d">7m</span><span class="t">What scaled</span></div>
+      <div class="mark" style="top:88%"><span class="d">11m</span><span class="t">Coda</span></div>
+    </div>
+    <div class="sound-foot">
+      <span class="big">42<span class="label">%</span></span>
+      <span class="mono" style="color:var(--ink-soft)">6m left</span>
+    </div>
+  </aside>
+
+</div>
+</body>
+</html>

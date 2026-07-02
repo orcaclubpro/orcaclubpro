@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SONAR — Markets Brief</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,300;1,6..72,400&family=Jost:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --paper:#F1F0EA;
+    --panel:#FBFAF6;
+    --ink:#15191B;
+    --ink-soft:#565C5E;
+    --faint:#D3D2CA;
+    --hair:#E2E1DA;
+    --hover:#EAE9E1;
+    --signal:#0E7C86;
+    --abyss:#10161A;
+    --serif:"Newsreader",Georgia,serif;
+    --sans:"Jost",system-ui,sans-serif;
+    --mono:"JetBrains Mono",monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--paper);color:var(--ink);
+    font-family:var(--serif);
+    -webkit-font-smoothing:antialiased;
+    line-height:1.6;
+  }
+  .label{
+    font-family:var(--sans);text-transform:uppercase;
+    letter-spacing:.22em;font-weight:400;font-size:11px;
+    color:var(--ink-soft);
+  }
+  .mono{font-family:var(--mono);font-size:11px;letter-spacing:.02em}
+
+  /* ---- app shell ---- */
+  .shell{display:grid;grid-template-columns:236px 1fr 220px;min-height:100vh}
+
+  /* ---- spine (left) ---- */
+  .spine{
+    border-right:1px solid var(--hair);
+    padding:26px 22px;position:sticky;top:0;height:100vh;
+    display:flex;flex-direction:column;
+  }
+  /* real SONAR brand — background-keyed transparent assets (orca mark + wordmark) */
+  .brand{margin:0 auto 32px;display:flex;flex-direction:column;align-items:center;gap:12px;
+    text-decoration:none;cursor:pointer}
+  .brand .orca{width:50px;height:auto;display:block;transition:transform .3s ease}
+  .brand .word{width:128px;height:auto;display:block}
+  .brand:hover .orca,.brand:focus-visible .orca{transform:translateY(-2px)}
+  /* subline is a reward for hovering the mark — hidden until then */
+  .subline{text-align:center;opacity:0;transform:translateY(-3px);
+    transition:opacity .28s ease,transform .28s ease}
+  .brand:hover .subline,.brand:focus-visible .subline{opacity:1;transform:none}
+  @media (prefers-reduced-motion:reduce){.subline,.brand .orca{transition:opacity .28s ease}}
+  .subline .rule{display:inline-flex;align-items:center;gap:8px;color:var(--faint)}
+  .subline .rule::before,.subline .rule::after{content:"";width:14px;height:1px;background:var(--faint)}
+  .subline .by{font-family:var(--sans);font-size:9.5px;letter-spacing:.34em;color:var(--ink);
+    text-transform:uppercase}
+  .subline .tag{font-family:var(--sans);font-size:8px;letter-spacing:.26em;color:var(--ink-soft);
+    text-transform:uppercase;display:block;margin-top:8px}
+
+  .nav{display:flex;flex-direction:column}
+  .nav-eyebrow{font-family:var(--sans);text-transform:uppercase;letter-spacing:.24em;
+    font-size:9px;color:var(--faint);padding:0 10px;margin-bottom:11px}
+  .nav-div{height:1px;background:var(--hair);margin:20px 10px}
+  .chapters{display:flex;flex-direction:column;gap:2px}
+  .chap{position:relative;display:flex;align-items:center;justify-content:space-between;
+    gap:12px;padding:9px 10px;text-decoration:none;color:var(--ink-soft);border-radius:6px;
+    transition:background .15s,color .15s}
+  .chap:hover{background:var(--hover);color:var(--ink)}
+  .chap .name{font-family:var(--sans);font-size:14px;letter-spacing:.04em;
+    transition:transform .18s ease}
+  .chap:hover .name{transform:translateX(2px)}
+  /* per-channel "signal" — freshness readout, reinforces the sonar idea */
+  .chap .sig{display:flex;align-items:center;gap:6px;font-family:var(--mono);
+    font-size:10px;color:var(--faint);line-height:1}
+  .chap .sig .dot{width:5px;height:5px;border-radius:50%;background:var(--signal)}
+  .chap .sig .star{color:var(--signal);font-size:12px}
+  .chap.active{color:var(--ink);background:linear-gradient(90deg,rgba(14,110,110,.09),transparent)}
+  .chap.active .name{font-weight:500;transform:translateX(2px)}
+  .chap.active::before{content:"";position:absolute;left:0;top:50%;transform:translateY(-50%);
+    width:2px;height:20px;background:var(--signal);border-radius:2px}
+
+  .spine-foot{margin-top:auto;padding-top:22px;border-top:1px solid var(--hair)}
+  .scan{
+    display:flex;align-items:center;gap:9px;width:100%;
+    background:var(--panel);border:1px solid var(--hair);border-radius:6px;
+    padding:9px 11px;color:var(--ink-soft);
+  }
+  .scan input{border:0;background:none;outline:none;font-family:var(--sans);font-size:13px;
+    letter-spacing:.03em;color:var(--ink);width:100%}
+  .scan input::placeholder{color:var(--faint)}
+  .scan .k{font-family:var(--mono);font-size:10px;border:1px solid var(--hair);border-radius:3px;
+    padding:1px 5px;color:var(--ink-soft)}
+  .edition{font-family:var(--mono);font-size:9px;letter-spacing:.06em;color:var(--faint);
+    margin-top:16px;padding:0 2px}
+
+  /* ---- reading pane (center) ---- */
+  .read{padding:64px 0 120px}
+  .col{max-width:660px;margin:0 auto;padding:0 40px}
+  .eyebrow{display:flex;align-items:center;gap:10px;margin-bottom:26px}
+  .eyebrow .dot{width:5px;height:5px;border-radius:50%;background:var(--signal)}
+  .title{
+    font-family:var(--serif);font-weight:500;font-size:46px;line-height:1.08;
+    letter-spacing:-.015em;margin-bottom:18px;
+  }
+  .title em{font-style:italic;font-weight:400}
+
+  /* ---- thesis line — the "what's investable" stance ---- */
+  .thesis{
+    font-family:var(--serif);font-weight:400;font-size:25px;line-height:1.4;
+    letter-spacing:-.01em;color:var(--ink);
+    padding-left:22px;border-left:2px solid var(--signal);
+    margin:0 0 34px;
+  }
+  .thesis em{font-style:italic;color:var(--signal)}
+
+  .byline{display:flex;gap:18px;align-items:center;padding:16px 0;
+    border-top:1px solid var(--hair);border-bottom:1px solid var(--hair);margin-bottom:36px}
+  .byline .who{font-family:var(--sans);font-size:13px;letter-spacing:.04em}
+  .byline .meta{color:var(--ink-soft)}
+
+  /* ---- data strip — mono figures, no chart lib ---- */
+  .strip{display:flex;flex-wrap:wrap;
+    border-top:1px solid var(--hair);border-bottom:1px solid var(--hair);margin:0 0 42px}
+  .fig{flex:1 1 130px;padding:15px 16px 14px;border-right:1px solid var(--hair)}
+  .fig:last-child{border-right:0}
+  .fig .k{font-family:var(--mono);font-size:9px;letter-spacing:.07em;text-transform:uppercase;
+    color:var(--ink-soft);display:block;margin-bottom:9px;white-space:nowrap}
+  .fig .v{font-family:var(--serif);font-weight:500;font-size:23px;line-height:1;
+    display:flex;align-items:baseline;gap:6px;color:var(--ink)}
+  .fig .up{color:var(--signal);font-family:var(--sans);font-size:13px;font-weight:500}
+  .fig .dn{color:var(--signal);font-family:var(--sans);font-size:13px;font-weight:500}
+  .fig .spark{font-family:var(--mono);font-size:19px;color:var(--signal);letter-spacing:-2px;
+    line-height:1}
+
+  .body p{font-size:18.5px;line-height:1.72;margin-bottom:24px}
+  .body p.lead::first-letter{
+    font-family:var(--serif);font-weight:500;float:left;font-size:58px;line-height:.72;
+    padding:6px 10px 0 0;color:var(--ink);
+  }
+
+  /* ---- premium gate ---- */
+  .gate{position:relative;margin-top:34px;
+    background:var(--panel);border:1px solid var(--hair);border-radius:12px;
+    padding:36px 38px 30px;text-align:center;overflow:visible}
+  /* soft fade lifts the paragraph above into the wall — themed, not hardcoded */
+  .gate .fade{position:absolute;left:1px;right:1px;top:-124px;height:120px;
+    background:linear-gradient(to bottom,rgba(0,0,0,0),var(--paper));pointer-events:none}
+  .gate .plabel{font-family:var(--sans);text-transform:uppercase;letter-spacing:.24em;
+    font-size:10px;font-weight:500;color:var(--signal);margin-bottom:15px}
+  .gate .gtitle{font-family:var(--serif);font-weight:400;font-size:22px;line-height:1.42;
+    color:var(--ink);margin:0 auto 24px;max-width:400px}
+  .gate .actions{display:flex;flex-direction:column;align-items:center;gap:13px}
+  .gate .sub{display:inline-flex;align-items:center;gap:9px;text-decoration:none;
+    background:var(--signal);color:var(--paper);
+    font-family:var(--sans);font-size:13px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;
+    padding:13px 26px;border-radius:7px;transition:transform .18s ease,box-shadow .2s ease}
+  .gate .sub .ar{transition:transform .2s}
+  .gate .sub:hover{transform:translateY(-1px)}
+  .gate .sub:hover .ar{transform:translateX(4px)}
+  .gate .signin{font-family:var(--sans);font-size:12px;letter-spacing:.03em;color:var(--ink-soft);
+    text-decoration:none}
+  .gate .signin a{color:var(--ink);text-decoration:underline;text-underline-offset:2px}
+  .gate .sponsor{margin-top:26px;padding-top:20px;border-top:1px solid var(--hair);
+    font-family:var(--sans);font-size:11px;letter-spacing:.06em;color:var(--ink-soft)}
+  .gate .sponsor b{color:var(--ink);font-weight:500;letter-spacing:.12em;text-transform:uppercase}
+  @media (prefers-reduced-motion:reduce){.gate .sub{transition:none}}
+
+  /* ---- signal panel (right) ---- */
+  .sound{
+    border-left:1px solid var(--hair);padding:64px 24px;position:sticky;top:0;height:100vh;
+    display:flex;flex-direction:column;
+  }
+  .sound .cap{margin-bottom:22px}
+  .sig-list{display:flex;flex-direction:column}
+  .sig-row{padding:15px 0;border-bottom:1px solid var(--hair);display:flex;flex-direction:column;gap:6px}
+  .sig-row:first-child{border-top:1px solid var(--hair)}
+  .sig-row .k{font-family:var(--mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--ink-soft)}
+  .sig-row .v{font-family:var(--sans);font-size:13.5px;letter-spacing:.02em;color:var(--ink);
+    display:flex;align-items:center;gap:8px}
+  .sig-row .v .d{width:6px;height:6px;border-radius:50%;background:var(--signal);flex:none}
+  .sig-row .v .locked{font-family:var(--mono);font-size:10px;color:var(--faint);
+    letter-spacing:.02em;text-transform:none}
+  .sig-foot{margin-top:auto;padding-top:22px;font-family:var(--mono);font-size:9px;
+    letter-spacing:.06em;color:var(--faint)}
+
+  @media (max-width:1100px){
+    .shell{grid-template-columns:210px 1fr}
+    .sound{display:none}
+  }
+  @media (max-width:720px){
+    .shell{grid-template-columns:1fr}
+    .spine{position:static;height:auto;flex-direction:row;align-items:center;
+      border-right:0;border-bottom:1px solid var(--hair);padding:10px 20px}
+    .nav,.subline,.spine-foot{display:none}
+    .brand{margin:0;flex-direction:row;gap:11px;align-items:center}
+    .brand .orca{width:30px}
+    .brand .word{width:92px}
+    .col{padding:0 24px}
+    .title{font-size:34px}
+    .thesis{font-size:21px}
+    .fig{flex:1 1 45%}
+    .gate{padding:30px 24px 26px}
+  }
+
+  /* ============ DARK MODE — "THE DEEP" ============
+     same structure, tokens flipped. This is exactly how the real build works:
+     one component tree, two variable sets, switched by [data-theme]. */
+  html[data-theme="deep"]{
+    --paper:#0E1417; --panel:#141D21; --ink:#E7EBE9; --ink-soft:#93A0A0;
+    --faint:#33403F; --hair:#26302F; --signal:#46D3DA; --abyss:#0E1417;
+    --light-card:#F1F0EA; --hover:rgba(255,255,255,.05);
+  }
+  html[data-theme="deep"] .chap.active{background:linear-gradient(90deg,rgba(70,211,218,.10),transparent)}
+  html[data-theme="deep"] body{
+    background-image:radial-gradient(120% 90% at 50% 0%,rgba(20,32,36,.55) 0%,transparent 55%),
+                     radial-gradient(140% 120% at 50% 120%,rgba(0,0,0,.45) 0%,transparent 60%);
+    background-attachment:fixed;
+  }
+  /* near-black transparent logo art → invert to light on the dark ground */
+  html[data-theme="deep"] .brand .orca,
+  html[data-theme="deep"] .brand .word{filter:invert(1) brightness(1.08)}
+  /* a couple of signal glows come alive at depth */
+  html[data-theme="deep"] .eyebrow .dot{box-shadow:0 0 10px rgba(70,211,218,.55)}
+  html[data-theme="deep"] .chap.active::before{box-shadow:0 0 8px rgba(70,211,218,.6)}
+  html[data-theme="deep"] .sig-row .v .d{box-shadow:0 0 8px rgba(70,211,218,.5)}
+  html[data-theme="deep"] .gate .sub{box-shadow:0 0 22px -6px rgba(70,211,218,.5)}
+  html[data-theme="deep"] .gate .sub:hover{box-shadow:0 0 28px -4px rgba(70,211,218,.65)}
+
+  /* mode toggle (surface ⇄ depth) */
+  .mode{display:flex;align-items:center;gap:11px;width:100%;background:none;border:0;cursor:pointer;
+    padding:0 2px 16px;color:var(--ink-soft);font-family:var(--sans);font-size:10.5px;
+    letter-spacing:.2em;text-transform:uppercase}
+  .mode:hover{color:var(--ink)}
+  .mode-track{width:34px;height:18px;border-radius:20px;border:1px solid var(--hair);
+    background:var(--panel);position:relative;transition:background .2s,border-color .2s;flex:none}
+  .mode-thumb{position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;
+    background:var(--ink-soft);transition:transform .22s ease,background .2s}
+  html[data-theme="deep"] .mode-thumb{transform:translateX(16px);background:var(--signal);
+    box-shadow:0 0 8px rgba(70,211,218,.6)}
+  @media (prefers-reduced-motion:reduce){.mode-thumb{transition:none}}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- SPINE -->
+  <nav class="spine">
+    <a class="brand" href="#" aria-label="SONAR by ORCACLUB — home">
+      <img class="orca" src="./sonar-orca.png" alt="" />
+      <img class="word" src="./sonar-word.png" alt="SONAR" />
+      <div class="subline">
+        <span class="rule"><span class="by">by orcaclub</span></span>
+        <span class="tag">Signal from beneath the noise</span>
+      </div>
+    </a>
+
+    <div class="nav">
+      <div class="nav-eyebrow">Channels</div>
+      <div class="chapters">
+        <a class="chap" href="#"><span class="name">AI</span><span class="sig"><span class="dot"></span>2</span></a>
+        <a class="chap active" href="#"><span class="name">Markets</span><span class="sig"><span class="dot"></span>1</span></a>
+        <a class="chap" href="#"><span class="name">Research</span><span class="sig"></span></a>
+      </div>
+      <div class="nav-div"></div>
+      <div class="nav-eyebrow">Studio</div>
+      <div class="chapters">
+        <a class="chap" href="#"><span class="name">Field Notes</span><span class="sig"><span class="star">★</span></span></a>
+      </div>
+    </div>
+
+    <div class="spine-foot">
+      <button class="mode" id="modeToggle" aria-label="Toggle reading mode" aria-pressed="false">
+        <span class="mode-track"><span class="mode-thumb"></span></span>
+        <span class="mode-label">Depth</span>
+      </button>
+      <div class="scan">
+        <span class="mono">⌕</span>
+        <input placeholder="Scan the archive…" />
+        <span class="k">/</span>
+      </div>
+      <div class="edition">Edition 038 · Jul 2026</div>
+    </div>
+  </nav>
+
+  <!-- BRIEF PANE -->
+  <main class="read">
+    <article class="col">
+      <div class="eyebrow">
+        <span class="dot"></span>
+        <span class="label">Sonar / Markets</span>
+        <span class="mono" style="color:var(--faint)">· signal no. 047</span>
+      </div>
+
+      <h1 class="title">The inference-cost cliff — <em>what's investable</em></h1>
+
+      <p class="thesis">The floor under token prices is falling faster than the models are getting bigger. The margin is leaving <em>who trains</em> and moving to <em>who serves</em> — and the market hasn't repriced it yet.</p>
+
+      <div class="byline">
+        <span class="who">The Sonar Desk</span>
+        <span class="mono meta">JUL 02 2026</span>
+        <span class="mono meta">4 MIN</span>
+        <span class="mono meta" style="color:var(--signal)">◆ HIGH CONVICTION</span>
+      </div>
+
+      <!-- DATA STRIP -->
+      <div class="strip">
+        <div class="fig">
+          <span class="k">$ / 1M tokens · YoY</span>
+          <span class="v">−62%<span class="dn">▾</span></span>
+        </div>
+        <div class="fig">
+          <span class="k">Hyperscale capex</span>
+          <span class="v">+34%<span class="up">▴</span></span>
+        </div>
+        <div class="fig">
+          <span class="k">Cost curve · 8q</span>
+          <span class="v"><span class="spark">▇▆▅▃▂▂▁▁</span></span>
+        </div>
+        <div class="fig">
+          <span class="k">Near catalysts</span>
+          <span class="v">3</span>
+        </div>
+      </div>
+
+      <div class="body">
+        <p class="lead">The story the tape keeps telling is about training — bigger clusters, bigger raises, bigger names. That story is priced. The one underneath it is about serving, and it is moving in the opposite direction: the marginal cost of a token has fallen roughly two-thirds in a year, and it is still falling.</p>
+
+        <p>That collapse is not bad news for everyone. It is a transfer. When inference gets cheap, the value doesn't evaporate — it relocates to whoever owns the workload, the distribution, and the last mile of latency. The setup is a classic picks-and-shovels rotation, except the shovels are getting cheaper and the ground is getting bigger at the same time.</p>
+
+        <!-- PREMIUM GATE -->
+        <div class="gate">
+          <div class="fade"></div>
+          <div class="plabel">Markets Premium</div>
+          <div class="gtitle">The full call — positioning, names, and timing — is for members.</div>
+          <div class="actions">
+            <a class="sub" href="#">Subscribe <span class="ar">→</span></a>
+            <span class="signin">Already a member? <a href="#">Sign in</a></span>
+          </div>
+          <div class="sponsor">This brief is supported by — <b>Meridian Capital</b></div>
+        </div>
+      </div>
+    </article>
+  </main>
+
+  <!-- SIGNAL PANEL -->
+  <aside class="sound">
+    <div class="cap label">Signal</div>
+    <div class="sig-list">
+      <div class="sig-row">
+        <span class="k">Conviction</span>
+        <span class="v"><span class="d"></span>High</span>
+      </div>
+      <div class="sig-row">
+        <span class="k">Horizon</span>
+        <span class="v">2–3 quarters</span>
+      </div>
+      <div class="sig-row">
+        <span class="k">Exposure</span>
+        <span class="v">Picks &amp; shovels</span>
+      </div>
+      <div class="sig-row">
+        <span class="k">Watch</span>
+        <span class="v">3 names <span class="locked">· members</span></span>
+      </div>
+    </div>
+    <div class="sig-foot">Analyst note · updated 02 JUL 2026</div>
+  </aside>
+
+</div>
+<script>
+(function(){
+  var root=document.documentElement,
+      btn=document.getElementById('modeToggle'),
+      lbl=btn.querySelector('.mode-label');
+  function set(m){
+    root.setAttribute('data-theme',m);
+    btn.setAttribute('aria-pressed', m==='deep');
+    lbl.textContent = m==='deep' ? 'Surface' : 'Depth';
+  }
+  set('light'); // default to light; toggle switches to deep
+  btn.addEventListener('click', function(){
+    set(root.getAttribute('data-theme')==='deep' ? 'light' : 'deep');
+  });
+})();
+</script>
+</body>
+</html>
