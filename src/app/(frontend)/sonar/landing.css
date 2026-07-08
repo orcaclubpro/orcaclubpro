@@ -1,0 +1,412 @@
+/* SONAR landing — ported from docs/superpowers/concepts/sonar-landing.html.
+   Scoped under `.sonar-landing` so it can't leak into the rest of the site. */
+
+.sonar-landing {
+  --paper: #f1f0ea;
+  --ink: #15191b;
+  --ink-soft: #565c5e;
+  --faint: #d3d2ca;
+  --hair: #e2e1da;
+  --signal: #0e7c86;
+  --serif: var(--font-sonar-serif), Georgia, serif;
+  --sans: var(--font-sonar-sans), system-ui, sans-serif;
+  --mono: var(--font-sonar-mono), monospace;
+
+  position: relative;
+  background: radial-gradient(120% 85% at 50% 26%, #f6f5f0 0%, #eeece4 62%, #e4e2d8 100%);
+  color: var(--ink);
+  font-family: var(--serif);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+.sonar-landing .noise {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+  opacity: 0;
+  animation: sonar-noiseSettle 2.6s ease-out 0.05s forwards;
+}
+@keyframes sonar-noiseSettle {
+  0% {
+    opacity: 0.16;
+  }
+  100% {
+    opacity: 0.04;
+  }
+}
+
+/* ---------- HERO ---------- */
+.sonar-landing .hero {
+  position: relative;
+  z-index: 1;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px 24px;
+}
+.sonar-landing .stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.sonar-landing .ping {
+  position: absolute;
+  top: 26px;
+  left: 50%;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+.sonar-landing .ping span {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 150px;
+  height: 150px;
+  margin: -75px;
+  border: 1px solid var(--signal);
+  border-radius: 50%;
+  opacity: 0;
+  animation: sonar-ping 4.2s cubic-bezier(0.15, 0.5, 0.3, 1) infinite;
+}
+.sonar-landing .ping span:nth-child(1) {
+  animation-delay: 0.15s;
+}
+.sonar-landing .ping span:nth-child(2) {
+  animation-delay: 1.55s;
+}
+.sonar-landing .ping span:nth-child(3) {
+  animation-delay: 2.95s;
+}
+@keyframes sonar-ping {
+  0% {
+    transform: scale(0.15);
+    opacity: 0.55;
+  }
+  70% {
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+.sonar-landing .orca {
+  width: 118px;
+  height: auto;
+  position: relative;
+  z-index: 2;
+  opacity: 0;
+  animation: sonar-surface 1s cubic-bezier(0.2, 0.7, 0.2, 1) 0.3s forwards;
+}
+@keyframes sonar-surface {
+  0% {
+    opacity: 0;
+    transform: translateY(16px) scale(0.9);
+    filter: blur(7px);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+}
+.sonar-landing .word {
+  width: 290px;
+  height: auto;
+  margin-top: 26px;
+  clip-path: inset(0 100% 0 0);
+  opacity: 0;
+  animation: sonar-sweep 0.85s cubic-bezier(0.4, 0, 0.1, 1) 0.95s forwards;
+}
+@keyframes sonar-sweep {
+  0% {
+    clip-path: inset(0 100% 0 0);
+    opacity: 1;
+  }
+  100% {
+    clip-path: inset(0 0 0 0);
+    opacity: 1;
+  }
+}
+.sonar-landing .tag {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 26px;
+  color: var(--ink-soft);
+  opacity: 0;
+  animation: sonar-rise 0.8s ease 1.5s forwards;
+}
+.sonar-landing .tag::before,
+.sonar-landing .tag::after {
+  content: "";
+  width: 26px;
+  height: 1px;
+  background: var(--faint);
+}
+.sonar-landing .tag span {
+  font-family: var(--sans);
+  text-transform: uppercase;
+  letter-spacing: 0.34em;
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+.sonar-landing .cta-row {
+  display: flex;
+  gap: 16px;
+  margin-top: 44px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.sonar-landing .btn {
+  opacity: 0;
+  animation: sonar-rise 0.7s ease forwards;
+  font-family: var(--sans);
+  font-size: 14px;
+  letter-spacing: 0.06em;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 14px 26px;
+  border-radius: 8px;
+  transition: transform 0.2s, background 0.2s, border-color 0.2s, color 0.2s;
+}
+.sonar-landing .btn .ar {
+  transition: transform 0.22s;
+}
+.sonar-landing .btn.primary {
+  background: var(--signal);
+  color: var(--paper);
+  animation-delay: 1.85s;
+}
+.sonar-landing .btn.primary:hover {
+  transform: translateY(-2px);
+}
+.sonar-landing .btn.primary:hover .ar {
+  transform: translateX(4px);
+}
+.sonar-landing .btn.ghost {
+  color: var(--ink);
+  border: 1px solid var(--hair);
+  background: rgba(255, 255, 255, 0.35);
+  animation-delay: 2s;
+}
+.sonar-landing .btn.ghost:hover {
+  border-color: var(--signal);
+  color: var(--signal);
+}
+.sonar-landing .scrollcue {
+  position: absolute;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--faint);
+  text-decoration: none;
+  opacity: 0;
+  animation: sonar-rise 0.8s ease 2.3s forwards;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.sonar-landing .scrollcue .chev {
+  animation: sonar-bob 2.2s ease-in-out infinite;
+}
+@keyframes sonar-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(4px);
+  }
+}
+.sonar-landing .scrollcue:hover {
+  color: var(--ink-soft);
+}
+@keyframes sonar-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---------- LEARN MORE ---------- */
+.sonar-landing .learn {
+  position: relative;
+  z-index: 1;
+  max-width: 940px;
+  margin: 0 auto;
+  padding: 110px 24px 130px;
+}
+.sonar-landing .eyebrow {
+  font-family: var(--sans);
+  text-transform: uppercase;
+  letter-spacing: 0.28em;
+  font-size: 11px;
+  color: var(--signal);
+  text-align: center;
+  margin-bottom: 22px;
+}
+.sonar-landing .learn h2 {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: 38px;
+  line-height: 1.18;
+  letter-spacing: -0.01em;
+  text-align: center;
+  max-width: 660px;
+  margin: 0 auto 20px;
+}
+.sonar-landing .learn h2 em {
+  font-style: italic;
+}
+.sonar-landing .learn .lede {
+  font-family: var(--serif);
+  font-size: 19px;
+  line-height: 1.6;
+  color: var(--ink-soft);
+  text-align: center;
+  max-width: 560px;
+  margin: 0 auto 66px;
+  font-weight: 300;
+}
+.sonar-landing .channels {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--hair);
+  border: 1px solid var(--hair);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.sonar-landing .ch {
+  background: var(--paper);
+  padding: 26px 22px;
+  min-height: 150px;
+  display: flex;
+  flex-direction: column;
+}
+.sonar-landing .ch .k {
+  font-family: var(--sans);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 11px;
+  color: var(--ink);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sonar-landing .ch .k .dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--signal);
+}
+.sonar-landing .ch p {
+  font-family: var(--serif);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+.sonar-landing .ch.star .k {
+  color: var(--signal);
+}
+.sonar-landing .close {
+  margin-top: 60px;
+  text-align: center;
+}
+.sonar-landing .close .line {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 300;
+  font-size: 22px;
+  color: var(--ink);
+  margin-bottom: 26px;
+}
+.sonar-landing .close .go {
+  font-family: var(--sans);
+  font-size: 14px;
+  letter-spacing: 0.06em;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 14px 28px;
+  border-radius: 8px;
+  background: var(--signal);
+  color: var(--paper);
+  transition: transform 0.2s;
+}
+.sonar-landing .close .go:hover {
+  transform: translateY(-2px);
+}
+.sonar-landing .reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+.sonar-landing .reveal.in {
+  opacity: 1;
+  transform: none;
+}
+
+@media (max-width: 720px) {
+  .sonar-landing .orca {
+    width: 92px;
+  }
+  .sonar-landing .word {
+    width: 220px;
+  }
+  .sonar-landing .learn h2 {
+    font-size: 28px;
+  }
+  .sonar-landing .channels {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 440px) {
+  .sonar-landing .channels {
+    grid-template-columns: 1fr;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sonar-landing .noise,
+  .sonar-landing .ping span,
+  .sonar-landing .scrollcue .chev {
+    animation: none;
+  }
+  .sonar-landing .orca,
+  .sonar-landing .word,
+  .sonar-landing .tag,
+  .sonar-landing .btn,
+  .sonar-landing .scrollcue,
+  .sonar-landing .reveal {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    clip-path: none !important;
+    filter: none !important;
+  }
+  .sonar-landing .noise {
+    opacity: 0.05;
+  }
+}
