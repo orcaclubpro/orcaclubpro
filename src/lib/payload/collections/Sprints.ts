@@ -26,6 +26,10 @@ export const Sprints: CollectionConfig = {
     update: adminOrUser, // Only admin/user can update sprints
     delete: adminOnly, // Only admins can delete sprints
   },
+  indexes: [
+    // Dashboard query: sprints for a project filtered by status
+    { fields: ['project', 'status'] },
+  ],
   fields: [
     // ============================================================================
     // BASIC INFORMATION
@@ -95,6 +99,7 @@ export const Sprints: CollectionConfig = {
         {
           name: 'startDate',
           type: 'date',
+          index: true,
           admin: {
             description: 'Sprint start date',
             width: '50%',

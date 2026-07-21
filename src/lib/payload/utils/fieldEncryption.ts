@@ -3,7 +3,10 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'crypt
 const FORMAT_PREFIX = 'ENC_V1'
 
 function getKey(): Buffer {
-  const secret = process.env.PAYLOAD_SECRET || ''
+  const secret = process.env.PAYLOAD_SECRET
+  if (!secret) {
+    throw new Error('PAYLOAD_SECRET environment variable is required for field encryption')
+  }
   return createHash('sha256').update(secret).digest()
 }
 

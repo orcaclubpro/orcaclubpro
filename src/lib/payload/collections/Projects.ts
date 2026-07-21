@@ -97,6 +97,7 @@ export const Projects: CollectionConfig = {
           type: 'relationship',
           relationTo: 'users',
           hasMany: true,
+          index: true,
           admin: {
             description: 'Team members assigned to this project',
             width: '50%',

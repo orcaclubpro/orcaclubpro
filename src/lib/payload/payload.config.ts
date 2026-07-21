@@ -679,6 +679,14 @@ const Users: CollectionConfig = {
       type: 'select',
       required: true,
       defaultValue: 'user',
+      // SECURITY: only admins may set/change a role. Without this, any user
+      // (permitted to update their own record via adminOrSelf) could PATCH
+      // themselves to role: 'admin'. Server-side hooks that assign roles run
+      // with overrideAccess and are unaffected.
+      access: {
+        create: ({ req: { user } }) => user?.role === 'admin',
+        update: ({ req: { user } }) => user?.role === 'admin',
+      },
       options: [
         {
           label: 'Admin',
@@ -844,6 +852,13 @@ const Users: CollectionConfig = {
       type: 'relationship',
       relationTo: 'client-accounts',
       hasMany: false,
+      // SECURITY: the client-account linkage determines which tenant's data a
+      // client can see. Only admins may change it; the auto-create hook runs
+      // with overrideAccess and is unaffected.
+      access: {
+        create: ({ req: { user } }) => user?.role === 'admin',
+        update: ({ req: { user } }) => user?.role === 'admin',
+      },
       admin: {
         condition: (data) => data.role === 'client',
         description: 'Linked client account (auto-created on user creation)',
@@ -977,7 +992,14 @@ export default buildConfig({
   collections: [Media, Clients, Leads, Categories, Tags, Posts, Solutions, Pages, Users, ClientAccounts, Orders, Packages, WebhookEvents, Projects, Tasks, Sprints, Files, Credentials, Timelines],
 
   // Your Payload secret - should be a complex and secure string, unguessable
-  secret: process.env.PAYLOAD_SECRET || 'your-secret-here',
+  secret: (() => {
+    if (!process.env.PAYLOAD_SECRET) {
+      throw new Error(
+        'PAYLOAD_SECRET environment variable is required — refusing to start with an insecure fallback secret',
+      )
+    }
+    return process.env.PAYLOAD_SECRET
+  })(),
   // Using MongoDB adapter
   db: mongooseAdapter({
     url: process.env.DATABASE_URI || 'mongodb+srv://chance:ara9YRAkRe7blAqF@orcapod.f5yp3f7.mongodb.net/orcapod',

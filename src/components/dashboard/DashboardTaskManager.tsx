@@ -324,7 +324,7 @@ export function DashboardTaskManager({ username, userRole }: DashboardTaskManage
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          'fixed bottom-28 right-4 md:bottom-8 md:right-8 z-[53] size-14 md:size-16 rounded-full bg-[var(--space-accent)] text-black shadow-2xl shadow-[#000000]/[0.40]',
+          'print:hidden fixed bottom-28 right-4 md:bottom-8 md:right-8 z-[53] size-14 md:size-16 rounded-full bg-[var(--space-accent)] text-black shadow-2xl shadow-[#000000]/[0.40]',
           'hover:scale-110 active:scale-95 transition-all duration-300 flex items-center justify-center group',
           isOpen && 'rotate-45'
         )}
@@ -339,7 +339,7 @@ export function DashboardTaskManager({ username, userRole }: DashboardTaskManage
       {/* Panel */}
       <div
         className={cn(
-          'fixed top-0 right-0 h-full w-full md:w-[480px] bg-[var(--space-bg-base)] border-l border-[var(--space-border-hard)] z-[56]',
+          'print:hidden fixed top-0 right-0 h-full w-full md:w-[480px] bg-[var(--space-bg-base)] border-l border-[var(--space-border-hard)] z-[56]',
           'transform transition-transform duration-300 overflow-hidden flex flex-col',
           isOpen ? 'translate-x-0' : 'translate-x-full'
         )}

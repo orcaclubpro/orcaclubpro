@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { LoginForm } from '@/components/auth/LoginForm'
 import { getCurrentUser } from '@/actions/auth'
+import { experienceFor } from '@/app/(spaces)/experience'
 import AnimatedBackground from '@/components/layout/animated-background'
 import LoginGreeting from '@/components/auth/LoginGreeting'
 import Link from 'next/link'
@@ -22,7 +23,7 @@ export default async function LoginPage({
     redirect(dest)
   }
 
-  if (user && (user.role === 'admin' || user.role === 'user')) {
+  if (user && experienceFor(user.role) === 'staff') {
     redirect('/admin')
   }
 

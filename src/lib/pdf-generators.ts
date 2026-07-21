@@ -1,5 +1,7 @@
 import { PDFDocument, StandardFonts, rgb, PDFFont, PDFPage } from 'pdf-lib'
+import fontkit from '@pdf-lib/fontkit'
 import type { NdaFormData, SowFormData } from './document-generators'
+import { CINZEL_DECORATIVE_BOLD_BASE64 } from './fonts/cinzel-decorative-bold'
 
 // ── Color palette ──────────────────────────────────────────────────────────────
 
@@ -1022,4 +1024,279 @@ export async function buildPersonalSowPdf(d: SowFormData): Promise<Uint8Array> {
 
 export async function buildOrcaclubSowPdf(d: SowFormData): Promise<Uint8Array> {
   return buildSowCore(d, 'orcaclub')
+}
+
+// ── Package Invoice / Proposal PDF ─────────────────────────────────────────────
+
+export interface PackagePdfLineItem {
+  name: string
+  description?: string | null
+  quantity: number
+  rate: number
+  isRecurring?: boolean
+  recurringInterval?: 'month' | 'year'
+}
+
+export interface PackagePdfData {
+  sendAs: 'proposal' | 'invoice'
+  ref: string
+  packageName: string
+  dateLabel: string
+  clientLines: string[]
+  description?: string | null
+  coverMessage?: string | null
+  lineItems: PackagePdfLineItem[]
+  paymentSchedule?: Array<{ label: string; amount: number; dueDateLabel?: string | null }>
+}
+
+function money(n: number): string {
+  return n.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
+}
+
+// Print-page palette (matches packages/[package]/print/page.tsx)
+const P = {
+  ink:    rgb(0.067, 0.067, 0.067), // #111
+  gray6:  rgb(0.420, 0.447, 0.502), // #6b7280
+  gray4:  rgb(0.612, 0.639, 0.686), // #9ca3af
+  rule:   rgb(0.898, 0.906, 0.922), // #e5e7eb
+  ruleLt: rgb(0.953, 0.957, 0.965), // #f3f4f6
+  headBg: rgb(0.953, 0.957, 0.965), // #f3f4f6
+  boxBg:  rgb(0.976, 0.980, 0.984), // #f9fafb
+  cyan:   rgb(0.031, 0.569, 0.698), // #0891b2
+  navy:   rgb(0.118, 0.227, 0.431), // #1E3A6E
+}
+
+export async function buildPackagePdf(d: PackagePdfData): Promise<Uint8Array> {
+  const doc = await PDFDocument.create()
+  doc.registerFontkit(fontkit)
+  const bold   = await doc.embedFont(StandardFonts.HelveticaBold)
+  const normal = await doc.embedFont(StandardFonts.Helvetica)
+  const gothic = await doc.embedFont(Buffer.from(CINZEL_DECORATIVE_BOLD_BASE64, 'base64'), { subset: true })
+
+  const isInvoice = d.sendAs === 'invoice'
+  const PW = 612, PH = 792, ML = 56, MR = 56, MB = 64
+  const innerW = PW - ML - MR
+
+  let page = doc.addPage([PW, PH])
+  let y = PH - 64
+
+  const ensure = (h: number) => {
+    if (y - h < MB + 20) {
+      page = doc.addPage([PW, PH])
+      y = PH - 64
+    }
+  }
+
+  // Letter-spaced label, mirroring the print page's tracked uppercase style
+  const tracked = (text: string, x: number, ty: number, size: number, font: PDFFont, color: ReturnType<typeof rgb>, spacing: number) => {
+    let cx = x
+    for (const ch of text) {
+      page.drawText(ch, { x: cx, y: ty, size, font, color })
+      cx += font.widthOfTextAtSize(ch, size) + spacing
+    }
+    return cx - spacing
+  }
+  const trackedW = (text: string, size: number, font: PDFFont, spacing: number) =>
+    [...text].reduce((w, ch) => w + font.widthOfTextAtSize(ch, size) + spacing, 0) - spacing
+
+  const rightText = (text: string, size: number, font: PDFFont, color: ReturnType<typeof rgb>, ty: number) => {
+    page.drawText(text, { x: PW - MR - font.widthOfTextAtSize(text, size), y: ty, size, font, color })
+  }
+
+  const hr = (color = P.rule, thickness = 0.6) => {
+    page.drawLine({ start: { x: ML, y }, end: { x: PW - MR, y }, thickness, color })
+  }
+
+  // ── Header: wordmark + tagline | label + ref + date ─────────────────────────
+  page.drawText('ORCACLUB', { x: ML, y, size: 16, font: gothic, color: P.ink })
+  const label = isInvoice ? 'INVOICE' : 'PROPOSAL'
+  const labelW = trackedW(label, 7.5, bold, 1.6)
+  tracked(label, PW - MR - labelW, y + 6, 7.5, bold, P.gray6, 1.6)
+  rightText(d.ref, 11, bold, P.ink, y - 8)
+  y -= 14
+  tracked('WEB DESIGN AND MARKETING AUTOMATION', ML, y, 6.5, normal, P.gray4, 1.4)
+  rightText(d.dateLabel, 8.5, normal, P.gray4, y - 6)
+  y -= 30
+  hr()
+  y -= 26
+
+  // ── Bill To (left) | package name + description (right) ─────────────────────
+  const blockTop = y
+  if (d.clientLines.length > 0) {
+    tracked('BILL TO', ML, y, 7, bold, P.gray4, 1.6)
+    y -= 15
+    d.clientLines.forEach((line, i) => {
+      const font = i === 0 ? bold : normal
+      const size = i === 0 ? 10.5 : 9
+      page.drawText(line, { x: ML, y, size, font, color: i === 0 ? P.ink : P.gray6 })
+      y -= size + 4
+    })
+  }
+  let ry = blockTop - 2
+  const nameW = 300
+  for (const ln of wrap(d.packageName, bold, 14, nameW)) {
+    page.drawText(ln, { x: PW - MR - bold.widthOfTextAtSize(ln, 14), y: ry, size: 14, font: bold, color: P.ink })
+    ry -= 18
+  }
+  if (d.description) {
+    ry -= 2
+    for (const ln of wrap(d.description.replace(/\s+/g, ' '), normal, 8.5, 260)) {
+      page.drawText(ln, { x: PW - MR - normal.widthOfTextAtSize(ln, 8.5), y: ry, size: 8.5, font: normal, color: P.gray6 })
+      ry -= 12
+    }
+  }
+  y = Math.min(y, ry) - 20
+
+  // ── Cover message (proposal only) ───────────────────────────────────────────
+  if (!isInvoice && d.coverMessage) {
+    const lines = wrap(d.coverMessage.replace(/\s+/g, ' '), normal, 9, innerW - 36)
+    const boxH = lines.length * 13 + 22
+    ensure(boxH + 10)
+    page.drawRectangle({ x: ML, y: y - boxH, width: innerW, height: boxH, color: P.boxBg })
+    page.drawRectangle({ x: ML, y: y - boxH, width: 3, height: boxH, color: P.navy })
+    let ty = y - 16
+    for (const ln of lines) {
+      page.drawText(ln, { x: ML + 18, y: ty, size: 9, font: normal, color: P.gray6 })
+      ty -= 13
+    }
+    y -= boxH + 22
+  }
+
+  // ── Line items table ────────────────────────────────────────────────────────
+  let oneTime = 0, monthly = 0, annual = 0
+  for (const item of d.lineItems) {
+    const total = item.rate * item.quantity
+    if (item.isRecurring) {
+      if (item.recurringInterval === 'year') annual += total
+      else monthly += total
+    } else {
+      oneTime += total
+    }
+  }
+
+  const colQty = 50, colRate = 85, colAmt = 90
+  const colName = innerW - colQty - colRate - colAmt
+  const xQty  = ML + colName
+  const xRate = xQty + colQty
+  const xAmt  = xRate + colRate
+
+  // Header row
+  ensure(40)
+  page.drawRectangle({ x: ML, y: y - 22, width: innerW, height: 22, color: P.headBg })
+  const hy = y - 15
+  tracked('ITEM', ML + 12, hy, 7, bold, P.gray6, 1.2)
+  tracked('QTY', xQty + (colQty - trackedW('QTY', 7, bold, 1.2)) / 2, hy, 7, bold, P.gray6, 1.2)
+  tracked('RATE', xRate + colRate - trackedW('RATE', 7, bold, 1.2) - 12, hy, 7, bold, P.gray6, 1.2)
+  tracked('AMOUNT', xAmt + colAmt - trackedW('AMOUNT', 7, bold, 1.2) - 12, hy, 7, bold, P.gray6, 1.2)
+  y -= 22
+
+  // Rows
+  for (let i = 0; i < d.lineItems.length; i++) {
+    const item = d.lineItems[i]
+    const per = item.isRecurring ? (item.recurringInterval === 'year' ? '/yr' : '/mo') : ''
+    const nameLines = wrap(item.name.replace(/\s+/g, ' '), bold, 9.5, colName - 24)
+    const descLines = item.description ? wrap(item.description.replace(/\s+/g, ' '), normal, 8, colName - 24) : []
+    const tagH = item.isRecurring ? 12 : 0
+    const rowH = 12 + nameLines.length * 13 + descLines.length * 11 + tagH + 10
+    ensure(rowH)
+
+    let ty = y - 12 - 9.5 + 2
+    for (const ln of nameLines) {
+      page.drawText(ln, { x: ML + 12, y: ty, size: 9.5, font: bold, color: P.ink })
+      ty -= 13
+    }
+    for (const ln of descLines) {
+      page.drawText(ln, { x: ML + 12, y: ty, size: 8, font: normal, color: P.gray6 })
+      ty -= 11
+    }
+    if (item.isRecurring) {
+      tracked(item.recurringInterval === 'year' ? 'ANNUAL' : 'MONTHLY', ML + 12, ty, 6.5, bold, P.cyan, 1.2)
+    }
+
+    const vy = y - 12 - 9.5 + 2
+    const qtyStr = String(item.quantity)
+    page.drawText(qtyStr, { x: xQty + (colQty - normal.widthOfTextAtSize(qtyStr, 9)) / 2, y: vy, size: 9, font: normal, color: P.gray6 })
+    const rateStr = `${money(item.rate)}${per}`
+    page.drawText(rateStr, { x: xRate + colRate - normal.widthOfTextAtSize(rateStr, 9) - 12, y: vy, size: 9, font: normal, color: P.gray6 })
+    const amtStr = `${money(item.rate * item.quantity)}${per}`
+    page.drawText(amtStr, { x: xAmt + colAmt - bold.widthOfTextAtSize(amtStr, 9) - 12, y: vy, size: 9, font: bold, color: P.ink })
+
+    y -= rowH
+    if (i < d.lineItems.length - 1) {
+      page.drawLine({ start: { x: ML, y }, end: { x: PW - MR, y }, thickness: 0.5, color: P.ruleLt })
+    }
+  }
+  hr()
+  y -= 18
+
+  // ── Totals (right-aligned block, like the print page) ───────────────────────
+  const totX = PW - MR - 240
+  const totRow = (labelTxt: string, valueTxt: string, opts?: { valueColor?: ReturnType<typeof rgb>; boldLabel?: boolean; size?: number }) => {
+    ensure(18)
+    const size = opts?.size ?? 9.5
+    page.drawText(labelTxt, { x: totX, y, size, font: opts?.boldLabel ? bold : normal, color: opts?.boldLabel ? P.ink : P.gray6 })
+    page.drawText(valueTxt, { x: PW - MR - bold.widthOfTextAtSize(valueTxt, size), y, size, font: bold, color: opts?.valueColor ?? P.ink })
+    y -= size + 8
+  }
+
+  if (oneTime > 0 && (monthly > 0 || annual > 0)) totRow('Subtotal (one-time)', money(oneTime))
+  if (monthly > 0) totRow('Monthly recurring', `${money(monthly)}/mo`, { valueColor: P.cyan })
+  if (annual > 0)  totRow('Annual recurring', `${money(annual)}/yr`, { valueColor: P.cyan })
+  ensure(24)
+  page.drawLine({ start: { x: totX, y: y + 4 }, end: { x: PW - MR, y: y + 4 }, thickness: 0.6, color: P.rule })
+  y -= 6
+  totRow('Total due', money(oneTime > 0 ? oneTime : monthly + annual), { boldLabel: true, size: 11 })
+  y -= 12
+
+  // ── Payment schedule (proposal only) ────────────────────────────────────────
+  if (!isInvoice && d.paymentSchedule && d.paymentSchedule.length > 0) {
+    ensure(60)
+    hr(P.ruleLt)
+    y -= 20
+    tracked('PAYMENT SCHEDULE', ML, y, 7, bold, P.gray4, 1.6)
+    y -= 16
+
+    const sAmtW = 100, sDateW = 110
+    const sNameW = innerW - sAmtW - sDateW
+    page.drawRectangle({ x: ML, y: y - 20, width: innerW, height: 20, color: P.headBg })
+    const shy = y - 14
+    tracked('PAYMENT', ML + 12, shy, 7, bold, P.gray6, 1.2)
+    tracked('AMOUNT', ML + sNameW + sAmtW - trackedW('AMOUNT', 7, bold, 1.2) - 12, shy, 7, bold, P.gray6, 1.2)
+    tracked('DUE DATE', ML + sNameW + sAmtW + sDateW - trackedW('DUE DATE', 7, bold, 1.2) - 12, shy, 7, bold, P.gray6, 1.2)
+    y -= 20
+
+    for (let i = 0; i < d.paymentSchedule.length; i++) {
+      const e = d.paymentSchedule[i]
+      ensure(24)
+      const vy = y - 15
+      page.drawText(e.label, { x: ML + 12, y: vy, size: 9.5, font: normal, color: P.ink })
+      const amtStr = money(e.amount)
+      page.drawText(amtStr, { x: ML + sNameW + sAmtW - bold.widthOfTextAtSize(amtStr, 9.5) - 12, y: vy, size: 9.5, font: bold, color: P.ink })
+      const dateStr = e.dueDateLabel ?? '—'
+      page.drawText(dateStr, { x: ML + sNameW + sAmtW + sDateW - normal.widthOfTextAtSize(dateStr, 9) - 12, y: vy, size: 9, font: normal, color: P.gray6 })
+      y -= 24
+      if (i < d.paymentSchedule.length - 1) {
+        page.drawLine({ start: { x: ML, y }, end: { x: PW - MR, y }, thickness: 0.5, color: P.ruleLt })
+      }
+    }
+    hr()
+    y -= 16
+    const schedTotal = money(d.paymentSchedule.reduce((s, e) => s + e.amount, 0))
+    page.drawText('Total', { x: ML + 12, y, size: 9.5, font: bold, color: P.ink })
+    page.drawText(schedTotal, { x: PW - MR - bold.widthOfTextAtSize(schedTotal, 9.5) - 12, y, size: 9.5, font: bold, color: P.ink })
+    y -= 18
+    for (const ln of wrap('Each payment will be invoiced individually on or before its due date. You will receive a separate invoice for each installment.', normal, 8, innerW)) {
+      ensure(12)
+      page.drawText(ln, { x: ML, y, size: 8, font: normal, color: P.gray4 })
+      y -= 11
+    }
+  }
+
+  // ── Footer (bottom of last page) ────────────────────────────────────────────
+  page.drawLine({ start: { x: ML, y: MB - 8 }, end: { x: PW - MR, y: MB - 8 }, thickness: 0.6, color: P.rule })
+  page.drawText('orcaclub.pro', { x: ML, y: MB - 24, size: 8, font: normal, color: P.gray4 })
+  const footRight = `${d.ref} · ${d.dateLabel}`
+  page.drawText(footRight, { x: PW - MR - normal.widthOfTextAtSize(footRight, 8), y: MB - 24, size: 8, font: normal, color: P.gray4 })
+
+  return doc.save()
 }

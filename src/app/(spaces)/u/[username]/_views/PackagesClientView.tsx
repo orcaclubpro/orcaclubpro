@@ -383,11 +383,6 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
   const total = clientPackages.length
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // Touch swipe on carousel
-  const touchStartX = useRef(0)
-  const touchStartY = useRef(0)
-  const touchLocked = useRef<'h' | 'v' | null>(null)
-
   const goTo = (idx: number) => setActiveIdx(Math.max(0, Math.min(total - 1, idx)))
 
   // Keyboard nav (only when modal closed)
@@ -400,40 +395,6 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [activeIdx, modalPkg])
-
-  // Touch on carousel container
-  useEffect(() => {
-    const el = containerRef.current
-    if (!el) return
-    const onStart = (e: TouchEvent) => {
-      touchStartX.current = e.touches[0].clientX
-      touchStartY.current = e.touches[0].clientY
-      touchLocked.current = null
-    }
-    const onMove = (e: TouchEvent) => {
-      const dx = e.touches[0].clientX - touchStartX.current
-      const dy = e.touches[0].clientY - touchStartY.current
-      if (!touchLocked.current) {
-        if (Math.abs(dx) > Math.abs(dy) * 1.2 && Math.abs(dx) > 8) touchLocked.current = 'h'
-        else if (Math.abs(dy) > 8) touchLocked.current = 'v'
-      }
-      if (touchLocked.current === 'h') e.preventDefault()
-    }
-    const onEnd = (e: TouchEvent) => {
-      if (touchLocked.current !== 'h') return
-      const dx = e.changedTouches[0].clientX - touchStartX.current
-      if (dx < -40) goTo(activeIdx + 1)
-      else if (dx > 40) goTo(activeIdx - 1)
-    }
-    el.addEventListener('touchstart', onStart, { passive: true })
-    el.addEventListener('touchmove', onMove, { passive: false })
-    el.addEventListener('touchend', onEnd, { passive: true })
-    return () => {
-      el.removeEventListener('touchstart', onStart)
-      el.removeEventListener('touchmove', onMove)
-      el.removeEventListener('touchend', onEnd)
-    }
-  }, [activeIdx])
 
   // ── Empty state ─────────────────────────────────────────────────────────────
 

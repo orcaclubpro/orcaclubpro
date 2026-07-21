@@ -93,8 +93,6 @@ function SprintCarousel({ sprints, username }: { sprints: ActiveSprint[]; userna
   const [idx, setIdx] = useState(0)
   const safeIdx     = Math.min(idx, sprints.length - 1)
   const sprint      = sprints[safeIdx]
-  const touchStartX = useRef(0)
-  const touchStartY = useRef(0)
 
   const prev = () => setIdx(i => Math.max(0, i - 1))
   const next = () => setIdx(i => Math.min(sprints.length - 1, i + 1))
@@ -114,18 +112,6 @@ function SprintCarousel({ sprints, username }: { sprints: ActiveSprint[]; userna
   const cfg      = SPRINT_STATUS_CFG[sprint.status] ?? SPRINT_STATUS_CFG['in-progress']
   const pct      = sprint.totalTasksCount > 0 ? Math.round((sprint.completedTasksCount / sprint.totalTasksCount) * 100) : 0
   const daysLeft = Math.ceil((new Date(sprint.endDate).getTime() - Date.now()) / 86_400_000)
-
-  const onTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX
-    touchStartY.current = e.touches[0].clientY
-  }
-  const onTouchEnd = (e: React.TouchEvent) => {
-    if (sprints.length <= 1) return
-    const dx = e.changedTouches[0].clientX - touchStartX.current
-    const dy = e.changedTouches[0].clientY - touchStartY.current
-    if (Math.abs(dy) > Math.abs(dx) * 0.85 || Math.abs(dx) < 40) return
-    if (dx < 0) next(); else prev()
-  }
 
   return (
     <div className="space-y-4" aria-label={`Sprint ${safeIdx + 1} of ${sprints.length}`}>
@@ -151,7 +137,7 @@ function SprintCarousel({ sprints, username }: { sprints: ActiveSprint[]; userna
         </div>
       )}
 
-      <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+      <div>
         <Link
           href={`/u/${username}/projects/${sprint.projectId}/sprints/${sprint.id}`}
           className="block rounded-2xl border border-[var(--space-border-hard)] bg-[var(--space-bg-base)] overflow-hidden hover:border-[#262626] hover:bg-[var(--space-bg-card)] transition-all duration-200 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--space-accent)]/40"
@@ -483,7 +469,7 @@ export function AdminHomeView({
                   <motion.ul role="list" variants={stagger} initial="initial" animate="animate">
                     {allPendingOrders.map((order: any, i: number) => {
                       const ca       = typeof order.clientAccount === 'object' ? order.clientAccount : null
-                      const name     = ca?.companyName || ca?.firstName || 'Client'
+                      const name     = ca?.company || ca?.firstName || 'Client'
                       const daysLeft = order.dueDate
                         ? Math.ceil((new Date(order.dueDate).getTime() - Date.now()) / 86_400_000)
                         : null
@@ -718,7 +704,7 @@ export function AdminHomeView({
                   <ul role="list">
                     {pendingOrders.map((order: any, i: number) => {
                       const ca   = typeof order.clientAccount === 'object' ? order.clientAccount : null
-                      const name = ca?.companyName || ca?.firstName || 'Client'
+                      const name = ca?.company || ca?.firstName || 'Client'
                       return (
                         <li
                           key={order.id}

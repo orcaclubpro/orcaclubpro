@@ -1,7 +1,8 @@
 import { redirect, notFound } from 'next/navigation'
-import { getCurrentUser } from '@/actions/auth'
+import { getSessionUser } from '@/app/(spaces)/session'
 import { getPayload } from 'payload'
 import config from '@payload-config'
+import { getClientAccountDetail } from './detail-data'
 import type { ClientAccount, Project, User as UserType } from '@/types/payload-types'
 import {
   serializeSprint,
@@ -18,19 +19,11 @@ export async function generateMetadata({
   params: Promise<{ username: string; client: string }>
 }) {
   const { client: clientId } = await params
-  try {
-    const payload = await getPayload({ config })
-    const clientAccount = await payload.findByID({
-      collection: 'client-accounts',
-      id: clientId,
-      depth: 0,
-    })
-    return {
-      title: `${clientAccount.name} — ORCACLUB`,
-      description: `Client account for ${clientAccount.name}`,
-    }
-  } catch {
-    return { title: 'Client — ORCACLUB' }
+  const clientAccount = await getClientAccountDetail(clientId)
+  if (!clientAccount) return { title: 'Client — ORCACLUB' }
+  return {
+    title: `${clientAccount.name} — ORCACLUB`,
+    description: `Client account for ${clientAccount.name}`,
   }
 }
 
@@ -49,21 +42,13 @@ export default async function ClientDetailPage({
     ? (rawTab as ClientTab)
     : 'overview'
 
-  const user = await getCurrentUser()
+  const user = await getSessionUser()
   if (!user || user.username !== username) redirect('/login')
 
   const payload = await getPayload({ config })
 
-  let clientAccount: ClientAccount
-  try {
-    clientAccount = await payload.findByID({
-      collection: 'client-accounts',
-      id: clientId,
-      depth: 2,
-    })
-  } catch {
-    notFound()
-  }
+  const clientAccount: ClientAccount | null = await getClientAccountDetail(clientId)
+  if (!clientAccount) notFound()
 
   const [{ docs: orders }, { docs: projects }, { docs: clientUsers }, packagesResult, credentialsResult] =
     await Promise.all([

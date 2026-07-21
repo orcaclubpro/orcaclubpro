@@ -1,6 +1,6 @@
 import type { CollectionConfig, FieldHook } from 'payload'
 import { adminOnly, adminOrUser } from '../access'
-import { adminOrProjectMemberOrClient } from '../access'
+import { adminOrProjectMember } from '../access'
 import { encryptField, decryptField } from '../utils/fieldEncryption'
 
 const encryptBeforeChange: FieldHook = ({ value }) => {
@@ -18,6 +18,13 @@ const decryptAfterRead: FieldHook = ({ value }) => {
 
 const Credentials: CollectionConfig = {
   slug: 'credentials',
+  // SECURITY: keep decrypted secrets off the public API surface. GraphQL is
+  // disabled entirely, and collection-level read is staff-only so a client
+  // cannot GET /api/credentials to pull cleartext secrets. Clients still view
+  // their own project's credentials through the server-rendered portal and the
+  // vetted server actions in src/actions/credentials.ts (which run via the
+  // Local API and enforce project ownership + the vault session).
+  graphQL: false,
   admin: {
     useAsTitle: 'title',
     defaultColumns: ['title', 'project', 'website', 'username', 'updatedAt'],
@@ -26,7 +33,7 @@ const Credentials: CollectionConfig = {
   },
   access: {
     create: adminOrUser,
-    read: adminOrProjectMemberOrClient,
+    read: adminOrProjectMember,
     update: adminOrUser,
     delete: adminOnly,
   },

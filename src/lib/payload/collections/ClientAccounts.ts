@@ -186,6 +186,7 @@ const ClientAccounts: CollectionConfig = {
               type: 'relationship',
               relationTo: 'users',
               hasMany: true,
+              index: true,
               admin: {
                 description: 'Users responsible for this client account (team members)',
                 position: 'sidebar',

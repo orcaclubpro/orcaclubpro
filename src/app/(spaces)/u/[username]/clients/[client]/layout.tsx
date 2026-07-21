@@ -1,7 +1,8 @@
 import { redirect, notFound } from 'next/navigation'
-import { getCurrentUser } from '@/actions/auth'
+import { getSessionUser } from '@/app/(spaces)/session'
 import { getPayload } from 'payload'
 import config from '@payload-config'
+import { getClientAccountDetail } from './detail-data'
 import { AlertCircle } from 'lucide-react'
 import { CollapsibleSidebar } from '@/components/dashboard/CollapsibleSidebar'
 import { ClientSidebar, ClientSidebarContent } from '@/components/dashboard/ClientSidebar'
@@ -18,22 +19,14 @@ export default async function ClientDetailLayout({
 }) {
   const { username, client: clientId } = await params
 
-  const user = await getCurrentUser()
+  const user = await getSessionUser()
   if (!user || user.username !== username) redirect('/login')
   if (user.role === 'client') redirect(`/u/${username}`)
 
   const payload = await getPayload({ config })
 
-  let clientAccount: ClientAccount
-  try {
-    clientAccount = await payload.findByID({
-      collection: 'client-accounts',
-      id: clientId,
-      depth: 2,
-    })
-  } catch {
-    notFound()
-  }
+  const clientAccount: ClientAccount | null = await getClientAccountDetail(clientId)
+  if (!clientAccount) notFound()
 
   if (user.role !== 'admin') {
     const assignedIds = Array.isArray(clientAccount.assignedTo)

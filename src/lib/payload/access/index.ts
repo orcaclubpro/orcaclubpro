@@ -138,6 +138,26 @@ export const adminOrProjectMemberOrClient: Access = ({ req: { user } }) => {
   return { 'project.assignedTo': { contains: user.id } } as any
 }
 
+/**
+ * Admin/staff see all orders; a client sees only orders on their own account.
+ * Keyed on the Orders `clientAccount` field (not `client`, which adminOrOwnClient uses).
+ */
+export const adminOrUserOrOwnOrder: Access = ({ req: { user } }) => {
+  if (!user) return false
+
+  // Admins and staff manage all orders
+  if (user.role === 'admin' || user.role === 'user') return true
+
+  // Clients see only orders on their linked account
+  if (user.role === 'client' && user.clientAccount) {
+    const clientAccountId =
+      typeof user.clientAccount === 'string' ? user.clientAccount : user.clientAccount.id
+    return { clientAccount: { equals: clientAccountId } }
+  }
+
+  return false
+}
+
 // ============================================================================
 // FIELD-LEVEL ACCESS FUNCTIONS
 // ============================================================================

@@ -1,12 +1,12 @@
 import { redirect, notFound } from 'next/navigation'
-import { getCurrentUser } from '@/actions/auth'
+import { getSessionUser } from '@/app/(spaces)/session'
 import { getPayload } from 'payload'
 import config from '@payload-config'
+import { getProjectDetail, getProjectTasks } from './detail-data'
 import { ProjectTabNav } from '@/components/dashboard/ProjectTabNav'
 import { HomeTab } from '@/components/dashboard/HomeTab'
 import { SprintsTab } from '@/components/dashboard/SprintsTab'
 import { CredentialsTab } from '@/components/dashboard/CredentialsTab'
-import { SwipeTabRouter } from '@/components/dashboard/SwipeTabRouter'
 import { DetailTabSlide } from '@/components/dashboard/DetailTabSlide'
 import type { Project, Task, Sprint } from '@/types/payload-types'
 
@@ -16,15 +16,11 @@ export async function generateMetadata({
   params: Promise<{ username: string; project: string }>
 }) {
   const { project: projectId } = await params
-  try {
-    const payload = await getPayload({ config })
-    const project = await payload.findByID({ collection: 'projects', id: projectId, depth: 0 })
-    return {
-      title: `${project.name} - ORCACLUB`,
-      description: project.description || `Project details for ${project.name}`,
-    }
-  } catch {
-    return { title: 'Project - ORCACLUB', description: 'Project details' }
+  const project = await getProjectDetail(projectId)
+  if (!project) return { title: 'Project - ORCACLUB', description: 'Project details' }
+  return {
+    title: `${project.name} - ORCACLUB`,
+    description: project.description || `Project details for ${project.name}`,
   }
 }
 
@@ -38,27 +34,17 @@ export default async function ProjectDetailPage({
   const { username, project: projectId } = await params
   const { tab } = await searchParams
 
-  const user = await getCurrentUser()
+  const user = await getSessionUser()
   if (!user || user.username !== username) redirect('/login')
 
   const isClient = user.role === 'client'
   const payload = await getPayload({ config })
 
-  let project: Project
-  try {
-    project = await payload.findByID({ collection: 'projects', id: projectId, depth: 2 })
-  } catch {
-    notFound()
-  }
+  const project: Project | null = await getProjectDetail(projectId)
+  if (!project) notFound()
 
-  const [{ docs: tasks }, { docs: sprints }, { docs: credentials }] = await Promise.all([
-    payload.find({
-      collection: 'tasks',
-      where: { project: { equals: projectId } },
-      depth: 1,
-      sort: '-createdAt',
-      limit: 200,
-    }),
+  const [tasks, { docs: sprints }, { docs: credentials }] = await Promise.all([
+    getProjectTasks(projectId),
     payload.find({
       collection: 'sprints',
       where: { project: { equals: projectId } },
@@ -85,8 +71,6 @@ export default async function ProjectDetailPage({
       <div className="sticky top-[49px] z-10 bg-[var(--space-bg-card)] border-b border-[var(--space-border-hard)] px-6">
         <ProjectTabNav activeTab={activeTab} basePath={basePath} />
       </div>
-
-      <SwipeTabRouter tabs={PROJECT_TABS} activeTab={activeTab} basePath={basePath} />
 
       <DetailTabSlide
         activeTab={activeTab}

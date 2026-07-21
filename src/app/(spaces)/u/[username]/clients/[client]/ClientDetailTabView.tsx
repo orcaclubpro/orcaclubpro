@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import {
   AlertCircle,
   CheckCircle,
@@ -263,80 +263,6 @@ export function ClientDetailTabView({
     },
     [activeTab, username, clientId]
   )
-
-  // ── Touch swipe gesture ───────────────────────────────────────────────────
-
-  const touchStartX = useRef<number | null>(null)
-  const touchStartY = useRef<number | null>(null)
-  const touchTargetRef = useRef<EventTarget | null>(null)
-
-  useEffect(() => {
-    const onTouchStart = (e: TouchEvent) => {
-      touchStartX.current = e.touches[0].clientX
-      touchStartY.current = e.touches[0].clientY
-      touchTargetRef.current = e.target
-    }
-
-    const onTouchEnd = (e: TouchEvent) => {
-      if (touchStartX.current === null || touchStartY.current === null) return
-
-      // Don't swipe if inside a horizontally scrollable container
-      if ((touchTargetRef.current as Element | null)?.closest('[data-h-scroll]')) {
-        touchStartX.current = null
-        touchStartY.current = null
-        return
-      }
-
-      const dx = e.changedTouches[0].clientX - touchStartX.current
-      const dy = e.changedTouches[0].clientY - touchStartY.current
-
-      touchStartX.current = null
-      touchStartY.current = null
-
-      // Require mostly horizontal swipe
-      if (Math.abs(dx) < 50 || Math.abs(dy) > Math.abs(dx) * 0.8) return
-
-      const currIdx = TABS.indexOf(activeTab)
-      if (dx < 0 && currIdx < TABS.length - 1) {
-        navigate(TABS[currIdx + 1])
-      } else if (dx > 0 && currIdx > 0) {
-        navigate(TABS[currIdx - 1])
-      }
-    }
-
-    document.addEventListener('touchstart', onTouchStart, { passive: true })
-    document.addEventListener('touchend', onTouchEnd, { passive: true })
-    return () => {
-      document.removeEventListener('touchstart', onTouchStart)
-      document.removeEventListener('touchend', onTouchEnd)
-    }
-  }, [activeTab, navigate])
-
-  // ── Wheel gesture ─────────────────────────────────────────────────────────
-
-  const wheelCooldown = useRef(false)
-
-  useEffect(() => {
-    const onWheel = (e: WheelEvent) => {
-      if (wheelCooldown.current) return
-      if (Math.abs(e.deltaX) < 120) return
-
-      wheelCooldown.current = true
-      setTimeout(() => {
-        wheelCooldown.current = false
-      }, 300)
-
-      const currIdx = TABS.indexOf(activeTab)
-      if (e.deltaX > 0 && currIdx < TABS.length - 1) {
-        navigate(TABS[currIdx + 1])
-      } else if (e.deltaX < 0 && currIdx > 0) {
-        navigate(TABS[currIdx - 1])
-      }
-    }
-
-    document.addEventListener('wheel', onWheel, { passive: true })
-    return () => document.removeEventListener('wheel', onWheel)
-  }, [activeTab, navigate])
 
   // ── Render ────────────────────────────────────────────────────────────────
 

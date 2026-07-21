@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { AssignPackageModal } from './AssignPackageModal'
+import { EmailPackageModal } from './EmailPackageModal'
 import {
   getProposalWithTemplate,
   updatePackage,
@@ -20,7 +21,6 @@ import {
   pushPackageSchedule,
   sendScheduledPayment,
   removeScheduleEntry,
-  sendProposalEmail,
 } from '@/actions/packages'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -357,9 +357,6 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
 
   // Email proposal modal state
   const [emailModalPkgId, setEmailModalPkgId]   = useState<string | null>(null)
-  const [emailAddresses, setEmailAddresses]       = useState('')
-  const [emailSending, setEmailSending]           = useState(false)
-  const [emailResult, setEmailResult]             = useState<{ sent?: number; error?: string } | null>(null)
 
   const getDays = (pkgId: string) => daysUntilDue[pkgId] ?? 30
   const getMode = (pkgId: string) => invoiceMode[pkgId] ?? 'full'
@@ -505,26 +502,6 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     })
-  }
-
-  const handleEmailProposal = async () => {
-    if (!emailModalPkgId) return
-    const emails = emailAddresses.split(',').map(e => e.trim()).filter(e => e.includes('@'))
-    if (emails.length === 0) return
-    setEmailSending(true)
-    setEmailResult(null)
-    const result = await sendProposalEmail(emailModalPkgId, emails)
-    setEmailSending(false)
-    if ('sent' in result && result.sent > 0) {
-      setEmailResult({ sent: result.sent })
-      setTimeout(() => {
-        setEmailModalPkgId(null)
-        setEmailAddresses('')
-        setEmailResult(null)
-      }, 2500)
-    } else {
-      setEmailResult({ error: ('error' in result ? result.error : undefined) ?? 'Failed to send' })
-    }
   }
 
   const handleFrequencyChange = (pkgId: string, freq: Frequency) => {
@@ -773,11 +750,11 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                           <ArrowRight className="size-3" />
                         </Link>
                         <button
-                          onClick={() => { setEmailModalPkgId(pkg.id); setEmailAddresses(''); setEmailResult(null) }}
+                          onClick={() => setEmailModalPkgId(pkg.id)}
                           className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[var(--space-text-secondary)] border border-[var(--space-border-hard)] rounded-lg hover:border-[rgba(139,156,182,0.18)] transition-all"
                         >
                           <Mail className="size-3.5" />
-                          Email Proposal
+                          Email
                         </button>
                       </div>
 
@@ -1382,77 +1359,12 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
         </div>
       )}
 
-      {/* ── Email Proposal Modal ──────────────────────────────────────────── */}
+      {/* ── Email Modal ───────────────────────────────────────────────────── */}
       {emailModalPkgId && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
-          {/* Backdrop */}
-          <div
-            className="absolute inset-0 bg-[#000000]/60"
-            onClick={() => { setEmailModalPkgId(null); setEmailAddresses(''); setEmailResult(null) }}
-          />
-          {/* Dialog */}
-          <div className="relative z-10 w-full max-w-sm rounded-2xl border border-[var(--space-border-hard)] bg-[var(--space-bg-base)] p-6 space-y-4 shadow-[0_8px_40px_rgba(255,255,255,0.06)]">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Mail className="size-4" style={{ color: 'var(--space-accent)' }} />
-                <h3 className="text-sm font-semibold text-[var(--space-text-primary)]">Email Proposal</h3>
-              </div>
-              <button
-                onClick={() => { setEmailModalPkgId(null); setEmailAddresses(''); setEmailResult(null) }}
-                className="p-1 text-[var(--space-text-muted)] hover:text-[var(--space-text-tertiary)] transition-colors rounded-lg hover:bg-[var(--space-bg-card-hover)]"
-              >
-                <X className="size-4" />
-              </button>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-semibold uppercase tracking-widest text-[var(--space-text-muted)]">
-                Email addresses
-              </label>
-              <textarea
-                value={emailAddresses}
-                onChange={e => setEmailAddresses(e.target.value)}
-                placeholder="client@example.com, another@example.com"
-                rows={3}
-                className="w-full px-3 py-2.5 text-sm bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] rounded-xl text-[var(--space-text-primary)] placeholder-[#555555] focus:outline-none focus:border-[rgba(139,156,182,0.20)] resize-none"
-              />
-              <p className="text-[10px] text-[var(--space-text-muted)]">Separate multiple addresses with commas</p>
-            </div>
-
-            {emailResult && (
-              <div className={`rounded-xl px-3 py-2.5 text-xs font-medium ${
-                emailResult.sent
-                  ? 'bg-emerald-500/[0.08] border border-emerald-500/20 text-emerald-400'
-                  : 'bg-red-500/[0.08] border border-red-500/20 text-red-400'
-              }`}>
-                {'sent' in emailResult && emailResult.sent
-                  ? `✓ Proposal sent to ${emailResult.sent} recipient${emailResult.sent !== 1 ? 's' : ''}`
-                  : `✗ ${emailResult.error ?? 'Failed to send'}`
-                }
-              </div>
-            )}
-
-            <div className="flex items-center gap-2 pt-1">
-              <button
-                onClick={() => { setEmailModalPkgId(null); setEmailAddresses(''); setEmailResult(null) }}
-                className="flex-1 px-4 py-2 text-xs font-medium text-[var(--space-text-muted)] border border-[var(--space-border-hard)] rounded-xl hover:text-[var(--space-text-tertiary)] hover:border-[var(--space-border-hard)] transition-all"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleEmailProposal}
-                disabled={emailSending || !emailAddresses.trim()}
-                className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-semibold border border-[rgba(139,156,182,0.18)] bg-[rgba(139,156,182,0.06)] rounded-xl hover:bg-[rgba(139,156,182,0.10)] disabled:opacity-40 transition-all"
-                style={{ color: 'var(--space-accent)' }}
-              >
-                {emailSending
-                  ? <><Loader2 className="size-3.5 animate-spin" /> Sending…</>
-                  : <><Mail className="size-3.5" /> Send Proposal</>
-                }
-              </button>
-            </div>
-          </div>
-        </div>
+        <EmailPackageModal
+          packageId={emailModalPkgId}
+          onClose={() => setEmailModalPkgId(null)}
+        />
       )}
     </section>
   )

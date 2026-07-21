@@ -113,11 +113,10 @@ export default async function PackagePrintPage({
               ORCACLUB
             </span>
             <p style={{ fontSize: 10, color: '#9ca3af', letterSpacing: '0.18em', textTransform: 'uppercase', marginTop: 3 }}>
-              Technical Operations Development Studio
+              Web Design and Marketing Automation
             </p>
           </div>
           <div style={{ textAlign: 'right' }}>
-            <p style={{ fontSize: 11, fontWeight: 600, color: '#6b7280', letterSpacing: '0.12em', textTransform: 'uppercase' }}>Proposal</p>
             <p style={{ fontSize: 13, color: '#111', fontWeight: 600, marginTop: 2 }}>{ref}</p>
             <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>{proposalDate}</p>
           </div>
@@ -397,8 +396,13 @@ export default async function PackagePrintPage({
             size: letter;
             margin: 0;
           }
-          body { background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          /* Beat the inline theme vars set on <html> so the spaces wrapper prints white */
+          :root { --space-bg-base: #ffffff !important; --space-text: #111111 !important; }
+          html, body { background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           header, footer, nav { display: none !important; }
+          /* The spaces layout scales <main> with zoom:1.3 and pads for the fixed
+             header/bottom nav — undo both or the invoice overflows the page */
+          main { zoom: 1 !important; padding: 0 !important; min-height: 0 !important; }
         }
       `}</style>
     </div>

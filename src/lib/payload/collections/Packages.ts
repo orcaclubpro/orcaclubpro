@@ -31,6 +31,10 @@ const Packages: CollectionConfig = {
     update: adminOrUser,
     delete: adminOnly,
   },
+  indexes: [
+    // Dashboard query: packages for a client account filtered by type
+    { fields: ['clientAccount', 'type'] },
+  ],
   fields: [
     {
       name: 'name',

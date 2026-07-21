@@ -323,30 +323,22 @@ body {
   }
 }
 
-/* ── Tab page slide animations ─────────────────────────────────────────────── */
-
-/* Enter from the right (forward navigation) */
-@keyframes tabSlideInFromRight {
-  from { transform: translateX(100%); }
-  to   { transform: translateX(0); }
+/* ── Loading skeletons ─────────────────────────────────────────────────────── */
+/* One slow, synchronized breath across all bars — surfaces stay static so the
+   skeleton reads as the page's own structure, not a new visual event. */
+@keyframes skeletonPulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.45; }
 }
 
-/* Enter from the left (backward navigation) */
-@keyframes tabSlideInFromLeft {
-  from { transform: translateX(-100%); }
-  to   { transform: translateX(0); }
+.skel {
+  background: var(--space-bg-card-hover);
+  border-radius: 6px;
+  animation: skeletonPulse 1.6s ease-in-out infinite;
 }
 
-/* Exit to the left — supports starting from a mid-drag position via --tab-slide-from */
-@keyframes tabSlideOutLeft {
-  from { transform: translateX(var(--tab-slide-from, 0px)); }
-  to   { transform: translateX(-100%); }
-}
-
-/* Exit to the right — same */
-@keyframes tabSlideOutRight {
-  from { transform: translateX(var(--tab-slide-from, 0px)); }
-  to   { transform: translateX(100%); }
+@media (prefers-reduced-motion: reduce) {
+  .skel { animation: none; }
 }
 
 /* Animation utility classes */

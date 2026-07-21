@@ -35,7 +35,13 @@ const nextConfig = {
     // Enable webpack memory optimizations
     webpackMemoryOptimizations: true,
     // Inline critical CSS to reduce render-blocking resources
-    optimizeCss: true
+    optimizeCss: true,
+    // Client router cache: serve recently-visited dynamic routes (dashboard
+    // tabs) from cache on back/forward and repeat visits within the window.
+    staleTimes: {
+      dynamic: 30,
+      static: 180,
+    },
   },
   
   // Webpack configuration for bun compatibility

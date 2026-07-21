@@ -5,10 +5,11 @@ import Link from 'next/link'
 import {
   Search, Package, FileText, X, ExternalLink,
   Layers, Loader2, CheckCircle2, ChevronRight,
-  Check,
+  Check, Mail,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { AssignPackageModal } from '@/components/dashboard/AssignPackageModal'
+import { EmailPackageModal } from '@/components/dashboard/EmailPackageModal'
 import { createOrderFromPackage } from '@/actions/packages'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -104,6 +105,7 @@ function ProposalModal({
   const [invoiceState, setInvoiceState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
   const [invoiceUrl, setInvoiceUrl] = useState<string | null>(null)
   const [invoiceError, setInvoiceError] = useState<string | null>(null)
+  const [emailOpen, setEmailOpen] = useState(false)
 
   const lineItems = pkg.lineItems ?? []
   const { oneTime, monthly, annual } = computeTotals(lineItems)
@@ -293,6 +295,13 @@ function ProposalModal({
               }
             </button>
           )}
+          <button
+            onClick={() => setEmailOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] text-[var(--space-text-tertiary)] hover:text-[var(--space-text-primary)] transition-all"
+          >
+            <Mail className="size-3.5" />
+            Email
+          </button>
           <Link
             href={`/u/${username}/packages/${pkg.id}/print`}
             target="_blank"
@@ -305,6 +314,10 @@ function ProposalModal({
           </Link>
         </div>
       </div>
+
+      {emailOpen && (
+        <EmailPackageModal packageId={pkg.id} onClose={() => setEmailOpen(false)} />
+      )}
     </div>
   )
 }

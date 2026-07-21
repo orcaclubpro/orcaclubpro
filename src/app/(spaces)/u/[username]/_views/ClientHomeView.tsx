@@ -145,7 +145,7 @@ export function ClientHomeView({
               packages={clientPackages}
               maxPackages={2}
               maxEntries={3}
-              footerLink={{ label: 'View full payment schedule', href: `/u/${username}?tab=invoices` }}
+              footerLink={{ label: 'View full payment schedule', href: `/u/${username}/invoices` }}
             />
           </div>
         )}
@@ -175,7 +175,7 @@ export function ClientHomeView({
             )}
           </div>
           {clientProjects.length > 3 && (
-            <Link href={`/u/${username}?tab=projects`} className="flex items-center gap-1 text-xs text-[var(--space-text-secondary)] hover:text-[var(--space-text-tertiary)] transition-colors">
+            <Link href={`/u/${username}/projects`} className="flex items-center gap-1 text-xs text-[var(--space-text-secondary)] hover:text-[var(--space-text-tertiary)] transition-colors">
               View all <ArrowRight className="size-3" />
             </Link>
           )}
@@ -191,7 +191,7 @@ export function ClientHomeView({
             <h2 className="text-sm font-semibold text-[var(--space-text-primary)]">Invoices</h2>
           </div>
           <Link
-            href={`/u/${username}?tab=invoices`}
+            href={`/u/${username}/invoices`}
             className="flex items-center gap-1 text-xs text-[var(--space-text-secondary)] hover:text-[var(--space-text-tertiary)] transition-colors"
           >
             View all <ArrowRight className="size-3" />

@@ -48,6 +48,11 @@ export const Tasks: CollectionConfig = {
   hooks: {
     beforeChange: [setCompletedAtOnCompletion],
   },
+  indexes: [
+    // Dashboard queries: tasks by assignee filtered by status / sorted by due date
+    { fields: ['assignedTo', 'status'] },
+    { fields: ['assignedTo', 'dueDate'] },
+  ],
   fields: [
     // ============================================================================
     // BASIC INFORMATION
@@ -161,6 +166,7 @@ export const Tasks: CollectionConfig = {
     {
       name: 'dueDate',
       type: 'date',
+      index: true,
       admin: {
         description: 'When this task is due',
       },

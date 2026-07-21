@@ -42,7 +42,7 @@ export async function createBillingPortalSession(clientAccountId: string) {
     // Determine return URL — if client, send back to their invoices tab; staff go back to client profile
     const returnUrl =
       user.role === 'client' && user.username
-        ? `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://orcaclub.pro'}/u/${user.username}?tab=invoices`
+        ? `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://orcaclub.pro'}/u/${user.username}/invoices`
         : `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://orcaclub.pro'}/u/${user.username}/clients/${clientAccountId}`
 
     const session = await stripe.billingPortal.sessions.create({

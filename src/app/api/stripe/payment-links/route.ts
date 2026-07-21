@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getStripe } from '@/lib/stripe'
 import { getPayload } from 'payload'
 import configPromise from '@payload-config'
+import { headers } from 'next/headers'
 
 /**
  * POST /api/stripe/payment-links
@@ -34,6 +35,32 @@ import configPromise from '@payload-config'
 export async function POST(request: NextRequest) {
   try {
     const stripe = getStripe()
+    const payload = await getPayload({ config: configPromise })
+
+    // Authenticate — staff only. This endpoint creates client accounts, orders,
+    // and finalized Stripe invoices, so it must never be reachable anonymously.
+    let user
+    try {
+      const result = await payload.auth({ headers: await headers() })
+      user = result.user
+    } catch {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      )
+    }
+
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      )
+    }
+
+    if (user.role !== 'admin' && user.role !== 'user') {
+      return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 })
+    }
+
     const body = await request.json()
 
     const { customerEmail, customerName, lineItems, project } = body
@@ -73,9 +100,6 @@ export async function POST(request: NextRequest) {
       (sum: number, item: any) => sum + item.unitPrice * item.quantity,
       0
     )
-
-    // Create PayloadCMS records first to get order number
-    const payload = await getPayload({ config: configPromise })
 
     // 1. Find or create client account
     let clientAccount = await payload.find({

@@ -220,9 +220,34 @@ export async function updateCredential(id: string, data: Partial<CredentialInput
   try {
     const user = await getCurrentUser()
     if (!user) return { success: false, error: 'Unauthorized' }
-    // clients may edit credentials (but cannot create or delete)
 
     const payload = await getPayload({ config })
+
+    // SECURITY: verify the caller owns the credential's project before editing.
+    // Without this, any authenticated user could overwrite any project's
+    // credentials by guessing/enumerating credential IDs (cross-tenant IDOR).
+    const existing = await payload.findByID({ collection: 'credentials', id, depth: 1 })
+    const project = existing?.project
+    if (!project || typeof project === 'string') {
+      return { success: false, error: 'Access denied' }
+    }
+
+    const projectClientId =
+      typeof project.client === 'string' ? project.client : (project.client as any)?.id
+    const assignedIds = (Array.isArray(project.assignedTo) ? project.assignedTo : [])
+      .map((a: any) => (typeof a === 'string' ? a : a?.id))
+      .filter(Boolean)
+    const userClientId =
+      typeof user.clientAccount === 'string' ? user.clientAccount : (user.clientAccount as any)?.id
+
+    const authorized =
+      user.role === 'admin' ||
+      (user.role === 'user' && assignedIds.includes(user.id)) ||
+      (user.role === 'client' && userClientId && projectClientId === userClientId)
+
+    if (!authorized) {
+      return { success: false, error: 'Access denied' }
+    }
 
     const updateData: Record<string, unknown> = {}
     if (data.title !== undefined) updateData.title = data.title

@@ -1,7 +1,8 @@
 import { redirect, notFound } from 'next/navigation'
-import { getCurrentUser } from '@/actions/auth'
+import { getSessionUser } from '@/app/(spaces)/session'
 import { getPayload } from 'payload'
 import config from '@payload-config'
+import { getProjectDetail, getProjectTasks } from './detail-data'
 import { AlertCircle } from 'lucide-react'
 import { ProjectSidebar } from '@/components/dashboard/ProjectSidebar'
 import { CollapsibleSidebar } from '@/components/dashboard/CollapsibleSidebar'
@@ -19,17 +20,13 @@ export default async function ProjectLayout({
 }) {
   const { username, project: projectId } = await params
 
-  const user = await getCurrentUser()
+  const user = await getSessionUser()
   if (!user || user.username !== username) redirect('/login')
 
   const payload = await getPayload({ config })
 
-  let project: Project
-  try {
-    project = await payload.findByID({ collection: 'projects', id: projectId, depth: 2 })
-  } catch {
-    notFound()
-  }
+  const project: Project | null = await getProjectDetail(projectId)
+  if (!project) notFound()
 
   const isClient = user.role === 'client'
 
@@ -68,14 +65,8 @@ export default async function ProjectLayout({
     }
   }
 
-  const [{ docs: tasks }, clientProjectsResult, staffProjectsResult] = await Promise.all([
-    payload.find({
-      collection: 'tasks',
-      where: { project: { equals: projectId } },
-      depth: 0,
-      sort: '-createdAt',
-      limit: 200,
-    }),
+  const [tasks, clientProjectsResult, staffProjectsResult] = await Promise.all([
+    getProjectTasks(projectId),
     isClient && user.clientAccount
       ? payload.find({
           collection: 'projects',

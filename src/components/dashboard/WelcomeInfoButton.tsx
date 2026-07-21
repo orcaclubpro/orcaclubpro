@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useTransition, useRef } from 'react'
 import { createPortal } from 'react-dom'
+import { useRouter, usePathname } from 'next/navigation'
 import { Info, X, FolderOpen, Receipt, Package, ArrowRight, Check } from 'lucide-react'
-import { useTabContext } from '@/app/(spaces)/TabContext'
 import { usePackageCount } from '@/app/(spaces)/PackageCountContext'
 import { dismissTips } from '@/actions/profile'
 
@@ -19,7 +19,8 @@ export function WelcomeInfoButton({ firstName, showTips }: WelcomeInfoButtonProp
   const [dismissed, setDismissed] = useState(false)
   const [mounted, setMounted] = useState(false) // guard for createPortal (SSR)
   const [, startTransition] = useTransition()
-  const { navigate } = useTabContext()
+  const router = useRouter()
+  const pathname = usePathname()
   const { packageCount } = usePackageCount()
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -56,7 +57,9 @@ export function WelcomeInfoButton({ firstName, showTips }: WelcomeInfoButtonProp
 
   const handleNavigate = (tab: string) => {
     closeModal()
-    setTimeout(() => navigate(tab), 160)
+    const username = pathname?.match(/^\/u\/([^/]+)/)?.[1]
+    if (!username) return
+    setTimeout(() => router.push(`/u/${username}/${tab}`), 160)
   }
 
   // ── Modal content (rendered via portal into document.body) ──────────────

@@ -11,7 +11,11 @@ import { EMAIL_LIGHT_MODE_STYLES } from '@/lib/email/templates/base'
 const EXPIRY_MS = 60 * 60 * 1000 // 1 hour
 
 function getSecret(): string {
-  return process.env.PAYLOAD_SECRET || 'your-secret-here'
+  const secret = process.env.PAYLOAD_SECRET
+  if (!secret) {
+    throw new Error('PAYLOAD_SECRET environment variable is required to sign unlock tokens')
+  }
+  return secret
 }
 
 /**

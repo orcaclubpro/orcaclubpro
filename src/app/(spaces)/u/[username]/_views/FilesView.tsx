@@ -11,7 +11,6 @@ import { cn } from '@/lib/utils'
 import { createDocument, updateDocument, deleteFileRecord, sendDocumentEmail } from '@/actions/files'
 import { createPackageFromSow } from '@/actions/packages'
 import type { NdaFormData, SowFormData } from '@/lib/document-generators'
-import { buildPersonalNdaPdf, buildOrcaclubNdaPdf, buildPersonalSowPdf, buildOrcaclubSowPdf } from '@/lib/pdf-generators'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -257,6 +256,8 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
     if ((rec.documentTemplate === 'nda' || rec.documentTemplate === 'sow') && rec.documentData) {
       setViewingId(rec.id)
       try {
+        const { buildPersonalNdaPdf, buildOrcaclubNdaPdf, buildPersonalSowPdf, buildOrcaclubSowPdf } =
+          await import('@/lib/pdf-generators')
         const data = rec.documentData as any
         const brand = rec.documentBrand ?? 'orcaclub'
         let bytes: Uint8Array
@@ -346,6 +347,8 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
   }
 
   async function buildPdfBytes(): Promise<Uint8Array> {
+    const { buildPersonalNdaPdf, buildOrcaclubNdaPdf, buildPersonalSowPdf, buildOrcaclubSowPdf } =
+      await import('@/lib/pdf-generators')
     if (docType === 'nda') {
       return brand === 'personal' ? buildPersonalNdaPdf(ndaForm) : buildOrcaclubNdaPdf(ndaForm)
     } else {

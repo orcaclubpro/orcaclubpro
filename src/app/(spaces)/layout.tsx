@@ -1,11 +1,14 @@
+import { getPayload } from "payload"
+import config from "@payload-config"
 import { SpacesHeader } from "@/components/layout/spaces-header"
 import { MobileBottomNav } from "@/components/dashboard/MobileBottomNav"
 import { GlobalSearchPaletteLoader } from "@/components/dashboard/GlobalSearchPaletteLoader"
-import { getCurrentUser } from "@/actions/auth"
-import { TabProvider } from "./TabContext"
+import { getSessionUser } from "./session"
+import { experienceFor } from "./experience"
 import { HeaderTitleProvider } from "./HeaderTitleContext"
 import { PackageCountProvider } from "./PackageCountContext"
 import { ThemeProvider } from "./ThemeContext"
+import { countClientProposalPackages } from "./u/[username]/dashboard-data"
 import { THEMES, DEFAULT_THEME } from "./themes"
 import type { ThemeId } from "./themes"
 
@@ -14,10 +17,17 @@ export default async function SpacesLayout({
 }: {
   children: React.ReactNode
 }) {
-  const user = await getCurrentUser()
-  const isDeveloper = user?.role === 'admin' || user?.role === 'user'
+  const user = await getSessionUser()
+  const isDeveloper = !!user && experienceFor(user.role) === 'staff'
   const savedTheme = (user as any)?.dashboardTheme as ThemeId | undefined
   const initialTheme: ThemeId = (savedTheme && THEMES[savedTheme]) ? savedTheme : DEFAULT_THEME
+
+  // Mobile-nav packages badge — resolved server-side so it's correct on first paint.
+  let packageCount = 0
+  if (user && experienceFor(user.role) === 'client') {
+    const payload = await getPayload({ config })
+    packageCount = await countClientProposalPackages(payload, user)
+  }
 
   // Build inline CSS vars from the initial theme so the correct background
   // renders on the server — before ThemeContext's useEffect fires on the client.
@@ -29,8 +39,7 @@ export default async function SpacesLayout({
   return (
     <ThemeProvider initialTheme={initialTheme} username={user?.username ?? undefined}>
     <HeaderTitleProvider>
-    <TabProvider>
-    <PackageCountProvider>
+    <PackageCountProvider initialCount={packageCount}>
       {/* Wrapper fills the full viewport — inline theme vars applied server-side
           so the background is correct before JS hydration (avoids black flash). */}
       <div
@@ -43,7 +52,7 @@ export default async function SpacesLayout({
             __html: `(function(){var r=document.documentElement;var v="${cssVarString}".split(';');v.forEach(function(p){var i=p.indexOf(':');if(i>0)r.style.setProperty(p.slice(0,i),p.slice(i+1));});})();`,
           }}
         />
-        <SpacesHeader user={user} showTips={(user as any)?.showTips !== false && user?.role === 'client'} />
+        <SpacesHeader user={user} showTips={(user as any)?.showTips !== false && experienceFor(user?.role) === 'client'} />
         {/* zoom: 1.3 scales up the entire spaces UI for better legibility.
             Note: `zoom` is non-standard CSS; Firefox ignores it. For cross-browser
             support, this should eventually migrate to transform:scale(1.3) with
@@ -56,7 +65,6 @@ export default async function SpacesLayout({
         <GlobalSearchPaletteLoader username={user.username} />
       )}
     </PackageCountProvider>
-    </TabProvider>
     </HeaderTitleProvider>
     </ThemeProvider>
   )

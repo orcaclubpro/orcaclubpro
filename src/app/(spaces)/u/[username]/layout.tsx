@@ -1,7 +1,9 @@
 import { redirect } from 'next/navigation'
 import type { Metadata } from 'next'
-import { getCurrentUser } from '@/actions/auth'
+import { getSessionUser } from '@/app/(spaces)/session'
+import { experienceFor } from '@/app/(spaces)/experience'
 import { DashboardTaskManager } from '@/components/dashboard/DashboardTaskManager'
+import { PasskeySetupPrompt } from '@/components/dashboard/PasskeySetupPrompt'
 
 export async function generateMetadata({
   params,
@@ -22,7 +24,7 @@ export default async function DashboardLayout({
   params: Promise<{ username: string }>
 }) {
   const { username } = await params
-  const user = await getCurrentUser()
+  const user = await getSessionUser()
 
   // Check authentication
   if (!user) {
@@ -35,16 +37,19 @@ export default async function DashboardLayout({
     if (user.username) {
       redirect(`/u/${user.username}`)
     }
-    // If user has no username, redirect based on role
-    if (user.role === 'admin' || user.role === 'user') {
+    // If user has no username, redirect based on experience
+    if (experienceFor(user.role) === 'staff') {
       redirect('/admin')
     }
     // Client without username shouldn't happen, but redirect to login
     redirect('/login')
   }
 
+  const hasPasskey = Boolean((user as any).passkeyCredentials?.length)
+
   return (
     <>
+      {!hasPasskey && <PasskeySetupPrompt />}
       {children}
       <DashboardTaskManager username={username} userRole={user.role} />
     </>

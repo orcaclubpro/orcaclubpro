@@ -9,11 +9,14 @@ import { headers } from 'next/headers'
 import { getStripe } from '@/lib/stripe'
 import {
   sendGenericInvoiceEmail,
+  sendInvoiceCopyToAddresses,
   sendPaymentScheduleEmail,
   sendProposalEmailToAddresses,
   generateProposalEmail,
   generateProposalEmailText,
+  type EmailAttachment,
 } from '@/lib/payload/utils/genericInvoiceEmailTemplate'
+import { buildPackagePdf } from '@/lib/pdf-generators'
 
 const APP_BASE = process.env.NEXT_PUBLIC_SERVER_URL ?? 'https://app.orcaclub.pro'
 
@@ -230,6 +233,9 @@ export async function assignPackageToClient({
         status: 'draft',
         clientAccount: clientAccountId,
         sourcePackage: packageId,
+        // Start with every template option selected — staff usually keep all
+        // of them and can still uncheck in the proposal editor
+        lineItems: (template.lineItems ?? []).map(({ id: _id, ...item }: any) => item),
       } as any,
     })
 
@@ -1466,6 +1472,7 @@ export async function emailPackageToSelf(packageId: string) {
 export async function sendProposalEmail(
   packageId: string,
   emails: string[],
+  sendAs: 'proposal' | 'invoice' = 'proposal',
 ) {
   try {
     const user = await getCurrentUser()
@@ -1504,6 +1511,81 @@ export async function sendProposalEmail(
       }
     }
 
+    const clientObj = clientAccount && typeof clientAccount === 'object' ? clientAccount : null
+    // Same reference format as the print page (PKG-XXXXXX)
+    const ref = `PKG-${packageId.slice(-6).toUpperCase()}`
+
+    // Build the PDF attachment — non-blocking, the email still sends without it
+    let attachments: EmailAttachment[] | undefined
+    try {
+      const fmtPdfDate = (iso: string) => {
+        const parts = iso.split('T')[0].split('-').map(Number)
+        if (parts.length !== 3 || parts.some(isNaN)) return iso
+        return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+          .format(new Date(parts[0], parts[1] - 1, parts[2]))
+      }
+      const bytes = await buildPackagePdf({
+        sendAs,
+        ref,
+        packageName: pkg.name,
+        dateLabel: new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).format(new Date()),
+        clientLines: [
+          clientObj?.name,
+          clientObj?.company,
+          clientObj?.address?.line1,
+          clientObj?.address?.line2,
+          [clientObj?.address?.city, clientObj?.address?.state, clientObj?.address?.zip].filter(Boolean).join(', ') || null,
+          clientObj?.email,
+        ].filter(Boolean) as string[],
+        description: pkg.description ?? null,
+        coverMessage: (pkg as any).coverMessage ?? null,
+        lineItems: lineItems.map((item: any) => ({
+          name: item.name,
+          description: item.description ?? null,
+          quantity: item.quantity ?? 1,
+          rate: item.adjustedPrice ?? item.price ?? 0,
+          isRecurring: item.isRecurring ?? false,
+          recurringInterval: item.recurringInterval ?? undefined,
+        })),
+        paymentSchedule: ((pkg as any).paymentSchedule ?? []).map((e: any) => ({
+          label: e.label,
+          amount: e.amount,
+          dueDateLabel: e.dueDate ? fmtPdfDate(e.dueDate) : null,
+        })),
+      })
+      attachments = [{
+        filename: sendAs === 'invoice' ? `Invoice_${ref}.pdf` : `Proposal_${pkg.name.replace(/\s+/g, '_')}.pdf`,
+        content: Buffer.from(bytes).toString('base64'),
+        encoding: 'base64',
+        contentType: 'application/pdf',
+      }]
+    } catch (err) {
+      console.error('[sendProposalEmail] PDF generation failed — sending without attachment:', err)
+    }
+
+    if (sendAs === 'invoice') {
+      // Straight invoice copy — no Order or Stripe invoice is created.
+      const totalDue = totalOneTime > 0 ? totalOneTime : totalMonthly + totalAnnual
+      return await sendInvoiceCopyToAddresses(payload, {
+        orderNumber: ref,
+        customerName: clientObj?.name ?? undefined,
+        customerEmail: clientObj?.email ?? validEmails[0],
+        customerCompany: clientObj?.company ?? undefined,
+        customerPhone: clientObj?.phone ?? undefined,
+        customerAddress: clientObj?.address ?? undefined,
+        lineItems: lineItems.map((item: any) => ({
+          title: item.name,
+          quantity: item.quantity ?? 1,
+          price: item.adjustedPrice ?? item.price ?? 0,
+          isRecurring: item.isRecurring || undefined,
+          recurringInterval: item.recurringInterval || undefined,
+        })),
+        totalAmount: totalDue,
+        packageName: pkg.name,
+        proposalPrintUrl,
+      }, validEmails, attachments)
+    }
+
     const result = await sendProposalEmailToAddresses(payload, {
       packageName: pkg.name,
       packageDescription: pkg.description ?? undefined,
@@ -1525,7 +1607,7 @@ export async function sendProposalEmail(
       })),
       proposalPrintUrl,
       recipientEmail: validEmails[0],
-    }, validEmails)
+    }, validEmails, attachments)
 
     return result
   } catch (error) {

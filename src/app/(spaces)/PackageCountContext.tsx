@@ -16,8 +16,16 @@ export function usePackageCount() {
   return useContext(PackageCountContext)
 }
 
-export function PackageCountProvider({ children }: { children: React.ReactNode }) {
-  const [packageCount, setPackageCount] = useState(0)
+// initialCount is fetched server-side in the spaces layout (client experience
+// only) so the mobile-nav badge is correct on first paint.
+export function PackageCountProvider({
+  children,
+  initialCount = 0,
+}: {
+  children: React.ReactNode
+  initialCount?: number
+}) {
+  const [packageCount, setPackageCount] = useState(initialCount)
   return (
     <PackageCountContext.Provider value={{ packageCount, setPackageCount }}>
       {children}

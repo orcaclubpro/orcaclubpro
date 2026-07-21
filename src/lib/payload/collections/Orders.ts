@@ -1,6 +1,6 @@
 import type { CollectionConfig } from 'payload'
 import { updateClientBalance, revertClientBalance } from '../hooks/updateClientBalance'
-import { authenticated, adminOnly } from '../access'
+import { adminOnly, adminOrUser, adminOrUserOrOwnOrder } from '../access'
 
 const Orders: CollectionConfig = {
   slug: 'orders',
@@ -45,9 +45,12 @@ const Orders: CollectionConfig = {
     afterDelete: [revertClientBalance],
   },
   access: {
-    read: authenticated,
-    create: authenticated,
-    update: authenticated,
+    // Clients see only their own orders; staff/admin see all. Server-side
+    // flows (payment-links API, Stripe webhooks) run with overrideAccess and
+    // are unaffected. Clients never create/edit orders directly.
+    read: adminOrUserOrOwnOrder,
+    create: adminOrUser,
+    update: adminOrUser,
     delete: adminOnly,
   },
   fields: [
