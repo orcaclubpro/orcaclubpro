@@ -406,9 +406,10 @@ export function PackageBuilderModal({ mode, username, clientId, existing, onClos
   if (!mounted) return null
 
   const overlay = (
-    <div className="fixed inset-0 z-[60] flex">
+    <div className="fixed inset-0 z-[60] flex p-3 sm:p-5">
+      <div className="absolute inset-0 bg-[#000000]/75 backdrop-blur-sm" onClick={() => onClose()} />
       <div
-        className="relative z-10 w-full h-full flex flex-col overflow-hidden"
+        className="relative z-10 w-full h-full flex flex-col overflow-hidden rounded-2xl border border-[var(--space-border-hard)] shadow-2xl shadow-[#000000]/50"
         style={{ background: 'var(--space-bg-card)' }}
       >
         {/* Header */}
