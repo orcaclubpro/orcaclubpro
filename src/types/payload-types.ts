@@ -79,6 +79,7 @@ export interface Config {
     'client-accounts': ClientAccount;
     orders: Order;
     packages: Package;
+    'service-items': ServiceItem;
     'webhook-events': WebhookEvent;
     projects: Project;
     tasks: Task;
@@ -110,6 +111,7 @@ export interface Config {
     'client-accounts': ClientAccountsSelect<false> | ClientAccountsSelect<true>;
     orders: OrdersSelect<false> | OrdersSelect<true>;
     packages: PackagesSelect<false> | PackagesSelect<true>;
+    'service-items': ServiceItemsSelect<false> | ServiceItemsSelect<true>;
     'webhook-events': WebhookEventsSelect<false> | WebhookEventsSelect<true>;
     projects: ProjectsSelect<false> | ProjectsSelect<true>;
     tasks: TasksSelect<false> | TasksSelect<true>;
@@ -914,6 +916,10 @@ export interface Package {
          */
         label: string;
         /**
+         * Maps to the Order invoiceType — replaces label string-matching
+         */
+        entryType?: ('deposit' | 'installment' | 'balance') | null;
+        /**
          * Dollar amount for this payment
          */
         amount: number;
@@ -937,6 +943,14 @@ export interface Package {
         name: string;
         description?: string | null;
         /**
+         * Authoritative billing type. isRecurring/recurringInterval are derived from this on save.
+         */
+        billingType?: ('fixed' | 'hourly' | 'recurring') | null;
+        /**
+         * Hours worked (hourly items) — total = hours × rate is stored in price
+         */
+        hours?: number | null;
+        /**
          * Base price per unit (USD)
          */
         price: number;
@@ -954,12 +968,61 @@ export interface Package {
          */
         recurringInterval?: ('month' | 'year') | null;
         /**
+         * Contract length in months (recurring items)
+         */
+        contractTermMonths?: number | null;
+        /**
+         * Offer as an optional add-on the client can request (excluded from proposal total)
+         */
+        isAddOn?: boolean | null;
+        /**
+         * Catalog item this line was created from (provenance only)
+         */
+        sourceServiceItem?: (string | null) | ServiceItem;
+        /**
          * Stripe Price ID (optional)
          */
         stripePriceId?: string | null;
         id?: string | null;
       }[]
     | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Reusable service catalog — staff pick from these when building packages.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "service-items".
+ */
+export interface ServiceItem {
+  id: string;
+  name: string;
+  description?: string | null;
+  /**
+   * Fixed: flat price. Hourly: hours × rate. Recurring: per-interval subscription.
+   */
+  billingType: 'fixed' | 'hourly' | 'recurring';
+  /**
+   * Fixed: total price. Recurring: amount per interval. (Hourly uses rate below.)
+   */
+  defaultPrice?: number | null;
+  /**
+   * Hourly rate (USD/hr)
+   */
+  defaultRate?: number | null;
+  /**
+   * Billing interval for recurring items
+   */
+  defaultInterval?: ('month' | 'year') | null;
+  /**
+   * Hidden from the builder catalog when checked
+   */
+  archived?: boolean | null;
+  /**
+   * How many times this item has been added to a package
+   */
+  usageCount?: number | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1821,6 +1884,10 @@ export interface PayloadLockedDocument {
         value: string | Package;
       } | null)
     | ({
+        relationTo: 'service-items';
+        value: string | ServiceItem;
+      } | null)
+    | ({
         relationTo: 'webhook-events';
         value: string | WebhookEvent;
       } | null)
@@ -2352,6 +2419,7 @@ export interface PackagesSelect<T extends boolean = true> {
     | T
     | {
         label?: T;
+        entryType?: T;
         amount?: T;
         dueDate?: T;
         orderId?: T;
@@ -2363,14 +2431,35 @@ export interface PackagesSelect<T extends boolean = true> {
     | {
         name?: T;
         description?: T;
+        billingType?: T;
+        hours?: T;
         price?: T;
         adjustedPrice?: T;
         quantity?: T;
         isRecurring?: T;
         recurringInterval?: T;
+        contractTermMonths?: T;
+        isAddOn?: T;
+        sourceServiceItem?: T;
         stripePriceId?: T;
         id?: T;
       };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "service-items_select".
+ */
+export interface ServiceItemsSelect<T extends boolean = true> {
+  name?: T;
+  description?: T;
+  billingType?: T;
+  defaultPrice?: T;
+  defaultRate?: T;
+  defaultInterval?: T;
+  archived?: T;
+  usageCount?: T;
   updatedAt?: T;
   createdAt?: T;
 }

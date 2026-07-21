@@ -38,6 +38,24 @@ async function getClientUsername(
   }
 }
 
+/**
+ * Resolve an Order invoiceType from a payment-schedule entry.
+ * Prefers the explicit entryType field; falls back to the legacy label heuristic
+ * for entries created before entryType existed.
+ */
+function resolveInvoiceType(entry: {
+  entryType?: string | null
+  label?: string | null
+}): 'deposit' | 'installment' | 'balance' {
+  if (entry.entryType === 'deposit' || entry.entryType === 'installment' || entry.entryType === 'balance') {
+    return entry.entryType
+  }
+  const label = (entry.label ?? '').toLowerCase()
+  if (label.includes('deposit')) return 'deposit'
+  if (label.includes('final') || label.includes('balance')) return 'balance'
+  return 'installment'
+}
+
 /** Find the highest existing INV-NNNN number and return the next one. */
 async function nextOrderNumber(payload: Awaited<ReturnType<typeof getPayload>>): Promise<string> {
   const { docs } = await payload.find({
@@ -801,6 +819,7 @@ export async function sendScheduledPayment(
     const currentSchedule = ((pkg as any).paymentSchedule ?? []) as Array<{
       id: string
       label: string
+      entryType?: 'deposit' | 'installment' | 'balance' | null
       amount: number
       dueDate?: string | null
       orderId?: string | null
@@ -827,13 +846,7 @@ export async function sendScheduledPayment(
 
     const orderNumber = await nextOrderNumber(payload)
 
-    const invoiceType = entry.label.toLowerCase().includes('deposit')
-      ? 'deposit'
-      : entry.label.toLowerCase().includes('milestone')
-        ? 'installment'
-        : entry.label.toLowerCase().includes('final')
-          ? 'balance'
-          : 'installment'
+    const invoiceType = resolveInvoiceType(entry)
 
     stripe = getStripe()
 
@@ -1053,7 +1066,7 @@ export async function createPartialInvoiceFromPackage(
 async function _sendScheduleEntryInvoice(
   payload: Awaited<ReturnType<typeof getPayload>>,
   stripe: ReturnType<typeof getStripe>,
-  entry: { id: string; label: string; amount: number; dueDate?: string | null },
+  entry: { id: string; label: string; entryType?: 'deposit' | 'installment' | 'balance' | null; amount: number; dueDate?: string | null },
   packageId: string,
   proposalName: string,
   clientAccountId: string,
@@ -1065,9 +1078,7 @@ async function _sendScheduleEntryInvoice(
     : 30
 
   const orderNumber = await nextOrderNumber(payload)
-  const invoiceType = entry.label.toLowerCase().includes('deposit') ? 'deposit'
-    : entry.label.toLowerCase().includes('final') ? 'balance'
-    : 'installment'
+  const invoiceType = resolveInvoiceType(entry)
 
   const invoice = await stripe.invoices.create({
     customer: stripeCustomerId,
@@ -1642,9 +1653,7 @@ export async function linkScheduleEntriesToOrders(packageId: string) {
 
     for (const entry of unlinked) {
       const orderNumber = await nextOrderNumber(payload)
-      const invoiceType = entry.label.toLowerCase().includes('deposit') ? 'deposit'
-        : entry.label.toLowerCase().includes('final') ? 'balance'
-        : 'installment'
+      const invoiceType = resolveInvoiceType(entry)
 
       const order = await payload.create({
         collection: 'orders',

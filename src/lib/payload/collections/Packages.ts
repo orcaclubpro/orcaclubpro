@@ -150,6 +150,19 @@ const Packages: CollectionConfig = {
           admin: { description: 'e.g. Deposit, Installment 1, Final Payment' },
         },
         {
+          name: 'entryType',
+          type: 'select',
+          defaultValue: 'installment',
+          options: [
+            { label: 'Deposit', value: 'deposit' },
+            { label: 'Installment', value: 'installment' },
+            { label: 'Balance', value: 'balance' },
+          ],
+          admin: {
+            description: 'Maps to the Order invoiceType — replaces label string-matching',
+          },
+        },
+        {
           name: 'amount',
           type: 'number',
           required: true,
@@ -191,6 +204,35 @@ const Packages: CollectionConfig = {
         {
           name: 'description',
           type: 'textarea',
+        },
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'billingType',
+              type: 'select',
+              defaultValue: 'fixed',
+              options: [
+                { label: 'Fixed', value: 'fixed' },
+                { label: 'Hourly', value: 'hourly' },
+                { label: 'Recurring', value: 'recurring' },
+              ],
+              admin: {
+                width: '50%',
+                description: 'Authoritative billing type. isRecurring/recurringInterval are derived from this on save.',
+              },
+            },
+            {
+              name: 'hours',
+              type: 'number',
+              min: 0,
+              admin: {
+                width: '50%',
+                description: 'Hours worked (hourly items) — total = hours × rate is stored in price',
+                condition: (data, siblingData) => siblingData?.billingType === 'hourly',
+              },
+            },
+          ],
         },
         {
           type: 'row',
@@ -251,6 +293,32 @@ const Packages: CollectionConfig = {
               },
             },
           ],
+        },
+        {
+          name: 'contractTermMonths',
+          type: 'number',
+          min: 0,
+          admin: {
+            description: 'Contract length in months (recurring items)',
+            condition: (data, siblingData) => siblingData?.billingType === 'recurring',
+          },
+        },
+        {
+          name: 'isAddOn',
+          type: 'checkbox',
+          defaultValue: false,
+          admin: {
+            description: 'Offer as an optional add-on the client can request (excluded from proposal total)',
+          },
+        },
+        {
+          name: 'sourceServiceItem',
+          type: 'relationship',
+          relationTo: 'service-items',
+          admin: {
+            description: 'Catalog item this line was created from (provenance only)',
+            readOnly: true,
+          },
         },
         {
           name: 'stripePriceId',
