@@ -168,6 +168,12 @@ const selectCls =
   'px-2 py-1.5 text-xs bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] rounded-md text-[var(--space-text-secondary)] focus:outline-none focus:border-[rgba(139,156,182,0.20)] transition-colors'
 const numCls =
   'text-xs bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] rounded-md text-[var(--space-text-primary)] px-2 py-1.5 focus:outline-none focus:border-[rgba(139,156,182,0.20)] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none'
+// Field-height select that matches inputCls (used in the new-service mini-form)
+const fieldSelectCls =
+  'px-3 py-2 text-sm bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] rounded-lg text-[var(--space-text-secondary)] focus:outline-none focus:border-[rgba(139,156,182,0.20)] transition-colors cursor-pointer'
+// Number input matching inputCls height (spinners stripped)
+const numFieldCls =
+  'px-3 py-2 text-sm bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] rounded-lg text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)] focus:outline-none focus:border-[rgba(139,156,182,0.20)] transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none'
 
 // ── Component ────────────────────────────────────────────────────────────────────
 
@@ -514,7 +520,11 @@ export function PackageBuilderModal({ mode, username, clientId, existing, onClos
                   New service item
                 </button>
               ) : (
-                <div className="space-y-2">
+                <div className="rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] p-3 space-y-2.5">
+                  <div className="flex items-center gap-1.5">
+                    <PlusCircle className="size-3.5" style={{ color: 'var(--space-accent)' }} />
+                    <p className="text-[9px] font-bold tracking-[0.22em] uppercase text-[var(--space-text-tertiary)]">New service</p>
+                  </div>
                   <input
                     value={nsName}
                     onChange={(e) => setNsName(e.target.value)}
@@ -526,38 +536,37 @@ export function PackageBuilderModal({ mode, username, clientId, existing, onClos
                       type="number"
                       value={nsPrice}
                       onChange={(e) => setNsPrice(e.target.value)}
-                      placeholder={nsBilling === 'hourly' ? 'Rate/hr' : 'Price'}
-                      className={cn(numCls, 'flex-1')}
+                      placeholder={nsBilling === 'hourly' ? 'Rate / hr' : nsBilling === 'recurring' ? 'Amount' : 'Price'}
+                      className={cn(numFieldCls, 'flex-1 min-w-0')}
                     />
-                    <select value={nsBilling} onChange={(e) => setNsBilling(e.target.value as BillingType)} className={selectCls}>
+                    <select value={nsBilling} onChange={(e) => setNsBilling(e.target.value as BillingType)} className={fieldSelectCls}>
                       <option value="fixed">Fixed</option>
                       <option value="hourly">Hourly</option>
                       <option value="recurring">Recurring</option>
                     </select>
-                    {nsBilling === 'recurring' && (
-                      <select value={nsInterval} onChange={(e) => setNsInterval(e.target.value as 'month' | 'year')} className={selectCls}>
-                        <option value="month">/mo</option>
-                        <option value="year">/yr</option>
-                      </select>
-                    )}
                   </div>
-                  <label className="flex items-center gap-2 text-[11px] text-[var(--space-text-muted)] cursor-pointer select-none">
-                    <input type="checkbox" checked={nsSave} onChange={(e) => setNsSave(e.target.checked)} className="accent-[var(--space-accent)]" />
+                  {nsBilling === 'recurring' && (
+                    <select value={nsInterval} onChange={(e) => setNsInterval(e.target.value as 'month' | 'year')} className={cn(fieldSelectCls, 'w-full')}>
+                      <option value="month">Billed monthly</option>
+                      <option value="year">Billed yearly</option>
+                    </select>
+                  )}
+                  <label className="flex items-center gap-2 text-[11px] text-[var(--space-text-tertiary)] cursor-pointer select-none py-0.5">
+                    <input type="checkbox" checked={nsSave} onChange={(e) => setNsSave(e.target.checked)} className="size-3.5 accent-[var(--space-accent)]" />
                     Save to catalog for reuse
                   </label>
-                  <div className="flex gap-2">
+                  <div className="flex items-center gap-2 pt-0.5">
                     <button
                       onClick={handleAddNewService}
                       disabled={nsBusy}
-                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-[rgba(139,156,182,0.10)] border border-[rgba(139,156,182,0.15)] hover:bg-[rgba(139,156,182,0.14)] transition-all disabled:opacity-50"
-                      style={{ color: 'var(--space-accent)' }}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-[var(--space-accent)] text-black hover:opacity-90 transition-all disabled:opacity-50"
                     >
-                      {nsBusy ? <Loader2 className="size-3 animate-spin" /> : <Plus className="size-3" />}
-                      Add
+                      {nsBusy ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}
+                      Add to package
                     </button>
                     <button
                       onClick={() => { setShowNewForm(false); setError(null) }}
-                      className="px-3 py-1.5 text-xs text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] rounded-lg hover:bg-[var(--space-bg-card-hover)] transition-colors"
+                      className="px-3 py-2 text-xs text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] rounded-lg hover:bg-[var(--space-bg-card-hover)] transition-colors"
                     >
                       Cancel
                     </button>
