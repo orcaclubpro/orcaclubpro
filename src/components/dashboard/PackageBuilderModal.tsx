@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import {
   Search, Plus, PlusCircle, X, Trash2, Loader2,
   ChevronDown, ChevronRight, ArrowUp, ArrowDown,
-  Package, MoreHorizontal, Layers, CalendarClock,
+  Package, MoreHorizontal, Layers, CalendarClock, Star,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ServiceItem } from '@/types/payload-types'
@@ -14,6 +14,8 @@ import {
   createServiceItem,
   createProposal,
   updateProposal,
+  toggleServiceItemStar,
+  deleteServiceItem,
   type BuilderLineItem,
 } from '@/actions/package-builder'
 import { getClientAccountsList } from '@/actions/packages'
@@ -225,6 +227,8 @@ export function PackageBuilderModal({ mode, username, clientId, existing, onClos
   const [showSchedule, setShowSchedule] = useState(false)
   const [mobilePane, setMobilePane] = useState<'catalog' | 'package'>('package')
   const [overflowKey, setOverflowKey] = useState<string | null>(null)
+  const [catalogMenuId, setCatalogMenuId] = useState<string | null>(null)
+  const [catalogBusyId, setCatalogBusyId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
@@ -267,6 +271,35 @@ export function PackageBuilderModal({ mode, username, clientId, existing, onClos
   async function refreshCatalog() {
     const cat = await getServiceCatalog()
     if (cat.success) setCatalog(cat.items)
+  }
+
+  async function handleToggleStar(item: ServiceItem) {
+    setCatalogMenuId(null)
+    setCatalogBusyId(item.id)
+    // Optimistic: flip locally so it re-sorts immediately
+    setCatalog((prev) =>
+      [...prev.map((c) => (c.id === item.id ? { ...c, starred: !item.starred } : c))].sort(
+        (a, b) => Number(b.starred) - Number(a.starred) || (b.usageCount ?? 0) - (a.usageCount ?? 0),
+      ),
+    )
+    const res = await toggleServiceItemStar(item.id, !item.starred)
+    if (!res.success) {
+      setError(res.error ?? 'Failed to update')
+      await refreshCatalog()
+    }
+    setCatalogBusyId(null)
+  }
+
+  async function handleDeleteCatalogItem(item: ServiceItem) {
+    setCatalogMenuId(null)
+    setCatalogBusyId(item.id)
+    const res = await deleteServiceItem(item.id)
+    if (res.success) {
+      setCatalog((prev) => prev.filter((c) => c.id !== item.id))
+    } else {
+      setError(res.error ?? 'Failed to delete')
+    }
+    setCatalogBusyId(null)
   }
 
   // ── Line mutations ─────────────────────────────────────────────────────────
@@ -412,6 +445,10 @@ export function PackageBuilderModal({ mode, username, clientId, existing, onClos
         className="relative z-10 w-full h-full flex flex-col overflow-hidden rounded-2xl border border-[var(--space-border-hard)] shadow-2xl shadow-[#000000]/50"
         style={{ background: 'var(--space-bg-card)' }}
       >
+        {/* Click-away catcher for the catalog item menu */}
+        {catalogMenuId && (
+          <div className="fixed inset-0 z-20" onClick={() => setCatalogMenuId(null)} />
+        )}
         {/* Header */}
         <div className="shrink-0 flex items-center gap-3 px-4 sm:px-6 py-3.5 border-b border-[var(--space-border-hard)] bg-[rgba(255,255,255,0.015)]">
           <div className="size-9 shrink-0 rounded-xl bg-[rgba(139,156,182,0.08)] border border-[rgba(139,156,182,0.15)] flex items-center justify-center">
@@ -501,23 +538,56 @@ export function PackageBuilderModal({ mode, username, clientId, existing, onClos
                 </div>
               ) : (
                 filteredCatalog.map((item) => (
-                  <button
+                  <div
                     key={item.id}
-                    type="button"
-                    onClick={() => addLine(catalogToLine(item))}
-                    className="w-full group flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] hover:bg-[var(--space-bg-card-hover)] hover:border-[rgba(139,156,182,0.15)] transition-all text-left"
+                    className="relative group flex items-stretch rounded-lg border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] hover:border-[rgba(139,156,182,0.15)] transition-all"
                   >
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-[var(--space-text-secondary)] truncate">{item.name}</p>
-                      <p className="text-[10px] text-[var(--space-text-muted)] tabular-nums font-mono mt-0.5">
-                        {catalogPriceHint(item)}
-                      </p>
-                    </div>
-                    <PlusCircle
-                      className="size-4 shrink-0 text-[var(--space-text-muted)] group-hover:text-[var(--space-accent)] transition-colors"
-                      style={{ color: undefined }}
-                    />
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => addLine(catalogToLine(item))}
+                      className="flex-1 min-w-0 flex items-center gap-2.5 pl-3 pr-1 py-2.5 rounded-l-lg hover:bg-[var(--space-bg-card-hover)] transition-colors text-left"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          {item.starred && (
+                            <Star className="size-3 shrink-0 fill-current" style={{ color: 'var(--space-accent)' }} />
+                          )}
+                          <p className="text-sm font-medium text-[var(--space-text-secondary)] truncate">{item.name}</p>
+                        </div>
+                        <p className="text-[10px] text-[var(--space-text-muted)] tabular-nums font-mono mt-0.5">
+                          {catalogPriceHint(item)}
+                        </p>
+                      </div>
+                      <PlusCircle className="size-4 shrink-0 text-[var(--space-text-muted)] opacity-0 group-hover:opacity-100 group-hover:text-[var(--space-accent)] transition-all" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCatalogMenuId(catalogMenuId === item.id ? null : item.id)}
+                      aria-label="Catalog item options"
+                      className="shrink-0 px-1.5 flex items-center justify-center rounded-r-lg text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] hover:bg-[var(--space-bg-card-hover)] transition-colors"
+                    >
+                      {catalogBusyId === item.id ? <Loader2 className="size-3.5 animate-spin" /> : <MoreHorizontal className="size-3.5" />}
+                    </button>
+
+                    {catalogMenuId === item.id && (
+                      <div className="absolute right-1 top-[calc(100%-4px)] z-30 w-40 rounded-lg border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] shadow-xl shadow-[#000000]/40 py-1">
+                        <button
+                          onClick={() => handleToggleStar(item)}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-xs text-[var(--space-text-tertiary)] hover:bg-[var(--space-bg-card-hover)] hover:text-[var(--space-text-primary)] transition-colors text-left"
+                        >
+                          <Star className={cn('size-3.5', item.starred && 'fill-current')} style={item.starred ? { color: 'var(--space-accent)' } : undefined} />
+                          {item.starred ? 'Unstar' : 'Star — show first'}
+                        </button>
+                        <button
+                          onClick={() => handleDeleteCatalogItem(item)}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-xs text-[var(--space-text-tertiary)] hover:bg-red-500/10 hover:text-red-400 transition-colors text-left"
+                        >
+                          <Trash2 className="size-3.5" />
+                          Delete
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 ))
               )}
             </div>

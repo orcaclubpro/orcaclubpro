@@ -91,6 +91,16 @@ const ServiceItems: CollectionConfig = {
       },
     },
     {
+      name: 'starred',
+      type: 'checkbox',
+      defaultValue: false,
+      index: true,
+      admin: {
+        position: 'sidebar',
+        description: 'Prioritized — starred items render first in the builder catalog',
+      },
+    },
+    {
       name: 'archived',
       type: 'checkbox',
       defaultValue: false,

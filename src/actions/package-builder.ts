@@ -70,7 +70,8 @@ export async function getServiceCatalog() {
     const { docs } = await payload.find({
       collection: 'service-items',
       where: { archived: { not_equals: true } },
-      sort: '-usageCount',
+      // Starred items first, then most-used
+      sort: ['-starred', '-usageCount'],
       limit: 200,
       depth: 0,
     })
@@ -79,6 +80,36 @@ export async function getServiceCatalog() {
   } catch (error) {
     console.error('[getServiceCatalog]', error)
     return { success: false, items: [] as ServiceItem[], error: error instanceof Error ? error.message : 'Failed' }
+  }
+}
+
+/** Star / unstar a catalog item — starred items render first in the builder. Admin/user only. */
+export async function toggleServiceItemStar(id: string, starred: boolean) {
+  try {
+    const user = await getCurrentUser()
+    if (!user || user.role === 'client') return { success: false, error: 'Unauthorized' }
+
+    const payload = await getPayload({ config })
+    await payload.update({ collection: 'service-items', id, data: { starred } as any })
+    return { success: true, starred }
+  } catch (error) {
+    console.error('[toggleServiceItemStar]', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to update' }
+  }
+}
+
+/** Delete a catalog item. Admin only (matches the collection's delete access). */
+export async function deleteServiceItem(id: string) {
+  try {
+    const user = await getCurrentUser()
+    if (!user || user.role !== 'admin') return { success: false, error: 'Only admins can delete catalog items' }
+
+    const payload = await getPayload({ config })
+    await payload.delete({ collection: 'service-items', id })
+    return { success: true }
+  } catch (error) {
+    console.error('[deleteServiceItem]', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to delete' }
   }
 }
 

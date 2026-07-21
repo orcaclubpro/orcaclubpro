@@ -1016,6 +1016,10 @@ export interface ServiceItem {
    */
   defaultInterval?: ('month' | 'year') | null;
   /**
+   * Prioritized — starred items render first in the builder catalog
+   */
+  starred?: boolean | null;
+  /**
    * Hidden from the builder catalog when checked
    */
   archived?: boolean | null;
@@ -2458,6 +2462,7 @@ export interface ServiceItemsSelect<T extends boolean = true> {
   defaultPrice?: T;
   defaultRate?: T;
   defaultInterval?: T;
+  starred?: T;
   archived?: T;
   usageCount?: T;
   updatedAt?: T;
