@@ -555,9 +555,10 @@ export async function createOrderFromPackage(
       return { success: false, error: 'Package proposal not found' }
     }
 
-    const lineItems = (pkg.lineItems ?? []) as any[]
+    // Add-on items are optional extras the client hasn't purchased — never invoice them.
+    const lineItems = ((pkg.lineItems ?? []) as any[]).filter((li: any) => !li.isAddOn)
     if (lineItems.length === 0) {
-      return { success: false, error: 'Package has no line items to invoice' }
+      return { success: false, error: 'Package has no billable line items to invoice' }
     }
 
     const clientAccount = pkg.clientAccount as any
@@ -1271,7 +1272,8 @@ export async function acceptPackage(packageId: string) {
       id: string; label: string; amount: number; dueDate?: string | null; orderId?: string | null
     }>
     const pendingEntries = schedule.filter(e => !e.orderId)
-    const lineItems = (proposal.lineItems ?? []) as any[]
+    // Add-on items are optional extras — excluded from the accepted/charged total.
+    const lineItems = ((proposal.lineItems ?? []) as any[]).filter((li: any) => !li.isAddOn)
 
     if (pendingEntries.length === 0 && lineItems.length === 0) {
       return { success: false, error: 'This package has no items configured yet — contact your team.' }

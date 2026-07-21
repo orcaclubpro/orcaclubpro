@@ -5,11 +5,12 @@ import Link from 'next/link'
 import {
   Search, Package, FileText, X, ExternalLink,
   Layers, Loader2, CheckCircle2, ChevronRight,
-  Check, Mail,
+  Check, Mail, Plus, Pencil,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { AssignPackageModal } from '@/components/dashboard/AssignPackageModal'
 import { EmailPackageModal } from '@/components/dashboard/EmailPackageModal'
+import { PackageBuilderModal, type ExistingProposal } from '@/components/dashboard/PackageBuilderModal'
 import { createOrderFromPackage } from '@/actions/packages'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -97,10 +98,12 @@ function ProposalModal({
   pkg,
   username,
   onClose,
+  onEdit,
 }: {
   pkg: PackageDoc
   username: string
   onClose: () => void
+  onEdit: () => void
 }) {
   const [invoiceState, setInvoiceState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
   const [invoiceUrl, setInvoiceUrl] = useState<string | null>(null)
@@ -283,6 +286,13 @@ function ProposalModal({
             Close
           </button>
           <div className="flex-1" />
+          <button
+            onClick={onEdit}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] text-[var(--space-text-tertiary)] hover:text-[var(--space-text-primary)] transition-all"
+          >
+            <Pencil className="size-3.5" />
+            Edit
+          </button>
           {lineItems.length > 0 && invoiceState !== 'done' && (
             <button
               onClick={handleCreateInvoice}
@@ -456,6 +466,11 @@ function TemplateRow({ pkg }: { pkg: PackageDoc }) {
 export function PackagesAdminView({ allPackages, username }: PackagesAdminViewProps) {
   const [query, setQuery] = useState('')
   const [modalPkg, setModalPkg] = useState<PackageDoc | null>(null)
+  const [builder, setBuilder] = useState<
+    | { mode: 'create'; clientId: string }
+    | { mode: 'edit'; pkg: PackageDoc }
+    | null
+  >(null)
 
   const proposals = allPackages.filter(p => p.type === 'proposal')
   const templates  = allPackages.filter(p => p.type === 'template')
@@ -564,7 +579,16 @@ export function PackagesAdminView({ allPackages, username }: PackagesAdminViewPr
                       {group.proposals.length} package{group.proposals.length !== 1 ? 's' : ''}
                     </span>
                   </div>
-                  <AssignPackageModal clientId={group.clientId} />
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setBuilder({ mode: 'create', clientId: group.clientId })}
+                      className="flex items-center gap-1.5 h-8 px-3 text-xs font-medium rounded-md border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] text-[var(--space-text-tertiary)] hover:bg-[var(--space-bg-card-hover)] hover:text-[var(--space-text-primary)] transition-all"
+                    >
+                      <Plus className="size-3.5" />
+                      New Package
+                    </button>
+                    <AssignPackageModal clientId={group.clientId} />
+                  </div>
                 </div>
 
                 {/* Horizontal proposal card scroll */}
@@ -641,6 +665,25 @@ export function PackagesAdminView({ allPackages, username }: PackagesAdminViewPr
           pkg={modalPkg}
           username={username}
           onClose={() => setModalPkg(null)}
+          onEdit={() => {
+            const pkg = modalPkg
+            setModalPkg(null)
+            setBuilder({ mode: 'edit', pkg })
+          }}
+        />
+      )}
+
+      {/* Package builder */}
+      {builder && (
+        <PackageBuilderModal
+          mode={builder.mode}
+          username={username}
+          clientId={builder.mode === 'create' ? builder.clientId : undefined}
+          existing={builder.mode === 'edit' ? (builder.pkg as unknown as ExistingProposal) : undefined}
+          onClose={(id) => {
+            setBuilder(null)
+            if (id) window.location.reload()
+          }}
         />
       )}
     </>

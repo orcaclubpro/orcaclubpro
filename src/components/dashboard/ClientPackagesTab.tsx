@@ -13,7 +13,6 @@ import { cn } from '@/lib/utils'
 import { AssignPackageModal } from './AssignPackageModal'
 import { EmailPackageModal } from './EmailPackageModal'
 import {
-  getProposalWithTemplate,
   updatePackage,
   deleteProposal,
   createOrderFromPackage,
@@ -33,6 +32,9 @@ interface LineItem {
   quantity?: number
   isRecurring?: boolean
   recurringInterval?: 'month' | 'year'
+  /** When true, this line is an optional add-on the client can request — excluded
+   *  from the proposal total. Undefined on older docs is treated as included. */
+  isAddOn?: boolean
 }
 
 interface ScheduledEntry {
@@ -154,6 +156,7 @@ function OptionCard({
   selected,
   requested,
   onToggle,
+  onRemove,
   onDescriptionChange,
   onQuantityChange,
   onAdjustedPriceChange,
@@ -162,6 +165,7 @@ function OptionCard({
   selected: boolean
   requested?: boolean
   onToggle: () => void
+  onRemove?: () => void
   onDescriptionChange?: (desc: string) => void
   onQuantityChange?: (qty: number) => void
   onAdjustedPriceChange?: (price: number | null) => void
@@ -174,11 +178,21 @@ function OptionCard({
   const hasDiscount = item.adjustedPrice != null && item.adjustedPrice !== basePrice
   return (
     <div className={cn(
-      'w-full flex flex-col rounded-xl border text-left transition-all duration-150',
+      'relative w-full flex flex-col rounded-xl border text-left transition-all duration-150',
       selected
         ? 'bg-[rgba(255,255,255,0.03)] border-[rgba(139,156,182,0.15)]'
         : 'border-[var(--space-border-hard)] hover:border-[var(--space-border-hard)] hover:bg-[var(--space-bg-card-hover)]',
     )}>
+      {onRemove && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onRemove() }}
+          className="absolute top-2 right-2 z-10 size-6 flex items-center justify-center rounded-md text-[var(--space-text-muted)] hover:text-red-400 hover:bg-red-400/10 transition-colors"
+          title="Remove item"
+        >
+          <X className="size-3.5" />
+        </button>
+      )}
       <button type="button" onClick={onToggle} className="flex flex-col gap-2.5 p-4 text-left w-full">
         <div className="flex items-start gap-3">
           <div className={cn(
@@ -324,9 +338,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
   // Core UI state
   const [expandedId, setExpandedId]           = useState<string | null>(null)
   const [editItems, setEditItems]             = useState<LineItem[]>([])
-  const [templateItems, setTemplateItems]     = useState<LineItem[]>([])
   const [requestedItemNames, setRequestedItemNames] = useState<Set<string>>(new Set())
-  const [loadingTemplate, setLoadingTemplate] = useState(false)
   const [saving, setSaving]                   = useState(false)
   const [saveError, setSaveError]             = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
@@ -391,11 +403,10 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
     }
   }
 
-  const handleRowClick = useCallback(async (pkg: PackageDoc) => {
+  const handleRowClick = useCallback((pkg: PackageDoc) => {
     if (expandedId === pkg.id) { setExpandedId(null); return }
     setExpandedId(pkg.id)
     setEditItems([...(pkg.lineItems ?? [])])
-    setTemplateItems([])
     setSaveError(null)
     setConfirmDeleteId(null)
     // Pre-populate project selection from saved value
@@ -403,23 +414,14 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
       ? (typeof pkg.projectRef === 'string' ? pkg.projectRef : pkg.projectRef.id)
       : ''
     setSelectedProjectId(prev => ({ ...prev, [pkg.id]: existingProjectId }))
-    setLoadingTemplate(true)
-    try {
-      const result = await getProposalWithTemplate(pkg.id)
-      if (result.success) {
-        setTemplateItems(result.templateLineItems)
-        setRequestedItemNames(new Set((result.requestedItems ?? []).map((r: any) => r.name)))
-      }
-    } catch {}
-    setLoadingTemplate(false)
+    // Client-requested add-ons come straight off the proposal doc
+    setRequestedItemNames(new Set((pkg.requestedItems ?? []).map(r => r.name)))
   }, [expandedId])
 
-  const toggleItem = (templateItem: LineItem) => {
-    setEditItems(prev => {
-      const idx = prev.findIndex(ei => ei.name === templateItem.name)
-      if (idx >= 0) return prev.filter((_, i) => i !== idx)
-      return [...prev, { ...templateItem }]
-    })
+  // Flip an item between "included" and "available add-on" — both live on the
+  // proposal's own line items, distinguished by the isAddOn flag.
+  const toggleItem = (item: LineItem) => {
+    setEditItems(prev => prev.map(ei => ei.name === item.name ? { ...ei, isAddOn: !ei.isAddOn } : ei))
   }
 
   const removeExtra = (idx: number) => setEditItems(prev => prev.filter((_, i) => i !== idx))
@@ -459,7 +461,10 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
       const depositVal = depositStr !== '' ? parseFloat(depositStr) : 0
       const hasDeposit = depositStr !== '' && !isNaN(depositVal) && depositVal > 0
       const deposit = hasDeposit ? depositVal : 0
-      const { oneTime } = computeTotals(editItems.length > 0 ? editItems : (pkg.lineItems ?? []))
+      // Add-ons are excluded from the proposal total, so the schedule is built
+      // from included items only (isAddOn falsy).
+      const scheduleSource = (editItems.length > 0 ? editItems : (pkg.lineItems ?? [])).filter(i => !i.isAddOn)
+      const { oneTime } = computeTotals(scheduleSource)
       const numInstallments = getNumInstallments(pkg.id)
       const remaining = Math.max(0, oneTime - deposit)
       const amounts = computeInstallmentAmounts(remaining, numInstallments)
@@ -582,21 +587,28 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
       {packages.length > 0 ? (
         <div className="space-y-4">
           {packages.map((pkg) => {
-            const { oneTime, monthly, annual } = computeTotals(pkg.lineItems ?? [])
-            const lineItems = pkg.lineItems ?? []
+            const allLineItems = pkg.lineItems ?? []
+            // Add-ons are optional extras excluded from the proposal total —
+            // included items (isAddOn falsy) drive pricing, counts and totals.
+            const lineItems = allLineItems.filter(li => !li.isAddOn)
+            const { oneTime, monthly, annual } = computeTotals(lineItems)
             const isExpanded = expandedId === pkg.id
             const hasItems = lineItems.length > 0
-            const extraItems = editItems.filter(ei => !templateItems.some(ti => ti.name === ei.name))
+            const includedItems = editItems.filter(ei => !ei.isAddOn)
+            const addOnItems = editItems.filter(ei => ei.isAddOn)
             const pendingRequests = (pkg.requestedItems ?? []).filter(
-              r => !lineItems.some(li => li.name === r.name)
+              r => !allLineItems.some(li => li.name === r.name)
             ).length
 
             // Invoice progress
             const pkgOrders = packageOrders?.[pkg.id] ?? []
             const invoicedAmount = pkgOrders.reduce((s, o) => s + (o.amount ?? 0), 0)
             const paidAmount = pkgOrders.filter(o => o.status === 'paid').reduce((s, o) => s + (o.amount ?? 0), 0)
-            // For the schedule builder use editItems when this card is expanded
-            const { oneTime: editOneTime } = computeTotals(expandedId === pkg.id && editItems.length > 0 ? editItems : (pkg.lineItems ?? []))
+            // For the schedule builder use editItems when this card is expanded —
+            // included items only, since add-ons don't count toward the total.
+            const { oneTime: editOneTime } = computeTotals(
+              (expandedId === pkg.id && editItems.length > 0 ? editItems : allLineItems).filter(i => !i.isAddOn)
+            )
             const packageTotal = editOneTime
             const invoicedPct = packageTotal > 0 ? Math.min(100, (invoicedAmount / packageTotal) * 100) : 0
             const paidPct = packageTotal > 0 ? Math.min(100, (paidAmount / packageTotal) * 100) : 0
@@ -779,88 +791,62 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                         )}
                       </div>
 
-                      {/* Line item checklist */}
-                      {loadingTemplate ? (
-                        <div className="flex items-center gap-2 py-2">
-                          <Loader2 className="size-3.5 text-[var(--space-text-muted)] animate-spin" />
-                          <span className="text-xs text-[var(--space-text-muted)]">Loading options…</span>
-                        </div>
-                      ) : (
-                        <>
-                          {templateItems.length > 0 && (
-                            <div>
-                              <p className="text-[10px] text-[var(--space-text-muted)] uppercase tracking-widest font-semibold mb-3">
-                                Select services to include
-                              </p>
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                {templateItems.map((item, i) => {
-                                  const editItem = editItems.find(ei => ei.name === item.name)
-                                  const isSelected = !!editItem
-                                  const displayItem = editItem
-                                    ? { ...item, description: editItem.description, quantity: editItem.quantity, adjustedPrice: editItem.adjustedPrice }
-                                    : item
-                                  return (
-                                    <OptionCard
-                                      key={i}
-                                      item={displayItem}
-                                      selected={isSelected}
-                                      requested={requestedItemNames.has(item.name)}
-                                      onToggle={() => toggleItem(item)}
-                                      onQuantityChange={isSelected ? (qty) => updateItemQuantity(item.name, qty) : undefined}
-                                      onDescriptionChange={isSelected ? (desc) => updateItemDescription(item.name, desc) : undefined}
-                                      onAdjustedPriceChange={isSelected ? (price) => updateItemAdjustedPrice(item.name, price) : undefined}
-                                    />
-                                  )
-                                })}
-                              </div>
+                      {/* Line items — included services vs. optional add-ons,
+                          both read straight off the proposal's own line items. */}
+                      <>
+                        {includedItems.length > 0 && (
+                          <div>
+                            <p className="text-[10px] text-[var(--space-text-muted)] uppercase tracking-widest font-semibold mb-3">
+                              Included services
+                            </p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {includedItems.map((item) => {
+                                const globalIdx = editItems.findIndex(ei => ei.name === item.name)
+                                return (
+                                  <OptionCard
+                                    key={item.name}
+                                    item={item}
+                                    selected={true}
+                                    requested={requestedItemNames.has(item.name)}
+                                    onToggle={() => toggleItem(item)}
+                                    onRemove={() => removeExtra(globalIdx)}
+                                    onQuantityChange={(qty) => updateItemQuantity(item.name, qty)}
+                                    onDescriptionChange={(desc) => updateItemDescription(item.name, desc)}
+                                    onAdjustedPriceChange={(price) => updateItemAdjustedPrice(item.name, price)}
+                                  />
+                                )
+                              })}
                             </div>
-                          )}
+                          </div>
+                        )}
 
-                          {extraItems.length > 0 && (
-                            <div>
-                              <p className="text-[10px] text-[var(--space-text-muted)] uppercase tracking-widest font-semibold mb-3">
-                                Custom Items
-                              </p>
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                {extraItems.map((item, i) => {
-                                  const globalIdx = editItems.findIndex(ei => ei.name === item.name)
-                                  const total = (item.price ?? 0) * (item.quantity ?? 1)
-                                  return (
-                                    <div key={i} className="flex flex-col gap-2.5 p-4 rounded-xl bg-[var(--space-bg-card)] border border-[var(--space-border-hard)]">
-                                      <div className="flex items-start justify-between gap-2">
-                                        <div className="flex-1 min-w-0">
-                                          <p className="text-sm font-semibold text-[var(--space-text-primary)]">{item.name}</p>
-                                          {item.description && (
-                                            <p className="text-[11px] text-[var(--space-text-muted)] mt-0.5 line-clamp-2">{item.description}</p>
-                                          )}
-                                        </div>
-                                        <button
-                                          onClick={() => removeExtra(globalIdx)}
-                                          className="size-6 flex items-center justify-center rounded-md text-[var(--space-text-muted)] hover:text-red-400 hover:bg-red-400/10 transition-colors shrink-0"
-                                        >
-                                          <X className="size-3.5" />
-                                        </button>
-                                      </div>
-                                      <div className="flex items-center justify-end">
-                                        <span className="text-sm font-bold text-[var(--space-text-primary)] tabular-nums font-mono">
-                                          {fmt(total)}
-                                          {item.isRecurring && (
-                                            <span className="text-xs font-normal text-[var(--space-text-muted)] font-sans">/{item.recurringInterval === 'year' ? 'yr' : 'mo'}</span>
-                                          )}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  )
-                                })}
-                              </div>
+                        {addOnItems.length > 0 && (
+                          <div>
+                            <p className="text-[10px] text-[var(--space-text-muted)] uppercase tracking-widest font-semibold mb-3">
+                              Available add-ons
+                            </p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {addOnItems.map((item) => {
+                                const globalIdx = editItems.findIndex(ei => ei.name === item.name)
+                                return (
+                                  <OptionCard
+                                    key={item.name}
+                                    item={item}
+                                    selected={false}
+                                    requested={requestedItemNames.has(item.name)}
+                                    onToggle={() => toggleItem(item)}
+                                    onRemove={() => removeExtra(globalIdx)}
+                                  />
+                                )
+                              })}
                             </div>
-                          )}
+                          </div>
+                        )}
 
-                          {templateItems.length === 0 && editItems.length === 0 && (
-                            <p className="text-xs text-[var(--space-text-muted)] py-1">No source package found. Add items via the task manager.</p>
-                          )}
-                        </>
-                      )}
+                        {editItems.length === 0 && (
+                          <p className="text-xs text-[var(--space-text-muted)] py-1">No line items yet. Add items via the task manager.</p>
+                        )}
+                      </>
 
                       {/* ── Payment Schedule Overview ────────────────────── */}
                       {pkg.paymentSchedule && pkg.paymentSchedule.length > 0 && (
