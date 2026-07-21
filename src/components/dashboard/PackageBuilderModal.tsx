@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import {
   Search, Plus, PlusCircle, X, Trash2, Loader2,
   ChevronDown, ChevronRight, ArrowUp, ArrowDown,
@@ -226,6 +227,7 @@ export function PackageBuilderModal({ mode, username, clientId, existing, onClos
   const [overflowKey, setOverflowKey] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [mounted, setMounted] = useState(false)
 
   // New service item mini-form
   const [showNewForm, setShowNewForm] = useState(false)
@@ -249,6 +251,16 @@ export function PackageBuilderModal({ mode, username, clientId, existing, onClos
     })()
     return () => {
       alive = false
+    }
+  }, [])
+
+  // Portal is only valid after mount (needs document); also locks body scroll while open.
+  useEffect(() => {
+    setMounted(true)
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
     }
   }, [])
 
@@ -391,12 +403,12 @@ export function PackageBuilderModal({ mode, username, clientId, existing, onClos
   }, [existing, clients, existingClientId])
 
   // ── Render ─────────────────────────────────────────────────────────────────
-  return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-0 sm:p-6">
-      <div className="absolute inset-0 bg-[#000000]/75 backdrop-blur-sm" onClick={() => onClose()} />
+  if (!mounted) return null
 
+  const overlay = (
+    <div className="fixed inset-0 z-[60] flex">
       <div
-        className="relative z-10 w-full sm:max-w-5xl h-full sm:h-auto sm:max-h-[88vh] sm:min-h-[520px] flex flex-col sm:rounded-2xl border border-[var(--space-border-hard)] overflow-hidden shadow-2xl shadow-[#000000]/50"
+        className="relative z-10 w-full h-full flex flex-col overflow-hidden"
         style={{ background: 'var(--space-bg-card)' }}
       >
         {/* Header */}
@@ -948,4 +960,6 @@ export function PackageBuilderModal({ mode, username, clientId, existing, onClos
       </div>
     </div>
   )
+
+  return createPortal(overlay, document.body)
 }
