@@ -386,15 +386,18 @@ export function PackageBuilderModal({ mode, username, clientId, existing, onClos
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="fixed inset-0 z-50 flex items-stretch justify-center sm:p-4">
-      <div className="absolute inset-0 bg-[#000000]/70" onClick={() => onClose()} />
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-0 sm:p-6">
+      <div className="absolute inset-0 bg-[#000000]/75 backdrop-blur-sm" onClick={() => onClose()} />
 
       <div
-        className="relative z-10 w-full sm:max-w-6xl h-full sm:h-[92vh] flex flex-col sm:rounded-2xl border border-[var(--space-border-hard)] overflow-hidden"
+        className="relative z-10 w-full sm:max-w-5xl h-full sm:h-auto sm:max-h-[88vh] sm:min-h-[520px] flex flex-col sm:rounded-2xl border border-[var(--space-border-hard)] overflow-hidden shadow-2xl shadow-[#000000]/50"
         style={{ background: 'var(--space-bg-card)' }}
       >
         {/* Header */}
-        <div className="shrink-0 flex items-center gap-3 px-4 sm:px-6 py-3.5 border-b border-[var(--space-border-hard)]">
+        <div className="shrink-0 flex items-center gap-3 px-4 sm:px-6 py-3.5 border-b border-[var(--space-border-hard)] bg-[rgba(255,255,255,0.015)]">
+          <div className="size-9 shrink-0 rounded-xl bg-[rgba(139,156,182,0.08)] border border-[rgba(139,156,182,0.15)] flex items-center justify-center">
+            <Package className="size-4" style={{ color: 'var(--space-accent)' }} />
+          </div>
           <div className="flex-1 min-w-0">
             <p className="text-[9px] font-bold tracking-[0.28em] uppercase" style={{ color: 'var(--space-accent)' }}>
               {mode === 'edit' ? 'Edit Package' : 'Package Builder'}
@@ -404,16 +407,9 @@ export function PackageBuilderModal({ mode, username, clientId, existing, onClos
             </p>
           </div>
           <button
-            onClick={handleSave}
-            disabled={saving}
-            className="hidden sm:flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-[var(--space-accent)] text-black hover:opacity-90 transition-all disabled:opacity-50"
-          >
-            {saving ? <Loader2 className="size-3.5 animate-spin" /> : null}
-            Save draft
-          </button>
-          <button
             onClick={() => onClose()}
-            className="shrink-0 size-8 rounded-lg border border-[var(--space-border-hard)] flex items-center justify-center text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] transition-all"
+            aria-label="Close"
+            className="shrink-0 size-8 rounded-lg border border-[var(--space-border-hard)] flex items-center justify-center text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] hover:border-[rgba(139,156,182,0.20)] transition-all"
           >
             <X className="size-3.5" />
           </button>
@@ -441,12 +437,18 @@ export function PackageBuilderModal({ mode, username, clientId, existing, onClos
           {/* LEFT — catalog rail */}
           <div
             className={cn(
-              'flex-col w-full sm:w-[320px] sm:shrink-0 border-r border-[var(--space-border-hard)] min-h-0',
+              'flex-col w-full sm:w-[300px] sm:shrink-0 border-r border-[var(--space-border-hard)] min-h-0 bg-[rgba(0,0,0,0.13)]',
               mobilePane === 'catalog' ? 'flex' : 'hidden sm:flex',
             )}
           >
-            {/* Search */}
-            <div className="shrink-0 p-3 border-b border-[var(--space-border-hard)]">
+            {/* Rail header + search */}
+            <div className="shrink-0 p-3 border-b border-[var(--space-border-hard)] space-y-2.5">
+              <div className="flex items-center gap-2 px-0.5">
+                <Layers className="size-3 text-[var(--space-text-muted)]" />
+                <p className="text-[9px] font-bold tracking-[0.24em] uppercase text-[var(--space-text-muted)]">
+                  Catalog{catalog.length > 0 ? ` · ${catalog.length}` : ''}
+                </p>
+              </div>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-[var(--space-text-muted)] pointer-events-none" />
                 <input
@@ -465,13 +467,18 @@ export function PackageBuilderModal({ mode, username, clientId, existing, onClos
                   <Loader2 className="size-5 text-[var(--space-text-muted)] animate-spin" />
                 </div>
               ) : filteredCatalog.length === 0 ? (
-                <div className="flex flex-col items-center gap-2 py-8 text-center">
+                <div className="flex flex-col items-center gap-2 py-10 px-4 text-center">
                   <div className="p-3 rounded-xl bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)]">
                     <Layers className="size-5 text-[var(--space-text-muted)]" />
                   </div>
-                  <p className="text-xs text-[var(--space-text-muted)]">
-                    {q ? 'No matching services' : 'No catalog items yet'}
+                  <p className="text-xs font-medium text-[var(--space-text-tertiary)]">
+                    {q ? 'No matching services' : 'No saved services yet'}
                   </p>
+                  {!q && (
+                    <p className="text-[11px] text-[var(--space-text-muted)] leading-relaxed max-w-[200px]">
+                      Add a service below and check “Save to catalog” to reuse it on future packages.
+                    </p>
+                  )}
                 </div>
               ) : (
                 filteredCatalog.map((item) => (
@@ -885,9 +892,9 @@ export function PackageBuilderModal({ mode, username, clientId, existing, onClos
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="shrink-0 flex items-center gap-4 px-4 sm:px-6 py-3.5 border-t border-[var(--space-border-hard)] flex-wrap">
-          <div className="flex items-end gap-5 flex-wrap flex-1">
+        {/* Footer — action bar */}
+        <div className="shrink-0 flex items-center gap-4 px-4 sm:px-6 py-3 border-t border-[var(--space-border-hard)] bg-[rgba(255,255,255,0.02)] flex-wrap">
+          <div className="flex items-end gap-5 flex-wrap flex-1 min-w-0">
             {oneTime > 0 && (
               <div>
                 <p className="text-lg font-bold text-[var(--space-text-primary)] tabular-nums leading-none">{fmt(oneTime)}</p>
@@ -907,17 +914,27 @@ export function PackageBuilderModal({ mode, username, clientId, existing, onClos
               </div>
             )}
             {oneTime === 0 && monthly === 0 && annual === 0 && (
-              <span className="text-xs text-[var(--space-text-muted)]">No pricing yet</span>
+              <span className="text-xs text-[var(--space-text-muted)]">
+                {lines.length === 0 ? 'Add line items to set pricing' : 'No billable pricing yet'}
+              </span>
             )}
           </div>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-xl bg-[var(--space-accent)] text-black hover:opacity-90 transition-all disabled:opacity-50"
-          >
-            {saving ? <Loader2 className="size-3.5 animate-spin" /> : null}
-            {mode === 'edit' ? 'Save changes' : 'Save draft'}
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => onClose()}
+              className="hidden sm:block px-4 py-2.5 text-sm text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] rounded-xl hover:bg-[var(--space-bg-card-hover)] transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-xl bg-[var(--space-accent)] text-black hover:opacity-90 transition-all disabled:opacity-50"
+            >
+              {saving ? <Loader2 className="size-3.5 animate-spin" /> : null}
+              {mode === 'edit' ? 'Save changes' : 'Save draft'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
