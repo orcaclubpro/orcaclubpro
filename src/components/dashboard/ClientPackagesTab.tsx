@@ -22,6 +22,14 @@ import {
   removeScheduleEntry,
 } from '@/actions/packages'
 
+// Shared style for the per-package action buttons (Copy Link / View Package / Email)
+// so all three get an identical hover: text brightens, border picks up the accent
+// tint, and a subtle card background appears.
+const PKG_ACTION_BTN =
+  'flex items-center gap-1.5 px-3 py-1.5 text-xs text-[var(--space-text-secondary)] ' +
+  'border border-[var(--space-border-hard)] rounded-lg transition-all ' +
+  'hover:text-[var(--space-text-primary)] hover:border-[rgba(139,156,182,0.25)] hover:bg-[var(--space-bg-card-hover)]'
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface LineItem {
@@ -743,19 +751,18 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                     <div className="h-px bg-gradient-to-r from-transparent via-[#333333] to-transparent" />
                     <div className="px-7 py-6 space-y-6 bg-[var(--space-bg-card-hover)]">
 
-                      {/* Share row */}
+                      {/* Share row — all three share one hover treatment */}
                       <div className="flex items-center gap-2 flex-wrap">
                         <button
                           onClick={() => handleCopy(pkg.id)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[var(--space-text-secondary)] border border-[var(--space-border-hard)] rounded-lg hover:text-[var(--space-text-primary)] hover:border-[var(--space-border-hard)] transition-all"
+                          className={PKG_ACTION_BTN}
                         >
                           {copied ? <CheckCheck className="size-3.5 text-emerald-400" /> : <Copy className="size-3.5" />}
                           {copied ? 'Copied!' : 'Copy Link'}
                         </button>
                         <Link
                           href={`/u/${username}/packages/${pkg.id}/print`}
-                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[var(--space-text-secondary)] border border-[var(--space-border-hard)] rounded-lg hover:border-[rgba(139,156,182,0.18)] transition-all"
-                          style={{ color: undefined }}
+                          className={PKG_ACTION_BTN}
                         >
                           <FileText className="size-3.5" />
                           View Package
@@ -763,7 +770,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                         </Link>
                         <button
                           onClick={() => setEmailModalPkgId(pkg.id)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[var(--space-text-secondary)] border border-[var(--space-border-hard)] rounded-lg hover:border-[rgba(139,156,182,0.18)] transition-all"
+                          className={PKG_ACTION_BTN}
                         >
                           <Mail className="size-3.5" />
                           Email

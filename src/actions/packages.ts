@@ -214,6 +214,160 @@ export async function createPackageFromSow(
   }
 }
 
+/**
+ * Best-effort parse of a package's `notes` field back into SOW milestones + terms.
+ * Packages created via createPackageFromSow store notes in a known shape
+ * ("Milestones:\n…\n\nTerms:\n…"); freeform notes fall back to defaults.
+ */
+function parseSowExtrasFromNotes(notes?: string | null) {
+  const extras = {
+    milestones: [] as Array<{ name: string; date: string; notes: string }>,
+    netDays: '30',
+    lateFee: '1.5',
+    revisionRounds: '2',
+    revisionRate: '',
+    contractTerm: '3 months',
+    billingCycle: 'Monthly',
+  }
+  if (!notes) return extras
+
+  const msBlock = notes.match(/Milestones:\n([\s\S]*?)(?:\n\n|$)/)
+  if (msBlock) {
+    for (const line of msBlock[1].split('\n').map(l => l.trim()).filter(Boolean)) {
+      const date = line.match(/\(([^)]+)\)/)?.[1] ?? ''
+      const note = line.match(/—\s*(.+)$/)?.[1] ?? ''
+      const name = line.replace(/\s*\([^)]*\)/, '').replace(/\s*—.*$/, '').trim()
+      if (name) extras.milestones.push({ name, date, notes: note })
+    }
+  }
+
+  const termsBlock = notes.match(/Terms:\n([\s\S]*)$/)
+  if (termsBlock) {
+    const t = termsBlock[1]
+    extras.netDays = t.match(/Net Days:\s*(\d+)/)?.[1] ?? extras.netDays
+    extras.lateFee = t.match(/Late Fee:\s*([\d.]+)/)?.[1] ?? extras.lateFee
+    const rev = t.match(/Revisions:\s*(\d+)\s*rounds(?:\s*@\s*\$([\d.]+))?/)
+    if (rev) { extras.revisionRounds = rev[1]; if (rev[2]) extras.revisionRate = rev[2] }
+    extras.contractTerm = t.match(/Term:\s*(.+)/)?.[1]?.trim() ?? extras.contractTerm
+    extras.billingCycle = t.match(/Billing:\s*(.+)/)?.[1]?.trim() ?? extras.billingCycle
+  }
+
+  return extras
+}
+
+/** Map a package/proposal document to a SOW form payload (inverse of createPackageFromSow). */
+function packageToSowData(pkg: any): SowFormData {
+  const lineItems = (pkg.lineItems ?? []) as any[]
+  const amountOf = (item: any) => (item.adjustedPrice ?? item.price ?? 0) * (item.quantity ?? 1)
+
+  const projectItems = lineItems
+    .filter(i => !i.isRecurring)
+    .map(i => ({ desc: i.name as string, amount: String(amountOf(i)) }))
+  const retainerItems = lineItems
+    .filter(i => i.isRecurring)
+    .map(i => ({ desc: i.name as string, amount: String(amountOf(i)) }))
+
+  const pricingType: SowFormData['pricingType'] =
+    projectItems.length && retainerItems.length ? 'both'
+    : retainerItems.length ? 'retainer'
+    : 'project'
+
+  // Scope items: prefer the cover message (numbered list), else fall back to
+  // the line-item names so the scope section isn't empty.
+  const coverLines = (pkg.coverMessage ?? '')
+    .split('\n')
+    .map((l: string) => l.replace(/^\s*\d+\.\s*/, '').trim())
+    .filter(Boolean)
+  const scopeItems: string[] = coverLines.length
+    ? coverLines
+    : lineItems.map(i => i.name as string).filter(Boolean)
+
+  // Payment schedule: convert stored dollar amounts back to percentages.
+  const total = lineItems.reduce((s, i) => s + amountOf(i), 0)
+  const schedule = (pkg.paymentSchedule ?? []) as any[]
+  const paymentSchedule = schedule.length
+    ? schedule.map(e => ({
+        label: e.label ?? '',
+        pct: total > 0 ? String(Math.round((e.amount ?? 0) / total * 100)) : '',
+        note: '',
+      }))
+    : [
+        { label: 'Deposit', pct: '50', note: 'Due before work begins' },
+        { label: 'Final Payment', pct: '50', note: 'Due upon project completion' },
+      ]
+
+  const extras = parseSowExtrasFromNotes(pkg.notes)
+  const client = pkg.clientAccount && typeof pkg.clientAccount === 'object' ? pkg.clientAccount : null
+
+  return {
+    providerName: 'ORCACLUB',
+    providerContact: 'team@orcaclub.pro',
+    clientName: client?.name ?? client?.company ?? '',
+    clientContact: client?.email ?? client?.phone ?? '',
+    effectiveDate: new Date().toISOString().split('T')[0],
+    projectName: pkg.name ?? '',
+    projectOverview: pkg.description ?? '',
+    scopeItems: scopeItems.length ? scopeItems : [''],
+    milestones: extras.milestones.length ? extras.milestones : [{ name: '', date: '', notes: '' }],
+    pricingType,
+    projectItems: projectItems.length ? projectItems : [{ desc: '', amount: '' }],
+    retainerItems: retainerItems.length ? retainerItems : [{ desc: '', amount: '' }],
+    billingCycle: extras.billingCycle,
+    contractTerm: extras.contractTerm,
+    netDays: extras.netDays,
+    paymentSchedule,
+    lateFee: extras.lateFee,
+    revisionRounds: extras.revisionRounds,
+    revisionRate: extras.revisionRate,
+  }
+}
+
+/**
+ * Create a Scope of Work document (files collection) prefilled from a package's
+ * line items, client, and terms. The document opens editable in the Files tab's
+ * SOW builder for final review before generating the contract PDF.
+ */
+export async function createSowFromPackage(packageId: string, projectId?: string) {
+  try {
+    const user = await getCurrentUser()
+    if (!user || user.role === 'client') return { success: false, error: 'Unauthorized' }
+
+    const payload = await getPayload({ config })
+
+    const pkg = await payload.findByID({ collection: 'packages', id: packageId, depth: 1 })
+    if (!pkg) return { success: false, error: 'Package not found' }
+
+    const sowData = packageToSowData(pkg)
+
+    const linkedProjectId =
+      projectId ??
+      (typeof (pkg as any).projectRef === 'string'
+        ? (pkg as any).projectRef
+        : (pkg as any).projectRef?.id) ??
+      undefined
+
+    const doc = await payload.create({
+      collection: 'files',
+      data: {
+        name: `SOW — ${pkg.name}`,
+        description: `Scope of Work generated from package "${pkg.name}"`,
+        fileType: 'document',
+        documentTemplate: 'sow',
+        documentBrand: 'orcaclub',
+        documentData: sowData,
+        ...(linkedProjectId ? { project: linkedProjectId } : {}),
+      } as any,
+    })
+
+    revalidatePath(`/u/${user.username}/files`)
+
+    return { success: true, id: doc.id }
+  } catch (error) {
+    console.error('[createSowFromPackage]', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to create SOW' }
+  }
+}
+
 export async function assignPackageToClient({
   packageId,
   clientAccountId,

@@ -258,7 +258,7 @@ export function generateGenericInvoiceEmail(order: GenericInvoiceEmailData): str
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                 <tr>
                   <td class="oc-footer-note-td" style="border-top:1px solid #0f0f0f;padding-top:24px;">
-                    <p class="oc-muted" style="margin:0;font-size:11px;color:#2e2e2e;line-height:1.7;font-weight:300;">${order.proposalPrintUrl ? `<a href="${order.proposalPrintUrl}" style="color:#3a5a5e;text-decoration:none;">Download a copy of this invoice</a> &nbsp;·&nbsp; ` : ''}Questions? Reply to this email or contact <a href="mailto:chance@orcaclub.pro" style="color:#3a5a5e;text-decoration:none;">chance@orcaclub.pro</a></p>
+                    <p class="oc-muted" style="margin:0;font-size:11px;color:#2e2e2e;line-height:1.7;font-weight:300;">A copy of this invoice is attached as a PDF. Questions? Reply to this email or contact <a href="mailto:chance@orcaclub.pro" style="color:#3a5a5e;text-decoration:none;">chance@orcaclub.pro</a></p>
                   </td>
                 </tr>
               </table>
@@ -322,7 +322,9 @@ ${lineItemsText}
 ━━━━━━━━━━━━━━━━━━━━
 TOTAL DUE: ${fmtUsd(order.totalAmount)} USD
 ${order.invoiceNote ? `\n${order.invoiceNote}\n` : ''}
-${order.stripeInvoiceUrl ? `Pay online:\n${order.stripeInvoiceUrl}\n\n` : ''}${order.proposalPrintUrl ? `Download a copy of this invoice:\n${order.proposalPrintUrl}\n\n` : ''}Questions? Reply to this email or contact chance@orcaclub.pro
+${order.stripeInvoiceUrl ? `Pay online:\n${order.stripeInvoiceUrl}\n\n` : ''}A copy of this invoice is attached as a PDF.
+
+Questions? Reply to this email or contact chance@orcaclub.pro
 
 ---
 ORCACLUB
@@ -577,21 +579,6 @@ export function generatePaymentScheduleEmail(data: PaymentScheduleEmailData): st
             </td>
           </tr>
 
-          ${data.proposalPrintUrl ? `
-          <!-- CTA -->
-          <tr>
-            <td style="padding:28px 40px 0 40px;">
-              <table role="presentation" cellspacing="0" cellpadding="0" border="0">
-                <tr>
-                  <td style="background-color:#67e8f9;">
-                    <a href="${data.proposalPrintUrl}" style="display:inline-block;padding:13px 28px;font-size:11px;font-weight:700;color:#000000;text-decoration:none;letter-spacing:0.12em;text-transform:uppercase;">View Package &amp; Schedule</a>
-                  </td>
-                </tr>
-              </table>
-              <p class="oc-muted" style="margin:10px 0 0 0;font-size:11px;color:#2e2e2e;word-break:break-all;">${data.proposalPrintUrl}</p>
-            </td>
-          </tr>
-          ` : ''}
 
           <!-- Footer note -->
           <tr>
@@ -649,7 +636,7 @@ ${scheduleText}
 TOTAL: ${fmtUsd(data.totalAmount)} USD
 
 ---
-${data.proposalPrintUrl ? `View your proposal and payment schedule:\n${data.proposalPrintUrl}\n\n` : ''}Questions? Reply to this email or contact chance@orcaclub.pro
+Questions? Reply to this email or contact chance@orcaclub.pro
 
 ---
 © 2025 ORCACLUB. Technical Operations Development Studio.
@@ -793,29 +780,13 @@ export function generateProposalEmail(data: ProposalEmailData): string {
 
           ${scheduleHtml}
 
-          ${data.proposalPrintUrl ? `
-          <!-- CTA -->
-          <tr>
-            <td style="padding:28px 40px 0 40px;">
-              <table role="presentation" cellspacing="0" cellpadding="0" border="0">
-                <tr>
-                  <td style="background-color:#67e8f9;">
-                    <a href="${data.proposalPrintUrl}" style="display:inline-block;padding:13px 28px;font-size:11px;font-weight:700;color:#000000;text-decoration:none;letter-spacing:0.12em;text-transform:uppercase;">View Proposal</a>
-                  </td>
-                </tr>
-              </table>
-              <p class="oc-muted" style="margin:10px 0 0 0;font-size:11px;color:#2e2e2e;word-break:break-all;">${data.proposalPrintUrl}</p>
-            </td>
-          </tr>
-          ` : ''}
-
           <!-- Footer note -->
           <tr>
             <td style="padding:28px 40px 40px 40px;">
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                 <tr>
                   <td class="oc-footer-note-td" style="border-top:1px solid #0f0f0f;padding-top:24px;">
-                    <p class="oc-muted" style="margin:0;font-size:11px;color:#2e2e2e;line-height:1.7;font-weight:300;">Questions about this proposal? Reply to this email or contact <a href="mailto:chance@orcaclub.pro" style="color:#2a6068;text-decoration:none;">chance@orcaclub.pro</a></p>
+                    <p class="oc-muted" style="margin:0;font-size:11px;color:#2e2e2e;line-height:1.7;font-weight:300;">The full proposal is attached as a PDF. Questions? Reply to this email or contact <a href="mailto:chance@orcaclub.pro" style="color:#2a6068;text-decoration:none;">chance@orcaclub.pro</a></p>
                   </td>
                 </tr>
               </table>
@@ -871,7 +842,9 @@ ${lineItemsText}
 ${data.totalOneTime > 0 ? `\nOne-time Total: ${fmtUsd(data.totalOneTime)} USD` : ''}${data.totalMonthly > 0 ? `\nMonthly: ${fmtUsd(data.totalMonthly)}/mo` : ''}${data.totalAnnual > 0 ? `\nAnnual: ${fmtUsd(data.totalAnnual)}/yr` : ''}
 ${scheduleText}
 ---
-${data.proposalPrintUrl ? `View your full proposal:\n${data.proposalPrintUrl}\n\n` : ''}Questions? Reply to this email or contact chance@orcaclub.pro
+The full proposal is attached as a PDF.
+
+Questions? Reply to this email or contact chance@orcaclub.pro
 
 ---
 © 2025 ORCACLUB. Technical Operations Development Studio.

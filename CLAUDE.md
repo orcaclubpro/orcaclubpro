@@ -29,9 +29,19 @@ src/
 │   │   ├── solutions/    # TOFU problem-solution pages
 │   │   ├── sonar/        # Blog: listing, [slug], category/[slug]
 │   │   └── contact/, about/, login/, forgot-password/, reset-password/
-│   ├── (payload)/        # Payload admin (CMS interface)
-│   ├── (spaces)/         # Client portal
-│   │   └── u/[username]/ # Dashboard: clients/, orders/, projects/[project]/, tasks/
+│   ├── (payload)/        # Payload admin (CMS interface) + auto-mounted REST API
+│   ├── (spaces)/         # Client portal (see Client Portal Architecture section)
+│   │   ├── session.ts    # getSessionUser() — cached auth; ALWAYS use inside (spaces)
+│   │   ├── experience.ts # role → 'staff' | 'client' (presentation only)
+│   │   └── u/[username]/ # Route-per-tab dashboard
+│   │       ├── page.tsx            # Home tab + legacy ?tab= redirects
+│   │       ├── tabs.ts             # Tab registry — id === route segment
+│   │       ├── dashboard-data.ts   # Per-tab data loaders
+│   │       ├── _views/             # View components, one per tab
+│   │       ├── projects/ clients/ tasks/ files/ timelines/ packages/  # staff tabs
+│   │       ├── invoices/ accounts/                                    # client tabs
+│   │       ├── clients/[client]/   # Detail route (detail-data.ts = cached fetches)
+│   │       └── projects/[project]/ # Detail route (detail-data.ts = cached fetches)
 │   └── api/              # REST endpoints (see API Routes section)
 ├── components/
 │   ├── ui/               # shadcn/ui primitives
@@ -41,11 +51,11 @@ src/
 │   └── payload/          # Custom Payload admin components (see Components section)
 ├── lib/
 │   ├── payload/
-│   │   ├── payload.config.ts   # Main Payload config
-│   │   ├── collections/        # One file per collection
+│   │   ├── payload.config.ts   # Main Payload config (Users/Media/Leads/Categories/Tags/Posts defined inline here)
+│   │   ├── collections/        # One file per collection (newer collections)
 │   │   ├── hooks/              # Lifecycle hooks (see Hooks section)
 │   │   ├── access/index.ts     # All shared access control functions
-│   │   └── utils/              # loginTwoFactor.ts, passwordReset.ts
+│   │   └── utils/              # loginTwoFactor, passwordReset, passkey*, unlockAccount, email templates, fieldEncryption
 │   ├── shopify/          # admin-client.ts, customers.ts, products.ts, draft-orders.ts
 │   ├── stripe.ts         # Stripe singleton client
 │   ├── google-calendar.ts
@@ -54,6 +64,31 @@ src/
 ├── actions/              # Next.js Server Actions
 └── types/payload-types.ts  # Auto-generated — never edit by hand
 ```
+
+## Client Portal Architecture — (spaces)
+
+The dashboard is **route-per-tab** — there is no client-side tab system. Each tab is a real Next.js route under `u/[username]/`; navigation is plain prefetched `<Link>`s, `loading.tsx` skeletons give instant paint, and `staleTimes` in `next.config.mjs` caches repeat visits.
+
+| Piece | File | Rule |
+|-------|------|------|
+| Tab registry | `u/[username]/tabs.ts` | Single source of truth for tab ids, labels, icons, nav placement. **Tab id === route segment** — public contract, never rename. |
+| Per-tab loaders | `u/[username]/dashboard-data.ts` | Each page fetches only its tab's data. Loaders use `select`/`populate` to trim payloads — when a view needs a new field, add it to the loader's `select`. |
+| Cached auth | `(spaces)/session.ts` → `getSessionUser()` | Always use this inside `(spaces)` instead of `getCurrentUser` — `React.cache()` dedupes across layout, page, and metadata in one request. |
+| Cached client account | `resolveClientAccount()` in `dashboard-data.ts` | `cache()`d — layout badge + page share one findByID. Returns null → render `<AccountNotFound />` (in `_views/`). |
+| Detail-route data | `clients/[client]/detail-data.ts`, `projects/[project]/detail-data.ts` | `cache()`d findByID shared by layout + page + generateMetadata. Never call findByID for these docs directly in a route file. |
+| Skeletons | `components/dashboard/LoadingSkeleton.tsx` | Every tab route has a `loading.tsx` composing these primitives. Without one, link prefetch does nothing and navigation shows a blank wait. |
+| Nav | `components/dashboard/MobileBottomNav.tsx` | Builds links from `tabs.ts` via `tabHref()`; active state derived from pathname. |
+| Experiences | `(spaces)/experience.ts` | Collapses roles → `'staff' \| 'client'` for **presentation only**. Data scoping still distinguishes `admin` vs `user` (see loaders). |
+
+Legacy `?tab=<id>` URLs redirect to the routes in `u/[username]/page.tsx`. The old `orders/` route redirects to `invoices/`.
+
+### Adding a dashboard tab
+
+1. Add a `TabDef` to `STAFF_TABS` or `CLIENT_TABS` in `tabs.ts` (id = route segment)
+2. Add a loader to `dashboard-data.ts` — `select` only the fields the view renders
+3. Create `u/[username]/<id>/page.tsx`: guard with `experienceFor(user.role)`, call the loader, render the view
+4. Create `u/[username]/<id>/loading.tsx` from `LoadingSkeleton` composites
+5. Put the view component in `_views/`
 
 ## CRITICAL SECURITY RULES
 
@@ -115,7 +150,9 @@ access: {
 stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET)
 ```
 
-## Collections (14 total)
+## Collections (20 total)
+
+Most collections have their own file in `src/lib/payload/collections/`; **Users, Media, Leads, Categories, Tags, and Posts are defined inline in `payload.config.ts`**.
 
 ### Business Operations
 
@@ -128,6 +165,9 @@ stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET)
 | Tasks | `tasks` | Work items with status, priority, sprint, time tracking | — |
 | Sprints | `sprints` | Groups tasks per project. `completedTasksCount` is read-only | — |
 | Files | `files` | Documents attached to projects or sprints | — |
+| Packages | `packages` | Service packages / proposals per client account | — |
+| ServiceItems | `service-items` | Line-item catalog for packages/orders | — |
+| Credentials | `credentials` | Client-facing credentials attached to projects | — |
 | WebhookEvents | `webhook-events` | Stripe webhook idempotency tracker | — |
 
 ### Content & Marketing
@@ -139,7 +179,10 @@ stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET)
 | Leads | `leads` | Contact/booking submissions. Status: `new → contacted → converted → lost` |
 | Categories | `categories` | Blog taxonomy |
 | Tags | `tags` | Blog keywords |
-| Posts | `posts` | Blog content with draft/publish versioning | `revalidate` (afterChange + afterDelete) |
+| Posts | `posts` | Blog content with draft/publish versioning. `revalidate` hook (afterChange + afterDelete) |
+| Solutions | `solutions` | TOFU solution pages content (also uses revalidate hooks) |
+| Pages | `pages` | CMS-managed pages |
+| Timelines | `timelines` | Public project timelines (`/timelines/[slug]`, PDF export) |
 
 ## Access Control
 
@@ -155,6 +198,8 @@ adminOrAssigned           // Admins see all; users see only assigned items
 adminOrProjectMember      // Admins see all; users see items from assigned projects
 adminOrOwnClient          // Admins see all; clients see only their own account
 adminOrSelf               // Admins see all; users see only their own user record
+adminOrProjectMemberOrClient // Project members + the client who owns the project (Credentials)
+adminOrUserOrOwnOrder     // Staff, or the client whose clientAccount owns the order
 ```
 
 **Collection access matrix:**
@@ -168,11 +213,17 @@ adminOrSelf               // Admins see all; users see only their own user recor
 | Tasks | adminOrUser | adminOrAssigned | adminOrAssigned | adminOnly |
 | Sprints | adminOrUser | adminOrProjectMember | adminOrProjectMember | adminOnly |
 | Files | adminOrUser | adminOrProjectMember | adminOrProjectMember | adminOnly |
+| Packages | adminOrUser | custom (staff or owning client) | adminOrUser | adminOnly |
+| ServiceItems | adminOrUser | adminOrUser | adminOrUser | adminOnly |
+| Credentials | adminOrUser | adminOrProjectMember | adminOrUser | adminOnly |
 | WebhookEvents | internal | adminOnly | adminOnly | adminOnly |
 | Media | authenticated | anyone | authenticated | authenticated |
 | Clients | authenticated | anyone | authenticated | authenticated |
 | Leads | anyone | authenticated | authenticated | authenticated |
 | Posts | authenticated | authenticatedOrPublished | authenticated | authenticated |
+| Solutions | authenticated | authenticatedOrPublished | authenticated | authenticated |
+| Pages | adminOnly | authenticatedOrPublished | adminOnly | adminOnly |
+| Timelines | adminOrUser | anyone | adminOrUser | adminOnly |
 
 ## Hooks
 
@@ -187,8 +238,10 @@ All hooks in `src/lib/payload/hooks/`.
 | `createShopifyCustomer.ts` | ClientAccounts `beforeChange` | Finds or creates Shopify customer via GraphQL. Non-blocking. |
 | `syncUserToClientAccount.ts` | Users `afterChange` | Keeps ClientAccount email/name in sync with User. |
 | `syncClientAccountToUser.ts` | ClientAccounts `afterChange` | Keeps User email/name in sync with ClientAccount. |
-| `sendTwoFactorEmail.ts` | Users `afterChange` | Sends 2FA setup email. Part of dormant 2FA system. |
-| `revalidate.ts` | Posts `afterChange`, `afterDelete` | Calls `revalidatePath` for `/`, `/sonar`, `/sonar/[slug]`. |
+| `sendTwoFactorEmail.ts` | Users `afterChange` | Sends 2FA setup email. Part of account-setup 2FA (login 2FA is bypassed). |
+| `sendClientWelcomeEmail.ts` | Users `afterChange` | Sends welcome email to newly created client users. Non-blocking. |
+| `clearClientAccountOnDelete.ts` | ClientAccounts `afterDelete` | Clears the ClientAccount linkage on the associated User. |
+| `revalidate.ts` | Posts + Solutions `afterChange`, `afterDelete` | `revalidatePath` for `/`, `/sonar`, `/sonar/[slug]`; also exports homepage/multi-path revalidate helpers. |
 
 **Hook rules:**
 1. Always pass `req` to nested Payload operations
@@ -201,7 +254,7 @@ All integrations use singletons and are non-blocking in hooks.
 
 | Integration | Files | Key Behavior |
 |------------|-------|-------------|
-| **Stripe** | `src/lib/stripe.ts` | Singleton. API version `2025-12-15.clover`. Webhooks: `invoice.paid`, `invoice.payment_failed`, `invoice.voided`. Idempotency via `WebhookEvents` collection. |
+| **Stripe** | `src/lib/stripe.ts` | Singleton. API version `2025-12-15.clover`. Webhooks handled by `stripePlugin` in `payload.config.ts` (NOT an app route): `invoice.paid`, `invoice.payment_failed`, `invoice.voided`, `invoice.marked_uncollectible`. Idempotency via `WebhookEvents` collection. |
 | **Shopify** | `src/lib/shopify/` | OAuth token cached in memory with auto-refresh. `customers.ts` does email lookup before create to prevent duplicates. |
 | **Google Calendar** | `src/lib/google-calendar.ts` | Service account with lazy init. Creates events with Google Meet links. `getAvailableSlots()` returns free 1-hour slots 9AM–5PM. |
 | **Email** | `src/lib/email/templates/` | Nodemailer via Gmail SMTP. All sends are non-blocking. See `/docs/EMAIL_TEMPLATES.md` for the full design standard — **always follow it when creating or modifying any email template**. |
@@ -221,8 +274,11 @@ Components are registered in `payload.config.ts` using **file paths** (not direc
 | `BeforeLogin.tsx` | Server | Pre-login banner |
 | `SendInvoiceButton.tsx` | Client | Send invoice from Order edit view |
 | `ConvertToClientButton.tsx` | Client | Convert Lead → ClientAccount + User |
-| `CreateOrderButton.tsx` | Client | Floating action in admin nav actions |
+| `actions/CreateOrderButton.tsx` | Client | Floating action in admin nav actions |
 | `order-creation/` | Mixed | Order creation workflow (customer selector, product search, cart, invoice summary) |
+| `MarkAsPaidButton.tsx` | Client | Mark an Order paid from the edit view |
+| `PasskeyManager.tsx` | Client | Manage WebAuthn passkeys from the admin account panel |
+| `timelines/` | Mixed | Timelines builder: custom admin view (`TimelinesBuilderView`), nav link (`afterNavLinks`), preview tab |
 
 **UI field pattern** — presentational only, stores no data:
 
@@ -249,6 +305,10 @@ Components are registered in `payload.config.ts` using **file paths** (not direc
 | `/api/auth/verify-login-code` | POST | Verify code, create Payload session |
 | `/api/auth/forgot-password` | POST | Send password reset email |
 | `/api/auth/reset-password` | POST | Reset password with token |
+| `/api/auth/complete-setup` | POST | Finish account setup |
+| `/api/auth/passkey/*` | POST/GET | WebAuthn passkeys — `register-options`, `verify-register`, `authenticate-options`, `verify-authenticate`, `credentials` |
+| `/api/auth/request-unlock`, `/api/auth/unlock-account` | POST | Locked-account recovery flow |
+| `/api/resend-2fa`, `/api/verify-2fa` | POST | Account-setup 2FA verification |
 
 ### Business Logic
 
@@ -258,8 +318,10 @@ Components are registered in `payload.config.ts` using **file paths** (not direc
 | `/api/booking` | POST | Create Lead + Google Calendar event |
 | `/api/booking/available-slots` | GET | Available time slots for a given date |
 | `/api/invoices/send` | POST | Send invoice email for an Order |
-| `/api/stripe/webhooks` | POST | Handle Stripe invoice events |
 | `/api/stripe/payment-links` | POST | Create a Stripe payment link for an Order |
+| `/api/orders/[id]/fulfill` | POST | Fulfill an order |
+| `/api/timelines/[slug]/pdf` | GET | Timeline PDF export |
+| `/api/users/theme` | POST | Save dashboard theme preference |
 | `/api/projects/[project]/tasks` | GET, POST | List or create tasks |
 | `/api/projects/[project]/sprints` | GET, POST | List or create sprints |
 | `/api/users/[username]/projects` | GET | List projects for a user |
@@ -277,19 +339,23 @@ const { user } = await payload.auth({ headers: await headers() })
 const { docs } = await payload.find({ collection: 'orders', user, overrideAccess: false })
 ```
 
-## Authentication & 2FA
+## Authentication
 
-The 2FA infrastructure is built but **currently disabled** — `beforeLogin.ts` passes all authenticated users through.
+**Login 2FA is bypassed** — `beforeLogin.ts` passes all authenticated users through (the file contains no re-enable scaffolding; enforcing 2FA again means writing the check back in). Account-setup 2FA (`sendTwoFactorEmail` hook, `/api/resend-2fa`, `/api/verify-2fa`) is still active.
 
 | File | Purpose |
 |------|---------|
 | `src/lib/payload/utils/loginTwoFactor.ts` | Code generation, email sending, verification |
 | `src/app/api/auth/request-login-code/route.ts` | Request code endpoint |
 | `src/app/api/auth/verify-login-code/route.ts` | Verify code, create session |
-| `src/lib/payload/hooks/beforeLogin.ts` | Currently: allow all. To re-enable: restore `bypassLoginTwoFactor` context check. |
+| `src/lib/payload/hooks/beforeLogin.ts` | Currently: allow all |
 | `src/components/payload/CustomLogin.tsx` | Login UI with email → code flow |
 
 User fields: `loginTwoFactorCode`, `loginTwoFactorExpiry` (10 min TTL), `twoFactorCode`, `twoFactorExpiry`, `twoFactorVerified`
+
+**Passkeys (WebAuthn) — active.** `Users.passkeyCredentials` array field; routes under `/api/auth/passkey/*`; `PasskeySetupPrompt` shows in the dashboard for users with no passkey (rendered by `u/[username]/layout.tsx`); `PasskeyManager` in the admin account panel; helpers in `utils/passkeyChallenge.ts` + `utils/passkeyRpConfig.ts` (built on `@simplewebauthn`).
+
+**Account unlock**: `utils/unlockAccount.ts` + `/api/auth/request-unlock` + `/api/auth/unlock-account`.
 
 ## Development Workflow
 
@@ -303,12 +369,12 @@ bun run tsc --noEmit                 # Verify no TypeScript errors
 
 ### Adding a new collection
 
-1. Create `src/lib/payload/collections/[name].ts`
+1. Create `src/lib/payload/collections/[name].ts` (new collections get their own file — only the six legacy ones live inline in `payload.config.ts`)
 2. Import access functions from `src/lib/payload/access/index.ts`
 3. Add hooks in `src/lib/payload/hooks/` following existing patterns
 4. Register in `payload.config.ts` `collections` array
 5. Run `bun run payload:generate`
-6. Add `index: true` on any field used in `where` queries
+6. Add `index: true` on any field used in `where` or `sort` queries; use the collection-level `indexes: [{ fields: [...] }]` array for compound indexes matching multi-field queries (`createdAt`/`updatedAt` are auto-indexed by Payload)
 
 ### Adding a new integration
 
@@ -384,6 +450,9 @@ import { Button } from '@/components/ui/button'
 | 2FA flow appears broken | It's intentionally disabled — `beforeLogin.ts` passes all users |
 | Client can see another client's data | Missing `overrideAccess: false` in `(spaces)/` query |
 | MongoDB write conflict in balance hook | `updateClientBalance.ts` has exponential retry — don't remove it |
+| Dashboard view renders a blank/missing field | Staff loaders use `select` — add the field to the loader's `select` in `dashboard-data.ts` |
+| New dashboard route shows nothing while loading | Add a `loading.tsx` (compose from `LoadingSkeleton.tsx`) — prefetch needs a loading boundary |
+| Duplicate auth/doc fetches in `(spaces)` | Use `getSessionUser()` and the `detail-data.ts` `cache()` helpers — never raw `getCurrentUser`/`findByID` in both layout and page |
 | Package manager errors | Always use `bun`, never npm/yarn/pnpm |
 
 ## Email System Rules
