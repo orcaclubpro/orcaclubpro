@@ -576,7 +576,7 @@ export function PackageBuilderModal({ mode, username, clientId, existing, onClos
                           className="w-full flex items-center gap-2 px-3 py-2 text-xs text-[var(--space-text-tertiary)] hover:bg-[var(--space-bg-card-hover)] hover:text-[var(--space-text-primary)] transition-colors text-left"
                         >
                           <Star className={cn('size-3.5', item.starred && 'fill-current')} style={item.starred ? { color: 'var(--space-accent)' } : undefined} />
-                          {item.starred ? 'Unstar' : 'Star — show first'}
+                          {item.starred ? 'Unfavorite' : 'Favorite'}
                         </button>
                         <button
                           onClick={() => handleDeleteCatalogItem(item)}
