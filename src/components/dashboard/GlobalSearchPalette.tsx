@@ -205,7 +205,7 @@ export function GlobalSearchPalette({ username }: GlobalSearchPaletteProps) {
           className="overflow-hidden rounded-2xl shadow-[0_32px_80px_rgba(0,0,0,0.7)]"
           style={{
             background: 'var(--space-bg-card)',
-            border: '1px solid rgba(255,255,255,0.07)',
+            border: '1px solid var(--space-border)',
           }}
         >
           {/* Search input row */}
@@ -221,7 +221,7 @@ export function GlobalSearchPalette({ username }: GlobalSearchPaletteProps) {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search clients, projects, sprints…"
-              className="flex-1 bg-transparent text-white text-sm placeholder:text-[#555555] outline-none"
+              className="flex-1 bg-transparent text-[var(--space-text-primary)] text-sm placeholder:text-[#555555] outline-none"
             />
             <div className="flex items-center gap-2 shrink-0">
               {query ? (
@@ -282,7 +282,7 @@ export function GlobalSearchPalette({ username }: GlobalSearchPaletteProps) {
                     >
                       <Icon className="size-3.5 shrink-0" style={{ color: 'rgba(103,232,249,0.5)' }} />
                       <div>
-                        <p className="text-sm font-semibold text-white tabular-nums leading-none">
+                        <p className="text-sm font-semibold text-[var(--space-text-primary)] tabular-nums leading-none">
                           {data ? count : '—'}
                         </p>
                         <p className="text-[9px] text-[#555555] mt-0.5">
@@ -459,7 +459,7 @@ function ResultRow({
       <div className="flex-1 min-w-0">
         <p className={cn(
           'text-sm truncate transition-colors duration-100',
-          isSelected ? 'text-white font-medium' : 'text-[#B0B0B0] group-hover:text-[#D0D0D0]',
+          isSelected ? 'text-[var(--space-text-primary)] font-medium' : 'text-[#B0B0B0] group-hover:text-[#D0D0D0]',
         )}>
           {primary}
         </p>

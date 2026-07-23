@@ -213,6 +213,11 @@ function OptionCard({
             <p className={cn('text-sm font-semibold leading-snug', selected ? 'text-[var(--space-text-primary)]' : 'text-[var(--space-text-secondary)]')}>
               {item.name}
             </p>
+            {item.description && !(selected && onDescriptionChange) && (
+              <p className="mt-1 text-xs leading-relaxed text-[var(--space-text-muted)] whitespace-pre-line">
+                {item.description}
+              </p>
+            )}
             {requested && !selected && (
               <span className="inline-flex items-center gap-1 mt-1 text-[9px] text-amber-400/80 bg-amber-400/[0.08] border border-amber-400/20 rounded px-1.5 py-0.5 font-semibold uppercase tracking-widest">
                 Requested by client

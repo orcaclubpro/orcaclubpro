@@ -16,6 +16,38 @@ const C = {
   white: rgb(1,     1,     1),
 }
 
+// Brand palette shared by the invoice/proposal/SOW documents
+// (matches packages/[package]/print/page.tsx).
+const BRAND = {
+  ink:    rgb(0.067, 0.067, 0.067), // #111
+  gray6:  rgb(0.420, 0.447, 0.502), // #6b7280
+  gray4:  rgb(0.612, 0.639, 0.686), // #9ca3af
+  rule:   rgb(0.898, 0.906, 0.922), // #e5e7eb
+  ruleLt: rgb(0.953, 0.957, 0.965), // #f3f4f6
+  headBg: rgb(0.953, 0.957, 0.965), // #f3f4f6
+  boxBg:  rgb(0.976, 0.980, 0.984), // #f9fafb
+  cyan:   rgb(0.031, 0.569, 0.698), // #0891b2
+  navy:   rgb(0.118, 0.227, 0.431), // #1E3A6E
+}
+
+/** Width of a letter-spaced (tracked) run. */
+function trackedWidth(text: string, size: number, font: PDFFont, spacing: number): number {
+  return [...text].reduce((w, ch) => w + font.widthOfTextAtSize(ch, size) + spacing, 0) - spacing
+}
+
+/** Draw a letter-spaced (tracked) run; returns the end x. */
+function drawTracked(
+  page: PDFPage, text: string, x: number, y: number,
+  size: number, font: PDFFont, color: ReturnType<typeof rgb>, spacing: number,
+): number {
+  let cx = x
+  for (const ch of text) {
+    page.drawText(ch, { x: cx, y, size, font, color })
+    cx += font.widthOfTextAtSize(ch, size) + spacing
+  }
+  return cx - spacing
+}
+
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 function fmtDate(val: string): string {
@@ -57,6 +89,8 @@ class DocWriter {
   pw = 612; ph = 792
   innerW:  number
   prefix:  string
+  gothic?: PDFFont
+  branded  = false
   private pageNum  = 0
   private runTitle = ''
   private footNote = ''
@@ -64,6 +98,7 @@ class DocWriter {
   constructor(
     doc: PDFDocument, bold: PDFFont, normal: PDFFont,
     prefix = '', runTitle = '', footNote = '',
+    opts?: { gothic?: PDFFont; branded?: boolean },
   ) {
     this.doc      = doc
     this.bold     = bold
@@ -72,7 +107,41 @@ class DocWriter {
     this.prefix   = prefix
     this.runTitle = runTitle
     this.footNote = footNote
+    this.gothic   = opts?.gothic
+    this.branded  = opts?.branded ?? false
     this._np(true)
+  }
+
+  // Brand-aware chrome colors — branded docs (ORCACLUB invoice/proposal/SOW)
+  // use the print-page palette; legacy docs (personal NDA/SOW) keep the old look.
+  private get cNavy()  { return this.branded ? BRAND.navy   : C.navy }
+  private get cRule()  { return this.branded ? BRAND.rule   : C.rule }
+  private get cAlt()   { return this.branded ? BRAND.ruleLt : C.bgAlt }
+  private get cLabel() { return this.branded ? BRAND.gray6  : C.light }
+
+  /** Branded document header: Cinzel wordmark + tagline, right-aligned label + date. */
+  brandHeader(rightLabel: string, dateLabel: string) {
+    const g = this.gothic ?? this.bold
+    this.page.drawText('ORCACLUB', { x: this.ml, y: this.y, size: 16, font: g, color: BRAND.ink })
+    const lw = trackedWidth(rightLabel.toUpperCase(), 7.5, this.bold, 1.6)
+    drawTracked(this.page, rightLabel.toUpperCase(), this.pw - this.mr - lw, this.y + 6, 7.5, this.bold, BRAND.gray6, 1.6)
+    const dw = this.normal.widthOfTextAtSize(dateLabel, 8.5)
+    this.page.drawText(dateLabel, { x: this.pw - this.mr - dw, y: this.y - 8, size: 8.5, font: this.normal, color: BRAND.gray4 })
+    this.y -= 14
+    drawTracked(this.page, 'WEB DESIGN AND MARKETING AUTOMATION', this.ml, this.y, 6.5, this.normal, BRAND.gray4, 1.4)
+    this.y -= 22
+    this.page.drawLine({ start: { x: this.ml, y: this.y }, end: { x: this.pw - this.mr, y: this.y }, thickness: 0.6, color: BRAND.rule })
+    this.y -= 24
+  }
+
+  /** Branded document title: bold heading + tracked uppercase subtitle. */
+  brandTitle(title: string, subtitle?: string) {
+    this.page.drawText(title, { x: this.ml, y: this.y, size: 20, font: this.bold, color: BRAND.ink })
+    this.y -= 26
+    if (subtitle) {
+      drawTracked(this.page, subtitle.toUpperCase(), this.ml, this.y, 8, this.normal, BRAND.gray4, 1.4)
+      this.y -= 20
+    }
   }
 
   // ── Pagination ───────────────────────────────────────────────────────────────
@@ -94,15 +163,15 @@ class DocWriter {
     this.page.drawLine({
       start: { x: this.ml, y: y - 6 },
       end:   { x: this.pw - this.mr, y: y - 6 },
-      thickness: 0.4, color: C.rule,
+      thickness: 0.4, color: this.cRule,
     })
     this.page.drawText(this.runTitle, {
-      x: this.ml, y, size: 7, font: this.bold, color: C.light,
+      x: this.ml, y, size: 7, font: this.bold, color: this.cLabel,
     })
     const pg  = `Page ${this.pageNum}`
     const pgW = this.normal.widthOfTextAtSize(pg, 7)
     this.page.drawText(pg, {
-      x: this.pw - this.mr - pgW, y, size: 7, font: this.normal, color: C.light,
+      x: this.pw - this.mr - pgW, y, size: 7, font: this.normal, color: this.cLabel,
     })
   }
 
@@ -110,14 +179,14 @@ class DocWriter {
     this.page.drawLine({
       start: { x: this.ml, y: this.mb + 12 },
       end:   { x: this.pw - this.mr, y: this.mb + 12 },
-      thickness: 0.4, color: C.rule,
+      thickness: 0.4, color: this.cRule,
     })
     if (!this.footNote) return
     const size = 6.5
     const tw = this.normal.widthOfTextAtSize(this.footNote, size)
     this.page.drawText(this.footNote, {
       x: (this.pw - tw) / 2, y: this.mb,
-      size, font: this.normal, color: C.light,
+      size, font: this.normal, color: this.cLabel,
     })
   }
 
@@ -175,16 +244,16 @@ class DocWriter {
     this.page.drawRectangle({
       x: this.ml - 9, y: this.y - (size - 1),
       width: 3, height: size + 1,
-      color: C.navy,
+      color: this.cNavy,
     })
     this.page.drawText(text.toUpperCase(), {
-      x: this.x, y: this.y, size, font: this.bold, color: C.navy,
+      x: this.x, y: this.y, size, font: this.bold, color: this.cNavy,
     })
     this.y -= size + 5
     this.page.drawLine({
       start: { x: this.ml, y: this.y },
       end:   { x: this.pw - this.mr, y: this.y },
-      thickness: 0.3, color: C.rule,
+      thickness: 0.3, color: this.cRule,
     })
     this.y -= 7
   }
@@ -299,25 +368,37 @@ class DocWriter {
   // ── Table ────────────────────────────────────────────────────────────────────
 
   table(headers: string[], widths: number[], rows: string[][], size = 9) {
+    const rowText = this.branded ? BRAND.ink : C.dark
     if (headers.length > 0) {
       const hRowH = size + 12
       this.need(hRowH + 2)
-      let cx = this.ml
-      for (let ci = 0; ci < headers.length; ci++) {
-        this.page.drawRectangle({
-          x: cx, y: this.y - hRowH, width: widths[ci], height: hRowH, color: C.navy,
-        })
-        this.page.drawText(headers[ci], {
-          x: cx + 6, y: this.y - size - 4,
-          size: size - 0.5, font: this.bold, color: C.white,
-        })
-        cx += widths[ci]
+      if (this.branded) {
+        // Light-gray header bar with tracked uppercase labels (matches invoice/proposal)
+        const totalW = widths.reduce((a, b) => a + b, 0)
+        this.page.drawRectangle({ x: this.ml, y: this.y - hRowH, width: totalW, height: hRowH, color: BRAND.headBg })
+        let cx = this.ml
+        for (let ci = 0; ci < headers.length; ci++) {
+          drawTracked(this.page, headers[ci].toUpperCase(), cx + 6, this.y - size - 4, size - 2, this.bold, BRAND.gray6, 0.8)
+          cx += widths[ci]
+        }
+      } else {
+        let cx = this.ml
+        for (let ci = 0; ci < headers.length; ci++) {
+          this.page.drawRectangle({
+            x: cx, y: this.y - hRowH, width: widths[ci], height: hRowH, color: C.navy,
+          })
+          this.page.drawText(headers[ci], {
+            x: cx + 6, y: this.y - size - 4,
+            size: size - 0.5, font: this.bold, color: C.white,
+          })
+          cx += widths[ci]
+        }
       }
       this.y -= hRowH + 1
     }
 
     for (let ri = 0; ri < rows.length; ri++) {
-      const bg = ri % 2 === 1 ? C.bgAlt : C.white
+      const bg = ri % 2 === 1 ? this.cAlt : C.white
       let maxLines = 1
       for (let ci = 0; ci < rows[ri].length; ci++) {
         const lns = wrap(rows[ri][ci], this.normal, size, widths[ci] - 12)
@@ -334,7 +415,7 @@ class DocWriter {
         const lns = wrap(rows[ri][ci], this.normal, size, widths[ci] - 12)
         let ty = this.y - size - 5
         for (const l of lns) {
-          this.page.drawText(l, { x: cx + 6, y: ty, size, font: this.normal, color: C.dark })
+          this.page.drawText(l, { x: cx + 6, y: ty, size, font: this.normal, color: rowText })
           ty -= size + 3
         }
         cx += widths[ci]
@@ -342,7 +423,7 @@ class DocWriter {
       this.page.drawLine({
         start: { x: this.ml, y: this.y - rowH },
         end:   { x: this.pw - this.mr, y: this.y - rowH },
-        thickness: 0.3, color: C.rule,
+        thickness: 0.3, color: this.cRule,
       })
       this.y -= rowH + 1
     }
@@ -357,18 +438,18 @@ class DocWriter {
     this.page.drawLine({
       start: { x: this.ml, y: this.y },
       end:   { x: this.pw - this.mr, y: this.y },
-      thickness: 1.2, color: C.navy,
+      thickness: 1.2, color: this.cNavy,
     })
     this.page.drawRectangle({
       x: this.ml, y: this.y - rowH, width: totalW, height: rowH,
-      color: rgb(0.89, 0.92, 0.97),
+      color: this.branded ? BRAND.headBg : rgb(0.89, 0.92, 0.97),
     })
     this.page.drawText(label, {
-      x: this.ml + 6, y: this.y - size - 5, size, font: this.bold, color: C.navy,
+      x: this.ml + 6, y: this.y - size - 5, size, font: this.bold, color: this.branded ? BRAND.ink : C.navy,
     })
     const amtW = this.bold.widthOfTextAtSize(amount, size)
     this.page.drawText(amount, {
-      x: this.pw - this.mr - amtW - 6, y: this.y - size - 5, size, font: this.bold, color: C.navy,
+      x: this.pw - this.mr - amtW - 6, y: this.y - size - 5, size, font: this.bold, color: this.cNavy,
     })
     this.y -= rowH + 4
   }
@@ -387,21 +468,21 @@ class DocWriter {
     this.page.drawLine({
       start: { x: this.ml, y: this.y },
       end:   { x: this.pw - this.mr, y: this.y },
-      thickness: 2, color: C.navy,
+      thickness: 2, color: this.cNavy,
     })
     this.y -= 18
 
     const htxt = 'AUTHORIZATION AND SIGNATURES'
     const htw  = this.bold.widthOfTextAtSize(htxt, 11)
     this.page.drawText(htxt, {
-      x: (this.pw - htw) / 2, y: this.y, size: 11, font: this.bold, color: C.navy,
+      x: (this.pw - htw) / 2, y: this.y, size: 11, font: this.bold, color: this.cNavy,
     })
     this.y -= 16
 
     this.page.drawLine({
       start: { x: this.ml, y: this.y },
       end:   { x: this.pw - this.mr, y: this.y },
-      thickness: 0.5, color: C.rule,
+      thickness: 0.5, color: this.cRule,
     })
     this.y -= 16
 
@@ -437,20 +518,27 @@ class DocWriter {
     }
 
     const lbl = (text: string, x: number, yy: number) => {
-      this.page.drawText(text, { x, y: yy, size: 7, font: this.bold, color: C.light })
+      this.page.drawText(text, { x, y: yy, size: 7, font: this.bold, color: this.cLabel })
     }
 
     const startY = this.y
 
-    // Column headers (navy bars)
-    this.page.drawRectangle({ x: L, y: startY - 14, width: colW, height: 14, color: C.navy })
-    this.page.drawText(sp_label.toUpperCase(), {
-      x: L + 6, y: startY - 10.5, size: 7.5, font: this.bold, color: C.white,
-    })
-    this.page.drawRectangle({ x: R, y: startY - 14, width: colW, height: 14, color: C.navy })
-    this.page.drawText(cl_label.toUpperCase(), {
-      x: R + 6, y: startY - 10.5, size: 7.5, font: this.bold, color: C.white,
-    })
+    // Column headers
+    if (this.branded) {
+      this.page.drawRectangle({ x: L, y: startY - 14, width: colW, height: 14, color: BRAND.headBg })
+      drawTracked(this.page, sp_label.toUpperCase(), L + 6, startY - 10.5, 7, this.bold, BRAND.gray6, 0.8)
+      this.page.drawRectangle({ x: R, y: startY - 14, width: colW, height: 14, color: BRAND.headBg })
+      drawTracked(this.page, cl_label.toUpperCase(), R + 6, startY - 10.5, 7, this.bold, BRAND.gray6, 0.8)
+    } else {
+      this.page.drawRectangle({ x: L, y: startY - 14, width: colW, height: 14, color: C.navy })
+      this.page.drawText(sp_label.toUpperCase(), {
+        x: L + 6, y: startY - 10.5, size: 7.5, font: this.bold, color: C.white,
+      })
+      this.page.drawRectangle({ x: R, y: startY - 14, width: colW, height: 14, color: C.navy })
+      this.page.drawText(cl_label.toUpperCase(), {
+        x: R + 6, y: startY - 10.5, size: 7.5, font: this.bold, color: C.white,
+      })
+    }
 
     let y = startY - 26
 
@@ -833,16 +921,20 @@ export async function buildOrcaclubNdaPdf(d: NdaFormData): Promise<Uint8Array> {
 
 async function buildSowCore(d: SowFormData, brand: 'personal' | 'orcaclub'): Promise<Uint8Array> {
   const doc    = await PDFDocument.create()
+  const isOrcaclub = brand === 'orcaclub'
+  if (isOrcaclub) doc.registerFontkit(fontkit)
   const bold   = await doc.embedFont(StandardFonts.HelveticaBold)
   const normal = await doc.embedFont(StandardFonts.Helvetica)
+  const gothic = isOrcaclub
+    ? await doc.embedFont(Buffer.from(CINZEL_DECORATIVE_BOLD_BASE64, 'base64'), { subset: true })
+    : undefined
 
-  const isOrcaclub = brand === 'orcaclub'
   const spName  = d.providerName?.trim() || (isOrcaclub ? 'ORCACLUB' : 'Chance Noonan')
   const spFull  = d.providerName?.trim() || (isOrcaclub ? 'ORCACLUB Technical Operations Development Studio' : 'Chance Noonan, Independent Freelance Consultant')
   const spTitle = isOrcaclub ? 'Authorized Representative' : 'Independent Freelance Consultant'
   const subtitle = isOrcaclub ? 'Technical Services Agreement' : 'Independent Contractor Agreement'
   const footNote = isOrcaclub
-    ? 'ORCACLUB Technical Operations Development Studio · orcaclub.pro · Does not constitute legal advice.'
+    ? 'ORCACLUB · Web Design and Marketing Automation · orcaclub.pro · Does not constitute legal advice.'
     : `Prepared by ${spName} · Independent Freelance Consultant · Does not constitute legal advice.`
 
   const w = new DocWriter(
@@ -850,13 +942,16 @@ async function buildSowCore(d: SowFormData, brand: 'personal' | 'orcaclub'): Pro
     'sow_',
     `SCOPE OF WORK AGREEMENT — ${blank(d.projectName, 'CONFIDENTIAL')}`,
     footNote,
+    { gothic, branded: isOrcaclub },
   )
 
   // ── Title block ──────────────────────────────────────────────────────────────
-  w.titleBlock(
-    'Scope of Work Agreement',
-    subtitle,
-  )
+  if (isOrcaclub) {
+    w.brandHeader('Scope of Work', fmtDate(d.effectiveDate))
+    w.brandTitle('Scope of Work Agreement', subtitle)
+  } else {
+    w.titleBlock('Scope of Work Agreement', subtitle)
+  }
 
   // ── Opening recital ──────────────────────────────────────────────────────────
   w.body(
@@ -1053,18 +1148,7 @@ function money(n: number): string {
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
 }
 
-// Print-page palette (matches packages/[package]/print/page.tsx)
-const P = {
-  ink:    rgb(0.067, 0.067, 0.067), // #111
-  gray6:  rgb(0.420, 0.447, 0.502), // #6b7280
-  gray4:  rgb(0.612, 0.639, 0.686), // #9ca3af
-  rule:   rgb(0.898, 0.906, 0.922), // #e5e7eb
-  ruleLt: rgb(0.953, 0.957, 0.965), // #f3f4f6
-  headBg: rgb(0.953, 0.957, 0.965), // #f3f4f6
-  boxBg:  rgb(0.976, 0.980, 0.984), // #f9fafb
-  cyan:   rgb(0.031, 0.569, 0.698), // #0891b2
-  navy:   rgb(0.118, 0.227, 0.431), // #1E3A6E
-}
+const P = BRAND
 
 export async function buildPackagePdf(d: PackagePdfData): Promise<Uint8Array> {
   const doc = await PDFDocument.create()

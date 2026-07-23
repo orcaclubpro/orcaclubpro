@@ -12,11 +12,12 @@ import {
   sendInvoiceCopyToAddresses,
   sendPaymentScheduleEmail,
   sendProposalEmailToAddresses,
+  sendSowToAddresses,
   generateProposalEmail,
   generateProposalEmailText,
   type EmailAttachment,
 } from '@/lib/payload/utils/genericInvoiceEmailTemplate'
-import { buildPackagePdf } from '@/lib/pdf-generators'
+import { buildPackagePdf, buildOrcaclubSowPdf } from '@/lib/pdf-generators'
 
 const APP_BASE = process.env.NEXT_PUBLIC_SERVER_URL ?? 'https://app.orcaclub.pro'
 
@@ -260,12 +261,16 @@ function packageToSowData(pkg: any): SowFormData {
   const lineItems = (pkg.lineItems ?? []) as any[]
   const amountOf = (item: any) => (item.adjustedPrice ?? item.price ?? 0) * (item.quantity ?? 1)
 
+  // Fold the optional line description into the SOW's Description cell so it
+  // carries through to the contract PDF (SowLineItem is just desc + amount).
+  const descOf = (i: any) =>
+    i.description?.trim() ? `${i.name} — ${i.description.trim()}` : (i.name as string)
   const projectItems = lineItems
     .filter(i => !i.isRecurring)
-    .map(i => ({ desc: i.name as string, amount: String(amountOf(i)) }))
+    .map(i => ({ desc: descOf(i), amount: String(amountOf(i)) }))
   const retainerItems = lineItems
     .filter(i => i.isRecurring)
-    .map(i => ({ desc: i.name as string, amount: String(amountOf(i)) }))
+    .map(i => ({ desc: descOf(i), amount: String(amountOf(i)) }))
 
   const pricingType: SowFormData['pricingType'] =
     projectItems.length && retainerItems.length ? 'both'
@@ -283,12 +288,17 @@ function packageToSowData(pkg: any): SowFormData {
     : lineItems.map(i => i.name as string).filter(Boolean)
 
   // Payment schedule: convert stored dollar amounts back to percentages.
-  const total = lineItems.reduce((s, i) => s + amountOf(i), 0)
+  // The SOW PDF computes each installment's dollar amount off the project-items
+  // subtotal (or retainer subtotal when retainer-only), so use that same base
+  // here for an exact round-trip.
+  const projectTotal = projectItems.reduce((s, i) => s + (parseFloat(i.amount) || 0), 0)
+  const retainerTotal = retainerItems.reduce((s, i) => s + (parseFloat(i.amount) || 0), 0)
+  const scheduleBase = pricingType === 'retainer' ? retainerTotal : projectTotal
   const schedule = (pkg.paymentSchedule ?? []) as any[]
   const paymentSchedule = schedule.length
     ? schedule.map(e => ({
         label: e.label ?? '',
-        pct: total > 0 ? String(Math.round((e.amount ?? 0) / total * 100)) : '',
+        pct: scheduleBase > 0 ? String(Math.round((e.amount ?? 0) / scheduleBase * 100)) : '',
         note: '',
       }))
     : [
@@ -1636,10 +1646,67 @@ export async function emailPackageToSelf(packageId: string) {
 }
 
 
+export interface BillToOverride {
+  name: string
+  company?: string
+  email: string
+  phone?: string
+  address: { line1: string; line2?: string; city: string; state: string; zip: string }
+}
+
+/** A bill-to override is only applied when every required field is filled in. */
+function isBillToComplete(b?: BillToOverride | null): b is BillToOverride {
+  return !!(
+    b &&
+    b.name?.trim() &&
+    b.email?.trim() &&
+    b.address?.line1?.trim() &&
+    b.address?.city?.trim() &&
+    b.address?.state?.trim() &&
+    b.address?.zip?.trim()
+  )
+}
+
+/**
+ * Return a package's client account bill-to details, flattened for the email
+ * sender's override form (empty strings when a field is unset). Staff only.
+ */
+export async function getPackageBillTo(packageId: string) {
+  try {
+    const user = await getCurrentUser()
+    if (!user || user.role === 'client') return { success: false as const, error: 'Unauthorized' }
+
+    const payload = await getPayload({ config })
+    const pkg = await payload.findByID({ collection: 'packages', id: packageId, depth: 1 })
+    if (!pkg) return { success: false as const, error: 'Package not found' }
+
+    const c = pkg.clientAccount && typeof pkg.clientAccount === 'object' ? (pkg.clientAccount as any) : null
+    const addr = c?.address ?? {}
+    return {
+      success: true as const,
+      billTo: {
+        name: c?.name ?? '',
+        company: c?.company ?? '',
+        email: c?.email ?? '',
+        phone: c?.phone ?? '',
+        line1: addr.line1 ?? '',
+        line2: addr.line2 ?? '',
+        city: addr.city ?? '',
+        state: addr.state ?? '',
+        zip: addr.zip ?? '',
+      },
+    }
+  } catch (error) {
+    console.error('[getPackageBillTo]', error)
+    return { success: false as const, error: error instanceof Error ? error.message : 'Failed' }
+  }
+}
+
 export async function sendProposalEmail(
   packageId: string,
   emails: string[],
-  sendAs: 'proposal' | 'invoice' = 'proposal',
+  sendAs: 'proposal' | 'invoice' | 'sow' = 'proposal',
+  billTo?: BillToOverride | null,
 ) {
   try {
     const user = await getCurrentUser()
@@ -1679,6 +1746,27 @@ export async function sendProposalEmail(
     }
 
     const clientObj = clientAccount && typeof clientAccount === 'object' ? clientAccount : null
+
+    // Resolve the effective bill-to: the manual override wins only when it is
+    // fully filled in (isBillToComplete); otherwise fall back to the client's
+    // saved account details. Overriding replaces the block wholesale.
+    const override = isBillToComplete(billTo) ? billTo : null
+    const bt = override
+      ? {
+          name: override.name,
+          company: override.company?.trim() || undefined,
+          email: override.email,
+          phone: override.phone?.trim() || undefined,
+          address: override.address,
+        }
+      : {
+          name: clientObj?.name ?? undefined,
+          company: clientObj?.company ?? undefined,
+          email: clientObj?.email ?? undefined,
+          phone: clientObj?.phone ?? undefined,
+          address: clientObj?.address ?? undefined,
+        }
+
     // Same reference format as the print page (PKG-XXXXXX)
     const ref = `PKG-${packageId.slice(-6).toUpperCase()}`
 
@@ -1691,37 +1779,45 @@ export async function sendProposalEmail(
         return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
           .format(new Date(parts[0], parts[1] - 1, parts[2]))
       }
-      const bytes = await buildPackagePdf({
-        sendAs,
-        ref,
-        packageName: pkg.name,
-        dateLabel: new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).format(new Date()),
-        clientLines: [
-          clientObj?.name,
-          clientObj?.company,
-          clientObj?.address?.line1,
-          clientObj?.address?.line2,
-          [clientObj?.address?.city, clientObj?.address?.state, clientObj?.address?.zip].filter(Boolean).join(', ') || null,
-          clientObj?.email,
-        ].filter(Boolean) as string[],
-        description: pkg.description ?? null,
-        coverMessage: (pkg as any).coverMessage ?? null,
-        lineItems: lineItems.map((item: any) => ({
-          name: item.name,
-          description: item.description ?? null,
-          quantity: item.quantity ?? 1,
-          rate: item.adjustedPrice ?? item.price ?? 0,
-          isRecurring: item.isRecurring ?? false,
-          recurringInterval: item.recurringInterval ?? undefined,
-        })),
-        paymentSchedule: ((pkg as any).paymentSchedule ?? []).map((e: any) => ({
-          label: e.label,
-          amount: e.amount,
-          dueDateLabel: e.dueDate ? fmtPdfDate(e.dueDate) : null,
-        })),
-      })
+      let bytes: Uint8Array
+      let filename: string
+      if (sendAs === 'sow') {
+        bytes = await buildOrcaclubSowPdf(packageToSowData(pkg))
+        filename = `SOW_${pkg.name.replace(/\s+/g, '_')}.pdf`
+      } else {
+        bytes = await buildPackagePdf({
+          sendAs,
+          ref,
+          packageName: pkg.name,
+          dateLabel: new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).format(new Date()),
+          clientLines: [
+            bt.name,
+            bt.company,
+            bt.address?.line1,
+            bt.address?.line2,
+            [bt.address?.city, bt.address?.state, bt.address?.zip].filter(Boolean).join(', ') || null,
+            bt.email,
+          ].filter(Boolean) as string[],
+          description: pkg.description ?? null,
+          coverMessage: (pkg as any).coverMessage ?? null,
+          lineItems: lineItems.map((item: any) => ({
+            name: item.name,
+            description: item.description ?? null,
+            quantity: item.quantity ?? 1,
+            rate: item.adjustedPrice ?? item.price ?? 0,
+            isRecurring: item.isRecurring ?? false,
+            recurringInterval: item.recurringInterval ?? undefined,
+          })),
+          paymentSchedule: ((pkg as any).paymentSchedule ?? []).map((e: any) => ({
+            label: e.label,
+            amount: e.amount,
+            dueDateLabel: e.dueDate ? fmtPdfDate(e.dueDate) : null,
+          })),
+        })
+        filename = sendAs === 'invoice' ? `Invoice_${ref}.pdf` : `Proposal_${pkg.name.replace(/\s+/g, '_')}.pdf`
+      }
       attachments = [{
-        filename: sendAs === 'invoice' ? `Invoice_${ref}.pdf` : `Proposal_${pkg.name.replace(/\s+/g, '_')}.pdf`,
+        filename,
         content: Buffer.from(bytes).toString('base64'),
         encoding: 'base64',
         contentType: 'application/pdf',
@@ -1730,18 +1826,27 @@ export async function sendProposalEmail(
       console.error('[sendProposalEmail] PDF generation failed — sending without attachment:', err)
     }
 
+    if (sendAs === 'sow') {
+      return await sendSowToAddresses(payload, {
+        packageName: pkg.name,
+        recipientName: bt.name ?? undefined,
+        recipientEmail: bt.email ?? validEmails[0],
+      }, validEmails, attachments)
+    }
+
     if (sendAs === 'invoice') {
       // Straight invoice copy — no Order or Stripe invoice is created.
       const totalDue = totalOneTime > 0 ? totalOneTime : totalMonthly + totalAnnual
       return await sendInvoiceCopyToAddresses(payload, {
         orderNumber: ref,
-        customerName: clientObj?.name ?? undefined,
-        customerEmail: clientObj?.email ?? validEmails[0],
-        customerCompany: clientObj?.company ?? undefined,
-        customerPhone: clientObj?.phone ?? undefined,
-        customerAddress: clientObj?.address ?? undefined,
+        customerName: bt.name ?? undefined,
+        customerEmail: bt.email ?? validEmails[0],
+        customerCompany: bt.company ?? undefined,
+        customerPhone: bt.phone ?? undefined,
+        customerAddress: bt.address ?? undefined,
         lineItems: lineItems.map((item: any) => ({
           title: item.name,
+          description: item.description || undefined,
           quantity: item.quantity ?? 1,
           price: item.adjustedPrice ?? item.price ?? 0,
           isRecurring: item.isRecurring || undefined,
@@ -1759,6 +1864,7 @@ export async function sendProposalEmail(
       coverMessage: (pkg as any).coverMessage ?? undefined,
       lineItems: lineItems.map((item: any) => ({
         name: item.name,
+        description: item.description || undefined,
         price: item.adjustedPrice ?? item.price ?? 0,
         quantity: item.quantity ?? 1,
         isRecurring: item.isRecurring ?? false,

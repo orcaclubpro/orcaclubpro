@@ -488,7 +488,7 @@ export interface User {
   /**
    * Dashboard color preset
    */
-  dashboardTheme?: ('void' | 'arctic' | 'ember' | 'emerald' | 'dusk' | 'chrome' | 'light' | 'paper') | null;
+  dashboardTheme?: ('sonar' | 'light' | 'paper') | null;
   /**
    * Registered WebAuthn passkeys for this user
    */

@@ -114,27 +114,29 @@
   --sidebar-border: hsl(220 13% 91%);
   --sidebar-ring: hsl(217.2 91.2% 59.8%);
 
-  /* SPACES dashboard theme variables — Charcoal Studio */
-  --space-accent: #8B9CB6;
-  --space-accent-rgb: 139, 156, 182;
-  --space-accent-dim: #6B7F9A;
-  --space-accent-glow: rgba(139, 156, 182, 0.20);
-  --space-accent-soft: rgba(139, 156, 182, 0.08);
-  --space-bg-base: #1C1C1C;
-  --space-bg-surface: rgba(255, 255, 255, 0.04);
-  --space-nav-bg: rgba(34, 34, 34, 0.96);
-  --space-border: rgba(255, 255, 255, 0.08);
+  /* SPACES dashboard theme variables — default: Sonar (warm paper).
+     Mirrors the DEFAULT_THEME in src/app/(spaces)/themes.ts. These are the
+     pre-hydration fallbacks; the layout injects the user's saved theme inline. */
+  --space-accent: #0e7c86;
+  --space-accent-rgb: 14, 124, 134;
+  --space-accent-dim: #0b616a;
+  --space-accent-glow: rgba(14, 110, 110, 0.13);
+  --space-accent-soft: rgba(14, 110, 110, 0.09);
+  --space-bg-base: #f1f0ea;
+  --space-bg-surface: rgba(21, 25, 27, 0.02);
+  --space-nav-bg: rgba(241, 240, 234, 0.92);
+  --space-border: #e2e1da;
   /* Extended theme variables */
-  --space-text-primary:   #F0F0F0;
-  --space-text-secondary: #6B6B6B;
-  --space-text-tertiary:  #A0A0A0;
-  --space-text-muted:     #4A4A4A;
-  --space-bg-card:        #252525;
-  --space-bg-card-hover:  #2D2D2D;
-  --space-border-hard:    #404040;
-  --space-divider:        #333333;
-  --space-nav-fg:         #ffffff;
-  --space-nav-fg-dim:     rgba(255, 255, 255, 0.40);
+  --space-text-primary:   #15191b;
+  --space-text-secondary: #565c5e;
+  --space-text-tertiary:  #8b8f8a;
+  --space-text-muted:     #adaba2;
+  --space-bg-card:        #fbfaf6;
+  --space-bg-card-hover:  #eae9e1;
+  --space-border-hard:    #d3d2ca;
+  --space-divider:        #e2e1da;
+  --space-nav-fg:         #15191b;
+  --space-nav-fg-dim:     rgba(21, 25, 27, 0.45);
 }
 
 * {

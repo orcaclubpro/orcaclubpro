@@ -771,7 +771,7 @@ function MobileProjectCard({
           {/* Header row */}
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-[var(--space-text-primary)] group-hover:text-white truncate transition-colors duration-200 leading-snug">
+              <p className="text-sm font-semibold text-[var(--space-text-primary)] group-hover:text-[var(--space-text-primary)] truncate transition-colors duration-200 leading-snug">
                 {project.name}
               </p>
               <div className="flex items-center gap-1.5 mt-0.5">

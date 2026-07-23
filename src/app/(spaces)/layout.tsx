@@ -31,7 +31,7 @@ export default async function SpacesLayout({
 
   // Build inline CSS vars from the initial theme so the correct background
   // renders on the server — before ThemeContext's useEffect fires on the client.
-  const themeVars = THEMES[initialTheme]?.vars ?? THEMES.paper.vars
+  const themeVars = THEMES[initialTheme]?.vars ?? THEMES[DEFAULT_THEME].vars
   const cssVarString = Object.entries(themeVars)
     .map(([k, v]) => `${k}:${v}`)
     .join(';')
@@ -44,7 +44,7 @@ export default async function SpacesLayout({
           so the background is correct before JS hydration (avoids black flash). */}
       <div
         className="min-h-screen"
-        style={{ backgroundColor: 'var(--space-bg-base)', color: 'var(--space-text, #F0F0F0)' } as React.CSSProperties}
+        style={{ backgroundColor: 'var(--space-bg-base)', color: 'var(--space-text-primary)' } as React.CSSProperties}
       >
         {/* Inline script sets CSS vars synchronously before first paint */}
         <script

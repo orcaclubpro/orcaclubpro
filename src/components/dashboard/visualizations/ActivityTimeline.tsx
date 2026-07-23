@@ -95,11 +95,11 @@ export function ActivityTimeline({ events, maxEvents = 5 }: ActivityTimelineProp
           <div key={event.id} className="relative group">
             {/* Timeline line */}
             {!isLast && (
-              <div className="absolute left-[18px] top-[36px] bottom-[-4px] w-px bg-white/[0.06]" />
+              <div className="absolute left-[18px] top-[36px] bottom-[-4px] w-px bg-[var(--space-bg-surface)]" />
             )}
 
             {/* Event content */}
-            <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-white/[0.02] transition-all duration-300">
+            <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-[var(--space-bg-surface)] transition-all duration-300">
               {/* Icon with dot */}
               <div className="relative flex-shrink-0">
                 <div
@@ -114,7 +114,7 @@ export function ActivityTimeline({ events, maxEvents = 5 }: ActivityTimelineProp
 
               {/* Event details */}
               <div className="flex-1 min-w-0 pt-0.5">
-                <p className="text-sm font-medium text-white leading-snug">
+                <p className="text-sm font-medium text-[var(--space-text-primary)] leading-snug">
                   {event.title}
                 </p>
                 {event.description && (

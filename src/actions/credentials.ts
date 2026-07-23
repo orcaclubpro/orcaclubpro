@@ -7,7 +7,7 @@ import { baseEmailTemplate } from '@/lib/email/templates/base'
 import { cookies } from 'next/headers'
 
 const VAULT_COOKIE = 'orcaclub-vault-session'
-const VAULT_MAX_AGE = 60 * 60 * 24 // 24 hours
+const VAULT_MAX_AGE = 60 * 60 // 1 hour of inactivity (sliding — refreshed on each checkVaultSession)
 
 /** Verify the currently-authenticated user's account password.
  *  On success, fires a non-blocking security notification email to the account. */
@@ -156,9 +156,27 @@ export async function checkVaultSession(): Promise<{ unlocked: boolean; expiresA
     // Ensure the cookie belongs to the currently authenticated user
     if (data.userId !== String(user.id)) return { unlocked: false }
 
-    const unlockedAt = data.unlockedAt ? new Date(data.unlockedAt).getTime() : 0
-    const expiresAt = unlockedAt + VAULT_MAX_AGE * 1000
-    if (Date.now() > expiresAt) return { unlocked: false }
+    const lastActiveAt = data.unlockedAt ? new Date(data.unlockedAt).getTime() : 0
+    // Inactivity check: lock only if more than VAULT_MAX_AGE has passed since the
+    // last activity, not since the original unlock.
+    if (Date.now() - lastActiveAt > VAULT_MAX_AGE * 1000) return { unlocked: false }
+
+    // Sliding window: each valid check counts as activity and resets the timer,
+    // so the vault stays open while in use and re-locks only after
+    // VAULT_MAX_AGE of inactivity.
+    const refreshedAt = Date.now()
+    const expiresAt = refreshedAt + VAULT_MAX_AGE * 1000
+    cookieStore.set(
+      VAULT_COOKIE,
+      JSON.stringify({ userId: String(user.id), unlockedAt: new Date(refreshedAt).toISOString() }),
+      {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: VAULT_MAX_AGE,
+      },
+    )
 
     return { unlocked: true, expiresAt }
   } catch {

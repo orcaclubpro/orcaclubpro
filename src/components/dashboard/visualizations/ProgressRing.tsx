@@ -47,7 +47,7 @@ export function ProgressRing({
         />
       </svg>
       {showLabel && (
-        <span className="absolute text-xs font-semibold text-white">
+        <span className="absolute text-xs font-semibold text-[var(--space-text-primary)]">
           {Math.round(progress)}%
         </span>
       )}

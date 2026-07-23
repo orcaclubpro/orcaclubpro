@@ -39,6 +39,18 @@ export const adminOnly: Access = ({ req: { user } }) => {
 }
 
 /**
+ * Payload admin-panel gate — restricts the /admin UI to role: 'admin' only.
+ *
+ * The `admin` access slot requires a strict boolean return (no query
+ * constraints), so it can't reuse the `Access`-typed `adminOnly`. Without this,
+ * Payload's default grants /admin access to ANY authenticated user in the auth
+ * collection — including role: 'user' and role: 'client'. Non-admins are
+ * confined to the /u/[username] dashboard.
+ */
+export const canAccessAdmin = ({ req: { user } }: Parameters<Access>[0]): boolean =>
+  user?.role === 'admin'
+
+/**
  * Admin or User role (excludes clients)
  */
 export const adminOrUser: Access = ({ req: { user } }) => {

@@ -682,7 +682,7 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
                         className={cn(
                           'flex-1 py-2 px-2 rounded-xl text-xs font-semibold border transition-all flex items-center justify-center gap-1',
                           brand === 'personal'
-                            ? 'bg-white/10 border-white/20 text-white'
+                            ? 'bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)]'
                             : 'bg-[var(--space-bg-base)] border-[var(--space-border-hard)] text-[var(--space-text-secondary)] hover:border-[#333]',
                         )}
                       >

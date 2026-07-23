@@ -31,7 +31,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog'
-import { verifyCurrentPassword, updateCredential } from '@/actions/credentials'
+import { checkVaultSession, unlockVault, updateCredential } from '@/actions/credentials'
 
 // ─── Badge Colors ─────────────────────────────────────────────────────────────
 
@@ -459,7 +459,7 @@ function VaultLockGate({ onUnlock }: { onUnlock: () => void }) {
     if (!password) return
     setLoading(true)
     setError(null)
-    const result = await verifyCurrentPassword(password)
+    const result = await unlockVault(password)
     setLoading(false)
     if (result.success) {
       onUnlock()
@@ -570,8 +570,15 @@ function ProjectGroup({
 type SortView = 'all' | 'by-project'
 
 export function ClientCredentialsTab({ credentials }: ClientCredentialsTabProps) {
-  const [unlocked, setUnlocked] = useState(false)
+  // null = checking persisted session on mount, false = locked, true = unlocked
+  const [unlocked, setUnlocked] = useState<boolean | null>(null)
   const [view, setView] = useState<SortView>('all')
+
+  // Restore an existing vault session so the client isn't re-prompted on every
+  // visit — the vault only re-locks after VAULT_MAX_AGE of inactivity.
+  useEffect(() => {
+    checkVaultSession().then(({ unlocked: isUnlocked }) => setUnlocked(isUnlocked))
+  }, [])
   const [editOpen, setEditOpen] = useState(false)
   const [editingCredential, setEditingCredential] = useState<CredentialWithProject | null>(null)
 
@@ -644,7 +651,11 @@ export function ClientCredentialsTab({ credentials }: ClientCredentialsTabProps)
       </div>
 
       {/* Content */}
-      {!unlocked ? (
+      {unlocked === null ? (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="size-5 animate-spin text-[var(--space-text-muted)]" />
+        </div>
+      ) : !unlocked ? (
         <VaultLockGate onUnlock={() => setUnlocked(true)} />
       ) : credentials.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">

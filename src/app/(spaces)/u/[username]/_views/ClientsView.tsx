@@ -695,7 +695,7 @@ function MobileClientCard({
 
         {/* Text */}
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-[var(--space-text-primary)] group-hover:text-white truncate transition-colors duration-200 leading-snug">
+          <p className="text-sm font-semibold text-[var(--space-text-primary)] group-hover:text-[var(--space-text-primary)] truncate transition-colors duration-200 leading-snug">
             {client.name}
           </p>
           <p className="text-[11px] text-[#666666] group-hover:text-[#777777] truncate mt-0.5 transition-colors duration-200">

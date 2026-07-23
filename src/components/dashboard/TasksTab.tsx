@@ -308,7 +308,7 @@ function TaskCard({
       )}
 
       <div className="flex-1 min-w-0">
-        <p className={cn('text-sm leading-snug', done ? 'line-through text-[var(--space-text-secondary)]' : isActive ? 'text-white' : 'text-[var(--space-text-primary)]')}>
+        <p className={cn('text-sm leading-snug', done ? 'line-through text-[var(--space-text-secondary)]' : isActive ? 'text-[var(--space-text-primary)]' : 'text-[var(--space-text-primary)]')}>
           {task.title}
         </p>
         {/* Description preview */}

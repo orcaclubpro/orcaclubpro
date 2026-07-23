@@ -1,17 +1,32 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Mail, X, Loader2, FileText, Receipt } from 'lucide-react'
+import { Mail, X, Loader2, FileText, Receipt, FileSignature, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { sendProposalEmail } from '@/actions/packages'
+import { sendProposalEmail, getPackageBillTo } from '@/actions/packages'
 
-type SendAs = 'proposal' | 'invoice'
+const emptyBillTo = {
+  name: '', company: '', email: '', phone: '',
+  line1: '', line2: '', city: '', state: '', zip: '',
+}
+
+const billToInputCls =
+  'w-full px-2.5 py-2 text-sm bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] rounded-lg text-[var(--space-text-primary)] placeholder-[#555555] focus:outline-none focus:border-[rgba(139,156,182,0.20)]'
+
+type SendAs = 'proposal' | 'invoice' | 'sow'
 
 const MODES: Array<{ value: SendAs; label: string; icon: typeof FileText; hint: string }> = [
   { value: 'proposal', label: 'Proposal', icon: FileText, hint: 'Services, pricing, and payment schedule for review' },
   { value: 'invoice', label: 'Invoice', icon: Receipt, hint: 'A straight invoice copy — no payment link or order is created' },
+  { value: 'sow', label: 'SOW', icon: FileSignature, hint: 'Scope of Work contract — deliverables, timeline, fees, and terms, attached as a PDF' },
 ]
+
+const SENT_LABEL: Record<SendAs, string> = {
+  proposal: 'Proposal',
+  invoice: 'Invoice',
+  sow: 'Scope of Work',
+}
 
 export function EmailPackageModal({
   packageId,
@@ -24,15 +39,48 @@ export function EmailPackageModal({
   const [addresses, setAddresses] = useState('')
   const [sending, setSending] = useState(false)
   const [result, setResult] = useState<{ sent?: number; error?: string } | null>(null)
+  const [showBillTo, setShowBillTo] = useState(false)
+  const [billTo, setBillTo] = useState(emptyBillTo)
+
+  // Prefill the override with the client's saved bill-to so staff edit from a
+  // starting point rather than a blank form.
+  useEffect(() => {
+    let active = true
+    getPackageBillTo(packageId).then(res => {
+      if (active && res.success) setBillTo({ ...emptyBillTo, ...res.billTo })
+    })
+    return () => { active = false }
+  }, [packageId])
 
   const hint = MODES.find(m => m.value === sendAs)!.hint
+  const patchBill = (k: keyof typeof billTo, v: string) => setBillTo(b => ({ ...b, [k]: v }))
+
+  // Override only applies when every required field is filled (company/suite/phone optional).
+  const billToComplete = [billTo.name, billTo.email, billTo.line1, billTo.city, billTo.state, billTo.zip]
+    .every(v => v.trim().length > 0)
 
   async function handleSend() {
     const emails = addresses.split(',').map(e => e.trim()).filter(e => e.includes('@'))
     if (emails.length === 0) return
     setSending(true)
     setResult(null)
-    const res = await sendProposalEmail(packageId, emails, sendAs)
+    const override =
+      sendAs !== 'sow' && billToComplete
+        ? {
+            name: billTo.name.trim(),
+            company: billTo.company.trim() || undefined,
+            email: billTo.email.trim(),
+            phone: billTo.phone.trim() || undefined,
+            address: {
+              line1: billTo.line1.trim(),
+              line2: billTo.line2.trim() || undefined,
+              city: billTo.city.trim(),
+              state: billTo.state.trim(),
+              zip: billTo.zip.trim(),
+            },
+          }
+        : undefined
+    const res = await sendProposalEmail(packageId, emails, sendAs, override)
     setSending(false)
     if ('sent' in res && res.sent > 0) {
       setResult({ sent: res.sent })
@@ -72,7 +120,7 @@ export function EmailPackageModal({
           <label className="text-[10px] font-semibold uppercase tracking-widest text-[var(--space-text-muted)]">
             Send as
           </label>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             {MODES.map(mode => {
               const Icon = mode.icon
               const active = sendAs === mode.value
@@ -113,6 +161,50 @@ export function EmailPackageModal({
           <p className="text-[10px] text-[var(--space-text-muted)]">Separate multiple addresses with commas</p>
         </div>
 
+        {/* Bill to override — proposal & invoice only */}
+        {sendAs !== 'sow' && (
+          <div className="rounded-xl border border-[var(--space-border-hard)] overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setShowBillTo(v => !v)}
+              className="w-full flex items-center gap-2 px-3 py-2.5 text-left"
+            >
+              <ChevronRight className={cn('size-3.5 text-[var(--space-text-muted)] transition-transform', showBillTo && 'rotate-90')} />
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--space-text-muted)]">Bill to override</span>
+              <span
+                className={cn(
+                  'ml-auto text-[9px] font-semibold uppercase tracking-widest',
+                  billToComplete ? 'text-emerald-400' : 'text-[var(--space-text-muted)]',
+                )}
+              >
+                {billToComplete ? 'Active' : 'Using client'}
+              </span>
+            </button>
+            {showBillTo && (
+              <div className="px-3 pb-3 pt-1 space-y-2 border-t border-[var(--space-border-hard)]">
+                <p className="text-[10px] text-[var(--space-text-muted)] leading-relaxed pt-2">
+                  Prefilled from the client's saved details — edit any field to change the bill-to on this send. Used only when Name, Email, Street, City, State, and ZIP are all filled.
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <input value={billTo.name} onChange={e => patchBill('name', e.target.value)} placeholder="Name *" className={billToInputCls} />
+                  <input value={billTo.company} onChange={e => patchBill('company', e.target.value)} placeholder="Company" className={billToInputCls} />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <input value={billTo.email} onChange={e => patchBill('email', e.target.value)} placeholder="Email *" className={billToInputCls} />
+                  <input value={billTo.phone} onChange={e => patchBill('phone', e.target.value)} placeholder="Phone" className={billToInputCls} />
+                </div>
+                <input value={billTo.line1} onChange={e => patchBill('line1', e.target.value)} placeholder="Street address *" className={billToInputCls} />
+                <input value={billTo.line2} onChange={e => patchBill('line2', e.target.value)} placeholder="Suite / unit" className={billToInputCls} />
+                <div className="grid grid-cols-3 gap-2">
+                  <input value={billTo.city} onChange={e => patchBill('city', e.target.value)} placeholder="City *" className={billToInputCls} />
+                  <input value={billTo.state} onChange={e => patchBill('state', e.target.value)} placeholder="State *" className={billToInputCls} />
+                  <input value={billTo.zip} onChange={e => patchBill('zip', e.target.value)} placeholder="ZIP *" className={billToInputCls} />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {result && (
           <div className={cn(
             'rounded-xl px-3 py-2.5 text-xs font-medium',
@@ -121,7 +213,7 @@ export function EmailPackageModal({
               : 'bg-red-500/[0.08] border border-red-500/20 text-red-400',
           )}>
             {result.sent
-              ? `✓ ${sendAs === 'invoice' ? 'Invoice' : 'Proposal'} sent to ${result.sent} recipient${result.sent !== 1 ? 's' : ''}`
+              ? `✓ ${SENT_LABEL[sendAs]} sent to ${result.sent} recipient${result.sent !== 1 ? 's' : ''}`
               : `✗ ${result.error ?? 'Failed to send'}`
             }
           </div>

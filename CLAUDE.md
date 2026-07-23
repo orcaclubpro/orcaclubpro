@@ -90,6 +90,24 @@ Legacy `?tab=<id>` URLs redirect to the routes in `u/[username]/page.tsx`. The o
 4. Create `u/[username]/<id>/loading.tsx` from `LoadingSkeleton` composites
 5. Put the view component in `_views/`
 
+### Dashboard themes — plug-and-play
+
+The theme registry in `src/app/(spaces)/themes.ts` is the **single source of truth**. Themes swap `--space-*` CSS variables on `<html>` (custom system — no `next-themes`). Current themes: `sonar` (warm paper, **default**), `light` (neutral), `paper` (Charcoal, dark).
+
+**Add a theme = add one `defineTheme({...})` entry to `THEME_LIST`. Nothing else to touch** — the Payload `dashboardTheme` dropdown (`themeSelectOptions()`), the `ThemeSwitcher` preview cards, and the default (`DEFAULT_THEME`) all derive from the registry.
+
+```typescript
+defineTheme({
+  id: 'ocean', label: 'Ocean', description: 'Deep blue',
+  mode: 'dark',              // picks LIGHT_EXTENDED / DARK_EXTENDED text+card defaults
+  accent: '#38bdf8', accentRgb: '56, 189, 248',
+  bgBase: '#04121f',
+  // overrides: { '--space-bg-card': '#0a2436' },  // only when deviating
+})
+```
+
+`defineTheme` derives accent-dim/glow/soft, surface, nav-bg, and border from the accent + mode. After editing, run `bun run payload:generate` (the `dashboardTheme` enum is generated). Components consume vars via `var(--space-*)` / `bg-[var(--space-*)]` — never hardcode `text-white`/`bg-black` in dashboard components (breaks light themes).
+
 ## CRITICAL SECURITY RULES
 
 ### 1. Always set `overrideAccess: false` when passing a user to the Local API

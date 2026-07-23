@@ -165,7 +165,7 @@ export function EnhancedTaskCard({ task }: EnhancedTaskCardProps) {
               variant={task.status === 'completed' ? 'outline' : 'default'}
               className={
                 task.status === 'completed'
-                  ? 'bg-white/[0.03] border-white/[0.08] hover:bg-white/[0.05]'
+                  ? 'bg-[var(--space-bg-surface)] border-[var(--space-border)] hover:bg-[var(--space-bg-surface)]'
                   : 'bg-green-400/20 text-green-400 border border-green-400/30 hover:bg-green-400/30'
               }
             >

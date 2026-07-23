@@ -32,7 +32,7 @@ export function TasksSection({ projectId, tasks }: TasksSectionProps) {
             <p className="text-xs text-gray-500 uppercase tracking-wider font-medium mb-1">
               Total Tasks
             </p>
-            <p className="text-2xl font-bold text-white">{totalTasks}</p>
+            <p className="text-2xl font-bold text-[var(--space-text-primary)]">{totalTasks}</p>
           </div>
         </div>
 
@@ -70,11 +70,11 @@ export function TasksSection({ projectId, tasks }: TasksSectionProps) {
       {/* Create Task Button */}
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-lg bg-white/[0.04] border border-white/[0.08]">
+          <div className="p-2.5 rounded-lg bg-[var(--space-bg-surface)] border border-[var(--space-border)]">
             <ListTodo className="size-5 text-[var(--space-accent)]" />
           </div>
           <div>
-            <h2 className="text-2xl font-semibold text-white">Tasks</h2>
+            <h2 className="text-2xl font-semibold text-[var(--space-text-primary)]">Tasks</h2>
             <p className="text-sm text-gray-400">Manage project tasks by priority</p>
           </div>
         </div>
@@ -178,7 +178,7 @@ function PriorityGroup({
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <div className={`size-2 rounded-full ${iconColors[color]}`} />
-        <h3 className="text-lg font-semibold text-white">
+        <h3 className="text-lg font-semibold text-[var(--space-text-primary)]">
           {title} ({tasks.length})
         </h3>
       </div>

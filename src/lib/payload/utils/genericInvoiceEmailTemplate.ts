@@ -9,6 +9,7 @@ import { buildPackagePdf } from '@/lib/pdf-generators'
 
 interface OrderLineItem {
   title: string
+  description?: string
   quantity: number
   price: number
   isRecurring?: boolean
@@ -70,7 +71,7 @@ interface ProposalEmailData {
   packageName: string
   packageDescription?: string
   coverMessage?: string
-  lineItems: Array<{ name: string; price: number; quantity?: number; isRecurring?: boolean; recurringInterval?: string }>
+  lineItems: Array<{ name: string; description?: string; price: number; quantity?: number; isRecurring?: boolean; recurringInterval?: string }>
   totalOneTime: number
   totalMonthly: number
   totalAnnual: number
@@ -132,6 +133,7 @@ export function generateGenericInvoiceEmail(order: GenericInvoiceEmailData): str
                 <tr>
                   <td class="oc-item-divider" style="padding:12px 0;border-bottom:1px solid #1a1a1a;">
                     <div class="oc-item-name" style="color:#cccccc;font-size:13px;">${item.title}</div>
+                    ${item.description ? `<div class="oc-detail-val" style="color:#555555;font-size:11px;margin-top:3px;line-height:1.5;white-space:pre-line;">${item.description}</div>` : ''}
                     ${item.isRecurring ? `<div class="oc-detail-key" style="color:#3a3a3a;font-size:11px;margin-top:3px;">Recurring (${item.recurringInterval}ly)</div>` : ''}
                   </td>
                   <td class="oc-item-divider oc-detail-val" style="padding:12px 0;border-bottom:1px solid #1a1a1a;text-align:center;color:#555555;font-size:13px;width:50px;">${item.quantity}</td>
@@ -295,7 +297,8 @@ export function generateGenericInvoiceEmailText(order: GenericInvoiceEmailData):
   const lineItemsText = order.lineItems
     .map(item => {
       const recurring = item.isRecurring ? ` (recurring, ${item.recurringInterval}ly)` : ''
-      return `- ${item.title}${recurring}\n  Qty: ${item.quantity} × ${fmtUsd(item.price)} = ${fmtUsd(item.price * item.quantity)}`
+      const desc = item.description ? `\n  ${item.description.replace(/\n/g, '\n  ')}` : ''
+      return `- ${item.title}${recurring}${desc}\n  Qty: ${item.quantity} × ${fmtUsd(item.price)} = ${fmtUsd(item.price * item.quantity)}`
     })
     .join('\n\n')
 
@@ -363,6 +366,7 @@ export async function sendGenericInvoiceEmail(
       customerAddress: clientAccount.address || undefined,
       lineItems: (order.lineItems || []).map(item => ({
         title: item.title,
+        description: (item as any).description || undefined,
         quantity: item.quantity,
         price: item.price,
         isRecurring: item.isRecurring || undefined,
@@ -395,6 +399,7 @@ export async function sendGenericInvoiceEmail(
         ].filter(Boolean) as string[],
         lineItems: emailData.lineItems.map(item => ({
           name: item.title,
+          description: item.description,
           quantity: item.quantity,
           rate: item.price,
           isRecurring: item.isRecurring,
@@ -483,6 +488,146 @@ export async function sendInvoiceCopyToAddresses(
       const msg = error instanceof Error ? error.message : 'Unknown error'
       errors.push(`${recipient}: ${msg}`)
       payload.logger.error(`[InvoiceCopy] Failed to send to ${recipient}:`, error)
+    }
+  }
+  return { success: sent > 0, sent, errors }
+}
+
+// ─── Scope of Work Email ────────────────────────────────────────────────────────
+
+interface SowEmailData {
+  packageName: string
+  recipientName?: string
+  recipientEmail: string
+}
+
+export function generateSowEmail(data: SowEmailData): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scope of Work — ${data.packageName} — ORCACLUB</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&display=swap" rel="stylesheet">
+  ${EMAIL_LIGHT_MODE_STYLES}
+</head>
+<body style="margin:0;padding:0;background-color:#000000;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+    <tr>
+      <td style="padding:48px 20px;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" class="oc-card" style="max-width:560px;width:100%;background-color:#080808;border:1px solid #111111;">
+
+          <!-- Header -->
+          <tr>
+            <td class="oc-header-td" style="padding:28px 40px 24px 40px;border-bottom:1px solid #0f0f0f;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                  <td>
+                    <span style="font-family:'Cinzel Decorative',Georgia,serif;font-size:13px;font-weight:700;color:#333333;">ORCA</span><span style="font-family:'Cinzel Decorative',Georgia,serif;font-size:13px;font-weight:700;color:#67e8f9;">CLUB</span>
+                  </td>
+                  <td align="right">
+                    <span class="oc-header-label" style="font-size:10px;letter-spacing:0.4em;color:#1f1f1f;text-transform:uppercase;font-weight:300;">Scope of Work</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:36px 40px 0 40px;">
+              <p class="oc-eyebrow" style="margin:0 0 10px 0;font-size:10px;letter-spacing:0.35em;text-transform:uppercase;color:#3a3a3a;font-weight:400;">Agreement</p>
+              <p class="oc-heading" style="margin:0;font-size:22px;font-weight:200;color:#ffffff;letter-spacing:0.01em;line-height:1.3;">${data.packageName}</p>
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin-top:18px;">
+                <tr><td class="oc-hairline" style="width:24px;height:1px;line-height:1px;font-size:1px;background-color:#2a6068;">&nbsp;</td></tr>
+              </table>
+              <p class="oc-body-text" style="margin:22px 0 0 0;font-size:13px;color:#555555;line-height:1.8;font-weight:300;">${data.recipientName ? `Hello ${data.recipientName},<br><br>` : ''}Your Scope of Work agreement is attached to this email as a PDF. It outlines the deliverables, timeline, fees, and terms for this engagement. Please review it, and reply here with any questions or to arrange signature.</p>
+            </td>
+          </tr>
+
+          <!-- Footer note -->
+          <tr>
+            <td style="padding:28px 40px 40px 40px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                  <td class="oc-footer-note-td" style="border-top:1px solid #0f0f0f;padding-top:24px;">
+                    <p class="oc-muted" style="margin:0;font-size:11px;color:#2e2e2e;line-height:1.7;font-weight:300;">The Scope of Work is attached as a PDF. Questions? Reply to this email or contact <a href="mailto:chance@orcaclub.pro" style="color:#3a5a5e;text-decoration:none;">chance@orcaclub.pro</a></p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer bar -->
+          <tr>
+            <td class="oc-footer-bar" style="padding:18px 40px;border-top:1px solid #0a0a0a;background-color:#050505;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                  <td>
+                    <span class="oc-footer-orca" style="font-family:'Cinzel Decorative',Georgia,serif;font-size:10px;font-weight:700;color:#1f1f1f;">ORCA</span><span class="oc-footer-club" style="font-family:'Cinzel Decorative',Georgia,serif;font-size:10px;font-weight:700;color:#1a3a3e;">CLUB</span>
+                  </td>
+                  <td align="right">
+                    <a href="https://orcaclub.pro" class="oc-footer-link" style="font-size:10px;color:#1f1f1f;text-decoration:none;font-weight:300;letter-spacing:0.02em;">orcaclub.pro</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`
+}
+
+export function generateSowEmailText(data: SowEmailData): string {
+  return `
+ORCACLUB — Scope of Work
+${data.packageName}
+
+Hello${data.recipientName ? ` ${data.recipientName}` : ''},
+
+Your Scope of Work agreement is attached to this email as a PDF. It outlines the
+deliverables, timeline, fees, and terms for this engagement. Please review it, and
+reply here with any questions or to arrange signature.
+
+Questions? Reply to this email or contact chance@orcaclub.pro
+
+---
+ORCACLUB
+orcaclub.pro
+  `.trim()
+}
+
+export async function sendSowToAddresses(
+  payload: Payload,
+  data: SowEmailData,
+  emails: string[],
+  attachments?: EmailAttachment[],
+): Promise<{ success: boolean; sent: number; errors: string[] }> {
+  const errors: string[] = []
+  let sent = 0
+  for (const email of emails) {
+    const recipient = email.trim()
+    if (!recipient) continue
+    try {
+      await payload.sendEmail({
+        to: recipient,
+        from: process.env.EMAIL_FROM || 'carbon@orcaclub.pro',
+        subject: `Scope of Work: ${data.packageName} — ORCACLUB`,
+        html: generateSowEmail({ ...data, recipientEmail: recipient }),
+        text: generateSowEmailText({ ...data, recipientEmail: recipient }),
+        ...(attachments?.length ? { attachments } : {}),
+      } as any)
+      sent++
+      payload.logger.info(`[SOW] Sent to ${recipient} for ${data.packageName}`)
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Unknown error'
+      errors.push(`${recipient}: ${msg}`)
+      payload.logger.error(`[SOW] Failed to send to ${recipient}:`, error)
     }
   }
   return { success: sent > 0, sent, errors }
@@ -672,6 +817,7 @@ export function generateProposalEmail(data: ProposalEmailData): string {
     <tr>
       <td class="oc-item-divider" style="padding:10px 0;border-bottom:1px solid #1a1a1a;">
         <div class="oc-item-name" style="color:#cccccc;font-size:13px;font-weight:400;">${item.name}</div>
+        ${item.description ? `<div class="oc-detail-val" style="color:#555555;font-size:11px;margin-top:3px;line-height:1.5;white-space:pre-line;">${item.description}</div>` : ''}
         ${recurringLabel}
       </td>
       <td class="oc-item-divider oc-item-total" style="padding:10px 0;border-bottom:1px solid #1a1a1a;text-align:right;color:#cccccc;font-size:13px;font-weight:600;width:100px;">${fmtUsd(total)}${item.isRecurring ? `<span class="oc-detail-key" style="color:#3a3a3a;font-size:11px;font-weight:400;">/${item.recurringInterval ?? 'mo'}</span>` : ''}</td>
@@ -821,7 +967,8 @@ export function generateProposalEmailText(data: ProposalEmailData): string {
   const lineItemsText = data.lineItems.map(item => {
     const qty = item.quantity ?? 1
     const recurring = item.isRecurring ? ` (per ${item.recurringInterval ?? 'month'})` : ''
-    return `  - ${item.name}${recurring}: ${fmtUsd(item.price * qty)}`
+    const desc = item.description ? `\n    ${item.description.replace(/\n/g, '\n    ')}` : ''
+    return `  - ${item.name}${recurring}: ${fmtUsd(item.price * qty)}${desc}`
   }).join('\n')
 
   const scheduleText = data.paymentSchedule && data.paymentSchedule.length > 0

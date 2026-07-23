@@ -36,7 +36,7 @@ export function BillingPortalButton({
         <button
           onClick={handle}
           disabled={loading}
-          className="flex items-center gap-2 px-3 py-1.5 text-xs text-gray-400 border border-white/[0.08] rounded-lg hover:text-[var(--space-accent)] hover:border-[rgba(139,156,182,0.18)] disabled:opacity-50 transition-all"
+          className="flex items-center gap-2 px-3 py-1.5 text-xs text-gray-400 border border-[var(--space-border)] rounded-lg hover:text-[var(--space-accent)] hover:border-[rgba(139,156,182,0.18)] disabled:opacity-50 transition-all"
         >
           {loading ? <Loader2 className="size-3.5 animate-spin" /> : <CreditCard className="size-3.5" />}
           {loading ? 'Loading…' : label}

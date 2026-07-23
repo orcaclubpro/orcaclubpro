@@ -1,21 +1,80 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Palette } from 'lucide-react'
+import { Check, Palette } from 'lucide-react'
 import { useTheme } from '@/app/(spaces)/ThemeContext'
-import { THEMES, type ThemeId } from '@/app/(spaces)/themes'
+import { THEME_LIST, THEMES, type ThemeDefinition, type ThemeMode } from '@/app/(spaces)/themes'
 import { cn } from '@/lib/utils'
 
-const THEME_SWATCHES: Record<ThemeId, string> = {
-  paper:   '#8B9CB6',
-  void:    '#67e8f9',
-  arctic:  '#7dd3fc',
-  ember:   '#fbbf24',
-  emerald: '#34d399',
-  dusk:    '#a78bfa',
-  chrome:  '#e2e8f0',
-  light:   '#0891b2',
+/** A miniature live preview of a theme, rendered with that theme's own vars. */
+function ThemeCard({
+  theme,
+  active,
+  onSelect,
+}: {
+  theme: ThemeDefinition
+  active: boolean
+  onSelect: () => void
+}) {
+  const v = theme.vars
+  return (
+    <button
+      onClick={onSelect}
+      aria-label={`${theme.label} theme`}
+      aria-pressed={active}
+      className="group relative flex flex-col gap-1.5 p-1.5 rounded-xl text-left transition-all duration-150 active:scale-[0.97]"
+      style={{
+        background: active ? 'var(--space-bg-card-hover)' : 'transparent',
+        boxShadow: active
+          ? `0 0 0 1.5px ${v['--space-accent']}`
+          : '0 0 0 1px var(--space-border)',
+      }}
+    >
+      {/* Mini preview — painted with the theme's own colors */}
+      <div
+        className="relative h-11 rounded-lg overflow-hidden flex items-center gap-1.5 px-2"
+        style={{ background: v['--space-bg-base'] }}
+      >
+        <div
+          className="flex-1 h-7 rounded-md flex items-center gap-1 px-1.5"
+          style={{
+            background: v['--space-bg-card'],
+            boxShadow: `inset 0 0 0 1px ${v['--space-border']}`,
+          }}
+        >
+          <span className="text-[10px] font-bold leading-none" style={{ color: v['--space-text-primary'] }}>
+            Aa
+          </span>
+          <span
+            className="h-1 flex-1 rounded-full"
+            style={{ background: v['--space-text-secondary'], opacity: 0.5 }}
+          />
+        </div>
+        <span
+          className="size-3 rounded-full shrink-0"
+          style={{ background: v['--space-accent'], boxShadow: `0 0 6px ${v['--space-accent-glow']}` }}
+        />
+        {active && (
+          <span
+            className="absolute top-1 right-1 size-3.5 rounded-full flex items-center justify-center"
+            style={{ background: v['--space-accent'] }}
+          >
+            <Check className="size-2.5" strokeWidth={3} style={{ color: v['--space-bg-base'] }} />
+          </span>
+        )}
+      </div>
+      {/* Label */}
+      <span className="text-[10px] font-semibold leading-none px-0.5 text-[var(--space-text-primary)]">
+        {theme.label}
+      </span>
+    </button>
+  )
 }
+
+const MODE_ORDER: { mode: ThemeMode; label: string }[] = [
+  { mode: 'light', label: 'Light' },
+  { mode: 'dark', label: 'Dark' },
+]
 
 export function ThemeSwitcher() {
   const { themeId, setTheme } = useTheme()
@@ -32,76 +91,66 @@ export function ThemeSwitcher() {
     return () => document.removeEventListener('mousedown', handler)
   }, [open])
 
-  const current = THEMES[themeId]
+  const current = THEMES[themeId] ?? THEME_LIST[0]
 
   return (
     <div ref={ref} className="relative">
-      {/* Trigger pill */}
+      {/* Trigger — shows the current theme so it's always obvious which is active */}
       <button
-        onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/[0.12] transition-all duration-200 hover:bg-white/[0.08] active:scale-95"
-        style={{ background: open ? 'rgba(255,255,255,0.08)' : 'transparent' }}
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-[var(--space-border)] transition-all duration-200 hover:bg-[var(--space-bg-card-hover)] active:scale-95"
+        style={{ background: open ? 'var(--space-bg-card-hover)' : 'transparent' }}
         aria-label="Switch theme"
+        aria-expanded={open}
       >
-        {/* Accent swatch dot */}
         <span
-          className="size-2.5 rounded-full flex-shrink-0 ring-1 ring-white/20"
-          style={{ background: THEME_SWATCHES[themeId] }}
+          className="size-2.5 rounded-full flex-shrink-0 ring-1 ring-[var(--space-border-hard)]"
+          style={{ background: current.swatch }}
         />
-        <span className="text-[11px] font-semibold uppercase tracking-widest text-white/60 hidden sm:block">
+        <span className="text-[11px] font-semibold uppercase tracking-widest text-[var(--space-nav-fg-dim)] hidden sm:block">
           {current.label}
         </span>
-        <Palette className="size-3.5 text-white/60 sm:hidden" />
+        <Palette className="size-3.5 text-[var(--space-nav-fg-dim)] sm:hidden" />
       </button>
 
-      {/* Popover — opens downward since switcher is in the top header */}
+      {/* Popover — opens downward since the switcher lives in the top header */}
       {open && (
         <div
-          className="absolute top-full left-0 mt-2 w-64 rounded-2xl p-2 z-50"
+          className="absolute top-full left-0 mt-2 w-72 rounded-2xl p-2.5 z-50"
           style={{
             background: 'var(--space-bg-card)',
             border: '1px solid var(--space-border-hard)',
-            boxShadow: '0 8px 40px rgba(0,0,0,0.40), 0 2px 8px rgba(0,0,0,0.20)',
+            boxShadow: '0 8px 40px rgba(0,0,0,0.30), 0 2px 8px rgba(0,0,0,0.15)',
             animation: 'themeFadeIn 160ms cubic-bezier(0.22,1,0.36,1) forwards',
           }}
         >
-          <p className="text-[9px] uppercase tracking-[0.15em] text-[var(--space-text-secondary)] font-semibold px-2 pt-1 pb-2">
-            Color Preset
+          <p className="text-[9px] uppercase tracking-[0.15em] text-[var(--space-text-tertiary)] font-semibold px-1 pb-1">
+            Theme
           </p>
-          <div className="grid grid-cols-2 gap-1.5">
-            {Object.values(THEMES).map((theme) => {
-              const active = theme.id === themeId
-              return (
-                <button
-                  key={theme.id}
-                  onClick={() => { setTheme(theme.id); setOpen(false) }}
-                  className={cn(
-                    'flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-left transition-all duration-150 active:scale-95',
-                    active ? 'bg-[var(--space-bg-card-hover)]' : 'hover:bg-[var(--space-bg-card-hover)]',
-                  )}
-                  style={active ? { boxShadow: `0 0 0 1px ${THEME_SWATCHES[theme.id]}30` } : undefined}
-                >
-                  <span
-                    className="size-5 rounded-full flex-shrink-0 ring-1 ring-white/20"
-                    style={{
-                      background: THEME_SWATCHES[theme.id],
-                      boxShadow: active ? `0 0 8px ${THEME_SWATCHES[theme.id]}60` : 'none',
-                    }}
-                  />
-                  <div>
-                    <p className="text-[11px] font-semibold text-[var(--space-text-primary)] leading-none mb-0.5">{theme.label}</p>
-                    <p className="text-[9px] text-[var(--space-text-secondary)] leading-none">{theme.description}</p>
-                  </div>
-                  {active && (
-                    <span
-                      className="ml-auto size-1.5 rounded-full flex-shrink-0"
-                      style={{ background: THEME_SWATCHES[theme.id] }}
+          {MODE_ORDER.map(({ mode, label }) => {
+            const themes = THEME_LIST.filter((t) => t.mode === mode)
+            if (themes.length === 0) return null
+            return (
+              <div key={mode} className="mt-1.5">
+                <p className="text-[8px] uppercase tracking-[0.2em] text-[var(--space-text-muted)] font-semibold px-1 pb-1.5">
+                  {label}
+                </p>
+                <div className={cn('grid grid-cols-3 gap-1.5')}>
+                  {themes.map((theme) => (
+                    <ThemeCard
+                      key={theme.id}
+                      theme={theme}
+                      active={theme.id === themeId}
+                      onSelect={() => {
+                        setTheme(theme.id)
+                        setOpen(false)
+                      }}
                     />
-                  )}
-                </button>
-              )
-            })}
-          </div>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
         </div>
       )}
 

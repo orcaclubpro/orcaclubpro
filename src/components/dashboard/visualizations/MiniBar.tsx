@@ -21,7 +21,7 @@ export function MiniBar({ segments, height = 6, showLabels = false }: MiniBarPro
     <div className="space-y-2">
       {/* Bar */}
       <div
-        className="w-full bg-white/[0.05] rounded-full overflow-hidden flex border border-white/[0.06]"
+        className="w-full bg-[var(--space-bg-surface)] rounded-full overflow-hidden flex border border-[var(--space-border)]"
         style={{ height }}
       >
         {segments.map((segment, index) => {

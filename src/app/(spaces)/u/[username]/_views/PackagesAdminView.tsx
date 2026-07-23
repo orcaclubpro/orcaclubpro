@@ -2,16 +2,17 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import {
   Search, Package, FileText, X, ExternalLink,
   Layers, Loader2, CheckCircle2, ChevronRight,
-  Check, Mail, Plus, Pencil,
+  Check, Mail, Plus, Pencil, FileSignature,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { AssignPackageModal } from '@/components/dashboard/AssignPackageModal'
 import { EmailPackageModal } from '@/components/dashboard/EmailPackageModal'
 import { PackageBuilderModal, type ExistingProposal } from '@/components/dashboard/PackageBuilderModal'
-import { createOrderFromPackage } from '@/actions/packages'
+import { createOrderFromPackage, createSowFromPackage } from '@/actions/packages'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -105,10 +106,13 @@ function ProposalModal({
   onClose: () => void
   onEdit: () => void
 }) {
+  const router = useRouter()
   const [invoiceState, setInvoiceState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
   const [invoiceUrl, setInvoiceUrl] = useState<string | null>(null)
   const [invoiceError, setInvoiceError] = useState<string | null>(null)
   const [emailOpen, setEmailOpen] = useState(false)
+  const [sowState, setSowState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
+  const [sowError, setSowError] = useState<string | null>(null)
 
   const lineItems = pkg.lineItems ?? []
   const { oneTime, monthly, annual } = computeTotals(lineItems)
@@ -130,6 +134,20 @@ function ProposalModal({
     } else {
       setInvoiceState('error')
       setInvoiceError(result.error ?? 'Failed to create invoice')
+    }
+  }
+
+  async function handleCreateSow() {
+    setSowState('loading')
+    setSowError(null)
+    const result = await createSowFromPackage(pkg.id)
+    if (result.success) {
+      setSowState('done')
+      // Land on the Files tab where the prefilled SOW is ready to review/edit
+      router.push(`/u/${username}/files`)
+    } else {
+      setSowState('error')
+      setSowError(result.error ?? 'Failed to create scope of work')
     }
   }
 
@@ -275,6 +293,19 @@ function ProposalModal({
             </p>
           )}
 
+          {/* SOW result */}
+          {sowState === 'done' && (
+            <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-emerald-500/[0.06] border border-emerald-500/25 text-emerald-400 text-sm">
+              <CheckCircle2 className="size-4" />
+              Scope of Work created — opening Files…
+            </div>
+          )}
+          {sowState === 'error' && sowError && (
+            <p className="text-xs text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2">
+              {sowError}
+            </p>
+          )}
+
         </div>
 
         {/* Footer */}
@@ -302,6 +333,18 @@ function ProposalModal({
               {invoiceState === 'loading'
                 ? <><Loader2 className="size-3.5 animate-spin" />Creating…</>
                 : <><FileText className="size-3.5" />Create Invoice</>
+              }
+            </button>
+          )}
+          {lineItems.length > 0 && (
+            <button
+              onClick={handleCreateSow}
+              disabled={sowState === 'loading'}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] text-[var(--space-text-tertiary)] hover:text-[var(--space-text-primary)] transition-all disabled:opacity-50"
+            >
+              {sowState === 'loading'
+                ? <><Loader2 className="size-3.5 animate-spin" />Creating…</>
+                : <><FileSignature className="size-3.5" />Scope of Work</>
               }
             </button>
           )}

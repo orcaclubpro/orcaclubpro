@@ -83,7 +83,7 @@ export function PasskeySetupPrompt() {
               className="size-10"
               style={{ color: 'var(--space-accent, #67e8f9)' }}
             />
-            <p className="text-base font-semibold text-white">Passkey saved!</p>
+            <p className="text-base font-semibold text-[var(--space-text-primary)]">Passkey saved!</p>
             <p className="text-sm text-gray-400">You&rsquo;re all set.</p>
           </div>
         ) : (
@@ -99,7 +99,7 @@ export function PasskeySetupPrompt() {
             {/* Title */}
             <h2
               id="passkey-prompt-title"
-              className="text-lg font-semibold text-white text-center mb-2"
+              className="text-lg font-semibold text-[var(--space-text-primary)] text-center mb-2"
             >
               Secure your account
             </h2>
@@ -130,7 +130,7 @@ export function PasskeySetupPrompt() {
               <button
                 onClick={handleNotNow}
                 disabled={isLoading}
-                className="w-full rounded-lg border px-4 py-2.5 text-sm font-medium text-gray-300 transition-colors hover:text-white disabled:opacity-60"
+                className="w-full rounded-lg border px-4 py-2.5 text-sm font-medium text-gray-300 transition-colors hover:text-[var(--space-text-primary)] disabled:opacity-60"
                 style={{ borderColor: 'var(--space-border, #1f2937)' }}
               >
                 Not now

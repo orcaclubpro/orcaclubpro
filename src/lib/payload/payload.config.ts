@@ -34,7 +34,8 @@ import Credentials from './collections/Credentials'
 import { Timelines } from './collections/Timelines'
 import Solutions from './collections/Solutions'
 import { Pages } from './collections/Pages'
-import { anyone, authenticated, authenticatedOrPublished, adminOnly, adminOrSelf } from './access'
+import { anyone, authenticated, authenticatedOrPublished, adminOnly, adminOrSelf, canAccessAdmin } from './access'
+import { themeSelectOptions, DEFAULT_THEME } from '@/app/(spaces)/themes'
 
 // Helper function to format strings as URL-friendly slugs
 const formatSlug = (val: string): string =>
@@ -633,6 +634,10 @@ const Users: CollectionConfig = {
     defaultColumns: ['name', 'email', 'twoFactorVerified'],
   },
   access: {
+    // Gate the Payload admin panel to admins only. Without this, Payload's default
+    // grants /admin access to ANY authenticated user in this collection — including
+    // role: 'user' and role: 'client'. Non-admins are confined to /u/[username].
+    admin: canAccessAdmin,
     read: adminOrSelf,
     create: adminOnly,
     update: adminOrSelf,
@@ -946,17 +951,10 @@ const Users: CollectionConfig = {
     {
       name: 'dashboardTheme',
       type: 'select',
-      defaultValue: 'void',
-      options: [
-        { label: 'Void (Default)', value: 'void' },
-        { label: 'Arctic', value: 'arctic' },
-        { label: 'Ember', value: 'ember' },
-        { label: 'Emerald', value: 'emerald' },
-        { label: 'Dusk', value: 'dusk' },
-        { label: 'Chrome', value: 'chrome' },
-        { label: 'Light', value: 'light' },
-        { label: 'Charcoal', value: 'paper' },
-      ],
+      // Options + default are generated from the theme registry
+      // (src/app/(spaces)/themes.ts) — the single source of truth.
+      defaultValue: DEFAULT_THEME,
+      options: themeSelectOptions(),
       admin: {
         description: 'Dashboard color preset',
         position: 'sidebar',

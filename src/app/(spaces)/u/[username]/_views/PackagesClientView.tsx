@@ -134,7 +134,7 @@ function PackageModal({
         className={cn(
           'relative z-10 flex flex-col w-full overflow-hidden',
           'rounded-t-3xl sm:rounded-2xl',
-          'border-t border-x border-white/[0.07] sm:border',
+          'border-t border-x border-[var(--space-border)] sm:border',
           // height constraints — the only source of truth
           'max-h-[96dvh] sm:max-h-[82vh] sm:max-w-[700px]',
         )}
@@ -145,7 +145,7 @@ function PackageModal({
 
         {/* ── HEADER BAR ── */}
         <div
-          className="shrink-0 flex items-center gap-3 px-4 py-3.5 border-b border-white/[0.06]"
+          className="shrink-0 flex items-center gap-3 px-4 py-3.5 border-b border-[var(--space-border)]"
           style={{ paddingTop: 'max(0.875rem, env(safe-area-inset-top))' }}
         >
           <button
@@ -154,12 +154,12 @@ function PackageModal({
             style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }}
             aria-label="Close"
           >
-            <ChevronLeft className="size-4 text-white/50" />
+            <ChevronLeft className="size-4 text-[var(--space-text-secondary)]" />
           </button>
 
           <div className="flex-1 min-w-0">
-            <p className="text-[9px] font-semibold tracking-[0.28em] uppercase text-white/30">Service Package</p>
-            <h2 className="text-sm font-semibold text-white/85 truncate leading-tight">{pkg.name}</h2>
+            <p className="text-[9px] font-semibold tracking-[0.28em] uppercase text-[var(--space-text-muted)]">Service Package</p>
+            <h2 className="text-sm font-semibold text-[var(--space-text-primary)] truncate leading-tight">{pkg.name}</h2>
           </div>
 
           {pkg.status === 'accepted' && (
@@ -176,7 +176,7 @@ function PackageModal({
           <div
             className={cn(
               'shrink-0 flex flex-col gap-4 px-5 py-5',
-              'border-b sm:border-b-0 sm:border-r border-white/[0.06]',
+              'border-b sm:border-b-0 sm:border-r border-[var(--space-border)]',
               // mobile: compact horizontal strip; desktop: fixed-width sidebar
               'sm:w-[240px] sm:overflow-y-auto',
             )}
@@ -193,25 +193,25 @@ function PackageModal({
                     >
                       {fmt(oneTime)}
                     </p>
-                    <p className="text-[10px] uppercase tracking-[0.22em] text-white/30 mt-1.5">one-time</p>
+                    <p className="text-[10px] uppercase tracking-[0.22em] text-[var(--space-text-muted)] mt-1.5">one-time</p>
                   </div>
                 )}
                 {monthly > 0 && (
                   <div className="mb-3">
                     <div className="flex items-baseline gap-1">
                       <p className="text-3xl font-bold tabular-nums leading-none" style={{ color: '#F5F5F5', letterSpacing: '-0.02em' }}>{fmt(monthly)}</p>
-                      <span className="text-sm text-white/25">/mo</span>
+                      <span className="text-sm text-[var(--space-text-muted)]">/mo</span>
                     </div>
-                    <p className="text-[10px] uppercase tracking-[0.22em] text-white/30 mt-1.5">monthly</p>
+                    <p className="text-[10px] uppercase tracking-[0.22em] text-[var(--space-text-muted)] mt-1.5">monthly</p>
                   </div>
                 )}
                 {annual > 0 && (
                   <div>
                     <div className="flex items-baseline gap-1">
                       <p className="text-3xl font-bold tabular-nums leading-none" style={{ color: '#F5F5F5', letterSpacing: '-0.02em' }}>{fmt(annual)}</p>
-                      <span className="text-sm text-white/25">/yr</span>
+                      <span className="text-sm text-[var(--space-text-muted)]">/yr</span>
                     </div>
-                    <p className="text-[10px] uppercase tracking-[0.22em] text-white/30 mt-1.5">annually</p>
+                    <p className="text-[10px] uppercase tracking-[0.22em] text-[var(--space-text-muted)] mt-1.5">annually</p>
                   </div>
                 )}
               </div>
@@ -219,13 +219,13 @@ function PackageModal({
 
             {/* Description */}
             {pkg.description && (
-              <p className="text-[12px] text-white/35 leading-relaxed">{pkg.description}</p>
+              <p className="text-[12px] text-[var(--space-text-tertiary)] leading-relaxed">{pkg.description}</p>
             )}
 
             {/* Cover message */}
             {pkg.coverMessage && (
               <div className="rounded-xl px-3.5 py-3" style={{ background: 'rgba(255,255,255,0.03)', borderLeft: '2px solid rgba(103,232,249,0.2)' }}>
-                <p className="text-[12px] text-white/40 leading-relaxed whitespace-pre-wrap">{pkg.coverMessage}</p>
+                <p className="text-[12px] text-[var(--space-text-tertiary)] leading-relaxed whitespace-pre-wrap">{pkg.coverMessage}</p>
               </div>
             )}
 
@@ -236,9 +236,9 @@ function PackageModal({
 
             {/* What's Included */}
             {lineItems.length > 0 && (
-              <div className="px-5 py-5 border-b border-white/[0.05]">
+              <div className="px-5 py-5 border-b border-[var(--space-border)]">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-[9px] font-bold tracking-[0.25em] uppercase text-white/25">Included</span>
+                  <span className="text-[9px] font-bold tracking-[0.25em] uppercase text-[var(--space-text-muted)]">Included</span>
                   <span className="text-[9px] font-semibold tabular-nums" style={{ color: 'rgba(103,232,249,0.6)' }}>
                     {lineItems.length} {lineItems.length === 1 ? 'item' : 'items'}
                   </span>
@@ -254,7 +254,7 @@ function PackageModal({
                     return (
                       <div
                         key={i}
-                        className={cn('flex items-start gap-3 py-3', !isLast && 'border-b border-white/[0.04]')}
+                        className={cn('flex items-start gap-3 py-3', !isLast && 'border-b border-[var(--space-border)]')}
                       >
                         <div
                           className="mt-0.5 size-5 rounded-full flex items-center justify-center shrink-0"
@@ -263,14 +263,14 @@ function PackageModal({
                           <Check className="size-3" style={{ color: '#67e8f9' }} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-[13px] font-medium text-white/80 leading-snug">{item.name}</p>
+                          <p className="text-[13px] font-medium text-[var(--space-text-primary)] leading-snug">{item.name}</p>
                           {item.description && (
-                            <p className="text-[11px] text-white/30 mt-0.5 leading-relaxed">{item.description}</p>
+                            <p className="text-[11px] text-[var(--space-text-muted)] mt-0.5 leading-relaxed">{item.description}</p>
                           )}
                         </div>
                         <div className="flex flex-col items-end shrink-0 gap-0.5 pl-2">
                           {hasDiscount && (
-                            <span className="text-[11px] text-white/20 line-through tabular-nums">{fmt(baseTotal)}</span>
+                            <span className="text-[11px] text-[var(--space-text-muted)] line-through tabular-nums">{fmt(baseTotal)}</span>
                           )}
                           <span
                             className="text-[13px] font-semibold tabular-nums"
@@ -278,7 +278,7 @@ function PackageModal({
                           >
                             {fmt(adjustedTotal)}
                             {item.isRecurring && (
-                              <span className="text-[11px] font-normal text-white/25">/{item.recurringInterval === 'year' ? 'yr' : 'mo'}</span>
+                              <span className="text-[11px] font-normal text-[var(--space-text-muted)]">/{item.recurringInterval === 'year' ? 'yr' : 'mo'}</span>
                             )}
                           </span>
                         </div>
@@ -293,8 +293,8 @@ function PackageModal({
             {schedule.length > 0 && (
               <div className="px-5 py-5">
                 <div className="flex items-center gap-2 mb-3">
-                  <CalendarDays className="size-3 text-white/20" />
-                  <span className="text-[9px] font-bold tracking-[0.25em] uppercase text-white/25">Payment Schedule</span>
+                  <CalendarDays className="size-3 text-[var(--space-text-muted)]" />
+                  <span className="text-[9px] font-bold tracking-[0.25em] uppercase text-[var(--space-text-muted)]">Payment Schedule</span>
                 </div>
                 <div className="space-y-1.5">
                   {schedule.map((entry, i) => {
@@ -312,11 +312,11 @@ function PackageModal({
                           style={{ background: isInvoiced ? '#4ade80' : 'rgba(103,232,249,0.55)' }}
                         />
                         <div className="flex-1 min-w-0">
-                          <p className={cn('text-[13px] font-medium leading-snug', isInvoiced ? 'text-white/25' : 'text-white/60')}>
+                          <p className={cn('text-[13px] font-medium leading-snug', isInvoiced ? 'text-[var(--space-text-muted)]' : 'text-[var(--space-text-secondary)]')}>
                             {entry.label}
                           </p>
                           {entry.dueDate && (
-                            <p className="text-[10px] text-white/20 mt-0.5">Due {formatDisplayDate(entry.dueDate)}</p>
+                            <p className="text-[10px] text-[var(--space-text-muted)] mt-0.5">Due {formatDisplayDate(entry.dueDate)}</p>
                           )}
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
@@ -336,8 +336,8 @@ function PackageModal({
 
                 {/* Total */}
                 {scheduleTotal > 0 && (
-                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/[0.06]">
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/20">Total</span>
+                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-[var(--space-border)]">
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--space-text-muted)]">Total</span>
                     <span className="text-[15px] font-bold tabular-nums" style={{ color: 'rgba(255,255,255,0.8)' }}>{fmt(scheduleTotal)}</span>
                   </div>
                 )}
@@ -347,7 +347,7 @@ function PackageModal({
             {/* Empty state */}
             {lineItems.length === 0 && schedule.length === 0 && (
               <div className="flex items-center justify-center px-6 py-12">
-                <p className="text-[13px] text-white/25 text-center">Your team is still configuring this package.</p>
+                <p className="text-[13px] text-[var(--space-text-muted)] text-center">Your team is still configuring this package.</p>
               </div>
             )}
           </div>
@@ -355,7 +355,7 @@ function PackageModal({
 
         {/* ── FOOTER ── */}
         <div
-          className="shrink-0 flex items-center gap-2.5 px-4 border-t border-white/[0.06]"
+          className="shrink-0 flex items-center gap-2.5 px-4 border-t border-[var(--space-border)]"
           style={{
             background: 'rgba(17,17,17,0.98)',
             paddingTop: '0.75rem',
