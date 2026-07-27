@@ -116,7 +116,7 @@ export function ThemeSwitcher() {
       {/* Popover — opens downward since the switcher lives in the top header */}
       {open && (
         <div
-          className="absolute top-full left-0 mt-2 w-72 rounded-2xl p-2.5 z-50"
+          className="absolute top-full left-0 mt-2 w-60 rounded-2xl p-2.5 z-50"
           style={{
             background: 'var(--space-bg-card)',
             border: '1px solid var(--space-border-hard)',
@@ -135,7 +135,7 @@ export function ThemeSwitcher() {
                 <p className="text-[8px] uppercase tracking-[0.2em] text-[var(--space-text-muted)] font-semibold px-1 pb-1.5">
                   {label}
                 </p>
-                <div className={cn('grid grid-cols-3 gap-1.5')}>
+                <div className={cn('grid grid-cols-2 gap-1.5')}>
                   {themes.map((theme) => (
                     <ThemeCard
                       key={theme.id}
