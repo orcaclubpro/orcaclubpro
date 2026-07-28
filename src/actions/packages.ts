@@ -58,7 +58,12 @@ function resolveInvoiceType(entry: {
   return 'installment'
 }
 
-/** Find the highest existing INV-NNNN number and return the next one. */
+/**
+ * Legacy INV-NNNN generator. Now used ONLY for placeholder orders that are NOT
+ * backed by a Stripe invoice (see linkScheduleEntriesToOrders). Every real
+ * invoiced order takes its number from the finalized Stripe invoice
+ * (`invoice.number`) instead, so those two never share a numbering scheme.
+ */
 async function nextOrderNumber(payload: Awaited<ReturnType<typeof getPayload>>): Promise<string> {
   const { docs } = await payload.find({
     collection: 'orders',
