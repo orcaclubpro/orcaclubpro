@@ -3,9 +3,8 @@
 import Link from "next/link"
 import { LogOut } from "lucide-react"
 import { logoutAction } from "@/actions/auth"
-import { UserSettingsModal } from "@/components/dashboard/UserSettingsModal"
+import { UserMenu } from "@/components/dashboard/UserMenu"
 import { WelcomeInfoButton } from "@/components/dashboard/WelcomeInfoButton"
-import { ThemeSwitcher } from "@/components/dashboard/ThemeSwitcher"
 import { useHeaderTitle } from "@/app/(spaces)/HeaderTitleContext"
 
 interface SpacesHeaderProps {
@@ -45,12 +44,6 @@ export function SpacesHeader({ user, showTips }: SpacesHeaderProps) {
             SPACES
           </Link>
 
-          {/* Vertical divider */}
-          <div className="w-px h-5 bg-[var(--space-border-hard)] shrink-0" />
-
-          {/* ThemeSwitcher sits right next to SPACES */}
-          <ThemeSwitcher />
-
           {/* Breadcrumb — only when on a sub-page */}
           {title && (
             <>
@@ -79,6 +72,22 @@ export function SpacesHeader({ user, showTips }: SpacesHeaderProps) {
               <WelcomeInfoButton firstName={user.firstName} showTips={showTips} />
             )}
 
+            {/* Orca menu — theme · view as client (staff) · account settings */}
+            {user.email != null && (
+              <UserMenu
+                name={
+                  isClient
+                    ? (`${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() || user.email)
+                    : (user.name ?? user.email)
+                }
+                email={user.email}
+                title={user.title}
+                role={user.role}
+                isStaff={isDeveloper}
+              />
+            )}
+
+            {/* Logout — always the far-right control */}
             <button
               onClick={handleLogout}
               className="flex items-center gap-2 px-3 py-2 rounded-lg text-[17px] font-medium text-[var(--space-nav-fg-dim)] hover:text-[var(--space-nav-fg)] hover:bg-[var(--space-bg-card-hover)] transition-all duration-200 focus:outline-none"
@@ -87,23 +96,6 @@ export function SpacesHeader({ user, showTips }: SpacesHeaderProps) {
               <LogOut className="h-[22px] w-[22px]" />
               <span className="hidden sm:inline">Logout</span>
             </button>
-
-            {isDeveloper && user.name != null && user.email != null && (
-              <UserSettingsModal
-                name={user.name}
-                email={user.email}
-                title={user.title}
-                role={user.role}
-              />
-            )}
-
-            {isClient && user.email != null && (
-              <UserSettingsModal
-                name={`${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() || user.email}
-                email={user.email}
-                role="client"
-              />
-            )}
           </div>
         )}
 

@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useTransition } from 'react'
 import { createPortal } from 'react-dom'
 import {
   Search, Plus, PlusCircle, X, Trash2, Loader2,
   ChevronDown, ChevronRight, ArrowUp, ArrowDown,
-  Package, MoreHorizontal, Layers, CalendarClock, Star,
+  Package, MoreHorizontal, Layers, CalendarClock, Star, Eye,
 } from 'lucide-react'
+import { enterClientPreview } from '@/app/(spaces)/preview-actions'
 import { cn } from '@/lib/utils'
 import type { ServiceItem } from '@/types/payload-types'
 import {
@@ -417,6 +418,21 @@ export function PackageBuilderModal({ mode, username, clientId, existing, onClos
     } finally {
       setSaving(false)
     }
+  }
+
+  // ── View as client ───────────────────────────────────────────────────────
+  // Preview the portal as the client this package is for. Navigates away, so
+  // guard an unsaved draft in create mode.
+  const [isPreviewing, startPreview] = useTransition()
+  const previewClientId = mode === 'edit' ? existingClientId : selectedClientId
+
+  function handlePreview() {
+    if (!previewClientId) return
+    if (mode === 'create' && lines.length > 0 &&
+        !window.confirm('Leave the builder to preview this client’s portal? Unsaved changes will be lost.')) {
+      return
+    }
+    startPreview(() => enterClientPreview(previewClientId))
   }
 
   // ── Derived ────────────────────────────────────────────────────────────────
@@ -1012,6 +1028,17 @@ export function PackageBuilderModal({ mode, username, clientId, existing, onClos
             )}
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            {previewClientId && (
+              <button
+                onClick={handlePreview}
+                disabled={isPreviewing}
+                title="Open this client’s portal as they see it"
+                className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-[var(--space-text-tertiary)] hover:text-[var(--space-text-primary)] rounded-xl border border-[var(--space-border-hard)] hover:border-[rgba(139,156,182,0.20)] hover:bg-[var(--space-bg-card-hover)] transition-all disabled:opacity-50"
+              >
+                {isPreviewing ? <Loader2 className="size-3.5 animate-spin" /> : <Eye className="size-3.5" />}
+                <span className="hidden sm:inline">View as client</span>
+              </button>
+            )}
             <button
               onClick={() => onClose()}
               className="hidden sm:block px-4 py-2.5 text-sm text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] rounded-xl hover:bg-[var(--space-bg-card-hover)] transition-colors"

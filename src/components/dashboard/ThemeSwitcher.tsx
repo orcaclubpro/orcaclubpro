@@ -76,6 +76,42 @@ const MODE_ORDER: { mode: ThemeMode; label: string }[] = [
   { mode: 'dark', label: 'Dark' },
 ]
 
+/**
+ * The theme-card grid on its own — no trigger, no popover chrome. Used inside
+ * the ThemeSwitcher popover and inside the header UserMenu.
+ */
+export function ThemePicker({ onPick }: { onPick?: () => void }) {
+  const { themeId, setTheme } = useTheme()
+  return (
+    <>
+      {MODE_ORDER.map(({ mode, label }) => {
+        const themes = THEME_LIST.filter((t) => t.mode === mode)
+        if (themes.length === 0) return null
+        return (
+          <div key={mode} className="mt-1.5 first:mt-0">
+            <p className="text-[8px] uppercase tracking-[0.2em] text-[var(--space-text-muted)] font-semibold px-1 pb-1.5">
+              {label}
+            </p>
+            <div className={cn('grid grid-cols-2 gap-1.5')}>
+              {themes.map((theme) => (
+                <ThemeCard
+                  key={theme.id}
+                  theme={theme}
+                  active={theme.id === themeId}
+                  onSelect={() => {
+                    setTheme(theme.id)
+                    onPick?.()
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        )
+      })}
+    </>
+  )
+}
+
 export function ThemeSwitcher() {
   const { themeId, setTheme } = useTheme()
   const [open, setOpen] = useState(false)
