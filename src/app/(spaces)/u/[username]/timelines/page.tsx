@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { getSessionUser } from '@/app/(spaces)/session'
-import { experienceFor } from '@/app/(spaces)/experience'
+import { effectiveExperience } from '@/app/(spaces)/preview'
 import { TimelinesAdminView } from '../_views/TimelinesAdminView'
 
 export async function generateMetadata({ params }: { params: Promise<{ username: string }> }) {
@@ -15,7 +15,7 @@ export default async function TimelinesPage({ params }: { params: Promise<{ user
   const { username } = await params
   const user = await getSessionUser()
   if (!user || user.username !== username) redirect('/login')
-  if (experienceFor(user.role) !== 'staff') redirect(`/u/${username}`)
+  if (await effectiveExperience(user) !== 'staff') redirect(`/u/${username}`)
 
   return <TimelinesAdminView username={username} />
 }

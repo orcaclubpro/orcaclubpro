@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils'
 import { NewClientModal } from '@/components/dashboard/NewClientModal'
 import { PortfolioTimeline } from '@/components/dashboard/PortfolioTimeline'
 import { deleteClientAccount, updateClientAccount, removeUserFromClientTeam } from '@/actions/clients'
+import { ViewAsClientButton } from '@/components/dashboard/ViewAsClientButton'
 import type { SerializedProject } from '@/components/dashboard/ProjectsCarousel'
 
 interface ClientsViewProps {
@@ -470,14 +471,17 @@ function ClientDetail({
       {/* ── Action buttons — in layout flow, above scroll area ─────────── */}
       <div className="shrink-0 flex items-center justify-end gap-3 px-8 pt-5 pb-3">
         {userRole !== 'client' && (
-          <button
-            type="button"
-            onClick={() => setEditOpen(true)}
-            className="flex items-center gap-2.5 bg-[var(--space-bg-card-hover)] hover:bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] hover:border-[var(--space-border-hard)] text-[var(--space-text-tertiary)] hover:text-[var(--space-text-primary)] font-semibold rounded-full px-7 py-3 text-sm transition-all duration-200"
-          >
-            <Settings className="size-4" />
-            Edit
-          </button>
+          <>
+            <ViewAsClientButton accountId={client.id} />
+            <button
+              type="button"
+              onClick={() => setEditOpen(true)}
+              className="flex items-center gap-2.5 bg-[var(--space-bg-card-hover)] hover:bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] hover:border-[var(--space-border-hard)] text-[var(--space-text-tertiary)] hover:text-[var(--space-text-primary)] font-semibold rounded-full px-7 py-3 text-sm transition-all duration-200"
+            >
+              <Settings className="size-4" />
+              Edit
+            </button>
+          </>
         )}
         <Link
           href={`/u/${username}/clients/${client.id}`}

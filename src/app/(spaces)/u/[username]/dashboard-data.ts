@@ -8,6 +8,7 @@ import {
   type SerializedProject,
 } from '@/lib/serialization'
 import type { ClientOption } from '@/components/dashboard/CreateProjectModal'
+import { getPreviewClientId } from '@/app/(spaces)/preview'
 
 // The authenticated user, exactly as the layout resolves it (non-null).
 type CurrentUser = NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>
@@ -311,6 +312,24 @@ export const resolveClientAccount = cache(
   },
 )
 
+// The client account whose portal to render: the previewed account when staff
+// is in "view as client" mode, otherwise the user's own account. Every client
+// experience route resolves through this so preview and real-client paths share
+// one code path. cache()d — layout badge + page collapse to a single findByID.
+export const resolveActiveClientAccount = cache(
+  async (payload: Payload, user: CurrentUser): Promise<any | null> => {
+    const previewId = await getPreviewClientId(user)
+    if (previewId) {
+      try {
+        return await payload.findByID({ collection: 'client-accounts', id: previewId, depth: 1 })
+      } catch {
+        return null
+      }
+    }
+    return resolveClientAccount(payload, user)
+  },
+)
+
 // ── Shared client queries ─────────────────────────────────────────────────────
 
 const findClientProjects = (payload: Payload, clientAccountId: any) =>
@@ -436,7 +455,7 @@ export async function loadClientCredentials(payload: Payload, clientAccount: any
 // ── Client: proposal-package count (mobile nav badge) ─────────────────────────
 
 export async function countClientProposalPackages(payload: Payload, user: CurrentUser): Promise<number> {
-  const clientAccount = await resolveClientAccount(payload, user)
+  const clientAccount = await resolveActiveClientAccount(payload, user)
   if (!clientAccount) return 0
   const { totalDocs } = await payload.find({
     collection: 'packages',

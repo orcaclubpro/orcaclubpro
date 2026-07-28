@@ -6,11 +6,12 @@ import { usePathname, useRouter } from 'next/navigation'
 import { ChevronLeft, Search, MoreHorizontal } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { usePackageCount } from '@/app/(spaces)/PackageCountContext'
-import { experienceFor } from '@/app/(spaces)/experience'
+import type { Experience } from '@/app/(spaces)/experience'
 import { tabsFor, tabHref, type TabDef } from '@/app/(spaces)/u/[username]/tabs'
 
 interface MobileBottomNavProps {
-  role?: string | null
+  /** Effective experience — reflects staff "view as client" preview. */
+  experience: Experience
 }
 
 interface NavItem {
@@ -20,7 +21,7 @@ interface NavItem {
   tab: string
 }
 
-export function MobileBottomNav({ role }: MobileBottomNavProps) {
+export function MobileBottomNav({ experience }: MobileBottomNavProps) {
   const pathname = usePathname()
   const router = useRouter()
   const { packageCount } = usePackageCount()
@@ -54,7 +55,6 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
   const onProjectPage = pathname?.startsWith(`/u/${username}/projects/`) ?? false
   const onClientPage  = pathname?.startsWith(`/u/${username}/clients/`)  ?? false
   const onDetailPage  = onProjectPage || onClientPage
-  const experience = experienceFor(role)
   const isClient = experience === 'client'
 
   // Each tab is a route segment: /u/<username> is home, /u/<username>/<tab>

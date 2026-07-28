@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import type { Metadata } from 'next'
 import { getSessionUser } from '@/app/(spaces)/session'
 import { experienceFor } from '@/app/(spaces)/experience'
+import { effectiveExperience } from '@/app/(spaces)/preview'
 import { DashboardTaskManager } from '@/components/dashboard/DashboardTaskManager'
 import { PasskeySetupPrompt } from '@/components/dashboard/PasskeySetupPrompt'
 
@@ -46,12 +47,16 @@ export default async function DashboardLayout({
   }
 
   const hasPasskey = Boolean((user as any).passkeyCredentials?.length)
+  // While staff preview a client's portal, hide staff-only chrome so the view
+  // matches what the client actually sees.
+  const experience = await effectiveExperience(user)
+  const previewing = experience === 'client' && experienceFor(user.role) === 'staff'
 
   return (
     <>
-      {!hasPasskey && <PasskeySetupPrompt />}
+      {!hasPasskey && !previewing && <PasskeySetupPrompt />}
       {children}
-      <DashboardTaskManager username={username} userRole={user.role} />
+      <DashboardTaskManager username={username} userRole={previewing ? 'client' : user.role} />
     </>
   )
 }

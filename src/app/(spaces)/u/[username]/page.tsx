@@ -2,8 +2,9 @@ import { redirect } from 'next/navigation'
 import { getPayload } from 'payload'
 import config from '@payload-config'
 import { getSessionUser } from '@/app/(spaces)/session'
+import { effectiveExperience } from '@/app/(spaces)/preview'
 import { tabsFor } from './tabs'
-import { loadStaffHome, loadClientHome, resolveClientAccount } from './dashboard-data'
+import { loadStaffHome, loadClientHome, resolveActiveClientAccount } from './dashboard-data'
 import { AdminHomeView } from './_views/AdminHomeView'
 import { ClientHomeView } from './_views/ClientHomeView'
 import { AccountNotFound } from './_views/AccountNotFound'
@@ -45,10 +46,11 @@ export default async function DashboardPage({
   if (!user || user.username !== username) redirect('/login')
 
   const payload = await getPayload({ config })
+  const experience = await effectiveExperience(user)
 
   // ── Staff (admin / user) ───────────────────────────────────────────────────
 
-  if (user.role === 'admin' || user.role === 'user') {
+  if (experience === 'staff') {
     const data = await loadStaffHome(payload, user)
     return (
       <AdminHomeView
@@ -67,15 +69,17 @@ export default async function DashboardPage({
     )
   }
 
-  // ── Client ─────────────────────────────────────────────────────────────────
+  // ── Client (real client, or staff previewing "view as client") ─────────────
 
-  const clientAccount = await resolveClientAccount(payload, user)
+  const clientAccount = await resolveActiveClientAccount(payload, user)
   if (!clientAccount) return <AccountNotFound />
 
   const data = await loadClientHome(payload, user, clientAccount)
+  // When staff previews, greet with the client's name rather than the staff user's.
+  const firstName = user.role === 'client' ? data.firstName : (clientAccount.firstName ?? clientAccount.name)
   return (
     <ClientHomeView
-      user={{ firstName: data.firstName }}
+      user={{ firstName }}
       username={username}
       showTips={data.showTips}
       clientAccount={clientAccount}

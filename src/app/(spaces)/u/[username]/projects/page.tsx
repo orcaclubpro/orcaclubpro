@@ -2,10 +2,10 @@ import { redirect } from 'next/navigation'
 import { getPayload } from 'payload'
 import config from '@payload-config'
 import { getSessionUser } from '@/app/(spaces)/session'
-import { experienceFor } from '@/app/(spaces)/experience'
+import { effectiveExperience } from '@/app/(spaces)/preview'
 import {
   loadStaffProjectsTab,
-  resolveClientAccount,
+  resolveActiveClientAccount,
   loadClientProjectsTab,
 } from '../dashboard-data'
 import { AccountNotFound } from '../_views/AccountNotFound'
@@ -27,7 +27,7 @@ export default async function ProjectsPage({ params }: { params: Promise<{ usern
 
   const payload = await getPayload({ config })
 
-  if (experienceFor(user.role) === 'staff') {
+  if (await effectiveExperience(user) === 'staff') {
     const { serializedProjects, clientOptions } = await loadStaffProjectsTab(payload, user)
     return (
       <ProjectsAdminView
@@ -39,7 +39,7 @@ export default async function ProjectsPage({ params }: { params: Promise<{ usern
     )
   }
 
-  const clientAccount = await resolveClientAccount(payload, user)
+  const clientAccount = await resolveActiveClientAccount(payload, user)
   if (!clientAccount) return <AccountNotFound />
 
   const { serializedClientProjects } = await loadClientProjectsTab(payload, clientAccount)

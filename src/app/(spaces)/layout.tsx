@@ -3,12 +3,13 @@ import config from "@payload-config"
 import { SpacesHeader } from "@/components/layout/spaces-header"
 import { MobileBottomNav } from "@/components/dashboard/MobileBottomNav"
 import { GlobalSearchPaletteLoader } from "@/components/dashboard/GlobalSearchPaletteLoader"
+import { ClientPreviewBanner } from "@/components/dashboard/ClientPreviewBanner"
 import { getSessionUser } from "./session"
-import { experienceFor } from "./experience"
+import { effectiveExperience, getPreviewClientId } from "./preview"
 import { HeaderTitleProvider } from "./HeaderTitleContext"
 import { PackageCountProvider } from "./PackageCountContext"
 import { ThemeProvider } from "./ThemeContext"
-import { countClientProposalPackages } from "./u/[username]/dashboard-data"
+import { countClientProposalPackages, resolveActiveClientAccount } from "./u/[username]/dashboard-data"
 import { THEMES, DEFAULT_THEME } from "./themes"
 import type { ThemeId } from "./themes"
 
@@ -18,15 +19,22 @@ export default async function SpacesLayout({
   children: React.ReactNode
 }) {
   const user = await getSessionUser()
-  const isDeveloper = !!user && experienceFor(user.role) === 'staff'
+  const experience = await effectiveExperience(user)
+  const isDeveloper = experience === 'staff'
   const savedTheme = (user as any)?.dashboardTheme as ThemeId | undefined
   const initialTheme: ThemeId = (savedTheme && THEMES[savedTheme]) ? savedTheme : DEFAULT_THEME
 
-  // Mobile-nav packages badge — resolved server-side so it's correct on first paint.
+  // Mobile-nav packages badge — resolved server-side so it's correct on first
+  // paint. During a client preview this reflects the previewed account.
   let packageCount = 0
-  if (user && experienceFor(user.role) === 'client') {
+  let previewClientName: string | null = null
+  if (user && experience === 'client') {
     const payload = await getPayload({ config })
     packageCount = await countClientProposalPackages(payload, user)
+    if (await getPreviewClientId(user)) {
+      const previewAccount = await resolveActiveClientAccount(payload, user)
+      previewClientName = previewAccount?.name ?? 'this client'
+    }
   }
 
   // Build inline CSS vars from the initial theme so the correct background
@@ -52,15 +60,18 @@ export default async function SpacesLayout({
             __html: `(function(){var r=document.documentElement;var v="${cssVarString}".split(';');v.forEach(function(p){var i=p.indexOf(':');if(i>0)r.style.setProperty(p.slice(0,i),p.slice(i+1));});})();`,
           }}
         />
-        <SpacesHeader user={user} showTips={(user as any)?.showTips !== false && experienceFor(user?.role) === 'client'} />
+        <SpacesHeader user={user} showTips={(user as any)?.showTips !== false && experience === 'client' && !previewClientName} />
         {/* zoom: 1.3 scales up the entire spaces UI for better legibility.
             Note: `zoom` is non-standard CSS; Firefox ignores it. For cross-browser
             support, this should eventually migrate to transform:scale(1.3) with
             compensating width/height calculations.
             min-h-[calc(100vh/1.3)] — with zoom:1.3, visually fills exactly 100vh. pb-28 reserved for mobile bottom nav only. */}
-        <main className="pt-[68px] min-h-[calc(100vh/1.3)] pb-28 lg:pb-0 [overflow-x:clip]" style={{ zoom: 1.3 }}>{children}</main>
+        <main className="pt-[68px] min-h-[calc(100vh/1.3)] pb-28 lg:pb-0 [overflow-x:clip]" style={{ zoom: 1.3 }}>
+          {previewClientName && <ClientPreviewBanner clientName={previewClientName} />}
+          {children}
+        </main>
       </div>
-      <MobileBottomNav role={user?.role} />
+      <MobileBottomNav experience={experience} />
       {isDeveloper && user?.username && (
         <GlobalSearchPaletteLoader username={user.username} />
       )}
