@@ -1,6 +1,11 @@
 @import "tailwindcss";
 @plugin "tailwindcss-animate";
 
+/* Keep docs out of Tailwind v4's automatic content detection. Prose examples
+   like `bg-[var(--space-*)]` in CLAUDE.md / docs would otherwise be scanned
+   as real utilities and emit invalid CSS (background-color: var(--space-*)). */
+@source not "../../**/*.md";
+
 @custom-variant dark (&:is(.dark *));
 
 @theme {
