@@ -7,6 +7,7 @@ import type { SowFormData } from '@/lib/document-generators'
 import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
 import { getStripe } from '@/lib/stripe'
+import { createStripeInvoiceForOrder } from '@/lib/stripe/invoices'
 import {
   sendGenericInvoiceEmail,
   sendInvoiceCopyToAddresses,
@@ -739,51 +740,33 @@ export async function createOrderFromPackage(
 
     stripe = getStripe()
 
-    // Generate order number (max-based — safe even if orders were deleted)
-    const orderNumber = await nextOrderNumber(payload)
-
     const totalAmount = lineItems.reduce(
       (sum: number, item: any) => sum + (item.adjustedPrice ?? item.price ?? 0) * (item.quantity ?? 1),
       0
     )
 
-    // 1. Create Stripe invoice BEFORE touching the DB.
+    // 1. Create Stripe invoice BEFORE touching the DB (create → attach items → finalize).
     //    Webhook looks up the order by stripeInvoiceId (more reliable than metadata).
-    const invoice = await stripe.invoices.create({
-      customer: stripeCustomerId,
-      collection_method: 'send_invoice',
-      days_until_due: daysUntilDue,
-      auto_advance: false,
-      description: `Order ${orderNumber} — ${pkg.name}`,
-      metadata: {
-        order_number: orderNumber,
-        orcaclub_package_id: packageId,
-      },
+    const { invoice: finalized } = await createStripeInvoiceForOrder({
+      stripe,
+      stripeCustomerId,
+      daysUntilDue,
+      description: pkg.name,
+      invoiceMetadata: { orcaclub_package_id: packageId },
+      lines: lineItems.map((item: any) => {
+        const qty = item.quantity ?? 1
+        const unitPrice = item.adjustedPrice ?? item.price ?? 0
+        const descParts = [
+          item.name,
+          qty > 1 ? `${qty} × $${unitPrice}` : null,
+          item.description || null,
+        ].filter(Boolean)
+        return { description: descParts.join(' — '), amount: unitPrice * qty }
+      }),
     })
-
-    // 2. Attach each line item directly to this invoice.
-    //    Explicit attachment avoids pending items floating to unrelated invoices.
-    for (const item of lineItems) {
-      const qty = item.quantity ?? 1
-      const unitPrice = item.adjustedPrice ?? item.price ?? 0
-      const totalCents = Math.round(unitPrice * qty * 100)
-      const descParts = [
-        item.name,
-        qty > 1 ? `${qty} × $${unitPrice}` : null,
-        item.description || null,
-      ].filter(Boolean)
-      await stripe.invoiceItems.create({
-        customer: stripeCustomerId,
-        invoice: invoice.id,
-        amount: totalCents,
-        currency: 'usd',
-        description: descParts.join(' — '),
-        metadata: { order_number: orderNumber },
-      })
-    }
-
-    // 3. Finalize → locks the invoice and generates hosted_invoice_url.
-    finalizedInvoice = await stripe.invoices.finalizeInvoice(invoice.id)
+    finalizedInvoice = finalized
+    // Stripe assigns the invoice number at finalization — use it as the order number.
+    const orderNumber = finalized.number ?? finalized.id
 
     // 4. Single payload.create with ALL data — triggers updateClientBalance exactly once.
     //    Packages use 'name'; Orders use 'title' — mapped explicitly below.
@@ -1009,36 +992,24 @@ export async function sendScheduledPayment(
       ? Math.max(1, Math.round((new Date(entry.dueDate).getTime() - Date.now()) / 86400000))
       : 30
 
-    const orderNumber = await nextOrderNumber(payload)
-
     const invoiceType = resolveInvoiceType(entry)
 
     stripe = getStripe()
 
-    const invoice = await stripe.invoices.create({
-      customer: stripeCustomerId,
-      collection_method: 'send_invoice',
-      days_until_due: daysUntilDue,
-      auto_advance: false,
-      description: `Order ${orderNumber} — ${pkg.name}`,
-      metadata: {
-        order_number: orderNumber,
+    const { invoice: finalized } = await createStripeInvoiceForOrder({
+      stripe,
+      stripeCustomerId,
+      daysUntilDue,
+      description: pkg.name,
+      invoiceMetadata: {
         orcaclub_package_id: packageId,
         orcaclub_invoice_type: invoiceType,
         orcaclub_schedule_entry_id: entryId,
       },
+      lines: [{ description: `${entry.label} — ${pkg.name}`, amount: entry.amount }],
     })
-
-    await stripe.invoiceItems.create({
-      customer: stripeCustomerId,
-      invoice: invoice.id,
-      amount: Math.round(entry.amount * 100),
-      currency: 'usd',
-      description: `${entry.label} — ${pkg.name}`,
-      metadata: { order_number: orderNumber },
-    })
-
-    finalizedInvoice = await stripe.invoices.finalizeInvoice(invoice.id)
+    finalizedInvoice = finalized
+    const orderNumber = finalized.number ?? finalized.id
 
     const order = await payload.create({
       collection: 'orders',
@@ -1153,41 +1124,26 @@ export async function createPartialInvoiceFromPackage(
 
     stripe = getStripe()
 
-    // Generate order number (max-based — safe even if orders were deleted)
-    const orderNumber = await nextOrderNumber(payload)
-
     // Map label to invoiceType
     const invoiceType = label.toLowerCase().includes('deposit') ? 'deposit'
       : label.toLowerCase().includes('milestone') ? 'installment'
       : label.toLowerCase().includes('final') ? 'balance'
       : 'installment'
 
-    // 1. Create Stripe invoice
-    const invoice = await stripe.invoices.create({
-      customer: stripeCustomerId,
-      collection_method: 'send_invoice',
-      days_until_due: daysUntilDue,
-      auto_advance: false,
-      description: `Order ${orderNumber} — ${pkg.name}`,
-      metadata: {
-        order_number: orderNumber,
+    // 1. Create → attach the single partial line item → finalize
+    const { invoice: finalized } = await createStripeInvoiceForOrder({
+      stripe,
+      stripeCustomerId,
+      daysUntilDue,
+      description: pkg.name,
+      invoiceMetadata: {
         orcaclub_package_id: packageId,
         orcaclub_invoice_type: invoiceType,
       },
+      lines: [{ description: `${label} — ${pkg.name}`, amount }],
     })
-
-    // 2. Single line item for the partial amount
-    await stripe.invoiceItems.create({
-      customer: stripeCustomerId,
-      invoice: invoice.id,
-      amount: Math.round(amount * 100),
-      currency: 'usd',
-      description: `${label} — ${pkg.name}`,
-      metadata: { order_number: orderNumber },
-    })
-
-    // 3. Finalize
-    finalizedInvoice = await stripe.invoices.finalizeInvoice(invoice.id)
+    finalizedInvoice = finalized
+    const orderNumber = finalized.number ?? finalized.id
 
     // 4. Create order record
     const order = await payload.create({
@@ -1242,28 +1198,17 @@ async function _sendScheduleEntryInvoice(
     ? Math.max(1, Math.round((new Date(entry.dueDate).getTime() - Date.now()) / 86400000))
     : 30
 
-  const orderNumber = await nextOrderNumber(payload)
   const invoiceType = resolveInvoiceType(entry)
 
-  const invoice = await stripe.invoices.create({
-    customer: stripeCustomerId,
-    collection_method: 'send_invoice',
-    days_until_due: daysUntilDue,
-    auto_advance: false,
-    description: `Order ${orderNumber} — ${proposalName}`,
-    metadata: { order_number: orderNumber, orcaclub_package_id: packageId, orcaclub_invoice_type: invoiceType },
+  const { invoice: finalizedInvoice } = await createStripeInvoiceForOrder({
+    stripe,
+    stripeCustomerId,
+    daysUntilDue,
+    description: proposalName,
+    invoiceMetadata: { orcaclub_package_id: packageId, orcaclub_invoice_type: invoiceType },
+    lines: [{ description: `${entry.label} — ${proposalName}`, amount: entry.amount }],
   })
-
-  await stripe.invoiceItems.create({
-    customer: stripeCustomerId,
-    invoice: invoice.id,
-    amount: Math.round(entry.amount * 100),
-    currency: 'usd',
-    description: `${entry.label} — ${proposalName}`,
-    metadata: { order_number: orderNumber },
-  })
-
-  const finalizedInvoice = await stripe.invoices.finalizeInvoice(invoice.id)
+  const orderNumber = finalizedInvoice.number ?? finalizedInvoice.id
 
   const order = await payload.create({
     collection: 'orders',
@@ -1491,30 +1436,20 @@ export async function acceptPackage(packageId: string) {
       })()
     } else if (lineItems.length > 0) {
       // No schedule — create one full invoice from all line items
-      const orderNumber = await nextOrderNumber(payload)
       const totalAmount = lineItems.reduce((s: number, item: any) => s + (item.price ?? 0) * (item.quantity ?? 1), 0)
 
-      const invoice = await stripe.invoices.create({
-        customer: stripeCustomerId,
-        collection_method: 'send_invoice',
-        days_until_due: 30,
-        auto_advance: false,
-        description: `Order ${orderNumber} — ${proposal.name}`,
-        metadata: { order_number: orderNumber, orcaclub_package_id: packageId },
-      })
-
-      for (const item of lineItems) {
-        await stripe.invoiceItems.create({
-          customer: stripeCustomerId,
-          invoice: invoice.id,
-          amount: Math.round((item.price ?? 0) * (item.quantity ?? 1) * 100),
-          currency: 'usd',
+      const { invoice: finalizedInvoice } = await createStripeInvoiceForOrder({
+        stripe,
+        stripeCustomerId,
+        daysUntilDue: 30,
+        description: proposal.name,
+        invoiceMetadata: { orcaclub_package_id: packageId },
+        lines: lineItems.map((item: any) => ({
           description: item.name,
-          metadata: { order_number: orderNumber },
-        })
-      }
-
-      const finalizedInvoice = await stripe.invoices.finalizeInvoice(invoice.id)
+          amount: (item.price ?? 0) * (item.quantity ?? 1),
+        })),
+      })
+      const orderNumber = finalizedInvoice.number ?? finalizedInvoice.id
 
       const order = await payload.create({
         collection: 'orders',

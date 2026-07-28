@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/actions/auth'
 import { getPayload } from 'payload'
 import config from '@payload-config'
 import { getStripe } from '@/lib/stripe'
+import { fulfillOrderPaidOutOfBand } from '@/lib/stripe/invoices'
 
 // ── Update due date ────────────────────────────────────────────────────────────
 
@@ -168,6 +169,8 @@ export async function updateOrderLineItems(
 /**
  * Manually mark a pending order as paid (for payments collected outside Stripe).
  * Admin and user roles only — triggers the afterChange balance recalculation hook.
+ * Also syncs the linked Stripe invoice to paid-out-of-band (shared with the admin
+ * /fulfill route) so the Stripe invoice never lingers as `open` after payment.
  */
 export async function markOrderAsPaid(
   orderId: string,
@@ -182,10 +185,9 @@ export async function markOrderAsPaid(
     if (!order) return { success: false, error: 'Order not found' }
     if (order.status === 'paid') return { success: false, error: 'Order is already paid' }
 
-    await payload.update({
-      collection: 'orders',
+    await fulfillOrderPaidOutOfBand(payload, {
       id: orderId,
-      data: { status: 'paid' } as any,
+      stripeInvoiceId: order.stripeInvoiceId as string | undefined,
     })
 
     return { success: true }

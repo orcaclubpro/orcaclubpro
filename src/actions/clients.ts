@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/actions/auth'
 import { getPayload, type Payload } from 'payload'
 import config from '@payload-config'
 import { getStripe } from '@/lib/stripe'
+import { resolveStripeCustomer } from '@/lib/stripe/customers'
 import { revalidatePath } from 'next/cache'
 import crypto from 'crypto'
 import { clientWelcome } from '@/lib/email/templates'
@@ -56,33 +57,16 @@ export async function createOrUpdateClientAccount({
       }
     }
 
-    const stripe = getStripe()
-
     // Step 1: Find or create Stripe customer (search-first pattern)
-    const existingStripeCustomers = await stripe.customers.list({ email, limit: 1 })
-
-    let stripeCustomerId: string
-
-    if (existingStripeCustomers.data.length > 0) {
-      const existing = existingStripeCustomers.data[0]
-      stripeCustomerId = existing.id
-
-      // Update name in Stripe if it differs
-      if (name && existing.name !== name) {
-        await stripe.customers.update(stripeCustomerId, { name })
-      }
-    } else {
-      const newCustomer = await stripe.customers.create({
-        email,
-        name,
-        metadata: {
-          created_via: 'orcaclub_dashboard',
-          source: 'new_client_modal',
-          created_at: new Date().toISOString(),
-        },
-      })
-      stripeCustomerId = newCustomer.id
-    }
+    const { customerId: stripeCustomerId } = await resolveStripeCustomer({
+      email,
+      name,
+      metadata: {
+        created_via: 'orcaclub_dashboard',
+        source: 'new_client_modal',
+        created_at: new Date().toISOString(),
+      },
+    })
 
     // Step 2: Check if a ClientAccount already exists with this email
     const { docs: existingAccounts } = await payload.find({

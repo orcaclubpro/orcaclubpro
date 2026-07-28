@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getStripe } from '@/lib/stripe'
+import { resolveStripeCustomer } from '@/lib/stripe/customers'
+import { createStripeInvoiceForOrder } from '@/lib/stripe/invoices'
 import { getPayload } from 'payload'
 import configPromise from '@payload-config'
 import { headers } from 'next/headers'
@@ -146,98 +148,34 @@ export async function POST(request: NextRequest) {
       console.log('[Stripe Invoice] Stripe customer ID:', stripeCustomerId)
     }
 
-    // 2. Verify Stripe customer exists (following same pattern as hook)
-    if (stripeCustomerId) {
-      try {
-        const customer = await stripe.customers.retrieve(stripeCustomerId)
-
-        // Check if customer is deleted
-        if (customer.deleted) {
-          throw new Error('Customer is deleted')
-        }
-
-        console.log('[Stripe Invoice] Stripe customer verified:', stripeCustomerId)
-      } catch (error: any) {
-        console.warn(
-          '[Stripe Invoice] Stripe customer invalid or not found in Stripe, will search/create new:',
-          stripeCustomerId
-        )
-        console.warn('[Stripe Invoice] Error details:', error.message || error)
-
-        // Clear invalid ID from database (same as hook)
-        await payload.update({
-          collection: 'client-accounts',
-          id: clientAccountId,
-          data: {
-            stripeCustomerId: null, // Clear invalid ID
-          },
-        })
-
-        stripeCustomerId = '' // Clear for search/create flow
-        console.log('[Stripe Invoice] Cleared invalid Stripe customer ID from client account')
-      }
-    }
-
-    // 3. If no valid Stripe customer, search for existing or create new
-    if (!stripeCustomerId) {
-      console.log('[Stripe Invoice] Searching for existing Stripe customer:', customerEmail)
-
-      const existingCustomers = await stripe.customers.list({
-        email: customerEmail,
-        limit: 1,
-      })
-
-      if (existingCustomers.data.length > 0) {
-        // Found existing customer in Stripe
-        stripeCustomerId = existingCustomers.data[0].id
-        console.log('[Stripe Invoice] Found existing Stripe customer:', stripeCustomerId)
-
-        // Update client account with Stripe customer ID
-        await payload.update({
-          collection: 'client-accounts',
-          id: clientAccountId,
-          data: {
-            stripeCustomerId,
-          },
-        })
-        console.log('[Stripe Invoice] Updated client account with Stripe ID')
-      } else {
-        // Create new Stripe customer
-        console.log('[Stripe Invoice] Creating new Stripe customer for:', customerEmail)
-
-        const newCustomer = await stripe.customers.create({
-          email: customerEmail,
-          name: customerName || customerEmail.split('@')[0],
-          metadata: {
-            orcaclub_client_id: clientAccountId,
-            created_via: 'orcaclub_admin',
-            source: 'payment_links_api',
-            created_at: new Date().toISOString(),
-          },
-        })
-
-        stripeCustomerId = newCustomer.id
-        console.log('[Stripe Invoice] Created new Stripe customer:', stripeCustomerId)
-
-        // Update client account with Stripe customer ID
-        await payload.update({
-          collection: 'client-accounts',
-          id: clientAccountId,
-          data: {
-            stripeCustomerId,
-          },
-        })
-        console.log('[Stripe Invoice] Updated client account with new Stripe ID')
-      }
-    }
-
-    // 4. Generate order number
-    const orderCount = await payload.count({
-      collection: 'orders',
+    // 2. Resolve the Stripe customer: validate the existing id → search by email → create.
+    const resolvedCustomer = await resolveStripeCustomer({
+      stripe,
+      email: customerEmail,
+      name: customerName || customerEmail.split('@')[0],
+      existingCustomerId: stripeCustomerId || null,
+      metadata: {
+        orcaclub_client_id: clientAccountId,
+        created_via: 'orcaclub_admin',
+        source: 'payment_links_api',
+        created_at: new Date().toISOString(),
+      },
     })
 
-    const orderNumber = `INV-${String(orderCount.totalDocs + 1).padStart(4, '0')}`
-    console.log('[Stripe Invoice] Generated order number:', orderNumber)
+    // 3. Persist the resolved id whenever it changed (linked, created, or the old
+    //    one was invalid and dropped) so the client account stays in sync.
+    if (resolvedCustomer.customerId !== stripeCustomerId) {
+      await payload.update({
+        collection: 'client-accounts',
+        id: clientAccountId,
+        data: { stripeCustomerId: resolvedCustomer.customerId },
+      })
+      console.log(
+        `[Stripe Invoice] Client account Stripe customer ${resolvedCustomer.action}:`,
+        resolvedCustomer.customerId,
+      )
+    }
+    stripeCustomerId = resolvedCustomer.customerId
 
     // Final safety check: Ensure we have a valid Stripe customer ID
     if (!stripeCustomerId) {
@@ -248,99 +186,72 @@ export async function POST(request: NextRequest) {
 
     console.log('[Stripe Invoice] Final customer ID check passed:', stripeCustomerId)
 
-    // 5. Create order record in PayloadCMS FIRST (so we have the order ID)
-    const order = await payload.create({
-      collection: 'orders',
-      data: {
-        orderNumber,
-        clientAccount: clientAccountId,
-        amount: totalAmount,
-        status: 'pending', // Will be updated to 'paid' via webhook
-        stripeCustomerId,
-        project: project || undefined, // Optional project name
-        lineItems: lineItems.map((item: any) => ({
-          title: item.title,
-          quantity: item.quantity,
-          price: item.unitPrice,
-          isRecurring: false,
-        })),
+    // 5. Create the Stripe invoice FIRST so we can stamp its real invoice number
+    //    onto the order. Attach every line item explicitly, then finalize.
+    const { invoice, invoiceId, hostedInvoiceUrl } = await createStripeInvoiceForOrder({
+      stripe,
+      stripeCustomerId,
+      daysUntilDue: 30,
+      ...(project ? { description: `Order — ${project}` } : {}),
+      paymentSettings: {
+        payment_method_types: ['card', 'us_bank_account'], // Enable ACH (capped at $5)
       },
-    })
-
-    console.log('[Stripe Invoice] Created order record:', order.id, orderNumber)
-
-    // 6. Create invoice items for each line item
-    console.log('[Stripe Invoice] Creating invoice items for', lineItems.length, 'line items')
-
-    for (const item of lineItems) {
-      const invoiceItem = await stripe.invoiceItems.create({
-        customer: stripeCustomerId,
-        amount: Math.round(item.unitPrice * item.quantity * 100), // Convert to cents
-        currency: 'usd',
+      invoiceMetadata: {
+        created_via: 'orcaclub_admin',
+      },
+      lines: lineItems.map((item: any) => ({
         description: item.title,
+        amount: item.unitPrice * item.quantity,
         metadata: {
-          order_number: orderNumber,
-          orcaclub_order_id: order.id, // Include order ID
           quantity: item.quantity.toString(),
           unit_price: item.unitPrice.toString(),
         },
+      })),
+    })
+
+    // Stripe assigns the invoice number at finalization — use it as the order
+    // number so the two always match. Fall back to the invoice id (unique) in the
+    // should-never-happen case where a finalized invoice has no number.
+    const orderNumber = invoice.number ?? invoiceId
+    console.log('[Stripe Invoice] Invoice finalized:', invoiceId, '→', orderNumber)
+
+    // 6. Create the order with the Stripe invoice already linked. If this write
+    //    fails, void the invoice so we never strand a payable invoice with no
+    //    matching order (the webhook resolves orders by stripeInvoiceId).
+    let order
+    try {
+      order = await payload.create({
+        collection: 'orders',
+        data: {
+          orderNumber,
+          clientAccount: clientAccountId,
+          amount: totalAmount,
+          status: 'pending', // Will be updated to 'paid' via webhook
+          stripeCustomerId,
+          stripeInvoiceId: invoiceId,
+          stripeInvoiceUrl: hostedInvoiceUrl,
+          project: project || undefined, // Optional project name
+          lineItems: lineItems.map((item: any) => ({
+            title: item.title,
+            quantity: item.quantity,
+            price: item.unitPrice,
+            isRecurring: false,
+          })),
+        },
       })
-      console.log('[Stripe Invoice] Created invoice item:', invoiceItem.id, '-', item.title, `$${item.unitPrice} x ${item.quantity}`)
-    }
-
-    console.log('[Stripe Invoice] All invoice items created successfully')
-
-    // 7. Create invoice (draft) WITH order ID in metadata from the start
-    const invoice = await stripe.invoices.create({
-      customer: stripeCustomerId,
-      collection_method: 'send_invoice', // Creates hosted invoice page
-      days_until_due: 30,
-      auto_advance: false, // ✅ Don't auto-finalize - we'll do it manually
-      description: `Order ${orderNumber}`,
-      payment_settings: {
-        payment_method_types: ['card', 'us_bank_account'], // Enable ACH (capped at $5)
-      },
-      metadata: {
-        order_number: orderNumber,
-        orcaclub_order_id: order.id,
-        created_via: 'orcaclub_admin',
-      },
-    })
-
-    console.log('[Stripe Invoice] Draft invoice created:', invoice.id)
-    console.log('[Stripe Invoice] Invoice has', invoice.lines?.data?.length || 0, 'line items')
-
-    // 8. Verify invoice has line items before finalizing
-    if (!invoice.lines?.data || invoice.lines.data.length === 0) {
-      throw new Error(
-        `Invoice ${invoice.id} has no line items! Created ${lineItems.length} invoice items but they weren't attached.`
+    } catch (createErr) {
+      await stripe.invoices.voidInvoice(invoiceId).catch((e: any) =>
+        console.error('[Stripe Invoice] Failed to void orphaned invoice:', e)
       )
+      throw createErr
     }
 
-    // 9. Finalize invoice to make it payable
-    const finalizedInvoice = await stripe.invoices.finalizeInvoice(invoice.id)
-
-    console.log('[Stripe Invoice] Invoice finalized:', finalizedInvoice.id)
-    console.log('[Stripe Invoice] Final invoice has', finalizedInvoice.lines?.data?.length || 0, 'line items')
-    console.log('[Stripe Invoice] Total amount:', finalizedInvoice.total / 100, 'USD')
-    console.log('[Stripe Invoice] Hosted URL:', finalizedInvoice.hosted_invoice_url)
-
-    // 10. Update order with Stripe invoice details
-    await payload.update({
-      collection: 'orders',
-      id: order.id,
-      data: {
-        stripeInvoiceId: finalizedInvoice.id,
-        stripeInvoiceUrl: finalizedInvoice.hosted_invoice_url || '',
-      },
-    })
-
-    console.log('[Stripe Invoice] Updated order with invoice details')
+    console.log('[Stripe Invoice] Created order record:', order.id, orderNumber)
 
     return NextResponse.json({
       success: true,
-      invoiceUrl: finalizedInvoice.hosted_invoice_url,
-      invoiceId: finalizedInvoice.id,
+      invoiceUrl: hostedInvoiceUrl,
+      invoiceId,
       orderNumber,
       totalAmount,
     })
