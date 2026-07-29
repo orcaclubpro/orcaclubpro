@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import {
   Search, Package, FileText, X, ExternalLink,
   Layers, Loader2, CheckCircle2, ChevronRight,
-  Check, Mail, Plus, Pencil, FileSignature,
+  Check, Mail, Plus, Pencil, FileSignature, Clock,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { AssignPackageModal } from '@/components/dashboard/AssignPackageModal'
@@ -510,8 +510,8 @@ export function PackagesAdminView({ allPackages, username }: PackagesAdminViewPr
   const [query, setQuery] = useState('')
   const [modalPkg, setModalPkg] = useState<PackageDoc | null>(null)
   const [builder, setBuilder] = useState<
-    | { mode: 'create'; clientId: string }
-    | { mode: 'edit'; pkg: PackageDoc }
+    | { mode: 'create'; clientId: string; initialTab?: 'builder' | 'retainer' }
+    | { mode: 'edit'; pkg: PackageDoc; initialTab?: 'builder' | 'retainer' }
     | null
   >(null)
 
@@ -630,6 +630,13 @@ export function PackagesAdminView({ allPackages, username }: PackagesAdminViewPr
                       <Plus className="size-3.5" />
                       New Package
                     </button>
+                    <button
+                      onClick={() => setBuilder({ mode: 'create', clientId: group.clientId, initialTab: 'retainer' })}
+                      className="flex items-center gap-1.5 h-8 px-3 text-xs font-medium rounded-md border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] text-[var(--space-text-tertiary)] hover:bg-[var(--space-bg-card-hover)] hover:text-[var(--space-text-primary)] transition-all"
+                    >
+                      <Clock className="size-3.5" />
+                      Retainer
+                    </button>
                     <AssignPackageModal clientId={group.clientId} />
                   </div>
                 </div>
@@ -723,6 +730,7 @@ export function PackagesAdminView({ allPackages, username }: PackagesAdminViewPr
           username={username}
           clientId={builder.mode === 'create' ? builder.clientId : undefined}
           existing={builder.mode === 'edit' ? (builder.pkg as unknown as ExistingProposal) : undefined}
+          initialTab={builder.initialTab}
           onClose={(id) => {
             setBuilder(null)
             if (id) window.location.reload()

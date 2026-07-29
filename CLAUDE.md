@@ -106,7 +106,7 @@ defineTheme({
 })
 ```
 
-`defineTheme` derives accent-dim/glow/soft, surface, nav-bg, and border from the accent + mode. After editing, run `bun run payload:generate` (the `dashboardTheme` enum is generated). Components consume vars via `var(--space-*)` / `bg-[var(--space-*)]` — never hardcode `text-white`/`bg-black` in dashboard components (breaks light themes).
+`defineTheme` derives accent-dim/glow/soft, surface, nav-bg, and border from the accent + mode. After editing, run `bun run payload:generate` (the `dashboardTheme` enum is generated). Components consume vars via `var(--space-*)` / `bg-[var(--space-accent)]` — never hardcode `text-white`/`bg-black` in dashboard components (breaks light themes).
 
 ## CRITICAL SECURITY RULES
 

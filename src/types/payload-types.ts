@@ -80,6 +80,8 @@ export interface Config {
     orders: Order;
     packages: Package;
     'service-items': ServiceItem;
+    retainers: Retainer;
+    'retainer-time-entries': RetainerTimeEntry;
     'webhook-events': WebhookEvent;
     projects: Project;
     tasks: Task;
@@ -112,6 +114,8 @@ export interface Config {
     orders: OrdersSelect<false> | OrdersSelect<true>;
     packages: PackagesSelect<false> | PackagesSelect<true>;
     'service-items': ServiceItemsSelect<false> | ServiceItemsSelect<true>;
+    retainers: RetainersSelect<false> | RetainersSelect<true>;
+    'retainer-time-entries': RetainerTimeEntriesSelect<false> | RetainerTimeEntriesSelect<true>;
     'webhook-events': WebhookEventsSelect<false> | WebhookEventsSelect<true>;
     projects: ProjectsSelect<false> | ProjectsSelect<true>;
     tasks: TasksSelect<false> | TasksSelect<true>;
@@ -1325,6 +1329,64 @@ export interface OrcaclubCarouselBlock {
   blockType: 'orcaclubCarousel';
 }
 /**
+ * Monthly retainer agreements — one active per client. Hours are logged as retainer-time-entries.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "retainers".
+ */
+export interface Retainer {
+  id: string;
+  clientAccount: string | ClientAccount;
+  /**
+   * Playbook tier — drives preset fee/hours in the builder.
+   */
+  tier: 'basic' | 'growth' | 'enterprise';
+  status: 'active' | 'paused' | 'cancelled';
+  startDate?: string | null;
+  /**
+   * USD per month
+   */
+  monthlyFee?: number | null;
+  /**
+   * Monthly hour cap (no rollover)
+   */
+  hoursPerMonth?: number | null;
+  /**
+   * USD/hr charged past the cap (displayed only for now)
+   */
+  overageRate?: number | null;
+  /**
+   * Internal notes
+   */
+  notes?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Hours logged against a retainer, summed per calendar month against the cap.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "retainer-time-entries".
+ */
+export interface RetainerTimeEntry {
+  id: string;
+  date: string;
+  hours: number;
+  /**
+   * Meetings, revisions, and reporting all count against the cap (per the playbook).
+   */
+  category?: ('work' | 'meeting' | 'revision' | 'reporting') | null;
+  description?: string | null;
+  retainer: string | Retainer;
+  clientAccount: string | ClientAccount;
+  /**
+   * Staff member who logged this entry
+   */
+  loggedBy?: (string | null) | User;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * Tracks processed Stripe webhook events
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1890,6 +1952,14 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'service-items';
         value: string | ServiceItem;
+      } | null)
+    | ({
+        relationTo: 'retainers';
+        value: string | Retainer;
+      } | null)
+    | ({
+        relationTo: 'retainer-time-entries';
+        value: string | RetainerTimeEntry;
       } | null)
     | ({
         relationTo: 'webhook-events';
@@ -2465,6 +2535,37 @@ export interface ServiceItemsSelect<T extends boolean = true> {
   starred?: T;
   archived?: T;
   usageCount?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "retainers_select".
+ */
+export interface RetainersSelect<T extends boolean = true> {
+  clientAccount?: T;
+  tier?: T;
+  status?: T;
+  startDate?: T;
+  monthlyFee?: T;
+  hoursPerMonth?: T;
+  overageRate?: T;
+  notes?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "retainer-time-entries_select".
+ */
+export interface RetainerTimeEntriesSelect<T extends boolean = true> {
+  date?: T;
+  hours?: T;
+  category?: T;
+  description?: T;
+  retainer?: T;
+  clientAccount?: T;
+  loggedBy?: T;
   updatedAt?: T;
   createdAt?: T;
 }
