@@ -32,7 +32,8 @@ src/
 │   ├── (payload)/        # Payload admin (CMS interface) + auto-mounted REST API
 │   ├── (spaces)/         # Client portal (see Client Portal Architecture section)
 │   │   ├── session.ts    # getSessionUser() — cached auth; ALWAYS use inside (spaces)
-│   │   ├── experience.ts # role → 'staff' | 'client' (presentation only)
+│   │   ├── experience.ts # experienceFor(role) → 'staff' | 'client' (presentation only)
+│   │   ├── preview.ts    # "View as client": effectiveExperience() + getPreviewClientId() (preview-actions.ts = enter/exit)
 │   │   └── u/[username]/ # Route-per-tab dashboard
 │   │       ├── page.tsx            # Home tab + legacy ?tab= redirects
 │   │       ├── tabs.ts             # Tab registry — id === route segment
@@ -58,6 +59,7 @@ src/
 │   │   └── utils/              # loginTwoFactor, passwordReset, passkey*, unlockAccount, email templates, fieldEncryption
 │   ├── shopify/          # admin-client.ts, customers.ts, products.ts, draft-orders.ts
 │   ├── stripe.ts         # Stripe singleton client
+│   ├── stripe/           # Shared helpers: invoices.ts, customers.ts, retry.ts, webhook-handlers.ts
 │   ├── google-calendar.ts
 │   └── email/templates/
 ├── hooks/                # React hooks (client-side)
@@ -74,11 +76,12 @@ The dashboard is **route-per-tab** — there is no client-side tab system. Each 
 | Tab registry | `u/[username]/tabs.ts` | Single source of truth for tab ids, labels, icons, nav placement. **Tab id === route segment** — public contract, never rename. |
 | Per-tab loaders | `u/[username]/dashboard-data.ts` | Each page fetches only its tab's data. Loaders use `select`/`populate` to trim payloads — when a view needs a new field, add it to the loader's `select`. |
 | Cached auth | `(spaces)/session.ts` → `getSessionUser()` | Always use this inside `(spaces)` instead of `getCurrentUser` — `React.cache()` dedupes across layout, page, and metadata in one request. |
-| Cached client account | `resolveClientAccount()` in `dashboard-data.ts` | `cache()`d — layout badge + page share one findByID. Returns null → render `<AccountNotFound />` (in `_views/`). |
+| Cached client account | `resolveActiveClientAccount()` in `dashboard-data.ts` | Use this (not `resolveClientAccount()`) in every client route — it returns the previewed account when staff is "viewing as client", else the user's own. `cache()`d. Returns null → render `<AccountNotFound />` (in `_views/`). |
 | Detail-route data | `clients/[client]/detail-data.ts`, `projects/[project]/detail-data.ts` | `cache()`d findByID shared by layout + page + generateMetadata. Never call findByID for these docs directly in a route file. |
 | Skeletons | `components/dashboard/LoadingSkeleton.tsx` | Every tab route has a `loading.tsx` composing these primitives. Without one, link prefetch does nothing and navigation shows a blank wait. |
-| Nav | `components/dashboard/MobileBottomNav.tsx` | Builds links from `tabs.ts` via `tabHref()`; active state derived from pathname. |
-| Experiences | `(spaces)/experience.ts` | Collapses roles → `'staff' \| 'client'` for **presentation only**. Data scoping still distinguishes `admin` vs `user` (see loaders). |
+| Nav | `components/dashboard/MobileBottomNav.tsx` | Builds links from `tabs.ts` via `tabHref()`; takes the resolved `experience`, not `role` — active state derived from pathname. |
+| Experiences | `(spaces)/experience.ts` | `experienceFor(role)` collapses roles → `'staff' \| 'client'` for **presentation only**. Data scoping still distinguishes `admin` vs `user` (see loaders). |
+| Client preview | `(spaces)/preview.ts` + `preview-actions.ts` | "View as client": staff pick a client (header `ClientViewSwitcher` / builder button) → `enterClientPreview()` sets an **httpOnly, staff-only** cookie → `exitClientPreview()` clears it. **Guard routes and nav with `effectiveExperience(user)`, not `experienceFor(user.role)`** — a staff previewer resolves to `'client'`. Cookie only sets data-scope target; access control is unchanged (only staff can set it). |
 
 Legacy `?tab=<id>` URLs redirect to the routes in `u/[username]/page.tsx`. The old `orders/` route redirects to `invoices/`.
 
@@ -86,7 +89,7 @@ Legacy `?tab=<id>` URLs redirect to the routes in `u/[username]/page.tsx`. The o
 
 1. Add a `TabDef` to `STAFF_TABS` or `CLIENT_TABS` in `tabs.ts` (id = route segment)
 2. Add a loader to `dashboard-data.ts` — `select` only the fields the view renders
-3. Create `u/[username]/<id>/page.tsx`: guard with `experienceFor(user.role)`, call the loader, render the view
+3. Create `u/[username]/<id>/page.tsx`: guard with `await effectiveExperience(user)` (preview-aware — never `experienceFor(user.role)` in a route); client tabs load their account via `resolveActiveClientAccount()`; then call the loader and render the view
 4. Create `u/[username]/<id>/loading.tsx` from `LoadingSkeleton` composites
 5. Put the view component in `_views/`
 
@@ -272,7 +275,7 @@ All integrations use singletons and are non-blocking in hooks.
 
 | Integration | Files | Key Behavior |
 |------------|-------|-------------|
-| **Stripe** | `src/lib/stripe.ts` | Singleton. API version `2025-12-15.clover`. Webhooks handled by `stripePlugin` in `payload.config.ts` (NOT an app route): `invoice.paid`, `invoice.payment_failed`, `invoice.voided`, `invoice.marked_uncollectible`. Idempotency via `WebhookEvents` collection. |
+| **Stripe** | `src/lib/stripe.ts` + `src/lib/stripe/` | `stripe.ts` = singleton (API version `2025-12-15.clover`). Webhooks handled by `stripePlugin` in `payload.config.ts` (NOT an app route): `invoice.paid`, `invoice.payment_failed`, `invoice.voided`, `invoice.marked_uncollectible`. Idempotency via `WebhookEvents`. **Shared helpers — always reuse, never inline the sequences:** `stripe/invoices.ts` → `createStripeInvoiceForOrder()` (create→attach lines→finalize, amounts in **dollars**) and `fulfillOrderPaidOutOfBand()` (offline mark-paid, Stripe-first); `stripe/customers.ts` → `resolveStripeCustomer()` (validate→search-by-email→create); `stripe/retry.ts` → `retryOnTransientError()` (Mongo write-conflict retry). |
 | **Shopify** | `src/lib/shopify/` | OAuth token cached in memory with auto-refresh. `customers.ts` does email lookup before create to prevent duplicates. |
 | **Google Calendar** | `src/lib/google-calendar.ts` | Service account with lazy init. Creates events with Google Meet links. `getAvailableSlots()` returns free 1-hour slots 9AM–5PM. |
 | **Email** | `src/lib/email/templates/` | Nodemailer via Gmail SMTP. All sends are non-blocking. See `/docs/EMAIL_TEMPLATES.md` for the full design standard — **always follow it when creating or modifying any email template**. |
@@ -471,6 +474,9 @@ import { Button } from '@/components/ui/button'
 | Dashboard view renders a blank/missing field | Staff loaders use `select` — add the field to the loader's `select` in `dashboard-data.ts` |
 | New dashboard route shows nothing while loading | Add a `loading.tsx` (compose from `LoadingSkeleton.tsx`) — prefetch needs a loading boundary |
 | Duplicate auth/doc fetches in `(spaces)` | Use `getSessionUser()` and the `detail-data.ts` `cache()` helpers — never raw `getCurrentUser`/`findByID` in both layout and page |
+| "View as client" preview leaks/misroutes | Guard client routes with `effectiveExperience(user)` and load accounts via `resolveActiveClientAccount()` — the plain `experienceFor`/`resolveClientAccount` are preview-blind |
+| Reinventing invoice numbers | An order's `orderNumber` = the finalized Stripe `invoice.number` (set at create in every invoice flow). Don't generate `INV-` — `nextOrderNumber()` survives only for non-Stripe placeholder orders (`linkScheduleEntriesToOrders`) |
+| Inlining Stripe create/finalize or customer lookup | Use `createStripeInvoiceForOrder()` / `resolveStripeCustomer()` / `fulfillOrderPaidOutOfBand()` in `src/lib/stripe/` — never re-copy the sequences |
 | Package manager errors | Always use `bun`, never npm/yarn/pnpm |
 
 ## Email System Rules

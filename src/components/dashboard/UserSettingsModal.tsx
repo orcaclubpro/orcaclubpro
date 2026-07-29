@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { Loader2, Check, X, KeyRound, ChevronDown, Fingerprint, ShieldCheck, Trash2 } from 'lucide-react'
-import Image from 'next/image'
 import { startRegistration } from '@simplewebauthn/browser'
 import { updateUserProfile, changeUserPassword } from '@/actions/profile'
 
@@ -17,7 +16,9 @@ interface PasskeyCredential {
   credentialBackedUp?: boolean
 }
 
-interface UserSettingsModalProps {
+interface UserSettingsPanelProps {
+  open: boolean
+  onClose: () => void
   name: string
   email: string
   title?: string | null
@@ -28,9 +29,8 @@ const PANEL_BG = '#1C1C1C'
 const fieldClass =
   'w-full h-9 rounded-lg px-3 text-sm text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)] outline-none transition-colors duration-150 border border-[var(--space-border-hard)] focus:border-[rgba(139,156,182,0.15)] bg-[var(--space-bg-card)] focus:bg-[var(--space-bg-card-hover)]'
 
-export function UserSettingsModal({ name, email, title, role }: UserSettingsModalProps) {
+export function UserSettingsPanel({ open, onClose, name, email, title, role }: UserSettingsPanelProps) {
   const router = useRouter()
-  const [open, setOpen] = useState(false)
   const [visible, setVisible] = useState(false)
   const isClient = role === 'client'
 
@@ -54,14 +54,22 @@ export function UserSettingsModal({ name, email, title, role }: UserSettingsModa
   const [addingPasskey, setAddingPasskey] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
+  // Initialize forms + slide in whenever the panel opens (was handleOpen).
   useEffect(() => {
-    if (open) requestAnimationFrame(() => setVisible(true))
-    else setVisible(false)
-  }, [open])
+    if (!open) { setVisible(false); return }
+    setForm({ name, email, title: title ?? '' })
+    setProfileError(null); setProfileSaved(false)
+    setPw({ current: '', next: '', confirm: '' })
+    setPwError(null); setPwSaved(false)
+    setShowPassword(false)
+    setPasskeyError(null)
+    fetchPasskeys()
+    requestAnimationFrame(() => setVisible(true))
+  }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!open) return
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') handleClose() }
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') requestClose() }
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
   }, [open, profileLoading, pwLoading])
@@ -82,21 +90,10 @@ export function UserSettingsModal({ name, email, title, role }: UserSettingsModa
     }
   }
 
-  function handleOpen() {
-    setForm({ name, email, title: title ?? '' })
-    setProfileError(null); setProfileSaved(false)
-    setPw({ current: '', next: '', confirm: '' })
-    setPwError(null); setPwSaved(false)
-    setShowPassword(false)
-    setPasskeyError(null)
-    setOpen(true)
-    fetchPasskeys()
-  }
-
-  function handleClose() {
+  function requestClose() {
     if (profileLoading || pwLoading) return
     setVisible(false)
-    setTimeout(() => setOpen(false), 300)
+    setTimeout(() => onClose(), 300)
   }
 
   async function handleSaveProfile() {
@@ -184,23 +181,9 @@ export function UserSettingsModal({ name, email, title, role }: UserSettingsModa
 
   const initial = (name || email || '?')[0].toUpperCase()
 
-  return (
-    <>
-      <button
-        onClick={handleOpen}
-        className="group flex items-center justify-center w-12 h-12 rounded-lg hover:bg-[var(--space-bg-card-hover)] transition-all duration-200 focus:outline-none focus-visible:ring-1 focus-visible:ring-[rgba(139,156,182,0.15)]"
-        aria-label="Profile"
-      >
-        <Image
-          src="/orcaclubpro.png"
-          alt="Profile"
-          width={48}
-          height={48}
-          className="opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-all duration-200"
-        />
-      </button>
+  if (!open || typeof document === 'undefined') return null
 
-      {open && typeof document !== 'undefined' && createPortal(
+  return createPortal(
         <>
           {/* Backdrop */}
           <div
@@ -208,7 +191,7 @@ export function UserSettingsModal({ name, email, title, role }: UserSettingsModa
             style={{
               background: visible ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0)',
             }}
-            onClick={handleClose}
+            onClick={requestClose}
           />
 
           {/* Panel — the panel itself scrolls; header is sticky */}
@@ -233,7 +216,7 @@ export function UserSettingsModal({ name, email, title, role }: UserSettingsModa
                   </div>
                 </div>
                 <button
-                  onClick={handleClose}
+                  onClick={requestClose}
                   disabled={profileLoading || pwLoading}
                   className="text-[var(--space-text-muted)] hover:text-[var(--space-text-tertiary)] transition-colors p-1.5 rounded-md hover:bg-[var(--space-bg-card-hover)] disabled:opacity-40"
                   aria-label="Close"
@@ -455,7 +438,5 @@ export function UserSettingsModal({ name, email, title, role }: UserSettingsModa
           </div>
         </>,
         document.body
-      )}
-    </>
-  )
+      )
 }
