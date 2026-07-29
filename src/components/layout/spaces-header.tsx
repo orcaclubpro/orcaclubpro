@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { LogOut } from "lucide-react"
 import { logoutAction } from "@/actions/auth"
 import { UserMenu } from "@/components/dashboard/UserMenu"
@@ -39,9 +40,19 @@ export function SpacesHeader({ user, showTips }: SpacesHeaderProps) {
         <div className="flex items-center gap-3 min-w-0">
           <Link
             href={homeHref}
-            className="text-[19px] font-bold tracking-[0.2em] shrink-0 text-[var(--space-nav-fg)] focus:outline-none hover:opacity-70 transition-opacity"
+            className="flex items-center gap-2.5 shrink-0 focus:outline-none hover:opacity-70 transition-opacity"
           >
-            SPACES
+            <Image
+              src="/orcaclubpro.png"
+              alt="ORCACLUB"
+              width={30}
+              height={30}
+              priority
+              className="shrink-0"
+            />
+            <span className="text-[19px] font-bold tracking-[0.2em] text-[var(--space-nav-fg)]">
+              SPACES
+            </span>
           </Link>
 
           {/* Breadcrumb — only when on a sub-page */}
