@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, X, Building2, FolderKanban, Zap, Loader2, ArrowRight } from 'lucide-react'
+import { Search, X, Building2, FolderKanban, Zap, Loader2, ArrowRight, ArrowUpRight, Package, Clock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { fetchSearchData } from '@/actions/search'
 import type { SearchClient, SearchProject, SearchSprint } from '@/actions/search'
@@ -109,6 +109,14 @@ export function GlobalSearchPalette({ username }: GlobalSearchPaletteProps) {
     setIsOpen(false)
     setQuery('')
     setSelectedIdx(0)
+  }
+
+  // Launcher tabs — the full-screen Package Builder / Retainer tools live in
+  // DashboardTaskManager. Dismiss the palette, then hand off via a DOM event
+  // (mirrors the 'orcaclub:open-search' pattern) so the tool opens on its tab.
+  const launchTool = (tab: 'builder' | 'retainer') => {
+    closePalette()
+    document.dispatchEvent(new CustomEvent('orcaclub:open-builder', { detail: { tab } }))
   }
 
   // ── Event listeners ─────────────────────────────────────────────────────────
@@ -237,6 +245,39 @@ export function GlobalSearchPalette({ username }: GlobalSearchPaletteProps) {
                 </kbd>
               )}
             </div>
+          </div>
+
+          {/* Mode strip — Search is inline; Builder/Retainer launch the full tool */}
+          <div className="flex items-center gap-1 px-2.5 py-2 border-b border-[var(--space-border-hard)] overflow-x-auto">
+            <button
+              type="button"
+              onClick={() => inputRef.current?.focus()}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium shrink-0"
+              style={{ background: 'rgba(103,232,249,0.08)', color: 'var(--space-accent)' }}
+            >
+              <Search className="size-3.5" />
+              Search
+            </button>
+            <button
+              type="button"
+              onClick={() => launchTool('builder')}
+              aria-label="Open Package Builder"
+              className="group flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] hover:bg-[var(--space-bg-base)] transition-colors shrink-0"
+            >
+              <Package className="size-3.5" />
+              <span><span className="hidden sm:inline">Package </span>Builder</span>
+              <ArrowUpRight className="size-3 opacity-40 group-hover:opacity-70 transition-opacity" />
+            </button>
+            <button
+              type="button"
+              onClick={() => launchTool('retainer')}
+              aria-label="Open Retainer"
+              className="group flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] hover:bg-[var(--space-bg-base)] transition-colors shrink-0"
+            >
+              <Clock className="size-3.5" />
+              Retainer
+              <ArrowUpRight className="size-3 opacity-40 group-hover:opacity-70 transition-opacity" />
+            </button>
           </div>
 
           {/* Body */}
