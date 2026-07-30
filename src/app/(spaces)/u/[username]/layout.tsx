@@ -3,7 +3,7 @@ import type { Metadata } from 'next'
 import { getSessionUser } from '@/app/(spaces)/session'
 import { experienceFor } from '@/app/(spaces)/experience'
 import { effectiveExperience } from '@/app/(spaces)/preview'
-import { DashboardTaskManager } from '@/components/dashboard/DashboardTaskManager'
+import { CommandConsoleLoader } from '@/components/dashboard/CommandConsoleLoader'
 import { PasskeySetupPrompt } from '@/components/dashboard/PasskeySetupPrompt'
 
 export async function generateMetadata({
@@ -56,7 +56,11 @@ export default async function DashboardLayout({
     <>
       {!hasPasskey && !previewing && <PasskeySetupPrompt />}
       {children}
-      <DashboardTaskManager username={username} userRole={previewing ? 'client' : user.role} />
+      {/* The powerhouse: search + package builder + retainer, one console.
+          Staff-only, and hidden while a staff member previews a client's portal. */}
+      {experienceFor(user.role) === 'staff' && !previewing && (
+        <CommandConsoleLoader username={username} />
+      )}
     </>
   )
 }

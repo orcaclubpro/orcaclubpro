@@ -1341,8 +1341,15 @@ export interface Retainer {
    * Playbook tier — drives preset fee/hours in the builder.
    */
   tier: 'basic' | 'growth' | 'enterprise';
-  status: 'active' | 'paused' | 'cancelled';
+  /**
+   * Inactive retainers are hidden from the dashboard; their logged hours are kept.
+   */
+  status: 'active' | 'inactive';
   startDate?: string | null;
+  /**
+   * Auto-set when activated — the billing-cycle anchor day.
+   */
+  activatedAt?: string | null;
   /**
    * USD per month
    */
@@ -1356,9 +1363,21 @@ export interface Retainer {
    */
   overageRate?: number | null;
   /**
+   * Scheduled deactivation — retainer stays active until this date, then flips inactive.
+   */
+  deactivateOn?: string | null;
+  /**
    * Internal notes
    */
   notes?: string | null;
+  pendingTier?: ('basic' | 'growth' | 'enterprise') | null;
+  pendingMonthlyFee?: number | null;
+  pendingHoursPerMonth?: number | null;
+  pendingOverageRate?: number | null;
+  /**
+   * When the scheduled change takes effect.
+   */
+  pendingEffectiveFrom?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1373,6 +1392,10 @@ export interface RetainerTimeEntry {
   date: string;
   hours: number;
   /**
+   * Draft = a planned task with no hours yet; Logged = actual time counted against the cap.
+   */
+  status: 'draft' | 'logged';
+  /**
    * Meetings, revisions, and reporting all count against the cap (per the playbook).
    */
   category?: ('work' | 'meeting' | 'revision' | 'reporting') | null;
@@ -1383,6 +1406,22 @@ export interface RetainerTimeEntry {
    * Staff member who logged this entry
    */
   loggedBy?: (string | null) | User;
+  /**
+   * hours/mo at log time
+   */
+  capAtLog?: number | null;
+  /**
+   * overage $/hr at log time
+   */
+  overageRateAtLog?: number | null;
+  /**
+   * fee/mo at log time
+   */
+  feeAtLog?: number | null;
+  /**
+   * tier at log time
+   */
+  tierAtLog?: ('basic' | 'growth' | 'enterprise') | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -2547,10 +2586,17 @@ export interface RetainersSelect<T extends boolean = true> {
   tier?: T;
   status?: T;
   startDate?: T;
+  activatedAt?: T;
   monthlyFee?: T;
   hoursPerMonth?: T;
   overageRate?: T;
+  deactivateOn?: T;
   notes?: T;
+  pendingTier?: T;
+  pendingMonthlyFee?: T;
+  pendingHoursPerMonth?: T;
+  pendingOverageRate?: T;
+  pendingEffectiveFrom?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -2561,11 +2607,16 @@ export interface RetainersSelect<T extends boolean = true> {
 export interface RetainerTimeEntriesSelect<T extends boolean = true> {
   date?: T;
   hours?: T;
+  status?: T;
   category?: T;
   description?: T;
   retainer?: T;
   clientAccount?: T;
   loggedBy?: T;
+  capAtLog?: T;
+  overageRateAtLog?: T;
+  feeAtLog?: T;
+  tierAtLog?: T;
   updatedAt?: T;
   createdAt?: T;
 }

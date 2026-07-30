@@ -46,6 +46,18 @@ const RetainerTimeEntries: CollectionConfig = {
       ],
     },
     {
+      name: 'status',
+      type: 'select',
+      defaultValue: 'logged',
+      required: true,
+      index: true,
+      options: [
+        { label: 'Draft', value: 'draft' },
+        { label: 'Logged', value: 'logged' },
+      ],
+      admin: { description: 'Draft = a planned task with no hours yet; Logged = actual time counted against the cap.' },
+    },
+    {
       name: 'category',
       type: 'select',
       defaultValue: 'work',
@@ -80,6 +92,43 @@ const RetainerTimeEntries: CollectionConfig = {
       type: 'relationship',
       relationTo: 'users',
       admin: { readOnly: true, description: 'Staff member who logged this entry' },
+    },
+    // ── Term snapshot ──────────────────────────────────────────────────────────
+    // The retainer's terms frozen at log time, so past months keep the cap/rate
+    // they were actually billed under even after the retainer is later edited.
+    // Set in logHours(); read by getRetainerSummary() for non-current months.
+    {
+      type: 'row',
+      fields: [
+        {
+          name: 'capAtLog',
+          type: 'number',
+          min: 0,
+          admin: { width: '25%', readOnly: true, description: 'hours/mo at log time' },
+        },
+        {
+          name: 'overageRateAtLog',
+          type: 'number',
+          min: 0,
+          admin: { width: '25%', readOnly: true, description: 'overage $/hr at log time' },
+        },
+        {
+          name: 'feeAtLog',
+          type: 'number',
+          min: 0,
+          admin: { width: '25%', readOnly: true, description: 'fee/mo at log time' },
+        },
+        {
+          name: 'tierAtLog',
+          type: 'select',
+          options: [
+            { label: 'Basic', value: 'basic' },
+            { label: 'Growth', value: 'growth' },
+            { label: 'Enterprise', value: 'enterprise' },
+          ],
+          admin: { width: '25%', readOnly: true, description: 'tier at log time' },
+        },
+      ],
     },
   ],
 }

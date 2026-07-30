@@ -3,7 +3,7 @@
 import { useRef, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { ChevronLeft, Search, MoreHorizontal } from 'lucide-react'
+import { ChevronLeft, MoreHorizontal } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { usePackageCount } from '@/app/(spaces)/PackageCountContext'
 import type { Experience } from '@/app/(spaces)/experience'
@@ -72,11 +72,9 @@ export function MobileBottomNav({ experience }: MobileBottomNavProps) {
   })
   const tabs = tabsFor(experience)
 
-  // Primary: always visible on mobile. Staff also get a Search shortcut (not a tab).
-  const primaryLinks: NavItem[] = [
-    ...tabs.filter(t => t.inNav && t.navGroup === 'primary').map(toLink),
-    ...(isClient ? [] : [{ href: '#search', label: 'Search', icon: Search, tab: 'search' }]),
-  ]
+  // Primary: always visible on mobile. Search lives in the CommandConsole now
+  // (FAB / "L") — it's no longer a nav item.
+  const primaryLinks: NavItem[] = tabs.filter(t => t.inNav && t.navGroup === 'primary').map(toLink)
 
   // Secondary: hidden on mobile (More menu), inline on md+.
   const secondaryLinks = tabs.filter(t => t.inNav && t.navGroup === 'secondary').map(toLink)
@@ -112,23 +110,6 @@ export function MobileBottomNav({ experience }: MobileBottomNavProps) {
         </span>
       </>
     )
-
-    // Search is a command-palette trigger, not a route
-    if (item.tab === 'search') {
-      return (
-        <a
-          href={item.href}
-          onClick={(e) => {
-            e.preventDefault()
-            setMenuOpen(false)
-            document.dispatchEvent(new CustomEvent('orcaclub:open-search'))
-          }}
-          className={className}
-        >
-          {inner}
-        </a>
-      )
-    }
 
     return (
       <Link href={item.href} onClick={() => setMenuOpen(false)} className={className}>

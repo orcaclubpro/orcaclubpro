@@ -47,7 +47,7 @@ const Retainers: CollectionConfig = {
             { label: 'Growth', value: 'growth' },
             { label: 'Enterprise', value: 'enterprise' },
           ],
-          admin: { width: '34%', description: 'Playbook tier — drives preset fee/hours in the builder.' },
+          admin: { width: '25%', description: 'Playbook tier — drives preset fee/hours in the builder.' },
         },
         {
           name: 'status',
@@ -57,15 +57,33 @@ const Retainers: CollectionConfig = {
           index: true,
           options: [
             { label: 'Active', value: 'active' },
-            { label: 'Paused', value: 'paused' },
-            { label: 'Cancelled', value: 'cancelled' },
+            { label: 'Inactive', value: 'inactive' },
           ],
-          admin: { width: '33%' },
+          admin: { width: '25%', description: 'Inactive retainers are hidden from the dashboard; their logged hours are kept.' },
         },
         {
           name: 'startDate',
           type: 'date',
-          admin: { width: '33%', date: { pickerAppearance: 'dayOnly' } },
+          admin: { width: '25%', date: { pickerAppearance: 'dayOnly' } },
+        },
+        {
+          name: 'activatedAt',
+          type: 'date',
+          admin: {
+            width: '25%',
+            readOnly: true,
+            date: { pickerAppearance: 'dayOnly' },
+            description: 'Auto-set when activated — the billing-cycle anchor day.',
+          },
+          hooks: {
+            beforeChange: [
+              ({ siblingData, value }) => {
+                // Stamp the first time it goes active; preserve the anchor thereafter.
+                if (siblingData?.status === 'active' && !value) return new Date()
+                return value
+              },
+            ],
+          },
         },
       ],
     },
@@ -94,9 +112,67 @@ const Retainers: CollectionConfig = {
       ],
     },
     {
+      name: 'deactivateOn',
+      type: 'date',
+      admin: {
+        readOnly: true,
+        date: { pickerAppearance: 'dayOnly' },
+        description: 'Scheduled deactivation — retainer stays active until this date, then flips inactive.',
+        condition: (data) => Boolean(data?.deactivateOn),
+      },
+    },
+    {
       name: 'notes',
       type: 'textarea',
       admin: { description: 'Internal notes' },
+    },
+    // ── Scheduled plan change (next cycle) ──────────────────────────────────────
+    // One pending change written/read by server actions (not hand-edited), applied
+    // at the next billing cycle. Hidden in admin until a change is scheduled.
+    {
+      type: 'collapsible',
+      label: 'Scheduled change (next cycle)',
+      admin: { condition: (data) => Boolean(data?.pendingEffectiveFrom) },
+      fields: [
+        {
+          name: 'pendingTier',
+          type: 'select',
+          options: [
+            { label: 'Basic', value: 'basic' },
+            { label: 'Growth', value: 'growth' },
+            { label: 'Enterprise', value: 'enterprise' },
+          ],
+          admin: { readOnly: true, condition: (data) => Boolean(data?.pendingEffectiveFrom) },
+        },
+        {
+          name: 'pendingMonthlyFee',
+          type: 'number',
+          min: 0,
+          admin: { readOnly: true, condition: (data) => Boolean(data?.pendingEffectiveFrom) },
+        },
+        {
+          name: 'pendingHoursPerMonth',
+          type: 'number',
+          min: 0,
+          admin: { readOnly: true, condition: (data) => Boolean(data?.pendingEffectiveFrom) },
+        },
+        {
+          name: 'pendingOverageRate',
+          type: 'number',
+          min: 0,
+          admin: { readOnly: true, condition: (data) => Boolean(data?.pendingEffectiveFrom) },
+        },
+        {
+          name: 'pendingEffectiveFrom',
+          type: 'date',
+          admin: {
+            readOnly: true,
+            date: { pickerAppearance: 'dayOnly' },
+            description: 'When the scheduled change takes effect.',
+            condition: (data) => Boolean(data?.pendingEffectiveFrom),
+          },
+        },
+      ],
     },
   ],
 }

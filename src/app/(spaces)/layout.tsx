@@ -2,7 +2,6 @@ import { getPayload } from "payload"
 import config from "@payload-config"
 import { SpacesHeader } from "@/components/layout/spaces-header"
 import { MobileBottomNav } from "@/components/dashboard/MobileBottomNav"
-import { GlobalSearchPaletteLoader } from "@/components/dashboard/GlobalSearchPaletteLoader"
 import { ClientPreviewBanner } from "@/components/dashboard/ClientPreviewBanner"
 import { getSessionUser } from "./session"
 import { effectiveExperience, getPreviewClientId } from "./preview"
@@ -20,7 +19,6 @@ export default async function SpacesLayout({
 }) {
   const user = await getSessionUser()
   const experience = await effectiveExperience(user)
-  const isDeveloper = experience === 'staff'
   const savedTheme = (user as any)?.dashboardTheme as ThemeId | undefined
   const initialTheme: ThemeId = (savedTheme && THEMES[savedTheme]) ? savedTheme : DEFAULT_THEME
 
@@ -72,9 +70,8 @@ export default async function SpacesLayout({
         </main>
       </div>
       <MobileBottomNav experience={experience} />
-      {isDeveloper && user?.username && (
-        <GlobalSearchPaletteLoader username={user.username} />
-      )}
+      {/* Search now lives inside the CommandConsole, mounted per-dashboard in
+          u/[username]/layout (staff-only, preview-aware). */}
     </PackageCountProvider>
     </HeaderTitleProvider>
     </ThemeProvider>

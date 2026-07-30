@@ -1384,3 +1384,187 @@ export async function buildPackagePdf(d: PackagePdfData): Promise<Uint8Array> {
 
   return doc.save()
 }
+
+// ── Retainer Hours Statement PDF ───────────────────────────────────────────────
+
+export interface RetainerStatementData {
+  clientName: string
+  clientCompany?: string | null
+  tierLabel: string          // e.g. "Growth"
+  periodLabel: string        // e.g. "Jul 10 – Aug 9, 2026"
+  monthlyFee: number         // USD/mo
+  hoursPerMonth: number      // the monthly cap
+  overageRate: number        // USD/hr
+  entries: Array<{ date: string; description: string; category: string; hours: number }>
+  totals: { used: number; remaining: number; overageHours: number; overageAmount: number }
+  generatedOn: string        // ISO date string
+}
+
+/** Format a numeric hours value trimmed to at most 2 decimals (e.g. 2, 2.5, 2.25). */
+function fmtHours(n: number): string {
+  return n.toLocaleString('en-US', { maximumFractionDigits: 2 })
+}
+
+/** Format an entry date as short month/day (e.g. "Jul 12"), falling back to the raw string. */
+function fmtShortDate(val: string): string {
+  if (!val) return '—'
+  const iso = /^\d{4}-\d{2}-\d{2}$/.test(val)
+  const dt = new Date(iso ? val + 'T00:00:00' : val)
+  return isNaN(dt.getTime())
+    ? val
+    : dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+/** Format an ISO date as a full long date (e.g. "July 29, 2026"), falling back to the raw string. */
+function fmtLongDate(val: string): string {
+  if (!val) return '—'
+  const iso = /^\d{4}-\d{2}-\d{2}$/.test(val)
+  const dt = new Date(iso ? val + 'T00:00:00' : val)
+  return isNaN(dt.getTime())
+    ? val
+    : dt.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+}
+
+export async function buildRetainerStatementPdf(d: RetainerStatementData): Promise<Uint8Array> {
+  const doc = await PDFDocument.create()
+  doc.registerFontkit(fontkit)
+  const bold   = await doc.embedFont(StandardFonts.HelveticaBold)
+  const normal = await doc.embedFont(StandardFonts.Helvetica)
+  const gothic = await doc.embedFont(Buffer.from(CINZEL_DECORATIVE_BOLD_BASE64, 'base64'), { subset: true })
+
+  const genLabel = fmtLongDate(d.generatedOn)
+
+  const w = new DocWriter(
+    doc, bold, normal,
+    'ret_',
+    `RETAINER HOURS STATEMENT — ${blank(d.clientCompany || d.clientName, 'CLIENT')}`,
+    'ORCACLUB · Web Design and Marketing Automation · orcaclub.pro',
+    { gothic, branded: true },
+  )
+
+  // ── Header + title (matches invoice / proposal / SOW) ────────────────────────
+  w.brandHeader('Retainer Statement', genLabel)
+  w.brandTitle('RETAINER HOURS STATEMENT', `${d.tierLabel} Retainer`)
+
+  // ── Meta block ───────────────────────────────────────────────────────────────
+  const metaColW = [w.innerW * 0.26, w.innerW * 0.74]
+  const clientVal = d.clientCompany
+    ? `${d.clientName}  ·  ${d.clientCompany}`
+    : d.clientName
+  w.table([], metaColW, [
+    ['Client',         clientVal],
+    ['Tier',           d.tierLabel],
+    ['Billing Period', d.periodLabel],
+    ['Generated',      genLabel],
+  ])
+  w.sp(6)
+
+  // ── Plan terms box ───────────────────────────────────────────────────────────
+  {
+    const planLine = `${d.tierLabel} · ${money(d.monthlyFee)}/mo · ${d.hoursPerMonth} hrs/mo · overage ${money(d.overageRate)}/hr`
+    const boxH = 26
+    w.need(boxH + 12)
+    w.page.drawRectangle({ x: w.ml, y: w.y - boxH, width: w.innerW, height: boxH, color: BRAND.boxBg })
+    w.page.drawRectangle({ x: w.ml, y: w.y - boxH, width: 3, height: boxH, color: BRAND.navy })
+    w.page.drawText(planLine, { x: w.ml + 14, y: w.y - 17, size: 9.5, font: w.bold, color: BRAND.ink })
+    w.y -= boxH + 14
+  }
+
+  // ── Hours logged table ───────────────────────────────────────────────────────
+  w.section('Hours Logged')
+
+  const cDate = 58, cCat = 92, cHours = 52
+  const cDesc = w.innerW - cDate - cCat - cHours
+  const xDate  = w.ml
+  const xDesc  = xDate + cDate
+  const xCat   = xDesc + cDesc
+  const xHours = xCat + cCat // right edge = xHours + cHours = ml + innerW
+
+  // Header bar — light gray with tracked uppercase labels (branded style)
+  const hRowH = 20
+  w.need(hRowH + 2)
+  w.page.drawRectangle({ x: w.ml, y: w.y - hRowH, width: w.innerW, height: hRowH, color: BRAND.headBg })
+  const hy = w.y - 13
+  drawTracked(w.page, 'DATE',        xDate + 6, hy, 6.5, w.bold, BRAND.gray6, 0.8)
+  drawTracked(w.page, 'DESCRIPTION', xDesc + 6, hy, 6.5, w.bold, BRAND.gray6, 0.8)
+  drawTracked(w.page, 'CATEGORY',    xCat + 6,  hy, 6.5, w.bold, BRAND.gray6, 0.8)
+  const hoursHdrW = trackedWidth('HOURS', 6.5, w.bold, 0.8)
+  drawTracked(w.page, 'HOURS', xHours + cHours - hoursHdrW - 6, hy, 6.5, w.bold, BRAND.gray6, 0.8)
+  w.y -= hRowH + 1
+
+  const size = 9
+  if (d.entries.length === 0) {
+    const rowH = size + 14
+    w.need(rowH + 1)
+    w.page.drawText('No hours logged for this period.', {
+      x: xDate + 6, y: w.y - size - 6, size, font: w.normal, color: BRAND.gray6,
+    })
+    w.y -= rowH + 1
+  } else {
+    for (let ri = 0; ri < d.entries.length; ri++) {
+      const e = d.entries[ri]
+      const descLines = wrap(e.description.replace(/\s+/g, ' '), w.normal, size, cDesc - 12)
+      const rowH = descLines.length * (size + 3) + 10
+      w.need(rowH + 1)
+
+      const bg = ri % 2 === 1 ? BRAND.ruleLt : C.white
+      w.page.drawRectangle({ x: w.ml, y: w.y - rowH, width: w.innerW, height: rowH, color: bg })
+
+      const ty0 = w.y - size - 5
+      w.page.drawText(fmtShortDate(e.date), { x: xDate + 6, y: ty0, size, font: w.normal, color: BRAND.ink })
+      let ty = ty0
+      for (const ln of descLines) {
+        w.page.drawText(ln, { x: xDesc + 6, y: ty, size, font: w.normal, color: BRAND.ink })
+        ty -= size + 3
+      }
+      w.page.drawText(e.category, { x: xCat + 6, y: ty0, size, font: w.normal, color: BRAND.gray6 })
+      const hStr = fmtHours(e.hours)
+      const hStrW = w.normal.widthOfTextAtSize(hStr, size)
+      w.page.drawText(hStr, { x: xHours + cHours - hStrW - 6, y: ty0, size, font: w.normal, color: BRAND.ink })
+
+      w.page.drawLine({
+        start: { x: w.ml, y: w.y - rowH },
+        end:   { x: w.pw - w.mr, y: w.y - rowH },
+        thickness: 0.3, color: BRAND.rule,
+      })
+      w.y -= rowH + 1
+    }
+  }
+  w.sp(6)
+
+  // ── Totals summary (right-aligned block, like the invoice) ───────────────────
+  const totX = w.pw - w.mr - 230
+  const totRow = (
+    labelTxt: string, valueTxt: string,
+    opts?: { strong?: boolean; size?: number; color?: ReturnType<typeof rgb> },
+  ) => {
+    w.need(18)
+    const s = opts?.size ?? 9.5
+    w.page.drawText(labelTxt, {
+      x: totX, y: w.y, size: s,
+      font: opts?.strong ? w.bold : w.normal,
+      color: opts?.strong ? BRAND.ink : BRAND.gray6,
+    })
+    const vw = w.bold.widthOfTextAtSize(valueTxt, s)
+    w.page.drawText(valueTxt, { x: w.pw - w.mr - vw, y: w.y, size: s, font: w.bold, color: opts?.color ?? BRAND.ink })
+    w.y -= s + 8
+  }
+
+  w.need(40)
+  w.page.drawLine({ start: { x: totX, y: w.y + 4 }, end: { x: w.pw - w.mr, y: w.y + 4 }, thickness: 0.6, color: BRAND.rule })
+  w.y -= 8
+  totRow('Hours used', `${fmtHours(d.totals.used)} / ${fmtHours(d.hoursPerMonth)}`, { strong: true, size: 11 })
+  totRow('Remaining', `${fmtHours(d.totals.remaining)} hrs`)
+  if (d.totals.overageHours > 0) {
+    totRow('Overage', `${fmtHours(d.totals.overageHours)} hrs · ${money(d.totals.overageAmount)}`, { color: BRAND.cyan })
+  }
+
+  w.sp(12)
+  w.body(
+    'This statement summarizes hours logged against your monthly retainer for the period shown. Unused hours do not roll over unless otherwise agreed in writing.',
+    8, BRAND.gray6,
+  )
+
+  w._drawFooter()
+  return doc.save()
+}
