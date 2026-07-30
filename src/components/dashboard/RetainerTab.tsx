@@ -13,6 +13,7 @@ import {
   getRetainerSummary,
   setRetainer,
   setRetainerActive,
+  setRetainerAnchor,
   logHours,
   logPlannedHours,
   createDraft,
@@ -149,6 +150,11 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
   const [notes, setNotes] = useState('')
   const [savingRetainer, setSavingRetainer] = useState(false)
 
+  // Re-anchor cycle control (explicit — rewrites the read-only activatedAt anchor)
+  const [anchorOpen, setAnchorOpen] = useState(false)
+  const [anchorDate, setAnchorDate] = useState('')
+  const [reanchoring, setReanchoring] = useState(false)
+
   // Log-hours form
   const [logDate, setLogDate] = useState(todayInput())
   const [logHoursStr, setLogHoursStr] = useState('')
@@ -230,6 +236,8 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
       setOverageStr(String(retainer.overageRate ?? 65))
       setStartDate(retainer.startDate ? String(retainer.startDate).slice(0, 10) : '')
       setNotes(retainer.notes ?? '')
+      setAnchorDate((retainer.activatedAt ?? retainer.startDate) ? String(retainer.activatedAt ?? retainer.startDate).slice(0, 10) : '')
+      setAnchorOpen(false)
       setEditing(false)
     } else {
       applyPreset('basic')
@@ -352,6 +360,20 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
     if (r.success) { setEditing(false); await load() }
     else setError(r.error ?? 'Failed to save retainer')
     setSavingRetainer(false)
+  }
+
+  async function handleReanchor() {
+    setError(null)
+    if (!retainer) return
+    if (!anchorDate) { setError('Pick a cycle start date'); return }
+    setReanchoring(true)
+    const r = await setRetainerAnchor(retainer.id, anchorDate)
+    if (r.success) {
+      setAnchorOpen(false)
+      setRefDate('') // jump back to the current cycle under the new anchor
+      await load()
+    } else setError(r.error ?? 'Failed to re-anchor cycle')
+    setReanchoring(false)
   }
 
   async function handleLog() {
@@ -757,6 +779,49 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                 <p className="text-[10px] text-[var(--space-text-muted)]">
                   Fee / hours / overage changes take effect next cycle. Notes and start date apply immediately.
                 </p>
+              )}
+
+              {/* ── Cycle anchor — explicit re-anchor (rewrites activatedAt) ── */}
+              {retainer && (
+                <div className="rounded-lg border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] px-3 py-2.5">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <CalendarClock className="size-3.5 shrink-0 text-[var(--space-text-muted)]" />
+                      <span className="text-xs text-[var(--space-text-secondary)] truncate">
+                        Cycles anchored to <span className="font-semibold text-[var(--space-text-primary)]">{fmtDay(retainer.activatedAt ?? retainer.startDate) || '—'}</span>
+                      </span>
+                    </div>
+                    {!anchorOpen && (
+                      <button type="button" onClick={() => setAnchorOpen(true)} className={ghostBtn}>
+                        Adjust cycle start
+                      </button>
+                    )}
+                  </div>
+
+                  {anchorOpen && (
+                    <div className="mt-3 space-y-2.5">
+                      <label className="block">
+                        <span className={fieldLabel}>Cycle start date</span>
+                        <input type="date" value={anchorDate} onChange={(e) => setAnchorDate(e.target.value)} className={cn(inputCls, 'mt-1')} />
+                      </label>
+                      <p className="text-[10px] leading-relaxed text-amber-500">
+                        Only the day of the month sets when cycles begin. This re-dates history — existing logged hours may shift into a different cycle. Applies immediately.
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <button onClick={handleReanchor} disabled={reanchoring} className={accentBtn}>
+                          {reanchoring ? <Loader2 className="size-3.5 animate-spin" /> : null}
+                          Re-anchor cycle
+                        </button>
+                        <button
+                          onClick={() => { setAnchorOpen(false); setAnchorDate((retainer.activatedAt ?? retainer.startDate) ? String(retainer.activatedAt ?? retainer.startDate).slice(0, 10) : '') }}
+                          className="px-3 py-2 text-xs text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] rounded-lg hover:bg-[var(--space-bg-card)] transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
 
               <div className="flex items-center gap-2">

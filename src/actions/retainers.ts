@@ -432,6 +432,37 @@ export async function setRetainerActive(retainerId: string, active: boolean) {
   }
 }
 
+/**
+ * Re-anchor a retainer's billing cycle to a new date. The cycle anchor is normally the
+ * auto-stamped `activatedAt` (read-only in admin); this deliberately rewrites it so staff
+ * can correct or shift when cycles begin. Only the day-of-month matters for cycle math.
+ *
+ * NOTE: this re-dates history — past/current cycle windows shift, so already-logged time
+ * entries may fall into a different cycle. The caller warns before invoking. Staff only.
+ */
+export async function setRetainerAnchor(retainerId: string, date: string) {
+  try {
+    const user = await getCurrentUser()
+    if (!user || user.role === 'client') return { success: false as const, error: 'Unauthorized' }
+    if (!retainerId) return { success: false as const, error: 'No retainer selected' }
+    const day = String(date).slice(0, 10)
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return { success: false as const, error: 'A valid date is required' }
+
+    const payload = await getPayload({ config })
+    const r = (await payload
+      .findByID({ collection: 'retainers', id: retainerId, depth: 0 })
+      .catch(() => null)) as RetainerDoc | null
+    if (!r) return { success: false as const, error: 'Retainer not found' }
+
+    // Local API ignores the field's admin `readOnly` flag — the anchor is rewritten here.
+    await payload.update({ collection: 'retainers', id: retainerId, data: { activatedAt: dayToIso(day) } as any })
+    return { success: true as const, activatedAt: dayToIso(day) }
+  } catch (error) {
+    console.error('[setRetainerAnchor]', error)
+    return { success: false as const, error: error instanceof Error ? error.message : 'Failed to re-anchor retainer' }
+  }
+}
+
 /** Log actual hours against a retainer — freezes the terms in effect on that date. Staff only. */
 export async function logHours(input: {
   retainerId: string
