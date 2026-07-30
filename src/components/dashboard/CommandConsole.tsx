@@ -183,7 +183,7 @@ export function CommandConsole({ username }: CommandConsoleProps) {
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Global launch keys — L: search · K: build. Ignored while typing elsewhere.
+  // Global launch keys — L: search · K: build · ` : cycle stations. Ignored while typing.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return
@@ -198,6 +198,11 @@ export function CommandConsole({ username }: CommandConsoleProps) {
         e.preventDefault()
         if (isOpenRef.current) goStation('retainer')
         else openConsole('retainer')
+      } else if (e.key === '`' && !isOpenRef.current) {
+        // Backtick opens the console; cycling once open is handled below (fires even
+        // while the search input is focused, which this global handler skips).
+        e.preventDefault()
+        openConsole(STATIONS[0].id)
       }
     }
     document.addEventListener('keydown', handler)
@@ -208,6 +213,15 @@ export function CommandConsole({ username }: CommandConsoleProps) {
   useEffect(() => {
     if (!isOpen) return
     const handler = (e: KeyboardEvent) => {
+      // Backtick cycles stations in rail order (search → retainer → build → …), from
+      // any station — including while the search input is focused.
+      if (e.key === '`' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault()
+        const order = STATIONS.map((s) => s.id)
+        const idx = order.indexOf(stationRef.current)
+        goStation(order[(idx + 1) % order.length])
+        return
+      }
       if (stationRef.current !== 'search') {
         if (e.key === 'Escape') { e.preventDefault(); goStation('search') }
         return

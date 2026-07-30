@@ -73,6 +73,14 @@ export async function GET(
         description: e.description ?? '',
         category: e.category ?? 'work',
         hours: e.hours,
+        priority: e.priority ?? 'medium',
+      })),
+      planned: summary.drafts.map((e) => ({
+        date: e.date,
+        description: e.description ?? '',
+        category: e.category ?? 'work',
+        priority: e.priority ?? 'medium',
+        completion: e.completion ?? 'incomplete',
       })),
       totals: {
         used: summary.totals.used,

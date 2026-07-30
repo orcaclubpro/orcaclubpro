@@ -4,12 +4,15 @@ import { getCurrentUser } from '@/actions/auth'
 import { getPayload } from 'payload'
 import config from '@payload-config'
 import { cycleFor, nextCycleStart, type Cycle } from '@/lib/retainers/cycle'
+import { deriveRecapDefaults, type RecapData } from '@/lib/retainers/recap'
 
 // ── Shared shapes ───────────────────────────────────────────────────────────────
 
 export type RetainerTier = 'basic' | 'growth' | 'enterprise'
 export type RetainerStatus = 'active' | 'inactive'
 export type TimeEntryCategory = 'work' | 'meeting' | 'revision' | 'reporting'
+export type TimeEntryPriority = 'low' | 'medium' | 'high'
+export type TimeEntryCompletion = 'incomplete' | 'complete'
 export type TimeEntryStatus = 'draft' | 'logged'
 
 export interface RetainerDoc {
@@ -38,6 +41,8 @@ export interface TimeEntryDoc {
   hours: number
   status: TimeEntryStatus
   category?: TimeEntryCategory | null
+  priority?: TimeEntryPriority | null
+  completion?: TimeEntryCompletion | null
   description?: string | null
   retainer: string | { id: string }
   clientAccount: string | { id: string }
@@ -434,6 +439,7 @@ export async function logHours(input: {
   date: string
   hours: number
   category?: TimeEntryCategory
+  priority?: TimeEntryPriority
   description?: string
 }) {
   try {
@@ -462,6 +468,7 @@ export async function logHours(input: {
         hours: input.hours,
         status: 'logged',
         category: input.category ?? 'work',
+        priority: input.priority ?? 'medium',
         description: input.description || undefined,
         loggedBy: user.id,
         capAtLog: terms?.hoursPerMonth ?? undefined,
@@ -488,6 +495,7 @@ export async function createDraft(input: {
   date: string
   description: string
   category?: TimeEntryCategory
+  priority?: TimeEntryPriority
 }) {
   try {
     const user = await getCurrentUser()
@@ -506,6 +514,8 @@ export async function createDraft(input: {
         hours: 0,
         status: 'draft',
         category: input.category ?? 'work',
+        priority: input.priority ?? 'medium',
+        completion: 'incomplete',
         description: input.description.trim(),
         loggedBy: user.id,
       } as any,
@@ -519,15 +529,19 @@ export async function createDraft(input: {
 }
 
 /**
- * Edit an entry. Setting hours > 0 on a draft CONVERTS it to a logged entry and freezes
- * the terms in effect on its date; editing an already-logged entry leaves its frozen
- * terms untouched (an edit changes the work item, not the contract). Staff only.
+ * Edit an entry in place — description, date, category, priority, hours, and (for planned
+ * work) completion status. Editing does NOT change an entry's kind: a planned/draft item
+ * stays planned even with hours set, and a logged entry stays logged. To turn planned work
+ * into counted time, use `logHours` (which creates a separate logged entry and leaves the
+ * plan in place — see logPlannedHours). Staff only.
  */
 export async function updateTimeEntry(input: {
   id: string
   date?: string
   hours?: number
   category?: TimeEntryCategory
+  priority?: TimeEntryPriority
+  completion?: TimeEntryCompletion
   description?: string
 }) {
   try {
@@ -536,7 +550,6 @@ export async function updateTimeEntry(input: {
     if (!input.id) return { success: false as const, error: 'No entry selected' }
 
     const payload = await getPayload({ config })
-    const now = new Date().toISOString()
     const entry = (await payload
       .findByID({ collection: 'retainer-time-entries', id: input.id, depth: 0 })
       .catch(() => null)) as TimeEntryDoc | null
@@ -545,35 +558,138 @@ export async function updateTimeEntry(input: {
     const data: Record<string, unknown> = {}
     if (input.date !== undefined) data.date = dayToIso(input.date)
     if (input.category !== undefined) data.category = input.category
+    if (input.priority !== undefined) data.priority = input.priority
+    if (input.completion !== undefined) data.completion = input.completion
     if (input.description !== undefined) data.description = input.description
     if (input.hours !== undefined) data.hours = input.hours
-
-    const nextHours = input.hours ?? entry.hours
-    const nextDate = (data.date as string | undefined) ?? entry.date
-
-    // Draft → logged conversion: freeze terms in effect on the entry's date.
-    if (entry.status === 'draft' && nextHours > 0) {
-      data.status = 'logged'
-      data.loggedBy = user.id
-      const retId = typeof entry.retainer === 'object' ? entry.retainer.id : entry.retainer
-      const raw = (await payload
-        .findByID({ collection: 'retainers', id: retId, depth: 0 })
-        .catch(() => null)) as RetainerDoc | null
-      const retainer = raw ? await settleRetainer(payload, raw, now) : null
-      if (retainer) {
-        const terms = effectiveTerms(retainer, new Date(nextDate).toISOString())
-        data.capAtLog = terms.hoursPerMonth
-        data.overageRateAtLog = terms.overageRate
-        data.feeAtLog = terms.monthlyFee
-        data.tierAtLog = terms.tier
-      }
-    }
 
     const updated = await payload.update({ collection: 'retainer-time-entries', id: input.id, data: data as any })
     return { success: true as const, id: input.id, entry: updated as unknown as TimeEntryDoc }
   } catch (error) {
     console.error('[updateTimeEntry]', error)
     return { success: false as const, error: error instanceof Error ? error.message : 'Failed to update entry' }
+  }
+}
+
+/**
+ * Log actual hours against a planned (draft) item WITHOUT consuming it. Creates a separate
+ * logged entry (counted against the cap, terms frozen on its date) and marks the plan
+ * complete, so the planned-work checklist keeps a permanent record. Staff only.
+ */
+export async function logPlannedHours(input: {
+  draftId: string
+  hours: number
+  date?: string
+  category?: TimeEntryCategory
+  priority?: TimeEntryPriority
+  description?: string
+}) {
+  try {
+    const user = await getCurrentUser()
+    if (!user || user.role === 'client') return { success: false as const, error: 'Unauthorized' }
+    if (!input.draftId) return { success: false as const, error: 'No planned item selected' }
+    if (!(input.hours > 0)) return { success: false as const, error: 'Hours must be greater than zero' }
+
+    const payload = await getPayload({ config })
+    const draft = (await payload
+      .findByID({ collection: 'retainer-time-entries', id: input.draftId, depth: 0 })
+      .catch(() => null)) as TimeEntryDoc | null
+    if (!draft) return { success: false as const, error: 'Planned item not found' }
+
+    const retainerId = typeof draft.retainer === 'object' ? draft.retainer.id : draft.retainer
+    const clientAccountId = typeof draft.clientAccount === 'object' ? draft.clientAccount.id : draft.clientAccount
+
+    // Create the logged entry — defaults come from the plan (incl. its date so the time
+    // lands in the same cycle), overridable from the log dialog.
+    const logged = await logHours({
+      retainerId,
+      clientAccountId,
+      date: input.date ?? String(draft.date).slice(0, 10),
+      hours: input.hours,
+      category: input.category ?? (draft.category ?? 'work') as TimeEntryCategory,
+      priority: input.priority ?? (draft.priority ?? 'medium') as TimeEntryPriority,
+      description: input.description ?? draft.description ?? undefined,
+    })
+    if (!logged.success) return logged
+
+    // Mark the plan complete — it stays in the planned list for tracking.
+    await payload.update({
+      collection: 'retainer-time-entries',
+      id: input.draftId,
+      data: { completion: 'complete' } as any,
+    })
+
+    return { success: true as const, id: logged.id }
+  } catch (error) {
+    console.error('[logPlannedHours]', error)
+    return { success: false as const, error: error instanceof Error ? error.message : 'Failed to log planned hours' }
+  }
+}
+
+const TIER_LABEL: Record<RetainerTier, string> = { basic: 'Basic', growth: 'Growth', enterprise: 'Enterprise' }
+
+/**
+ * Derive the default recap for a client's current (or `refDate`) billing cycle —
+ * the pre-filled model the composer opens with. Numbers come straight from the
+ * cycle summary; narrative fields start blank. Next-month priorities are seeded
+ * from any planned (draft) items already sitting in the *next* cycle. Staff only.
+ */
+export async function getRecapModel(clientAccountId: string, refDate?: string) {
+  try {
+    const user = await getCurrentUser()
+    if (!user || user.role === 'client') return { success: false as const, error: 'Unauthorized' }
+    if (!clientAccountId) return { success: false as const, error: 'A client is required' }
+
+    const summary = await getRetainerSummary(clientAccountId, refDate)
+    if (!summary.success) return { success: false as const, error: summary.error }
+    if (!summary.retainer || !summary.cycle || !summary.terms) {
+      return { success: false as const, error: 'No active retainer cycle to recap' }
+    }
+
+    const payload = await getPayload({ config })
+    const account = await payload
+      .findByID({ collection: 'client-accounts', id: clientAccountId, depth: 0 })
+      .catch(() => null)
+
+    // Group logged descriptions by category to seed each bucket's narrative.
+    const loggedDescriptions: Partial<Record<TimeEntryCategory, string[]>> = {}
+    for (const e of summary.logged) {
+      if (!e.description) continue
+      const cat = (e.category ?? 'work') as TimeEntryCategory
+      ;(loggedDescriptions[cat] ??= []).push(e.description)
+    }
+
+    // Seed next-month priorities from planned items already sitting in the next cycle.
+    let nextMonthPriorities: string[] = []
+    const nextSummary = await getRetainerSummary(clientAccountId, summary.cycle.end)
+    if (nextSummary.success) {
+      nextMonthPriorities = nextSummary.drafts.map((d) => d.description ?? '').filter(Boolean)
+    }
+
+    const model = deriveRecapDefaults({
+      clientName: account?.name ?? 'Client',
+      clientCompany: account?.company ?? null,
+      tier: summary.terms.tier,
+      tierLabel: TIER_LABEL[summary.terms.tier],
+      periodLabel: summary.cycle.label,
+      monthlyFee: summary.terms.monthlyFee,
+      hoursPerMonth: summary.terms.hoursPerMonth,
+      hoursUsed: summary.totals.used,
+      byCategory: summary.totals.byCategory,
+      loggedCount: summary.logged.length,
+      loggedDescriptions,
+      nextMonthPriorities,
+    })
+
+    return {
+      success: true as const,
+      model,
+      retainerId: summary.retainer.id,
+      cycleStart: summary.cycle.start,
+    }
+  } catch (error) {
+    console.error('[getRecapModel]', error)
+    return { success: false as const, error: error instanceof Error ? error.message : 'Failed to build recap' }
   }
 }
 

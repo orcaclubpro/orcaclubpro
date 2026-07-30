@@ -70,6 +70,27 @@ const RetainerTimeEntries: CollectionConfig = {
       admin: { description: 'Meetings, revisions, and reporting all count against the cap (per the playbook).' },
     },
     {
+      name: 'priority',
+      type: 'select',
+      defaultValue: 'medium',
+      options: [
+        { label: 'Low', value: 'low' },
+        { label: 'Medium', value: 'medium' },
+        { label: 'High', value: 'high' },
+      ],
+      admin: { description: 'Priority of this task — for planning and reporting only; does not affect billing.' },
+    },
+    {
+      name: 'completion',
+      type: 'select',
+      defaultValue: 'incomplete',
+      options: [
+        { label: 'Incomplete', value: 'incomplete' },
+        { label: 'Complete', value: 'complete' },
+      ],
+      admin: { description: 'For planned (draft) work — whether the task has been completed. Shown on the retainer statement PDF.' },
+    },
+    {
       name: 'description',
       type: 'textarea',
     },

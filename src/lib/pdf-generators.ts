@@ -1,7 +1,14 @@
-import { PDFDocument, StandardFonts, rgb, PDFFont, PDFPage } from 'pdf-lib'
+import { PDFDocument, StandardFonts, rgb, PDFFont, PDFPage, PDFImage } from 'pdf-lib'
 import fontkit from '@pdf-lib/fontkit'
 import type { NdaFormData, SowFormData } from './document-generators'
+import type { RecapData } from './retainers/recap'
 import { CINZEL_DECORATIVE_BOLD_BASE64 } from './fonts/cinzel-decorative-bold'
+import { NEWSREADER_REGULAR_BASE64 } from './fonts/newsreader-regular'
+import { NEWSREADER_LIGHT_BASE64 } from './fonts/newsreader-light'
+import { POPPINS_LIGHT_BASE64 } from './fonts/poppins-light'
+import { POPPINS_REGULAR_BASE64 } from './fonts/poppins-regular'
+import { IBM_PLEX_MONO_REGULAR_BASE64 } from './fonts/ibm-plex-mono-regular'
+import { ORCA_MARK_BLACK_PNG_BASE64 } from './fonts/orca-mark-black'
 
 // ── Color palette ──────────────────────────────────────────────────────────────
 
@@ -1395,7 +1402,8 @@ export interface RetainerStatementData {
   monthlyFee: number         // USD/mo
   hoursPerMonth: number      // the monthly cap
   overageRate: number        // USD/hr
-  entries: Array<{ date: string; description: string; category: string; hours: number }>
+  entries: Array<{ date: string; description: string; category: string; hours: number; priority?: string }>
+  planned?: Array<{ date: string; description: string; category: string; priority?: string; completion?: string }>  // draft / projected work — no hours yet
   totals: { used: number; remaining: number; overageHours: number; overageAmount: number }
   generatedOn: string        // ISO date string
 }
@@ -1470,37 +1478,40 @@ export async function buildRetainerStatementPdf(d: RetainerStatementData): Promi
     w.y -= boxH + 14
   }
 
-  // ── Hours logged table ───────────────────────────────────────────────────────
-  w.section('Hours Logged')
-
-  const cDate = 58, cCat = 92, cHours = 52
-  const cDesc = w.innerW - cDate - cCat - cHours
-  const xDate  = w.ml
-  const xDesc  = xDate + cDate
-  const xCat   = xDesc + cDesc
-  const xHours = xCat + cCat // right edge = xHours + cHours = ml + innerW
-
-  // Header bar — light gray with tracked uppercase labels (branded style)
-  const hRowH = 20
-  w.need(hRowH + 2)
-  w.page.drawRectangle({ x: w.ml, y: w.y - hRowH, width: w.innerW, height: hRowH, color: BRAND.headBg })
-  const hy = w.y - 13
-  drawTracked(w.page, 'DATE',        xDate + 6, hy, 6.5, w.bold, BRAND.gray6, 0.8)
-  drawTracked(w.page, 'DESCRIPTION', xDesc + 6, hy, 6.5, w.bold, BRAND.gray6, 0.8)
-  drawTracked(w.page, 'CATEGORY',    xCat + 6,  hy, 6.5, w.bold, BRAND.gray6, 0.8)
-  const hoursHdrW = trackedWidth('HOURS', 6.5, w.bold, 0.8)
-  drawTracked(w.page, 'HOURS', xHours + cHours - hoursHdrW - 6, hy, 6.5, w.bold, BRAND.gray6, 0.8)
-  w.y -= hRowH + 1
-
   const size = 9
-  if (d.entries.length === 0) {
-    const rowH = size + 14
-    w.need(rowH + 1)
-    w.page.drawText('No hours logged for this period.', {
-      x: xDate + 6, y: w.y - size - 6, size, font: w.normal, color: BRAND.gray6,
-    })
-    w.y -= rowH + 1
-  } else {
+  const planned = d.planned ?? []
+  // Priority label for the PDF — Medium is the neutral default and left blank (matches
+  // the dashboard, which only badges High/Low). High is emphasized in bold below.
+  const priText = (p?: string): string => (p === 'high' ? 'High' : p === 'low' ? 'Low' : '')
+
+  // ── Hours logged table ───────────────────────────────────────────────────────
+  // Only render the table when hours have actually been logged. With nothing logged
+  // we skip it entirely (no empty "No hours logged" table) — the totals block below
+  // still reports 0 / cap remaining.
+  if (d.entries.length > 0) {
+    w.section('Hours Logged')
+
+    const cDate = 58, cPri = 50, cCat = 84, cHours = 52
+    const cDesc = w.innerW - cDate - cPri - cCat - cHours
+    const xDate  = w.ml
+    const xDesc  = xDate + cDate
+    const xPri   = xDesc + cDesc
+    const xCat   = xPri + cPri
+    const xHours = xCat + cCat // right edge = xHours + cHours = ml + innerW
+
+    // Header bar — light gray with tracked uppercase labels (branded style)
+    const hRowH = 20
+    w.need(hRowH + 2)
+    w.page.drawRectangle({ x: w.ml, y: w.y - hRowH, width: w.innerW, height: hRowH, color: BRAND.headBg })
+    const hy = w.y - 13
+    drawTracked(w.page, 'DATE',        xDate + 6, hy, 6.5, w.bold, BRAND.gray6, 0.8)
+    drawTracked(w.page, 'DESCRIPTION', xDesc + 6, hy, 6.5, w.bold, BRAND.gray6, 0.8)
+    drawTracked(w.page, 'PRIORITY',    xPri + 6,  hy, 6.5, w.bold, BRAND.gray6, 0.8)
+    drawTracked(w.page, 'CATEGORY',    xCat + 6,  hy, 6.5, w.bold, BRAND.gray6, 0.8)
+    const hoursHdrW = trackedWidth('HOURS', 6.5, w.bold, 0.8)
+    drawTracked(w.page, 'HOURS', xHours + cHours - hoursHdrW - 6, hy, 6.5, w.bold, BRAND.gray6, 0.8)
+    w.y -= hRowH + 1
+
     for (let ri = 0; ri < d.entries.length; ri++) {
       const e = d.entries[ri]
       const descLines = wrap(e.description.replace(/\s+/g, ' '), w.normal, size, cDesc - 12)
@@ -1517,6 +1528,8 @@ export async function buildRetainerStatementPdf(d: RetainerStatementData): Promi
         w.page.drawText(ln, { x: xDesc + 6, y: ty, size, font: w.normal, color: BRAND.ink })
         ty -= size + 3
       }
+      const pri = priText(e.priority)
+      if (pri) w.page.drawText(pri, { x: xPri + 6, y: ty0, size, font: e.priority === 'high' ? w.bold : w.normal, color: e.priority === 'high' ? BRAND.ink : BRAND.gray6 })
       w.page.drawText(e.category, { x: xCat + 6, y: ty0, size, font: w.normal, color: BRAND.gray6 })
       const hStr = fmtHours(e.hours)
       const hStrW = w.normal.widthOfTextAtSize(hStr, size)
@@ -1529,8 +1542,65 @@ export async function buildRetainerStatementPdf(d: RetainerStatementData): Promi
       })
       w.y -= rowH + 1
     }
+    w.sp(6)
   }
-  w.sp(6)
+
+  // ── Planned work table (draft entries) ───────────────────────────────────────
+  // Projected work — DATE / DESCRIPTION / PRIORITY / CATEGORY / STATUS, no HOURS. Status
+  // tracks whether the planned task has been completed (hours logged against it).
+  if (planned.length > 0) {
+    w.section('Planned Work')
+
+    const pDate = 52, pPri = 44, pCat = 72, pStatus = 64
+    const pDesc = w.innerW - pDate - pPri - pCat - pStatus
+    const xDate   = w.ml
+    const xDesc   = xDate + pDate
+    const xPri    = xDesc + pDesc
+    const xCat    = xPri + pPri
+    const xStatus = xCat + pCat
+
+    const hRowH = 20
+    w.need(hRowH + 2)
+    w.page.drawRectangle({ x: w.ml, y: w.y - hRowH, width: w.innerW, height: hRowH, color: BRAND.headBg })
+    const hy = w.y - 13
+    drawTracked(w.page, 'DATE',        xDate + 6,   hy, 6.5, w.bold, BRAND.gray6, 0.8)
+    drawTracked(w.page, 'DESCRIPTION', xDesc + 6,   hy, 6.5, w.bold, BRAND.gray6, 0.8)
+    drawTracked(w.page, 'PRIORITY',    xPri + 6,    hy, 6.5, w.bold, BRAND.gray6, 0.8)
+    drawTracked(w.page, 'CATEGORY',    xCat + 6,    hy, 6.5, w.bold, BRAND.gray6, 0.8)
+    drawTracked(w.page, 'STATUS',      xStatus + 6, hy, 6.5, w.bold, BRAND.gray6, 0.8)
+    w.y -= hRowH + 1
+
+    for (let ri = 0; ri < planned.length; ri++) {
+      const e = planned[ri]
+      const descLines = wrap(e.description.replace(/\s+/g, ' '), w.normal, size, pDesc - 12)
+      const rowH = descLines.length * (size + 3) + 10
+      w.need(rowH + 1)
+
+      const bg = ri % 2 === 1 ? BRAND.ruleLt : C.white
+      w.page.drawRectangle({ x: w.ml, y: w.y - rowH, width: w.innerW, height: rowH, color: bg })
+
+      const ty0 = w.y - size - 5
+      w.page.drawText(fmtShortDate(e.date), { x: xDate + 6, y: ty0, size, font: w.normal, color: BRAND.gray6 })
+      let ty = ty0
+      for (const ln of descLines) {
+        w.page.drawText(ln, { x: xDesc + 6, y: ty, size, font: w.normal, color: BRAND.ink })
+        ty -= size + 3
+      }
+      const pri = priText(e.priority)
+      if (pri) w.page.drawText(pri, { x: xPri + 6, y: ty0, size, font: e.priority === 'high' ? w.bold : w.normal, color: e.priority === 'high' ? BRAND.ink : BRAND.gray6 })
+      w.page.drawText(e.category, { x: xCat + 6, y: ty0, size, font: w.normal, color: BRAND.gray6 })
+      const done = e.completion === 'complete'
+      w.page.drawText(done ? 'Complete' : 'Incomplete', { x: xStatus + 6, y: ty0, size, font: done ? w.bold : w.normal, color: done ? BRAND.navy : BRAND.gray6 })
+
+      w.page.drawLine({
+        start: { x: w.ml, y: w.y - rowH },
+        end:   { x: w.pw - w.mr, y: w.y - rowH },
+        thickness: 0.3, color: BRAND.rule,
+      })
+      w.y -= rowH + 1
+    }
+    w.sp(6)
+  }
 
   // ── Totals summary (right-aligned block, like the invoice) ───────────────────
   const totX = w.pw - w.mr - 230
@@ -1566,5 +1636,335 @@ export async function buildRetainerStatementPdf(d: RetainerStatementData): Promi
   )
 
   w._drawFooter()
+  return doc.save()
+}
+
+// ── Retainer Monthly Recap PDF — deck slides ────────────────────────────────────
+// A faithful PDF rendering of the "Monthly Recap & Insights" deck: seven landscape
+// 16:9 slides in the deck's paper/teal editorial style (Newsreader / Poppins / IBM
+// Plex Mono). One <section> of the template = one PDF page. All layout is expressed
+// in the template's 1920×1080 px space and scaled to a 960×540pt page (S = 0.5).
+// Positions are baselines measured from the template HTML rendered in Chrome at
+// 1920×1080 (scratch measure.html), so text sits exactly where the deck puts it.
+
+const S = 0.5
+const DECK_W = 960 // 1920 * S
+const DECK_H = 540 // 1080 * S
+
+const DECK = {
+  paper:       rgb(0.945, 0.941, 0.925), // #f1f0ec
+  card:        rgb(0.969, 0.965, 0.953), // #f7f6f3
+  ink:         rgb(0.086, 0.094, 0.102), // #16181a
+  teal:        rgb(0.059, 0.431, 0.420), // #0f6e6b
+  tealLt:      rgb(0.373, 0.741, 0.722), // #5fbdb8
+  muted:       rgb(0.541, 0.541, 0.518), // #8a8a84
+  desc:        rgb(0.361, 0.369, 0.373), // #5c5e5f
+  descDark:    rgb(0.620, 0.631, 0.624), // #9ea19f
+  placeholder: rgb(0.706, 0.706, 0.682), // #b4b4ae — empty "—" rows
+  hair18:      rgb(0.80,  0.80,  0.79),  // rgba(22,24,26,0.18) on paper
+  hair50:      rgb(0.55,  0.56,  0.56),  // rgba(22,24,26,0.5) on paper
+  hair14:      rgb(0.84,  0.84,  0.83),  // rgba(22,24,26,0.14) on paper
+  barTrack:    rgb(0.88,  0.88,  0.86),  // rgba(22,24,26,0.09) on paper
+  hairDark18:  rgb(0.28,  0.29,  0.29),  // rgba(241,240,236,0.18) on ink
+  hairDark20:  rgb(0.26,  0.27,  0.27),  // rgba(241,240,236,0.2) on ink
+  hairDark40:  rgb(0.42,  0.42,  0.41),  // rgba(241,240,236,0.4) on ink
+}
+
+interface DeckFonts { serif: PDFFont; serifLt: PDFFont; sans: PDFFont; sansLt: PDFFont; mono: PDFFont }
+
+/** A single slide — draws in the template's px coordinate space (top-left origin,
+ * text positioned by baseline, exactly as measured from the rendered template). */
+class Deck {
+  page: PDFPage
+  f: DeckFonts
+  logo?: PDFImage
+  constructor(page: PDFPage, f: DeckFonts, logo?: PDFImage) { this.page = page; this.f = f; this.logo = logo }
+
+  bg(color: ReturnType<typeof rgb>): void {
+    this.page.drawRectangle({ x: 0, y: 0, width: DECK_W, height: DECK_H, color })
+  }
+
+  /** Filled rectangle in px, positioned by its top-left corner. */
+  rect(xPx: number, topPx: number, wPx: number, hPx: number, color: ReturnType<typeof rgb>): void {
+    this.page.drawRectangle({ x: xPx * S, y: DECK_H - (topPx + hPx) * S, width: wPx * S, height: hPx * S, color })
+  }
+
+  img(image: PDFImage, xPx: number, topPx: number, wPx: number, hPx: number): void {
+    this.page.drawImage(image, { x: xPx * S, y: DECK_H - (topPx + hPx) * S, width: wPx * S, height: hPx * S })
+  }
+
+  /** One line of text on a baseline. `xPx` is the left edge (right edge when align:'right'). */
+  text(
+    t: string, xPx: number, blPx: number, sizePx: number, font: PDFFont, color: ReturnType<typeof rgb>,
+    opts?: { tracking?: number; align?: 'left' | 'right' },
+  ): void {
+    const size = sizePx * S
+    const y = DECK_H - blPx * S
+    if (opts?.tracking) {
+      const tr = opts.tracking * S
+      const x0 = opts.align === 'right' ? xPx * S - trackedWidth(t, size, font, tr) : xPx * S
+      drawTracked(this.page, t, x0, y, size, font, color, tr)
+      return
+    }
+    const x = opts?.align === 'right' ? xPx * S - font.widthOfTextAtSize(t, size) : xPx * S
+    this.page.drawText(t, { x, y, size, font, color })
+  }
+
+  /** Wrapped paragraph; first line on `blPx`, subsequent lines `lineHpx` apart. Returns the line count. */
+  para(
+    t: string, xPx: number, blPx: number, sizePx: number, lineHpx: number,
+    font: PDFFont, color: ReturnType<typeof rgb>, maxWpx: number, opts?: { tracking?: number },
+  ): number {
+    const lines = wrap((t || '').replace(/\s+/g, ' ').trim(), font, sizePx * S, maxWpx * S)
+    lines.forEach((ln, i) => this.text(ln, xPx, blPx + i * lineHpx, sizePx, font, color, opts))
+    return lines.length
+  }
+
+  /** Line count `t` will wrap to, without drawing. */
+  lineCount(t: string, sizePx: number, font: PDFFont, maxWpx: number): number {
+    return wrap((t || '').replace(/\s+/g, ' ').trim(), font, sizePx * S, maxWpx * S).length
+  }
+}
+
+const NUMBER_WORD = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight']
+function numberWord(n: number): string { return NUMBER_WORD[n] ?? String(n) }
+
+// Layout constants shared across slides (template px).
+const PADX = 110
+const CONTENT_R = DECK_W / S - PADX // 1810 — right content edge
+const CONTENT_W = CONTENT_R - PADX  // 1700
+
+// Shared type scale (from the template): mono kickers 26px ls 0.2em, mono labels
+// 24px ls 0.16em, section headlines 80px Newsreader ls -1.2px lh 84.8.
+const KICKER = { size: 26, tracking: 26 * 0.2 }
+const LABEL = { size: 24, tracking: 24 * 0.16 }
+const H2 = { size: 80, tracking: -1.2, lineH: 84.8 }
+
+/** Kicker + wrapped headline + rule; returns the top (px) of the rule. */
+function deckHeader(s: Deck, kicker: string, headline: string, opts?: { dark?: boolean }): number {
+  const dark = opts?.dark
+  s.text(kicker.toUpperCase(), PADX, 123, KICKER.size, s.f.mono, dark ? DECK.tealLt : DECK.teal, { tracking: KICKER.tracking })
+  const lines = s.para(headline, PADX, 213, H2.size, H2.lineH, s.f.serif, dark ? DECK.paper : DECK.ink, CONTENT_W, { tracking: H2.tracking })
+  const ruleY = 258.8 + (lines - 1) * H2.lineH
+  s.rect(PADX, ruleY, CONTENT_W, 1, dark ? DECK.hairDark40 : DECK.hair50)
+  return ruleY
+}
+
+// ── Slide 1 · Cover ─────────────────────────────────────────────────────────────
+function deckCover(s: Deck, d: RecapData): void {
+  s.bg(DECK.paper)
+  if (s.logo) s.img(s.logo, PADX, 96, 64, 68.2)
+  s.text('ORCACLUB', s.logo ? 202 : PADX, 138.6, 26, s.f.sans, DECK.ink, { tracking: 26 * 0.42 })
+  const kicker = `${d.clientCompany || d.clientName} · ${d.periodLabel}`
+  s.text(kicker.toUpperCase(), PADX, 392.6, KICKER.size, s.f.mono, DECK.teal, { tracking: KICKER.tracking })
+  s.text('Monthly recap', PADX, 544.6, 150, s.f.serif, DECK.ink, { tracking: -3 })
+  s.text('& insights', PADX, 685.6, 150, s.f.serif, DECK.ink, { tracking: -3 })
+  s.rect(PADX, 761.6, CONTENT_W, 1, DECK.hair18)
+  const foot = `${d.tierLabel} retainer · ${fmtHours(d.hoursPerMonth)} hrs/mo`
+  s.text(foot.toUpperCase(), PADX, 989, LABEL.size, s.f.mono, DECK.muted, { tracking: LABEL.tracking })
+}
+
+// ── Slide 2 · At a glance ─────────────────────────────────────────────────────────
+function deckGlance(s: Deck, d: RecapData): void {
+  s.bg(DECK.paper)
+  const headline = d.headline?.trim() || `${fmtHours(d.hoursUsed)} of ${fmtHours(d.hoursPerMonth)} hours used`
+  const ruleY = deckHeader(s, 'At a glance', headline)
+
+  const cells: Array<{ label: string; big: string; unit?: string; desc?: string; small?: boolean; teal?: boolean }> = [
+    { label: 'Hours used', big: fmtHours(d.hoursUsed), unit: ` / ${fmtHours(d.hoursPerMonth)}`, desc: `${fmtHours(d.hoursUnused)} hours unused`, teal: true },
+    { label: 'Items shipped', big: String(d.itemsShipped), desc: 'Delivered this cycle' },
+    { label: 'Site health', big: d.siteHealth.label || '—', desc: d.siteHealth.note, small: true },
+    { label: 'Open requests', big: String(d.openRequests.count), desc: d.openRequests.note },
+  ]
+  const gridTop = ruleY + 53
+  const gridBottom = 996
+  const n = cells.length
+  const colW = (CONTENT_W - (n - 1)) / n // 1px hairline gaps
+  s.rect(PADX, gridTop, CONTENT_W, gridBottom - gridTop, DECK.hair14)
+  for (let i = 0; i < n; i++) {
+    const x = PADX + i * (colW + 1)
+    const c = cells[i]
+    s.rect(x, gridTop, colW, gridBottom - gridTop, DECK.card)
+    s.text(c.label.toUpperCase(), x + 40, gridTop + 73, LABEL.size, s.f.mono, DECK.muted, { tracking: LABEL.tracking })
+    const bigSize = c.small ? 96 : 132
+    const bigBl = gridTop + (c.small ? 342.8 : 369.9)
+    s.text(c.big, x + 40, bigBl, bigSize, s.f.serif, c.teal ? DECK.teal : DECK.ink)
+    if (c.unit) {
+      const bw = s.f.serif.widthOfTextAtSize(c.big, bigSize * S) / S
+      s.text(c.unit, x + 40 + bw, bigBl, 48, s.f.serif, DECK.muted)
+    }
+    if (c.desc?.trim()) {
+      // Bottom-anchored: the last line's baseline sits at gridTop + 625.5.
+      const k = s.lineCount(c.desc, 26, s.f.sansLt, colW - 80)
+      s.para(c.desc, x + 40, gridTop + 625.5 - (k - 1) * 37.7, 26, 37.7, s.f.sansLt, DECK.desc, colW - 80)
+    }
+  }
+}
+
+// ── Slide 3 · Where the hours went ────────────────────────────────────────────────
+function deckHours(s: Deck, d: RecapData): void {
+  s.bg(DECK.paper)
+  const headline = d.bucketsHeadline?.trim() || 'How the retainer hours were spent'
+  let rowTop = deckHeader(s, 'Where the hours went', headline) + 49
+
+  const maxH = Math.max(...d.buckets.map((b) => b.hours), 0.0001)
+  const barX = PADX + 400 + 48
+  const barW = CONTENT_W - 400 - 110 - 96 // 1094 — grid: 400px label / bar / 110px value
+  for (const b of d.buckets) {
+    s.text(b.label, PADX, rowTop + 32, 44, s.f.serif, DECK.ink)
+    s.rect(barX, rowTop + 5, barW, 34, DECK.barTrack)
+    const frac = Math.max(0, Math.min(1, b.hours / maxH))
+    s.rect(barX, rowTop + 5, Math.max(3, barW * frac), 34, DECK.teal)
+    s.text(`${fmtHours(b.hours)}h`, CONTENT_R, rowTop + 32, 44, s.f.serif, DECK.ink, { align: 'right' })
+    if (b.note?.trim()) {
+      const k = s.para(b.note, PADX, rowTop + 93, 29, 43.5, s.f.sansLt, DECK.desc, 1340)
+      rowTop += 62 + k * 43.5 + 36
+    } else {
+      rowTop += 44 + 36
+    }
+  }
+}
+
+// ── Slide 4 · Campaigns (Growth / Enterprise) ─────────────────────────────────────
+function deckCampaigns(s: Deck, d: RecapData, items: RecapData['campaigns']): void {
+  s.bg(DECK.paper)
+  const ruleY = deckHeader(s, 'Campaigns', 'Campaign activity this cycle')
+  const cards = items.slice(0, 4)
+  const n = cards.length || 1
+  const colW = (CONTENT_W - (n - 1)) / n // 1px hairline gaps
+  const cardTop = ruleY + 49
+  const cardBottom = 914 // 996 − footer line − 48px gap
+  s.rect(PADX, cardTop, CONTENT_W, cardBottom - cardTop, DECK.hair14)
+  cards.forEach((c, i) => {
+    const x = PADX + i * (colW + 1)
+    s.rect(x, cardTop, colW, cardBottom - cardTop, DECK.card)
+    if (c.channel.trim()) s.text(c.channel.toUpperCase(), x + 40, cardTop + 69, LABEL.size, s.f.mono, DECK.muted, { tracking: LABEL.tracking })
+    let titleLines = 0
+    if (c.title.trim()) titleLines = s.para(c.title, x + 40, cardTop + 130, 44, 48.4, s.f.serif, DECK.ink, colW - 80)
+    if (c.note.trim()) {
+      const noteBl = titleLines > 0 ? cardTop + 130 + (titleLines - 1) * 48.4 + 63.4 : cardTop + 130
+      s.para(c.note, x + 40, noteBl, 27, 40.5, s.f.sansLt, DECK.desc, colW - 80)
+    }
+  })
+  s.text('Full metrics are in the monthly performance report.', PADX, 989, 26, s.f.mono, DECK.muted, { tracking: 2.6 })
+}
+
+// ── Slide 5 · Recommendations (dark) ──────────────────────────────────────────────
+function deckRecs(s: Deck, recs: RecapData['recommendations']): void {
+  s.bg(DECK.ink)
+  const word = numberWord(recs.length)
+  const ruleY = deckHeader(s, 'Recommendations', `${word ? word : 'A few'} thing${recs.length === 1 ? '' : 's'} to focus on next`, { dark: true })
+  // Equal-height rows fill the area below the header; content vertically centered.
+  const top = ruleY + 49
+  const pitch = (996 - top) / recs.length
+  recs.forEach((r, i) => {
+    const title = r.title?.trim() || '—'
+    const titleLines = s.lineCount(title, 50, s.f.serif, CONTENT_W - 154)
+    const noteLines = r.note.trim() ? s.lineCount(r.note, 29, s.f.sansLt, CONTENT_W - 154) : 0
+    const blockH = 50 + (titleLines - 1) * 55 + (noteLines ? 12 + noteLines * 42.05 : 0)
+    const blockTop = top + i * pitch + (pitch - blockH) / 2
+    s.text(String(i + 1).padStart(2, '0'), PADX, blockTop + 66, 60, s.f.serif, DECK.tealLt)
+    s.para(title, PADX + 154, blockTop + 37, 50, 55, s.f.serif, DECK.paper, CONTENT_W - 154)
+    if (noteLines) {
+      s.para(r.note, PADX + 154, blockTop + 50 + (titleLines - 1) * 55 + 43, 29, 42.05, s.f.sansLt, DECK.descDark, CONTENT_W - 154)
+    }
+    s.rect(PADX, top + (i + 1) * pitch, CONTENT_W, 1, DECK.hairDark18)
+  })
+}
+
+// ── Slide 6 · Notes ───────────────────────────────────────────────────────────────
+function deckNotes(s: Deck, d: RecapData): void {
+  s.bg(DECK.paper)
+  const ruleY = deckHeader(s, 'Notes from this call', 'Decisions and open questions')
+  const colW = (CONTENT_W - 90) / 2 // 805, 90px column gap
+  const cols = [
+    { label: 'Decided', items: d.notesDecided.filter((x) => x.trim()) },
+    { label: 'Open', items: d.notesOpen.filter((x) => x.trim()) },
+  ]
+  cols.forEach((col, ci) => {
+    const x = PADX + ci * (colW + 90)
+    s.text(col.label.toUpperCase(), x, ruleY + 70, LABEL.size, s.f.mono, DECK.muted, { tracking: LABEL.tracking })
+    let border = ruleY + 99
+    for (const it of (col.items.length ? col.items : ['—'])) {
+      s.rect(x, border, colW, 1, DECK.hair14)
+      const empty = it === '—'
+      const k = s.para(it, x, border + 53, 33, 46.2, s.f.serifLt, empty ? DECK.placeholder : DECK.ink, colW)
+      border += 45 + k * 46.2
+    }
+  })
+}
+
+// ── Slide 7 · Next month ──────────────────────────────────────────────────────────
+
+/** "July 2026" → "August plan"; anything unparseable → "The month ahead". */
+const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+function nextMonthKicker(periodLabel: string): string {
+  const m = periodLabel.trim().match(/^([A-Za-z]+)\s+\d{4}$/)
+  const idx = m ? MONTH_NAMES.findIndex((x) => x.toLowerCase() === m[1].toLowerCase()) : -1
+  return idx >= 0 ? `${MONTH_NAMES[(idx + 1) % 12]} plan` : 'The month ahead'
+}
+
+function deckNext(s: Deck, d: RecapData): void {
+  s.bg(DECK.paper)
+  const ruleY = deckHeader(s, nextMonthKicker(d.periodLabel), 'Next month')
+  const leftW = 866.5 // grid 1.15fr / 1fr, 80px gap
+  const boxX = PADX + leftW + 80
+  const boxW = CONTENT_R - boxX // 753.5
+
+  s.text('PRIORITIES', PADX, ruleY + 74, LABEL.size, s.f.mono, DECK.muted, { tracking: LABEL.tracking })
+  let border = ruleY + 103
+  const pr = d.nextMonthPriorities.filter((x) => x.trim())
+  for (const p of (pr.length ? pr : ['—'])) {
+    s.rect(PADX, border, leftW, 1, DECK.hair14)
+    const empty = p === '—'
+    const k = s.para(p, PADX, border + 53, 35, 47.25, s.f.serifLt, empty ? DECK.placeholder : DECK.ink, leftW)
+    border += 41 + k * 47.25
+  }
+
+  const boxTop = ruleY + 49
+  s.rect(boxX, boxTop, boxW, 996 - boxTop, DECK.ink)
+  const tx = boxX + 44
+  const tw = boxW - 88
+  s.text('WE NEED FROM YOU', tx, boxTop + 69, LABEL.size, s.f.mono, DECK.tealLt, { tracking: LABEL.tracking })
+  let rb = boxTop + 100
+  const asks = d.asksFromClient.filter((x) => x.trim())
+  for (const a of (asks.length ? asks : ['—'])) {
+    s.rect(tx, rb, tw, 1, DECK.hairDark20)
+    const k = s.para(a, tx, rb + 50, 33, 44.55, s.f.serifLt, DECK.paper, tw)
+    rb += 41 + k * 44.55
+  }
+  if (d.nextCallLabel.trim()) {
+    s.text(`Next call · ${d.nextCallLabel}`.toUpperCase(), tx, boxTop + 637.2, 26, s.f.mono, DECK.descDark, { tracking: 2.6 })
+  }
+}
+
+export async function buildRetainerRecapPdf(d: RecapData & { generatedOn: string }): Promise<Uint8Array> {
+  const doc = await PDFDocument.create()
+  doc.registerFontkit(fontkit)
+  const serif = await doc.embedFont(Buffer.from(NEWSREADER_REGULAR_BASE64, 'base64'), { subset: true })
+  const serifLt = await doc.embedFont(Buffer.from(NEWSREADER_LIGHT_BASE64, 'base64'), { subset: true })
+  const sans = await doc.embedFont(Buffer.from(POPPINS_REGULAR_BASE64, 'base64'), { subset: true })
+  const sansLt = await doc.embedFont(Buffer.from(POPPINS_LIGHT_BASE64, 'base64'), { subset: true })
+  const mono = await doc.embedFont(Buffer.from(IBM_PLEX_MONO_REGULAR_BASE64, 'base64'), { subset: true })
+  const logo = await doc.embedPng(Buffer.from(ORCA_MARK_BLACK_PNG_BASE64, 'base64'))
+  const f: DeckFonts = { serif, serifLt, sans, sansLt, mono }
+  const slide = () => new Deck(doc.addPage([DECK_W, DECK_H]), f, logo)
+
+  deckCover(slide(), d)
+  deckGlance(slide(), d)
+  if (d.buckets.length > 0) deckHours(slide(), d)
+
+  const campaigns = (d.campaigns || []).filter((c) => c.title.trim() || c.note.trim() || c.channel.trim())
+  if (d.showCampaigns && campaigns.length > 0) deckCampaigns(slide(), d, campaigns)
+
+  const recs = (d.recommendations || []).filter((r) => r.title.trim() || r.note.trim())
+  if (recs.length > 0) deckRecs(slide(), recs)
+
+  if (d.notesDecided.some((x) => x.trim()) || d.notesOpen.some((x) => x.trim())) deckNotes(slide(), d)
+
+  if (d.nextMonthPriorities.some((x) => x.trim()) || d.asksFromClient.some((x) => x.trim()) || d.nextCallLabel.trim()) {
+    deckNext(slide(), d)
+  }
+
   return doc.save()
 }

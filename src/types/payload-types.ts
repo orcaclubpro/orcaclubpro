@@ -1399,6 +1399,14 @@ export interface RetainerTimeEntry {
    * Meetings, revisions, and reporting all count against the cap (per the playbook).
    */
   category?: ('work' | 'meeting' | 'revision' | 'reporting') | null;
+  /**
+   * Priority of this task — for planning and reporting only; does not affect billing.
+   */
+  priority?: ('low' | 'medium' | 'high') | null;
+  /**
+   * For planned (draft) work — whether the task has been completed. Shown on the retainer statement PDF.
+   */
+  completion?: ('incomplete' | 'complete') | null;
   description?: string | null;
   retainer: string | Retainer;
   clientAccount: string | ClientAccount;
@@ -2609,6 +2617,8 @@ export interface RetainerTimeEntriesSelect<T extends boolean = true> {
   hours?: T;
   status?: T;
   category?: T;
+  priority?: T;
+  completion?: T;
   description?: T;
   retainer?: T;
   clientAccount?: T;
