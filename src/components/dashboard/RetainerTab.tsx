@@ -4,13 +4,16 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   Loader2, Clock, Plus, Trash2, ChevronLeft, ChevronRight, Pencil,
   CalendarClock, PowerOff, FileDown, Check, X, ArrowRight, CalendarPlus, FileText,
-  CircleCheck, Circle, Search, Building2, CornerDownLeft,
+  CircleCheck, Circle, Search, Building2, CornerDownLeft, AlertTriangle, Activity, Flame, Send,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { RetainerRecapModal } from './RetainerRecapModal'
+import { RetainerInvoiceModal } from './RetainerInvoiceModal'
 import { getClientAccountsList } from '@/actions/packages'
+import type { RecapData } from '@/lib/retainers/recap'
 import {
   getRetainerSummary,
+  getRetainerPortfolio,
   setRetainer,
   setRetainerActive,
   setRetainerAnchor,
@@ -25,6 +28,10 @@ import {
   type RetainerTerms,
   type RetainerScheduled,
   type RetainerTier,
+  type RetainerPortfolioRow,
+  type RetainerHealth,
+  type RetainerClientInfo,
+  type RetainerNextCycle,
   type TimeEntryCategory,
   type TimeEntryPriority,
 } from '@/actions/retainers'
@@ -116,6 +123,8 @@ export interface RetainerTabProps { clientId?: string; active: boolean }
 export function RetainerTab({ clientId, active }: RetainerTabProps) {
   const [clients, setClients] = useState<ClientOption[]>([])
   const [clientsLoaded, setClientsLoaded] = useState(false)
+  const [portfolio, setPortfolio] = useState<RetainerPortfolioRow[]>([])
+  const [portfolioLoaded, setPortfolioLoaded] = useState(false)
   const [selectedClientId, setSelectedClientId] = useState<string>(clientId ?? '')
   const [stage, setStage] = useState<Stage>('overview')
 
@@ -138,7 +147,13 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
   const [drafts, setDrafts] = useState<TimeEntryDoc[]>([])
   const [totals, setTotals] = useState<RetainerTotals | null>(null)
   const [scheduled, setScheduled] = useState<RetainerScheduled | null>(null)
+  const [clientInfo, setClientInfo] = useState<RetainerClientInfo | null>(null)
+  const [nextCycle, setNextCycle] = useState<RetainerNextCycle | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  // Invoice flow + the lifted recap draft (keyed to a cycle so stale drafts never attach)
+  const [invoiceOpen, setInvoiceOpen] = useState(false)
+  const [recapDraft, setRecapDraft] = useState<{ cycleStart: string; data: RecapData } | null>(null)
 
   // Setup form
   const [editing, setEditing] = useState(false)
@@ -197,10 +212,24 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
     })()
   }, [active, clientsLoaded])
 
+  // The portfolio board — every active retainer's current-cycle burn. Refreshed
+  // whenever the picker is showing so it reflects hours just logged elsewhere.
+  const loadPortfolio = useCallback(async () => {
+    const r = await getRetainerPortfolio()
+    if (r.success) setPortfolio(r.rows)
+    setPortfolioLoaded(true)
+  }, [])
+
+  useEffect(() => {
+    if (!active || selectedClientId) return
+    void loadPortfolio()
+  }, [active, selectedClientId, loadPortfolio])
+
   const load = useCallback(async () => {
     if (!selectedClientId) {
       setRetainerDoc(null); setCycle(null); setTerms(null)
       setLogged([]); setDrafts([]); setTotals(null); setScheduled(null)
+      setClientInfo(null); setNextCycle(null)
       return
     }
     const r = await getRetainerSummary(selectedClientId, refDate || undefined)
@@ -212,6 +241,8 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
       setDrafts(r.drafts)
       setTotals(r.totals)
       setScheduled(r.scheduled)
+      setClientInfo(r.client)
+      setNextCycle(r.nextCycle)
     } else {
       setError(r.error ?? 'Failed to load retainer')
     }
@@ -258,7 +289,11 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
   const filteredClients = pq
     ? clients.filter((c) => c.name.toLowerCase().includes(pq) || (c.company ?? '').toLowerCase().includes(pq))
     : clients
-  const highlightIdx = Math.min(pickIdx, Math.max(0, filteredClients.length - 1))
+  // Empty query rests on the portfolio board; typing switches to the client list.
+  // Keyboard (↑↓↵) drives whichever is showing.
+  const showingBoard = !pq && portfolio.length > 0
+  const navIds = showingBoard ? portfolio.map((p) => p.clientAccountId) : filteredClients.map((c) => c.id)
+  const highlightIdx = Math.min(pickIdx, Math.max(0, navIds.length - 1))
 
   useEffect(() => { setPickIdx(0) }, [pickQuery])
 
@@ -274,6 +309,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
     setError(null)
     setPickQuery('')
     setPickIdx(0)
+    setRecapDraft(null)
   }
 
   const clearClient = useCallback(() => {
@@ -285,6 +321,8 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
     setELogMode(false)
     setPickQuery('')
     setPickIdx(0)
+    setInvoiceOpen(false)
+    setRecapDraft(null)
   }, [])
 
   const selectedClient = clients.find((c) => c.id === selectedClientId) ?? null
@@ -312,6 +350,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
         e.preventDefault()
         e.stopPropagation()
         if (recapOpen) { setRecapOpen(false); return }
+        if (invoiceOpen) { setInvoiceOpen(false); return }
         if (editId) { setEditId(null); setELogMode(false); return }
         if (editing && retainer) { setEditing(false); return }
         clearClient()
@@ -320,13 +359,13 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
       if (e.key >= '1' && e.key <= '4' && !e.metaKey && !e.ctrlKey && !e.altKey) {
         const tag = (e.target as HTMLElement)?.tagName
         if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable) return
-        if (!selectedClientId || !retainer || editing || recapOpen || loading) return
+        if (!selectedClientId || !retainer || editing || recapOpen || invoiceOpen || loading) return
         setStage(STAGES[Number(e.key) - 1].id)
       }
     }
     document.addEventListener('keydown', handler, true)
     return () => document.removeEventListener('keydown', handler, true)
-  }, [active, selectedClientId, recapOpen, editId, editing, retainer, loading, clearClient])
+  }, [active, selectedClientId, recapOpen, invoiceOpen, editId, editing, retainer, loading, clearClient])
 
   // ── Actions ─────────────────────────────────────────────────────────────────
 
@@ -523,6 +562,27 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
   const over = (totals?.overageHours ?? 0) > 0
   const doneCount = drafts.filter((d) => d.completion === 'complete').length
 
+  // ── Cycle timing + burn projection (overview) ──────────────────────────────────
+  // Pace only makes sense for the cycle happening now; past/future cycles are settled.
+  const nowMs = Date.now()
+  const cStart = cycle ? Date.parse(cycle.start) : 0
+  const cEnd = cycle ? Date.parse(cycle.end) : 0
+  const isCurrentCycle = Boolean(cycle) && nowMs >= cStart && nowMs < cEnd
+  const isPastCycle = Boolean(cycle) && cEnd <= nowMs
+  const cycleDays = cycle ? Math.max(1, Math.round((cEnd - cStart) / 86_400_000)) : 0
+  const daysLeft = isCurrentCycle ? Math.max(0, Math.ceil((cEnd - nowMs) / 86_400_000)) : 0
+  const dayOfCycle = isCurrentCycle ? Math.min(cycleDays, Math.floor((nowMs - cStart) / 86_400_000) + 1) : isPastCycle ? cycleDays : 0
+  const elapsedFrac = isCurrentCycle ? Math.min(1, Math.max(0, (nowMs - cStart) / (cEnd - cStart))) : isPastCycle ? 1 : 0
+  // Linear projection, held back until a couple of days in so it isn't wild on day one.
+  const projHours = isCurrentCycle && elapsedFrac > 0.06 ? used / elapsedFrac : null
+  const projOverHrs = projHours != null && cap > 0 ? Math.max(0, projHours - cap) : 0
+  const projOverAmt = projOverHrs * (totals?.overageRate ?? 0)
+  const aheadOfPace = isCurrentCycle && cap > 0 && pct / 100 > elapsedFrac + 0.05
+
+  // Overview surfacing: high-priority planned work still open, and the latest logged time.
+  const attention = drafts.filter((d) => (d.priority ?? 'medium') === 'high' && d.completion !== 'complete').slice(0, 4)
+  const recent = logged.slice(0, 4)
+
   // Inline editor row (shared by drafts + logged). In log mode the hours field is required
   // and saving creates a separate logged entry against the plan (see handleEditorSave).
   const renderEditor = () => (
@@ -557,13 +617,16 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
   // ── Stage 0 — client picker ──────────────────────────────────────────────────
 
   if (!selectedClientId) {
+    const attentionCount = portfolio.filter((p) => p.health === 'over' || p.health === 'warning').length
     return (
       <div className="relative flex flex-col h-full min-h-0">
         <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-          <div className="max-w-md mx-auto w-full pt-[5vh] pb-8 space-y-4">
+          <div className="max-w-2xl mx-auto w-full pt-[4vh] pb-8 space-y-5">
             <div className="text-center space-y-1.5">
               <p className="text-[9px] font-bold tracking-[0.3em] uppercase text-[var(--space-text-tertiary)]">Retainer</p>
-              <p className="text-xs text-[var(--space-text-muted)]">Pick a client — type to search, ↵ to select.</p>
+              <p className="text-xs text-[var(--space-text-muted)]">
+                {showingBoard ? 'Open a retainer to manage — or search any client to set one up.' : 'Type to search, ↵ to select.'}
+              </p>
             </div>
 
             <div
@@ -578,14 +641,14 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                 onKeyDown={(e) => {
                   if (e.key === 'ArrowDown') {
                     e.preventDefault()
-                    setPickIdx((i) => Math.min(filteredClients.length - 1, i + 1))
+                    setPickIdx((i) => Math.min(navIds.length - 1, i + 1))
                   } else if (e.key === 'ArrowUp') {
                     e.preventDefault()
                     setPickIdx((i) => Math.max(0, i - 1))
                   } else if (e.key === 'Enter') {
                     e.preventDefault()
-                    const c = filteredClients[highlightIdx]
-                    if (c) selectClient(c.id)
+                    const id = navIds[highlightIdx]
+                    if (id) selectClient(id)
                   } else if (e.key === 'Escape' && pickQuery) {
                     // First Esc clears the query; an Esc on an empty box bubbles
                     // to the console and collapses the station to search.
@@ -599,41 +662,76 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
               <kbd className="hidden sm:inline text-[10px] text-[var(--space-text-muted)] bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] rounded px-1.5 py-0.5 font-mono">↵</kbd>
             </div>
 
-            {!clientsLoaded ? (
-              <div className="flex justify-center py-10"><Loader2 className="size-4 text-[var(--space-text-muted)] animate-spin" /></div>
-            ) : filteredClients.length === 0 ? (
-              <p className="text-center text-xs text-[var(--space-text-muted)] py-10">
-                {clients.length === 0 ? 'No client accounts yet.' : `No clients match “${pickQuery}”.`}
-              </p>
+            {!pq ? (
+              /* ── Resting state: the portfolio board ── */
+              !portfolioLoaded ? (
+                <div className="flex justify-center py-12"><Loader2 className="size-4 text-[var(--space-text-muted)] animate-spin" /></div>
+              ) : portfolio.length === 0 ? (
+                <p className="text-center text-xs text-[var(--space-text-muted)] py-12">
+                  No active retainers yet. Search a client above to set one up.
+                </p>
+              ) : (
+                <div className="space-y-2.5">
+                  <div className="flex items-center gap-2 px-1">
+                    <p className="text-[9px] font-bold tracking-[0.3em] uppercase text-[var(--space-text-muted)]">
+                      Active retainers · {portfolio.length}
+                    </p>
+                    {attentionCount > 0 && (
+                      <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-500">
+                        <AlertTriangle className="size-3" /> {attentionCount} need attention
+                      </span>
+                    )}
+                  </div>
+                  <div ref={pickListRef} className="space-y-1.5">
+                    {portfolio.map((row, i) => (
+                      <BoardRow
+                        key={row.retainerId}
+                        row={row}
+                        idx={i}
+                        isSel={i === highlightIdx}
+                        onSelect={() => selectClient(row.clientAccountId)}
+                        onHover={() => setPickIdx(i)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )
             ) : (
-              <div ref={pickListRef} className="rounded-xl border border-[var(--space-border-hard)] overflow-hidden divide-y divide-[var(--space-border-hard)]">
-                {filteredClients.map((c, i) => {
-                  const isSel = i === highlightIdx
-                  return (
-                    <button
-                      key={c.id}
-                      type="button"
-                      data-pick-idx={i}
-                      onClick={() => selectClient(c.id)}
-                      onMouseEnter={() => setPickIdx(i)}
-                      className={cn(
-                        'w-full flex items-center gap-3 px-4 py-3 text-left transition-colors relative',
-                        isSel ? 'bg-[var(--space-bg-card-hover)]' : 'hover:bg-[var(--space-bg-card-hover)]',
-                      )}
-                    >
-                      {isSel && (
-                        <div className="absolute left-0 top-1 bottom-1 w-[2px] rounded-full" style={{ background: 'var(--space-accent)', opacity: 0.7 }} />
-                      )}
-                      <Building2 className={cn('size-3.5 shrink-0', isSel ? 'text-[var(--space-accent)]' : 'text-[var(--space-text-muted)]')} />
-                      <div className="flex-1 min-w-0">
-                        <p className={cn('text-sm truncate', isSel ? 'text-[var(--space-text-primary)] font-medium' : 'text-[var(--space-text-secondary)]')}>{c.name}</p>
-                        {c.company && <p className="text-[11px] text-[var(--space-text-muted)] truncate">{c.company}</p>}
-                      </div>
-                      {isSel && <CornerDownLeft className="size-3 shrink-0 opacity-60" style={{ color: 'var(--space-accent)' }} />}
-                    </button>
-                  )
-                })}
-              </div>
+              /* ── Search results ── */
+              !clientsLoaded ? (
+                <div className="flex justify-center py-10"><Loader2 className="size-4 text-[var(--space-text-muted)] animate-spin" /></div>
+              ) : filteredClients.length === 0 ? (
+                <p className="text-center text-xs text-[var(--space-text-muted)] py-10">No clients match “{pickQuery}”.</p>
+              ) : (
+                <div ref={pickListRef} className="rounded-xl border border-[var(--space-border-hard)] overflow-hidden divide-y divide-[var(--space-border-hard)]">
+                  {filteredClients.map((c, i) => {
+                    const isSel = i === highlightIdx
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        data-pick-idx={i}
+                        onClick={() => selectClient(c.id)}
+                        onMouseEnter={() => setPickIdx(i)}
+                        className={cn(
+                          'w-full flex items-center gap-3 px-4 py-3 text-left transition-colors relative',
+                          isSel ? 'bg-[var(--space-bg-card-hover)]' : 'hover:bg-[var(--space-bg-card-hover)]',
+                        )}
+                      >
+                        {isSel && (
+                          <div className="absolute left-0 top-1 bottom-1 w-[2px] rounded-full" style={{ background: 'var(--space-accent)', opacity: 0.7 }} />
+                        )}
+                        <Building2 className={cn('size-3.5 shrink-0', isSel ? 'text-[var(--space-accent)]' : 'text-[var(--space-text-muted)]')} />
+                        <div className="flex-1 min-w-0">
+                          <p className={cn('text-sm truncate', isSel ? 'text-[var(--space-text-primary)] font-medium' : 'text-[var(--space-text-secondary)]')}>{c.name}</p>
+                          {c.company && <p className="text-[11px] text-[var(--space-text-muted)] truncate">{c.company}</p>}
+                        </div>
+                        {isSel && <CornerDownLeft className="size-3 shrink-0 opacity-60" style={{ color: 'var(--space-accent)' }} />}
+                      </button>
+                    )
+                  })}
+                </div>
+              )
             )}
           </div>
         </div>
@@ -860,7 +958,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                     </div>
                   )}
 
-                  {/* Cycle summary — the one big thing on this screen */}
+                  {/* Cycle summary — where the retainer stands, and where it's heading */}
                   <div className="rounded-xl border border-[var(--space-border-hard)] p-5 bg-[var(--space-bg-card-hover)] space-y-4">
                     <div className="flex items-end justify-between gap-3">
                       <div>
@@ -869,20 +967,49 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                           <span className="text-base font-normal text-[var(--space-text-muted)]"> / {fmtHrs(cap)} hrs</span>
                         </p>
                         <p className="text-xs mt-2">
-                          {over
-                            ? <span className="text-amber-500 font-semibold">{fmtHrs(totals?.overageHours ?? 0)} hrs over · {fmt(totals?.overageAmount ?? 0)}</span>
-                            : <span className="text-[var(--space-text-tertiary)]">{fmtHrs(totals?.remaining ?? 0)} hrs remaining</span>}
+                          {over ? (
+                            <span className="text-amber-500 font-semibold">{fmtHrs(totals?.overageHours ?? 0)} hrs over · {fmt(totals?.overageAmount ?? 0)}</span>
+                          ) : projOverHrs > 0 ? (
+                            <span className="text-amber-500 font-semibold">Projected ~{Math.round(projHours!)} hrs · ~{fmt(projOverAmt)} over at this pace</span>
+                          ) : isCurrentCycle && projHours != null ? (
+                            <span className="text-[var(--space-text-tertiary)]">{fmtHrs(totals?.remaining ?? 0)} hrs left · ~{Math.round(projHours)} hrs projected</span>
+                          ) : (
+                            <span className="text-[var(--space-text-tertiary)]">{fmtHrs(totals?.remaining ?? 0)} hrs remaining</span>
+                          )}
                         </p>
                       </div>
-                      <p className="text-xs text-[var(--space-text-muted)] tabular-nums">{cycle?.label ?? '—'}</p>
+                      <div className="text-right shrink-0">
+                        <p className="text-xs text-[var(--space-text-muted)] tabular-nums">{cycle?.label ?? '—'}</p>
+                        <p className="text-[11px] mt-0.5 tabular-nums text-[var(--space-text-tertiary)]">
+                          {isCurrentCycle ? `${daysLeft} day${daysLeft === 1 ? '' : 's'} left` : isPastCycle ? 'Cycle ended' : 'Upcoming cycle'}
+                        </p>
+                      </div>
                     </div>
 
-                    <div className="h-2.5 rounded-full bg-[var(--space-bg-card)] overflow-hidden">
-                      <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: 'var(--space-accent)' }} />
+                    {/* Burn bar — fill is hours used; the tick marks where the cycle is today */}
+                    <div className="relative">
+                      <div className="h-2.5 rounded-full bg-[var(--space-bg-card)] overflow-hidden">
+                        <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: over ? 'rgb(245 158 11)' : 'var(--space-accent)' }} />
+                      </div>
+                      {isCurrentCycle && cap > 0 && (
+                        <div
+                          className="absolute -top-0.5 -bottom-0.5 w-px bg-[var(--space-text-secondary)]"
+                          style={{ left: `${elapsedFrac * 100}%` }}
+                          title={`Day ${dayOfCycle} of ${cycleDays}`}
+                        />
+                      )}
                     </div>
+                    {isCurrentCycle && cap > 0 && (
+                      <div className="flex items-center justify-between text-[10px] text-[var(--space-text-muted)] -mt-1">
+                        <span className="tabular-nums">Day {dayOfCycle} of {cycleDays}</span>
+                        <span className={cn('font-medium', aheadOfPace && !over ? 'text-amber-500' : '')}>
+                          {over ? 'over cap' : aheadOfPace ? 'ahead of pace' : 'on pace'}
+                        </span>
+                      </div>
+                    )}
 
                     {(Object.keys(CATEGORY_LABEL) as TimeEntryCategory[]).some((c) => (totals?.byCategory?.[c] ?? 0) > 0) && (
-                      <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex items-center gap-2 flex-wrap pt-1">
                         {(Object.keys(CATEGORY_LABEL) as TimeEntryCategory[]).map((c) =>
                           (totals?.byCategory?.[c] ?? 0) > 0
                             ? (
@@ -894,9 +1021,110 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                         )}
                       </div>
                     )}
+
+                    {/* Billing — close this cycle: bill next month + send the recap */}
+                    <div className="flex items-center justify-between gap-3 flex-wrap border-t border-[var(--space-border-hard)] pt-3">
+                      {nextCycle?.invoice ? (
+                        <>
+                          <p className="text-xs text-[var(--space-text-tertiary)]">
+                            {nextCycle.monthLabel} invoiced <span className="font-semibold text-[var(--space-text-primary)]">#{nextCycle.invoice.orderNumber}</span>
+                            <span className="tabular-nums"> · {fmt(nextCycle.invoice.amount)} · </span>
+                            <span className={nextCycle.invoice.status === 'paid' ? 'font-semibold text-[var(--space-accent)]' : 'font-semibold text-amber-500'}>
+                              {nextCycle.invoice.status}
+                            </span>
+                          </p>
+                          <div className="flex items-center gap-2">
+                            {nextCycle.invoice.stripeInvoiceUrl && (
+                              <a href={nextCycle.invoice.stripeInvoiceUrl} target="_blank" rel="noreferrer" className={ghostBtn}>
+                                View invoice
+                              </a>
+                            )}
+                            <button onClick={() => setInvoiceOpen(true)} className={ghostBtn} title="Send billing / recap">
+                              Manage billing
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-xs text-[var(--space-text-muted)]">
+                            {nextCycle ? <>Bill {nextCycle.monthLabel} — {fmt(terms?.monthlyFee ?? 0)}{over ? <span className="text-amber-500"> + {fmt(totals?.overageAmount ?? 0)} overage</span> : ''}</> : 'Retainer billing'}
+                          </p>
+                          <button onClick={() => setInvoiceOpen(true)} className={accentBtn}>
+                            <Send className="size-3.5" /> Send retainer billing
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
 
-                  {/* Jump cards — where to go next */}
+                  {/* Quick log — the day-to-day action, without a tab switch */}
+                  <div className="rounded-xl border border-[var(--space-border-hard)] p-3 bg-[var(--space-bg-card-hover)] flex items-end gap-2 flex-wrap">
+                    <label className="block">
+                      <span className={fieldLabel}>Hrs</span>
+                      <input
+                        type="number" min={0} step="0.25" value={logHoursStr}
+                        onChange={(e) => setLogHoursStr(e.target.value)}
+                        placeholder="0" className={cn(numCls, 'w-16 mt-1 py-1.5 text-sm')}
+                      />
+                    </label>
+                    <input
+                      value={logNote}
+                      onChange={(e) => setLogNote(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' && !logging) void handleLog() }}
+                      placeholder={`Log time to ${cycle?.label ?? 'this cycle'} — what did you do? ↵`}
+                      className={cn(inputCls, 'flex-1 min-w-[160px] py-1.5')}
+                    />
+                    <button onClick={handleLog} disabled={logging} className={accentBtn}>
+                      {logging ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />} Log
+                    </button>
+                  </div>
+
+                  {/* Needs attention — high-priority planned work still open */}
+                  {attention.length > 0 && (
+                    <div className="space-y-1.5">
+                      <p className="text-[9px] font-bold tracking-[0.25em] uppercase text-amber-500 flex items-center gap-1.5">
+                        <Flame className="size-3" /> Needs attention
+                      </p>
+                      {attention.map((e) => (
+                        <div key={e.id} className="flex items-center gap-3 px-3.5 py-2.5 rounded-lg border border-amber-500/25 bg-amber-500/[0.06]">
+                          <button onClick={() => handleToggleComplete(e)} disabled={togglingId === e.id} className="shrink-0 size-5 flex items-center justify-center rounded-md text-[var(--space-text-muted)] hover:text-[var(--space-accent)] transition-colors disabled:opacity-50" title="Mark complete">
+                            {togglingId === e.id ? <Loader2 className="size-3.5 animate-spin" /> : <Circle className="size-4" />}
+                          </button>
+                          <span className="text-[10px] uppercase tracking-wide text-[var(--space-text-muted)] shrink-0 w-16">
+                            {CATEGORY_LABEL[(e.category ?? 'work') as TimeEntryCategory]}
+                          </span>
+                          <span className="text-sm flex-1 min-w-0 truncate text-[var(--space-text-secondary)]">{e.description || '—'}</span>
+                          <button onClick={() => { setStage('plan'); openEditor(e, true) }} className="shrink-0 flex items-center gap-1 px-2 py-1 text-[11px] font-semibold rounded-md text-[var(--space-accent)] hover:bg-[var(--space-bg-card)] transition-colors" title="Log hours for this item">
+                            Log hours <ArrowRight className="size-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Recent activity — the latest logged time this cycle */}
+                  {recent.length > 0 && (
+                    <div className="space-y-1.5">
+                      <p className="text-[9px] font-bold tracking-[0.25em] uppercase text-[var(--space-text-muted)] flex items-center gap-1.5">
+                        <Activity className="size-3" /> Recent activity
+                      </p>
+                      {recent.map((e) => (
+                        <button
+                          key={e.id}
+                          type="button"
+                          onClick={() => { setStage('log'); openEditor(e) }}
+                          className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg border border-[var(--space-border-hard)] bg-[var(--space-bg-card-hover)] text-left hover:border-[var(--space-accent-glow)] transition-colors"
+                        >
+                          <span className="text-[11px] font-mono tabular-nums text-[var(--space-text-muted)] shrink-0 w-12">{String(e.date).slice(5, 10)}</span>
+                          <span className="text-sm font-bold tabular-nums text-[var(--space-text-primary)] shrink-0 w-12">{fmtHrs(e.hours)}h</span>
+                          <span className="text-[10px] uppercase tracking-wide text-[var(--space-text-muted)] shrink-0 w-16">{CATEGORY_LABEL[(e.category ?? 'work') as TimeEntryCategory]}</span>
+                          <span className="text-xs text-[var(--space-text-tertiary)] flex-1 min-w-0 truncate">{e.description || '—'}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Jump cards — the full tabs */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <JumpCard
                       icon={CalendarPlus}
@@ -1108,12 +1336,27 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
         </div>
       </div>
 
+      {invoiceOpen && retainer && cycle && selectedClientId && (
+        <RetainerInvoiceModal
+          retainerId={retainer.id}
+          clientId={selectedClientId}
+          cycleRef={cycle.start}
+          recapDraft={recapDraft?.cycleStart === cycle.start ? recapDraft.data : null}
+          onComposeRecap={() => setRecapOpen(true)}
+          onClose={() => setInvoiceOpen(false)}
+          onSent={() => { void load() }}
+        />
+      )}
+
+      {/* Rendered after the invoice modal so composing from the send flow stacks on top */}
       {recapOpen && retainer && cycle && selectedClientId && (
         <RetainerRecapModal
           retainerId={retainer.id}
           clientId={selectedClientId}
           cycleRef={cycle.start}
           onClose={() => setRecapOpen(false)}
+          draft={recapDraft?.cycleStart === cycle.start ? recapDraft.data : null}
+          onDraftChange={(m) => setRecapDraft({ cycleStart: cycle.start, data: m })}
         />
       )}
     </div>
@@ -1121,6 +1364,54 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
+
+const HEALTH_META: Record<RetainerHealth, { label: string; color: string }> = {
+  over:    { label: 'Over cap', color: 'rgb(245 158 11)' },
+  warning: { label: 'Near cap', color: 'rgb(245 158 11)' },
+  healthy: { label: 'On track', color: 'var(--space-accent)' },
+  open:    { label: 'Open',     color: 'var(--space-text-muted)' },
+}
+
+// One retainer in the portfolio board — client, cycle burn, and how much cycle is left.
+function BoardRow({
+  row, idx, isSel, onSelect, onHover,
+}: { row: RetainerPortfolioRow; idx: number; isSel: boolean; onSelect: () => void; onHover: () => void }) {
+  const meta = HEALTH_META[row.health]
+  const amber = row.health === 'over' || row.health === 'warning'
+  return (
+    <button
+      type="button"
+      data-pick-idx={idx}
+      onClick={onSelect}
+      onMouseEnter={onHover}
+      className={cn(
+        'w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-colors relative',
+        isSel ? 'bg-[var(--space-bg-card-hover)] border-[var(--space-accent-glow)]' : 'border-[var(--space-border-hard)] hover:bg-[var(--space-bg-card-hover)]',
+      )}
+    >
+      {isSel && <div className="absolute left-0 top-2 bottom-2 w-[2px] rounded-full" style={{ background: 'var(--space-accent)', opacity: 0.7 }} />}
+      <span className="size-2 rounded-full shrink-0" style={{ background: meta.color }} title={meta.label} />
+      <div className="flex-1 min-w-0">
+        <p className={cn('text-sm truncate', isSel ? 'text-[var(--space-text-primary)] font-medium' : 'text-[var(--space-text-secondary)]')}>
+          {row.clientName}
+          {row.clientCompany && <span className="font-normal text-[var(--space-text-muted)]"> · {row.clientCompany}</span>}
+        </p>
+        <p className="text-[11px] text-[var(--space-text-muted)] truncate">
+          {TIER_LABEL[row.tier]}
+          {row.deactivateOn ? ' · ending soon' : ''}
+        </p>
+      </div>
+
+      <div className="hidden sm:block w-24 h-1.5 rounded-full bg-[var(--space-bg-card)] overflow-hidden shrink-0">
+        <div className="h-full rounded-full" style={{ width: `${row.pct}%`, background: amber ? 'rgb(245 158 11)' : 'var(--space-accent)' }} />
+      </div>
+      <span className={cn('text-xs tabular-nums shrink-0 w-[68px] text-right', amber ? 'text-amber-500 font-semibold' : 'text-[var(--space-text-secondary)]')}>
+        {row.cap > 0 ? `${fmtHrs(row.used)}/${fmtHrs(row.cap)}h` : `${fmtHrs(row.used)}h`}
+      </span>
+      <span className="text-[11px] tabular-nums text-[var(--space-text-muted)] shrink-0 w-14 text-right">{row.daysLeft}d left</span>
+    </button>
+  )
+}
 
 function JumpCard({
   icon: Icon, title, hint, onClick,

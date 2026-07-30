@@ -40,6 +40,16 @@ export interface GenericInvoiceEmailData {
   dueDate?: string
   packageName?: string
   proposalPrintUrl?: string
+  // Retainer invoices: an optional staff cover note and next-month planned work.
+  customMessage?: string
+  plannedWork?: string[]
+  /** Whether a PDF copy is attached — drives the footer note. Defaults to true. */
+  hasPdfAttachment?: boolean
+}
+
+/** Escape user-entered text before it goes into an HTML email. */
+function esc(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
 export interface EmailAttachment {
@@ -145,6 +155,37 @@ export function generateGenericInvoiceEmail(order: GenericInvoiceEmailData): str
 
   const thStyle = 'font-size:10px;font-weight:400;color:#3a3a3a;text-transform:uppercase;letter-spacing:0.35em;padding-bottom:10px;border-bottom:1px solid #1a1a1a;'
 
+  const messageHtml = order.customMessage?.trim()
+    ? `
+          <tr>
+            <td style="padding:24px 40px 0 40px;">
+              <p class="oc-body-text" style="margin:0;font-size:13px;color:#555555;line-height:1.8;font-weight:300;white-space:pre-line;">${esc(order.customMessage.trim())}</p>
+            </td>
+          </tr>`
+    : ''
+
+  const plannedItems = (order.plannedWork ?? []).map((s) => s.trim()).filter(Boolean)
+  const plannedHtml = plannedItems.length
+    ? `
+          <tr>
+            <td style="padding:24px 40px 0 40px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="oc-detail-box" style="background-color:#111111;border:1px solid #1a1a1a;">
+                <tr>
+                  <td style="padding:16px 20px;">
+                    <p class="oc-detail-label" style="margin:0 0 10px 0;font-size:10px;letter-spacing:0.35em;text-transform:uppercase;color:#3a3a3a;font-weight:400;">Planned This Month</p>
+                    ${plannedItems
+                      .map(
+                        (item) =>
+                          `<div class="oc-detail-val" style="font-size:12px;color:#555555;line-height:1.8;">&bull;&nbsp; ${esc(item)}</div>`,
+                      )
+                      .join('\n                    ')}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>`
+    : ''
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -192,6 +233,7 @@ export function generateGenericInvoiceEmail(order: GenericInvoiceEmailData): str
               </table>
             </td>
           </tr>
+          ${messageHtml}
 
           <!-- Bill To -->
           <tr>
@@ -229,6 +271,8 @@ export function generateGenericInvoiceEmail(order: GenericInvoiceEmailData): str
             </td>
           </tr>
 
+          ${plannedHtml}
+
           ${order.invoiceNote ? `
           <!-- Note -->
           <tr>
@@ -260,7 +304,7 @@ export function generateGenericInvoiceEmail(order: GenericInvoiceEmailData): str
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                 <tr>
                   <td class="oc-footer-note-td" style="border-top:1px solid #0f0f0f;padding-top:24px;">
-                    <p class="oc-muted" style="margin:0;font-size:11px;color:#2e2e2e;line-height:1.7;font-weight:300;">A copy of this invoice is attached as a PDF. Questions? Reply to this email or contact <a href="mailto:chance@orcaclub.pro" style="color:#3a5a5e;text-decoration:none;">chance@orcaclub.pro</a></p>
+                    <p class="oc-muted" style="margin:0;font-size:11px;color:#2e2e2e;line-height:1.7;font-weight:300;">${order.hasPdfAttachment === false ? '' : 'A copy of this invoice is attached as a PDF. '}Questions? Reply to this email or contact <a href="mailto:chance@orcaclub.pro" style="color:#3a5a5e;text-decoration:none;">chance@orcaclub.pro</a></p>
                   </td>
                 </tr>
               </table>
@@ -312,9 +356,14 @@ export function generateGenericInvoiceEmailText(order: GenericInvoiceEmailData):
     order.customerEmail,
   ].filter(Boolean).join('\n')
 
+  const plannedItems = (order.plannedWork ?? []).map((s) => s.trim()).filter(Boolean)
+  const plannedText = plannedItems.length
+    ? `\nPLANNED THIS MONTH\n━━━━━━━━━━━━━━━━━━━━\n${plannedItems.map((i) => `- ${i}`).join('\n')}\n`
+    : ''
+
   return `
 ORCACLUB — ${typeLabel} #${order.orderNumber}
-${order.packageName ? `Package: ${order.packageName}\n` : ''}${order.dueDate ? `Due: ${fmtDueDate(order.dueDate)}\n` : ''}
+${order.packageName ? `Package: ${order.packageName}\n` : ''}${order.dueDate ? `Due: ${fmtDueDate(order.dueDate)}\n` : ''}${order.customMessage?.trim() ? `\n${order.customMessage.trim()}\n` : ''}
 BILL TO
 ━━━━━━━━━━━━━━━━━━━━
 ${billToLines}
@@ -324,8 +373,8 @@ ITEMS
 ${lineItemsText}
 ━━━━━━━━━━━━━━━━━━━━
 TOTAL DUE: ${fmtUsd(order.totalAmount)} USD
-${order.invoiceNote ? `\n${order.invoiceNote}\n` : ''}
-${order.stripeInvoiceUrl ? `Pay online:\n${order.stripeInvoiceUrl}\n\n` : ''}A copy of this invoice is attached as a PDF.
+${plannedText}${order.invoiceNote ? `\n${order.invoiceNote}\n` : ''}
+${order.stripeInvoiceUrl ? `Pay online:\n${order.stripeInvoiceUrl}\n\n` : ''}${order.hasPdfAttachment === false ? '' : 'A copy of this invoice is attached as a PDF.'}
 
 Questions? Reply to this email or contact chance@orcaclub.pro
 

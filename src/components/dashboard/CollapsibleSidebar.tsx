@@ -1,79 +1,87 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface CollapsibleSidebarProps {
   children: React.ReactNode
+  /** Short label shown on the collapsed rail so users know what's tucked away. */
+  railLabel?: string
 }
 
-export function CollapsibleSidebar({ children }: CollapsibleSidebarProps) {
-  const [pinned, setPinned] = useState(false)
-  const [hovered, setHovered] = useState(false)
-  const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+const STORAGE_KEY = 'orca:detail-sidebar-collapsed'
 
-  const isOpen = pinned || hovered
+/**
+ * Persistent detail sidebar. Open by default and stays put — a single collapse
+ * toggle (state remembered in localStorage) swaps it to a slim, labeled rail.
+ * No hover-to-expand: no accidental triggers, no width/opacity reflow race.
+ */
+export function CollapsibleSidebar({ children, railLabel = 'Details' }: CollapsibleSidebarProps) {
+  const [collapsed, setCollapsed] = useState(false)
+  // Gate the width transition until after the first client paint so restoring a
+  // saved "collapsed" preference snaps into place instead of animating on load.
+  const [mounted, setMounted] = useState(false)
 
-  const handleMouseEnter = useCallback(() => {
-    if (leaveTimer.current) clearTimeout(leaveTimer.current)
-    setHovered(true)
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(STORAGE_KEY) === '1') setCollapsed(true)
+    } catch {
+      /* localStorage unavailable — default to open */
+    }
+    setMounted(true)
   }, [])
 
-  const handleMouseLeave = useCallback(() => {
-    leaveTimer.current = setTimeout(() => setHovered(false), 150)
-  }, [])
+  const toggle = () =>
+    setCollapsed((c) => {
+      const next = !c
+      try {
+        localStorage.setItem(STORAGE_KEY, next ? '1' : '0')
+      } catch {
+        /* ignore */
+      }
+      return next
+    })
 
   return (
-    // aside stretches to the flex container's full height (no self-start, no fixed height)
-    // border-r extends the full page length for visual continuity
     <aside
       className={cn(
-        'hidden lg:block shrink-0 border-r border-[var(--space-border-hard)] bg-[var(--space-bg-card)] transition-[width] duration-300 ease-in-out',
-        isOpen ? 'w-72 xl:w-80' : 'w-12',
+        'hidden lg:block shrink-0 border-r border-[var(--space-border-hard)] bg-[var(--space-bg-card)]',
+        mounted && 'transition-[width] duration-300 ease-in-out',
+        collapsed ? 'w-12' : 'w-72 xl:w-80',
       )}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
     >
-      {/* Sticky panel — pins to viewport below the header while the aside background spans full page */}
-      <div className="sticky top-[49px] h-[calc((100vh-64px)/1.3)] flex flex-col">
-
-        {/* Extended hover zone — invisible 32px strip beyond the right edge */}
-        <div
-          className="absolute top-0 bottom-0 left-full w-8"
-          onMouseEnter={handleMouseEnter}
-          aria-hidden="true"
-        />
-
-        {/* Overflow clip wrapper — needed to clip wide content when collapsed */}
-        <div className="flex flex-col h-full overflow-hidden">
-
-          {/* Pin toggle — click to lock open / unlock */}
-          <div className={cn('flex shrink-0 pt-3', isOpen ? 'justify-end pr-3' : 'justify-center')}>
-            <button
-              onClick={() => setPinned((p) => !p)}
-              className="p-1.5 rounded-md text-[var(--space-text-muted)] hover:text-[var(--space-text-tertiary)] hover:bg-[var(--space-bg-card-hover)] transition-colors"
-              aria-label={pinned ? 'Unpin sidebar' : 'Pin sidebar open'}
-            >
-              {pinned ? (
-                <PanelLeftClose className="size-4" />
-              ) : (
-                <PanelLeftOpen className="size-4" />
-              )}
-            </button>
-          </div>
-
-          {/* Content — fades out when collapsed but stays mounted */}
-          <div
-            className={cn(
-              'flex-1 overflow-y-auto transition-opacity duration-200',
-              isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none',
-            )}
+      {/* Sticky panel pins below the header while the aside background spans the page. */}
+      <div className="sticky top-[49px] h-[calc((100vh-64px)/1.3)] flex flex-col overflow-hidden">
+        {collapsed ? (
+          // ── Collapsed rail — click anywhere to expand, labeled for discoverability ──
+          <button
+            onClick={toggle}
+            className="group flex h-full w-full flex-col items-center gap-4 pt-3 pb-5 text-[var(--space-text-muted)] hover:text-[var(--space-text-tertiary)] transition-colors"
+            aria-label={`Expand ${railLabel.toLowerCase()} panel`}
           >
-            {children}
-          </div>
-
-        </div>
+            <span className="p-1.5 rounded-md group-hover:bg-[var(--space-bg-card-hover)] transition-colors">
+              <PanelLeftOpen className="size-4" />
+            </span>
+            <span className="text-[9px] font-semibold uppercase tracking-[0.18em] [writing-mode:vertical-rl] rotate-180">
+              {railLabel}
+            </span>
+          </button>
+        ) : (
+          <>
+            {/* Collapse toggle */}
+            <div className="flex shrink-0 justify-end pr-3 pt-3">
+              <button
+                onClick={toggle}
+                className="p-1.5 rounded-md text-[var(--space-text-muted)] hover:text-[var(--space-text-tertiary)] hover:bg-[var(--space-bg-card-hover)] transition-colors"
+                aria-label={`Collapse ${railLabel.toLowerCase()} panel`}
+              >
+                <PanelLeftClose className="size-4" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto">{children}</div>
+          </>
+        )}
       </div>
     </aside>
   )

@@ -198,6 +198,26 @@ const Orders: CollectionConfig = {
       },
     },
     {
+      name: 'retainerRef',
+      type: 'relationship',
+      relationTo: 'retainers',
+      index: true,
+      admin: {
+        description: 'Retainer this invoice bills (for monthly retainer invoices)',
+        position: 'sidebar',
+      },
+    },
+    {
+      name: 'retainerCycleStart',
+      type: 'date',
+      index: true,
+      admin: {
+        description: 'Start of the billing cycle this retainer invoice covers',
+        position: 'sidebar',
+        date: { pickerAppearance: 'dayOnly' },
+      },
+    },
+    {
       name: 'invoiceType',
       type: 'select',
       options: [

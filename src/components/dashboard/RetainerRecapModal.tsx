@@ -24,15 +24,21 @@ export interface RetainerRecapModalProps {
   /** The viewed cycle's start ISO — used as the recap's reference date. */
   cycleRef: string
   onClose: () => void
+  /** Previously composed state for THIS cycle — resumes the draft instead of re-deriving. */
+  draft?: RecapData | null
+  /** Reports every edit up so the composed narrative survives the modal closing
+   *  (and can ride along on the retainer invoice email). */
+  onDraftChange?: (model: RecapData) => void
 }
 
-export function RetainerRecapModal({ retainerId, clientId, cycleRef, onClose }: RetainerRecapModalProps) {
-  const [loading, setLoading] = useState(true)
+export function RetainerRecapModal({ retainerId, clientId, cycleRef, onClose, draft, onDraftChange }: RetainerRecapModalProps) {
+  const [loading, setLoading] = useState(!draft)
   const [error, setError] = useState<string | null>(null)
-  const [model, setModel] = useState<RecapData | null>(null)
+  const [model, setModel] = useState<RecapData | null>(draft ?? null)
   const [generating, setGenerating] = useState(false)
 
   useEffect(() => {
+    if (draft) return // resume the lifted draft — no re-derive
     let alive = true
     ;(async () => {
       setLoading(true)
@@ -44,7 +50,14 @@ export function RetainerRecapModal({ retainerId, clientId, cycleRef, onClose }: 
       setLoading(false)
     })()
     return () => { alive = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId, cycleRef])
+
+  // Lift every edit (and the initial derived model) to the parent.
+  useEffect(() => {
+    if (model) onDraftChange?.(model)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [model])
 
   // Escape closes.
   useEffect(() => {

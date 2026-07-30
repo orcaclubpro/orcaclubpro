@@ -4,7 +4,21 @@ import { getCurrentUser } from '@/actions/auth'
 import { getPayload } from 'payload'
 import config from '@payload-config'
 import { cycleFor, nextCycleStart, type Cycle } from '@/lib/retainers/cycle'
-import { deriveRecapDefaults, type RecapData } from '@/lib/retainers/recap'
+import { deriveRecapDefaults, mergeRecap, RECAP_CATEGORY_LABEL, type RecapData } from '@/lib/retainers/recap'
+import { getStripe } from '@/lib/stripe'
+import { resolveStripeCustomer } from '@/lib/stripe/customers'
+import { createStripeInvoiceForOrder } from '@/lib/stripe/invoices'
+import { buildRetainerStatementPdf, buildRetainerRecapPdf } from '@/lib/pdf-generators'
+import {
+  generateGenericInvoiceEmail,
+  generateGenericInvoiceEmailText,
+  type EmailAttachment,
+} from '@/lib/payload/utils/genericInvoiceEmailTemplate'
+import {
+  generateRetainerRecapEmail,
+  generateRetainerRecapEmailText,
+  retainerRecapEmailSubject,
+} from '@/lib/payload/utils/retainerRecapEmailTemplate'
 
 // ── Shared shapes ───────────────────────────────────────────────────────────────
 
@@ -75,6 +89,32 @@ export interface RetainerScheduled {
   deactivateOn: string | null
   pendingEffectiveFrom: string | null
   pending: { tier?: RetainerTier | null; monthlyFee?: number | null; hoursPerMonth?: number | null; overageRate?: number | null } | null
+}
+
+/** The order already billed for a cycle, if any — lets the UI show "Invoiced" instead of "Send". */
+export interface RetainerCycleInvoice {
+  orderId: string
+  orderNumber: string
+  status: 'pending' | 'paid' | 'cancelled'
+  amount: number
+  stripeInvoiceUrl: string | null
+  createdAt: string
+}
+
+/** Client identity attached to the summary — recipient details for the invoice flow. */
+export interface RetainerClientInfo {
+  name: string
+  company: string | null
+  email: string | null
+}
+
+/** The next billing cycle — retainers bill a month ahead, so the close-out UI needs it. */
+export interface RetainerNextCycle {
+  start: string
+  label: string
+  /** Month name of the next cycle, e.g. "August". */
+  monthLabel: string
+  invoice: RetainerCycleInvoice | null
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────────
@@ -246,27 +286,81 @@ export async function getRetainerSummary(clientAccountId: string, refDate?: stri
         drafts: [] as TimeEntryDoc[],
         totals: computeTotals([], 0, 65),
         scheduled: null,
+        client: null as RetainerClientInfo | null,
+        cycleInvoice: null as RetainerCycleInvoice | null,
+        nextCycle: null as RetainerNextCycle | null,
       }
     }
 
     const cycle = cycleFor(anchorOf(retainer), refDate ? new Date(refDate).toISOString() : now)
+    // Retainers bill a month ahead, so the close-out flow always needs the next window.
+    const nextCycle = cycleFor(anchorOf(retainer), cycle.end)
 
-    const { docs } = await payload.find({
-      collection: 'retainer-time-entries',
-      where: {
-        and: [
-          { clientAccount: { equals: clientAccountId } },
-          { date: { greater_than_equal: cycle.start } },
-          { date: { less_than: cycle.end } },
-        ],
-      },
-      sort: '-date',
-      depth: 0,
-      limit: 500,
-    })
+    const [{ docs }, account, { docs: invoiceOrders }] = await Promise.all([
+      payload.find({
+        collection: 'retainer-time-entries',
+        where: {
+          and: [
+            { clientAccount: { equals: clientAccountId } },
+            { date: { greater_than_equal: cycle.start } },
+            { date: { less_than: cycle.end } },
+          ],
+        },
+        sort: '-date',
+        depth: 0,
+        limit: 500,
+      }),
+      payload.findByID({ collection: 'client-accounts', id: clientAccountId, depth: 0 }).catch(() => null),
+      // The orders billed for this cycle AND the next one, in one query.
+      payload.find({
+        collection: 'orders',
+        where: {
+          and: [
+            { retainerRef: { equals: retainer.id } },
+            { retainerCycleStart: { in: [cycle.start, nextCycle.start] } },
+            { status: { not_equals: 'cancelled' } },
+          ],
+        },
+        sort: '-createdAt',
+        depth: 0,
+        limit: 10,
+      }),
+    ])
     const all = docs as TimeEntryDoc[]
     const logged = all.filter((e) => e.status !== 'draft')
     const drafts = all.filter((e) => e.status === 'draft')
+
+    type OrderRow = { id: string; orderNumber: string; status: 'pending' | 'paid' | 'cancelled'; amount: number; stripeInvoiceUrl?: string | null; createdAt: string; retainerCycleStart?: string | null }
+    const toCycleInvoice = (o: OrderRow | undefined): RetainerCycleInvoice | null =>
+      o
+        ? {
+            orderId: o.id,
+            orderNumber: o.orderNumber,
+            status: o.status,
+            amount: o.amount,
+            stripeInvoiceUrl: o.stripeInvoiceUrl ?? null,
+            createdAt: o.createdAt,
+          }
+        : null
+    // Match orders to a cycle by their stored start (normalize both to a day key).
+    const dayKey = (v: string | null | undefined) => (v ? String(new Date(v).toISOString()).slice(0, 10) : '')
+    const orders = invoiceOrders as OrderRow[]
+    const cycleInvoice = toCycleInvoice(orders.find((o) => dayKey(o.retainerCycleStart) === dayKey(cycle.start)))
+    const nextInvoice = toCycleInvoice(orders.find((o) => dayKey(o.retainerCycleStart) === dayKey(nextCycle.start)))
+
+    const client: RetainerClientInfo | null = account
+      ? {
+          name: (account as any).name ?? 'Client',
+          company: ((account as any).company ?? null) as string | null,
+          email: ((account as any).email ?? null) as string | null,
+        }
+      : null
+    const nextCycleInfo: RetainerNextCycle = {
+      start: nextCycle.start,
+      label: nextCycle.label,
+      monthLabel: cycleMonthName(nextCycle.start),
+      invoice: nextInvoice,
+    }
 
     const terms = termsForCycle(retainer, cycle, logged, now)
     const scheduled: RetainerScheduled = {
@@ -291,10 +385,143 @@ export async function getRetainerSummary(clientAccountId: string, refDate?: stri
       drafts,
       totals: computeTotals(logged, terms.hoursPerMonth, terms.overageRate),
       scheduled,
+      client,
+      cycleInvoice,
+      nextCycle: nextCycleInfo,
     }
   } catch (error) {
     console.error('[getRetainerSummary]', error)
     return { success: false as const, error: error instanceof Error ? error.message : 'Failed to load retainer' }
+  }
+}
+
+// ── Portfolio ──────────────────────────────────────────────────────────────────
+
+export type RetainerHealth = 'healthy' | 'warning' | 'over' | 'open'
+
+export interface RetainerPortfolioRow {
+  clientAccountId: string
+  clientName: string
+  clientCompany: string | null
+  retainerId: string
+  tier: RetainerTier
+  used: number
+  cap: number
+  pct: number // 0–100, clamped
+  overageHours: number
+  overageAmount: number
+  remaining: number
+  daysLeft: number // days remaining in the current cycle
+  cycleLabel: string
+  deactivateOn: string | null
+  health: RetainerHealth
+}
+
+const HEALTH_RANK: Record<RetainerHealth, number> = { over: 0, warning: 1, healthy: 2, open: 3 }
+
+/**
+ * Every active retainer with its current-cycle burn — the manager's book at a glance.
+ * Sorted most-urgent first (over cap → near cap → healthy), then by days left. Staff only.
+ */
+export async function getRetainerPortfolio() {
+  try {
+    const user = await getCurrentUser()
+    if (!user || user.role === 'client') return { success: false as const, error: 'Unauthorized' }
+
+    const payload = await getPayload({ config })
+    const now = new Date().toISOString()
+    const nowMs = Date.parse(now)
+
+    const { docs } = await payload.find({
+      collection: 'retainers',
+      where: { status: { equals: 'active' } },
+      limit: 200,
+      depth: 0,
+    })
+
+    // Settle each against the clock (promote pending terms / flip due deactivations),
+    // then drop any that just expired.
+    const settled = (
+      await Promise.all(
+        (docs as RetainerDoc[]).map(async (r) => {
+          const s = await settleRetainer(payload, r, now)
+          return s.status === 'active' ? s : null
+        }),
+      )
+    ).filter(Boolean) as RetainerDoc[]
+
+    if (settled.length === 0) return { success: true as const, rows: [] as RetainerPortfolioRow[] }
+
+    // One query for the client names/companies these retainers point at.
+    const clientIds = [...new Set(settled.map((r) => (typeof r.clientAccount === 'object' ? r.clientAccount.id : r.clientAccount)))]
+    const { docs: accounts } = await payload.find({
+      collection: 'client-accounts',
+      where: { id: { in: clientIds } },
+      depth: 0,
+      limit: clientIds.length,
+    })
+    const nameById = new Map(accounts.map((a: any) => [a.id, { name: a.name as string, company: (a.company ?? null) as string | null }]))
+
+    const rows = await Promise.all(
+      settled.map(async (r): Promise<RetainerPortfolioRow> => {
+        const clientAccountId = typeof r.clientAccount === 'object' ? r.clientAccount.id : r.clientAccount
+        const cycle = cycleFor(anchorOf(r), now)
+        const terms = effectiveTerms(r, cycle.start)
+
+        const { docs: entries } = await payload.find({
+          collection: 'retainer-time-entries',
+          where: {
+            and: [
+              { clientAccount: { equals: clientAccountId } },
+              { date: { greater_than_equal: cycle.start } },
+              { date: { less_than: cycle.end } },
+            ],
+          },
+          depth: 0,
+          limit: 500,
+        })
+        const logged = (entries as TimeEntryDoc[]).filter((e) => e.status !== 'draft')
+        const totals = computeTotals(logged, terms.hoursPerMonth, terms.overageRate)
+
+        const pct = totals.cap > 0 ? Math.min(100, Math.round((totals.used / totals.cap) * 100)) : 0
+        const daysLeft = Math.max(0, Math.ceil((Date.parse(cycle.end) - nowMs) / 86_400_000))
+        const health: RetainerHealth =
+          totals.cap <= 0 ? 'open'
+            : totals.overageHours > 0 ? 'over'
+            : pct >= 80 ? 'warning'
+            : 'healthy'
+        const acct = nameById.get(clientAccountId)
+
+        return {
+          clientAccountId,
+          clientName: acct?.name ?? 'Client',
+          clientCompany: acct?.company ?? null,
+          retainerId: r.id,
+          tier: terms.tier,
+          used: totals.used,
+          cap: totals.cap,
+          pct,
+          overageHours: totals.overageHours,
+          overageAmount: totals.overageAmount,
+          remaining: totals.remaining,
+          daysLeft,
+          cycleLabel: cycle.label,
+          deactivateOn: iso(r.deactivateOn),
+          health,
+        }
+      }),
+    )
+
+    rows.sort((a, b) => {
+      if (HEALTH_RANK[a.health] !== HEALTH_RANK[b.health]) return HEALTH_RANK[a.health] - HEALTH_RANK[b.health]
+      if (a.daysLeft !== b.daysLeft) return a.daysLeft - b.daysLeft
+      return a.clientName.localeCompare(b.clientName)
+    })
+
+    return { success: true as const, rows }
+  } catch (error) {
+    console.error('[getRetainerPortfolio]', error)
+    return { success: false as const, error: error instanceof Error ? error.message : 'Failed to load portfolio' }
   }
 }
 
@@ -722,6 +949,442 @@ export async function getRecapModel(clientAccountId: string, refDate?: string) {
     console.error('[getRecapModel]', error)
     return { success: false as const, error: error instanceof Error ? error.message : 'Failed to build recap' }
   }
+}
+
+/** "July" for a cycle starting Jul 10 — the invoice's display month is the cycle's start month. */
+function cycleMonthName(cycleStartIso: string): string {
+  return new Date(cycleStartIso).toLocaleDateString('en-US', { month: 'long', timeZone: 'UTC' })
+}
+
+export interface RetainerBillingSide {
+  cycleStart: string
+  cycleLabel: string
+  monthLabel: string
+  tier: RetainerTier
+  tierLabel: string
+  hoursPerMonth: number
+  monthlyFee: number
+  invoice: RetainerCycleInvoice | null
+}
+
+/**
+ * Everything the close-out UI needs in one read: the cycle being closed (current —
+ * its hours + overage feed the recap and the overage line) and the cycle being billed
+ * (next — its effective fee + planned work feed the invoice). Staff only.
+ */
+export async function getRetainerBillingModel(clientAccountId: string, ref?: string) {
+  try {
+    const user = await getCurrentUser()
+    if (!user || user.role === 'client') return { success: false as const, error: 'Unauthorized' }
+    if (!clientAccountId) return { success: false as const, error: 'A client is required' }
+
+    const current = await getRetainerSummary(clientAccountId, ref)
+    if (!current.success) return { success: false as const, error: current.error }
+    if (!current.retainer || !current.cycle || !current.terms) {
+      return { success: false as const, error: 'No active retainer cycle to bill' }
+    }
+    const next = await getRetainerSummary(clientAccountId, current.cycle.end)
+    if (!next.success || !next.cycle || !next.terms) {
+      return { success: false as const, error: 'Could not resolve next cycle' }
+    }
+
+    return {
+      success: true as const,
+      retainerId: current.retainer.id,
+      client: current.client,
+      current: {
+        cycleStart: current.cycle.start,
+        cycleLabel: current.cycle.label,
+        monthLabel: cycleMonthName(current.cycle.start),
+        tier: current.terms.tier,
+        tierLabel: TIER_LABEL[current.terms.tier],
+        hoursPerMonth: current.terms.hoursPerMonth,
+        monthlyFee: current.terms.monthlyFee,
+        invoice: current.cycleInvoice,
+      } satisfies RetainerBillingSide,
+      currentUsage: {
+        hoursUsed: current.totals.used,
+        overageHours: current.totals.overageHours,
+        overageRate: current.terms.overageRate,
+        overageAmount: current.totals.overageAmount,
+        loggedCount: current.logged.length,
+      },
+      next: {
+        cycleStart: next.cycle.start,
+        cycleLabel: next.cycle.label,
+        monthLabel: cycleMonthName(next.cycle.start),
+        tier: next.terms.tier,
+        tierLabel: TIER_LABEL[next.terms.tier],
+        hoursPerMonth: next.terms.hoursPerMonth,
+        monthlyFee: next.terms.monthlyFee,
+        invoice: next.cycleInvoice,
+      } satisfies RetainerBillingSide,
+      nextPlanned: next.drafts.map((d) => d.description ?? '').filter(Boolean),
+    }
+  } catch (error) {
+    console.error('[getRetainerBillingModel]', error)
+    return { success: false as const, error: error instanceof Error ? error.message : 'Failed to load billing model' }
+  }
+}
+
+/** Normalize a recipient list — trimmed, de-duped, non-empty entries only. */
+function cleanRecipients(list: string[] | undefined, fallback: string | null | undefined): string[] {
+  const raw = list && list.length ? list : fallback ? [fallback] : []
+  return [...new Set(raw.map((e) => e.trim()).filter(Boolean))]
+}
+
+/**
+ * Bill NEXT month's retainer. `ref` points at the cycle being billed (the modal passes
+ * next month); the base fee comes from that cycle's effective terms. The closing month's
+ * overage is passed in explicitly (arrears) and added as a line. Creates the Stripe
+ * invoice + linked Order (retainerRef + retainerCycleStart) and emails the invoice —
+ * "August's Retainer" — with the month's planned work and an optional cover note. No PDFs
+ * (those ride the separate recap email). Refuses a cycle that already has an order unless
+ * `force`. Staff only.
+ */
+export async function sendRetainerInvoice(input: {
+  retainerId: string
+  clientAccountId: string
+  /** Cycle to BILL (any date inside it) — the modal points this at next month. */
+  ref?: string
+  baseFee?: number
+  /** Closing month's overage hours (arrears) — the modal passes the previous cycle's. */
+  overageHours?: number
+  overageRate?: number
+  /** Overrides the computed fee + overage total as the invoice amount. */
+  totalOverride?: number
+  daysUntilDue?: number
+  /** Recipients — defaults to the client account email. */
+  recipients?: string[]
+  /** Optional staff cover note rendered in the invoice email. */
+  message?: string
+  /** Planned-work lines shown in the email (defaults to the billed cycle's drafts). */
+  plannedWork?: string[]
+  /** Send even though this cycle already has an order. */
+  force?: boolean
+}) {
+  try {
+    const user = await getCurrentUser()
+    if (!user || user.role === 'client') return { success: false as const, error: 'Unauthorized' }
+    if (!input.retainerId || !input.clientAccountId) return { success: false as const, error: 'A retainer is required' }
+
+    const payload = await getPayload({ config })
+
+    // ── The cycle being billed (next month) ──────────────────────────────────────
+    const summary = await getRetainerSummary(input.clientAccountId, input.ref)
+    if (!summary.success) return { success: false as const, error: summary.error }
+    if (!summary.retainer || !summary.cycle || !summary.terms) {
+      return { success: false as const, error: 'No active retainer cycle to invoice' }
+    }
+    const { cycle, terms } = summary
+
+    if (summary.cycleInvoice && !input.force) {
+      return {
+        success: false as const,
+        error: `${cycleMonthName(cycle.start)} is already invoiced (#${summary.cycleInvoice.orderNumber}).`,
+        alreadyInvoiced: summary.cycleInvoice,
+      }
+    }
+
+    // ── Numbers — computed defaults, staff-overridable ───────────────────────────
+    const baseFee = input.baseFee ?? terms.monthlyFee
+    const overageHours = input.overageHours ?? 0 // arrears — caller supplies the closing month's
+    const overageRate = input.overageRate ?? terms.overageRate
+    const overageAmount = Math.round(overageHours * overageRate * 100) / 100
+    const computedTotal = Math.round((baseFee + overageAmount) * 100) / 100
+    const total = input.totalOverride ?? computedTotal
+    if (!(total > 0)) return { success: false as const, error: 'Invoice amount must be greater than zero' }
+
+    const month = cycleMonthName(cycle.start)
+    const clientName = summary.client?.name ?? 'Client'
+    const recipients = cleanRecipients(input.recipients, summary.client?.email)
+    if (recipients.length === 0) return { success: false as const, error: 'Add at least one recipient email' }
+    const stripeEmail = summary.client?.email ?? recipients[0]
+
+    // Line items in DOLLARS. When the total is overridden, collapse to one line at the
+    // override so the Stripe invoice always sums to exactly what staff approved.
+    const feeTitle = `${month} Retainer — ${TIER_LABEL[terms.tier]} (${terms.hoursPerMonth} hrs/mo)`
+    const lines: { title: string; amount: number }[] =
+      input.totalOverride != null && input.totalOverride !== computedTotal
+        ? [{ title: `${month} Retainer — ${TIER_LABEL[terms.tier]}`, amount: total }]
+        : [
+            ...(baseFee > 0 ? [{ title: feeTitle, amount: baseFee }] : []),
+            ...(overageAmount > 0
+              ? [{ title: `Overage — ${fmtHrsLabel(overageHours)} hrs × $${overageRate}/hr`, amount: overageAmount }]
+              : []),
+          ]
+    if (lines.length === 0) lines.push({ title: feeTitle, amount: total })
+
+    const plannedWork = input.plannedWork ?? summary.drafts.map((d) => d.description ?? '').filter(Boolean)
+
+    // ── Stripe: resolve customer → create + finalize invoice ─────────────────────
+    const stripe = getStripe()
+    const account = await payload
+      .findByID({ collection: 'client-accounts', id: input.clientAccountId, depth: 0 })
+      .catch(() => null)
+    const resolved = await resolveStripeCustomer({
+      stripe,
+      email: stripeEmail,
+      name: clientName,
+      existingCustomerId: ((account as any)?.stripeCustomerId as string | undefined) ?? null,
+      metadata: { orcaclub_client_id: input.clientAccountId, created_via: 'orcaclub_retainer' },
+    })
+    if (resolved.customerId !== (account as any)?.stripeCustomerId) {
+      await payload.update({
+        collection: 'client-accounts',
+        id: input.clientAccountId,
+        data: { stripeCustomerId: resolved.customerId } as any,
+      })
+    }
+
+    const { invoice, invoiceId, hostedInvoiceUrl } = await createStripeInvoiceForOrder({
+      stripe,
+      stripeCustomerId: resolved.customerId,
+      daysUntilDue: input.daysUntilDue ?? 30,
+      description: `${month} Retainer — ${clientName}`,
+      paymentSettings: { payment_method_types: ['card', 'us_bank_account'] },
+      invoiceMetadata: {
+        created_via: 'orcaclub_retainer',
+        retainer_id: input.retainerId,
+        cycle_start: cycle.start,
+      },
+      lines: lines.map((l) => ({ description: l.title, amount: l.amount })),
+    })
+
+    // ── The linked Order — void the Stripe invoice if this write fails ───────────
+    const orderNumber = invoice.number ?? invoiceId
+    let order
+    try {
+      order = await payload.create({
+        collection: 'orders',
+        data: {
+          orderNumber,
+          clientAccount: input.clientAccountId,
+          amount: total,
+          status: 'pending',
+          stripeCustomerId: resolved.customerId,
+          stripeInvoiceId: invoiceId,
+          stripeInvoiceUrl: hostedInvoiceUrl,
+          retainerRef: input.retainerId,
+          retainerCycleStart: cycle.start,
+          invoiceNote: `${month} Retainer`,
+          ...(invoice.due_date ? { dueDate: new Date(invoice.due_date * 1000).toISOString() } : {}),
+          lineItems: lines.map((l) => ({ title: l.title, quantity: 1, price: l.amount, isRecurring: false })),
+        } as any,
+      })
+    } catch (createErr) {
+      await stripe.invoices.voidInvoice(invoiceId).catch((e: unknown) =>
+        console.error('[sendRetainerInvoice] Failed to void orphaned invoice:', e),
+      )
+      throw createErr
+    }
+
+    // ── Email — "August's Retainer". Order + Stripe invoice survive an email failure. ─
+    let emailSent = false
+    try {
+      const emailData = {
+        orderNumber,
+        customerName: clientName,
+        customerEmail: recipients[0],
+        customerCompany: summary.client?.company ?? undefined,
+        lineItems: lines.map((l) => ({ title: l.title, quantity: 1, price: l.amount })),
+        totalAmount: total,
+        stripeInvoiceUrl: hostedInvoiceUrl,
+        invoiceNote: `${month} Retainer`,
+        customMessage: input.message,
+        plannedWork,
+        hasPdfAttachment: false,
+        ...(invoice.due_date ? { dueDate: new Date(invoice.due_date * 1000).toISOString() } : {}),
+      }
+      await payload.sendEmail({
+        to: recipients.join(', '),
+        from: process.env.EMAIL_FROM || 'carbon@orcaclub.pro',
+        subject: `${month}'s Retainer — ORCACLUB`,
+        html: generateGenericInvoiceEmail(emailData),
+        text: generateGenericInvoiceEmailText(emailData),
+      } as any)
+      emailSent = true
+
+      // Record the send on the order's history — one entry per recipient.
+      await payload.update({
+        collection: 'orders',
+        id: order.id,
+        data: {
+          invoices: recipients.map((r) => ({ sentAt: new Date().toISOString(), sentTo: r, sentBy: user.id, status: 'sent' })),
+        } as any,
+      })
+    } catch (e) {
+      console.error('[sendRetainerInvoice] Email failed (invoice + order created):', e)
+    }
+
+    return {
+      success: true as const,
+      orderId: order.id,
+      orderNumber,
+      hostedInvoiceUrl,
+      total,
+      emailSent,
+      recipients,
+    }
+  } catch (error) {
+    console.error('[sendRetainerInvoice]', error)
+    return { success: false as const, error: error instanceof Error ? error.message : 'Failed to send retainer invoice' }
+  }
+}
+
+/**
+ * The backward-looking half of a cycle close: email THIS month's hours & recap, with the
+ * hour-log statement and/or the monthly recap deck attached as PDFs. Purely informational
+ * — no Stripe, no order. Attachments are best-effort. `recap` overlays the staff-composed
+ * narrative onto the server-derived numbers. Staff only.
+ */
+export async function sendRetainerRecapEmail(input: {
+  clientAccountId: string
+  /** Cycle to recap (any date inside it) — the month being closed. */
+  ref?: string
+  recipients?: string[]
+  message?: string
+  attachStatement?: boolean
+  attachRecap?: boolean
+  recap?: Partial<RecapData>
+}) {
+  try {
+    const user = await getCurrentUser()
+    if (!user || user.role === 'client') return { success: false as const, error: 'Unauthorized' }
+    if (!input.clientAccountId) return { success: false as const, error: 'A client is required' }
+
+    const payload = await getPayload({ config })
+    const summary = await getRetainerSummary(input.clientAccountId, input.ref)
+    if (!summary.success) return { success: false as const, error: summary.error }
+    if (!summary.retainer || !summary.cycle || !summary.terms) {
+      return { success: false as const, error: 'No active retainer cycle to recap' }
+    }
+    const { cycle, terms, totals } = summary
+
+    const month = cycleMonthName(cycle.start)
+    const clientName = summary.client?.name ?? 'Client'
+    const recipients = cleanRecipients(input.recipients, summary.client?.email)
+    if (recipients.length === 0) return { success: false as const, error: 'Add at least one recipient email' }
+
+    const attachStatement = input.attachStatement !== false
+    const attachRecap = input.attachRecap !== false
+
+    // ── Attachments — best-effort; a failed PDF never blocks the send ────────────
+    const attachments: EmailAttachment[] = []
+    let hasStatement = false
+    let mergedRecap: RecapData | null = null
+
+    if (attachStatement) {
+      try {
+        const pdf = await buildRetainerStatementPdf({
+          clientName,
+          clientCompany: summary.client?.company ?? null,
+          tierLabel: TIER_LABEL[terms.tier],
+          periodLabel: cycle.label,
+          monthlyFee: terms.monthlyFee,
+          hoursPerMonth: terms.hoursPerMonth,
+          overageRate: terms.overageRate,
+          entries: summary.logged.map((e) => ({
+            date: e.date,
+            description: e.description ?? '',
+            category: e.category ?? 'work',
+            hours: e.hours,
+            priority: e.priority ?? 'medium',
+          })),
+          planned: summary.drafts.map((e) => ({
+            date: e.date,
+            description: e.description ?? '',
+            category: e.category ?? 'work',
+            priority: e.priority ?? 'medium',
+            completion: e.completion ?? 'incomplete',
+          })),
+          totals: {
+            used: totals.used,
+            remaining: totals.remaining,
+            overageHours: totals.overageHours,
+            overageAmount: totals.overageAmount,
+          },
+          generatedOn: new Date().toISOString(),
+        })
+        attachments.push({
+          filename: `ORCACLUB-Statement-${month}.pdf`,
+          content: Buffer.from(pdf).toString('base64'),
+          encoding: 'base64',
+          contentType: 'application/pdf',
+        })
+        hasStatement = true
+      } catch (e) {
+        console.error('[sendRetainerRecapEmail] Statement PDF failed (sending without):', e)
+      }
+    }
+
+    if (attachRecap) {
+      try {
+        const model = await getRecapModel(input.clientAccountId, input.ref)
+        if (model.success) {
+          mergedRecap = mergeRecap(model.model, input.recap)
+          const pdf = await buildRetainerRecapPdf({ ...mergedRecap, generatedOn: new Date().toISOString() })
+          attachments.push({
+            filename: `ORCACLUB-Recap-${month}.pdf`,
+            content: Buffer.from(pdf).toString('base64'),
+            encoding: 'base64',
+            contentType: 'application/pdf',
+          })
+        }
+      } catch (e) {
+        console.error('[sendRetainerRecapEmail] Recap PDF failed (sending without):', e)
+      }
+    }
+    const hasRecap = Boolean(mergedRecap) && attachments.some((a) => a.filename.includes('Recap'))
+
+    // Prefer the staff-edited bucket labels; fall back to derived category hours.
+    const buckets = mergedRecap
+      ? mergedRecap.buckets.map((b) => ({ label: b.label, hours: b.hours }))
+      : (Object.keys(totals.byCategory) as TimeEntryCategory[])
+          .filter((c) => (totals.byCategory[c] ?? 0) > 0)
+          .map((c) => ({ label: RECAP_CATEGORY_LABEL[c], hours: totals.byCategory[c] }))
+
+    const emailData = {
+      clientName,
+      clientCompany: summary.client?.company ?? null,
+      periodLabel: cycle.label,
+      monthLabel: month,
+      hoursUsed: totals.used,
+      hoursPerMonth: terms.hoursPerMonth,
+      overageHours: totals.overageHours,
+      overageAmount: totals.overageAmount,
+      itemsShipped: summary.logged.length,
+      buckets,
+      customMessage: input.message,
+      headline: mergedRecap?.headline,
+      hasStatement,
+      hasRecap,
+    }
+
+    try {
+      await payload.sendEmail({
+        to: recipients.join(', '),
+        from: process.env.EMAIL_FROM || 'carbon@orcaclub.pro',
+        subject: retainerRecapEmailSubject(emailData),
+        html: generateRetainerRecapEmail(emailData),
+        text: generateRetainerRecapEmailText(emailData),
+        ...(attachments.length ? { attachments } : {}),
+      } as any)
+    } catch (e) {
+      console.error('[sendRetainerRecapEmail] Email failed:', e)
+      return { success: false as const, error: 'Failed to send the recap email' }
+    }
+
+    return { success: true as const, recipients, attachmentCount: attachments.length }
+  } catch (error) {
+    console.error('[sendRetainerRecapEmail]', error)
+    return { success: false as const, error: error instanceof Error ? error.message : 'Failed to send recap email' }
+  }
+}
+
+/** Format hours for a Stripe line label (trim to 2 decimals). */
+function fmtHrsLabel(n: number): string {
+  return String(Math.round((n ?? 0) * 100) / 100)
 }
 
 /** Delete an entry (draft or logged). Staff only. */

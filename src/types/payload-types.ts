@@ -720,6 +720,14 @@ export interface Order {
    */
   packageRef?: (string | null) | Package;
   /**
+   * Retainer this invoice bills (for monthly retainer invoices)
+   */
+  retainerRef?: (string | null) | Retainer;
+  /**
+   * Start of the billing cycle this retainer invoice covers
+   */
+  retainerCycleStart?: string | null;
+  /**
    * Type of invoice (for deposit/payment plan tracking)
    */
   invoiceType?: ('full' | 'deposit' | 'installment' | 'balance') | null;
@@ -1035,6 +1043,59 @@ export interface ServiceItem {
   createdAt: string;
 }
 /**
+ * Monthly retainer agreements — one active per client. Hours are logged as retainer-time-entries.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "retainers".
+ */
+export interface Retainer {
+  id: string;
+  clientAccount: string | ClientAccount;
+  /**
+   * Playbook tier — drives preset fee/hours in the builder.
+   */
+  tier: 'basic' | 'growth' | 'enterprise';
+  /**
+   * Inactive retainers are hidden from the dashboard; their logged hours are kept.
+   */
+  status: 'active' | 'inactive';
+  startDate?: string | null;
+  /**
+   * Auto-set when activated — the billing-cycle anchor day.
+   */
+  activatedAt?: string | null;
+  /**
+   * USD per month
+   */
+  monthlyFee?: number | null;
+  /**
+   * Monthly hour cap (no rollover)
+   */
+  hoursPerMonth?: number | null;
+  /**
+   * USD/hr charged past the cap (displayed only for now)
+   */
+  overageRate?: number | null;
+  /**
+   * Scheduled deactivation — retainer stays active until this date, then flips inactive.
+   */
+  deactivateOn?: string | null;
+  /**
+   * Internal notes
+   */
+  notes?: string | null;
+  pendingTier?: ('basic' | 'growth' | 'enterprise') | null;
+  pendingMonthlyFee?: number | null;
+  pendingHoursPerMonth?: number | null;
+  pendingOverageRate?: number | null;
+  /**
+   * When the scheduled change takes effect.
+   */
+  pendingEffectiveFrom?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * SEO-driven solution pages with flexible content blocks
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1327,59 +1388,6 @@ export interface OrcaclubCarouselBlock {
   id?: string | null;
   blockName?: string | null;
   blockType: 'orcaclubCarousel';
-}
-/**
- * Monthly retainer agreements — one active per client. Hours are logged as retainer-time-entries.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "retainers".
- */
-export interface Retainer {
-  id: string;
-  clientAccount: string | ClientAccount;
-  /**
-   * Playbook tier — drives preset fee/hours in the builder.
-   */
-  tier: 'basic' | 'growth' | 'enterprise';
-  /**
-   * Inactive retainers are hidden from the dashboard; their logged hours are kept.
-   */
-  status: 'active' | 'inactive';
-  startDate?: string | null;
-  /**
-   * Auto-set when activated — the billing-cycle anchor day.
-   */
-  activatedAt?: string | null;
-  /**
-   * USD per month
-   */
-  monthlyFee?: number | null;
-  /**
-   * Monthly hour cap (no rollover)
-   */
-  hoursPerMonth?: number | null;
-  /**
-   * USD/hr charged past the cap (displayed only for now)
-   */
-  overageRate?: number | null;
-  /**
-   * Scheduled deactivation — retainer stays active until this date, then flips inactive.
-   */
-  deactivateOn?: string | null;
-  /**
-   * Internal notes
-   */
-  notes?: string | null;
-  pendingTier?: ('basic' | 'growth' | 'enterprise') | null;
-  pendingMonthlyFee?: number | null;
-  pendingHoursPerMonth?: number | null;
-  pendingOverageRate?: number | null;
-  /**
-   * When the scheduled change takes effect.
-   */
-  pendingEffectiveFrom?: string | null;
-  updatedAt: string;
-  createdAt: string;
 }
 /**
  * Hours logged against a retainer, summed per calendar month against the cap.
@@ -2488,6 +2496,8 @@ export interface OrdersSelect<T extends boolean = true> {
   stripeCustomerId?: T;
   stripePaymentIntentId?: T;
   packageRef?: T;
+  retainerRef?: T;
+  retainerCycleStart?: T;
   invoiceType?: T;
   invoiceNote?: T;
   dueDate?: T;

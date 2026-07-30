@@ -126,7 +126,7 @@ export default async function ClientDetailLayout({
     <div className="lg:flex" style={{ minHeight: 'calc((100vh - 64px) / 1.3)' }}>
       <SetHeaderTitle title={clientAccount.name} />
 
-      <CollapsibleSidebar>
+      <CollapsibleSidebar railLabel="Client">
         <ClientSidebarContent {...sidebarProps} />
       </CollapsibleSidebar>
 
