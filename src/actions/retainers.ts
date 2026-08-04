@@ -4,7 +4,7 @@ import { getCurrentUser } from '@/actions/auth'
 import { getPayload } from 'payload'
 import config from '@payload-config'
 import { cycleFor, nextCycleStart, type Cycle } from '@/lib/retainers/cycle'
-import { deriveRecapDefaults, type RecapData } from '@/lib/retainers/recap'
+import { deriveRecapDefaults, RECAP_CATEGORY_LABEL, type RecapData } from '@/lib/retainers/recap'
 import { getStripe } from '@/lib/stripe'
 import { createStripeInvoiceForOrder } from '@/lib/stripe/invoices'
 import { resolveStripeCustomer } from '@/lib/stripe/customers'
@@ -230,6 +230,12 @@ async function loadActiveRetainer(
   if (!raw) return null
   const settled = await settleRetainer(payload, raw, nowIso)
   return settled.status === 'active' ? settled : null
+}
+
+/** Short UTC day label for billing line items, e.g. "Jul 12". */
+function fmtEntryDay(dateIso: string): string {
+  const d = new Date(dateIso)
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
 }
 
 /** The order already billed for a (retainer, cycle) pair, or null. Idempotency + UI state. */
@@ -863,10 +869,39 @@ export async function sendRetainerBilling(clientAccountId: string, refDate?: str
     const billingName = `Retainer — ${tierLabel} · ${cycle.label}`
     const overageDesc = `Overage — ${totals.overageHours}h × $${terms.overageRate}/hr`
 
+    // Itemized work-hour lines — every logged entry, oldest first, at $0 (the hours
+    // are covered by the fee/overage lines, so the amount check still balances).
+    // Each line shows its value: covered hours at the effective rate (fee ÷ cap),
+    // hours past the cap at the overage rate — split by a running-hours counter.
+    const round2 = (n: number) => Math.round(n * 100) / 100
+    const effectiveRate = terms.hoursPerMonth > 0 ? feeAmount / terms.hoursPerMonth : 0
+    const workEntries = [...logged].sort((a, b) => (a.date < b.date ? -1 : 1))
+    let runningHours = 0
+    const workLines = workEntries.map((e) => {
+      const h = e.hours ?? 0
+      const coveredH = round2(Math.max(0, Math.min(h, terms.hoursPerMonth - runningHours)))
+      const overH = round2(h - coveredH)
+      runningHours = round2(runningHours + h)
+      const value = round2(coveredH * effectiveRate + overH * terms.overageRate)
+      const calcParts = [
+        coveredH > 0 ? `${coveredH}h × $${round2(effectiveRate)}/hr` : null,
+        overH > 0 ? `${overH}h × $${terms.overageRate}/hr overage` : null,
+      ].filter(Boolean)
+      const category = RECAP_CATEGORY_LABEL[(e.category ?? 'work') as TimeEntryCategory]
+      return {
+        title: `${fmtEntryDay(e.date)} — ${e.description?.trim() || category}`,
+        description: `${h}h · ${category} · ${calcParts.join(' + ')} = $${value}${overH > 0 ? '' : ' · included in retainer'}`,
+        hours: h,
+        value,
+      }
+    })
+    const workValue = round2(workLines.reduce((sum, l) => sum + l.value, 0))
+
     // 1. Package (proposal, sent) — the client-facing billing document. Cover lists
     //    the hours summary and next cycle's planned work.
     const coverLines = [
       `Retainer billing for ${cycle.label}: ${totals.used} of ${terms.hoursPerMonth} hours used.`,
+      workValue > 0 ? `Work delivered this cycle: $${workValue} in logged hours.` : null,
       totals.overageHours > 0 ? `Includes ${totals.overageHours}h of overage at $${terms.overageRate}/hr.` : null,
       planned.length
         ? `\nPlanned for ${nextCycle.label}:\n${planned.map((p) => `• ${p}`).join('\n')}`
@@ -900,6 +935,15 @@ export async function sendRetainerBilling(clientAccountId: string, refDate?: str
                 quantity: 1,
               }]
             : []),
+          // Itemized hours — client-facing detail of the work the fee covered.
+          ...workLines.map((line) => ({
+            name: line.title,
+            description: line.description,
+            billingType: 'hourly',
+            hours: line.hours,
+            price: 0,
+            quantity: 1,
+          })),
         ],
       } as any,
     })
@@ -947,6 +991,8 @@ export async function sendRetainerBilling(clientAccountId: string, refDate?: str
             ? [{ title: `Monthly retainer — ${tierLabel}`, description: cycle.label, price: feeAmount, quantity: 1 }]
             : []),
           ...(totals.overageAmount > 0 ? [{ title: overageDesc, price: totals.overageAmount, quantity: 1 }] : []),
+          // Itemized hours at $0 — covered by the lines above; amount still balances.
+          ...workLines.map((line) => ({ title: line.title, description: line.description, price: 0, quantity: 1 })),
         ],
       } as any,
     })
