@@ -106,7 +106,7 @@ export default async function ProjectLayout({
         <ProjectSideActions project={project} tasks={tasks as Task[]} username={username} />
       )}
 
-      <CollapsibleSidebar>
+      <CollapsibleSidebar railLabel="Project">
         <ProjectSidebar
           project={project}
           tasks={tasks as Task[]}

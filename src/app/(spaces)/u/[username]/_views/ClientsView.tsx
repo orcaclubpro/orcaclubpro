@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
   Users, FolderOpen, ArrowRight, Building2, AlertCircle, CheckCircle,
-  Settings, Save, Loader2, Trash2, AlertTriangle, X, CheckCircle2, Shield,
+  Settings, Save, Loader2, Trash2, AlertTriangle, X, CheckCircle2, Shield, Search,
 } from 'lucide-react'
 import {
   Dialog, DialogContent, DialogTitle, DialogDescription,
@@ -27,87 +27,97 @@ interface ClientsViewProps {
   allOrders?: any[]
 }
 
-// ─── Palette ──────────────────────────────────────────────────────────────────
-
-const PALETTES = [
-  { text: 'text-blue-500',    dot: 'bg-[var(--space-accent)]'   },
-  { text: 'text-blue-400',    dot: 'bg-blue-400'    },
-  { text: 'text-violet-400',  dot: 'bg-violet-400'  },
-  { text: 'text-emerald-400', dot: 'bg-emerald-400' },
-  { text: 'text-amber-400',   dot: 'bg-amber-400'   },
-]
-
 function fmt(n: number) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n)
+}
+
+function initialsOf(name: string): string {
+  const parts = (name || '').split(/\s+/).filter(Boolean)
+  return parts.slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('') || name?.[0]?.toUpperCase() || '?'
+}
+
+// Muted, tasteful monogram tints — stable per client so each keeps its identity.
+const AVATAR_TINTS = [
+  { bg: 'bg-blue-400/10',    text: 'text-blue-400',    ring: 'border-blue-400/25'    },
+  { bg: 'bg-violet-400/10',  text: 'text-violet-400',  ring: 'border-violet-400/25'  },
+  { bg: 'bg-emerald-400/10', text: 'text-emerald-400', ring: 'border-emerald-400/25' },
+  { bg: 'bg-cyan-400/10',    text: 'text-cyan-400',    ring: 'border-cyan-400/25'    },
+  { bg: 'bg-rose-400/10',    text: 'text-rose-400',    ring: 'border-rose-400/25'    },
+  { bg: 'bg-amber-400/10',   text: 'text-amber-400',   ring: 'border-amber-400/25'   },
+]
+
+function tintFor(key: string) {
+  let h = 0
+  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0
+  return AVATAR_TINTS[h % AVATAR_TINTS.length]
 }
 
 // ─── Left panel: client nav row ────────────────────────────────────────────────
 
 function ClientNavRow({
   client,
-  index,
   isSelected,
   onSelect,
-  animationDelay,
   username,
 }: {
   client: any
-  index: number
   isSelected: boolean
   onSelect: () => void
-  animationDelay: number
   username: string
 }) {
   const router = useRouter()
-  const palette = PALETTES[index % PALETTES.length]
   const balance = client.accountBalance ?? 0
   const hasBalance = balance > 0
+  const secondary = client.company || client.email || ''
+  const tint = tintFor(client.id || client.name || '')
 
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       data-client-id={client.id}
       onClick={onSelect}
       onDoubleClick={() => router.push(`/u/${username}/clients/${client.id}`)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect() }
+      }}
       className={cn(
-        'w-full flex items-center gap-3 px-5 py-3.5 text-left transition-all duration-150 border-l-2 group',
-        'animate-in fade-in slide-in-from-left-1 duration-300',
+        'group w-full flex items-center gap-3 px-3 py-2.5 text-left border-l-2 cursor-pointer select-none transition-colors duration-150',
         isSelected
-          ? 'border-l-[rgba(139,156,182,0.50)] bg-[var(--space-bg-card-hover)]'
-          : 'border-l-transparent hover:bg-[rgba(255,255,255,0.02)] hover:border-l-[#404040]',
+          ? 'border-l-[var(--space-accent)] bg-[var(--space-bg-card-hover)]'
+          : 'border-l-transparent hover:bg-[var(--space-bg-card-hover)]/60',
       )}
-      style={{ animationDelay: `${animationDelay}ms` }}
     >
-      {/* Status dot */}
-      <span
-        className={cn(
-          'size-2 rounded-full shrink-0',
-          hasBalance ? 'bg-amber-400 animate-pulse' : palette.dot,
+      {/* Monogram — stable per-client identity */}
+      <div className={cn('relative size-9 shrink-0 rounded-lg flex items-center justify-center border', tint.bg, tint.ring)}>
+        <span className={cn('text-[11px] font-bold tracking-tight', tint.text)}>{initialsOf(client.name)}</span>
+        {hasBalance && (
+          <span className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full bg-amber-400 border-2 border-[var(--space-bg-card)]" />
         )}
-      />
+      </div>
 
-      {/* Text */}
       <div className="flex-1 min-w-0">
         <p
           className={cn(
-            'text-sm font-semibold truncate transition-colors duration-150',
-            isSelected ? 'text-[var(--space-text-primary)]' : 'text-[var(--space-text-secondary)] group-hover:text-[var(--space-text-tertiary)]',
+            'text-sm truncate leading-tight transition-colors duration-150 font-semibold',
+            isSelected
+              ? 'text-[var(--space-text-primary)]'
+              : 'text-[var(--space-text-tertiary)] group-hover:text-[var(--space-text-primary)]',
           )}
         >
           {client.name}
         </p>
-        <p className="text-[10px] text-[var(--space-text-muted)] truncate mt-0.5">
-          {client.company || client.email}
-        </p>
+        {secondary && (
+          <p className="text-[10px] text-[var(--space-text-muted)] truncate leading-tight mt-0.5">{secondary}</p>
+        )}
       </div>
 
-      {/* Balance badge */}
-      {hasBalance && (
-        <span className="text-[9px] font-mono text-amber-400 shrink-0 tabular-nums">
-          {fmt(balance)}
-        </span>
+      {hasBalance ? (
+        <span className="text-[10px] font-mono text-amber-400 shrink-0 tabular-nums">{fmt(balance)}</span>
+      ) : (
+        <ArrowRight className="size-3.5 shrink-0 text-transparent group-hover:text-[var(--space-text-muted)] transition-colors duration-150" />
       )}
-    </button>
+    </div>
   )
 }
 
@@ -752,9 +762,20 @@ export function ClientsView({
   allOrders = [],
 }: ClientsViewProps) {
   const [selectedId, setSelectedId] = useState<string>(clientAccounts[0]?.id ?? '')
+  const [query, setQuery] = useState('')
   const listRef = useRef<HTMLDivElement>(null)
 
   const selectedClient = clientAccounts.find((c) => c.id === selectedId) ?? clientAccounts[0] ?? null
+
+  const q = query.trim().toLowerCase()
+  const filtered = q
+    ? clientAccounts.filter(
+        (c) =>
+          (c.name?.toLowerCase().includes(q) ?? false) ||
+          (c.company?.toLowerCase().includes(q) ?? false) ||
+          (c.email?.toLowerCase().includes(q) ?? false),
+      )
+    : clientAccounts
 
   // Projects and orders belonging to the selected client
   const clientProjects = serializedProjects.filter((p) => p.client?.id === selectedId)
@@ -773,17 +794,17 @@ export function ClientsView({
       if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
       e.preventDefault()
       setSelectedId((curr) => {
-        const idx = clientAccounts.findIndex((c) => c.id === curr)
+        const idx = filtered.findIndex((c) => c.id === curr)
         const next =
           e.key === 'ArrowDown'
-            ? Math.min(clientAccounts.length - 1, idx + 1)
+            ? Math.min(filtered.length - 1, idx + 1)
             : Math.max(0, idx - 1)
-        return clientAccounts[next]?.id ?? curr
+        return filtered[next]?.id ?? curr
       })
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [clientAccounts])
+  }, [filtered])
 
   // Scroll selected into view
   useEffect(() => {
@@ -802,40 +823,49 @@ export function ClientsView({
           <div className="h-px w-full bg-gradient-to-r from-transparent via-[rgba(139,156,182,0.10)] to-transparent shrink-0" />
 
           {/* Header */}
-          <div className="px-6 pt-8 pb-5 shrink-0">
-            <p className="text-[10px] tracking-[0.4em] uppercase text-[var(--space-accent)] font-medium mb-3">
-              Workspace
-            </p>
-            <h1 className="text-2xl font-bold text-[var(--space-text-primary)] uppercase tracking-wide">Clients</h1>
-            <div className="mt-3 w-5 h-px bg-[rgba(139,156,182,0.18)]" />
-          </div>
-
-          {/* Summary counts */}
-          <div className="px-5 pb-3 shrink-0 flex items-center gap-3 text-[10px] text-[var(--space-text-muted)]">
+          {/* Header — compact */}
+          <div className="px-4 pt-5 pb-3 shrink-0">
+            <div className="flex items-baseline justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-[9px] tracking-[0.3em] uppercase text-[var(--space-accent)]/70 font-medium mb-1">Workspace</p>
+                <h1 className="text-lg font-bold text-[var(--space-text-primary)] tracking-tight leading-none">Clients</h1>
+              </div>
+              <span className="text-[11px] text-[var(--space-text-muted)] tabular-nums shrink-0">{clientAccounts.length}</span>
+            </div>
             {balanceCount > 0 && (
-              <span className="flex items-center gap-1.5">
-                <span className="size-1 rounded-full bg-amber-400/60" />
+              <div className="mt-2.5 flex items-center gap-1.5 text-[10px] text-[var(--space-text-muted)]">
+                <span className="size-1 rounded-full bg-amber-400/70" />
                 {balanceCount} outstanding
-              </span>
+              </div>
             )}
-            <span>{clientAccounts.length} total</span>
           </div>
 
-          <div className="mx-5 mb-1 h-px bg-[var(--space-divider)] shrink-0" />
+          {/* Search */}
+          <div className="px-3 pb-2 shrink-0">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-[var(--space-text-muted)]" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search clients"
+                className="w-full h-8 rounded-lg bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] pl-8 pr-3 text-xs text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)] focus:outline-none focus:border-[var(--space-accent)]/40 transition-colors"
+              />
+            </div>
+          </div>
 
           {/* Client list */}
           <div ref={listRef} className="flex-1 overflow-y-auto py-1">
-            {clientAccounts.length === 0 ? (
-              <p className="text-xs text-[var(--space-text-secondary)] px-5 py-6 text-center">No clients yet.</p>
+            {filtered.length === 0 ? (
+              <p className="text-xs text-[var(--space-text-muted)] px-5 py-6 text-center">
+                {clientAccounts.length === 0 ? 'No clients yet.' : 'No matches.'}
+              </p>
             ) : (
-              clientAccounts.map((client, i) => (
+              filtered.map((client) => (
                 <ClientNavRow
                   key={client.id}
                   client={client}
-                  index={i}
                   isSelected={client.id === selectedId}
                   onSelect={() => setSelectedId(client.id)}
-                  animationDelay={Math.min(i * 50, 400)}
                   username={username}
                 />
               ))

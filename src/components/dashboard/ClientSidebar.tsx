@@ -457,6 +457,7 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [teamModalOpen, setTeamModalOpen] = useState(false)
+  const [clientsOpen, setClientsOpen] = useState(false)
   const [form, setForm] = useState({ name, firstName, lastName, company: company ?? '', email: email ?? '' })
 
   const initials = getInitials(name)
@@ -505,20 +506,24 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
         </Link>
       </div>
 
-      {/* ── All clients hover-expand accordion ── */}
+      {/* ── All clients — click to expand quick switcher ── */}
       {allClients && allClients.length > 0 && (
-        <div className="group border-b border-[var(--space-border-hard)] shrink-0">
-          {/* Compact header — always visible */}
-          <div className="px-4 py-2.5 flex items-center gap-2 cursor-default select-none">
-            <p className="text-[10px] font-semibold text-[var(--space-text-muted)] uppercase tracking-widest flex-1">Clients</p>
+        <div className="border-b border-[var(--space-border-hard)] shrink-0">
+          {/* Compact header — click toggles the list */}
+          <button
+            onClick={() => setClientsOpen((o) => !o)}
+            className="w-full px-4 py-2.5 flex items-center gap-2 select-none hover:bg-[var(--space-bg-card-hover)] transition-colors"
+            aria-expanded={clientsOpen}
+          >
+            <p className="text-[10px] font-semibold text-[var(--space-text-muted)] uppercase tracking-widest flex-1 text-left">Switch client</p>
             <span className="text-[10px] tabular-nums text-[var(--space-text-muted)] bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] px-1.5 py-0.5 rounded-md">
               {allClients.length}
             </span>
-            <ChevronDown className="size-3 text-[var(--space-text-muted)] transition-transform duration-200 group-hover:rotate-180" />
-          </div>
+            <ChevronDown className={`size-3 text-[var(--space-text-muted)] transition-transform duration-200 ${clientsOpen ? 'rotate-180' : ''}`} />
+          </button>
           {/* Expandable list */}
-          <div className="max-h-0 overflow-hidden group-hover:max-h-[320px] transition-[max-height] duration-300 ease-in-out">
-            <div className="px-3 pb-3 space-y-0.5">
+          <div className={`overflow-hidden transition-[max-height] duration-300 ease-in-out ${clientsOpen ? 'max-h-[320px]' : 'max-h-0'}`}>
+            <div className="px-3 pb-3 space-y-0.5 overflow-y-auto max-h-[320px]">
               {allClients.map((c) => {
                 const isCurrent = c.id === id
                 const cInitials = getInitials(c.name)
@@ -676,20 +681,20 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
             </div>
           )}
 
-          {/* Metrics 2×2 */}
-          <div className="grid grid-cols-2 gap-2">
+          {/* Metrics — flat 2×2, divided rather than boxed */}
+          <div className="grid grid-cols-2 gap-x-4 gap-y-4">
             {[
               { label: 'Revenue',  value: fmt(totalRevenue),    Icon: TrendingUp,   amber: false          },
               { label: 'Balance',  value: fmt(accountBalance),  Icon: DollarSign,   amber: hasOutstanding },
               { label: 'Orders',   value: String(ordersCount),  Icon: ShoppingCart, amber: false          },
               { label: 'Projects', value: String(projectsCount),Icon: FolderKanban, amber: false          },
             ].map(({ label, value, Icon, amber }) => (
-              <div key={label} className="rounded-lg bg-[var(--space-bg-card)] border border-[var(--space-border-hard)] p-3">
-                <div className="flex items-center gap-1.5 mb-1.5">
+              <div key={label}>
+                <div className="flex items-center gap-1.5 mb-1">
                   <Icon className="size-3 text-[var(--space-text-muted)]" />
                   <span className="text-[10px] uppercase tracking-widest text-[var(--space-text-muted)] font-semibold">{label}</span>
                 </div>
-                <p className={`text-sm font-bold font-mono tabular-nums truncate ${amber ? 'text-amber-400' : 'text-[var(--space-text-primary)]'}`}>
+                <p className={`text-base font-bold font-mono tabular-nums truncate ${amber ? 'text-amber-400' : 'text-[var(--space-text-primary)]'}`}>
                   {value}
                 </p>
               </div>

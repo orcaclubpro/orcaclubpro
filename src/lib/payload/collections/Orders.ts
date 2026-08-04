@@ -218,6 +218,7 @@ const Orders: CollectionConfig = {
         description: 'Start of the billed retainer cycle — one order per (retainer, cycle)',
         position: 'sidebar',
         readOnly: true,
+        date: { pickerAppearance: 'dayOnly' },
         condition: (data) => Boolean(data?.retainerRef),
       },
     },

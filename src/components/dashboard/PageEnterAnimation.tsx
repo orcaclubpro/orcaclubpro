@@ -1,19 +1,9 @@
-'use client'
-
-import { useEffect, useRef } from 'react'
-
+/**
+ * Enter animation for detail-route content. Pure CSS: the keyframe's `from`
+ * state is applied by the browser before first paint (no flash of invisible
+ * content), it honors prefers-reduced-motion, and it plays once when the detail
+ * layout mounts — not on every intra-layout tab navigation.
+ */
 export function PageEnterAnimation({ children }: { children: React.ReactNode }) {
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    el.style.animation = 'pageSlideUp 220ms cubic-bezier(0.22, 1, 0.36, 1) forwards'
-  }, [])
-
-  return (
-    <div ref={ref} style={{ opacity: 0 }}>
-      {children}
-    </div>
-  )
+  return <div className="page-enter">{children}</div>
 }
