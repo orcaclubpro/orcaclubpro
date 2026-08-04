@@ -5,6 +5,10 @@ import { getPayload } from 'payload'
 import config from '@payload-config'
 import { cycleFor, nextCycleStart, type Cycle } from '@/lib/retainers/cycle'
 import { deriveRecapDefaults, type RecapData } from '@/lib/retainers/recap'
+import { getStripe } from '@/lib/stripe'
+import { createStripeInvoiceForOrder } from '@/lib/stripe/invoices'
+import { resolveStripeCustomer } from '@/lib/stripe/customers'
+import { sendGenericInvoiceEmail } from '@/lib/payload/utils/genericInvoiceEmailTemplate'
 
 // ── Shared shapes ───────────────────────────────────────────────────────────────
 
@@ -75,6 +79,15 @@ export interface RetainerScheduled {
   deactivateOn: string | null
   pendingEffectiveFrom: string | null
   pending: { tier?: RetainerTier | null; monthlyFee?: number | null; hoursPerMonth?: number | null; overageRate?: number | null } | null
+}
+
+/** The Order (if any) already billed for a cycle — one per (retainer, cycleStart). */
+export interface RetainerBilling {
+  orderId: string
+  orderNumber: string
+  status: 'pending' | 'paid' | 'cancelled'
+  invoiceUrl: string | null
+  packageId: string | null
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────────
@@ -219,6 +232,33 @@ async function loadActiveRetainer(
   return settled.status === 'active' ? settled : null
 }
 
+/** The order already billed for a (retainer, cycle) pair, or null. Idempotency + UI state. */
+async function findCycleOrder(
+  payload: Awaited<ReturnType<typeof getPayload>>,
+  retainerId: string,
+  cycleStart: string,
+): Promise<RetainerBilling | null> {
+  const { docs } = await payload.find({
+    collection: 'orders',
+    where: {
+      and: [{ retainerRef: { equals: retainerId } }, { retainerCycleStart: { equals: cycleStart } }],
+    },
+    limit: 1,
+    depth: 0,
+  })
+  const order = docs[0] as
+    | { id: string; orderNumber: string; status: string; stripeInvoiceUrl?: string | null; packageRef?: string | null }
+    | undefined
+  if (!order) return null
+  return {
+    orderId: order.id,
+    orderNumber: order.orderNumber,
+    status: order.status as RetainerBilling['status'],
+    invoiceUrl: order.stripeInvoiceUrl ?? null,
+    packageId: typeof order.packageRef === 'string' ? order.packageRef : null,
+  }
+}
+
 // ── Reads ────────────────────────────────────────────────────────────────────────
 
 /**
@@ -246,6 +286,7 @@ export async function getRetainerSummary(clientAccountId: string, refDate?: stri
         drafts: [] as TimeEntryDoc[],
         totals: computeTotals([], 0, 65),
         scheduled: null,
+        billing: null as RetainerBilling | null,
       }
     }
 
@@ -291,6 +332,7 @@ export async function getRetainerSummary(clientAccountId: string, refDate?: stri
       drafts,
       totals: computeTotals(logged, terms.hoursPerMonth, terms.overageRate),
       scheduled,
+      billing: await findCycleOrder(payload, retainer.id, cycle.start),
     }
   } catch (error) {
     console.error('[getRetainerSummary]', error)
@@ -721,6 +763,249 @@ export async function getRecapModel(clientAccountId: string, refDate?: string) {
   } catch (error) {
     console.error('[getRecapModel]', error)
     return { success: false as const, error: error instanceof Error ? error.message : 'Failed to build recap' }
+  }
+}
+
+/**
+ * Send retainer billing for one cycle: creates a client-facing Package (proposal)
+ * whose cover lists next cycle's planned items (recap parity), a Stripe invoice for
+ * the monthly fee + any overage, and a pending Order linked to both. The Order flows
+ * through the normal pipeline (balance hook, invoice email, `invoice.paid` webhook).
+ * One order per (retainer, cycle) — re-sending an already-billed cycle errors. Staff only.
+ */
+export async function sendRetainerBilling(clientAccountId: string, refDate?: string) {
+  // Track created artifacts so a mid-flow failure can clean up (void invoice, drop package).
+  let stripe: ReturnType<typeof getStripe> | null = null
+  let finalizedInvoiceId: string | null = null
+  let packageId: string | null = null
+  let orderCreated = false
+
+  try {
+    const user = await getCurrentUser()
+    if (!user || user.role === 'client') return { success: false as const, error: 'Unauthorized' }
+    if (!clientAccountId) return { success: false as const, error: 'A client is required' }
+
+    const payload = await getPayload({ config })
+    const now = new Date().toISOString()
+    const retainer = await loadActiveRetainer(payload, clientAccountId, now)
+    if (!retainer) return { success: false as const, error: 'No active retainer for this client' }
+
+    const cycle = cycleFor(anchorOf(retainer), refDate ? new Date(refDate).toISOString() : now)
+
+    // Idempotency — one order per cycle.
+    const existing = await findCycleOrder(payload, retainer.id, cycle.start)
+    if (existing) {
+      return { success: false as const, error: `This cycle is already billed (${existing.orderNumber})` }
+    }
+
+    // Cycle terms + totals (same derivation as the summary).
+    const { docs: entryDocs } = await payload.find({
+      collection: 'retainer-time-entries',
+      where: {
+        and: [
+          { clientAccount: { equals: clientAccountId } },
+          { date: { greater_than_equal: cycle.start } },
+          { date: { less_than: cycle.end } },
+        ],
+      },
+      depth: 0,
+      limit: 500,
+    })
+    const logged = (entryDocs as TimeEntryDoc[]).filter((e) => e.status !== 'draft')
+    const terms = termsForCycle(retainer, cycle, logged, now)
+    const totals = computeTotals(logged, terms.hoursPerMonth, terms.overageRate)
+
+    const feeAmount = terms.monthlyFee ?? 0
+    const totalAmount = Math.round((feeAmount + totals.overageAmount) * 100) / 100
+    if (totalAmount <= 0) {
+      return { success: false as const, error: 'Nothing to bill — no monthly fee or overage for this cycle' }
+    }
+
+    // Next cycle's planned items — same seeding as the recap's "next month priorities".
+    const nextCycle = cycleFor(anchorOf(retainer), cycle.end)
+    const { docs: nextDocs } = await payload.find({
+      collection: 'retainer-time-entries',
+      where: {
+        and: [
+          { clientAccount: { equals: clientAccountId } },
+          { status: { equals: 'draft' } },
+          { date: { greater_than_equal: nextCycle.start } },
+          { date: { less_than: nextCycle.end } },
+        ],
+      },
+      sort: 'date',
+      depth: 0,
+      limit: 100,
+    })
+    const planned = (nextDocs as TimeEntryDoc[]).map((d) => d.description?.trim() ?? '').filter(Boolean)
+
+    // Stripe customer (validate → search-by-email → create; persist a new/changed id).
+    const account = (await payload
+      .findByID({ collection: 'client-accounts', id: clientAccountId, depth: 0 })
+      .catch(() => null)) as { id: string; name?: string | null; email?: string | null; stripeCustomerId?: string | null } | null
+    if (!account?.email) {
+      return { success: false as const, error: 'Client account has no email — required for Stripe invoicing' }
+    }
+    stripe = getStripe()
+    const { customerId } = await resolveStripeCustomer({
+      email: account.email,
+      name: account.name,
+      existingCustomerId: account.stripeCustomerId,
+      stripe,
+    })
+    if (customerId !== account.stripeCustomerId) {
+      await payload
+        .update({ collection: 'client-accounts', id: clientAccountId, data: { stripeCustomerId: customerId } as any })
+        .catch((e) => console.warn('[sendRetainerBilling] Could not persist Stripe customer id:', e))
+    }
+
+    const tierLabel = TIER_LABEL[terms.tier]
+    const billingName = `Retainer — ${tierLabel} · ${cycle.label}`
+    const overageDesc = `Overage — ${totals.overageHours}h × $${terms.overageRate}/hr`
+
+    // 1. Package (proposal, sent) — the client-facing billing document. Cover lists
+    //    the hours summary and next cycle's planned work.
+    const coverLines = [
+      `Retainer billing for ${cycle.label}: ${totals.used} of ${terms.hoursPerMonth} hours used.`,
+      totals.overageHours > 0 ? `Includes ${totals.overageHours}h of overage at $${terms.overageRate}/hr.` : null,
+      planned.length
+        ? `\nPlanned for ${nextCycle.label}:\n${planned.map((p) => `• ${p}`).join('\n')}`
+        : null,
+    ].filter(Boolean)
+
+    const pkg = await payload.create({
+      collection: 'packages',
+      data: {
+        name: billingName,
+        type: 'proposal',
+        status: 'sent',
+        clientAccount: clientAccountId,
+        coverMessage: coverLines.join('\n'),
+        lineItems: [
+          ...(feeAmount > 0
+            ? [{
+                name: `Monthly retainer — ${tierLabel}`,
+                description: `${terms.hoursPerMonth} hrs/mo · ${cycle.label}`,
+                billingType: 'fixed',
+                price: feeAmount,
+                quantity: 1,
+              }]
+            : []),
+          ...(totals.overageAmount > 0
+            ? [{
+                name: overageDesc,
+                description: cycle.label,
+                billingType: 'fixed',
+                price: totals.overageAmount,
+                quantity: 1,
+              }]
+            : []),
+        ],
+      } as any,
+    })
+    packageId = pkg.id as string
+
+    // 2. Stripe invoice — create → attach lines → finalize (amounts in dollars).
+    const { invoice: finalized } = await createStripeInvoiceForOrder({
+      stripe,
+      stripeCustomerId: customerId,
+      description: billingName,
+      invoiceMetadata: {
+        orcaclub_retainer_id: retainer.id,
+        orcaclub_cycle_start: cycle.start,
+        orcaclub_package_id: packageId,
+      },
+      lines: [
+        ...(feeAmount > 0
+          ? [{ description: `Monthly retainer — ${tierLabel} (${cycle.label})`, amount: feeAmount }]
+          : []),
+        ...(totals.overageAmount > 0 ? [{ description: overageDesc, amount: totals.overageAmount }] : []),
+      ],
+    })
+    finalizedInvoiceId = finalized.id ?? null
+    // Stripe assigns the invoice number at finalization — it becomes the order number.
+    const orderNumber = finalized.number ?? finalized.id
+
+    // 3. Order — pending; triggers updateClientBalance, pays via webhook or mark-as-paid.
+    const order = await payload.create({
+      collection: 'orders',
+      data: {
+        orderNumber,
+        clientAccount: clientAccountId,
+        packageRef: packageId,
+        retainerRef: retainer.id,
+        retainerCycleStart: cycle.start,
+        invoiceType: 'retainer',
+        invoiceNote: billingName,
+        amount: totalAmount,
+        status: 'pending',
+        stripeCustomerId: customerId,
+        stripeInvoiceId: finalized.id,
+        stripeInvoiceUrl: finalized.hosted_invoice_url || '',
+        lineItems: [
+          ...(feeAmount > 0
+            ? [{ title: `Monthly retainer — ${tierLabel}`, description: cycle.label, price: feeAmount, quantity: 1 }]
+            : []),
+          ...(totals.overageAmount > 0 ? [{ title: overageDesc, price: totals.overageAmount, quantity: 1 }] : []),
+        ],
+      } as any,
+    })
+    orderCreated = true
+
+    // 4. Record the invoice on the package's payment schedule (best-effort).
+    await payload
+      .update({
+        collection: 'packages',
+        id: packageId,
+        data: {
+          paymentSchedule: [{ label: billingName, amount: totalAmount, orderId: order.id, invoicedAt: now }],
+        } as any,
+      })
+      .catch((e) => console.error('[sendRetainerBilling] Failed to update payment schedule:', e))
+
+    // 5. Non-blocking invoice email to the client, linking the package print view.
+    ;(async () => {
+      try {
+        const { docs: portalUsers } = await payload.find({
+          collection: 'users',
+          where: { clientAccount: { equals: clientAccountId } },
+          limit: 1,
+          depth: 0,
+        })
+        const username = (portalUsers[0] as { username?: string } | undefined)?.username
+        const base = process.env.NEXT_PUBLIC_SERVER_URL ?? 'https://app.orcaclub.pro'
+        const printUrl = username ? `${base}/u/${username}/packages/${packageId}/print` : undefined
+        await sendGenericInvoiceEmail(payload, order.id, user.id, printUrl)
+      } catch (e) {
+        console.error('[sendRetainerBilling] Invoice email failed:', e)
+      }
+    })()
+
+    return {
+      success: true as const,
+      orderId: order.id as string,
+      orderNumber: orderNumber as string,
+      invoiceUrl: finalized.hosted_invoice_url ?? null,
+      packageId,
+      plannedCount: planned.length,
+    }
+  } catch (error) {
+    // Cleanup: void an orphaned Stripe invoice / drop an orphaned package (best-effort).
+    if (!orderCreated) {
+      if (finalizedInvoiceId && stripe) {
+        stripe.invoices
+          .voidInvoice(finalizedInvoiceId)
+          .catch((e) => console.error('[sendRetainerBilling] Failed to void orphaned Stripe invoice:', e))
+      }
+      if (packageId) {
+        const payload = await getPayload({ config }).catch(() => null)
+        payload
+          ?.delete({ collection: 'packages', id: packageId })
+          .catch((e) => console.error('[sendRetainerBilling] Failed to remove orphaned package:', e))
+      }
+    }
+    console.error('[sendRetainerBilling]', error)
+    return { success: false as const, error: error instanceof Error ? error.message : 'Failed to send retainer billing' }
   }
 }
 

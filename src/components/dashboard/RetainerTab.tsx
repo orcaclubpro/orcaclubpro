@@ -14,6 +14,7 @@ import {
   setRetainer,
   setRetainerActive,
   setRetainerAnchor,
+  sendRetainerBilling,
   logHours,
   logPlannedHours,
   createDraft,
@@ -24,6 +25,7 @@ import {
   type RetainerTotals,
   type RetainerTerms,
   type RetainerScheduled,
+  type RetainerBilling,
   type RetainerTier,
   type TimeEntryCategory,
   type TimeEntryPriority,
@@ -138,6 +140,8 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
   const [drafts, setDrafts] = useState<TimeEntryDoc[]>([])
   const [totals, setTotals] = useState<RetainerTotals | null>(null)
   const [scheduled, setScheduled] = useState<RetainerScheduled | null>(null)
+  const [billing, setBilling] = useState<RetainerBilling | null>(null)
+  const [sendingBilling, setSendingBilling] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   // Setup form
@@ -200,7 +204,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
   const load = useCallback(async () => {
     if (!selectedClientId) {
       setRetainerDoc(null); setCycle(null); setTerms(null)
-      setLogged([]); setDrafts([]); setTotals(null); setScheduled(null)
+      setLogged([]); setDrafts([]); setTotals(null); setScheduled(null); setBilling(null)
       return
     }
     const r = await getRetainerSummary(selectedClientId, refDate || undefined)
@@ -212,6 +216,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
       setDrafts(r.drafts)
       setTotals(r.totals)
       setScheduled(r.scheduled)
+      setBilling(r.billing)
     } else {
       setError(r.error ?? 'Failed to load retainer')
     }
@@ -514,6 +519,22 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
     if (!retainer || !cycle) return
     const url = `/api/retainers/${retainer.id}/pdf?ref=${encodeURIComponent(cycle.start)}`
     window.open(url, '_blank')
+  }
+
+  async function handleSendBilling() {
+    if (!retainer || !cycle || !terms || !totals) return
+    const total = (terms.monthlyFee ?? 0) + (totals.overageAmount ?? 0)
+    const parts = [
+      `Send retainer billing for ${cycle.label}?`,
+      `Invoice total: ${fmt(total)} (${fmt(terms.monthlyFee)} fee${totals.overageAmount > 0 ? ` + ${fmt(totals.overageAmount)} overage` : ''}).`,
+      'This creates a package + Stripe invoice and emails the client.',
+    ]
+    if (!confirm(parts.join('\n'))) return
+    setError(null); setSendingBilling(true)
+    const r = await sendRetainerBilling(selectedClientId, cycle.start)
+    if (r.success) await load()
+    else setError(r.error ?? 'Failed to send retainer billing')
+    setSendingBilling(false)
   }
 
   const showForm = !retainer || editing
@@ -1095,9 +1116,46 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                       actionLabel="Compose recap"
                       onClick={() => setRecapOpen(true)}
                     />
+                    {billing ? (
+                      <div className="flex flex-col gap-3 rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card-hover)] p-4">
+                        <div className="flex items-center gap-2.5">
+                          <div className="size-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'var(--space-accent-soft)' }}>
+                            <CircleCheck className="size-4" style={{ color: 'var(--space-accent)' }} />
+                          </div>
+                          <p className="text-sm font-semibold text-[var(--space-text-primary)]">Retainer billing</p>
+                          <span className={cn(
+                            'ml-auto px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide rounded border',
+                            billing.status === 'paid'
+                              ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10'
+                              : billing.status === 'cancelled'
+                                ? 'text-red-400 border-red-500/30 bg-red-500/10'
+                                : 'text-amber-500 border-amber-500/30 bg-amber-500/10',
+                          )}>
+                            {billing.status}
+                          </span>
+                        </div>
+                        <p className="text-xs text-[var(--space-text-muted)] leading-relaxed flex-1">
+                          This cycle is billed — <span className="tabular-nums text-[var(--space-text-secondary)]">{billing.orderNumber}</span>. The invoice and package are live for the client.
+                        </p>
+                        {billing.invoiceUrl && (
+                          <a href={billing.invoiceUrl} target="_blank" rel="noreferrer" className={cn(ghostBtn, 'self-start')}>
+                            View Stripe invoice
+                          </a>
+                        )}
+                      </div>
+                    ) : (
+                      <DocCard
+                        icon={CalendarClock}
+                        title="Retainer billing"
+                        desc={`Bill ${cycle?.label ?? 'this cycle'} — creates a package + Stripe invoice for the ${fmt(terms?.monthlyFee ?? 0)} fee${(totals?.overageAmount ?? 0) > 0 ? ` plus ${fmt(totals?.overageAmount ?? 0)} overage` : ''}, listing next cycle's planned items, and emails the client.`}
+                        actionLabel={sendingBilling ? 'Sending…' : 'Send retainer billing'}
+                        onClick={handleSendBilling}
+                        disabled={sendingBilling}
+                      />
+                    )}
                   </div>
                   <p className="text-[11px] text-[var(--space-text-muted)]">
-                    Both documents cover the cycle shown in the header — use ‹ › up there to pick a different one.
+                    Documents and billing cover the cycle shown in the header — use ‹ › up there to pick a different one.
                   </p>
                 </>
               )}
@@ -1144,8 +1202,8 @@ function JumpCard({
 }
 
 function DocCard({
-  icon: Icon, title, desc, actionLabel, onClick,
-}: { icon: typeof Clock; title: string; desc: string; actionLabel: string; onClick: () => void }) {
+  icon: Icon, title, desc, actionLabel, onClick, disabled,
+}: { icon: typeof Clock; title: string; desc: string; actionLabel: string; onClick: () => void; disabled?: boolean }) {
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card-hover)] p-4">
       <div className="flex items-center gap-2.5">
@@ -1155,7 +1213,7 @@ function DocCard({
         <p className="text-sm font-semibold text-[var(--space-text-primary)]">{title}</p>
       </div>
       <p className="text-xs text-[var(--space-text-muted)] leading-relaxed flex-1">{desc}</p>
-      <button onClick={onClick} className={cn(accentBtn, 'self-start')}>
+      <button onClick={onClick} disabled={disabled} className={cn(accentBtn, 'self-start')}>
         {actionLabel}
       </button>
     </div>

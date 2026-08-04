@@ -4,6 +4,8 @@ import { adminOnly, adminOrUser, adminOrUserOrOwnOrder } from '../access'
 
 const Orders: CollectionConfig = {
   slug: 'orders',
+  // One order per billed retainer cycle — sendRetainerBilling queries this pair.
+  indexes: [{ fields: ['retainerRef', 'retainerCycleStart'] }],
   admin: {
     useAsTitle: 'orderNumber',
     defaultColumns: ['orderNumber', 'clientAccount', 'amount', 'status', 'createdAt'],
@@ -198,6 +200,28 @@ const Orders: CollectionConfig = {
       },
     },
     {
+      name: 'retainerRef',
+      type: 'relationship',
+      relationTo: 'retainers',
+      index: true,
+      admin: {
+        description: 'Retainer this invoice bills a cycle of (retainer billing only)',
+        position: 'sidebar',
+        condition: (data) => Boolean(data?.retainerRef),
+      },
+    },
+    {
+      name: 'retainerCycleStart',
+      type: 'date',
+      index: true,
+      admin: {
+        description: 'Start of the billed retainer cycle — one order per (retainer, cycle)',
+        position: 'sidebar',
+        readOnly: true,
+        condition: (data) => Boolean(data?.retainerRef),
+      },
+    },
+    {
       name: 'invoiceType',
       type: 'select',
       options: [
@@ -205,6 +229,7 @@ const Orders: CollectionConfig = {
         { label: 'Deposit', value: 'deposit' },
         { label: 'Installment', value: 'installment' },
         { label: 'Balance Payment', value: 'balance' },
+        { label: 'Retainer', value: 'retainer' },
       ],
       defaultValue: 'full',
       admin: {
