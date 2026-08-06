@@ -4,7 +4,220 @@ import { getCurrentUser } from '@/actions/auth'
 import { getPayload } from 'payload'
 import config from '@payload-config'
 import { getStripe } from '@/lib/stripe'
-import { fulfillOrderPaidOutOfBand } from '@/lib/stripe/invoices'
+import { createStripeInvoiceForOrder, fulfillOrderPaidOutOfBand } from '@/lib/stripe/invoices'
+import { resolveStripeCustomer } from '@/lib/stripe/customers'
+import { sendGenericInvoiceEmail } from '@/lib/payload/utils/genericInvoiceEmailTemplate'
+import { revalidatePath } from 'next/cache'
+
+// ── Create a client-scoped order (invoice) ─────────────────────────────────────
+
+export interface CreateClientOrderLine {
+  title: string
+  description?: string
+  /** Defaults to 1. */
+  quantity?: number
+  /** Unit price in DOLLARS. */
+  price: number
+}
+
+export interface CreateClientOrderInput {
+  clientAccountId: string
+  lines: CreateClientOrderLine[]
+  invoiceNote?: string
+  /** Days Stripe gives the client to pay. Defaults to 30. */
+  daysUntilDue?: number
+  /** Defaults to 'full'. */
+  invoiceType?: 'full' | 'deposit' | 'installment' | 'balance'
+  projectId?: string
+  /** Create the order + Stripe invoice but send no email. */
+  skipEmail?: boolean
+}
+
+export interface CreateClientOrderResult {
+  success: boolean
+  orderId?: string
+  orderNumber?: string
+  invoiceUrl?: string | null
+  total?: number
+  error?: string
+}
+
+const round2 = (n: number) => Math.round((n || 0) * 100) / 100
+
+/**
+ * Create a standalone invoice for a client — no package or retainer required.
+ *
+ * Mirrors `createPartialInvoiceFromPackage`: validate → resolve the Stripe
+ * customer → create/finalize the Stripe invoice → persist the Order → email
+ * (non-blocking). The order number always comes from the finalized Stripe
+ * invoice; if the Payload write fails afterwards the invoice is voided so no
+ * orphaned Stripe invoice is left behind.
+ */
+export async function createClientOrder(
+  input: CreateClientOrderInput,
+): Promise<CreateClientOrderResult> {
+  let finalizedInvoice: any = null
+  let stripe: ReturnType<typeof getStripe> | null = null
+
+  try {
+    const user = await getCurrentUser()
+    if (!user || user.role === 'client') return { success: false, error: 'Unauthorized' }
+
+    if (!input.clientAccountId) return { success: false, error: 'A client account is required' }
+
+    // ── Validate every line before touching Stripe ───────────────────────────
+    const rawLines = input.lines ?? []
+    if (rawLines.length === 0) return { success: false, error: 'At least one line item is required' }
+
+    const lines: { title: string; description?: string; quantity: number; price: number }[] = []
+    for (const [i, line] of rawLines.entries()) {
+      const title = (line?.title ?? '').trim()
+      if (!title) return { success: false, error: `Line ${i + 1} needs a title` }
+
+      const price = Number(line.price)
+      if (!isFinite(price) || price < 0) {
+        return { success: false, error: `Line ${i + 1} ("${title}") needs a price of $0 or more` }
+      }
+
+      const quantity = line.quantity === undefined || line.quantity === null ? 1 : Number(line.quantity)
+      if (!isFinite(quantity) || quantity < 1) {
+        return { success: false, error: `Line ${i + 1} ("${title}") needs a quantity of at least 1` }
+      }
+
+      lines.push({
+        title,
+        description: line.description?.trim() || undefined,
+        quantity: Math.round(quantity),
+        price: round2(price),
+      })
+    }
+
+    // The order's `amount` is this exact sum — the Orders beforeValidate hook
+    // warns on any mismatch between amount and the line items.
+    const total = round2(lines.reduce((sum, l) => sum + l.price * l.quantity, 0))
+    if (total <= 0) return { success: false, error: 'Invoice total must be greater than $0' }
+
+    const daysUntilDue = Math.max(1, Math.round(input.daysUntilDue ?? 30))
+    const invoiceType = input.invoiceType ?? 'full'
+
+    const payload = await getPayload({ config })
+
+    const account = await payload
+      .findByID({ collection: 'client-accounts', id: input.clientAccountId, depth: 0 })
+      .catch(() => null)
+    if (!account) return { success: false, error: 'Client account not found' }
+
+    const clientEmail = (account as any).email as string | null | undefined
+    if (!clientEmail) {
+      return { success: false, error: 'Client account has no email — add one before invoicing' }
+    }
+    const clientName =
+      ((account as any).name as string | undefined) ||
+      [(account as any).firstName, (account as any).lastName].filter(Boolean).join(' ') ||
+      clientEmail
+
+    stripe = getStripe()
+
+    // ── Stripe customer — validate → search by email → create ────────────────
+    const resolved = await resolveStripeCustomer({
+      stripe,
+      email: clientEmail,
+      name: clientName,
+      existingCustomerId: ((account as any).stripeCustomerId as string | undefined) ?? null,
+      metadata: {
+        orcaclub_client_id: input.clientAccountId,
+        created_via: 'orcaclub_dashboard',
+        source: 'client_orders_tab',
+      },
+    })
+    if (resolved.customerId !== (account as any).stripeCustomerId) {
+      await payload.update({
+        collection: 'client-accounts',
+        id: input.clientAccountId,
+        data: { stripeCustomerId: resolved.customerId } as any,
+      })
+    }
+
+    // ── Stripe invoice — create → attach lines → finalize ────────────────────
+    const invoiceNote = input.invoiceNote?.trim() || undefined
+    const { invoice: finalized, invoiceId, hostedInvoiceUrl } = await createStripeInvoiceForOrder({
+      stripe,
+      stripeCustomerId: resolved.customerId,
+      daysUntilDue,
+      description: invoiceNote ?? `Invoice — ${clientName}`,
+      invoiceMetadata: {
+        orcaclub_client_id: input.clientAccountId,
+        orcaclub_invoice_type: invoiceType,
+        created_via: 'orcaclub_dashboard',
+        ...(input.projectId ? { orcaclub_project_id: input.projectId } : {}),
+      },
+      lines: lines.map((l) => ({
+        description: l.quantity > 1 ? `${l.title} × ${l.quantity}` : l.title,
+        amount: round2(l.price * l.quantity),
+      })),
+    })
+    finalizedInvoice = finalized
+
+    // Order numbers are Stripe's — never generate an INV- number here.
+    const orderNumber = finalized.number ?? invoiceId
+
+    const order = await payload.create({
+      collection: 'orders',
+      data: {
+        orderNumber,
+        clientAccount: input.clientAccountId,
+        projectRef: input.projectId || undefined,
+        invoiceType,
+        ...(invoiceNote ? { invoiceNote } : {}),
+        amount: total,
+        status: 'pending',
+        stripeCustomerId: resolved.customerId,
+        stripeInvoiceId: invoiceId,
+        stripeInvoiceUrl: hostedInvoiceUrl,
+        ...(finalized.due_date ? { dueDate: new Date(finalized.due_date * 1000).toISOString() } : {}),
+        lineItems: lines.map((l) => ({
+          title: l.title,
+          description: l.description,
+          quantity: l.quantity,
+          price: l.price,
+          isRecurring: false,
+        })),
+      } as any,
+    })
+
+    revalidatePath(`/u/${user.username}/clients`)
+
+    // Non-blocking: the order + Stripe invoice must survive an email failure.
+    if (!input.skipEmail) {
+      ;(async () => {
+        try {
+          await sendGenericInvoiceEmail(payload, order.id as string, user.id as string)
+        } catch (e) {
+          console.error('[createClientOrder] Invoice email failed (order still created):', e)
+        }
+      })()
+    }
+
+    return {
+      success: true,
+      orderId: order.id as string,
+      orderNumber,
+      invoiceUrl: hostedInvoiceUrl || null,
+      total,
+    }
+  } catch (error) {
+    // Never leave an orphaned Stripe invoice behind a failed order write.
+    if (finalizedInvoice && stripe) {
+      stripe.invoices
+        .voidInvoice(finalizedInvoice.id)
+        .catch((e: any) =>
+          console.error('[createClientOrder] Failed to void orphaned Stripe invoice:', e),
+        )
+    }
+    console.error('[createClientOrder]', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to create order' }
+  }
+}
 
 // ── Update due date ────────────────────────────────────────────────────────────
 

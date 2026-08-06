@@ -13,6 +13,7 @@ import {
   DollarSign,
   ShoppingCart,
   FolderKanban,
+  Plus,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
@@ -27,6 +28,7 @@ import { ClientPortfolioTimeline } from '@/components/dashboard/ClientPortfolioT
 import type { SerializedProject } from '@/components/dashboard/ProjectsCarousel'
 import { ProjectRowActions } from '@/components/dashboard/ProjectRowActions'
 import { CreateProjectModal } from '@/components/dashboard/CreateProjectModal'
+import { CreateOrderModal } from '@/components/dashboard/CreateOrderModal'
 
 const ClientPackagesTab = dynamic(
   () => import('@/components/dashboard/ClientPackagesTab').then(m => ({ default: m.ClientPackagesTab }))
@@ -249,6 +251,7 @@ export function ClientDetailTabView({
   const [activeTab, setActiveTab] = useState<Tab>(initialTab)
   const [tabKey, setTabKey] = useState(0)
   const [enterFrom, setEnterFrom] = useState<'left' | 'right'>('right')
+  const [creatingOrder, setCreatingOrder] = useState(false)
 
   const navigate = useCallback(
     (tab: Tab) => {
@@ -442,17 +445,36 @@ export function ClientDetailTabView({
                 <h2 className="text-base font-semibold text-[var(--space-text-primary)]">Orders</h2>
                 <span className="text-xs text-[var(--space-text-muted)] tabular-nums">{orders.length}</span>
               </div>
-              {orders.length > 0 && (
-                <div className="flex items-center gap-4 text-xs">
-                  <span className="text-emerald-400 font-mono">{fmt(totalRevenue)} paid</span>
-                  {(clientAccount.accountBalance ?? 0) > 0 && (
-                    <span className="text-amber-400 font-mono">
-                      {fmt(clientAccount.accountBalance ?? 0)} due
-                    </span>
-                  )}
-                </div>
-              )}
+              <div className="flex items-center gap-4 text-xs">
+                {orders.length > 0 && (
+                  <>
+                    <span className="text-emerald-400 font-mono">{fmt(totalRevenue)} paid</span>
+                    {(clientAccount.accountBalance ?? 0) > 0 && (
+                      <span className="text-amber-400 font-mono">
+                        {fmt(clientAccount.accountBalance ?? 0)} due
+                      </span>
+                    )}
+                  </>
+                )}
+                {userRole !== 'client' && (
+                  <button
+                    type="button"
+                    onClick={() => setCreatingOrder(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-[var(--space-border-hard)] text-[var(--space-text-tertiary)] hover:text-[var(--space-text-primary)] hover:bg-[var(--space-bg-card-hover)] transition-all"
+                  >
+                    <Plus className="size-3.5" /> New order
+                  </button>
+                )}
+              </div>
             </div>
+
+            {creatingOrder && userRole !== 'client' && (
+              <CreateOrderModal
+                clientId={clientId}
+                clientName={clientAccount.name}
+                onClose={() => setCreatingOrder(false)}
+              />
+            )}
             <ScheduledPaymentsSection packages={packages as any} username={username} workCounts={workCounts} />
             <ClientOrdersTab
               orders={orders as any}
