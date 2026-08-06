@@ -18,9 +18,10 @@ import {
   generateProposalEmailText,
   type EmailAttachment,
 } from '@/lib/payload/utils/genericInvoiceEmailTemplate'
-import { buildPackagePdf, buildOrcaclubSowPdf } from '@/lib/pdf-generators'
+import { buildPackagePdf, buildOrcaclubSowPdf, buildPackageRecapPdf } from '@/lib/pdf-generators'
 import { buildWorkLines, type WorkCategory } from '@/lib/packages/workLines'
-import type { PackageRecapData } from '@/lib/packages/recap'
+import { mergePackageRecap, type PackageRecapData } from '@/lib/packages/recap'
+import { getPackageRecapModel } from '@/actions/packageWork'
 
 const APP_BASE = process.env.NEXT_PUBLIC_SERVER_URL ?? 'https://app.orcaclub.pro'
 
@@ -1125,6 +1126,23 @@ export async function sendScheduledPayment(
       } as any,
     })
 
+    // ── Recap model — MUST be captured before stamping ──────────────────────────
+    // getPackageRecapModel derives from *pending* (unstamped) work entries. The loop
+    // below stamps `billedOrderId` on every entry this invoice consumed, after which
+    // they are no longer pending and the recap would come back empty. So capture it
+    // here and let the email IIFE below close over the result. Non-blocking: a failure
+    // means "send without a recap PDF", never a failed invoice.
+    let recapModelForEmail: PackageRecapData | null = null
+    if (!opts?.skipEmail && opts?.attachRecapPdf) {
+      try {
+        const recapResult = await getPackageRecapModel(packageId, entryId)
+        if (recapResult.success) recapModelForEmail = recapResult.model
+        else console.error('[sendScheduledPayment] Recap model unavailable:', recapResult.error)
+      } catch (e) {
+        console.error('[sendScheduledPayment] Recap model failed (sending without recap):', e)
+      }
+    }
+
     // ── Consume: stamp the entries this order carried ───────────────────────────
     for (const l of workLines) {
       try {
@@ -1153,7 +1171,9 @@ export async function sendScheduledPayment(
 
     revalidatePath(`/u/${user.username}/clients`)
 
-    // Non-blocking: send "New Invoice" email to client (skipped if skipEmail is true)
+    // Non-blocking: send "New Invoice" email to client (skipped if skipEmail is true).
+    // The work section and the recap PDF are independently toggleable; either failing
+    // must not stop the email, and the email failing must not stop the invoice.
     if (!opts?.skipEmail) {
       ;(async () => {
         try {
@@ -1161,7 +1181,29 @@ export async function sendScheduledPayment(
           const proposalPrintUrl = clientUsername
             ? `${APP_BASE}/u/${clientUsername}/packages/${packageId}/print`
             : undefined
-          await sendGenericInvoiceEmail(payload, order.id, user.id, proposalPrintUrl)
+
+          const attachments: EmailAttachment[] = []
+          if (opts?.attachRecapPdf && recapModelForEmail) {
+            try {
+              const merged = mergePackageRecap(recapModelForEmail, opts.recap)
+              const pdf = await buildPackageRecapPdf({ ...merged, generatedOn: new Date().toISOString() })
+              attachments.push({
+                filename: `ORCACLUB-Recap-${entry.label.replace(/[^\w-]+/g, '-')}.pdf`,
+                content: Buffer.from(pdf).toString('base64'),
+                encoding: 'base64',
+                contentType: 'application/pdf',
+              })
+            } catch (e) {
+              console.error('[sendScheduledPayment] Recap PDF failed (sending without):', e)
+            }
+          }
+
+          await sendGenericInvoiceEmail(payload, order.id, user.id, proposalPrintUrl, {
+            workLog: opts?.includeWorkInEmail
+              ? workLines.map((l) => ({ title: l.title, description: l.description }))
+              : undefined,
+            attachments: attachments.length ? attachments : undefined,
+          })
         } catch (e) {
           console.error('[sendScheduledPayment] Invoice email failed:', e)
         }

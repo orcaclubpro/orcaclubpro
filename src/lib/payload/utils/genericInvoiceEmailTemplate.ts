@@ -43,6 +43,12 @@ export interface GenericInvoiceEmailData {
   // Retainer invoices: an optional staff cover note and next-month planned work.
   customMessage?: string
   plannedWork?: string[]
+  /**
+   * Milestone work log — the $0 work lines this invoice consumed, rendered as a
+   * "Work completed" section. Passed explicitly rather than read off lineItems so
+   * staff can send the invoice with the lines but without the section.
+   */
+  workLog?: { title: string; description?: string }[]
   /** Whether a PDF copy is attached — drives the footer note. Defaults to true. */
   hasPdfAttachment?: boolean
 }
@@ -164,6 +170,24 @@ export function generateGenericInvoiceEmail(order: GenericInvoiceEmailData): str
           </tr>`
     : ''
 
+  // Milestone work log — rides inside the line-items <tbody> (hence colspan="4"),
+  // between the items and the Total Due row.
+  const workItems = (order.workLog ?? []).filter((w) => w.title?.trim())
+  const workLogHtml = workItems.length === 0 ? '' : `
+                  <tr>
+                    <td colspan="4" style="padding:18px 0 4px 0;">
+                      <p class="oc-detail-label" style="margin:0 0 10px 0;font-size:10px;letter-spacing:0.35em;text-transform:uppercase;color:#3a3a3a;font-weight:400;">Work completed</p>
+                      ${workItems
+                        .map(
+                          (w) => `<div style="padding:0 0 10px 0;">
+                        <div class="oc-item-name" style="color:#cccccc;font-size:13px;line-height:1.6;">${esc(w.title)}</div>
+                        ${w.description ? `<div class="oc-detail-val" style="color:#555555;font-size:11px;margin-top:2px;line-height:1.6;">${esc(w.description)}</div>` : ''}
+                      </div>`,
+                        )
+                        .join('\n                      ')}
+                    </td>
+                  </tr>`
+
   const plannedItems = (order.plannedWork ?? []).map((s) => s.trim()).filter(Boolean)
   const plannedHtml = plannedItems.length
     ? `
@@ -261,7 +285,7 @@ export function generateGenericInvoiceEmail(order: GenericInvoiceEmailData): str
                     <th class="oc-item-divider" style="text-align:right;width:90px;${thStyle}">Amount</th>
                   </tr>
                 </thead>
-                <tbody>${lineItemsHtml}
+                <tbody>${lineItemsHtml}${workLogHtml}
                   <tr>
                     <td colspan="3" class="oc-total-label" style="padding:16px 0;font-size:10px;letter-spacing:0.35em;text-transform:uppercase;color:#3a3a3a;">Total Due</td>
                     <td style="padding:16px 0;text-align:right;font-size:18px;font-weight:700;color:#67e8f9;white-space:nowrap;">${fmtUsd(order.totalAmount)} <span class="oc-total-label" style="font-size:11px;font-weight:400;color:#3a3a3a;">USD</span></td>
@@ -356,6 +380,13 @@ export function generateGenericInvoiceEmailText(order: GenericInvoiceEmailData):
     order.customerEmail,
   ].filter(Boolean).join('\n')
 
+  const workItems = (order.workLog ?? []).filter((w) => w.title?.trim())
+  const workLogText = workItems.length === 0 ? '' : `
+Work completed
+━━━━━━━━━━━━━━━━━━━━
+${workItems.map((w) => `- ${w.title}${w.description ? ` (${w.description})` : ''}`).join('\n')}
+`
+
   const plannedItems = (order.plannedWork ?? []).map((s) => s.trim()).filter(Boolean)
   const plannedText = plannedItems.length
     ? `\nPLANNED THIS MONTH\n━━━━━━━━━━━━━━━━━━━━\n${plannedItems.map((i) => `- ${i}`).join('\n')}\n`
@@ -371,7 +402,7 @@ ${billToLines}
 ITEMS
 ━━━━━━━━━━━━━━━━━━━━
 ${lineItemsText}
-━━━━━━━━━━━━━━━━━━━━
+${workLogText}━━━━━━━━━━━━━━━━━━━━
 TOTAL DUE: ${fmtUsd(order.totalAmount)} USD
 ${plannedText}${order.invoiceNote ? `\n${order.invoiceNote}\n` : ''}
 ${order.stripeInvoiceUrl ? `Pay online:\n${order.stripeInvoiceUrl}\n\n` : ''}${order.hasPdfAttachment === false ? '' : 'A copy of this invoice is attached as a PDF.'}
@@ -388,7 +419,13 @@ export async function sendGenericInvoiceEmail(
   payload: Payload,
   orderId: string,
   userId: string,
-  proposalPrintUrl?: string
+  proposalPrintUrl?: string,
+  opts?: {
+    /** Itemized milestone work rendered as a "Work completed" section. */
+    workLog?: { title: string; description?: string }[]
+    /** Extra attachments (e.g. a recap PDF) merged with whatever this function already attaches. */
+    attachments?: EmailAttachment[]
+  },
 ): Promise<{ success: boolean; message: string; invoice?: any }> {
   try {
     const order = await payload.findByID({
@@ -428,6 +465,7 @@ export async function sendGenericInvoiceEmail(
       dueDate: (order as any).dueDate || undefined,
       packageName: (order as any).packageRef?.name || (order as any).package?.name || undefined,
       proposalPrintUrl: proposalPrintUrl || undefined,
+      workLog: opts?.workLog,
     }
 
     // PDF attachment — non-blocking, the email still sends without it
@@ -466,13 +504,19 @@ export async function sendGenericInvoiceEmail(
       payload.logger.error(`[Invoice] PDF generation failed — sending without attachment:`, err)
     }
 
+    // The footer note claims an invoice PDF is attached — only say so when one is.
+    emailData.hasPdfAttachment = Boolean(attachments?.length)
+
+    // Caller-supplied attachments (e.g. a recap PDF) ride along with the invoice PDF.
+    const allAttachments = [...(attachments ?? []), ...(opts?.attachments ?? [])]
+
     await payload.sendEmail({
       to: clientAccount.email,
       from: process.env.EMAIL_FROM || 'carbon@orcaclub.pro',
       subject: `Invoice #${order.orderNumber} — ORCACLUB`,
       html: generateGenericInvoiceEmail(emailData),
       text: generateGenericInvoiceEmailText(emailData),
-      ...(attachments?.length ? { attachments } : {}),
+      ...(allAttachments.length ? { attachments: allAttachments } : {}),
     } as any)
 
     const invoiceEntry = {
