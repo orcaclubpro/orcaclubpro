@@ -171,10 +171,24 @@ export function ScheduledPaymentsSection({ packages, username, workCounts }: Sch
                       {(() => {
                         const c = workCounts?.[pkg.id]
                         if (!c || (c.pending === 0 && c.plannedOpen === 0)) return null
+                        // Deep link into the Command Console's Milestones station on this
+                        // package + entry. The console is a sibling with no shared provider,
+                        // so a window event is the channel (it already listens for globals).
                         return (
-                          <span className="text-[10px] text-[var(--space-text-secondary)] tabular-nums shrink-0">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              window.dispatchEvent(
+                                new CustomEvent('orcaclub:open-milestones', {
+                                  detail: { packageId: pkg.id, entryId: entry.id },
+                                }),
+                              )
+                            }
+                            className="text-[10px] text-[var(--space-text-secondary)] hover:text-[var(--space-accent)] tabular-nums shrink-0 transition-colors"
+                            title="Open the work log for this package"
+                          >
                             {c.pending} logged{c.plannedOpen > 0 ? ` · ${c.plannedOpen} planned open` : ''}
-                          </span>
+                          </button>
                         )
                       })()}
                     </div>
