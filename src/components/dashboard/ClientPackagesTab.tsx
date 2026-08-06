@@ -7,7 +7,7 @@ import {
   FileText, ArrowRight, ChevronDown, ChevronUp,
   X, Check, Loader2, Trash2, Copy, CheckCheck, Sparkles,
   Receipt, ExternalLink, CheckCircle2, CalendarDays, ListOrdered,
-  Mail, Plus,
+  Mail, Plus, RotateCcw,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { AssignPackageModal } from './AssignPackageModal'
@@ -20,6 +20,7 @@ import {
   pushPackageSchedule,
   sendScheduledPayment,
   removeScheduleEntry,
+  resetScheduleEntry,
 } from '@/actions/packages'
 
 // Shared style for the per-package action buttons (Copy Link / View Package / Email)
@@ -155,6 +156,58 @@ function formatDisplayDate(isoDate: string) {
   const date = new Date(y, m - 1, d)
   if (!isFinite(date.getTime())) return ''
   return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(date)
+}
+
+// ── ResetInvoicedEntry ────────────────────────────────────────────────────────
+// Sits beside the "Invoiced" badge on a schedule row. Two-click confirm (no
+// window.confirm — this deletes an order and voids a Stripe invoice), spinner while
+// running, and the outcome or the refusal rendered inline.
+
+function ResetInvoicedEntry({
+  armed,
+  running,
+  disabled,
+  result,
+  onClick,
+  onBlur,
+}: {
+  armed: boolean
+  running: boolean
+  disabled?: boolean
+  result?: { note: string } | { error: string }
+  onClick: () => void
+  onBlur: () => void
+}) {
+  return (
+    <>
+      {result && 'note' in result && (
+        <span className="text-[10px] text-[var(--space-text-muted)] max-w-[140px] leading-snug">{result.note}</span>
+      )}
+      {result && 'error' in result && (
+        <span className="text-[10px] text-red-400 max-w-[140px] leading-snug">{result.error}</span>
+      )}
+      <button
+        type="button"
+        disabled={running || disabled}
+        onClick={onClick}
+        onBlur={onBlur}
+        title={armed ? 'Click again to confirm reset' : 'Reset — put this payment back on the schedule'}
+        aria-label={armed ? 'Confirm reset payment' : 'Reset — put this payment back on the schedule'}
+        className={cn(
+          'flex items-center gap-1 justify-center rounded transition-all disabled:opacity-40',
+          armed
+            ? 'px-1.5 py-0.5 text-[10px] font-semibold text-amber-400 border border-amber-400/30 bg-amber-400/[0.08]'
+            : 'size-6 text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)] hover:bg-[var(--space-bg-card-hover)]',
+        )}
+      >
+        {running
+          ? <Loader2 className="size-3 animate-spin" />
+          : <RotateCcw className="size-3" />
+        }
+        {armed && !running ? 'Confirm' : ''}
+      </button>
+    </>
+  )
 }
 
 // ── OptionCard ────────────────────────────────────────────────────────────────
@@ -379,6 +432,11 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
   const [sendingEntryId, setSendingEntryId]             = useState<string | null>(null)
   const [removingEntryId, setRemovingEntryId]           = useState<string | null>(null)
   const [entryResults, setEntryResults]                 = useState<Record<string, { url: string } | { error: string }>>({})
+  // Reset (un-invoice) an already-invoiced schedule entry: two-click confirm, then the
+  // outcome (or the refusal, e.g. the paid guard) shown inline next to the row.
+  const [resettingEntryId, setResettingEntryId]         = useState<string | null>(null)
+  const [confirmResetEntryId, setConfirmResetEntryId]   = useState<string | null>(null)
+  const [resetResults, setResetResults]                 = useState<Record<string, { note: string } | { error: string }>>({})
 
   // Email proposal modal state
   const [emailModalPkgId, setEmailModalPkgId]   = useState<string | null>(null)
@@ -582,6 +640,32 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
     setRemovingEntryId(null)
     if (result.success) {
       router.refresh()
+    }
+  }
+
+  /** Put an invoiced payment back on the schedule as un-invoiced. First click arms the
+   *  button, second click fires — this deletes an order and voids a Stripe invoice. */
+  const handleResetScheduleEntry = async (pkgId: string, entryId: string) => {
+    if (confirmResetEntryId !== entryId) {
+      setConfirmResetEntryId(entryId)
+      setResetResults(prev => { const next = { ...prev }; delete next[entryId]; return next })
+      return
+    }
+    setConfirmResetEntryId(null)
+    setResettingEntryId(entryId)
+    const result = await resetScheduleEntry(pkgId, entryId)
+    setResettingEntryId(null)
+    if (result.success) {
+      const parts: string[] = [
+        result.orderWasMissing ? 'Order was already gone' : 'Invoice voided',
+      ]
+      if ((result.releasedWorkEntries ?? 0) > 0) {
+        parts.push(`${result.releasedWorkEntries} work ${result.releasedWorkEntries === 1 ? 'entry' : 'entries'} released`)
+      }
+      setResetResults(prev => ({ ...prev, [entryId]: { note: `Reset — ${parts.join(', ')}` } }))
+      router.refresh()
+    } else {
+      setResetResults(prev => ({ ...prev, [entryId]: { error: result.error ?? 'Failed to reset entry' } }))
     }
   }
 
@@ -888,9 +972,19 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                                   </div>
                                   <div className="shrink-0 flex items-center gap-2">
                                     {isInvoiced ? (
-                                      <span className="text-[10px] text-emerald-400 bg-emerald-400/[0.08] border border-emerald-400/20 rounded px-1.5 py-0.5 font-semibold">
-                                        Invoiced
-                                      </span>
+                                      <>
+                                        <span className="text-[10px] text-emerald-400 bg-emerald-400/[0.08] border border-emerald-400/20 rounded px-1.5 py-0.5 font-semibold">
+                                          Invoiced
+                                        </span>
+                                        <ResetInvoicedEntry
+                                          armed={confirmResetEntryId === entry.id}
+                                          running={resettingEntryId === entry.id}
+                                          disabled={removingEntryId === entry.id || sendingEntryId === entry.id}
+                                          result={resetResults[entry.id]}
+                                          onClick={() => handleResetScheduleEntry(pkg.id, entry.id)}
+                                          onBlur={() => setTimeout(() => setConfirmResetEntryId(prev => (prev === entry.id ? null : prev)), 300)}
+                                        />
+                                      </>
                                     ) : (
                                       <>
                                         <span className="text-[10px] text-amber-400 bg-amber-400/[0.06] border border-amber-400/20 rounded px-1.5 py-0.5 font-semibold">
@@ -898,7 +992,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                                         </span>
                                         <button
                                           type="button"
-                                          disabled={removingEntryId === entry.id}
+                                          disabled={removingEntryId === entry.id || resettingEntryId === entry.id}
                                           onClick={() => handleRemoveScheduleEntry(pkg.id, entry.id)}
                                           className="flex items-center justify-center size-6 text-[var(--space-text-muted)] hover:text-red-400 hover:bg-red-400/[0.08] rounded transition-all disabled:opacity-40"
                                           title="Remove entry"
@@ -1170,6 +1264,14 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                                                 <ExternalLink className="size-3" />
                                               </a>
                                             )}
+                                            <ResetInvoicedEntry
+                                              armed={confirmResetEntryId === entry.id}
+                                              running={resettingEntryId === entry.id}
+                                              disabled={removingEntryId === entry.id || sendingEntryId === entry.id}
+                                              result={resetResults[entry.id]}
+                                              onClick={() => handleResetScheduleEntry(pkg.id, entry.id)}
+                                              onBlur={() => setTimeout(() => setConfirmResetEntryId(prev => (prev === entry.id ? null : prev)), 300)}
+                                            />
                                           </>
                                         ) : entryResult && 'url' in entryResult ? (
                                           <a href={entryResult.url} target="_blank" rel="noopener noreferrer"
@@ -1185,7 +1287,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                                             )}
                                             <button
                                               type="button"
-                                              disabled={sendingEntryId === entry.id || removingEntryId === entry.id}
+                                              disabled={sendingEntryId === entry.id || removingEntryId === entry.id || resettingEntryId === entry.id}
                                               onClick={() => handleSendScheduledPayment(pkg.id, entry.id, selectedProjectId[pkg.id] || undefined)}
                                               className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium border border-[rgba(139,156,182,0.18)] bg-[rgba(139,156,182,0.06)] rounded hover:bg-[rgba(139,156,182,0.10)] disabled:opacity-50 transition-all"
                                               style={{ color: 'var(--space-accent)' }}
@@ -1198,7 +1300,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                                             </button>
                                             <button
                                               type="button"
-                                              disabled={sendingEntryId === entry.id || removingEntryId === entry.id}
+                                              disabled={sendingEntryId === entry.id || removingEntryId === entry.id || resettingEntryId === entry.id}
                                               onClick={() => handleRemoveScheduleEntry(pkg.id, entry.id)}
                                               className="flex items-center justify-center size-6 text-[var(--space-text-muted)] hover:text-red-400 hover:bg-red-400/[0.08] rounded transition-all disabled:opacity-40"
                                               title="Remove entry"

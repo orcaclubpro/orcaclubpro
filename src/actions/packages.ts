@@ -984,6 +984,109 @@ export async function removeScheduleEntry(packageId: string, entryId: string) {
   }
 }
 
+/**
+ * Put an already-invoiced schedule entry back on the schedule as un-invoiced so it can
+ * be sent again. Tears down only: voids the Stripe invoice, deletes the Payload order,
+ * releases the work entries it consumed, then clears `orderId`/`invoicedAt` on the entry.
+ *
+ * Also the manual recovery path for a "ghost order" — a transaction abort can roll back
+ * the order while leaving the entry stamped invoiced against an id that no longer exists.
+ * That case still resets (and still releases stranded work entries).
+ *
+ * A paid order is never reset — resetting would detach a paid invoice.
+ */
+export async function resetScheduleEntry(packageId: string, entryId: string) {
+  try {
+    const user = await getCurrentUser()
+    if (!user || user.role === 'client') return { success: false, error: 'Unauthorized' }
+
+    const payload = await getPayload({ config })
+
+    const pkg = await payload.findByID({ collection: 'packages', id: packageId, depth: 0 })
+    if (!pkg || pkg.type !== 'proposal') return { success: false, error: 'Package proposal not found' }
+
+    const schedule = ((pkg as any).paymentSchedule ?? []) as Array<{
+      id: string
+      orderId?: string | null
+      invoicedAt?: string | null
+    }>
+    const entry = schedule.find((e) => e.id === entryId)
+    if (!entry) return { success: false, error: 'Schedule entry not found' }
+
+    const orderId = entry.orderId || null
+    let order: any = null
+    let orderWasMissing = false
+    let stripeVoided = false
+
+    if (orderId) {
+      order = await payload
+        .findByID({ collection: 'orders', id: orderId, depth: 0 })
+        .catch(() => null)
+
+      if (!order) {
+        // Ghost order — the order was rolled back but the entry stayed stamped.
+        orderWasMissing = true
+      } else if (order.status === 'paid') {
+        return {
+          success: false,
+          error: 'This payment has already been paid — reset would detach a paid invoice.',
+        }
+      }
+    } else {
+      orderWasMissing = true
+    }
+
+    // Void the Stripe invoice, then drop the order. Best-effort on Stripe: the point of
+    // this action is unsticking a broken state, so a Stripe rejection (already void,
+    // deleted, bad key) must never abort the reset.
+    if (order) {
+      if (order.stripeInvoiceId) {
+        try {
+          const stripe = getStripe()
+          const invoice = await stripe.invoices.retrieve(order.stripeInvoiceId).catch(() => null)
+          if (!invoice || invoice.status !== 'void') {
+            await stripe.invoices.voidInvoice(order.stripeInvoiceId)
+            stripeVoided = true
+          }
+        } catch (e) {
+          console.error('[resetScheduleEntry] Failed to void Stripe invoice:', order.stripeInvoiceId, e)
+        }
+      }
+      try {
+        await payload.delete({ collection: 'orders', id: order.id })
+      } catch (e) {
+        console.error('[resetScheduleEntry] Failed to delete order:', order.id, e)
+      }
+    }
+
+    // Release work entries even in the ghost case — that is exactly where they strand.
+    const releasedWorkEntries = orderId ? await releaseWorkEntriesForOrder(orderId) : 0
+
+    const updated = await payload.update({
+      collection: 'packages',
+      id: packageId,
+      data: {
+        paymentSchedule: schedule.map((e) =>
+          e.id === entryId ? { ...e, orderId: null, invoicedAt: null } : e,
+        ),
+      } as any,
+    })
+
+    revalidatePath(`/u/${user.username}/clients`)
+
+    return {
+      success: true,
+      schedule: (updated as any).paymentSchedule ?? [],
+      releasedWorkEntries,
+      orderWasMissing,
+      stripeVoided,
+    }
+  } catch (error) {
+    console.error('[resetScheduleEntry]', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to reset entry' }
+  }
+}
+
 export interface SendScheduledPaymentOpts {
   /** Create the order + Stripe invoice but send no email. */
   skipEmail?: boolean
