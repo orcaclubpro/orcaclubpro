@@ -11,6 +11,7 @@ import {
 } from '@/lib/stripe/invoices'
 import { resolveStripeCustomer } from '@/lib/stripe/customers'
 import { sendGenericInvoiceEmail } from '@/lib/payload/utils/genericInvoiceEmailTemplate'
+import { nextOrderNumber } from '@/lib/payload/utils/orderNumber'
 import { revalidatePath } from 'next/cache'
 
 // ── Create a client-scoped order (invoice) ─────────────────────────────────────
@@ -35,27 +36,55 @@ export interface CreateClientOrderInput {
   projectId?: string
   /** Create the order + Stripe invoice but send no email. */
   skipEmail?: boolean
+  /**
+   * Create and finalize a Stripe invoice for this order. Defaults to TRUE.
+   * When false the order is only recorded in Payload (so it shows on the
+   * client's profile and balance) and no Stripe API call is made at all —
+   * for work already billed somewhere else.
+   */
+  createStripeInvoice?: boolean
+  /**
+   * Optional link to an existing invoice / payment page. Stored as the order's
+   * `stripeInvoiceUrl`. Overrides the hosted Stripe URL when a Stripe invoice
+   * is also created. Must be an http(s) URL.
+   */
+  invoiceUrl?: string
 }
 
 export interface CreateClientOrderResult {
   success: boolean
   orderId?: string
   orderNumber?: string
+  /** Whatever ended up on the order — hosted Stripe URL, the supplied link, or null. */
   invoiceUrl?: string | null
+  /** True when a Stripe invoice was created and finalized for this order. */
+  stripeInvoiceCreated?: boolean
+  /** Whether an invoice email was dispatched to the client. */
+  emailed?: boolean
+  /** Non-fatal explanation — e.g. why no email was sent. */
+  notice?: string
   total?: number
   error?: string
 }
 
 const round2 = (n: number) => Math.round((n || 0) * 100) / 100
+const DAY_MS = 24 * 60 * 60 * 1000
 
 /**
  * Create a standalone invoice for a client — no package or retainer required.
  *
  * Mirrors `createPartialInvoiceFromPackage`: validate → resolve the Stripe
  * customer → create/finalize the Stripe invoice → persist the Order → email
- * (non-blocking). The order number always comes from the finalized Stripe
- * invoice; if the Payload write fails afterwards the invoice is voided so no
- * orphaned Stripe invoice is left behind.
+ * (non-blocking). The order number comes from the finalized Stripe invoice;
+ * if the Payload write fails afterwards the invoice is voided so no orphaned
+ * Stripe invoice is left behind.
+ *
+ * With `createStripeInvoice: false` the whole Stripe leg is skipped — no
+ * customer resolution, no invoice, no Stripe call of any kind. The order is
+ * recorded in Payload only (it still counts toward the client's balance), it
+ * takes an `INV-NNNN` number from `nextOrderNumber()` — the placeholder
+ * numbering scheme that exists precisely for non-Stripe orders — and its
+ * payable link is whatever `invoiceUrl` the caller supplied, if any.
  */
 export async function createClientOrder(
   input: CreateClientOrderInput,
@@ -103,6 +132,29 @@ export async function createClientOrder(
 
     const daysUntilDue = Math.max(1, Math.round(input.daysUntilDue ?? 30))
     const invoiceType = input.invoiceType ?? 'full'
+    // Default TRUE — omitting the flag preserves the original Stripe-backed flow.
+    const withStripeInvoice = input.createStripeInvoice !== false
+
+    // ── Validate the optional link before anything is created ────────────────
+    // This value is rendered as a clickable link in the portal and the invoice
+    // email, so only absolute http(s) URLs are allowed through.
+    let manualInvoiceUrl: string | null = null
+    const rawInvoiceUrl = input.invoiceUrl?.trim()
+    if (rawInvoiceUrl) {
+      let parsed: URL | null = null
+      try {
+        parsed = new URL(rawInvoiceUrl)
+      } catch {
+        parsed = null
+      }
+      if (!parsed || (parsed.protocol !== 'http:' && parsed.protocol !== 'https:')) {
+        return {
+          success: false,
+          error: 'The invoice link must be a full URL starting with http:// or https://',
+        }
+      }
+      manualInvoiceUrl = rawInvoiceUrl
+    }
 
     const payload = await getPayload({ config })
 
@@ -112,58 +164,92 @@ export async function createClientOrder(
     if (!account) return { success: false, error: 'Client account not found' }
 
     const clientEmail = (account as any).email as string | null | undefined
-    if (!clientEmail) {
+    // Stripe needs an email to resolve/create the customer. A Payload-only order
+    // does not — the client can still be missing one and just get no email.
+    if (!clientEmail && withStripeInvoice) {
       return { success: false, error: 'Client account has no email — add one before invoicing' }
     }
+    const accountStripeCustomerId =
+      ((account as any).stripeCustomerId as string | undefined) ?? null
     const clientName =
       ((account as any).name as string | undefined) ||
       [(account as any).firstName, (account as any).lastName].filter(Boolean).join(' ') ||
-      clientEmail
+      clientEmail ||
+      'Client'
 
-    stripe = getStripe()
-
-    // ── Stripe customer — validate → search by email → create ────────────────
-    const resolved = await resolveStripeCustomer({
-      stripe,
-      email: clientEmail,
-      name: clientName,
-      existingCustomerId: ((account as any).stripeCustomerId as string | undefined) ?? null,
-      metadata: {
-        orcaclub_client_id: input.clientAccountId,
-        created_via: 'orcaclub_dashboard',
-        source: 'client_orders_tab',
-      },
-    })
-    if (resolved.customerId !== (account as any).stripeCustomerId) {
-      await payload.update({
-        collection: 'client-accounts',
-        id: input.clientAccountId,
-        data: { stripeCustomerId: resolved.customerId } as any,
-      })
-    }
-
-    // ── Stripe invoice — create → attach lines → finalize ────────────────────
     const invoiceNote = input.invoiceNote?.trim() || undefined
-    const { invoice: finalized, invoiceId, hostedInvoiceUrl } = await createStripeInvoiceForOrder({
-      stripe,
-      stripeCustomerId: resolved.customerId,
-      daysUntilDue,
-      description: invoiceNote ?? `Invoice — ${clientName}`,
-      invoiceMetadata: {
-        orcaclub_client_id: input.clientAccountId,
-        orcaclub_invoice_type: invoiceType,
-        created_via: 'orcaclub_dashboard',
-        ...(input.projectId ? { orcaclub_project_id: input.projectId } : {}),
-      },
-      lines: lines.map((l) => ({
-        description: l.quantity > 1 ? `${l.title} × ${l.quantity}` : l.title,
-        amount: round2(l.price * l.quantity),
-      })),
-    })
-    finalizedInvoice = finalized
 
-    // Order numbers are Stripe's — never generate an INV- number here.
-    const orderNumber = finalized.number ?? invoiceId
+    let orderNumber: string
+    let stripeInvoiceId: string | null = null
+    let stripeCustomerId: string | null = null
+    let orderInvoiceUrl: string | null = null
+    let dueDate: string | undefined
+
+    if (withStripeInvoice) {
+      stripe = getStripe()
+
+      // ── Stripe customer — validate → search by email → create ──────────────
+      const resolved = await resolveStripeCustomer({
+        stripe,
+        email: clientEmail as string,
+        name: clientName,
+        existingCustomerId: accountStripeCustomerId,
+        metadata: {
+          orcaclub_client_id: input.clientAccountId,
+          created_via: 'orcaclub_dashboard',
+          source: 'client_orders_tab',
+        },
+      })
+      if (resolved.customerId !== accountStripeCustomerId) {
+        await payload.update({
+          collection: 'client-accounts',
+          id: input.clientAccountId,
+          data: { stripeCustomerId: resolved.customerId } as any,
+        })
+      }
+      stripeCustomerId = resolved.customerId
+
+      // ── Stripe invoice — create → attach lines → finalize ──────────────────
+      const { invoice: finalized, invoiceId, hostedInvoiceUrl } = await createStripeInvoiceForOrder({
+        stripe,
+        stripeCustomerId: resolved.customerId,
+        daysUntilDue,
+        description: invoiceNote ?? `Invoice — ${clientName}`,
+        invoiceMetadata: {
+          orcaclub_client_id: input.clientAccountId,
+          orcaclub_invoice_type: invoiceType,
+          created_via: 'orcaclub_dashboard',
+          ...(input.projectId ? { orcaclub_project_id: input.projectId } : {}),
+        },
+        lines: lines.map((l) => ({
+          description: l.quantity > 1 ? `${l.title} × ${l.quantity}` : l.title,
+          amount: round2(l.price * l.quantity),
+        })),
+      })
+      finalizedInvoice = finalized
+
+      // Order numbers are Stripe's — never generate an INV- number here.
+      orderNumber = finalized.number ?? invoiceId
+      stripeInvoiceId = invoiceId
+      // A link the caller supplied deliberately wins over Stripe's hosted page.
+      orderInvoiceUrl = manualInvoiceUrl ?? hostedInvoiceUrl ?? null
+      dueDate = finalized.due_date
+        ? new Date(finalized.due_date * 1000).toISOString()
+        : undefined
+    } else {
+      // ── Payload-only order — no Stripe call of any kind ────────────────────
+      // INV-NNNN is the placeholder numbering scheme reserved for orders with no
+      // Stripe invoice behind them, so it is the correct source here.
+      orderNumber = await nextOrderNumber(payload)
+      // Reuse an existing Stripe customer id if the account already has one, but
+      // never create one. `stripeInvoiceId` stays unset — a non-Stripe link must
+      // never land in an id field, and a fabricated id would break webhook
+      // reconciliation, which matches orders by `stripeInvoiceId`.
+      stripeCustomerId = accountStripeCustomerId
+      orderInvoiceUrl = manualInvoiceUrl
+      // No Stripe `due_date` to read back, so derive the same terms locally.
+      dueDate = new Date(Date.now() + daysUntilDue * DAY_MS).toISOString()
+    }
 
     const order = await payload.create({
       collection: 'orders',
@@ -175,10 +261,10 @@ export async function createClientOrder(
         ...(invoiceNote ? { invoiceNote } : {}),
         amount: total,
         status: 'pending',
-        stripeCustomerId: resolved.customerId,
-        stripeInvoiceId: invoiceId,
-        stripeInvoiceUrl: hostedInvoiceUrl,
-        ...(finalized.due_date ? { dueDate: new Date(finalized.due_date * 1000).toISOString() } : {}),
+        ...(stripeCustomerId ? { stripeCustomerId } : {}),
+        ...(stripeInvoiceId ? { stripeInvoiceId } : {}),
+        ...(orderInvoiceUrl ? { stripeInvoiceUrl: orderInvoiceUrl } : {}),
+        ...(dueDate ? { dueDate } : {}),
         lineItems: lines.map((l) => ({
           title: l.title,
           description: l.description,
@@ -201,15 +287,29 @@ export async function createClientOrder(
       // Keep the diagnostic detail in the server log; surface something legible upstream.
       console.error('[createClientOrder] Order did not persist:', e)
       throw new Error(
-        'The invoice could not be saved, so no order was created. ' +
-          'The Stripe invoice has been voided and the client was not billed — please try again.',
+        withStripeInvoice
+          ? 'The invoice could not be saved, so no order was created. ' +
+            'The Stripe invoice has been voided and the client was not billed — please try again.'
+          : 'The order could not be saved — nothing was recorded. Please try again.',
       )
     }
 
     revalidatePath(`/u/${user.username}/clients`)
 
-    // Non-blocking: the order + Stripe invoice must survive an email failure.
-    if (!input.skipEmail) {
+    // ── Email ────────────────────────────────────────────────────────────────
+    // With no Stripe invoice and no supplied link there is nothing payable to
+    // point the client at, so don't mail a dead invoice — report it instead.
+    let notice: string | undefined
+    let emailed = false
+    if (input.skipEmail) {
+      // Caller opted out — nothing to explain.
+    } else if (!clientEmail) {
+      notice = 'No email sent — this client account has no email address.'
+    } else if (!stripeInvoiceId && !orderInvoiceUrl) {
+      notice = 'No email sent — the order has no invoice link for the client to pay from.'
+    } else {
+      emailed = true
+      // Non-blocking: the order + Stripe invoice must survive an email failure.
       ;(async () => {
         try {
           await sendGenericInvoiceEmail(payload, order.id as string, user.id as string)
@@ -223,7 +323,10 @@ export async function createClientOrder(
       success: true,
       orderId: order.id as string,
       orderNumber,
-      invoiceUrl: hostedInvoiceUrl || null,
+      invoiceUrl: orderInvoiceUrl || null,
+      stripeInvoiceCreated: Boolean(stripeInvoiceId),
+      emailed,
+      notice,
       total,
     }
   } catch (error) {

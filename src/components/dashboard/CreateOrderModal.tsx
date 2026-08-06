@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Loader2, X, Send, CircleCheck, Circle, ArrowRight, Check, Plus, Trash2,
-  MailX, Receipt,
+  MailX, Receipt, CreditCard,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClientOrder } from '@/actions/orders'
@@ -58,6 +58,26 @@ interface Outcome {
   url?: string | null
   total: number
   emailed: boolean
+  stripeCreated: boolean
+  /** The link on the order came from the form, not from Stripe's hosted page. */
+  customLink: boolean
+  notice?: string
+}
+
+const URL_HINT = 'Enter a full URL starting with http:// or https://'
+
+/** Mirrors the server-side check so the error lands next to the field, not after a round trip. */
+function urlProblem(value: string): string | null {
+  const v = value.trim()
+  if (!v) return null
+  let parsed: URL | null = null
+  try {
+    parsed = new URL(v)
+  } catch {
+    return URL_HINT
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return URL_HINT
+  return null
 }
 
 export interface CreateOrderModalProps {
@@ -79,6 +99,9 @@ export function CreateOrderModal({ clientId, clientName, projectId, onClose }: C
   const [dueDaysStr, setDueDaysStr] = useState('30')
   const [invoiceType, setInvoiceType] = useState<InvoiceType>('full')
   const [skipEmail, setSkipEmail] = useState(false)
+  const [createStripe, setCreateStripe] = useState(true)
+  const [invoiceLink, setInvoiceLink] = useState('')
+  const [linkTouched, setLinkTouched] = useState(false)
 
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -106,9 +129,20 @@ export function CreateOrderModal({ clientId, clientName, projectId, onClose }: C
 
   const titledRows = rows.filter((r) => r.title.trim().length > 0)
   const dueDays = Math.max(1, Math.round(Number(dueDaysStr) || 0))
-  const valid = titledRows.length > 0 && titledRows.length === rows.length && total > 0
+  const linkError = urlProblem(invoiceLink)
+  const hasLink = invoiceLink.trim().length > 0 && !linkError
+  const valid =
+    titledRows.length > 0 && titledRows.length === rows.length && total > 0 && !linkError
+
+  // With no Stripe invoice and no link there is nothing payable to email about —
+  // the server skips the send in that case, so the UI says so up front.
+  const willEmail = !skipEmail && (createStripe || hasLink)
 
   async function handleSubmit() {
+    if (linkError) {
+      setLinkTouched(true)
+      return
+    }
     setError(null)
     setSubmitting(true)
     const result = await createClientOrder({
@@ -124,6 +158,8 @@ export function CreateOrderModal({ clientId, clientName, projectId, onClose }: C
       invoiceType,
       projectId,
       skipEmail,
+      createStripeInvoice: createStripe,
+      invoiceUrl: invoiceLink.trim() || undefined,
     })
     setSubmitting(false)
 
@@ -132,7 +168,10 @@ export function CreateOrderModal({ clientId, clientName, projectId, onClose }: C
         orderNumber: result.orderNumber,
         url: result.invoiceUrl ?? null,
         total: result.total ?? total,
-        emailed: !skipEmail,
+        emailed: result.emailed ?? false,
+        stripeCreated: result.stripeInvoiceCreated ?? false,
+        customLink: hasLink,
+        notice: result.notice,
       })
       router.refresh()
     } else {
@@ -182,9 +221,14 @@ export function CreateOrderModal({ clientId, clientName, projectId, onClose }: C
                   <div className="flex-1 min-w-0">
                     <p className={labelCls}>{clientName}</p>
                     <p className="text-xs text-[var(--space-text-secondary)] mt-0.5">
-                      Invoice {outcome.orderNumber ? `#${outcome.orderNumber} ` : ''}— {fmt(outcome.total)}
-                      {outcome.emailed ? ' created and emailed' : ' created, no email sent'}
+                      {outcome.stripeCreated ? 'Invoice' : 'Order'}{' '}
+                      {outcome.orderNumber ? `#${outcome.orderNumber} ` : ''}— {fmt(outcome.total)}
+                      {outcome.stripeCreated ? ' created' : ' recorded'}
+                      {outcome.emailed ? ' and emailed' : ', no email sent'}
                     </p>
+                    {outcome.notice && (
+                      <p className="text-[11px] text-[var(--space-text-muted)] mt-1">{outcome.notice}</p>
+                    )}
                     {outcome.url && (
                       <a
                         href={outcome.url}
@@ -192,7 +236,8 @@ export function CreateOrderModal({ clientId, clientName, projectId, onClose }: C
                         rel="noreferrer"
                         className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--space-accent)] hover:underline mt-1"
                       >
-                        View Stripe invoice <ArrowRight className="size-3" />
+                        {outcome.customLink ? 'View invoice link' : 'View Stripe invoice'}{' '}
+                        <ArrowRight className="size-3" />
                       </a>
                     )}
                   </div>
@@ -210,7 +255,9 @@ export function CreateOrderModal({ clientId, clientName, projectId, onClose }: C
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold text-[var(--space-text-primary)]">Line items</p>
                       <p className="text-[10px] text-[var(--space-text-muted)] mt-0.5">
-                        Each line appears on the Stripe invoice at price × quantity.
+                        {createStripe
+                          ? 'Each line appears on the Stripe invoice at price × quantity.'
+                          : 'Each line is recorded on the order at price × quantity.'}
                       </p>
                     </div>
                     <button type="button" onClick={addRow} className={cn(ghostBtn, 'shrink-0')}>
@@ -328,14 +375,58 @@ export function CreateOrderModal({ clientId, clientName, projectId, onClose }: C
                   </div>
                 </div>
 
-                {/* ── ③ Delivery ── */}
-                <div className="rounded-xl border border-[var(--space-border-hard)]">
+                {/* ── ③ Billing ── */}
+                <div className="rounded-xl border border-[var(--space-border-hard)] divide-y divide-[var(--space-border-hard)]">
+                  <ToggleRow
+                    icon={CreditCard}
+                    checked={createStripe}
+                    onToggle={() => setCreateStripe((v) => !v)}
+                    title="Create Stripe invoice"
+                    hint={
+                      createStripe
+                        ? 'Bills through Stripe — the client gets a hosted payment page.'
+                        : 'Off — the order is only recorded here (it still counts toward the balance). Nothing is charged through Stripe.'
+                    }
+                  />
+
+                  <div className="px-4 py-3">
+                    <label className="block">
+                      <span className={labelCls}>
+                        {createStripe ? 'Invoice link (optional override)' : 'Invoice link (optional)'}
+                      </span>
+                      <input
+                        type="url"
+                        inputMode="url"
+                        value={invoiceLink}
+                        onChange={(e) => setInvoiceLink(e.target.value)}
+                        onBlur={() => setLinkTouched(true)}
+                        placeholder="https://…"
+                        className={cn(inputCls, 'mt-1 text-xs py-1.5')}
+                      />
+                    </label>
+                    {linkTouched && linkError ? (
+                      <p className="text-[10px] text-red-400 mt-1">{linkError}</p>
+                    ) : (
+                      <p className="text-[10px] text-[var(--space-text-muted)] mt-1">
+                        {createStripe
+                          ? 'Replaces the Stripe hosted payment link on this order — leave blank to use Stripe’s.'
+                          : 'Where the client can pay or view the invoice you already sent. Leave blank to record the order with no link.'}
+                      </p>
+                    )}
+                  </div>
+
                   <ToggleRow
                     icon={MailX}
                     checked={skipEmail}
                     onToggle={() => setSkipEmail((v) => !v)}
                     title="Skip email"
-                    hint="Creates the order and Stripe invoice without notifying the client."
+                    hint={
+                      !skipEmail && !createStripe && !hasLink
+                        ? 'No email will be sent anyway — there is no invoice link for the client to pay from.'
+                        : createStripe
+                          ? 'Creates the order and Stripe invoice without notifying the client.'
+                          : 'Records the order without notifying the client.'
+                    }
                   />
                 </div>
 
@@ -351,12 +442,17 @@ export function CreateOrderModal({ clientId, clientName, projectId, onClose }: C
                 {[
                   `${rows.length} line${rows.length === 1 ? '' : 's'} · ${fmt(total)}`,
                   `net ${dueDays} day${dueDays === 1 ? '' : 's'}`,
-                  skipEmail ? 'no email' : null,
+                  createStripe ? null : 'no Stripe invoice',
+                  willEmail ? null : 'no email',
                 ].filter(Boolean).join(' · ')}
               </p>
               <button onClick={handleSubmit} disabled={submitting || !valid} className={accentBtn}>
                 {submitting ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
-                {submitting ? 'Creating…' : skipEmail ? 'Create invoice' : 'Create & send'}
+                {submitting
+                  ? createStripe ? 'Creating…' : 'Recording…'
+                  : createStripe
+                    ? willEmail ? 'Create & send' : 'Create invoice'
+                    : willEmail ? 'Record & send' : 'Record order'}
               </button>
             </div>
           )}
