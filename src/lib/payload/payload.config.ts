@@ -32,6 +32,7 @@ import Packages from './collections/Packages'
 import ServiceItems from './collections/ServiceItems'
 import Retainers from './collections/Retainers'
 import RetainerTimeEntries from './collections/RetainerTimeEntries'
+import PackageWorkEntries from './collections/PackageWorkEntries'
 import Credentials from './collections/Credentials'
 import { Timelines } from './collections/Timelines'
 import Solutions from './collections/Solutions'
@@ -990,7 +991,7 @@ export default buildConfig({
   editor: lexicalEditor(),
 
   // Define and configure your collections in this array
-  collections: [Media, Clients, Leads, Categories, Tags, Posts, Solutions, Pages, Users, ClientAccounts, Orders, Packages, ServiceItems, Retainers, RetainerTimeEntries, WebhookEvents, Projects, Tasks, Sprints, Files, Credentials, Timelines],
+  collections: [Media, Clients, Leads, Categories, Tags, Posts, Solutions, Pages, Users, ClientAccounts, Orders, Packages, PackageWorkEntries, ServiceItems, Retainers, RetainerTimeEntries, WebhookEvents, Projects, Tasks, Sprints, Files, Credentials, Timelines],
 
   // Your Payload secret - should be a complex and secure string, unguessable
   secret: (() => {

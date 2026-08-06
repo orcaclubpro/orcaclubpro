@@ -79,6 +79,7 @@ export interface Config {
     'client-accounts': ClientAccount;
     orders: Order;
     packages: Package;
+    'package-work-entries': PackageWorkEntry;
     'service-items': ServiceItem;
     retainers: Retainer;
     'retainer-time-entries': RetainerTimeEntry;
@@ -113,6 +114,7 @@ export interface Config {
     'client-accounts': ClientAccountsSelect<false> | ClientAccountsSelect<true>;
     orders: OrdersSelect<false> | OrdersSelect<true>;
     packages: PackagesSelect<false> | PackagesSelect<true>;
+    'package-work-entries': PackageWorkEntriesSelect<false> | PackageWorkEntriesSelect<true>;
     'service-items': ServiceItemsSelect<false> | ServiceItemsSelect<true>;
     retainers: RetainersSelect<false> | RetainersSelect<true>;
     'retainer-time-entries': RetainerTimeEntriesSelect<false> | RetainerTimeEntriesSelect<true>;
@@ -1390,6 +1392,48 @@ export interface OrcaclubCarouselBlock {
   blockType: 'orcaclubCarousel';
 }
 /**
+ * Planned and completed work logged against a proposal package, consumed by scheduled-payment invoices.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "package-work-entries".
+ */
+export interface PackageWorkEntry {
+  id: string;
+  date: string;
+  /**
+   * Optional — informational only. Never billed.
+   */
+  hours?: number | null;
+  /**
+   * Planned = future work ("what's left"); Logged = work done, eligible for the next invoice.
+   */
+  status: 'planned' | 'logged';
+  /**
+   * Meaningful on planned entries — flipped to complete when the planned work is logged as a separate entry.
+   */
+  completion?: ('incomplete' | 'complete') | null;
+  /**
+   * Recap bucket this entry rolls up into.
+   */
+  category?: ('work' | 'design' | 'revision' | 'meeting') | null;
+  description: string;
+  /**
+   * Must be a proposal package — enforced in src/actions/packageWork.ts.
+   */
+  package: string | Package;
+  clientAccount: string | ClientAccount;
+  /**
+   * Set when a scheduled-payment invoice consumes this entry. Empty = pending.
+   */
+  billedOrderId?: string | null;
+  /**
+   * Staff member who logged this entry
+   */
+  loggedBy?: (string | null) | User;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * Hours logged against a retainer, summed per calendar month against the cap.
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -2005,6 +2049,10 @@ export interface PayloadLockedDocument {
         value: string | Package;
       } | null)
     | ({
+        relationTo: 'package-work-entries';
+        value: string | PackageWorkEntry;
+      } | null)
+    | ({
         relationTo: 'service-items';
         value: string | ServiceItem;
       } | null)
@@ -2575,6 +2623,24 @@ export interface PackagesSelect<T extends boolean = true> {
         stripePriceId?: T;
         id?: T;
       };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "package-work-entries_select".
+ */
+export interface PackageWorkEntriesSelect<T extends boolean = true> {
+  date?: T;
+  hours?: T;
+  status?: T;
+  completion?: T;
+  category?: T;
+  description?: T;
+  package?: T;
+  clientAccount?: T;
+  billedOrderId?: T;
+  loggedBy?: T;
   updatedAt?: T;
   createdAt?: T;
 }
