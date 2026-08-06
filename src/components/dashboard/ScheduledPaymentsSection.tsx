@@ -114,7 +114,7 @@ export function ScheduledPaymentsSection({ packages, username }: ScheduledPaymen
     setOpenMenuId(null)
     setMenuPos(null)
     setSendingEntryId(entryId)
-    const result = await sendScheduledPayment(pkgId, entryId, undefined, skipEmail)
+    const result = await sendScheduledPayment(pkgId, entryId, undefined, { skipEmail })
     setSendingEntryId(null)
     if (result.success && result.invoiceUrl) {
       setEntryResults((prev) => ({ ...prev, [entryId]: { url: result.invoiceUrl as string } }))

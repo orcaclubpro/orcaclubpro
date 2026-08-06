@@ -15,6 +15,7 @@ import type { Payload, PayloadRequest } from 'payload'
 import type Stripe from 'stripe'
 import { retryOnTransientError } from '@/lib/stripe/retry'
 import { sendPaymentConfirmationEmails } from '@/lib/payload/utils/paymentConfirmationEmail'
+import { releaseWorkEntriesForOrder } from '@/actions/packages'
 
 // ─── Type matching @payloadcms/plugin-stripe handler signature ────────────────
 
@@ -269,6 +270,12 @@ export async function handleInvoiceVoided({ event, payload }: StripeHandlerArgs)
         data: { status: 'cancelled' },
       }),
     )
+
+    // A cancelled invoice never billed its work — release those entries back to pending.
+    const released = await releaseWorkEntriesForOrder(resolvedOrderId)
+    if (released > 0) {
+      console.log('[Stripe Webhook] Released work entries back to pending:', released)
+    }
 
     console.log('[Stripe Webhook] Order marked as cancelled:', resolvedOrderId)
 

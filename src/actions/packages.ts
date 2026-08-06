@@ -19,6 +19,8 @@ import {
   type EmailAttachment,
 } from '@/lib/payload/utils/genericInvoiceEmailTemplate'
 import { buildPackagePdf, buildOrcaclubSowPdf } from '@/lib/pdf-generators'
+import { buildWorkLines, type WorkCategory } from '@/lib/packages/workLines'
+import type { PackageRecapData } from '@/lib/packages/recap'
 
 const APP_BASE = process.env.NEXT_PUBLIC_SERVER_URL ?? 'https://app.orcaclub.pro'
 
@@ -911,6 +913,36 @@ export async function savePaymentSchedule(
   }
 }
 
+/**
+ * Un-stamp every work entry consumed by an order — used when a scheduled payment fails
+ * mid-flight, when its schedule entry is removed, or when Stripe voids the invoice. The
+ * entries go back to pending so the next invoice can pick them up. Best-effort: a failure
+ * here must never block the caller's primary operation. Returns how many were released.
+ */
+export async function releaseWorkEntriesForOrder(orderId: string): Promise<number> {
+  if (!orderId) return 0
+  try {
+    const payload = await getPayload({ config })
+    const { docs } = await payload.find({
+      collection: 'package-work-entries',
+      where: { billedOrderId: { equals: orderId } },
+      depth: 0,
+      limit: 1000,
+    })
+    await Promise.all(
+      (docs as any[]).map((d) =>
+        payload
+          .update({ collection: 'package-work-entries', id: d.id, data: { billedOrderId: '' } as any })
+          .catch((e) => console.error('[releaseWorkEntriesForOrder] Failed to release entry:', d.id, e)),
+      ),
+    )
+    return docs.length
+  } catch (e) {
+    console.error('[releaseWorkEntriesForOrder]', e)
+    return 0
+  }
+}
+
 export async function removeScheduleEntry(packageId: string, entryId: string) {
   try {
     const user = await getCurrentUser()
@@ -926,8 +958,10 @@ export async function removeScheduleEntry(packageId: string, entryId: string) {
     if (!entry) return { success: false, error: 'Entry not found' }
     if (entry.invoicedAt) return { success: false, error: 'Cannot remove an entry that has already been invoiced via Stripe' }
 
-    // Delete the pending order if one was created for this entry
+    // Delete the pending order if one was created for this entry, releasing any work
+    // entries it consumed back to pending first.
     if (entry.orderId && !entry.invoicedAt) {
+      await releaseWorkEntriesForOrder(entry.orderId)
       try {
         await payload.delete({ collection: 'orders', id: entry.orderId })
       } catch (e) {
@@ -949,14 +983,32 @@ export async function removeScheduleEntry(packageId: string, entryId: string) {
   }
 }
 
+export interface SendScheduledPaymentOpts {
+  /** Create the order + Stripe invoice but send no email. */
+  skipEmail?: boolean
+  /**
+   * Work entries to attach as $0 lines. Omit to attach every pending logged entry;
+   * pass [] to attach none.
+   */
+  workLineIds?: string[]
+  /** Staff-composed recap narrative (merged server-side before use). */
+  recap?: Partial<PackageRecapData>
+  /** Attach the recap PDF to the invoice email. */
+  attachRecapPdf?: boolean
+  /** Render the itemized work log in the invoice email body. */
+  includeWorkInEmail?: boolean
+}
+
 export async function sendScheduledPayment(
   packageId: string,
   entryId: string,
   projectId?: string,
-  skipEmail?: boolean,
+  opts?: SendScheduledPaymentOpts,
 ) {
   let finalizedInvoice: any = null
   let stripe: ReturnType<typeof getStripe> | null = null
+  /** Entries stamped in this run — unstamped if anything downstream throws. */
+  const stampedEntryIds: string[] = []
 
   try {
     const user = await getCurrentUser()
@@ -993,6 +1045,36 @@ export async function sendScheduledPayment(
       return { success: false, error: 'Client account has no Stripe customer ID — set it in the admin panel first' }
     }
 
+    // ── Pending work this invoice consumes ──────────────────────────────────────
+    // Default: every pending logged entry. `workLineIds: []` attaches none.
+    const { docs: pendingDocs } = await payload.find({
+      collection: 'package-work-entries',
+      where: {
+        and: [
+          { package: { equals: packageId } },
+          { status: { equals: 'logged' } },
+          { billedOrderId: { exists: false } },
+        ],
+      },
+      depth: 0,
+      sort: 'date',
+      limit: 500,
+    })
+    // `exists: false` misses documents stored with an empty string — filter defensively.
+    const allPending = (pendingDocs as any[]).filter((d) => !d.billedOrderId)
+    const selected = opts?.workLineIds
+      ? allPending.filter((d) => opts.workLineIds!.includes(d.id))
+      : allPending
+    const workLines = buildWorkLines(
+      selected.map((d) => ({
+        id: d.id as string,
+        date: typeof d.date === 'string' ? d.date : new Date(d.date).toISOString(),
+        description: d.description ?? null,
+        hours: d.hours ?? null,
+        category: (d.category ?? 'work') as WorkCategory,
+      })),
+    )
+
     const daysUntilDue = entry.dueDate
       ? Math.max(1, Math.round((new Date(entry.dueDate).getTime() - Date.now()) / 86400000))
       : 30
@@ -1001,6 +1083,8 @@ export async function sendScheduledPayment(
 
     stripe = getStripe()
 
+    // The payment line carries the price; work lines ride along at $0 so the invoice
+    // documents what the payment bought without changing the total.
     const { invoice: finalized } = await createStripeInvoiceForOrder({
       stripe,
       stripeCustomerId,
@@ -1011,7 +1095,10 @@ export async function sendScheduledPayment(
         orcaclub_invoice_type: invoiceType,
         orcaclub_schedule_entry_id: entryId,
       },
-      lines: [{ description: `${entry.label} — ${pkg.name}`, amount: entry.amount }],
+      lines: [
+        { description: `${entry.label} — ${pkg.name}`, amount: entry.amount },
+        ...workLines.map((l) => ({ description: l.title, amount: 0 })),
+      ],
     })
     finalizedInvoice = finalized
     const orderNumber = finalized.number ?? finalized.id
@@ -1030,9 +1117,27 @@ export async function sendScheduledPayment(
         stripeCustomerId,
         stripeInvoiceId: finalizedInvoice.id,
         stripeInvoiceUrl: finalizedInvoice.hosted_invoice_url || '',
-        lineItems: [{ title: entry.label, price: entry.amount, quantity: 1 }],
+        lineItems: [
+          { title: entry.label, price: entry.amount, quantity: 1 },
+          // Itemized work at $0 — covered by the payment line; the amount still balances.
+          ...workLines.map((l) => ({ title: l.title, description: l.description, price: 0, quantity: 1 })),
+        ],
       } as any,
     })
+
+    // ── Consume: stamp the entries this order carried ───────────────────────────
+    for (const l of workLines) {
+      try {
+        await payload.update({
+          collection: 'package-work-entries',
+          id: l.entryId,
+          data: { billedOrderId: order.id } as any,
+        })
+        stampedEntryIds.push(l.entryId)
+      } catch (e) {
+        console.error('[sendScheduledPayment] Failed to stamp work entry:', l.entryId, e)
+      }
+    }
 
     const updatedSchedule = currentSchedule.map((e) =>
       e.id === entryId
@@ -1049,7 +1154,7 @@ export async function sendScheduledPayment(
     revalidatePath(`/u/${user.username}/clients`)
 
     // Non-blocking: send "New Invoice" email to client (skipped if skipEmail is true)
-    if (!skipEmail) {
+    if (!opts?.skipEmail) {
       ;(async () => {
         try {
           const clientUsername = await getClientUsername(payload, clientAccountId)
@@ -1068,8 +1173,22 @@ export async function sendScheduledPayment(
       invoiceUrl: finalizedInvoice.hosted_invoice_url,
       orderNumber,
       orderId: order.id,
+      workLineCount: workLines.length,
     }
   } catch (error) {
+    // Release anything stamped before the failure, then void the orphaned invoice.
+    if (stampedEntryIds.length > 0) {
+      const cleanupPayload = await getPayload({ config }).catch(() => null)
+      if (cleanupPayload) {
+        await Promise.all(
+          stampedEntryIds.map((id) =>
+            cleanupPayload
+              .update({ collection: 'package-work-entries', id, data: { billedOrderId: '' } as any })
+              .catch((e) => console.error('[sendScheduledPayment] Failed to release work entry:', id, e)),
+          ),
+        )
+      }
+    }
     if (finalizedInvoice && stripe) {
       stripe.invoices.voidInvoice(finalizedInvoice.id).catch((e: any) =>
         console.error('[sendScheduledPayment] Failed to void orphaned Stripe invoice:', e)
