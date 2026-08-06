@@ -213,6 +213,8 @@ export interface ClientDetailTabViewProps {
   projects: Project[]
   clientUsers: Array<{ id: string; name: string; email: string }>
   packages: any[]
+  /** Per-package work-log counts, keyed by package id — surfaced on scheduled-payment rows. */
+  workCounts?: Record<string, { pending: number; plannedOpen: number }>
   credentials: any[]
   packageOrderMap: Record<string, any[]>
   serializedProjects: SerializedProject[]
@@ -234,6 +236,7 @@ export function ClientDetailTabView({
   projects,
   clientUsers,
   packages,
+  workCounts,
   credentials,
   packageOrderMap,
   serializedProjects,
@@ -450,7 +453,7 @@ export function ClientDetailTabView({
                 </div>
               )}
             </div>
-            <ScheduledPaymentsSection packages={packages as any} username={username} />
+            <ScheduledPaymentsSection packages={packages as any} username={username} workCounts={workCounts} />
             <ClientOrdersTab
               orders={orders as any}
               role={userRole as 'admin' | 'user' | 'client'}

@@ -96,6 +96,27 @@ export default async function ClientDetailPage({
   const packages = packagesResult.docs
   const credentials = credentialsResult.docs
 
+  // Work-log counts per package — drives the "N logged · M planned open" chip on
+  // each scheduled-payment row. One query for all of this client's packages.
+  const workCounts: Record<string, { pending: number; plannedOpen: number }> = {}
+  if (packages.length > 0) {
+    const { docs: workEntries } = await payload
+      .find({
+        collection: 'package-work-entries',
+        where: { package: { in: packages.map((p: any) => p.id) } },
+        depth: 0,
+        limit: 5000,
+      })
+      .catch(() => ({ docs: [] as any[] }))
+    for (const e of workEntries as any[]) {
+      const pid = typeof e.package === 'object' ? e.package?.id : e.package
+      if (!pid) continue
+      const b = (workCounts[pid] ??= { pending: 0, plannedOpen: 0 })
+      if (e.status === 'logged' && !e.billedOrderId) b.pending += 1
+      if (e.status === 'planned' && e.completion !== 'complete') b.plannedOpen += 1
+    }
+  }
+
   const packageOrderMap: Record<string, any[]> = {}
   for (const o of orders) {
     const pkgId =
@@ -174,6 +195,7 @@ export default async function ClientDetailPage({
       projects={projects as Project[]}
       clientUsers={clientUsersList}
       packages={packages}
+      workCounts={workCounts}
       credentials={credentials}
       packageOrderMap={packageOrderMap}
       serializedProjects={serializedProjects}

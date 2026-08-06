@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import { createPortal } from 'react-dom'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2, Receipt, CheckCircle2, ExternalLink, CalendarDays, Trash2, ChevronDown, FilePlus } from 'lucide-react'
-import { sendScheduledPayment, removeScheduleEntry } from '@/actions/packages'
+import { Loader2, Receipt, CheckCircle2, ExternalLink, CalendarDays, Trash2 } from 'lucide-react'
+import { removeScheduleEntry } from '@/actions/packages'
+import { SchedulePaymentInvoiceModal } from '@/components/dashboard/SchedulePaymentInvoiceModal'
+import type { PackageRecapData } from '@/lib/packages/recap'
 
 interface ScheduledEntry {
   id: string
@@ -24,6 +25,8 @@ interface PackageWithSchedule {
 interface ScheduledPaymentsSectionProps {
   packages: PackageWithSchedule[]
   username: string
+  /** Per-package work-log counts, keyed by package id — drives the work chip on each row. */
+  workCounts?: Record<string, { pending: number; plannedOpen: number }>
 }
 
 function fmt(n: number) {
@@ -58,25 +61,15 @@ const TIMEFRAME_OPTS: { label: string; value: Timeframe }[] = [
   { label: 'All', value: 'all' },
 ]
 
-export function ScheduledPaymentsSection({ packages, username }: ScheduledPaymentsSectionProps) {
+export function ScheduledPaymentsSection({ packages, username, workCounts }: ScheduledPaymentsSectionProps) {
   const router = useRouter()
   const [timeframe, setTimeframe] = useState<Timeframe>('all')
-  const [sendingEntryId, setSendingEntryId] = useState<string | null>(null)
   const [removingEntryId, setRemovingEntryId] = useState<string | null>(null)
   const [entryResults, setEntryResults] = useState<Record<string, { url: string } | { error: string }>>({})
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
-  const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null)
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => { setMounted(true) }, [])
-
-  // Close dropdown on outside click
-  useEffect(() => {
-    if (!openMenuId) return
-    const close = () => { setOpenMenuId(null); setMenuPos(null) }
-    document.addEventListener('click', close)
-    return () => document.removeEventListener('click', close)
-  }, [openMenuId])
+  /** The schedule entry whose invoice is being composed, or null. */
+  const [modalTarget, setModalTarget] = useState<{ pkgId: string; pkgName: string; entry: ScheduledEntry } | null>(null)
+  /** Recap drafts keyed by SCHEDULE-ENTRY id — a draft can never attach to a different payment. */
+  const [recapDrafts, setRecapDrafts] = useState<Record<string, PackageRecapData>>({})
 
   const scheduledPackages = packages
     .map((pkg) => ({
@@ -98,30 +91,15 @@ export function ScheduledPaymentsSection({ packages, username }: ScheduledPaymen
 
   if (totalUnvoiced === 0) return null
 
-  const handleToggleMenu = (e: React.MouseEvent<HTMLButtonElement>, entryId: string) => {
-    e.stopPropagation()
-    if (openMenuId === entryId) {
-      setOpenMenuId(null)
-      setMenuPos(null)
-    } else {
-      const rect = e.currentTarget.getBoundingClientRect()
-      setMenuPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right })
-      setOpenMenuId(entryId)
-    }
-  }
-
-  const handleSend = async (pkgId: string, entryId: string, skipEmail = false) => {
-    setOpenMenuId(null)
-    setMenuPos(null)
-    setSendingEntryId(entryId)
-    const result = await sendScheduledPayment(pkgId, entryId, undefined, { skipEmail })
-    setSendingEntryId(null)
-    if (result.success && result.invoiceUrl) {
-      setEntryResults((prev) => ({ ...prev, [entryId]: { url: result.invoiceUrl as string } }))
-      router.refresh()
-    } else {
-      setEntryResults((prev) => ({ ...prev, [entryId]: { error: result.error ?? 'Failed to send invoice' } }))
-    }
+  /** Compose the invoice for one entry — work lines, recap, and delivery live in the modal. */
+  const handleCompose = (pkgId: string, pkgName: string, entry: ScheduledEntry) => {
+    setEntryResults((prev) => {
+      if (!prev[entry.id]) return prev
+      const next = { ...prev }
+      delete next[entry.id]
+      return next
+    })
+    setModalTarget({ pkgId, pkgName, entry })
   }
 
   const handleRemove = async (pkgId: string, entryId: string) => {
@@ -190,6 +168,15 @@ export function ScheduledPaymentsSection({ packages, username }: ScheduledPaymen
                           {fmtEntryDate(entry.dueDate)}
                         </span>
                       )}
+                      {(() => {
+                        const c = workCounts?.[pkg.id]
+                        if (!c || (c.pending === 0 && c.plannedOpen === 0)) return null
+                        return (
+                          <span className="text-[10px] text-[var(--space-text-secondary)] tabular-nums shrink-0">
+                            {c.pending} logged{c.plannedOpen > 0 ? ` · ${c.plannedOpen} planned open` : ''}
+                          </span>
+                        )
+                      })()}
                     </div>
 
                     <div className="shrink-0 flex items-center gap-2">
@@ -211,32 +198,18 @@ export function ScheduledPaymentsSection({ packages, username }: ScheduledPaymen
                               {entryResult.error}
                             </span>
                           )}
-                          {/* Split invoice button */}
-                          <div className="flex items-stretch">
-                            <button
-                              type="button"
-                              disabled={sendingEntryId === entry.id || removingEntryId === entry.id}
-                              onClick={() => handleSend(pkg.id, entry.id, false)}
-                              className="flex items-center gap-1.5 pl-3 pr-2.5 py-1.5 text-xs font-medium text-[var(--space-accent)] border border-[rgba(139,156,182,0.20)] bg-[rgba(139,156,182,0.06)] rounded-l-lg hover:bg-[rgba(139,156,182,0.10)] disabled:opacity-50 transition-all"
-                            >
-                              {sendingEntryId === entry.id
-                                ? <Loader2 className="size-3.5 animate-spin" />
-                                : <Receipt className="size-3.5" />
-                              }
-                              {sendingEntryId === entry.id ? 'Sending…' : 'Send Invoice'}
-                            </button>
-                            <button
-                              type="button"
-                              disabled={sendingEntryId === entry.id || removingEntryId === entry.id}
-                              onClick={(e) => handleToggleMenu(e, entry.id)}
-                              className="flex items-center px-1.5 py-1.5 text-[var(--space-accent)] border border-l-0 border-[rgba(139,156,182,0.20)] bg-[rgba(139,156,182,0.06)] rounded-r-lg hover:bg-[rgba(139,156,182,0.10)] disabled:opacity-50 transition-all"
-                            >
-                              <ChevronDown className={`size-3 transition-transform ${openMenuId === entry.id ? 'rotate-180' : ''}`} />
-                            </button>
-                          </div>
                           <button
                             type="button"
-                            disabled={sendingEntryId === entry.id || removingEntryId === entry.id}
+                            disabled={removingEntryId === entry.id}
+                            onClick={() => handleCompose(pkg.id, pkg.name, entry)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[var(--space-accent)] border border-[rgba(139,156,182,0.20)] bg-[rgba(139,156,182,0.06)] rounded-lg hover:bg-[rgba(139,156,182,0.10)] disabled:opacity-50 transition-all"
+                          >
+                            <Receipt className="size-3.5" />
+                            Send Invoice
+                          </button>
+                          <button
+                            type="button"
+                            disabled={removingEntryId === entry.id}
                             onClick={() => handleRemove(pkg.id, entry.id)}
                             className="flex items-center justify-center size-8 text-gray-600 hover:text-red-400 hover:bg-red-400/[0.08] rounded-lg transition-all disabled:opacity-40"
                             title="Remove scheduled payment"
@@ -257,44 +230,18 @@ export function ScheduledPaymentsSection({ packages, username }: ScheduledPaymen
         </div>
       )}
 
-      {/* Dropdown portal — renders at body level to escape overflow:hidden */}
-      {mounted && openMenuId && menuPos && createPortal(
-        <div
-          style={{ position: 'fixed', top: menuPos.top, right: menuPos.right, zIndex: 9999 }}
-          className="min-w-[180px] rounded-xl border border-[#333] bg-[var(--space-bg-base)] shadow-2xl overflow-hidden"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button
-            type="button"
-            onClick={() => {
-              const pkg = scheduledPackages.find(p => p.pendingEntries.some(e => e.id === openMenuId))
-              if (pkg) handleSend(pkg.id, openMenuId, false)
-            }}
-            className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs text-[#D0D0D0] hover:bg-[var(--space-bg-card-hover)] transition-colors text-left"
-          >
-            <Receipt className="size-3.5 text-[var(--space-accent)] shrink-0" />
-            <div>
-              <div className="font-medium">Send Invoice</div>
-              <div className="text-[10px] text-[var(--space-text-secondary)] mt-0.5">Creates order + emails client</div>
-            </div>
-          </button>
-          <div className="h-px bg-[var(--space-bg-card)]" />
-          <button
-            type="button"
-            onClick={() => {
-              const pkg = scheduledPackages.find(p => p.pendingEntries.some(e => e.id === openMenuId))
-              if (pkg) handleSend(pkg.id, openMenuId, true)
-            }}
-            className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs text-[#D0D0D0] hover:bg-[var(--space-bg-card-hover)] transition-colors text-left"
-          >
-            <FilePlus className="size-3.5 text-[#8A8A8A] shrink-0" />
-            <div>
-              <div className="font-medium">Create Invoice</div>
-              <div className="text-[10px] text-[var(--space-text-secondary)] mt-0.5">Creates order, no email sent</div>
-            </div>
-          </button>
-        </div>,
-        document.body,
+      {/* Invoice composer — work-line selection, recap narrative, and delivery options */}
+      {modalTarget && (
+        <SchedulePaymentInvoiceModal
+          key={modalTarget.entry.id}
+          packageId={modalTarget.pkgId}
+          packageName={modalTarget.pkgName}
+          entry={modalTarget.entry}
+          recapDraft={recapDrafts[modalTarget.entry.id] ?? null}
+          onRecapChange={(id, r) => setRecapDrafts((p) => ({ ...p, [id]: r }))}
+          onClose={() => setModalTarget(null)}
+          onSent={() => { setModalTarget(null); router.refresh() }}
+        />
       )}
     </div>
   )
