@@ -2,6 +2,7 @@ import { PDFDocument, StandardFonts, rgb, PDFFont, PDFPage, PDFImage } from 'pdf
 import fontkit from '@pdf-lib/fontkit'
 import type { NdaFormData, SowFormData } from './document-generators'
 import type { RecapData } from './retainers/recap'
+import type { PackageRecapData } from './packages/recap'
 import { CINZEL_DECORATIVE_BOLD_BASE64 } from './fonts/cinzel-decorative-bold'
 import { NEWSREADER_REGULAR_BASE64 } from './fonts/newsreader-regular'
 import { NEWSREADER_LIGHT_BASE64 } from './fonts/newsreader-light'
@@ -1965,6 +1966,259 @@ export async function buildRetainerRecapPdf(d: RecapData & { generatedOn: string
   if (d.nextMonthPriorities.some((x) => x.trim()) || d.asksFromClient.some((x) => x.trim()) || d.nextCallLabel.trim()) {
     deckNext(slide(), d)
   }
+
+  return doc.save()
+}
+
+// ── Milestone Package Recap PDF — deck slides ───────────────────────────────────
+// The fixed-price counterpart to buildRetainerRecapPdf: the same 960×540pt landscape
+// deck, the same Deck writer, fonts, palette (DECK), margins (PADX/CONTENT_W) and
+// header/footer treatment — only the sections differ. One scheduled payment gets a
+// cover, an at-a-glance grid, the work it covers bucketed by category, what is still
+// left, and staff notes. Lists flow across continuation slides, so a package with
+// forty logged items paginates instead of running off the page.
+
+/** Short month/day in UTC (e.g. "May 2") — day-only dates never slip a day. */
+function fmtShortDateUtc(val: string | null | undefined): string {
+  if (!val) return '—'
+  const dayOnly = /^\d{4}-\d{2}-\d{2}$/.test(val)
+  const dt = new Date(dayOnly ? `${val}T00:00:00.000Z` : val)
+  return isNaN(dt.getTime())
+    ? String(val)
+    : dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
+}
+
+/** Full long date in UTC (e.g. "June 1, 2026"). */
+function fmtLongDateUtc(val: string | null | undefined): string {
+  if (!val) return '—'
+  const dayOnly = /^\d{4}-\d{2}-\d{2}$/.test(val)
+  const dt = new Date(dayOnly ? `${val}T00:00:00.000Z` : val)
+  return isNaN(dt.getTime())
+    ? String(val)
+    : dt.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' })
+}
+
+/** Largest size (template px) ≤ `maxPx` at which `t` fits `maxWpx` on one line. */
+function fitSize(t: string, font: PDFFont, maxPx: number, maxWpx: number, minPx = 40): number {
+  let size = maxPx
+  while (size > minPx && font.widthOfTextAtSize(t, size * S) > maxWpx * S) size -= 2
+  return size
+}
+
+/** Truncate a tracked run with an ellipsis so it never collides with its neighbour. */
+function ellipsize(t: string, font: PDFFont, sizePx: number, tracking: number, maxWpx: number): string {
+  if (trackedWidth(t, sizePx * S, font, tracking * S) <= maxWpx * S) return t
+  let cut = t
+  while (cut.length > 1 && trackedWidth(`${cut}…`, sizePx * S, font, tracking * S) > maxWpx * S) {
+    cut = cut.slice(0, -1)
+  }
+  return `${cut}…`
+}
+
+/** Bottom of the content area (template px) — same as the retainer deck's grids. */
+const DECK_BOTTOM = 996
+
+/**
+ * A paginating cursor over deck slides: draws the section header, tracks the current
+ * top (template px), and rolls onto a fresh "(cont.)" slide when the next block will
+ * not fit. A block taller than a whole page is allowed to overflow rather than loop.
+ */
+function pkgFlow(newSlide: () => Deck, kicker: string, headline: string) {
+  const open = (k: string): { s: Deck; top: number } => {
+    const s = newSlide()
+    s.bg(DECK.paper)
+    return { s, top: deckHeader(s, k, headline) + 49 }
+  }
+  let cur = open(kicker)
+  let start = cur.top
+  return {
+    get s(): Deck { return cur.s },
+    get top(): number { return cur.top },
+    advance(h: number): void { cur.top += h },
+    ensure(h: number): void {
+      if (cur.top + h <= DECK_BOTTOM || cur.top <= start) return
+      cur = open(`${kicker} (cont.)`)
+      start = cur.top
+    },
+  }
+}
+
+// ── Slide 1 · Cover ─────────────────────────────────────────────────────────────
+function pkgCover(s: Deck, d: PackageRecapData & { generatedOn: string }): void {
+  s.bg(DECK.paper)
+  if (s.logo) s.img(s.logo, PADX, 96, 64, 68.2)
+  s.text('ORCACLUB', s.logo ? 202 : PADX, 138.6, 26, s.f.sans, DECK.ink, { tracking: 26 * 0.42 })
+
+  const kicker = `${d.clientCompany || d.clientName} · ${d.paymentPosition}`
+  s.text(kicker.toUpperCase(), PADX, 392.6, KICKER.size, s.f.mono, DECK.teal, { tracking: KICKER.tracking })
+
+  s.text('Work recap', PADX, 544.6, 150, s.f.serif, DECK.ink, { tracking: -3 })
+  const label = d.paymentLabel?.trim() || 'Scheduled payment'
+  s.text(label, PADX, 685.6, fitSize(label, s.f.serif, 150, CONTENT_W), s.f.serif, DECK.ink, { tracking: -3 })
+  s.rect(PADX, 761.6, CONTENT_W, 1, DECK.hair18)
+
+  // Footer rail: package + due date on the left, generation stamp on the right.
+  const gen = `Generated ${fmtLongDateUtc(d.generatedOn)}`.toUpperCase()
+  const genW = trackedWidth(gen, LABEL.size * S, s.f.mono, LABEL.tracking * S) / S
+  const pkgName = d.packageName?.trim() || 'Package'
+  const foot = (d.paymentDueDate ? `${pkgName} · due ${fmtLongDateUtc(d.paymentDueDate)}` : pkgName).toUpperCase()
+  s.text(ellipsize(foot, s.f.mono, LABEL.size, LABEL.tracking, CONTENT_W - genW - 60), PADX, 989, LABEL.size, s.f.mono, DECK.muted, { tracking: LABEL.tracking })
+  s.text(gen, CONTENT_R, 989, LABEL.size, s.f.mono, DECK.muted, { tracking: LABEL.tracking, align: 'right' })
+}
+
+// ── Slide 2 · At a glance ───────────────────────────────────────────────────────
+function pkgGlance(s: Deck, d: PackageRecapData): void {
+  s.bg(DECK.paper)
+  const headline = d.headline?.trim() || `${d.itemsShipped} item${d.itemsShipped === 1 ? '' : 's'} delivered`
+  const ruleY = deckHeader(s, 'At a glance', headline)
+
+  const cells: Array<{ label: string; big: string; desc?: string; teal?: boolean }> = [
+    { label: 'This payment', big: money(d.paymentAmount), desc: d.paymentLabel, teal: true },
+    { label: 'Paid to date', big: money(d.amountPaid), desc: `of ${money(d.packageTotal)} · ${d.paymentPosition}` },
+    { label: 'Remaining', big: money(d.amountRemaining), desc: 'Balance on this package' },
+    { label: 'Items shipped', big: String(d.itemsShipped), desc: 'Covered by this payment' },
+  ]
+  // Hours are informational — a package with none logged shows no hours stat at all.
+  if (d.totalHours > 0) {
+    cells.push({ label: 'Hours logged', big: fmtHours(d.totalHours), desc: 'Informational only — never billed' })
+  }
+
+  const gridTop = ruleY + 53
+  const n = cells.length
+  const colW = (CONTENT_W - (n - 1)) / n // 1px hairline gaps
+
+  // Currency strings are far wider than the retainer deck's hour counts, so the big
+  // number shrinks to fit — one shared size across the row keeps the baselines level.
+  const bigSize = Math.min(...cells.map((c) => fitSize(c.big, s.f.serif, 132, colW - 80, 34)))
+  const bigBl = gridTop + 238 + bigSize
+
+  s.rect(PADX, gridTop, CONTENT_W, DECK_BOTTOM - gridTop, DECK.hair14)
+  for (let i = 0; i < n; i++) {
+    const x = PADX + i * (colW + 1)
+    const c = cells[i]
+    s.rect(x, gridTop, colW, DECK_BOTTOM - gridTop, DECK.card)
+    s.text(c.label.toUpperCase(), x + 40, gridTop + 73, LABEL.size, s.f.mono, DECK.muted, { tracking: LABEL.tracking })
+    s.text(c.big, x + 40, bigBl, bigSize, s.f.serif, c.teal ? DECK.teal : DECK.ink)
+    if (c.desc?.trim()) {
+      // Bottom-anchored: the last line's baseline sits at gridTop + 625.5.
+      const k = s.lineCount(c.desc, 26, s.f.sansLt, colW - 80)
+      s.para(c.desc, x + 40, gridTop + 625.5 - (k - 1) * 37.7, 26, 37.7, s.f.sansLt, DECK.desc, colW - 80)
+    }
+  }
+}
+
+// ── Slides 3+ · Accomplished ────────────────────────────────────────────────────
+function pkgAccomplished(newSlide: () => Deck, d: PackageRecapData): void {
+  const fl = pkgFlow(newSlide, 'Accomplished', d.accomplishedHeadline?.trim() || 'What this payment covers')
+  for (const b of d.buckets) {
+    // Bucket header — label left, informational hours right (omitted when zero).
+    // Reserve the header plus one row so a label never sits alone at a page bottom.
+    fl.ensure(180)
+    fl.s.rect(PADX, fl.top, CONTENT_W, 1, DECK.hair50)
+    fl.s.text(b.label || 'Work', PADX, fl.top + 52, 44, fl.s.f.serif, DECK.ink)
+    if (b.hours > 0) {
+      fl.s.text(`${fmtHours(b.hours)}h`, CONTENT_R, fl.top + 52, 44, fl.s.f.serif, DECK.teal, { align: 'right' })
+    }
+    fl.advance(76)
+
+    if (b.note?.trim()) {
+      const k = fl.s.lineCount(b.note, 29, fl.s.f.sansLt, 1340)
+      fl.ensure(k * 43.5 + 30)
+      fl.s.para(b.note, PADX, fl.top + 30, 29, 43.5, fl.s.f.sansLt, DECK.desc, 1340)
+      fl.advance(k * 43.5 + 24)
+    }
+
+    for (const it of b.items) {
+      const hours = it.hours != null && it.hours > 0 ? `  (${fmtHours(it.hours)}h)` : ''
+      const line = `${fmtShortDateUtc(it.date)} — ${it.description?.trim() || b.label || 'Work'}${hours}`
+      const k = fl.s.lineCount(line, 33, fl.s.f.serifLt, CONTENT_W)
+      fl.ensure(45 + k * 46.2)
+      fl.s.rect(PADX, fl.top, CONTENT_W, 1, DECK.hair14)
+      fl.s.para(line, PADX, fl.top + 53, 33, 46.2, fl.s.f.serifLt, DECK.ink, CONTENT_W)
+      fl.advance(45 + k * 46.2)
+    }
+    fl.advance(36)
+  }
+}
+
+// ── Slides · What's left ────────────────────────────────────────────────────────
+function pkgRemaining(newSlide: () => Deck, d: PackageRecapData): void {
+  const fl = pkgFlow(newSlide, "What's left", d.remainingHeadline?.trim() || 'Still to come')
+  for (const r of d.remaining) {
+    const planned = r.kind === 'planned'
+    const textX = planned ? PADX + 62 : PADX
+    const dateW = planned && r.dueDate ? 260 : 0
+    const maxW = CONTENT_R - textX - dateW
+    const line = planned
+      ? r.label?.trim() || 'Planned work'
+      : [
+          r.label?.trim() || 'Payment',
+          r.amount != null ? money(r.amount) : null,
+          r.dueDate ? `due ${fmtLongDateUtc(r.dueDate)}` : null,
+        ].filter(Boolean).join(' · ')
+
+    const k = fl.s.lineCount(line, 33, fl.s.f.serifLt, maxW)
+    fl.ensure(45 + k * 46.2)
+    fl.s.rect(PADX, fl.top, CONTENT_W, 1, DECK.hair14)
+    if (planned) {
+      // Hairline checkbox — an outer square knocked out by an inner paper square.
+      fl.s.rect(PADX, fl.top + 28, 30, 30, DECK.hair50)
+      fl.s.rect(PADX + 2, fl.top + 30, 26, 26, DECK.paper)
+    }
+    fl.s.para(line, textX, fl.top + 53, 33, 46.2, fl.s.f.serifLt, DECK.ink, maxW)
+    if (planned && r.dueDate) {
+      fl.s.text(fmtShortDateUtc(r.dueDate).toUpperCase(), CONTENT_R, fl.top + 51, LABEL.size, fl.s.f.mono, DECK.muted, { tracking: LABEL.tracking, align: 'right' })
+    }
+    fl.advance(45 + k * 46.2)
+  }
+}
+
+// ── Slides · Notes & next steps ─────────────────────────────────────────────────
+function pkgNotes(newSlide: () => Deck, cols: Array<{ label: string; items: string[] }>): void {
+  const s = newSlide()
+  s.bg(DECK.paper)
+  const ruleY = deckHeader(s, 'Notes & next steps', 'Where things stand')
+  const n = cols.length
+  const colW = (CONTENT_W - 90 * (n - 1)) / n // 90px column gap
+  cols.forEach((col, ci) => {
+    const x = PADX + ci * (colW + 90)
+    s.text(col.label.toUpperCase(), x, ruleY + 70, LABEL.size, s.f.mono, DECK.muted, { tracking: LABEL.tracking })
+    let border = ruleY + 99
+    for (const it of col.items) {
+      s.rect(x, border, colW, 1, DECK.hair14)
+      const k = s.para(it, x, border + 53, 33, 46.2, s.f.serifLt, DECK.ink, colW)
+      border += 45 + k * 46.2
+    }
+  })
+}
+
+/**
+ * Render a milestone package recap for one scheduled payment. Sections that have no
+ * content are skipped entirely rather than rendered empty.
+ */
+export async function buildPackageRecapPdf(d: PackageRecapData & { generatedOn: string }): Promise<Uint8Array> {
+  const doc = await PDFDocument.create()
+  doc.registerFontkit(fontkit)
+  const serif = await doc.embedFont(Buffer.from(NEWSREADER_REGULAR_BASE64, 'base64'), { subset: true })
+  const serifLt = await doc.embedFont(Buffer.from(NEWSREADER_LIGHT_BASE64, 'base64'), { subset: true })
+  const sans = await doc.embedFont(Buffer.from(POPPINS_REGULAR_BASE64, 'base64'), { subset: true })
+  const sansLt = await doc.embedFont(Buffer.from(POPPINS_LIGHT_BASE64, 'base64'), { subset: true })
+  const mono = await doc.embedFont(Buffer.from(IBM_PLEX_MONO_REGULAR_BASE64, 'base64'), { subset: true })
+  const logo = await doc.embedPng(Buffer.from(ORCA_MARK_BLACK_PNG_BASE64, 'base64'))
+  const f: DeckFonts = { serif, serifLt, sans, sansLt, mono }
+  const slide = () => new Deck(doc.addPage([DECK_W, DECK_H]), f, logo)
+
+  pkgCover(slide(), d)
+  pkgGlance(slide(), d)
+
+  if ((d.buckets || []).length > 0) pkgAccomplished(slide, d)
+  if ((d.remaining || []).length > 0) pkgRemaining(slide, d)
+
+  const noteCols = [
+    { label: 'Notes', items: (d.notes || []).filter((x) => x?.trim()) },
+    { label: 'Next steps', items: (d.nextSteps || []).filter((x) => x?.trim()) },
+  ].filter((c) => c.items.length > 0)
+  if (noteCols.length > 0) pkgNotes(slide, noteCols)
 
   return doc.save()
 }
