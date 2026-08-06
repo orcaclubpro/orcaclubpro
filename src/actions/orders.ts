@@ -4,7 +4,11 @@ import { getCurrentUser } from '@/actions/auth'
 import { getPayload } from 'payload'
 import config from '@payload-config'
 import { getStripe } from '@/lib/stripe'
-import { createStripeInvoiceForOrder, fulfillOrderPaidOutOfBand } from '@/lib/stripe/invoices'
+import {
+  assertOrderPersisted,
+  createStripeInvoiceForOrder,
+  fulfillOrderPaidOutOfBand,
+} from '@/lib/stripe/invoices'
 import { resolveStripeCustomer } from '@/lib/stripe/customers'
 import { sendGenericInvoiceEmail } from '@/lib/payload/utils/genericInvoiceEmailTemplate'
 import { revalidatePath } from 'next/cache'
@@ -184,6 +188,23 @@ export async function createClientOrder(
         })),
       } as any,
     })
+
+    // ── Confirm the order actually persisted ─────────────────────────────────
+    // An Orders afterChange hook (updateClientBalance → syncClientAccountToUser) can
+    // abort the create's Mongo transaction while swallowing the error — `payload.create`
+    // still returns a doc with an id for a row that was rolled back. Verify before we
+    // report success or email the client about an invoice with no order behind it; a
+    // throw here reaches the catch below, which voids the finalized Stripe invoice.
+    try {
+      await assertOrderPersisted(payload, order.id as string)
+    } catch (e) {
+      // Keep the diagnostic detail in the server log; surface something legible upstream.
+      console.error('[createClientOrder] Order did not persist:', e)
+      throw new Error(
+        'The invoice could not be saved, so no order was created. ' +
+          'The Stripe invoice has been voided and the client was not billed — please try again.',
+      )
+    }
 
     revalidatePath(`/u/${user.username}/clients`)
 

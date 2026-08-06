@@ -7,7 +7,7 @@ import type { SowFormData } from '@/lib/document-generators'
 import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
 import { getStripe } from '@/lib/stripe'
-import { createStripeInvoiceForOrder } from '@/lib/stripe/invoices'
+import { assertOrderPersisted, createStripeInvoiceForOrder } from '@/lib/stripe/invoices'
 import {
   sendGenericInvoiceEmail,
   sendInvoiceCopyToAddresses,
@@ -1228,6 +1228,24 @@ export async function sendScheduledPayment(
         ],
       } as any,
     })
+
+    // ── Confirm the order actually persisted ────────────────────────────────────
+    // An Orders afterChange hook (updateClientBalance → syncClientAccountToUser) can
+    // abort the create's Mongo transaction while swallowing the error — `payload.create`
+    // still hands back a doc with an id for a row that was rolled back. Everything below
+    // stamps that id onto work entries and the payment schedule, so verify FIRST: at this
+    // point nothing has been stamped, so a throw here leaves no wreckage — the catch just
+    // voids the Stripe invoice and returns a real error.
+    try {
+      await assertOrderPersisted(payload, order.id as string)
+    } catch (e) {
+      // Keep the diagnostic detail in the server log; surface something legible upstream.
+      console.error('[sendScheduledPayment] Order did not persist:', e)
+      throw new Error(
+        'The invoice could not be saved, so this payment was not recorded. ' +
+          'The Stripe invoice has been voided and nothing was billed — please try again.',
+      )
+    }
 
     // ── Recap model — MUST be captured before stamping ──────────────────────────
     // getPackageRecapModel derives from *pending* (unstamped) work entries. The loop

@@ -7,7 +7,7 @@ import { cycleFor, nextCycleStart, type Cycle } from '@/lib/retainers/cycle'
 import { deriveRecapDefaults, mergeRecap, RECAP_CATEGORY_LABEL, type RecapData } from '@/lib/retainers/recap'
 import { getStripe } from '@/lib/stripe'
 import { resolveStripeCustomer } from '@/lib/stripe/customers'
-import { createStripeInvoiceForOrder } from '@/lib/stripe/invoices'
+import { createStripeInvoiceForOrder, assertOrderPersisted } from '@/lib/stripe/invoices'
 import { buildRetainerStatementPdf, buildRetainerRecapPdf } from '@/lib/pdf-generators'
 import {
   generateGenericInvoiceEmail,
@@ -1255,6 +1255,14 @@ export async function sendRetainerInvoice(input: {
           ],
         } as any,
       })
+      // Payload runs afterChange hooks inside the create's Mongo transaction. A hook that
+      // catches its own error (updateClientBalance → syncClientAccountToUser) still leaves
+      // the transaction aborted, so `payload.create` can hand back a doc with an id for a
+      // row that was rolled back. Re-read before ANYTHING stamps against `order.id` —
+      // and only then treat the order as created, so a throw here still takes the cleanup
+      // path below (void the Stripe invoice) and the outer catch (delete the billing
+      // package) instead of leaving both orphaned behind a false success.
+      await assertOrderPersisted(payload, order.id as string)
       orderCreated = true
     } catch (createErr) {
       await stripe.invoices.voidInvoice(invoiceId).catch((e: unknown) =>
@@ -1334,6 +1342,105 @@ export async function sendRetainerInvoice(input: {
     }
     console.error('[sendRetainerInvoice]', error)
     return { success: false as const, error: error instanceof Error ? error.message : 'Failed to send retainer invoice' }
+  }
+}
+
+/**
+ * Undo a cycle's retainer billing so it can be sent again. Voids the Stripe invoice,
+ * deletes the client-facing billing package (`packageRef`), then deletes the order —
+ * whose `afterDelete` hook recalculates the client account balance, so nothing here
+ * touches the balance by hand.
+ *
+ * Retainer time entries are sliced by calendar cycle and carry no order stamp (unlike
+ * package work entries), so there is nothing to release.
+ *
+ * Stripe and the package are best-effort: the point of this action is unsticking a
+ * broken state, so a Stripe rejection (already void, deleted, bad key) or a missing
+ * package must never abort the reset. A paid order is never reset — that would detach
+ * a paid invoice.
+ */
+export async function resetRetainerInvoice(input: { retainerId: string; cycleStart: string }) {
+  try {
+    const user = await getCurrentUser()
+    if (!user || user.role === 'client') return { success: false as const, error: 'Unauthorized' }
+    if (!input.retainerId || !input.cycleStart) {
+      return { success: false as const, error: 'A retainer and cycle are required' }
+    }
+
+    const payload = await getPayload({ config })
+
+    const { docs } = await payload.find({
+      collection: 'orders',
+      where: {
+        and: [
+          { retainerRef: { equals: input.retainerId } },
+          { retainerCycleStart: { equals: input.cycleStart } },
+        ],
+      },
+      sort: '-createdAt',
+      depth: 0,
+      limit: 1,
+    })
+    const order = docs[0] as
+      | {
+          id: string
+          orderNumber?: string | null
+          status?: 'pending' | 'paid' | 'cancelled' | null
+          stripeInvoiceId?: string | null
+          packageRef?: string | { id: string } | null
+        }
+      | undefined
+    if (!order) return { success: false as const, error: 'No invoice found for this cycle' }
+
+    if (order.status === 'paid') {
+      return {
+        success: false as const,
+        error: 'This cycle has already been paid — reset would detach a paid invoice.',
+      }
+    }
+
+    // ── Void the Stripe invoice (best-effort) ────────────────────────────────────
+    let stripeVoided = false
+    if (order.stripeInvoiceId) {
+      try {
+        const stripe = getStripe()
+        const invoice = await stripe.invoices.retrieve(order.stripeInvoiceId).catch(() => null)
+        if (!invoice || invoice.status !== 'void') {
+          await stripe.invoices.voidInvoice(order.stripeInvoiceId)
+          stripeVoided = true
+        }
+      } catch (e) {
+        console.error('[resetRetainerInvoice] Failed to void Stripe invoice:', order.stripeInvoiceId, e)
+      }
+    }
+
+    // ── Drop the client-facing billing package (best-effort) ─────────────────────
+    // Retainer-specific: leaving it behind strands a document in the client's Packages
+    // tab pointing at an invoice that no longer exists.
+    let billingPackageDeleted = false
+    const packageId =
+      typeof order.packageRef === 'string' ? order.packageRef : order.packageRef?.id ?? null
+    if (packageId) {
+      try {
+        await payload.delete({ collection: 'packages', id: packageId })
+        billingPackageDeleted = true
+      } catch (e) {
+        console.error('[resetRetainerInvoice] Failed to delete billing package:', packageId, e)
+      }
+    }
+
+    // ── Drop the order — `revertClientBalance` (afterDelete) fixes the balance ────
+    await payload.delete({ collection: 'orders', id: order.id })
+
+    return {
+      success: true as const,
+      orderNumber: order.orderNumber ?? '',
+      stripeVoided,
+      billingPackageDeleted,
+    }
+  } catch (error) {
+    console.error('[resetRetainerInvoice]', error)
+    return { success: false as const, error: error instanceof Error ? error.message : 'Failed to reset invoice' }
   }
 }
 

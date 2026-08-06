@@ -5,6 +5,7 @@ import {
   Loader2, Clock, Plus, Trash2, ChevronLeft, ChevronRight, Pencil,
   CalendarClock, PowerOff, FileDown, Check, X, ArrowRight, CalendarPlus, FileText,
   CircleCheck, Circle, Search, Building2, CornerDownLeft, AlertTriangle, Activity, Flame, Send,
+  RotateCcw,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { RetainerRecapModal } from './RetainerRecapModal'
@@ -22,6 +23,7 @@ import {
   createDraft,
   updateTimeEntry,
   deleteTimeEntry,
+  resetRetainerInvoice,
   type RetainerDoc,
   type TimeEntryDoc,
   type RetainerTotals,
@@ -154,6 +156,12 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
   // Invoice flow + the lifted recap draft (keyed to a cycle so stale drafts never attach)
   const [invoiceOpen, setInvoiceOpen] = useState(false)
   const [recapDraft, setRecapDraft] = useState<{ cycleStart: string; data: RecapData } | null>(null)
+
+  // Invoice reset — two-click confirm on the button itself (this voids a Stripe
+  // invoice and deletes an order, so never a bare one-click).
+  const [confirmResetInvoice, setConfirmResetInvoice] = useState(false)
+  const [resettingInvoice, setResettingInvoice] = useState(false)
+  const [resetInvoiceError, setResetInvoiceError] = useState<string | null>(null)
 
   // Setup form
   const [editing, setEditing] = useState(false)
@@ -310,6 +318,8 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
     setPickQuery('')
     setPickIdx(0)
     setRecapDraft(null)
+    setConfirmResetInvoice(false)
+    setResetInvoiceError(null)
   }
 
   const clearClient = useCallback(() => {
@@ -323,6 +333,8 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
     setPickIdx(0)
     setInvoiceOpen(false)
     setRecapDraft(null)
+    setConfirmResetInvoice(false)
+    setResetInvoiceError(null)
   }, [])
 
   const selectedClient = clients.find((c) => c.id === selectedClientId) ?? null
@@ -547,6 +559,23 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
     if (r.success) await load()
     else setError(r.error ?? 'Failed to reactivate retainer')
     setReactivating(false)
+  }
+
+  // Reset the billed cycle's invoice — first click arms, second click runs.
+  async function handleResetInvoice() {
+    if (!retainer || !nextCycle?.invoice) return
+    if (!confirmResetInvoice) {
+      setConfirmResetInvoice(true)
+      setResetInvoiceError(null)
+      return
+    }
+    setConfirmResetInvoice(false)
+    setResetInvoiceError(null)
+    setResettingInvoice(true)
+    const r = await resetRetainerInvoice({ retainerId: retainer.id, cycleStart: nextCycle.start })
+    setResettingInvoice(false)
+    if (r.success) await load()
+    else setResetInvoiceError(r.error ?? 'Failed to reset invoice')
   }
 
   function handleExport() {
@@ -1034,6 +1063,9 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                             </span>
                           </p>
                           <div className="flex items-center gap-2">
+                            {resetInvoiceError && (
+                              <span className="text-[10px] text-red-400 max-w-[220px] leading-snug">{resetInvoiceError}</span>
+                            )}
                             {nextCycle.invoice.stripeInvoiceUrl && (
                               <a href={nextCycle.invoice.stripeInvoiceUrl} target="_blank" rel="noreferrer" className={ghostBtn}>
                                 View invoice
@@ -1042,6 +1074,37 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                             <button onClick={() => setInvoiceOpen(true)} className={ghostBtn} title="Send billing / recap">
                               Manage billing
                             </button>
+                            {/* Paid invoices are never reset — the action refuses, so don't offer it. */}
+                            {nextCycle.invoice.status !== 'paid' && (
+                              <button
+                                type="button"
+                                disabled={resettingInvoice}
+                                onClick={() => void handleResetInvoice()}
+                                onBlur={() => setTimeout(() => setConfirmResetInvoice(false), 300)}
+                                title={
+                                  confirmResetInvoice
+                                    ? 'Click again to confirm reset'
+                                    : "Reset — void this cycle's invoice and remove the order"
+                                }
+                                aria-label={
+                                  confirmResetInvoice
+                                    ? 'Confirm reset invoice'
+                                    : "Reset — void this cycle's invoice and remove the order"
+                                }
+                                className={cn(
+                                  'flex items-center gap-1 justify-center rounded-lg transition-all disabled:opacity-40',
+                                  confirmResetInvoice
+                                    ? 'px-2.5 py-1.5 text-[10px] font-semibold text-amber-400 border border-amber-400/30 bg-amber-400/[0.08]'
+                                    : 'size-8 text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)] hover:bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)]',
+                                )}
+                              >
+                                {resettingInvoice
+                                  ? <Loader2 className="size-3.5 animate-spin" />
+                                  : <RotateCcw className="size-3.5" />
+                                }
+                                {confirmResetInvoice && !resettingInvoice ? 'Confirm' : ''}
+                              </button>
+                            )}
                           </div>
                         </>
                       ) : (

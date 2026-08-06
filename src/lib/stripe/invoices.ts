@@ -159,3 +159,33 @@ export async function fulfillOrderPaidOutOfBand(
 
   return { stripeUpdated }
 }
+
+/**
+ * Confirm an Order actually persisted after `payload.create` returned it.
+ *
+ * Payload runs afterChange hooks inside the create's Mongo transaction. If a nested
+ * write in one of those hooks fails — `updateClientBalance` → `syncClientAccountToUser`
+ * → an invalid User field, say — the transaction is aborted even though both hooks
+ * catch the error and log it. Catching in JS does not un-abort a Mongo transaction.
+ * `payload.create` still hands back a doc with an id, so the caller sails on and
+ * stamps schedule entries and work entries against an order that no longer exists.
+ *
+ * Re-reading is the cheapest way to turn that silent data loss into a real error the
+ * caller can handle (void the Stripe invoice, clean up, tell the user). Call it
+ * immediately after creating an order, before anything else references the id.
+ *
+ * Throws when the order is gone; returns normally when it is there.
+ */
+export async function assertOrderPersisted(payload: Payload, orderId: string): Promise<void> {
+  const persisted = await payload
+    .findByID({ collection: 'orders', id: orderId, depth: 0 })
+    .catch(() => null)
+
+  if (!persisted) {
+    throw new Error(
+      `Order ${orderId} did not persist — an afterChange hook aborted its transaction. ` +
+        `Check the server log for a caught hook error at this timestamp (a failed nested ` +
+        `write rolls back the order even when the hook swallows the error).`,
+    )
+  }
+}
