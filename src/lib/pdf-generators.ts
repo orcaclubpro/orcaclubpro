@@ -2222,3 +2222,307 @@ export async function buildPackageRecapPdf(d: PackageRecapData & { generatedOn: 
 
   return doc.save()
 }
+
+// ── Package Work Log PDF — letter sheet ─────────────────────────────────────────
+// The fixed-price counterpart to buildRetainerStatementPdf: the same DocWriter, the
+// same letter page, fonts, margins, BRAND palette, header/footer treatment and row
+// helpers — only the columns differ. Where the retainer statement reports hours
+// against a monthly cap, this reports what has been logged against a package and
+// whether each item has already been carried on an invoice. All dates are formatted
+// in UTC (fmtShortDateUtc / fmtLongDateUtc) so day-only entry dates never slip.
+
+/** Data for one package's work-log sheet — the sibling of RetainerStatementData. */
+export interface PackageWorkLogData {
+  clientName: string
+  clientCompany: string | null
+  packageName: string
+  entries: Array<{
+    date: string
+    description: string
+    hours: number | null
+    category: 'work' | 'design' | 'revision' | 'meeting'
+    status: 'planned' | 'logged'
+    completion: 'incomplete' | 'complete'
+    /** Non-empty when this entry has already been carried on an invoice. */
+    billedOrderId: string | null
+  }>
+  schedule: Array<{ label: string; amount: number; dueDate: string | null; invoiced: boolean; paid: boolean }>
+  totals: { loggedCount: number; totalHours: number; pendingCount: number; plannedOpenCount: number }
+  generatedOn: string
+}
+
+/** "design" → "Design". Categories are stored lowercase; the sheet title-cases them. */
+function titleCase(val: string): string {
+  return val ? val.charAt(0).toUpperCase() + val.slice(1) : val
+}
+
+/**
+ * Render a package's work log: everything logged (with its billed/pending state), the
+ * planned work still open, and the payment schedule. Sections with no rows are skipped
+ * entirely, and every table paginates through DocWriter.need().
+ */
+export async function buildPackageWorkLogPdf(d: PackageWorkLogData): Promise<Uint8Array> {
+  const doc = await PDFDocument.create()
+  doc.registerFontkit(fontkit)
+  const bold   = await doc.embedFont(StandardFonts.HelveticaBold)
+  const normal = await doc.embedFont(StandardFonts.Helvetica)
+  const gothic = await doc.embedFont(Buffer.from(CINZEL_DECORATIVE_BOLD_BASE64, 'base64'), { subset: true })
+
+  const genLabel = fmtLongDateUtc(d.generatedOn)
+  const pkgName = d.packageName?.trim() || 'Package'
+
+  const w = new DocWriter(
+    doc, bold, normal,
+    'pwl_',
+    `PACKAGE WORK LOG — ${blank(d.clientCompany || d.clientName, 'CLIENT')}`,
+    'ORCACLUB · Web Design and Marketing Automation · orcaclub.pro',
+    { gothic, branded: true },
+  )
+
+  // ── Header + title (matches the retainer statement / invoice / proposal) ─────
+  w.brandHeader('Work Log', genLabel)
+  w.brandTitle('PACKAGE WORK LOG', pkgName)
+
+  // ── Meta block ───────────────────────────────────────────────────────────────
+  const metaColW = [w.innerW * 0.26, w.innerW * 0.74]
+  const clientVal = d.clientCompany ? `${d.clientName}  ·  ${d.clientCompany}` : d.clientName
+  w.table([], metaColW, [
+    ['Client',    clientVal],
+    ['Package',   pkgName],
+    ['Generated', genLabel],
+  ])
+  w.sp(6)
+
+  // ── Summary strip ────────────────────────────────────────────────────────────
+  {
+    const cells: Array<[string, string]> = [
+      ['Entries logged', String(d.totals.loggedCount)],
+      ['Hours logged',   fmtHours(d.totals.totalHours)],
+      ['Unbilled',       String(d.totals.pendingCount)],
+      ['Planned open',   String(d.totals.plannedOpenCount)],
+    ]
+    const boxH = 46
+    w.need(boxH + 12)
+    w.page.drawRectangle({ x: w.ml, y: w.y - boxH, width: w.innerW, height: boxH, color: BRAND.boxBg })
+    w.page.drawRectangle({ x: w.ml, y: w.y - boxH, width: 3, height: boxH, color: BRAND.navy })
+    const cellW = (w.innerW - 14) / cells.length
+    cells.forEach(([label, value], i) => {
+      const cx = w.ml + 14 + i * cellW
+      drawTracked(w.page, label.toUpperCase(), cx, w.y - 17, 6.5, w.bold, BRAND.gray6, 0.8)
+      w.page.drawText(value, { x: cx, y: w.y - 36, size: 13, font: w.bold, color: BRAND.ink })
+    })
+    w.y -= boxH + 14
+  }
+
+  const size = 9
+  const logged  = d.entries.filter((e) => e.status === 'logged')
+  const planned = d.entries.filter((e) => e.status === 'planned')
+
+  // ── Logged work table ────────────────────────────────────────────────────────
+  // HOURS is dropped entirely when nothing in the log carries an hour count — a
+  // package billed purely on deliverables never shows an empty column.
+  if (logged.length > 0) {
+    w.section('Logged Work')
+
+    const showHours = logged.some((e) => e.hours != null)
+    const cDate = 58, cCat = 74, cHours = showHours ? 48 : 0, cBilled = 58
+    const cDesc = w.innerW - cDate - cCat - cHours - cBilled
+    const xDate   = w.ml
+    const xDesc   = xDate + cDate
+    const xCat    = xDesc + cDesc
+    const xHours  = xCat + cCat
+    const xBilled = xHours + cHours // right edge = xBilled + cBilled = ml + innerW
+
+    const hRowH = 20
+    w.need(hRowH + 2)
+    w.page.drawRectangle({ x: w.ml, y: w.y - hRowH, width: w.innerW, height: hRowH, color: BRAND.headBg })
+    const hy = w.y - 13
+    drawTracked(w.page, 'DATE',        xDate + 6, hy, 6.5, w.bold, BRAND.gray6, 0.8)
+    drawTracked(w.page, 'DESCRIPTION', xDesc + 6, hy, 6.5, w.bold, BRAND.gray6, 0.8)
+    drawTracked(w.page, 'CATEGORY',    xCat + 6,  hy, 6.5, w.bold, BRAND.gray6, 0.8)
+    if (showHours) {
+      const hoursHdrW = trackedWidth('HOURS', 6.5, w.bold, 0.8)
+      drawTracked(w.page, 'HOURS', xHours + cHours - hoursHdrW - 6, hy, 6.5, w.bold, BRAND.gray6, 0.8)
+    }
+    drawTracked(w.page, 'STATUS', xBilled + 6, hy, 6.5, w.bold, BRAND.gray6, 0.8)
+    w.y -= hRowH + 1
+
+    for (let ri = 0; ri < logged.length; ri++) {
+      const e = logged[ri]
+      const descLines = wrap((e.description || '').replace(/\s+/g, ' '), w.normal, size, cDesc - 12)
+      const rowH = descLines.length * (size + 3) + 10
+      w.need(rowH + 1)
+
+      const bg = ri % 2 === 1 ? BRAND.ruleLt : C.white
+      w.page.drawRectangle({ x: w.ml, y: w.y - rowH, width: w.innerW, height: rowH, color: bg })
+
+      const ty0 = w.y - size - 5
+      w.page.drawText(fmtShortDateUtc(e.date), { x: xDate + 6, y: ty0, size, font: w.normal, color: BRAND.ink })
+      let ty = ty0
+      for (const ln of descLines) {
+        w.page.drawText(ln, { x: xDesc + 6, y: ty, size, font: w.normal, color: BRAND.ink })
+        ty -= size + 3
+      }
+      w.page.drawText(titleCase(e.category), { x: xCat + 6, y: ty0, size, font: w.normal, color: BRAND.gray6 })
+      if (showHours) {
+        // An entry with no hours shows an em dash rather than a misleading 0.
+        const hStr = e.hours != null ? fmtHours(e.hours) : '—'
+        const hStrW = w.normal.widthOfTextAtSize(hStr, size)
+        w.page.drawText(hStr, {
+          x: xHours + cHours - hStrW - 6, y: ty0, size, font: w.normal,
+          color: e.hours != null ? BRAND.ink : BRAND.gray4,
+        })
+      }
+      const billed = Boolean(e.billedOrderId)
+      w.page.drawText(billed ? 'Billed' : 'Pending', {
+        x: xBilled + 6, y: ty0, size,
+        font: billed ? w.bold : w.normal,
+        color: billed ? BRAND.navy : BRAND.gray6,
+      })
+
+      w.page.drawLine({
+        start: { x: w.ml, y: w.y - rowH },
+        end:   { x: w.pw - w.mr, y: w.y - rowH },
+        thickness: 0.3, color: BRAND.rule,
+      })
+      w.y -= rowH + 1
+    }
+    w.sp(6)
+  }
+
+  // ── Planned work table ───────────────────────────────────────────────────────
+  // Open items get an empty checkbox, completed ones a filled one.
+  if (planned.length > 0) {
+    w.section('Planned Work')
+
+    const cBox = 22, cDate = 56, cCat = 74, cStatus = 66
+    const cDesc = w.innerW - cBox - cDate - cCat - cStatus
+    const xBox    = w.ml
+    const xDate   = xBox + cBox
+    const xDesc   = xDate + cDate
+    const xCat    = xDesc + cDesc
+    const xStatus = xCat + cCat
+
+    const hRowH = 20
+    w.need(hRowH + 2)
+    w.page.drawRectangle({ x: w.ml, y: w.y - hRowH, width: w.innerW, height: hRowH, color: BRAND.headBg })
+    const hy = w.y - 13
+    drawTracked(w.page, 'DATE',        xDate + 6,   hy, 6.5, w.bold, BRAND.gray6, 0.8)
+    drawTracked(w.page, 'DESCRIPTION', xDesc + 6,   hy, 6.5, w.bold, BRAND.gray6, 0.8)
+    drawTracked(w.page, 'CATEGORY',    xCat + 6,    hy, 6.5, w.bold, BRAND.gray6, 0.8)
+    drawTracked(w.page, 'STATUS',      xStatus + 6, hy, 6.5, w.bold, BRAND.gray6, 0.8)
+    w.y -= hRowH + 1
+
+    for (let ri = 0; ri < planned.length; ri++) {
+      const e = planned[ri]
+      const descLines = wrap((e.description || '').replace(/\s+/g, ' '), w.normal, size, cDesc - 12)
+      const rowH = descLines.length * (size + 3) + 10
+      w.need(rowH + 1)
+
+      const bg = ri % 2 === 1 ? BRAND.ruleLt : C.white
+      w.page.drawRectangle({ x: w.ml, y: w.y - rowH, width: w.innerW, height: rowH, color: bg })
+
+      const ty0 = w.y - size - 5
+      const done = e.completion === 'complete'
+
+      // Checkbox: a 8.5pt square outline, knocked out by the row background when
+      // open and left solid navy when the item has been completed.
+      const bs = 8.5
+      w.page.drawRectangle({ x: xBox + 4, y: ty0 - 1, width: bs, height: bs, color: done ? BRAND.navy : BRAND.gray4 })
+      if (!done) {
+        w.page.drawRectangle({ x: xBox + 5, y: ty0, width: bs - 2, height: bs - 2, color: bg })
+      }
+
+      w.page.drawText(fmtShortDateUtc(e.date), { x: xDate + 6, y: ty0, size, font: w.normal, color: BRAND.gray6 })
+      let ty = ty0
+      for (const ln of descLines) {
+        w.page.drawText(ln, { x: xDesc + 6, y: ty, size, font: w.normal, color: BRAND.ink })
+        ty -= size + 3
+      }
+      w.page.drawText(titleCase(e.category), { x: xCat + 6, y: ty0, size, font: w.normal, color: BRAND.gray6 })
+      w.page.drawText(done ? 'Complete' : 'Open', {
+        x: xStatus + 6, y: ty0, size,
+        font: done ? w.bold : w.normal,
+        color: done ? BRAND.navy : BRAND.gray6,
+      })
+
+      w.page.drawLine({
+        start: { x: w.ml, y: w.y - rowH },
+        end:   { x: w.pw - w.mr, y: w.y - rowH },
+        thickness: 0.3, color: BRAND.rule,
+      })
+      w.y -= rowH + 1
+    }
+    w.sp(6)
+  }
+
+  // ── Payment schedule ─────────────────────────────────────────────────────────
+  if (d.schedule.length > 0) {
+    w.section('Payment Schedule')
+
+    const cAmount = 84, cDue = 92, cState = 74
+    const cLabel = w.innerW - cAmount - cDue - cState
+    const xLabel  = w.ml
+    const xAmount = xLabel + cLabel
+    const xDue    = xAmount + cAmount
+    const xState  = xDue + cDue
+
+    const hRowH = 20
+    w.need(hRowH + 2)
+    w.page.drawRectangle({ x: w.ml, y: w.y - hRowH, width: w.innerW, height: hRowH, color: BRAND.headBg })
+    const hy = w.y - 13
+    drawTracked(w.page, 'PAYMENT', xLabel + 6, hy, 6.5, w.bold, BRAND.gray6, 0.8)
+    const amtHdrW = trackedWidth('AMOUNT', 6.5, w.bold, 0.8)
+    drawTracked(w.page, 'AMOUNT', xAmount + cAmount - amtHdrW - 6, hy, 6.5, w.bold, BRAND.gray6, 0.8)
+    drawTracked(w.page, 'DUE',    xDue + 6,   hy, 6.5, w.bold, BRAND.gray6, 0.8)
+    drawTracked(w.page, 'STATE',  xState + 6, hy, 6.5, w.bold, BRAND.gray6, 0.8)
+    w.y -= hRowH + 1
+
+    for (let ri = 0; ri < d.schedule.length; ri++) {
+      const s = d.schedule[ri]
+      const labelLines = wrap((s.label || 'Payment').replace(/\s+/g, ' '), w.normal, size, cLabel - 12)
+      const rowH = labelLines.length * (size + 3) + 10
+      w.need(rowH + 1)
+
+      const bg = ri % 2 === 1 ? BRAND.ruleLt : C.white
+      w.page.drawRectangle({ x: w.ml, y: w.y - rowH, width: w.innerW, height: rowH, color: bg })
+
+      const ty0 = w.y - size - 5
+      let ty = ty0
+      for (const ln of labelLines) {
+        w.page.drawText(ln, { x: xLabel + 6, y: ty, size, font: w.normal, color: BRAND.ink })
+        ty -= size + 3
+      }
+      const amt = money(s.amount)
+      const amtW = w.normal.widthOfTextAtSize(amt, size)
+      w.page.drawText(amt, { x: xAmount + cAmount - amtW - 6, y: ty0, size, font: w.normal, color: BRAND.ink })
+      w.page.drawText(s.dueDate ? fmtShortDateUtc(s.dueDate) : '—', {
+        x: xDue + 6, y: ty0, size, font: w.normal, color: s.dueDate ? BRAND.gray6 : BRAND.gray4,
+      })
+      const state = s.paid ? 'Paid' : s.invoiced ? 'Invoiced' : 'Pending'
+      w.page.drawText(state, {
+        x: xState + 6, y: ty0, size,
+        font: s.paid ? w.bold : w.normal,
+        color: s.paid ? BRAND.navy : s.invoiced ? BRAND.cyan : BRAND.gray6,
+      })
+
+      w.page.drawLine({
+        start: { x: w.ml, y: w.y - rowH },
+        end:   { x: w.pw - w.mr, y: w.y - rowH },
+        thickness: 0.3, color: BRAND.rule,
+      })
+      w.y -= rowH + 1
+    }
+    w.sp(6)
+  }
+
+  // ── Closing note ─────────────────────────────────────────────────────────────
+  w.sp(6)
+  w.body(
+    `Generated ${genLabel}. This sheet lists the work logged against this package and the state of its payment schedule. Hours are recorded for transparency — fixed-price package work is billed on the schedule above, not by the hour.`,
+    8, BRAND.gray6,
+  )
+
+  w._drawFooter()
+  return doc.save()
+}

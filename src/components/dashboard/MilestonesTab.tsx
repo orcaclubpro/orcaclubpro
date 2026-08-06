@@ -4,10 +4,11 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   Loader2, Plus, Trash2, Pencil, Check, X, ArrowRight, CalendarPlus, Search,
   CornerDownLeft, Milestone, Receipt, ListChecks, CircleCheck, Circle, CircleDot,
-  AlertTriangle, Lock,
+  AlertTriangle, Lock, FileDown, FileText, Send,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { SchedulePaymentInvoiceModal } from './SchedulePaymentInvoiceModal'
+import { PackageRecapModal } from './PackageRecapModal'
 import { WORK_CATEGORY_LABEL, type WorkCategory } from '@/lib/packages/workLines'
 import type { PackageRecapData } from '@/lib/packages/recap'
 import {
@@ -28,21 +29,26 @@ import {
 // autofocused board of every package with a pending scheduled payment (type, ↑↓,
 // ↵). Once a package is picked, a persistent header holds the client, the package
 // and the stage tabs; the body shows exactly one stage: Overview · Plan · Log ·
-// Recap. Esc walks back one level (send modal → editor → board). Keys 1–4 jump
-// stages while not typing.
+// Documents. Esc walks back one level (recap composer → send modal → editor →
+// board). Keys 1–4 jump stages while not typing.
+//
+// Billing lives on documents and rows, not on a stage: the Overview payment
+// schedule sends a pending payment (SchedulePaymentInvoiceModal — the one and only
+// send path), and the Documents stage exports the work-log sheet or composes the
+// recap, which can hand off to that same send modal.
 //
 // Work entries are consumed by an invoice, never moved: once an entry carries a
 // `billedOrderId` the client has seen it on a document, so it renders frozen —
 // greyed, tagged "billed", with no edit or delete controls (the actions reject
 // those server-side too).
 
-type Stage = 'overview' | 'plan' | 'log' | 'recap'
+type Stage = 'overview' | 'plan' | 'log' | 'documents'
 
 const STAGES: { id: Stage; label: string; icon: typeof Milestone }[] = [
-  { id: 'overview', label: 'Overview', icon: Milestone },
-  { id: 'plan',     label: 'Plan',     icon: CalendarPlus },
-  { id: 'log',      label: 'Log',      icon: Plus },
-  { id: 'recap',    label: 'Recap',    icon: Receipt },
+  { id: 'overview',  label: 'Overview',  icon: Milestone },
+  { id: 'plan',      label: 'Plan',      icon: CalendarPlus },
+  { id: 'log',       label: 'Log',       icon: Plus },
+  { id: 'documents', label: 'Documents', icon: FileText },
 ]
 
 const CATEGORIES = Object.keys(WORK_CATEGORY_LABEL) as WorkCategory[]
@@ -92,7 +98,7 @@ const fieldLabel = 'text-[10px] font-semibold uppercase tracking-widest text-[va
 export interface MilestonesTabProps {
   /** Preselect this client's packages when launched from a search result. */
   clientId?: string
-  /** Deep-link straight to a package's recap stage for one schedule entry. */
+  /** Deep-link straight to a package's Documents stage for one schedule entry. */
   initialTarget?: { packageId: string; entryId: string } | null
 }
 
@@ -109,7 +115,7 @@ export function MilestonesTab({ clientId, initialTarget }: MilestonesTabProps) {
 
   // Selection
   const [packageId, setPackageId] = useState<string>(initialTarget?.packageId ?? '')
-  const [stage, setStage] = useState<Stage>(initialTarget ? 'recap' : 'overview')
+  const [stage, setStage] = useState<Stage>(initialTarget ? 'documents' : 'overview')
   const [summary, setSummary] = useState<WorkSummary | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -144,8 +150,11 @@ export function MilestonesTab({ clientId, initialTarget }: MilestonesTabProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
   // Recap / send flow — drafts keyed by schedule-entry id so one can never attach
-  // to a different payment.
-  const [recapEntryId, setRecapEntryId] = useState<string | null>(initialTarget?.entryId ?? null)
+  // to a different payment. `docEntryId` is the payment the Documents stage is
+  // pointed at; `sendEntryId` is the payment the send modal is open for.
+  const [docEntryId, setDocEntryId] = useState<string | null>(initialTarget?.entryId ?? null)
+  const [sendEntryId, setSendEntryId] = useState<string | null>(initialTarget?.entryId ?? null)
+  const [recapOpen, setRecapOpen] = useState(false)
   const [recapDrafts, setRecapDrafts] = useState<Record<string, PackageRecapData>>({})
 
   /** The station is kept mounted-but-hidden by the console; only act when on screen. */
@@ -162,8 +171,10 @@ export function MilestonesTab({ clientId, initialTarget }: MilestonesTabProps) {
     if (appliedTargetRef.current === key) return
     appliedTargetRef.current = key
     setPackageId(initialTarget.packageId)
-    setStage('recap')
-    setRecapEntryId(initialTarget.entryId)
+    setStage('documents')
+    setDocEntryId(initialTarget.entryId)
+    setRecapOpen(false)
+    setSendEntryId(initialTarget.entryId)
   }, [initialTarget])
 
   // ── Loading ─────────────────────────────────────────────────────────────────
@@ -224,7 +235,9 @@ export function MilestonesTab({ clientId, initialTarget }: MilestonesTabProps) {
     setPickIdx(0)
     setEditId(null)
     setELogMode(false)
-    setRecapEntryId(null)
+    setDocEntryId(null)
+    setSendEntryId(null)
+    setRecapOpen(false)
     setRecapDrafts({})
     setLogDate(todayInput())
     setPlanDate(todayInput())
@@ -237,7 +250,9 @@ export function MilestonesTab({ clientId, initialTarget }: MilestonesTabProps) {
     setError(null)
     setEditId(null)
     setELogMode(false)
-    setRecapEntryId(null)
+    setDocEntryId(null)
+    setSendEntryId(null)
+    setRecapOpen(false)
     setPickQuery('')
     setPickIdx(0)
   }, [])
@@ -254,9 +269,11 @@ export function MilestonesTab({ clientId, initialTarget }: MilestonesTabProps) {
     return () => clearTimeout(t)
   }, [packageId, stage, loading, isVisible])
 
-  // ── Esc walks back one level (send modal → editor → board); the final Esc from
-  // the board bubbles to the console, which collapses to search. 1–4 jump stages
-  // while not typing. Capture phase so we run before the console.
+  // ── Esc walks back one level (recap composer → send modal → editor → board);
+  // the final Esc from the board bubbles to the console, which collapses to
+  // search. 1–4 jump stages while not typing. Capture phase so we run before the
+  // console (which also means we own closing the modals — their own listeners
+  // never see the event).
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (!isVisible()) return
@@ -264,7 +281,8 @@ export function MilestonesTab({ clientId, initialTarget }: MilestonesTabProps) {
         if (!packageId) return // board level — let the console handle it
         e.preventDefault()
         e.stopPropagation()
-        if (recapEntryId) { setRecapEntryId(null); return }
+        if (recapOpen) { setRecapOpen(false); return }
+        if (sendEntryId) { setSendEntryId(null); return }
         if (editId) { setEditId(null); setELogMode(false); return }
         clearPackage()
         return
@@ -272,13 +290,13 @@ export function MilestonesTab({ clientId, initialTarget }: MilestonesTabProps) {
       if (e.key >= '1' && e.key <= '4' && !e.metaKey && !e.ctrlKey && !e.altKey) {
         const tag = (e.target as HTMLElement)?.tagName
         if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable) return
-        if (!packageId || loading || recapEntryId) return
+        if (!packageId || loading || sendEntryId || recapOpen) return
         setStage(STAGES[Number(e.key) - 1].id)
       }
     }
     document.addEventListener('keydown', handler, true)
     return () => document.removeEventListener('keydown', handler, true)
-  }, [packageId, recapEntryId, editId, loading, clearPackage, isVisible])
+  }, [packageId, sendEntryId, recapOpen, editId, loading, clearPackage, isVisible])
 
   // ── Derived ─────────────────────────────────────────────────────────────────
 
@@ -290,16 +308,17 @@ export function MilestonesTab({ clientId, initialTarget }: MilestonesTabProps) {
   const pendingEntries = schedule.filter(isPendingEntry)
   const pendingHours = pending.reduce((s, e) => s + (e.hours ?? 0), 0)
 
-  // Entering the Recap stage opens the next pending payment straight away —
-  // closing the send modal drops back to the selector.
+  // The Documents stage always points at a payment: keep the selection on the next
+  // pending one whenever the current pick is gone (just invoiced, package swapped).
   useEffect(() => {
-    if (stage !== 'recap' || loading || recapEntryId) return
-    const next = pendingEntries[0]
-    if (next) setRecapEntryId(next.id)
+    if (loading) return
+    if (docEntryId && pendingEntries.some((s) => s.id === docEntryId)) return
+    setDocEntryId(pendingEntries[0]?.id ?? null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stage, loading, packageId])
+  }, [loading, packageId, summary])
 
-  const recapEntry = recapEntryId ? schedule.find((s) => s.id === recapEntryId) ?? null : null
+  const docEntry = docEntryId ? schedule.find((s) => s.id === docEntryId) ?? null : null
+  const sendEntry = sendEntryId ? schedule.find((s) => s.id === sendEntryId) ?? null : null
 
   // ── Actions ─────────────────────────────────────────────────────────────────
 
@@ -399,6 +418,12 @@ export function MilestonesTab({ clientId, initialTarget }: MilestonesTabProps) {
     if (r.success) await load()
     else setError(r.error ?? 'Failed to delete entry')
     setDeletingId(null)
+  }
+
+  // The work-log sheet covers the whole package, so it needs no entry — a plain GET.
+  function handleExportWorkLog() {
+    if (!packageId) return
+    window.open(`/api/packages/${packageId}/worklog/pdf`, '_blank')
   }
 
   // Inline editor row (shared by planned + logged). In log mode saving creates a
@@ -589,7 +614,7 @@ export function MilestonesTab({ clientId, initialTarget }: MilestonesTabProps) {
             {STAGES.map((s, i) => {
               const Icon = s.icon
               const isActive = stage === s.id
-              const count = s.id === 'plan' ? planned.length : s.id === 'log' ? pending.length : s.id === 'recap' ? pendingEntries.length : null
+              const count = s.id === 'plan' ? planned.length : s.id === 'log' ? pending.length : null
               return (
                 <button
                   key={s.id}
@@ -639,8 +664,9 @@ export function MilestonesTab({ clientId, initialTarget }: MilestonesTabProps) {
                       <div className="space-y-1">
                         {schedule.map((s) => {
                           const state = s.paid ? 'paid' : s.invoicedAt ? 'invoiced' : 'pending'
-                          return (
-                            <div key={s.id} className="flex items-center gap-3 py-1.5">
+                          const sendable = isPendingEntry(s)
+                          const body = (
+                            <>
                               {state === 'paid' ? (
                                 <CircleCheck className="size-3.5 shrink-0" style={{ color: 'var(--space-accent)' }} />
                               ) : state === 'invoiced' ? (
@@ -654,10 +680,32 @@ export function MilestonesTab({ clientId, initialTarget }: MilestonesTabProps) {
                               <span className="text-[10px] uppercase tracking-wide text-[var(--space-text-muted)] shrink-0 w-16 text-right">{state}</span>
                               <span className="text-[11px] tabular-nums text-[var(--space-text-muted)] shrink-0 w-24 text-right">{fmtDay(s.dueDate) || '—'}</span>
                               <span className="text-xs font-semibold tabular-nums text-[var(--space-text-primary)] shrink-0 w-20 text-right">{fmt(s.amount)}</span>
+                            </>
+                          )
+                          return sendable ? (
+                            <button
+                              key={s.id}
+                              type="button"
+                              onClick={() => setSendEntryId(s.id)}
+                              title="Send this payment"
+                              className="group w-full flex items-center gap-3 py-1.5 px-1.5 -mx-1.5 rounded-lg text-left transition-colors hover:bg-[var(--space-bg-card)]"
+                            >
+                              {body}
+                              <Send className="size-3 shrink-0 text-[var(--space-text-muted)] opacity-0 group-hover:opacity-70 transition-opacity" />
+                            </button>
+                          ) : (
+                            <div key={s.id} className="flex items-center gap-3 py-1.5 px-1.5 -mx-1.5">
+                              {body}
+                              <span className="size-3 shrink-0" />
                             </div>
                           )
                         })}
                       </div>
+                    )}
+                    {pendingEntries.length > 0 && (
+                      <p className="text-[10px] text-[var(--space-text-muted)]">
+                        Pick a pending payment to send its invoice.
+                      </p>
                     )}
                   </div>
 
@@ -719,10 +767,10 @@ export function MilestonesTab({ clientId, initialTarget }: MilestonesTabProps) {
                       onClick={() => setStage('log')}
                     />
                     <JumpCard
-                      icon={Receipt}
-                      title="Recap & bill"
-                      hint={pendingEntries.length > 0 ? `${pendingEntries.length} payment${pendingEntries.length === 1 ? '' : 's'} open` : 'All payments invoiced'}
-                      onClick={() => setStage('recap')}
+                      icon={FileText}
+                      title="Documents"
+                      hint={pendingEntries.length > 0 ? `Work log & recap · ${pendingEntries.length} payment${pendingEntries.length === 1 ? '' : 's'} open` : 'Work log & recap'}
+                      onClick={() => setStage('documents')}
                     />
                   </div>
                 </>
@@ -864,11 +912,12 @@ export function MilestonesTab({ clientId, initialTarget }: MilestonesTabProps) {
                 </>
               )}
 
-              {/* ── Recap ── */}
-              {stage === 'recap' && (
+              {/* ── Documents ── */}
+              {stage === 'documents' && (
                 <>
+                  {/* A package recap is scoped to one scheduled payment — pick it first. */}
                   {pendingEntries.length === 0 ? (
-                    <div className="flex flex-col items-center gap-2 py-12 text-center rounded-xl border border-dashed border-[var(--space-border-hard)]">
+                    <div className="flex flex-col items-center gap-2 py-8 text-center rounded-xl border border-dashed border-[var(--space-border-hard)]">
                       <Receipt className="size-5 text-[var(--space-text-muted)]" />
                       <p className="text-xs text-[var(--space-text-muted)]">Every scheduled payment on this package is invoiced.</p>
                     </div>
@@ -881,15 +930,17 @@ export function MilestonesTab({ clientId, initialTarget }: MilestonesTabProps) {
                         <button
                           key={s.id}
                           type="button"
-                          onClick={() => setRecapEntryId(s.id)}
+                          onClick={() => setDocEntryId(s.id)}
                           className={cn(
                             'w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-colors',
-                            recapEntryId === s.id
+                            docEntryId === s.id
                               ? 'bg-[var(--space-bg-card-hover)] border-[var(--space-accent-glow)]'
                               : 'border-[var(--space-border-hard)] hover:bg-[var(--space-bg-card-hover)]',
                           )}
                         >
-                          <Receipt className="size-3.5 shrink-0 text-[var(--space-text-muted)]" />
+                          {docEntryId === s.id
+                            ? <CircleCheck className="size-3.5 shrink-0" style={{ color: 'var(--space-accent)' }} />
+                            : <Circle className="size-3.5 shrink-0 text-[var(--space-text-muted)]" />}
                           <div className="flex-1 min-w-0">
                             <p className="text-sm text-[var(--space-text-secondary)] truncate">{s.label || 'Payment'}</p>
                             <p className="text-[11px] text-[var(--space-text-muted)] tabular-nums truncate">
@@ -897,14 +948,31 @@ export function MilestonesTab({ clientId, initialTarget }: MilestonesTabProps) {
                             </p>
                           </div>
                           <span className="text-sm font-semibold tabular-nums text-[var(--space-text-primary)] shrink-0">{fmt(s.amount)}</span>
-                          <ArrowRight className="size-3.5 shrink-0 text-[var(--space-text-muted)]" />
                         </button>
                       ))}
-                      <p className="text-[11px] text-[var(--space-text-muted)] px-1">
-                        Composing a recap sends the invoice for that payment and consumes the unbilled work above.
-                      </p>
                     </div>
                   )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <DocCard
+                      icon={FileDown}
+                      title="Work log sheet"
+                      desc="A line-item PDF of every logged and planned entry on this package — billed/pending state and the payment schedule."
+                      actionLabel="Export PDF"
+                      onClick={handleExportWorkLog}
+                    />
+                    <DocCard
+                      icon={FileText}
+                      title="Payment recap"
+                      desc="The client-facing recap for the selected payment — what it covers, what's left, and the notes that ride along on the invoice."
+                      actionLabel="Compose recap"
+                      disabled={!docEntry}
+                      onClick={() => { if (docEntry) setRecapOpen(true) }}
+                    />
+                  </div>
+                  <p className="text-[11px] text-[var(--space-text-muted)]">
+                    The recap covers the selected payment — the work log sheet covers the whole package.
+                  </p>
                 </>
               )}
             </>
@@ -914,16 +982,33 @@ export function MilestonesTab({ clientId, initialTarget }: MilestonesTabProps) {
         </div>
       </div>
 
-      {summary && recapEntry && (
+      {/* The one and only send path. */}
+      {summary && sendEntry && (
         <SchedulePaymentInvoiceModal
-          key={recapEntry.id}
+          key={sendEntry.id}
           packageId={summary.package.id}
           packageName={summary.package.name}
-          entry={{ id: recapEntry.id, label: recapEntry.label, amount: recapEntry.amount, dueDate: recapEntry.dueDate }}
-          recapDraft={recapDrafts[recapEntry.id] ?? null}
+          entry={{ id: sendEntry.id, label: sendEntry.label, amount: sendEntry.amount, dueDate: sendEntry.dueDate }}
+          recapDraft={recapDrafts[sendEntry.id] ?? null}
           onRecapChange={(id, r) => setRecapDrafts((p) => ({ ...p, [id]: r }))}
-          onClose={() => setRecapEntryId(null)}
+          onClose={() => setSendEntryId(null)}
           onSent={() => { void load() }}
+        />
+      )}
+
+      {/* The recap composer never sends anything itself — it hands the entry (and the
+          narrative it just lifted into recapDrafts) to the send modal above. */}
+      {summary && recapOpen && docEntry && (
+        <PackageRecapModal
+          key={docEntry.id}
+          packageId={summary.package.id}
+          packageName={summary.package.name}
+          entryId={docEntry.id}
+          entryLabel={docEntry.label || 'Payment'}
+          draft={recapDrafts[docEntry.id] ?? null}
+          onDraftChange={(m) => setRecapDrafts((p) => ({ ...p, [docEntry.id]: m }))}
+          onSendInvoice={() => { setRecapOpen(false); setSendEntryId(docEntry.id) }}
+          onClose={() => setRecapOpen(false)}
         />
       )}
     </div>
@@ -1001,5 +1086,25 @@ function JumpCard({
       </div>
       <ArrowRight className="size-3.5 shrink-0 text-[var(--space-text-muted)] opacity-0 -translate-x-1 group-hover:opacity-60 group-hover:translate-x-0 transition-all" />
     </button>
+  )
+}
+
+// One document on the Documents stage — mirrors RetainerTab's DocCard.
+function DocCard({
+  icon: Icon, title, desc, actionLabel, onClick, disabled,
+}: { icon: typeof Milestone; title: string; desc: string; actionLabel: string; onClick: () => void; disabled?: boolean }) {
+  return (
+    <div className="flex flex-col gap-3 rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card-hover)] p-4">
+      <div className="flex items-center gap-2.5">
+        <div className="size-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'var(--space-accent-soft)' }}>
+          <Icon className="size-4" style={{ color: 'var(--space-accent)' }} />
+        </div>
+        <p className="text-sm font-semibold text-[var(--space-text-primary)]">{title}</p>
+      </div>
+      <p className="text-xs text-[var(--space-text-muted)] leading-relaxed flex-1">{desc}</p>
+      <button onClick={onClick} disabled={disabled} className={cn(accentBtn, 'self-start')}>
+        {actionLabel}
+      </button>
+    </div>
   )
 }
