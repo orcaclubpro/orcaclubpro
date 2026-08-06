@@ -5,13 +5,14 @@ import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import {
   Search, X, Building2, FolderKanban, Zap, Loader2, ArrowRight,
-  Package, Clock, Command, CornerDownLeft,
+  Package, Clock, Command, CornerDownLeft, Milestone,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { fetchSearchData } from '@/actions/search'
 import type { SearchClient, SearchProject, SearchSprint } from '@/actions/search'
 import { PackageBuilderTab } from './PackageBuilderTab'
 import { RetainerTab } from './RetainerTab'
+import { MilestonesTab } from './MilestonesTab'
 
 // ─── The Console ────────────────────────────────────────────────────────────────
 // One surface, three stations. Summoned once (⌘/L), it opens *search-first* — a
@@ -23,12 +24,13 @@ import { RetainerTab } from './RetainerTab'
 // a vertical spine in expanded mode. Boldness lives in that morph; everything else
 // stays quiet. All color flows through --space-* tokens so every theme comes for free.
 
-type Station = 'search' | 'builder' | 'retainer'
+type Station = 'search' | 'builder' | 'retainer' | 'milestones'
 
 const STATIONS: { id: Station; label: string; icon: typeof Search }[] = [
-  { id: 'search',   label: 'Search',   icon: Search },
-  { id: 'retainer', label: 'Retainer', icon: Clock },
-  { id: 'builder',  label: 'Build',    icon: Package },
+  { id: 'search',     label: 'Search',     icon: Search },
+  { id: 'retainer',   label: 'Retainer',   icon: Clock },
+  { id: 'milestones', label: 'Milestones', icon: Milestone },
+  { id: 'builder',    label: 'Build',      icon: Package },
 ]
 
 // ─── Search types + helpers (ported from GlobalSearchPalette) ───────────────────
@@ -89,7 +91,7 @@ export function CommandConsole({ username }: CommandConsoleProps) {
 
   // Which heavy stations have been opened at least once. Once visited they stay
   // mounted (hidden) so in-progress build/retainer state survives station switches.
-  const [visited, setVisited] = useState<{ builder: boolean; retainer: boolean }>({ builder: false, retainer: false })
+  const [visited, setVisited] = useState<{ builder: boolean; retainer: boolean; milestones: boolean }>({ builder: false, retainer: false, milestones: false })
 
   // Client the Build/Retainer stations are scoped to when launched from a search
   // result ("Build for Acme"). Changing it remounts that station on a fresh client.
@@ -183,7 +185,8 @@ export function CommandConsole({ username }: CommandConsoleProps) {
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Global launch keys — L: search · K: build · ` : cycle stations. Ignored while typing.
+  // Global launch keys — L: search · K: retainer · M: milestones · ` : cycle stations.
+  // Ignored while typing.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return
@@ -198,6 +201,10 @@ export function CommandConsole({ username }: CommandConsoleProps) {
         e.preventDefault()
         if (isOpenRef.current) goStation('retainer')
         else openConsole('retainer')
+      } else if (e.key === 'm' || e.key === 'M') {
+        e.preventDefault()
+        if (isOpenRef.current) goStation('milestones')
+        else openConsole('milestones')
       } else if (e.key === '`' && !isOpenRef.current) {
         // Backtick opens the console; cycling once open is handled below (fires even
         // while the search input is focused, which this global handler skips).
@@ -462,8 +469,9 @@ export function CommandConsole({ username }: CommandConsoleProps) {
                           Jump to a tool
                         </p>
                         <div className="grid grid-cols-2 gap-2">
-                          <LaunchCard icon={Clock}   title="Retainer"        hint="Log hours"        onClick={() => goStation('retainer', undefined)} />
-                          <LaunchCard icon={Package} title="Package Builder" hint="Draft a proposal" onClick={() => goStation('builder', undefined)} />
+                          <LaunchCard icon={Clock}     title="Retainer"        hint="Log hours"         onClick={() => goStation('retainer', undefined)} />
+                          <LaunchCard icon={Milestone} title="Milestones"      hint="Log package work"  onClick={() => goStation('milestones', undefined)} />
+                          <LaunchCard icon={Package}   title="Package Builder" hint="Draft a proposal"  onClick={() => goStation('builder', undefined)} />
                         </div>
                       </div>
                       <p className="text-[11px] text-[var(--space-text-muted)] px-1 leading-relaxed">
@@ -497,8 +505,9 @@ export function CommandConsole({ username }: CommandConsoleProps) {
                                 secondary={[item.data.company, item.data.email].filter(Boolean).join(' · ')}
                                 onClick={() => navigateToResult(item)}
                                 actions={[
-                                  { icon: Clock,   title: 'Retainer', onClick: () => goStation('retainer', item.data.id) },
-                                  { icon: Package, title: 'Build', onClick: () => goStation('builder', item.data.id) },
+                                  { icon: Clock,     title: 'Retainer', onClick: () => goStation('retainer', item.data.id) },
+                                  { icon: Milestone, title: 'Milestones', onClick: () => goStation('milestones', item.data.id) },
+                                  { icon: Package,   title: 'Build', onClick: () => goStation('builder', item.data.id) },
                                 ]}
                               />
                             )
@@ -570,7 +579,7 @@ export function CommandConsole({ username }: CommandConsoleProps) {
             {expanded && (
               <div className="flex items-center gap-3 px-4 sm:px-6 py-2.5 border-b border-[var(--space-border-hard)] shrink-0" style={{ background: 'rgba(255,255,255,0.015)' }}>
                 <span className="text-sm font-semibold text-[var(--space-text-primary)]">
-                  {station === 'builder' ? 'Package Builder' : 'Retainer'}
+                  {station === 'builder' ? 'Package Builder' : station === 'milestones' ? 'Milestones' : 'Retainer'}
                 </span>
                 <button
                   onClick={() => goStation('search')}
@@ -590,7 +599,7 @@ export function CommandConsole({ username }: CommandConsoleProps) {
             )}
 
             {/* Station bodies — mounted once visited; visibility toggled by station */}
-            {(visited.builder || visited.retainer) && (
+            {(visited.builder || visited.retainer || visited.milestones) && (
               <div className={cn('flex-1 min-h-0', expanded ? 'block' : 'hidden')}>
                 {visited.builder && (
                   <div className={cn('h-full min-h-0', station === 'builder' ? 'block' : 'hidden')}>
@@ -609,6 +618,14 @@ export function CommandConsole({ username }: CommandConsoleProps) {
                       key={`retainer-${launchClientId ?? 'blank'}`}
                       clientId={launchClientId}
                       active={station === 'retainer'}
+                    />
+                  </div>
+                )}
+                {visited.milestones && (
+                  <div className={cn('h-full min-h-0', station === 'milestones' ? 'block' : 'hidden')}>
+                    <MilestonesTab
+                      key={`milestones-${launchClientId ?? 'blank'}`}
+                      clientId={launchClientId}
                     />
                   </div>
                 )}
