@@ -10,7 +10,7 @@ import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import { mongooseAdapter } from '@payloadcms/db-mongodb'
 import { nodemailerAdapter } from '@payloadcms/email-nodemailer'
 import { buildConfig } from 'payload'
-import type { CollectionConfig } from 'payload'
+import type { CollectionConfig, CollectionBeforeValidateHook } from 'payload'
 import { fileURLToPath } from 'node:url'
 import path from 'path'
 import { revalidatePath } from 'next/cache'
@@ -38,7 +38,7 @@ import { Timelines } from './collections/Timelines'
 import Solutions from './collections/Solutions'
 import { Pages } from './collections/Pages'
 import { anyone, authenticated, authenticatedOrPublished, adminOnly, adminOrSelf, canAccessAdmin } from './access'
-import { themeSelectOptions, DEFAULT_THEME } from '@/app/(spaces)/themes'
+import { themeSelectOptions, DEFAULT_THEME, isThemeId } from '@/app/(spaces)/themes'
 
 // Helper function to format strings as URL-friendly slugs
 const formatSlug = (val: string): string =>
@@ -602,6 +602,35 @@ const Posts: CollectionConfig = {
   ],
 }
 
+// Self-heals a `dashboardTheme` that names a theme no longer in the registry
+// (src/app/(spaces)/themes.ts). Themes get retired, but user rows keep the old
+// id — and Payload re-validates the WHOLE document on every write, so a stale
+// value makes any update to that user fail with "This field has an invalid
+// selection." That is not cosmetic: `updateClientBalance` (orders afterChange)
+// → `syncClientAccountToUser` (client-accounts afterChange) writes the user
+// inside the shared Mongo transaction. Both hooks catch and log the error, but
+// catching in JS does not un-abort an aborted Mongo transaction, so the whole
+// order creation silently rolls back.
+//
+// This runs at the collection level (before field validation) and considers the
+// EFFECTIVE value, not just the incoming one: on a partial update `data` holds
+// only the changed fields, while the offending value lives on the stored doc.
+// Writing DEFAULT_THEME into `data` both passes validation and repairs the row.
+const coerceUnknownDashboardTheme: CollectionBeforeValidateHook = ({ data, originalDoc }) => {
+  if (!data) return data
+
+  const effective = data.dashboardTheme ?? originalDoc?.dashboardTheme
+
+  // Leave undefined/null alone — the field is optional and has a defaultValue.
+  if (effective === undefined || effective === null) return data
+
+  if (!isThemeId(effective)) {
+    data.dashboardTheme = DEFAULT_THEME
+  }
+
+  return data
+}
+
 // Users collection for authentication
 const Users: CollectionConfig = {
   slug: 'users',
@@ -647,6 +676,7 @@ const Users: CollectionConfig = {
     delete: adminOnly,
   },
   hooks: {
+    beforeValidate: [coerceUnknownDashboardTheme],
     beforeChange: [createClientAccountHook], // Must run BEFORE afterChange
     afterChange: [sendTwoFactorEmailHook, syncUserToClientAccount, sendClientWelcomeEmailHook],
     beforeLogin: [beforeLoginHook],

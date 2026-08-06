@@ -207,7 +207,10 @@ export const THEMES: Record<ThemeId, ThemeDefinition> = Object.fromEntries(
 )
 
 export function isThemeId(id: unknown): id is ThemeId {
-  return typeof id === 'string' && id in THEMES
+  // hasOwn, not `in` — `in` walks Object.prototype, so 'toString'/'constructor'
+  // would report as valid theme ids and could be persisted as an invalid
+  // `dashboardTheme` selection.
+  return typeof id === 'string' && Object.hasOwn(THEMES, id)
 }
 
 /** Payload `select` options generated from the registry. */
