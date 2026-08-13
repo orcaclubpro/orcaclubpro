@@ -1,10 +1,16 @@
 /**
  * NEW information-architecture nav data (hub-and-spoke funnel).
  *
- * NOT yet wired into the live header/footer — the cutover phase rewrites
- * header.tsx / footer.tsx to consume this file. Until then it is the reference
- * shape page-builder agents link against.
+ * Consumed by the header mega-dropdowns. The footer still uses its own
+ * hardcoded links until cutover.
+ *
+ * Hub children are split by `featured`: featured children are the money pages
+ * (they carry a price and lead the dropdown), the rest are supporting spokes
+ * and related offers shown in the dropdown's side panel. That split is what
+ * keeps the audit — the entry product — from being buried among seven peers.
  */
+
+import type { OfferKey } from './pricing'
 
 export type NavItem = {
   label: string
@@ -13,6 +19,12 @@ export type NavItem = {
   description?: string
   /** True for links that leave the site (render target="_blank" + rel). */
   external?: boolean
+  /** Money page: leads its hub dropdown and renders a price. */
+  featured?: boolean
+  /** Pulls price + timeline from src/data/pricing.ts — never hardcode them. */
+  priceKey?: OfferKey
+  /** Route not built yet — skipped by nav rendering so it can't 404. */
+  comingSoon?: boolean
   children?: NavItem[]
 }
 
@@ -26,16 +38,29 @@ export const NAV_ITEMS: NavItem[] = [
         label: 'Payload CMS Websites',
         href: '/websites/payload-cms',
         description: 'Fast, editable marketing sites on a headless CMS.',
+        featured: true,
+        priceKey: 'websites-payload-cms',
       },
       {
         label: 'Shopify Storefronts',
         href: '/websites/shopify',
         description: 'Shopify builds that convert — themes to headless.',
+        featured: true,
+        priceKey: 'websites-shopify',
       },
       {
         label: 'Custom Commerce',
         href: '/websites/custom-commerce',
         description: 'Bespoke commerce, APIs, and multi-system workflows.',
+        featured: true,
+        priceKey: 'websites-custom-commerce',
+      },
+      // Supporting — shown in the dropdown side panel, not the money grid.
+      {
+        label: 'Care Plan',
+        href: '/care',
+        description: 'Hosting, updates, and support after launch.',
+        priceKey: 'care',
       },
     ],
   },
@@ -48,11 +73,15 @@ export const NAV_ITEMS: NavItem[] = [
         label: 'Visibility Audit',
         href: '/get-found/audit',
         description: 'Fixed-price technical and content audit.',
+        featured: true,
+        priceKey: 'get-found-audit',
       },
       {
         label: 'Growth Retainer',
         href: '/get-found/growth',
         description: 'Ongoing search and channel growth, monthly.',
+        featured: true,
+        priceKey: 'get-found-growth',
       },
       {
         label: 'SEO',
@@ -82,7 +111,8 @@ export const NAV_ITEMS: NavItem[] = [
     ],
   },
   { label: 'Pricing', href: '/pricing' },
-  { label: 'Work', href: '/work' },
+  // /work is not built yet (needs the case-studies collection + real material).
+  { label: 'Work', href: '/work', comingSoon: true },
   { label: 'Sonar', href: 'https://sonar.orcaclub.pro', external: true },
   { label: 'Contact', href: '/contact' },
   { label: 'About', href: '/about' },

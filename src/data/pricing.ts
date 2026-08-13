@@ -20,24 +20,23 @@ export type Offer = {
 export const OFFERS = {
   'websites-payload-cms': {
     name: 'Payload CMS Website',
-    // TODO(chance): confirm final pricing before cutover
-    priceDisplay: '$4,000–$10,000',
+    priceDisplay: '$2,000–$5,000',
     priceNote: 'Fixed quote after scoping — no hourly surprises.',
+    // TODO(chance): confirm timeline — kept at 2–4 weeks for the "quick site" positioning
     timeline: '2–4 weeks',
   },
   'websites-shopify': {
     name: 'Shopify Storefront',
-    // TODO(chance): confirm final pricing before cutover
-    priceDisplay: '$2,500–$5,000',
+    priceDisplay: '$5,000–$20,000',
     priceNote: 'Fixed quote after scoping.',
-    timeline: '2–3 weeks',
+    timeline: '1–2 months',
   },
   'websites-custom-commerce': {
     name: 'Custom Commerce Build',
-    // TODO(chance): confirm final pricing before cutover
-    priceDisplay: 'from $12,000',
+    priceDisplay: '$10,000–$20,000',
     priceNote: 'Scoped and quoted per project.',
-    timeline: '4–8 weeks',
+    // TODO(chance): confirm timeline — 1–2 months to match the Shopify band it overlaps
+    timeline: '1–2 months',
   },
   'get-found-audit': {
     name: 'Search Visibility Audit',

@@ -46,7 +46,7 @@ const faqs: Faq[] = [
   {
     question: 'Who am I actually working with?',
     answer:
-      'The developer building your store. No account managers, no outsourced dev team — you talk directly to the person writing the code, which is why questions get answered in hours and the project ships in weeks.',
+      'The developer building your store. No account managers, no outsourced dev team — you talk directly to the person writing the code, which is why questions get answered quickly and the project stays on its schedule.',
   },
 ]
 
@@ -67,7 +67,7 @@ export default function ShopifyPage() {
             <span className="gradient-text font-light">Shopify</span> Storefronts, Built Properly
           </>
         ),
-        sub: 'Custom Shopify design and development for stores that have outgrown a stock template — themes, integrations, and automation shipped in weeks by a senior developer you work with directly.',
+        sub: 'Custom Shopify design and development for stores that have outgrown a stock template — themes, integrations, and automation built by a senior developer you work with directly.',
         ctaLabel: 'Start your store',
       }}
       priceKey="websites-shopify"

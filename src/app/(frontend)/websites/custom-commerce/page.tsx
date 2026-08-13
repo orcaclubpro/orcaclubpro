@@ -17,7 +17,7 @@ const faqs: Faq[] = [
   },
   {
     question: 'How does pricing work?',
-    answer: `Custom builds start ${OFFERS['websites-custom-commerce'].priceDisplay} and are quoted per project. We scope first — requirements, integrations, architecture — and then give you a fixed quote with milestones. The quote is the price; complexity risk is ours to manage, not yours to absorb in hourly overruns.`,
+    answer: `Custom builds run ${OFFERS['websites-custom-commerce'].priceDisplay} and are quoted per project. We scope first — requirements, integrations, architecture — and then give you a fixed quote with milestones. The quote is the price; complexity risk is ours to manage, not yours to absorb in hourly overruns.`,
   },
   {
     question: 'How long does a custom build take?',

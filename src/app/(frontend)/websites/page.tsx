@@ -3,21 +3,26 @@ import { buildMetadata } from '@/lib/seo/meta'
 import { OFFERS } from '@/data/pricing'
 import type { Faq } from '@/lib/seo/schema'
 
+// Overall band across the three build offers. Derived so a price change in
+// pricing.ts flows through here too — the cheapest floor and dearest ceiling.
+const LOW = OFFERS['websites-payload-cms'].priceDisplay.split('–')[0]
+const HIGH = OFFERS['websites-shopify'].priceDisplay.split('–')[1]
+
 export const metadata = buildMetadata({
   title: 'Web Design Orange County | Custom Websites Built in Weeks | ORCACLUB',
-  description: `Custom website design and development for Orange County businesses. Modern Next.js + Payload CMS builds delivered in 2–4 weeks at a fixed quote — most projects land between ${OFFERS['websites-shopify'].priceDisplay} and ${OFFERS['websites-payload-cms'].priceDisplay}.`,
+  description: `Custom website design and development for Orange County businesses. Modern Next.js, Payload CMS, and Shopify builds at a fixed quote — marketing sites from ${LOW}, commerce builds up to ${HIGH}.`,
   path: '/websites',
 })
 
 const faqs: Faq[] = [
   {
     question: 'How much does a custom website cost?',
-    answer: `Most of our website projects land between ${OFFERS['websites-shopify'].priceDisplay} and ${OFFERS['websites-payload-cms'].priceDisplay}, depending on scope. Shopify storefronts start at ${OFFERS['websites-shopify'].priceDisplay.split('–')[0]}, content-managed marketing sites on Payload CMS run ${OFFERS['websites-payload-cms'].priceDisplay}, and custom commerce builds — portals, dashboards, headless storefronts — start ${OFFERS['websites-custom-commerce'].priceDisplay}. Every project gets a fixed quote after scoping, so the number you agree to is the number you pay.`,
+    answer: `Website projects run from ${LOW} to ${HIGH}, depending on what you need. A content-managed marketing site on Payload CMS is ${OFFERS['websites-payload-cms'].priceDisplay} and the fastest way to launch. Shopify storefronts run ${OFFERS['websites-shopify'].priceDisplay}, since a real store means integrations, checkout work, and email automation, not just a theme. Custom commerce builds — client portals, admin dashboards, headless storefronts — run ${OFFERS['websites-custom-commerce'].priceDisplay}. Every project gets a fixed quote after scoping, so the number you agree to is the number you pay.`,
   },
   {
     question: 'How can you deliver in weeks when agencies quote months?',
     answer:
-      'Because there are no agency layers. You work directly with the senior developer building your site — no account managers, no handoffs, no committee reviews. Combined with a modern code-first stack (Next.js, TypeScript, Payload CMS) instead of plugin assembly, that removes most of what makes agency timelines stretch to 3–6 months. We fix the scope upfront and ship in 2–4 weeks.',
+      'Because there are no agency layers. You work directly with the senior developer building your site — no account managers, no handoffs, no committee reviews. Combined with a modern code-first stack (Next.js, TypeScript, Payload CMS) instead of plugin assembly, that removes most of what makes agency timelines stretch to 3–6 months. A marketing site ships in 2–4 weeks; a full commerce build takes one to two months rather than half a year.',
   },
   {
     question: 'Do you handle both design and development?',
@@ -47,21 +52,21 @@ export default function WebsitesHubPage() {
       schema={{
         name: 'Websites',
         description:
-          'Custom website design and development for Orange County businesses — Payload CMS builds, Shopify storefronts, and custom commerce platforms delivered in weeks at a fixed quote.',
+          'Custom website design and development for Orange County businesses — Payload CMS builds, Shopify storefronts, and custom commerce platforms at a fixed quote.',
       }}
       hero={{
         eyebrow: 'Web Design & Development — Orange County',
         title: (
           <>
-            Websites Built in <span className="gradient-text font-light">Weeks</span>, Not Months
+            Websites Built in <span className="gradient-text font-light">Weeks</span>, Not Quarters
           </>
         ),
-        sub: 'Custom websites designed, built, and launched in 2–4 weeks on a modern Next.js + Payload CMS stack — fixed scope, fixed quote, built by the senior developer you actually talk to.',
+        sub: 'Custom websites designed, built, and launched on a modern stack — 2–4 weeks for a marketing site, 1–2 months for a full commerce build. Fixed scope, fixed quote, built by the senior developer you actually talk to.',
       }}
       intro={[
-        `Here is what a professionally built website actually costs: most of our projects land between ${OFFERS['websites-shopify'].priceDisplay} and ${OFFERS['websites-payload-cms'].priceDisplay}, with larger custom commerce builds starting ${OFFERS['websites-custom-commerce'].priceDisplay}. Every project is scoped first and quoted fixed — no hourly meters, no surprise invoices. The three offers below each carry their own price and timeline band.`,
+        `Here is what a professionally built website actually costs: ${LOW} to ${HIGH}, depending on what it has to do. A content-managed marketing site runs ${OFFERS['websites-payload-cms'].priceDisplay}; a Shopify storefront with real integrations runs ${OFFERS['websites-shopify'].priceDisplay}; custom commerce platforms run ${OFFERS['websites-custom-commerce'].priceDisplay}. Every project is scoped first and quoted fixed — no hourly meters, no surprise invoices.`,
         'ORCACLUB is a technical operations development studio, not a marketing agency. Every site is built code-first on Next.js and Payload CMS — the same stack our own platform runs on — rather than assembled from page builders and plugins. That is why the sites are fast, why they rank, and why your team can edit everything without calling a developer.',
-        'The speed is structural, not rushed. Traditional agencies take 3–6 months because work passes through account managers, designers, developers, and review committees. Here it passes through one senior operator with a fixed scope and daily updates. Discovery to launch runs 2–4 weeks for most projects.',
+        'The speed is structural, not rushed. Traditional agencies take 3–6 months because work passes through account managers, designers, developers, and review committees. Here it passes through one senior operator with a fixed scope and weekly written updates. A marketing site goes discovery to launch in 2–4 weeks; a full commerce build takes one to two months.',
         'Design decisions serve conversion, not decoration: clear hierarchy, sub-second loads, mobile-first layouts, and technical SEO — metadata, structured data, Core Web Vitals — baked in from the first commit rather than bolted on after launch.',
       ]}
       cards={[
@@ -94,7 +99,7 @@ export default function WebsitesHubPage() {
             Ready to build something <span className="gradient-text font-light">fast</span>?
           </>
         ),
-        sub: 'Tell us what the site needs to do. You get a fixed scope, a fixed quote, and a launch date — usually within a month.',
+        sub: 'Tell us what the site needs to do. You get a fixed scope, a fixed quote, and a launch date before any work starts.',
         primary: { label: 'Start a project', href: '/contact' },
         secondary: { label: 'See pricing', href: '/pricing' },
         note: 'Free consultation · Fixed quotes · Direct access to the developer',
