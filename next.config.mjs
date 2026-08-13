@@ -77,15 +77,7 @@ const nextConfig = {
   },
   
   async redirects() {
-    return [
-      // TEMPORARY (rework Phase 0): /pricing doesn't exist yet but 4 internal
-      // links point at it (EcommerceContent, ShopifyContent). 302 to /packages
-      // until the real /pricing page ships at IA cutover — at which point this
-      // rule MUST be removed in the same deploy (the cutover adds /packages →
-      // /pricing 301s; leaving both creates an infinite redirect loop).
-      // See docs/FRONTEND_REWORK_PLAN.md Phase 2.
-      { source: '/pricing', destination: '/packages', permanent: false },
-    ];
+    return [];
   },
 
   // SECURITY: Enhanced security headers

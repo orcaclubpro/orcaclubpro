@@ -1,54 +1,38 @@
-import type { Metadata } from 'next'
 import AnimatedBackground from "@/components/layout/animated-background"
 import ScrollReveal from "@/components/layout/scroll-reveal"
 import HeroSection from "@/components/sections/HeroSection"
-import ServicesGrid from "@/components/sections/ServicesGrid"
 import RenderBlocks from "@/components/blocks/RenderBlocks"
 import Link from "next/link"
 import { ArrowRight } from "lucide-react"
 import { getCachedClients, getCachedHomePage } from "@/lib/payload/cached-queries"
+import { buildMetadata } from "@/lib/seo/meta"
 
-export const metadata: Metadata = {
-  title: 'ORCACLUB',
-  description: 'Professional web development company offering custom web development, website design services, and full-stack solutions. Our web design agency delivers fixed-price packages with 3-21 day turnaround for businesses seeking scalable web development services.',
-  keywords: [
-    'web development services',
-    'web development company',
-    'web design agency',
-    'website design services',
-    'custom web development',
-    'full stack development',
-    'custom integrations',
-    'workflow automation',
-    'website development',
-    'business automation',
-    'custom software development',
-    'api development',
-    'shopify integration',
-    'stripe integration',
-    'headless cms',
-    'next.js development',
-    'react development',
-    'development consultancy',
-    'professional web design',
-    'ecommerce development'
-  ],
-  openGraph: {
-    title: 'ORCACLUB',
-    description: 'Professional web development company specializing in custom web development and website design services. Fixed-price packages with fast 3-21 day delivery from an experienced web design agency.',
-    url: 'https://orcaclub.pro',
-    siteName: 'ORCACLUB',
-    type: 'website',
+export const metadata = buildMetadata({
+  // TODO(chance): confirm final home title/description wording
+  title: "ORCACLUB | Websites That Get Found — Orange County",
+  description:
+    "Websites built and run by one senior operator in Orange County. Payload CMS and Shopify builds, plus a get-found system that covers Google and AI search. Fixed quotes, fast delivery.",
+  path: "/",
+})
+
+// The funnel: home routes to the two hubs and /pricing. Nothing else — every
+// other path (contact, money pages) is reached through them or the nav.
+const HUBS = [
+  {
+    title: "Websites",
+    href: "/websites",
+    eyebrow: "Build",
+    blurb:
+      "Payload CMS and Shopify builds shipped in weeks, not months. Fixed scope, fixed quote, full ownership at handoff.",
   },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'ORCACLUB',
-    description: 'Web development services and custom web design from a professional web development company. Fast delivery, transparent pricing, and scalable solutions.',
+  {
+    title: "Get Found",
+    href: "/get-found",
+    eyebrow: "Visibility",
+    blurb:
+      "One system for showing up everywhere it matters — Google, Maps, ads, and AI search. Start with the audit.",
   },
-  alternates: {
-    canonical: 'https://orcaclub.pro',
-  },
-}
+] as const
 
 export default async function HomePage() {
   // Fetch clients and CMS home page in parallel using cached queries
@@ -65,64 +49,72 @@ export default async function HomePage() {
     // Pages collection may not exist yet or no home page created
   }
 
-  // Breadcrumb schema for homepage
-  const breadcrumbSchema = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    "itemListElement": [
-      {
-        "@type": "ListItem",
-        "position": 1,
-        "name": "Home",
-        "item": "https://orcaclub.pro"
-      }
-    ]
-  }
-
   const hasCmsLayout = homePage?.layout && Array.isArray(homePage.layout) && homePage.layout.length > 0
 
   return (
     <div className="min-h-screen relative">
-      {/* Breadcrumb Schema */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
-      />
-
       <AnimatedBackground />
 
       {hasCmsLayout ? (
         // CMS-managed layout
         <RenderBlocks blocks={homePage.layout} />
       ) : (
-        // Fallback: hardcoded sections (shown until a CMS home page is created)
         <>
-          {/* Hero Section */}
-          <HeroSection clients={clients} />
+          {/* Hero — brand + outcome one-liner, proof via client carousel */}
+          <HeroSection
+            clients={clients}
+            subheading="Websites that get you found. Built by one senior operator."
+            primaryButtonLabel="What we build"
+            primaryButtonHref="/websites"
+            secondaryButtonLabel="See pricing"
+            secondaryButtonHref="/pricing"
+          />
 
-          {/* Capabilities Section */}
+          {/* The two hubs */}
           <section className="py-40 px-8 relative z-10">
-            <div className="max-w-7xl mx-auto">
+            <div className="max-w-5xl mx-auto">
               <ScrollReveal>
-                <div className="text-center mb-32">
+                <div className="text-center mb-24">
                   <p className="text-[10px] tracking-[0.4em] uppercase text-white/15 font-light mb-5">
-                    Capabilities
+                    Two Ways In
                   </p>
                   <h2 className="text-4xl md:text-5xl font-extralight mb-6 tracking-tight">
-                    Tailored <span className="gradient-text font-light">solutions</span> for scaling businesses
+                    Build it. Then get it <span className="gradient-text font-light">found</span>.
                   </h2>
                   <div className="mx-auto w-6 h-px bg-cyan-400/40 mb-8" />
                   <p className="text-lg text-gray-400 max-w-2xl mx-auto font-light leading-relaxed">
-                    Fixed-price tiers, fast delivery, and modern tech. Choose Launch, Scale, or Enterprise.
+                    Everything ORCACLUB does lives in one of two systems — a website
+                    built right, and a visibility engine that puts it in front of the
+                    people searching for it.
                   </p>
                 </div>
               </ScrollReveal>
 
-              <ServicesGrid />
+              <div className="grid md:grid-cols-2 gap-6">
+                {HUBS.map((hub, i) => (
+                  <ScrollReveal key={hub.href} delay={i * 120}>
+                    <Link
+                      href={hub.href}
+                      className="group block h-full p-10 bg-white/[0.03] border border-white/[0.08] rounded-lg hover:bg-white/[0.05] hover:border-cyan-400/30 transition-all duration-500"
+                    >
+                      <p className="text-[10px] tracking-[0.3em] uppercase text-cyan-400/60 font-light mb-4">
+                        {hub.eyebrow}
+                      </p>
+                      <h3 className="text-2xl font-extralight text-white mb-4 tracking-tight">
+                        {hub.title}
+                      </h3>
+                      <p className="text-gray-400 font-light leading-relaxed mb-8">{hub.blurb}</p>
+                      <span className="inline-flex items-center gap-2 text-sm font-light text-cyan-400 group-hover:gap-3 transition-all duration-300">
+                        Explore {hub.title.toLowerCase()} <ArrowRight size={16} />
+                      </span>
+                    </Link>
+                  </ScrollReveal>
+                ))}
+              </div>
             </div>
           </section>
 
-          {/* Call to Action */}
+          {/* Closing CTA — drains to /pricing, the decision page */}
           <section className="py-40 px-8 relative z-10">
             <div className="max-w-4xl mx-auto text-center">
               <ScrollReveal>
@@ -130,28 +122,23 @@ export default async function HomePage() {
                   Get Started
                 </p>
                 <h2 className="text-4xl md:text-5xl font-extralight mb-6 tracking-tight">
-                  Ready to launch your <span className="gradient-text font-light">next project</span>?
+                  One page. Every <span className="gradient-text font-light">price</span>.
                 </h2>
                 <div className="mx-auto w-6 h-px bg-cyan-400/40 mb-8" />
                 <p className="text-lg text-gray-400 mb-16 font-light leading-relaxed max-w-2xl mx-auto">
-                  No opaque quotes. No lengthy sales cycles. Just transparent pricing, fast delivery, and direct developer access.
+                  No opaque quotes. No lengthy sales cycles. Every offer, scoped and
+                  priced in writing, on a single page.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
                   <Link
-                    href="/contact"
+                    href="/pricing"
                     className="inline-flex items-center gap-4 px-12 py-5 bg-gradient-to-r from-blue-600/20 to-cyan-500/20 border border-cyan-400/30 rounded-md text-base font-light text-cyan-400 hover:from-blue-600/30 hover:to-cyan-500/30 transition-all duration-500 magnetic interactive"
                   >
-                    Start Your Project <ArrowRight size={18} />
-                  </Link>
-                  <Link
-                    href="/project"
-                    className="inline-flex items-center gap-2 px-12 py-5 bg-white/[0.03] border border-white/[0.08] rounded-md text-base font-light text-white/70 hover:bg-white/[0.06] hover:border-white/[0.14] hover:text-white transition-all duration-500 magnetic interactive"
-                  >
-                    View Project Tiers
+                    See Pricing <ArrowRight size={18} />
                   </Link>
                 </div>
                 <p className="text-[10px] tracking-[0.3em] uppercase text-white/15 font-light">
-                  3–21 Day Delivery · Fixed Pricing · Direct Developer Access
+                  Fixed Quotes · Fast Delivery · Direct Operator Access
                 </p>
               </ScrollReveal>
             </div>
