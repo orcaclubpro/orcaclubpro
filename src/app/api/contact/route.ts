@@ -85,7 +85,8 @@ export async function POST(request: NextRequest) {
           name,
           email,
           phone,
-          acceptsMarketing: true,
+          // Submitting a contact form is not marketing consent (CAN-SPAM)
+          acceptsMarketing: false,
         })
 
         if (shopifyResult.success && shopifyResult.customerId) {

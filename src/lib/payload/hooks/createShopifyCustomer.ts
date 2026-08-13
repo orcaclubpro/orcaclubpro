@@ -38,7 +38,7 @@ export const createShopifyCustomerHook: CollectionBeforeChangeHook = async ({
       name: customerName,
       email: data.email,
       phone: data.phone || undefined,
-      acceptsMarketing: true, // Default to true for client accounts
+      acceptsMarketing: false, // Marketing consent must be given explicitly, never defaulted
     })
 
     if (result.success && result.customerId) {

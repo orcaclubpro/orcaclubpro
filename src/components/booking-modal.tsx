@@ -3,6 +3,7 @@
 import * as React from "react"
 import { Calendar, Mail, Phone, User, Building2, MessageSquare, Loader2 } from "lucide-react"
 import { toast } from "sonner"
+import Link from "next/link"
 import {
   Dialog,
   DialogContent,
@@ -373,6 +374,13 @@ export function BookingModal({
               )}
             </Button>
           </div>
+          <p className="text-xs text-white/40 text-center">
+            By submitting, you agree to our{" "}
+            <Link href="/privacy" className="underline hover:text-white/70 transition-colors">
+              Privacy Policy
+            </Link>
+            .
+          </p>
         </form>
       </DialogContent>
     </Dialog>

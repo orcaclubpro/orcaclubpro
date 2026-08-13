@@ -369,6 +369,13 @@ function Step3({
           </span>
         </button>
       </div>
+      <p className="text-xs text-white/30 text-center">
+        By submitting, you agree to our{" "}
+        <Link href="/privacy" className="underline hover:text-white/60 transition-colors">
+          Privacy Policy
+        </Link>
+        .
+      </p>
     </div>
   )
 }

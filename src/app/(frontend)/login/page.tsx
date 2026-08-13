@@ -9,6 +9,7 @@ import Link from 'next/link'
 export const metadata = {
   title: 'Client Login - ORCACLUB',
   description: 'Login to your ORCACLUB client dashboard',
+  robots: { index: false, follow: false },
 }
 
 export default async function LoginPage({

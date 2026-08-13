@@ -120,8 +120,34 @@ export function Footer() {
         {/* Footer Bottom */}
         <div className="border-t border-zinc-800 mt-16 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-zinc-400 text-[15px]">
-            &copy; 2025 OrcaClubPro. All rights reserved.
+            &copy; 2026 OrcaClubPro. All rights reserved.
           </p>
+          <ul className="flex items-center gap-6">
+            <li>
+              <Link
+                href="/privacy"
+                className="text-zinc-400 hover:text-white transition-colors duration-200 text-sm"
+              >
+                Privacy Policy
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/terms"
+                className="text-zinc-400 hover:text-white transition-colors duration-200 text-sm"
+              >
+                Terms of Service
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/accessibility"
+                className="text-zinc-400 hover:text-white transition-colors duration-200 text-sm"
+              >
+                Accessibility
+              </Link>
+            </li>
+          </ul>
           <p className="text-zinc-400 text-[15px]">Built to Surface.</p>
         </div>
       </div>

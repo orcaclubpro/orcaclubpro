@@ -22,9 +22,12 @@ export async function generateMetadata({
     overrideAccess: true,
   })
   const timeline = docs[0]
-  if (!timeline) return {}
+  if (!timeline) return { robots: { index: false, follow: false } }
   const fullTitle = [timeline.title, timeline.titleEmphasis].filter(Boolean).join(' ')
-  return { title: `${fullTitle} — ORCACLUB` }
+  return {
+    title: `${fullTitle} — ORCACLUB`,
+    robots: { index: false, follow: false },
+  }
 }
 
 export default async function TimelineClientPage({

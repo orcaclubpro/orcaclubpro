@@ -1,25 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-
-// SECURITY: Detect common exploit patterns and malicious payloads
-const EXPLOIT_PATTERNS = [
-  /wget\s+/i,           // Remote file download
-  /curl\s+/i,           // Remote file download
-  /bash/i,              // Shell execution
-  /sh\s/i,              // Shell execution
-  /eval\(/i,            // Code evaluation
-  /exec\(/i,            // Command execution
-  /base64/i,            // Base64 encoding (often used in exploits)
-  /\.\.\//,             // Path traversal
-  /%00/,                // Null byte injection
-  /%2e%2e/i,            // URL-encoded path traversal
-  /chmod/i,             // File permission changes
-  /\/etc\/passwd/i,     // System file access
-  /\/bin\//i,           // Binary execution
-  /uname/i,             // System information gathering
-  /whoami/i,            // User enumeration
-  /NEXT_REDIRECT/,      // CVE-2025-66478 exploit signature
-]
+import { findExploitPattern } from '@/lib/security/exploit-patterns'
 
 // ---------------------------------------------------------------------------
 // Simple in-memory rate limiter
@@ -90,13 +71,14 @@ export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   const url = pathname + request.nextUrl.search
 
-  // SECURITY: Block requests containing exploit patterns
-  for (const pattern of EXPLOIT_PATTERNS) {
-    if (pattern.test(url)) {
-      const clientIp = getClientIp(request)
-      console.error(`[SECURITY] Blocked malicious request from ${clientIp}: ${url}`)
-      return new NextResponse('Forbidden', { status: 403 })
-    }
+  // SECURITY: Block requests containing exploit patterns (see
+  // src/lib/security/exploit-patterns.ts — command patterns require shell
+  // semantics so dev-topic content slugs like "bash-scripting" don't 403)
+  const exploitPattern = findExploitPattern(url)
+  if (exploitPattern) {
+    const clientIp = getClientIp(request)
+    console.error(`[SECURITY] Blocked malicious request from ${clientIp}: ${url} (${exploitPattern})`)
+    return new NextResponse('Forbidden', { status: 403 })
   }
 
   // SECURITY: Additional check for suspicious User-Agent strings

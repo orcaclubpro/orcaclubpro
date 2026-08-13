@@ -110,6 +110,11 @@ export function baseEmailTemplate({ content }: BaseTemplateProps): string {
                     <a href="https://orcaclub.pro" class="oc-footer-link" style="font-size:10px;color:#1f1f1f;text-decoration:none;font-weight:300;letter-spacing:0.02em;">orcaclub.pro</a>
                   </td>
                 </tr>
+                <tr>
+                  <td colspan="2" style="padding-top:8px;">
+                    <span class="oc-footer-link" style="font-size:10px;color:#1f1f1f;font-weight:300;letter-spacing:0.02em;">ORCACLUB &middot; Orange, CA, USA</span>
+                  </td>
+                </tr>
               </table>
             </td>
           </tr>
@@ -137,6 +142,7 @@ ${content}
 
 ---
 ORCACLUB
+Orange, CA, USA
 orcaclub.pro
   `.trim()
 }

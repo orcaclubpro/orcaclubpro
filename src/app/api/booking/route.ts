@@ -93,7 +93,8 @@ export async function POST(request: NextRequest) {
           name,
           email,
           phone,
-          acceptsMarketing: true,
+          // Booking a consultation is not marketing consent (CAN-SPAM)
+          acceptsMarketing: false,
         })
 
         if (shopifyResult.success && shopifyResult.customerId) {
