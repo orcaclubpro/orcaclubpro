@@ -10,6 +10,9 @@ export const metadata: Metadata = {
   title: "Project Development — ORCACLUB",
   description:
     "Understand what active project development looks like at ORCACLUB — sprint cycles, weekly updates, scope protection, and full asset ownership at closeout.",
+  alternates: {
+    canonical: 'https://orcaclub.pro/project/development',
+  },
   openGraph: {
     title: "Project Development — ORCACLUB",
     description:

@@ -10,6 +10,9 @@ export const metadata: Metadata = {
   title: "How We Work — ORCACLUB",
   description:
     "The full ORCACLUB engagement process — from initial discovery through final delivery. Four phases, structured sprints, and written updates at every step.",
+  alternates: {
+    canonical: 'https://orcaclub.pro/project/onboarding',
+  },
   openGraph: {
     title: "How We Work — ORCACLUB",
     description:

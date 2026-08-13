@@ -4,43 +4,40 @@ import * as React from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import {
-  X, ArrowRight, Clock, Code2, Palette, Server, Search,
-  BarChart3, Zap, Plug, Rocket, ShoppingBag, Target, User,
+  X, ArrowRight, Clock, Code2, Server, Search, Sparkles, MapPin,
+  TrendingUp, Megaphone, Rocket, ShoppingBag, Target, User,
   LogOut, LayoutDashboard, ChevronDown,
 } from "lucide-react"
+import type { LucideIcon } from "lucide-react"
 import { logoutAction } from "@/actions/auth"
 import { Cinzel_Decorative } from "next/font/google"
+import { NAV_ITEMS, type NavItem } from "@/data/nav"
+import { OFFERS } from "@/data/pricing"
 
 const gothic = Cinzel_Decorative({ weight: "700", subsets: ["latin"] })
 
-const services = [
-  { name: "Web Design",           description: "Modern, responsive websites",  href: "/services/web-design",         icon: Palette },
-  { name: "CMS Development",      description: "Headless CMS & Payload",        href: "/services/cms-development",    icon: Code2 },
-  { name: "Hosting & Infrastructure", description: "Managed hosting included",  href: "/services/hosting-infrastructure", icon: Server },
-  { name: "Technical SEO",        description: "Schema, speed & structure",     href: "/services/technical-seo",      icon: Search },
-  { name: "Custom Development",   description: "Portals, dashboards, SaaS",     href: "/services/custom-development", icon: Rocket },
-  { name: "E-commerce",           description: "Online stores & Shopify",       href: "/services/ecommerce",          icon: ShoppingBag },
-]
+/**
+ * Nav structure lives in src/data/nav.ts — this file only maps routes to icons,
+ * so labels, hrefs, and prices can never drift between header, footer, and page.
+ */
+const ICONS: Record<string, LucideIcon> = {
+  '/websites/payload-cms': Code2,
+  '/websites/shopify': ShoppingBag,
+  '/websites/custom-commerce': Rocket,
+  '/care': Server,
+  '/get-found/audit': Search,
+  '/get-found/growth': TrendingUp,
+  '/get-found/seo': Search,
+  '/get-found/local-visibility': MapPin,
+  '/get-found/ai-search': Sparkles,
+  '/get-found/google-ads': Target,
+  '/get-found/meta-ads': Megaphone,
+}
 
-const integrations = [
-  { name: "API Integrations",     description: "CRM, Shopify, custom APIs",     href: "/services/api-integrations",       icon: Plug },
-  { name: "Analytics & Tracking", description: "GA4, GTM, dashboards",          href: "/services/analytics-tracking",     icon: BarChart3 },
-  { name: "Marketing Integration",description: "Google Ads, Meta, LinkedIn",    href: "/services/marketing-integration",  icon: Target },
-  { name: "Automation & Workflows",description: "Business process automation",  href: "/services/automation-workflows",   icon: Zap },
-]
-
-const packages = [
-  { name: "Launch",     description: "Professional website in 3-5 days",       timeline: "3-5 days",   price: "$1K–3K",    href: "/packages/launch" },
-  { name: "Scale",      description: "Website + integrations & analytics",      timeline: "7-10 days",  price: "$3K–5K",    href: "/packages/scale", popular: true },
-  { name: "Enterprise", description: "Custom solutions & Shopify",              timeline: "14-21 days", price: "$6K–30K",   href: "/packages/enterprise" },
-]
-
-const quickLinks = [
-  { name: "All Pricing",      href: "/packages" },
-  { name: "Our Work",         href: "/portfolio" },
-  { name: "About",            href: "/about" },
-  { name: "Meet the Founder", href: "/founder" },
-]
+const HUBS = NAV_ITEMS.filter((item) => item.children?.length)
+const TOP_LINKS = NAV_ITEMS.filter(
+  (item) => !item.children?.length && !item.comingSoon && !item.external,
+)
 
 interface HeaderUser {
   username?: string | null
@@ -49,7 +46,8 @@ interface HeaderUser {
 
 export function Header({ user }: { user?: HeaderUser | null } = {}) {
   const [mobileMenuOpen, setMobileMenuOpen]   = React.useState(false)
-  const [dropdownOpen, setDropdownOpen]       = React.useState(false)
+  /** href of the hub whose dropdown is open, or null. */
+  const [openHub, setOpenHub]                 = React.useState<string | null>(null)
   const [profileOpen, setProfileOpen]         = React.useState(false)
   const [scrolled, setScrolled]               = React.useState(false)
   const [mounted, setMounted]                 = React.useState(false)
@@ -72,14 +70,14 @@ export function Header({ user }: { user?: HeaderUser | null } = {}) {
     return () => clearTimeout(t)
   }, [])
 
-  const openDropdown  = () => { clearTimeout(dropdownCloseTimer.current); setDropdownOpen(true) }
-  const closeDropdown = () => { dropdownCloseTimer.current = setTimeout(() => setDropdownOpen(false), 160) }
+  const openDropdown  = (href: string) => { clearTimeout(dropdownCloseTimer.current); setOpenHub(href) }
+  const closeDropdown = () => { dropdownCloseTimer.current = setTimeout(() => setOpenHub(null), 160) }
 
   const openProfile  = (e: React.MouseEvent) => {
     e.stopPropagation()
     clearTimeout(profileCloseTimer.current)
     clearTimeout(dropdownCloseTimer.current)
-    setDropdownOpen(false)
+    setOpenHub(null)
     setProfileOpen(true)
   }
   const closeProfile = () => { profileCloseTimer.current = setTimeout(() => setProfileOpen(false), 160) }
@@ -96,9 +94,8 @@ export function Header({ user }: { user?: HeaderUser | null } = {}) {
     : { name: 'Login', href: '/login' }
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
-  const isServicesActive = isActive('/services')
 
-  React.useEffect(() => { setMobileMenuOpen(false); setDropdownOpen(false) }, [pathname])
+  React.useEffect(() => { setMobileMenuOpen(false); setOpenHub(null) }, [pathname])
 
   React.useEffect(() => {
     document.body.style.overflow = mobileMenuOpen ? 'hidden' : 'unset'
@@ -144,32 +141,40 @@ export function Header({ user }: { user?: HeaderUser | null } = {}) {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex md:gap-x-7 items-center">
-            <NavLink href="/solutions" active={isActive('/solutions')}>Solutions</NavLink>
+            {/* One trigger per hub — each owns its own mega dropdown */}
+            {HUBS.map((hub) => {
+              const hubActive = isActive(hub.href)
+              const isOpen = openHub === hub.href
+              return (
+                <div
+                  key={hub.href}
+                  className="relative"
+                  onMouseEnter={() => openDropdown(hub.href)}
+                  onMouseLeave={closeDropdown}
+                >
+                  <Link
+                    href={hub.href}
+                    className={`relative flex items-center gap-1 text-[15px] font-medium pb-0.5 transition-colors duration-200 ${
+                      isOpen || hubActive ? 'text-white' : 'text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    {hub.label}
+                    <ChevronDown
+                      className={`w-3.5 h-3.5 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+                    />
+                    {hubActive && !isOpen && (
+                      <span className="absolute bottom-0 left-0 right-0 h-px bg-cyan-400/60 rounded-full" />
+                    )}
+                  </Link>
+                </div>
+              )
+            })}
 
-            {/* Services — owns the mega dropdown */}
-            <div
-              className="relative"
-              onMouseEnter={openDropdown}
-              onMouseLeave={closeDropdown}
-            >
-              <button
-                className={`relative flex items-center gap-1 text-[15px] font-medium pb-0.5 transition-colors duration-200 ${
-                  dropdownOpen || isServicesActive ? 'text-white' : 'text-zinc-400 hover:text-white'
-                }`}
-              >
-                Services
-                <ChevronDown
-                  className={`w-3.5 h-3.5 transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`}
-                />
-                {isServicesActive && !dropdownOpen && (
-                  <span className="absolute bottom-0 left-0 right-0 h-px bg-cyan-400/60 rounded-full" />
-                )}
-              </button>
-            </div>
-
-            <NavLink href="/project"  active={isActive('/project')}>Project</NavLink>
-            <NavLink href="/packages" active={isActive('/packages')}>Pricing</NavLink>
-            <NavLink href="/contact"  active={isActive('/contact')}>Contact</NavLink>
+            {TOP_LINKS.map((link) => (
+              <NavLink key={link.href} href={link.href} active={isActive(link.href)}>
+                {link.label}
+              </NavLink>
+            ))}
 
             {/* Profile / Login */}
             {dashboardHref ? (
@@ -238,133 +243,145 @@ export function Header({ user }: { user?: HeaderUser | null } = {}) {
           </div>
         </nav>
 
-        {/* Desktop Mega Dropdown — triggered by Services nav item */}
-        {dropdownOpen && (
-          <div
-            className="hidden md:block absolute left-0 right-0 top-full animate-slideDown"
-            onMouseEnter={openDropdown}
-            onMouseLeave={closeDropdown}
-          >
-            <div className="bg-zinc-900 shadow-2xl shadow-black/70 border-b border-zinc-800">
-              <div className="max-w-7xl mx-auto flex divide-x divide-zinc-800">
+        {/* Desktop Mega Dropdown — one per hub, driven by NAV_ITEMS */}
+        {HUBS.map((hub) => {
+          if (openHub !== hub.href) return null
+          const children = hub.children ?? []
+          const featured = children.filter((c) => c.featured)
+          const supporting = children.filter((c) => !c.featured)
 
-                {/* ── CAPABILITIES PANEL ── */}
-                <div className="flex-1 px-8 py-8">
+          return (
+            <div
+              key={hub.href}
+              className="hidden md:block absolute left-0 right-0 top-full animate-slideDown"
+              onMouseEnter={() => openDropdown(hub.href)}
+              onMouseLeave={closeDropdown}
+            >
+              <div className="bg-zinc-900 shadow-2xl shadow-black/70 border-b border-zinc-800">
+                <div className="max-w-7xl mx-auto flex divide-x divide-zinc-800">
 
-                  {/* Section label */}
-                  <div className="flex items-center gap-4 mb-6">
-                    <span className="text-[9px] tracking-[0.45em] uppercase font-semibold text-zinc-500">Capabilities</span>
-                    <div className="flex-1 h-px bg-zinc-800" />
-                  </div>
+                  {/* ── MONEY PAGES ── the numbered grid */}
+                  <div className="flex-1 px-8 py-8">
+                    <div className="flex items-center gap-4 mb-6">
+                      <span className="text-[9px] tracking-[0.45em] uppercase font-semibold text-zinc-500">
+                        {hub.label}
+                      </span>
+                      <div className="flex-1 h-px bg-zinc-800" />
+                    </div>
 
-                  {/* Numbered service grid — 2 columns */}
-                  <div className="grid grid-cols-2 gap-x-10 gap-y-0 mb-8">
-                    {services.map((service, i) => (
-                      <Link
-                        key={service.name}
-                        href={service.href}
-                        className="group relative flex items-start gap-4 py-3.5 border-b border-zinc-800/50 hover:border-zinc-700/60 transition-colors"
-                      >
-                        {/* Large extralight number — the distinctive element */}
-                        <span className="text-2xl font-extralight text-zinc-700 group-hover:text-cyan-400/50 transition-colors duration-200 tabular-nums leading-none mt-0.5 w-8 flex-shrink-0 select-none">
-                          {String(i + 1).padStart(2, '0')}
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-0.5">
-                            <service.icon className="h-3.5 w-3.5 text-zinc-600 group-hover:text-cyan-400 transition-colors duration-150 flex-shrink-0" />
-                            <p className="text-sm font-medium text-zinc-300 group-hover:text-white transition-colors">
-                              {service.name}
-                            </p>
-                          </div>
-                          <p className="text-xs text-zinc-600 font-light leading-relaxed">{service.description}</p>
-                        </div>
-                        <ArrowRight className="h-3.5 w-3.5 text-cyan-400/60 flex-shrink-0 mt-1 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200" />
-                      </Link>
-                    ))}
-                  </div>
+                    <div className="grid grid-cols-2 gap-x-10 gap-y-0 mb-8">
+                      {featured.map((item, i) => {
+                        const Icon = ICONS[item.href]
+                        const offer = item.priceKey ? OFFERS[item.priceKey] : null
+                        return (
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            className="group relative flex items-start gap-4 py-3.5 border-b border-zinc-800/50 hover:border-zinc-700/60 transition-colors"
+                          >
+                            <span className="text-2xl font-extralight text-zinc-700 group-hover:text-cyan-400/50 transition-colors duration-200 tabular-nums leading-none mt-0.5 w-8 flex-shrink-0 select-none">
+                              {String(i + 1).padStart(2, '0')}
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-0.5">
+                                {Icon && (
+                                  <Icon className="h-3.5 w-3.5 text-zinc-600 group-hover:text-cyan-400 transition-colors duration-150 flex-shrink-0" />
+                                )}
+                                <p className="text-sm font-medium text-zinc-300 group-hover:text-white transition-colors">
+                                  {item.label}
+                                </p>
+                              </div>
+                              <p className="text-xs text-zinc-600 font-light leading-relaxed mb-1">
+                                {item.description}
+                              </p>
+                              {offer && (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-mono text-zinc-500 group-hover:text-zinc-300 transition-colors">
+                                    {offer.priceDisplay}
+                                  </span>
+                                  {offer.timeline && (
+                                    <span className="flex items-center gap-1">
+                                      <Clock className="h-2.5 w-2.5 text-zinc-700 flex-shrink-0" />
+                                      <span className="text-xs text-zinc-600 font-light">{offer.timeline}</span>
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                            <ArrowRight className="h-3.5 w-3.5 text-cyan-400/60 flex-shrink-0 mt-1 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200" />
+                          </Link>
+                        )
+                      })}
+                    </div>
 
-                  {/* Integrations as compact badge pills */}
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <span className="text-[9px] tracking-[0.45em] uppercase font-semibold text-zinc-600 flex-shrink-0">Integrations</span>
-                    <div className="h-px w-4 bg-zinc-800 flex-shrink-0" />
-                    {integrations.map((item) => (
-                      <Link
-                        key={item.name}
-                        href={item.href}
-                        className="group flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-zinc-800 bg-zinc-800/30 hover:border-zinc-600 hover:bg-zinc-800 transition-all duration-150"
-                      >
-                        <item.icon className="h-3 w-3 text-zinc-600 group-hover:text-cyan-400 transition-colors" />
-                        <span className="text-xs text-zinc-500 group-hover:text-zinc-200 transition-colors">{item.name}</span>
-                      </Link>
-                    ))}
                     <Link
-                      href="/services"
-                      className="group flex items-center gap-1 text-xs text-cyan-400/50 hover:text-cyan-400 transition-colors ml-1"
+                      href={hub.href}
+                      className="group flex items-center gap-1 text-xs text-cyan-400/50 hover:text-cyan-400 transition-colors"
                     >
-                      All Services
+                      Everything in {hub.label}
                       <ArrowRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
                     </Link>
                   </div>
-                </div>
 
-                {/* ── PRICING PANEL ── */}
-                <div className="w-72 px-8 py-8 bg-zinc-800/20">
+                  {/* ── SUPPORTING ── spokes and related offers */}
+                  <div className="w-72 px-8 py-8 bg-zinc-800/20">
+                    <div className="flex items-center gap-4 mb-6">
+                      <span className="text-[9px] tracking-[0.45em] uppercase font-semibold text-zinc-500">
+                        {hub.href === '/get-found' ? 'Channels' : 'After Launch'}
+                      </span>
+                      <div className="flex-1 h-px bg-zinc-800" />
+                    </div>
 
-                  <div className="flex items-center gap-4 mb-6">
-                    <span className="text-[9px] tracking-[0.45em] uppercase font-semibold text-zinc-500">Pricing</span>
-                    <div className="flex-1 h-px bg-zinc-800" />
-                  </div>
-
-                  <div className="space-y-1 mb-6">
-                    {packages.map((pkg) => (
-                      <Link
-                        key={pkg.name}
-                        href={pkg.href}
-                        className="group flex items-center gap-3 px-3 py-3 rounded-lg border border-transparent hover:border-zinc-700/50 hover:bg-zinc-800/50 transition-all duration-150"
-                      >
-                        <div className="w-1.5 h-1.5 rounded-full bg-zinc-700 group-hover:bg-cyan-400 transition-colors flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-0.5">
-                            <span className="text-sm font-medium text-zinc-300 group-hover:text-white transition-colors">
-                              {pkg.name}
+                    <div className="space-y-0.5 mb-6">
+                      {supporting.map((item) => {
+                        const Icon = ICONS[item.href]
+                        return (
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            className="group flex items-center gap-3 px-3 py-2 rounded-lg border border-transparent hover:border-zinc-700/50 hover:bg-zinc-800/50 transition-all duration-150"
+                          >
+                            {Icon ? (
+                              <Icon className="h-3 w-3 text-zinc-600 group-hover:text-cyan-400 transition-colors flex-shrink-0" />
+                            ) : (
+                              <div className="w-1.5 h-1.5 rounded-full bg-zinc-700 group-hover:bg-cyan-400 transition-colors flex-shrink-0" />
+                            )}
+                            <span className="flex-1 text-sm text-zinc-400 group-hover:text-white transition-colors">
+                              {item.label}
                             </span>
-                            {pkg.popular && (
-                              <span className="text-[9px] font-medium text-cyan-400/80 border border-cyan-400/25 px-1.5 py-0.5 rounded-full tracking-wide">
-                                Popular
+                            {item.priceKey && (
+                              <span className="text-xs font-mono text-zinc-600 group-hover:text-zinc-400 transition-colors flex-shrink-0">
+                                {OFFERS[item.priceKey].priceDisplay}
                               </span>
                             )}
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-2.5 w-2.5 text-zinc-700 flex-shrink-0" />
-                            <span className="text-xs text-zinc-600 font-light">{pkg.timeline}</span>
-                          </div>
-                        </div>
-                        <span className="text-sm font-mono text-zinc-500 group-hover:text-zinc-300 transition-colors flex-shrink-0">
-                          {pkg.price}
-                        </span>
-                      </Link>
-                    ))}
-                  </div>
+                          </Link>
+                        )
+                      })}
+                    </div>
 
-                  <div className="border-t border-zinc-800 pt-4 space-y-0.5">
-                    {quickLinks.map((link) => (
+                    <div className="border-t border-zinc-800 pt-4 space-y-0.5">
                       <Link
-                        key={link.name}
-                        href={link.href}
+                        href="/pricing"
                         className="group flex items-center justify-between px-3 py-1.5 rounded-md hover:bg-zinc-800/50 transition-colors"
                       >
-                        <span className="text-xs text-zinc-600 group-hover:text-zinc-300 transition-colors">{link.name}</span>
+                        <span className="text-xs text-zinc-600 group-hover:text-zinc-300 transition-colors">All Pricing</span>
                         <ArrowRight className="h-3 w-3 text-zinc-700 group-hover:text-cyan-400/60 group-hover:translate-x-0.5 transition-all flex-shrink-0" />
                       </Link>
-                    ))}
+                      <Link
+                        href="/contact"
+                        className="group flex items-center justify-between px-3 py-1.5 rounded-md hover:bg-zinc-800/50 transition-colors"
+                      >
+                        <span className="text-xs text-zinc-600 group-hover:text-zinc-300 transition-colors">Start a project</span>
+                        <ArrowRight className="h-3 w-3 text-zinc-700 group-hover:text-cyan-400/60 group-hover:translate-x-0.5 transition-all flex-shrink-0" />
+                      </Link>
+                    </div>
                   </div>
 
                 </div>
-
               </div>
             </div>
-          </div>
-        )}
+          )
+        })}
       </header>
 
       {/* Mobile menu overlay */}
@@ -401,18 +418,49 @@ export function Header({ user }: { user?: HeaderUser | null } = {}) {
               </button>
             </div>
 
-            {/* Nav Links */}
+            {/* Nav Links — same NAV_ITEMS source as desktop, hubs expanded inline */}
             <div className="px-4 py-6 space-y-1">
-              {[
-                { name: 'Solutions', href: '/solutions' },
-                { name: 'Services',  href: '/services' },
-                { name: 'Project',   href: '/project' },
-                { name: 'Pricing',   href: '/packages' },
-                { name: 'Contact',   href: '/contact' },
-                { name: 'About',     href: '/about' },
-              ].map((item) => (
+              {HUBS.map((hub) => (
+                <div key={hub.href} className="pb-2">
+                  <Link
+                    href={hub.href}
+                    className={`flex items-center justify-between px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+                      isActive(hub.href)
+                        ? 'text-white bg-zinc-800/60'
+                        : 'text-zinc-400 hover:text-white hover:bg-zinc-800/40'
+                    }`}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    {hub.label}
+                    {isActive(hub.href) && <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 flex-shrink-0" />}
+                  </Link>
+                  <div className="mt-1 ml-4 pl-3 border-l border-zinc-800 space-y-0.5">
+                    {(hub.children ?? []).map((child) => (
+                      <Link
+                        key={child.href}
+                        href={child.href}
+                        className={`flex items-center justify-between px-4 py-2 rounded-lg text-sm transition-colors ${
+                          isActive(child.href)
+                            ? 'text-white bg-zinc-800/60'
+                            : 'text-zinc-500 hover:text-white hover:bg-zinc-800/40'
+                        }`}
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <span>{child.label}</span>
+                        {child.priceKey && (
+                          <span className="text-xs font-mono text-zinc-600 flex-shrink-0">
+                            {OFFERS[child.priceKey].priceDisplay}
+                          </span>
+                        )}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              ))}
+
+              {TOP_LINKS.map((item) => (
                 <Link
-                  key={item.name}
+                  key={item.href}
                   href={item.href}
                   className={`flex items-center justify-between px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
                     isActive(item.href)
@@ -421,7 +469,7 @@ export function Header({ user }: { user?: HeaderUser | null } = {}) {
                   }`}
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  {item.name}
+                  {item.label}
                   {isActive(item.href) && <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 flex-shrink-0" />}
                 </Link>
               ))}
