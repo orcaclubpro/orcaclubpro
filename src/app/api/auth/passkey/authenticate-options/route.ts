@@ -38,7 +38,9 @@ export async function POST(request: NextRequest) {
 
     const options = await generateAuthenticationOptions({
       rpID,
-      userVerification: 'preferred',
+      // Must match the assertion check in verify-authenticate — asking for
+      // anything less lets the authenticator skip the biometric entirely.
+      userVerification: 'required',
       allowCredentials,
     })
 

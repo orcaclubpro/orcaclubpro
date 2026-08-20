@@ -30,8 +30,12 @@ export async function POST(request: NextRequest) {
       attestationType: 'none',
       excludeCredentials,
       authenticatorSelection: {
-        residentKey: 'preferred',
-        userVerification: 'preferred',
+        // 'required' — not 'preferred'. The login page authenticates with no
+        // email, so it relies on discoverable credentials; a non-discoverable
+        // one leaves the browser nothing local to offer and it falls back to
+        // the cross-device QR / security-key picker.
+        residentKey: 'required',
+        userVerification: 'required',
         authenticatorAttachment: 'platform',
       },
     })

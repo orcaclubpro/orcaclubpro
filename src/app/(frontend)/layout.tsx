@@ -1,5 +1,6 @@
 import { HeaderServer } from "@/components/layout/header-server"
 import { Footer } from "@/components/layout/footer"
+import { PasskeyHotkey } from "@/components/auth/PasskeyHotkey"
 
 export default function FrontendLayout({
   children,
@@ -17,6 +18,8 @@ export default function FrontendLayout({
       <HeaderServer />
       <main id="main-content" className="pt-16">{children}</main>
       <Footer />
+      {/* Press "K" anywhere on the marketing site to sign in with a passkey. */}
+      <PasskeyHotkey />
     </>
   )
 }
