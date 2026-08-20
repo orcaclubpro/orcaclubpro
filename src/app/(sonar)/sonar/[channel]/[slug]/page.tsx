@@ -19,7 +19,10 @@ export async function generateMetadata({
   const { channel, slug } = await params
   const article = getArticle(channel, slug)
   if (!article) return { title: 'SONAR' }
-  return { title: `SONAR — ${channelName(article.channel)}` }
+  return {
+    title: `SONAR — ${channelName(article.channel)}`,
+    alternates: { canonical: `https://orcaclub.pro/sonar/${article.channel}/${article.slug}` },
+  }
 }
 
 export default async function ArticlePage({

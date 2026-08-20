@@ -25,7 +25,7 @@ export default function HeroSection({
   primaryButtonLabel = 'Join the Wait List',
   primaryButtonHref = '/contact',
   secondaryButtonLabel = 'Start a Project',
-  secondaryButtonHref = '/solutions',
+  secondaryButtonHref = '/pricing',
   showClientsCarousel = true,
 }: HeroSectionProps) {
   const repeated = clients.length > 0 && showClientsCarousel

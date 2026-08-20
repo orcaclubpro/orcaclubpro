@@ -39,7 +39,7 @@ export const HeroBlock: Block = {
     {
       name: 'secondaryButtonHref',
       type: 'text',
-      defaultValue: '/solutions',
+      defaultValue: '/websites',
       admin: {
         description: 'URL for the secondary CTA button',
       },

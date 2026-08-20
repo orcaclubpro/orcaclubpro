@@ -17,7 +17,10 @@ export async function generateMetadata({
   params: Promise<{ channel: string }>
 }): Promise<Metadata> {
   const { channel } = await params
-  return { title: `SONAR — ${channelName(channel)}` }
+  return {
+    title: `SONAR — ${channelName(channel)}`,
+    alternates: { canonical: `https://orcaclub.pro/sonar/${channel}` },
+  }
 }
 
 export default async function ChannelPage({
@@ -36,7 +39,7 @@ export default async function ChannelPage({
         <div className="eyebrow">
           <span className="dot" />
           <span className="label crumb">
-            <Link href="/">Sonar</Link>
+            <Link href="/sonar">Sonar</Link>
             <span className="sep">/</span>
             <span>{channelName(channel)}</span>
           </span>
@@ -48,7 +51,7 @@ export default async function ChannelPage({
           <p className="index-empty">No dispatches on this channel yet.</p>
         ) : (
           articles.map((a) => (
-            <Link className="index-row" key={a.slug} href={`/${a.channel}/${a.slug}`}>
+            <Link className="index-row" key={a.slug} href={`/sonar/${a.channel}/${a.slug}`}>
               <h2 className="card-title">{a.title}</h2>
               <div className="card-meta mono" style={{ marginTop: 8 }}>
                 {a.date} · {a.readTime}

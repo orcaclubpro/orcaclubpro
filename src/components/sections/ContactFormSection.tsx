@@ -396,8 +396,8 @@ export default function ContactFormSection({
   step3Sub = 'Pick the option that works best for you.',
   services = DEFAULT_SERVICES,
   showBookingOption = true,
-  footerLinkLabel = 'Our Packages',
-  footerLinkHref = '/packages',
+  footerLinkLabel = 'See Pricing',
+  footerLinkHref = '/pricing',
 }: ContactFormSectionProps) {
   const [step, setStep] = useState<Step>(1)
   const [dir, setDir] = useState(1)

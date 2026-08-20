@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { findExploitPattern } from '@/lib/security/exploit-patterns'
+import { GONE_PATHS } from '@/lib/seo/redirect-map.mjs'
 
 // ---------------------------------------------------------------------------
 // Simple in-memory rate limiter
@@ -63,13 +64,15 @@ function rateLimitedResponse(retryAfter: number): NextResponse {
   )
 }
 
-// Main-site paths that SONAR (on its subdomain) links back to. On the subdomain
-// these escape the /s filter and redirect out to the main ORCACLUB domain.
-const SONAR_ESCAPE_PATHS = ['/contact']
-
 export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   const url = pathname + request.nextUrl.search
+
+  // Retired pages with no topical successor: honest 410 (see redirect-map.mjs —
+  // next.config redirects() cannot emit 410, so these live here).
+  if (GONE_PATHS.includes(pathname)) {
+    return new NextResponse('Gone', { status: 410 })
+  }
 
   // SECURITY: Block requests containing exploit patterns (see
   // src/lib/security/exploit-patterns.ts — command patterns require shell
@@ -112,60 +115,9 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // SONAR subdomain routing — single project, two hosts, filtered by the `host`
-  // header. sonar.orcaclub.pro serves the (sonar) route group, which mounts
-  // internally at /s. Three rules keep the two surfaces cleanly separated:
-  //   1. subdomain: rewrite everything onto /s (non-SONAR paths 404 there).
-  //   2. subdomain: escape /contact etc. back out to the main ORCACLUB domain.
-  //   3. off-subdomain: /s is the internal mount and is never user-facing, so any
-  //      /s hit redirects to the subdomain — prod → sonar.orcaclub.pro, dev →
-  //      sonar.localhost (same port).
-  // Local dev: browse http://sonar.localhost:3000 (Chrome resolves *.localhost).
-  const host = (request.headers.get('host') || '').split(':')[0]
-  const isSonarHost =
-    host === 'sonar.orcaclub.pro' || host === 'sonar.localhost' || host.endsWith('.sonar.localhost')
-
-  if (isSonarHost) {
-    // Escape hatch: SONAR funnel CTAs point back to the main site (e.g. /contact).
-    // Those paths would otherwise be filtered onto /s and 404, so send them home.
-    if (SONAR_ESCAPE_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
-      const target = request.nextUrl.clone()
-      if (host === 'sonar.orcaclub.pro') {
-        target.protocol = 'https:'
-        target.hostname = 'orcaclub.pro'
-        target.port = ''
-      } else {
-        target.hostname = 'localhost' // dev: *.sonar.localhost → main site on localhost
-      }
-      return NextResponse.redirect(target)
-    }
-
-    // Filter: everything else resolves to the SONAR app mount. Non-SONAR paths
-    // 404 under /s, keeping the subdomain SONAR-only.
-    if (
-      !pathname.startsWith('/api') &&
-      !pathname.startsWith('/admin') &&
-      !pathname.startsWith('/s')
-    ) {
-      const rewriteUrl = request.nextUrl.clone()
-      rewriteUrl.pathname = `/s${pathname === '/' ? '' : pathname}`
-      return NextResponse.rewrite(rewriteUrl)
-    }
-  } else if (pathname === '/s' || pathname.startsWith('/s/')) {
-    // /s is internal — send it to the subdomain so the app has one canonical home.
-    const target = request.nextUrl.clone()
-    if (host === 'orcaclub.pro' || host === 'www.orcaclub.pro') {
-      target.protocol = 'https:'
-      target.hostname = 'sonar.orcaclub.pro'
-      target.port = ''
-    } else if (host === 'localhost') {
-      target.hostname = 'sonar.localhost' // dev — port is preserved by clone()
-    } else {
-      return NextResponse.next() // other hosts (e.g. LAN IP): serve /s in place
-    }
-    target.pathname = pathname.replace(/^\/s/, '') || '/'
-    return NextResponse.redirect(target)
-  }
+  // SONAR lives at orcaclub.pro/sonar since the Phase-2 cutover. The old
+  // subdomain (sonar.orcaclub.pro) and internal /s mount 301 to it via
+  // next.config.mjs redirects() — no host-based routing left here.
 
   // Smart redirect: returning visitors with an active session go straight to their dashboard
   if (pathname === '/') {

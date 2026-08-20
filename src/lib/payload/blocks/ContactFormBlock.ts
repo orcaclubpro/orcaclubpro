@@ -147,7 +147,7 @@ export const ContactFormBlock: Block = {
             {
               name: 'footerLinkHref',
               type: 'text',
-              defaultValue: '/packages',
+              defaultValue: '/pricing',
               admin: { width: '50%' },
             },
           ],

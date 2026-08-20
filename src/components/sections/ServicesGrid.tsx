@@ -110,7 +110,7 @@ function WebDevSection() {
               triggerText="Get a Quote"
             />
             <Link
-              href="/services/web-development"
+              href="/websites"
               className="inline-flex items-center gap-2 px-6 py-3 bg-cyan-400/10 border border-cyan-400/20 rounded-lg text-sm font-medium text-cyan-400 hover:bg-cyan-400/20 transition-all duration-300 group"
             >
               Learn More <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -268,7 +268,7 @@ function MarketingSection() {
               triggerText="Get a Quote"
             />
             <Link
-              href="/services/digital-marketing"
+              href="/get-found"
               className="inline-flex items-center gap-2 px-6 py-3 bg-cyan-400/10 border border-cyan-400/20 rounded-lg text-sm font-medium text-cyan-400 hover:bg-cyan-400/20 transition-all duration-300 group"
             >
               Learn More <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -403,7 +403,7 @@ function SEOSection() {
               triggerText="Get a Quote"
             />
             <Link
-              href="/services/seo-services"
+              href="/get-found/seo"
               className="inline-flex items-center gap-2 px-6 py-3 bg-cyan-400/10 border border-cyan-400/20 rounded-lg text-sm font-medium text-cyan-400 hover:bg-cyan-400/20 transition-all duration-300 group"
             >
               Learn More <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />

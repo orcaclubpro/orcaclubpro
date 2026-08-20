@@ -604,9 +604,9 @@ function Eyebrow({ article }: { article: SonarArticle }) {
     <div className="eyebrow">
       {isFieldNote ? <span className="star">★</span> : <span className="dot" />}
       <span className="label crumb">
-        <Link href="/">Sonar</Link>
+        <Link href="/sonar">Sonar</Link>
         <span className="sep">/</span>
-        <Link href={`/${article.channel}`}>{channelName(article.channel)}</Link>
+        <Link href={`/sonar/${article.channel}`}>{channelName(article.channel)}</Link>
       </span>
       <span className="mono" style={{ color: 'var(--faint)' }}>
         {noLabel}

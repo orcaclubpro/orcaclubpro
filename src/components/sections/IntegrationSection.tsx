@@ -76,7 +76,7 @@ export default function IntegrationSection() {
             transition={{ delay: 1.2 }}
           >
             <Link
-              href="/services/integration-automation"
+              href="/websites/custom-commerce"
               className="inline-flex items-center gap-2 px-6 py-3 bg-cyan-400/10 border border-cyan-400/20 rounded-lg text-sm font-medium text-cyan-400 hover:bg-cyan-400/20 transition-all duration-300 group"
             >
               Learn More <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />

@@ -1,8 +1,8 @@
 /**
- * NEW information-architecture nav data (hub-and-spoke funnel).
+ * Information-architecture nav data (hub-and-spoke funnel).
  *
- * Consumed by the header mega-dropdowns. The footer still uses its own
- * hardcoded links until cutover.
+ * Consumed by the header mega-dropdowns (NAV_ITEMS) and the footer
+ * (FOOTER_LINKS) — the single source of truth for marketing-site links.
  *
  * Hub children are split by `featured`: featured children are the money pages
  * (they carry a price and lead the dropdown), the rest are supporting spokes
@@ -113,7 +113,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Pricing', href: '/pricing' },
   // /work is not built yet (needs the case-studies collection + real material).
   { label: 'Work', href: '/work', comingSoon: true },
-  { label: 'Sonar', href: 'https://sonar.orcaclub.pro', external: true },
+  { label: 'Sonar', href: '/sonar' },
   { label: 'Contact', href: '/contact' },
   { label: 'About', href: '/about' },
 ]
@@ -146,10 +146,10 @@ export const FOOTER_LINKS: FooterColumn[] = [
     heading: 'Company',
     links: [
       { label: 'Pricing', href: '/pricing' },
-      { label: 'Work', href: '/work' },
+      { label: 'Work', href: '/work', comingSoon: true },
       { label: 'About', href: '/about' },
       { label: 'Contact', href: '/contact' },
-      { label: 'Sonar', href: 'https://sonar.orcaclub.pro', external: true },
+      { label: 'Sonar', href: '/sonar' },
     ],
   },
   {

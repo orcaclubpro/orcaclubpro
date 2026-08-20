@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { OFFERS } from "@/data/pricing"
 
 interface FormData {
   name: string
@@ -341,14 +342,12 @@ export function ContactForm() {
                     className="w-full px-3 py-2 bg-white/5 border border-white/20 text-white rounded-md focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none"
                   >
                     <option value="" className="bg-black">Select a package...</option>
-                    <option value="launch" className="bg-black">Launch Tier ($1K-3K, 3-5 days)</option>
-                    <option value="scale" className="bg-black">Scale Tier ($3K-5K, 7-10 days)</option>
-                    <option value="enterprise" className="bg-black">Enterprise Tier ($6K-30K, 14-21 days)</option>
-                    <option value="maintenance-essential" className="bg-black">Essential Maintenance ($300/mo)</option>
-                    <option value="maintenance-growth" className="bg-black">Growth Maintenance ($600/mo)</option>
-                    <option value="maintenance-partner" className="bg-black">Partner Maintenance ($1,200/mo)</option>
-                    <option value="hourly" className="bg-black">Custom Hourly Work ($75/hr)</option>
-                    <option value="not-sure" className="bg-black">Not Sure - Need Consultation</option>
+                    {Object.entries(OFFERS).map(([key, offer]) => (
+                      <option key={key} value={key} className="bg-black">
+                        {offer.name} ({offer.priceDisplay})
+                      </option>
+                    ))}
+                    <option value="not-sure" className="bg-black">Not Sure — Need Consultation</option>
                   </select>
                 </div>
 
@@ -517,14 +516,12 @@ export function ContactForm() {
                     className="w-full px-3 py-2 bg-white/5 border border-white/20 text-white rounded-md focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none"
                   >
                     <option value="" className="bg-black">Select a package...</option>
-                    <option value="launch" className="bg-black">Launch Tier ($1K-3K, 3-5 days)</option>
-                    <option value="scale" className="bg-black">Scale Tier ($3K-5K, 7-10 days)</option>
-                    <option value="enterprise" className="bg-black">Enterprise Tier ($6K-30K, 14-21 days)</option>
-                    <option value="maintenance-essential" className="bg-black">Essential Maintenance ($300/mo)</option>
-                    <option value="maintenance-growth" className="bg-black">Growth Maintenance ($600/mo)</option>
-                    <option value="maintenance-partner" className="bg-black">Partner Maintenance ($1,200/mo)</option>
-                    <option value="hourly" className="bg-black">Custom Hourly Work ($75/hr)</option>
-                    <option value="not-sure" className="bg-black">Not Sure - Need Consultation</option>
+                    {Object.entries(OFFERS).map(([key, offer]) => (
+                      <option key={key} value={key} className="bg-black">
+                        {offer.name} ({offer.priceDisplay})
+                      </option>
+                    ))}
+                    <option value="not-sure" className="bg-black">Not Sure — Need Consultation</option>
                   </select>
                 </div>
 

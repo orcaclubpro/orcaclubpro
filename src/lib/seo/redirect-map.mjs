@@ -1,12 +1,10 @@
 // Legacy → new-IA redirect map. Single source of truth, consumed by
 // next.config.mjs redirects() (301s) and src/middleware.ts (410s).
 //
-// NOT WIRED YET — this activates at rework Phase 2 cutover, in the same deploy
-// that ships the new pages and deletes the old routes. Until then it is
-// documentation-as-data. See docs/FRONTEND_REWORK_PLAN.md.
+// LIVE since the Phase-2 cutover (Aug 2026). Keep entries ≥ 1 year.
 //
 // Rules: one hop only (no chains); every destination must exist and be
-// indexable at cutover. Plain .mjs so next.config.mjs can import it.
+// indexable. Plain .mjs so next.config.mjs can import it.
 
 export const LEGACY_REDIRECTS = [
   // --- services → /websites cluster
@@ -58,11 +56,16 @@ export const LEGACY_REDIRECTS = [
   { source: '/project/development', destination: '/contact' },
   { source: '/project/onboarding', destination: '/contact' },
   { source: '/consultations', destination: '/contact' },
-  { source: '/portfolio', destination: '/work' },
+  // Retarget /portfolio → /work when /work ships with real case studies.
+  { source: '/portfolio', destination: '/websites' },
   { source: '/insights', destination: '/sonar' },
-  // TODO(decision): keep /about live (recommended) — if so, delete this pair
-  // and add /founder → /about instead.
-  { source: '/founder', destination: '/' },
+  // /about stays live in the new IA; the solo-operator story folds into it.
+  { source: '/founder', destination: '/about' },
+
+  // --- SONAR consolidation: the internal /s mount is gone; the subdomain
+  // 301s to the main domain via the host-scoped rules in next.config.mjs.
+  { source: '/s', destination: '/sonar' },
+  { source: '/s/:path*', destination: '/sonar/:path*' },
 ]
 
 // Pages with no topical successor and no meaningful backlinks: honest 410

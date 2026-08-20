@@ -12,18 +12,17 @@ import { useSonarTheme } from './theme'
  * scan. Collapses to a top bar under 720px via sonar.css.
  */
 export function Spine() {
-  const pathname = usePathname() || '/'
-  // The app only renders on the subdomain (middleware redirects /s there and
-  // rewrites the clean paths onto /s internally), so links are root-relative.
+  const pathname = usePathname() || '/sonar'
+  // SONAR mounts at /sonar on the main domain, so all links carry the prefix.
   const isActive = (slug: string) =>
-    pathname === `/${slug}` || pathname.startsWith(`/${slug}/`)
+    pathname === `/sonar/${slug}` || pathname.startsWith(`/sonar/${slug}/`)
 
   const channels = CHANNELS.filter((c) => c.group === 'channels')
   const studio = CHANNELS.filter((c) => c.group === 'studio')
 
   return (
     <nav className="spine">
-      <Link className="brand" href="/" aria-label="SONAR by ORCACLUB — home">
+      <Link className="brand" href="/sonar" aria-label="SONAR by ORCACLUB — home">
         <Image className="orca" src="/sonar/orca.png" alt="" width={50} height={50} priority />
         <Image className="word" src="/sonar/word.png" alt="SONAR" width={128} height={34} priority />
         <span className="subline">
@@ -41,7 +40,7 @@ export function Spine() {
             <Link
               key={c.slug}
               className={`chap${isActive(c.slug) ? ' active' : ''}`}
-              href={`/${c.slug}`}
+              href={`/sonar/${c.slug}`}
               style={{ animationDelay: `${0.2 + i * 0.06}s` }}
             >
               <span className="name">{c.name}</span>
@@ -64,7 +63,7 @@ export function Spine() {
             <Link
               key={c.slug}
               className={`chap${isActive(c.slug) ? ' active' : ''}`}
-              href={`/${c.slug}`}
+              href={`/sonar/${c.slug}`}
               style={{ animationDelay: `${0.2 + (channels.length + i) * 0.06}s` }}
             >
               <span className="name">{c.name}</span>

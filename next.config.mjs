@@ -1,4 +1,5 @@
 import { withPayload } from '@payloadcms/next/withPayload';
+import { LEGACY_REDIRECTS } from './src/lib/seo/redirect-map.mjs';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -77,7 +78,38 @@ const nextConfig = {
   },
   
   async redirects() {
-    return [];
+    return [
+      // SONAR subdomain → main domain. Host-scoped so these only fire on
+      // sonar.orcaclub.pro. The explicit /s rules come first so an old
+      // internal-mount URL lands on /sonar/* in one hop, not /sonar/s/*.
+      {
+        source: '/s',
+        has: [{ type: 'host', value: 'sonar.orcaclub.pro' }],
+        destination: 'https://orcaclub.pro/sonar',
+        permanent: true,
+      },
+      {
+        source: '/s/:path*',
+        has: [{ type: 'host', value: 'sonar.orcaclub.pro' }],
+        destination: 'https://orcaclub.pro/sonar/:path*',
+        permanent: true,
+      },
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'sonar.orcaclub.pro' }],
+        destination: 'https://orcaclub.pro/sonar/:path*',
+        permanent: true,
+      },
+
+      // Legacy IA → new IA (Phase-2 cutover). Single source of truth:
+      // src/lib/seo/redirect-map.mjs. Order matters — static /solutions/*
+      // entries precede the :slug catch-all.
+      ...LEGACY_REDIRECTS.map(({ source, destination }) => ({
+        source,
+        destination,
+        permanent: true,
+      })),
+    ];
   },
 
   // SECURITY: Enhanced security headers

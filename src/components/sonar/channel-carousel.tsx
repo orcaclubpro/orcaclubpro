@@ -100,7 +100,7 @@ export function ChannelCarousel({ channels }: { channels: CarouselChannel[] }) {
               </div>
 
               <div className="cx-actions">
-                <Link className="cx-enter" href={`/${c.slug}`} tabIndex={i === active ? 0 : -1}>
+                <Link className="cx-enter" href={`/sonar/${c.slug}`} tabIndex={i === active ? 0 : -1}>
                   Enter {c.name} <span className="ar">→</span>
                 </Link>
                 <span className="cx-count mono">
