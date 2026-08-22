@@ -55,7 +55,7 @@ const RetainerTimeEntries: CollectionConfig = {
         { label: 'Draft', value: 'draft' },
         { label: 'Logged', value: 'logged' },
       ],
-      admin: { description: 'Draft = a planned task with no hours yet; Logged = actual time counted against the cap.' },
+      admin: { description: 'Draft = planned work, hours are an ESTIMATE and never count against the cap; Logged = actual time counted against the cap.' },
     },
     {
       name: 'category',

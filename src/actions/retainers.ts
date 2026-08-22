@@ -8,7 +8,7 @@ import { deriveRecapDefaults, mergeRecap, RECAP_CATEGORY_LABEL, type RecapData }
 import { getStripe } from '@/lib/stripe'
 import { resolveStripeCustomer } from '@/lib/stripe/customers'
 import { createStripeInvoiceForOrder, assertOrderPersisted } from '@/lib/stripe/invoices'
-import { buildRetainerStatementPdf, buildRetainerRecapPdf } from '@/lib/pdf-generators'
+import { buildRetainerStatementPdf, buildRetainerRecapPdf, buildRetainerProposalPdf } from '@/lib/pdf-generators'
 import {
   generateGenericInvoiceEmail,
   generateGenericInvoiceEmailText,
@@ -19,11 +19,16 @@ import {
   generateRetainerRecapEmailText,
   retainerRecapEmailSubject,
 } from '@/lib/payload/utils/retainerRecapEmailTemplate'
+import {
+  generateRetainerProposalEmail,
+  generateRetainerProposalEmailText,
+  retainerProposalEmailSubject,
+} from '@/lib/payload/utils/retainerProposalEmailTemplate'
 
 // ── Shared shapes ───────────────────────────────────────────────────────────────
 
 export type RetainerTier = 'basic' | 'growth' | 'enterprise'
-export type RetainerStatus = 'active' | 'inactive'
+export type RetainerStatus = 'scoping' | 'active' | 'inactive'
 export type TimeEntryCategory = 'work' | 'meeting' | 'revision' | 'reporting'
 export type TimeEntryPriority = 'low' | 'medium' | 'high'
 export type TimeEntryCompletion = 'incomplete' | 'complete'
@@ -33,6 +38,7 @@ export interface RetainerDoc {
   id: string
   clientAccount: string | { id: string }
   tier: RetainerTier
+  /** `scoping` = agreed, no plan yet: no cycle, no cap, nothing billable. */
   status: RetainerStatus
   monthlyFee?: number | null
   hoursPerMonth?: number | null
@@ -41,6 +47,19 @@ export interface RetainerDoc {
   activatedAt?: string | null
   deactivateOn?: string | null
   notes?: string | null
+  // The pitch headline. Scope ITEMS are draft/logged time entries, not a field here.
+  scopeSummary?: string | null
+  // The priced offer sent before activation. Kept apart from the live terms so a
+  // proposal can never be billed off — activation copies these across.
+  proposedTier?: RetainerTier | null
+  proposedMonthlyFee?: number | null
+  proposedHoursPerMonth?: number | null
+  proposedOverageRate?: number | null
+  proposedStartDate?: string | null
+  proposalIncludesCompletedWork?: boolean | null
+  proposalNote?: string | null
+  proposalSentAt?: string | null
+  proposalSentTo?: { email?: string | null }[] | null
   // One scheduled change that takes effect next cycle (see setRetainer/settle).
   pendingTier?: RetainerTier | null
   pendingMonthlyFee?: number | null
@@ -137,6 +156,31 @@ function anchorOf(r: RetainerDoc): string {
   return iso(r.activatedAt) ?? iso(r.startDate) ?? new Date().toISOString()
 }
 
+/** Scoped but not yet on a plan — no cycle, no cap, nothing loggable or billable. */
+function isScoping(r: RetainerDoc | null | undefined): boolean {
+  return r?.status === 'scoping'
+}
+
+/** What a scoping retainer has accumulated — the evidence pricing is set from. */
+export interface RetainerPitch {
+  /** Estimated hours across planned (draft) items — the recurring monthly ask. */
+  plannedHours: number
+  /** Hours already worked and logged during scoping. */
+  doneHours: number
+  plannedCount: number
+  doneCount: number
+}
+
+function computePitch(drafts: TimeEntryDoc[], logged: TimeEntryDoc[]): RetainerPitch {
+  const sum = (xs: TimeEntryDoc[]) => Math.round(xs.reduce((t, e) => t + (e.hours ?? 0), 0) * 100) / 100
+  return {
+    plannedHours: sum(drafts),
+    doneHours: sum(logged),
+    plannedCount: drafts.length,
+    doneCount: logged.length,
+  }
+}
+
 const EMPTY_CATEGORIES: Record<TimeEntryCategory, number> = {
   work: 0,
   meeting: 0,
@@ -215,6 +259,10 @@ async function settleRetainer(
   retainer: RetainerDoc,
   nowIso: string,
 ): Promise<RetainerDoc> {
+  // Scoping retainers carry no anchor, no pending change, and no deactivation date —
+  // there is nothing for the clock to promote or expire.
+  if (isScoping(retainer)) return retainer
+
   const updates: Record<string, unknown> = {}
   const deactivateOn = iso(retainer.deactivateOn)
   const pendingFrom = iso(retainer.pendingEffectiveFrom)
@@ -241,22 +289,30 @@ async function settleRetainer(
   return settled as unknown as RetainerDoc
 }
 
-/** The client's current active retainer (settled), or null if none / just expired. */
-async function loadActiveRetainer(
+/**
+ * The client's current LIVE retainer (settled) — active, or still being scoped.
+ * Null if there is none, or if the only one just expired. Scoping and active are
+ * both "live" because a client can only have one engagement in flight at a time.
+ */
+async function loadLiveRetainer(
   payload: Awaited<ReturnType<typeof getPayload>>,
   clientAccountId: string,
   nowIso: string,
 ): Promise<RetainerDoc | null> {
   const { docs } = await payload.find({
     collection: 'retainers',
-    where: { and: [{ clientAccount: { equals: clientAccountId } }, { status: { equals: 'active' } }] },
+    where: {
+      and: [{ clientAccount: { equals: clientAccountId } }, { status: { in: ['active', 'scoping'] } }],
+    },
+    // Active wins if both somehow exist — scoping sorts after it alphabetically.
+    sort: 'status',
     limit: 1,
     depth: 0,
   })
   const raw = (docs[0] as RetainerDoc | undefined) ?? null
   if (!raw) return null
   const settled = await settleRetainer(payload, raw, nowIso)
-  return settled.status === 'active' ? settled : null
+  return settled.status === 'active' || settled.status === 'scoping' ? settled : null
 }
 
 // ── Reads ────────────────────────────────────────────────────────────────────────
@@ -274,7 +330,7 @@ export async function getRetainerSummary(clientAccountId: string, refDate?: stri
 
     const payload = await getPayload({ config })
     const now = new Date().toISOString()
-    const retainer = await loadActiveRetainer(payload, clientAccountId, now)
+    const retainer = await loadLiveRetainer(payload, clientAccountId, now)
 
     if (!retainer) {
       return {
@@ -289,6 +345,49 @@ export async function getRetainerSummary(clientAccountId: string, refDate?: stri
         client: null as RetainerClientInfo | null,
         cycleInvoice: null as RetainerCycleInvoice | null,
         nextCycle: null as RetainerNextCycle | null,
+        pitch: null as RetainerPitch | null,
+        proposal: null as RetainerProposalTerms | null,
+      }
+    }
+
+    // ── Scoping: no anchor, so no cycle to slice by ────────────────────────────
+    // Return the whole pitch instead — every planned and completed item logged since
+    // scoping began. Null cycle/terms is what keeps this out of the billing paths
+    // (see getRetainerBillingModel, which refuses without them).
+    if (isScoping(retainer)) {
+      const [{ docs: scopeDocs }, scopeAccount] = await Promise.all([
+        payload.find({
+          collection: 'retainer-time-entries',
+          where: { retainer: { equals: retainer.id } },
+          sort: '-date',
+          depth: 0,
+          limit: 500,
+        }),
+        payload.findByID({ collection: 'client-accounts', id: clientAccountId, depth: 0 }).catch(() => null),
+      ])
+      const scopeAll = scopeDocs as TimeEntryDoc[]
+      const scopeLogged = scopeAll.filter((e) => e.status !== 'draft')
+      const scopeDrafts = scopeAll.filter((e) => e.status === 'draft')
+      return {
+        success: true as const,
+        retainer,
+        cycle: null,
+        terms: null,
+        logged: scopeLogged,
+        drafts: scopeDrafts,
+        totals: computeTotals(scopeLogged, 0, retainer.overageRate ?? 65),
+        scheduled: null,
+        client: scopeAccount
+          ? {
+              name: (scopeAccount as any).name ?? 'Client',
+              company: ((scopeAccount as any).company ?? null) as string | null,
+              email: ((scopeAccount as any).email ?? null) as string | null,
+            }
+          : null,
+        cycleInvoice: null as RetainerCycleInvoice | null,
+        nextCycle: null as RetainerNextCycle | null,
+        pitch: computePitch(scopeDrafts, scopeLogged),
+        proposal: proposalTermsOf(retainer),
       }
     }
 
@@ -388,6 +487,8 @@ export async function getRetainerSummary(clientAccountId: string, refDate?: stri
       client,
       cycleInvoice,
       nextCycle: nextCycleInfo,
+      pitch: null as RetainerPitch | null,
+      proposal: null as RetainerProposalTerms | null,
     }
   } catch (error) {
     console.error('[getRetainerSummary]', error)
@@ -397,7 +498,7 @@ export async function getRetainerSummary(clientAccountId: string, refDate?: stri
 
 // ── Portfolio ──────────────────────────────────────────────────────────────────
 
-export type RetainerHealth = 'healthy' | 'warning' | 'over' | 'open'
+export type RetainerHealth = 'healthy' | 'warning' | 'over' | 'open' | 'scoping'
 
 export interface RetainerPortfolioRow {
   clientAccountId: string
@@ -411,13 +512,18 @@ export interface RetainerPortfolioRow {
   overageHours: number
   overageAmount: number
   remaining: number
-  daysLeft: number // days remaining in the current cycle
+  daysLeft: number // days remaining in the current cycle (0 while scoping)
   cycleLabel: string
   deactivateOn: string | null
   health: RetainerHealth
+  /** Set only on scoping rows — the pitch waiting to be priced. */
+  pitch: RetainerPitch | null
+  /** Set only on scoping rows — when the proposal was last sent, if ever. */
+  proposalSentAt: string | null
 }
 
-const HEALTH_RANK: Record<RetainerHealth, number> = { over: 0, warning: 1, healthy: 2, open: 3 }
+// Scoping sits last: it is a to-do ("price this"), not a burn problem.
+const HEALTH_RANK: Record<RetainerHealth, number> = { over: 0, warning: 1, healthy: 2, open: 3, scoping: 4 }
 
 /**
  * Every active retainer with its current-cycle burn — the manager's book at a glance.
@@ -434,18 +540,18 @@ export async function getRetainerPortfolio() {
 
     const { docs } = await payload.find({
       collection: 'retainers',
-      where: { status: { equals: 'active' } },
+      where: { status: { in: ['active', 'scoping'] } },
       limit: 200,
       depth: 0,
     })
 
     // Settle each against the clock (promote pending terms / flip due deactivations),
-    // then drop any that just expired.
+    // then drop any that just expired. Scoping rows settle to themselves.
     const settled = (
       await Promise.all(
         (docs as RetainerDoc[]).map(async (r) => {
           const s = await settleRetainer(payload, r, now)
-          return s.status === 'active' ? s : null
+          return s.status === 'active' || s.status === 'scoping' ? s : null
         }),
       )
     ).filter(Boolean) as RetainerDoc[]
@@ -465,6 +571,42 @@ export async function getRetainerPortfolio() {
     const rows = await Promise.all(
       settled.map(async (r): Promise<RetainerPortfolioRow> => {
         const clientAccountId = typeof r.clientAccount === 'object' ? r.clientAccount.id : r.clientAccount
+
+        // ── Scoping row: no cycle, so report the pitch waiting to be priced ─────
+        if (isScoping(r)) {
+          const { docs: scopeEntries } = await payload.find({
+            collection: 'retainer-time-entries',
+            where: { retainer: { equals: r.id } },
+            depth: 0,
+            limit: 500,
+          })
+          const all = scopeEntries as TimeEntryDoc[]
+          const pitch = computePitch(
+            all.filter((e) => e.status === 'draft'),
+            all.filter((e) => e.status !== 'draft'),
+          )
+          const scopeAcct = nameById.get(clientAccountId)
+          return {
+            clientAccountId,
+            clientName: scopeAcct?.name ?? 'Client',
+            clientCompany: scopeAcct?.company ?? null,
+            retainerId: r.id,
+            tier: r.tier,
+            used: pitch.doneHours,
+            cap: 0,
+            pct: 0,
+            overageHours: 0,
+            overageAmount: 0,
+            remaining: 0,
+            daysLeft: 0,
+            cycleLabel: 'Not started',
+            deactivateOn: null,
+            health: 'scoping',
+            pitch,
+            proposalSentAt: iso(r.proposalSentAt),
+          }
+        }
+
         const cycle = cycleFor(anchorOf(r), now)
         const terms = effectiveTerms(r, cycle.start)
 
@@ -508,6 +650,8 @@ export async function getRetainerPortfolio() {
           cycleLabel: cycle.label,
           deactivateOn: iso(r.deactivateOn),
           health,
+          pitch: null,
+          proposalSentAt: null,
         }
       }),
     )
@@ -528,9 +672,16 @@ export async function getRetainerPortfolio() {
 // ── Writes ───────────────────────────────────────────────────────────────────────
 
 /**
- * Create a client's retainer, or change an existing one. Initial setup applies
- * immediately. Editing an ACTIVE retainer's terms schedules them for the next billing
- * cycle (pending slot); notes/start date apply immediately. Staff only.
+ * Create a client's retainer, or change an existing one.
+ *
+ * `mode: 'scope'` creates it in the SCOPING state instead: no fee, no hour cap, no
+ * cycle anchor. Staff then pitch planned and completed work against it and set
+ * pricing afterwards via `activateRetainerPlan`.
+ *
+ * Editing an ACTIVE retainer's terms schedules them for the next billing cycle
+ * (pending slot); notes/start date apply immediately. Editing a SCOPING retainer
+ * applies everything at once — nothing is billing yet, so there is no cycle to
+ * defer to. Staff only.
  */
 export async function setRetainer(input: {
   clientAccountId: string
@@ -540,6 +691,9 @@ export async function setRetainer(input: {
   overageRate?: number | null
   startDate?: string | null
   notes?: string | null
+  scopeSummary?: string | null
+  /** 'scope' defers pricing; 'plan' (default) sets terms and activates immediately. */
+  mode?: 'plan' | 'scope'
   retainerId?: string
 }) {
   try {
@@ -560,7 +714,10 @@ export async function setRetainer(input: {
     } else {
       const { docs } = await payload.find({
         collection: 'retainers',
-        where: { and: [{ clientAccount: { equals: input.clientAccountId } }, { status: { equals: 'active' } }] },
+        where: {
+          and: [{ clientAccount: { equals: input.clientAccountId } }, { status: { in: ['active', 'scoping'] } }],
+        },
+        sort: 'status',
         limit: 1,
         depth: 0,
       })
@@ -568,22 +725,40 @@ export async function setRetainer(input: {
     }
     if (existing) existing = await settleRetainer(payload, existing, now)
 
-    // No active retainer → create immediately.
-    if (!existing || existing.status !== 'active') {
+    // Nothing live for this client → create. Scope mode withholds fee/cap so no
+    // cycle anchor is stamped and nothing can be billed until pricing is set.
+    if (!existing || (existing.status !== 'active' && existing.status !== 'scoping')) {
+      const scopeMode = input.mode === 'scope'
       const created = await payload.create({
         collection: 'retainers',
         data: {
           clientAccount: input.clientAccountId,
           tier: input.tier,
-          status: 'active',
-          monthlyFee: input.monthlyFee ?? undefined,
-          hoursPerMonth: input.hoursPerMonth ?? undefined,
+          status: scopeMode ? 'scoping' : 'active',
+          monthlyFee: scopeMode ? undefined : (input.monthlyFee ?? undefined),
+          hoursPerMonth: scopeMode ? undefined : (input.hoursPerMonth ?? undefined),
           overageRate,
           startDate: input.startDate ? dayToIso(input.startDate) : undefined,
           notes: input.notes ?? undefined,
+          scopeSummary: input.scopeSummary ?? undefined,
         } as any,
       })
       return { success: true as const, id: created.id, scheduledFor: null as string | null }
+    }
+
+    // Editing a scoping retainer — nothing is billing, so everything applies now.
+    if (existing.status === 'scoping') {
+      await payload.update({
+        collection: 'retainers',
+        id: existing.id,
+        data: {
+          tier: input.tier,
+          startDate: input.startDate ? dayToIso(input.startDate) : undefined,
+          notes: input.notes ?? undefined,
+          scopeSummary: input.scopeSummary ?? undefined,
+        } as any,
+      })
+      return { success: true as const, id: existing.id, scheduledFor: null as string | null }
     }
 
     // Editing an active retainer: notes/start date now; term changes next cycle.
@@ -596,6 +771,7 @@ export async function setRetainer(input: {
     const data: Record<string, unknown> = {
       startDate: input.startDate ? dayToIso(input.startDate) : undefined,
       notes: input.notes ?? undefined,
+      scopeSummary: input.scopeSummary ?? undefined,
     }
 
     let scheduledFor: string | null = null
@@ -613,6 +789,409 @@ export async function setRetainer(input: {
   } catch (error) {
     console.error('[setRetainer]', error)
     return { success: false as const, error: error instanceof Error ? error.message : 'Failed to save retainer' }
+  }
+}
+
+/** Save the pitch headline on its own — the scoping view autosaves it. Staff only. */
+export async function setRetainerScope(input: { retainerId: string; scopeSummary: string }) {
+  try {
+    const user = await getCurrentUser()
+    if (!user || user.role === 'client') return { success: false as const, error: 'Unauthorized' }
+    if (!input.retainerId) return { success: false as const, error: 'No retainer selected' }
+
+    const payload = await getPayload({ config })
+    await payload.update({
+      collection: 'retainers',
+      id: input.retainerId,
+      data: { scopeSummary: input.scopeSummary ?? '' } as any,
+    })
+    return { success: true as const }
+  } catch (error) {
+    console.error('[setRetainerScope]', error)
+    return { success: false as const, error: error instanceof Error ? error.message : 'Failed to save scope' }
+  }
+}
+
+/**
+ * Price a scoped engagement and start it — the "set pricing after the fact" step.
+ *
+ * Writes the terms staff settled on, flips `scoping → active`, and stamps `activatedAt`
+ * to the chosen start day, which becomes the billing-cycle anchor. Everything pitched
+ * during scoping is dated before that anchor, so by default it would fall outside cycle
+ * one; `carryWork` re-dates it onto the anchor day so the first cycle opens with the
+ * planned work already on the board (and, optionally, the completed hours counted).
+ *
+ * Idempotent by guard: refuses unless the retainer is still scoping. Staff only.
+ */
+export async function activateRetainerPlan(input: {
+  retainerId: string
+  tier: RetainerTier
+  monthlyFee: number
+  hoursPerMonth: number
+  overageRate?: number | null
+  /** `YYYY-MM-DD` — the first cycle's start and the anchor day. Defaults to the
+   *  proposed start if one was quoted, else today. */
+  startDate?: string | null
+  /** What to carry into cycle one. Planned work almost always should. */
+  carryWork?: { planned?: boolean; done?: boolean }
+}) {
+  try {
+    const user = await getCurrentUser()
+    if (!user || user.role === 'client') return { success: false as const, error: 'Unauthorized' }
+    if (!input.retainerId) return { success: false as const, error: 'No retainer selected' }
+    if (!(input.hoursPerMonth >= 0)) return { success: false as const, error: 'Monthly hours must be zero or more' }
+    if (!(input.monthlyFee >= 0)) return { success: false as const, error: 'Monthly fee must be zero or more' }
+
+    const payload = await getPayload({ config })
+    const existing = (await payload
+      .findByID({ collection: 'retainers', id: input.retainerId, depth: 0 })
+      .catch(() => null)) as RetainerDoc | null
+    if (!existing) return { success: false as const, error: 'Retainer not found' }
+    if (!isScoping(existing)) {
+      return { success: false as const, error: 'This retainer is already on a plan' }
+    }
+
+    // The anchor: the chosen start day at noon UTC, else the date quoted on the
+    // proposal, else today. Everything downstream (cycle windows, invoicing, pending
+    // changes) hangs off this one date.
+    const anchor = input.startDate
+      ? dayToIso(input.startDate)
+      : (iso(existing.proposedStartDate) ?? new Date().toISOString())
+
+    await payload.update({
+      collection: 'retainers',
+      id: existing.id,
+      data: {
+        tier: input.tier,
+        status: 'active',
+        monthlyFee: input.monthlyFee,
+        hoursPerMonth: input.hoursPerMonth,
+        overageRate: input.overageRate ?? 65,
+        startDate: anchor,
+        activatedAt: anchor,
+        // The offer has been accepted into the live terms — retire the proposal slot
+        // so a stale quote can never be re-sent against a running retainer.
+        proposedTier: null,
+        proposedMonthlyFee: null,
+        proposedHoursPerMonth: null,
+        proposedOverageRate: null,
+        proposedStartDate: null,
+        ...CLEAR_PENDING,
+      } as any,
+    })
+
+    // ── Place the pitched work relative to the new anchor ──────────────────────
+    // Scoping work is dated whenever it happened, which may be before OR on the anchor
+    // day, so neither outcome can be left to chance: carried entries are re-dated ONTO
+    // the anchor (inside cycle one), and excluded entries are pushed to the day before
+    // cycle one opens. Without that second move, work logged on the start day itself
+    // would count against the cap no matter what staff chose.
+    const carryPlanned = input.carryWork?.planned ?? true
+    const carryDone = input.carryWork?.done ?? false
+    const cycleOneStart = cycleFor(anchor, anchor).start
+    const dayBefore = new Date(Date.parse(cycleOneStart) - 86_400_000 / 2).toISOString() // noon prior day
+
+    const { docs } = await payload.find({
+      collection: 'retainer-time-entries',
+      where: { retainer: { equals: existing.id } },
+      depth: 0,
+      limit: 500,
+    })
+
+    let carried = 0
+    for (const entry of docs as TimeEntryDoc[]) {
+      const carry = entry.status === 'draft' ? carryPlanned : carryDone
+      const entryIso = iso(entry.date)
+      const insideCycleOne = Boolean(entryIso && entryIso >= cycleOneStart)
+
+      // Already where it belongs — don't churn the record.
+      if (carry && insideCycleOne) { carried++; continue }
+      if (!carry && !insideCycleOne) continue
+
+      await payload.update({
+        collection: 'retainer-time-entries',
+        id: entry.id,
+        data: {
+          date: carry ? anchor : dayBefore,
+          // Logged hours entering cycle one freeze onto the terms just agreed.
+          ...(carry && entry.status !== 'draft'
+            ? {
+                capAtLog: input.hoursPerMonth,
+                overageRateAtLog: input.overageRate ?? 65,
+                feeAtLog: input.monthlyFee,
+                tierAtLog: input.tier,
+              }
+            : {}),
+        } as any,
+      })
+      if (carry) carried++
+    }
+
+    return { success: true as const, id: existing.id, activatedAt: anchor, carried }
+  } catch (error) {
+    console.error('[activateRetainerPlan]', error)
+    return { success: false as const, error: error instanceof Error ? error.message : 'Failed to start retainer' }
+  }
+}
+
+// ── Proposal — the priced document sent before the retainer starts ────────────
+
+/** The terms being offered, resolved from the stored proposal with sane fallbacks. */
+export interface RetainerProposalTerms {
+  tier: RetainerTier
+  monthlyFee: number
+  hoursPerMonth: number
+  overageRate: number
+  startDate: string | null
+  includesCompletedWork: boolean
+  note: string | null
+  sentAt: string | null
+  sentTo: string[]
+}
+
+/** Read the stored proposal off a retainer, filling gaps from its live/nominal values.
+ *  Internal: exporting it from a 'use server' module would publish it as an action. */
+function proposalTermsOf(r: RetainerDoc): RetainerProposalTerms {
+  return {
+    tier: (r.proposedTier ?? r.tier ?? 'basic') as RetainerTier,
+    monthlyFee: r.proposedMonthlyFee ?? r.monthlyFee ?? 0,
+    hoursPerMonth: r.proposedHoursPerMonth ?? r.hoursPerMonth ?? 0,
+    overageRate: r.proposedOverageRate ?? r.overageRate ?? 65,
+    startDate: iso(r.proposedStartDate),
+    includesCompletedWork: Boolean(r.proposalIncludesCompletedWork),
+    note: r.proposalNote ?? null,
+    sentAt: iso(r.proposalSentAt),
+    sentTo: (r.proposalSentTo ?? []).map((x) => x?.email ?? '').filter(Boolean),
+  }
+}
+
+/**
+ * Save the priced offer WITHOUT starting the retainer. Terms land in the proposal
+ * slot, never the live fields, so nothing becomes billable by saving a quote. Staff only.
+ */
+export async function setRetainerProposal(input: {
+  retainerId: string
+  tier: RetainerTier
+  monthlyFee: number
+  hoursPerMonth: number
+  overageRate?: number | null
+  startDate?: string | null
+  includesCompletedWork?: boolean
+  note?: string | null
+}) {
+  try {
+    const user = await getCurrentUser()
+    if (!user || user.role === 'client') return { success: false as const, error: 'Unauthorized' }
+    if (!input.retainerId) return { success: false as const, error: 'No retainer selected' }
+    if (!(input.hoursPerMonth >= 0)) return { success: false as const, error: 'Monthly hours must be zero or more' }
+    if (!(input.monthlyFee >= 0)) return { success: false as const, error: 'Monthly fee must be zero or more' }
+
+    const payload = await getPayload({ config })
+    await payload.update({
+      collection: 'retainers',
+      id: input.retainerId,
+      data: {
+        proposedTier: input.tier,
+        proposedMonthlyFee: input.monthlyFee,
+        proposedHoursPerMonth: input.hoursPerMonth,
+        proposedOverageRate: input.overageRate ?? 65,
+        proposedStartDate: input.startDate ? dayToIso(input.startDate) : null,
+        proposalIncludesCompletedWork: Boolean(input.includesCompletedWork),
+        proposalNote: input.note ?? null,
+      } as any,
+    })
+    return { success: true as const }
+  } catch (error) {
+    console.error('[setRetainerProposal]', error)
+    return { success: false as const, error: error instanceof Error ? error.message : 'Failed to save proposal' }
+  }
+}
+
+/**
+ * Everything the proposal document renders, assembled once so the PDF route and the
+ * email send can never drift apart. Works only while scoping — a started retainer
+ * bills off its live terms and has statements instead. Staff only.
+ */
+export async function getRetainerProposalModel(retainerId: string) {
+  const user = await getCurrentUser()
+  if (!user || user.role === 'client') return { success: false as const, error: 'Unauthorized' }
+  if (!retainerId) return { success: false as const, error: 'No retainer selected' }
+
+  const payload = await getPayload({ config })
+  const retainer = (await payload
+    .findByID({ collection: 'retainers', id: retainerId, depth: 0 })
+    .catch(() => null)) as RetainerDoc | null
+  if (!retainer) return { success: false as const, error: 'Retainer not found' }
+
+  const clientAccountId =
+    typeof retainer.clientAccount === 'object' ? retainer.clientAccount.id : retainer.clientAccount
+  const [{ docs }, account] = await Promise.all([
+    payload.find({
+      collection: 'retainer-time-entries',
+      where: { retainer: { equals: retainer.id } },
+      sort: 'date',
+      depth: 0,
+      limit: 500,
+    }),
+    payload.findByID({ collection: 'client-accounts', id: clientAccountId, depth: 0 }).catch(() => null),
+  ])
+  const all = docs as TimeEntryDoc[]
+  const completed = all.filter((e) => e.status !== 'draft')
+  const planned = all.filter((e) => e.status === 'draft')
+
+  return {
+    success: true as const,
+    retainer,
+    clientAccountId,
+    terms: proposalTermsOf(retainer),
+    client: {
+      name: ((account as any)?.name ?? 'Client') as string,
+      company: (((account as any)?.company ?? null) as string | null),
+      email: (((account as any)?.email ?? null) as string | null),
+    },
+    completed,
+    planned,
+    pitch: computePitch(planned, completed),
+  }
+}
+
+/** Shape the model into the PDF builder's input — shared by the route and the email. */
+function proposalPdfData(m: Extract<Awaited<ReturnType<typeof getRetainerProposalModel>>, { success: true }>) {
+  const { terms, client, completed, planned, retainer } = m
+  return {
+    clientName: client.name,
+    clientCompany: client.company,
+    tierLabel: TIER_LABEL[terms.tier],
+    monthlyFee: terms.monthlyFee,
+    hoursPerMonth: terms.hoursPerMonth,
+    overageRate: terms.overageRate,
+    startLabel: terms.startDate
+      ? new Date(terms.startDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' })
+      : null,
+    scopeSummary: retainer.scopeSummary ?? null,
+    note: terms.note,
+    completed: completed.map((e) => ({
+      date: e.date,
+      description: e.description ?? '',
+      category: e.category ?? 'work',
+      hours: e.hours ?? 0,
+    })),
+    planned: planned.map((e) => ({
+      description: e.description ?? '',
+      category: e.category ?? 'work',
+      priority: e.priority ?? 'medium',
+      hours: e.hours ?? 0,
+    })),
+    includesCompletedWork: terms.includesCompletedWork,
+    generatedOn: new Date().toISOString(),
+  }
+}
+
+/**
+ * Build the proposal PDF for a retainer. Shared by the download route and the email.
+ * Exported from a 'use server' module, so it is a public endpoint — the staff check
+ * inside getRetainerProposalModel is what gates it, not the calling route.
+ */
+export async function buildProposalPdfFor(retainerId: string) {
+  const model = await getRetainerProposalModel(retainerId)
+  if (!model.success) return { success: false as const, error: model.error }
+  const bytes = await buildRetainerProposalPdf(proposalPdfData(model))
+  return { success: true as const, bytes, model }
+}
+
+/**
+ * Email the proposal to the client with the PDF attached, and stamp when/to whom.
+ * Sending does NOT start the retainer — activation stays a separate, deliberate step.
+ * Staff only.
+ */
+export async function sendRetainerProposalEmail(input: {
+  retainerId: string
+  recipients?: string[]
+  message?: string
+}) {
+  try {
+    const user = await getCurrentUser()
+    if (!user || user.role === 'client') return { success: false as const, error: 'Unauthorized' }
+    if (!input.retainerId) return { success: false as const, error: 'No retainer selected' }
+
+    const payload = await getPayload({ config })
+    const model = await getRetainerProposalModel(input.retainerId)
+    if (!model.success) return { success: false as const, error: model.error }
+    if (!isScoping(model.retainer)) {
+      return { success: false as const, error: 'This retainer has already started — send a statement instead' }
+    }
+
+    const { terms, client, pitch } = model
+    if (!(terms.hoursPerMonth > 0) || !(terms.monthlyFee > 0)) {
+      return { success: false as const, error: 'Set the pricing before sending the proposal' }
+    }
+
+    const recipients = cleanRecipients(input.recipients, client.email)
+    if (recipients.length === 0) return { success: false as const, error: 'Add at least one recipient email' }
+
+    // The PDF is the document — if it fails to build there is nothing worth sending,
+    // so unlike the recap flow this is NOT best-effort.
+    let attachment: EmailAttachment
+    try {
+      const bytes = await buildRetainerProposalPdf(proposalPdfData(model))
+      attachment = {
+        filename: `ORCACLUB-Retainer-Proposal-${client.company || client.name}.pdf`.replace(/[^\w.\- ]+/g, ''),
+        content: Buffer.from(bytes).toString('base64'),
+        encoding: 'base64',
+        contentType: 'application/pdf',
+      }
+    } catch (e) {
+      console.error('[sendRetainerProposalEmail] PDF build failed:', e)
+      return { success: false as const, error: 'Could not build the proposal PDF' }
+    }
+
+    const emailData = {
+      clientName: client.name,
+      clientCompany: client.company,
+      tierLabel: TIER_LABEL[terms.tier],
+      monthlyFee: terms.monthlyFee,
+      hoursPerMonth: terms.hoursPerMonth,
+      overageRate: terms.overageRate,
+      startLabel: terms.startDate
+        ? new Date(terms.startDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' })
+        : null,
+      scopeSummary: model.retainer.scopeSummary ?? null,
+      completedHours: pitch.doneHours,
+      plannedHours: pitch.plannedHours,
+      includesCompletedWork: terms.includesCompletedWork,
+      customMessage: input.message?.trim() || terms.note || undefined,
+    }
+
+    try {
+      await payload.sendEmail({
+        to: recipients.join(', '),
+        from: process.env.EMAIL_FROM || 'carbon@orcaclub.pro',
+        subject: retainerProposalEmailSubject(emailData),
+        html: generateRetainerProposalEmail(emailData),
+        text: generateRetainerProposalEmailText(emailData),
+        attachments: [attachment],
+      } as any)
+    } catch (e) {
+      console.error('[sendRetainerProposalEmail] Email failed:', e)
+      return { success: false as const, error: 'Failed to send the proposal email' }
+    }
+
+    // Stamp the send only after it actually went out.
+    const sentAt = new Date().toISOString()
+    await payload.update({
+      collection: 'retainers',
+      id: input.retainerId,
+      data: {
+        proposalSentAt: sentAt,
+        proposalSentTo: recipients.map((email) => ({ email })),
+        ...(input.message?.trim() ? { proposalNote: input.message.trim() } : {}),
+      } as any,
+    })
+
+    return { success: true as const, recipients, sentAt }
+  } catch (error) {
+    console.error('[sendRetainerProposalEmail]', error)
+    return { success: false as const, error: error instanceof Error ? error.message : 'Failed to send proposal' }
   }
 }
 
@@ -744,8 +1323,9 @@ export async function logHours(input: {
 }
 
 /**
- * Create a projected (draft) work item — a planned task with no hours yet. `date` places
- * it in a billing cycle (use a next-cycle date to plan ahead). Staff only.
+ * Create a projected (draft) work item — planned work, optionally carrying an hour
+ * ESTIMATE. `date` places it in a billing cycle (use a next-cycle date to plan ahead);
+ * while scoping there is no cycle, and the estimates are what size the plan. Staff only.
  */
 export async function createDraft(input: {
   retainerId: string
@@ -754,6 +1334,8 @@ export async function createDraft(input: {
   description: string
   category?: TimeEntryCategory
   priority?: TimeEntryPriority
+  /** Estimated hours. Drafts never count against the cap — only logged entries do. */
+  hours?: number
 }) {
   try {
     const user = await getCurrentUser()
@@ -769,7 +1351,7 @@ export async function createDraft(input: {
         retainer: input.retainerId,
         clientAccount: input.clientAccountId,
         date: dayToIso(input.date),
-        hours: 0,
+        hours: input.hours != null && input.hours > 0 ? input.hours : 0,
         status: 'draft',
         category: input.category ?? 'work',
         priority: input.priority ?? 'medium',

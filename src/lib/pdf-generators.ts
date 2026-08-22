@@ -1640,6 +1640,184 @@ export async function buildRetainerStatementPdf(d: RetainerStatementData): Promi
   return doc.save()
 }
 
+// ── Retainer Proposal PDF — the priced offer, sent before activation ───────────
+// Built from the scoping record: what has already been delivered, what is planned
+// each month, and the plan being proposed for it. Deliberately mirrors the statement
+// document so a client who accepts sees the same shape again every cycle.
+
+export interface RetainerProposalData {
+  clientName: string
+  clientCompany?: string | null
+  tierLabel: string
+  monthlyFee: number
+  hoursPerMonth: number
+  overageRate: number
+  /** Proposed first-cycle start, long-form (e.g. "September 1, 2026"), or null. */
+  startLabel?: string | null
+  /** The pitch headline — what the retainer covers. */
+  scopeSummary?: string | null
+  /** Staff cover note, printed above the tables. */
+  note?: string | null
+  /** Work already delivered during scoping. */
+  completed: Array<{ date: string; description: string; category: string; hours: number }>
+  /** Recurring work proposed each month, with estimates. */
+  planned: Array<{ description: string; category: string; priority?: string; hours: number }>
+  /** Present delivered work as bundled in at no charge. */
+  includesCompletedWork?: boolean
+  generatedOn: string
+}
+
+export async function buildRetainerProposalPdf(d: RetainerProposalData): Promise<Uint8Array> {
+  const doc = await PDFDocument.create()
+  doc.registerFontkit(fontkit)
+  const bold   = await doc.embedFont(StandardFonts.HelveticaBold)
+  const normal = await doc.embedFont(StandardFonts.Helvetica)
+  const gothic = await doc.embedFont(Buffer.from(CINZEL_DECORATIVE_BOLD_BASE64, 'base64'), { subset: true })
+
+  const genLabel = fmtLongDate(d.generatedOn)
+  const completedHours = d.completed.reduce((t, e) => t + (e.hours || 0), 0)
+  const plannedHours   = d.planned.reduce((t, e) => t + (e.hours || 0), 0)
+  const effRate = d.hoursPerMonth > 0 ? d.monthlyFee / d.hoursPerMonth : 0
+
+  const w = new DocWriter(
+    doc, bold, normal,
+    'prop_',
+    `RETAINER PROPOSAL — ${blank(d.clientCompany || d.clientName, 'CLIENT')}`,
+    'ORCACLUB · Web Design and Marketing Automation · orcaclub.pro',
+    { gothic, branded: true },
+  )
+
+  w.brandHeader('Retainer Proposal', genLabel)
+  w.brandTitle('RETAINER PROPOSAL', `${d.tierLabel} Retainer`)
+
+  // ── Meta block ───────────────────────────────────────────────────────────────
+  const metaColW = [w.innerW * 0.26, w.innerW * 0.74]
+  const clientVal = d.clientCompany ? `${d.clientName}  ·  ${d.clientCompany}` : d.clientName
+  w.table([], metaColW, [
+    ['Client',   clientVal],
+    ['Prepared', genLabel],
+    ...(d.startLabel ? [['Proposed Start', d.startLabel]] : []),
+  ])
+  w.sp(6)
+
+  // ── Proposed plan box ────────────────────────────────────────────────────────
+  {
+    const planLine = `${d.tierLabel} · ${money(d.monthlyFee)}/mo · ${fmtHours(d.hoursPerMonth)} hrs/mo · overage ${money(d.overageRate)}/hr`
+    const boxH = 26
+    w.need(boxH + 12)
+    w.page.drawRectangle({ x: w.ml, y: w.y - boxH, width: w.innerW, height: boxH, color: BRAND.boxBg })
+    w.page.drawRectangle({ x: w.ml, y: w.y - boxH, width: 3, height: boxH, color: BRAND.navy })
+    w.page.drawText(planLine, { x: w.ml + 14, y: w.y - 17, size: 9.5, font: w.bold, color: BRAND.ink })
+    w.y -= boxH + 14
+  }
+
+  if (d.scopeSummary?.trim()) {
+    w.section('Scope')
+    w.body(d.scopeSummary.trim(), 9.5, BRAND.ink)
+    w.sp(4)
+  }
+
+  if (d.note?.trim()) {
+    w.body(d.note.trim(), 9, BRAND.gray6)
+    w.sp(4)
+  }
+
+  const size = 9
+  const priText = (p?: string): string => (p === 'high' ? 'High' : p === 'low' ? 'Low' : '')
+
+  // ── What it costs ────────────────────────────────────────────────────────────
+  // Placed directly under the scope, ahead of the supporting tables: the offer is
+  // what the client opened this for, and leading with it keeps the money on page one
+  // no matter how much work is itemized below.
+  w.section('Investment')
+  const totX = w.pw - w.mr - 240
+  const totRow = (
+    labelTxt: string, valueTxt: string,
+    opts?: { strong?: boolean; size?: number; color?: ReturnType<typeof rgb> },
+  ) => {
+    const sz = opts?.size ?? 9.5
+    w.page.drawText(labelTxt, {
+      x: totX, y: w.y, size: sz,
+      font: opts?.strong ? w.bold : w.normal,
+      color: opts?.strong ? BRAND.ink : BRAND.gray6,
+    })
+    const vw = w.bold.widthOfTextAtSize(valueTxt, sz)
+    w.page.drawText(valueTxt, { x: w.pw - w.mr - vw, y: w.y, size: sz, font: w.bold, color: opts?.color ?? BRAND.ink })
+    w.y -= sz + 8
+  }
+
+  // Reserve the WHOLE block up front so it can never split across a page boundary.
+  const priceRows = (11 + 8) + (9.5 + 8) * (effRate > 0 ? 3 : 2)
+  w.need(12 + priceRows)
+  w.page.drawLine({ start: { x: totX, y: w.y + 4 }, end: { x: w.pw - w.mr, y: w.y + 4 }, thickness: 0.6, color: BRAND.rule })
+  w.y -= 8
+  totRow('Monthly retainer', `${money(d.monthlyFee)}/mo`, { strong: true, size: 11 })
+  totRow('Included hours', `${fmtHours(d.hoursPerMonth)} hrs/mo`)
+  if (effRate > 0) totRow('Effective rate', `${money(Math.round(effRate))}/hr`)
+  totRow('Additional hours', `${money(d.overageRate)}/hr`)
+  w.sp(6)
+
+  // ── Work already delivered ───────────────────────────────────────────────────
+  if (d.completed.length > 0) {
+    w.section('Work Completed To Date')
+    const cDate = 58, cCat = 84, cHours = 52
+    const cDesc = w.innerW - cDate - cCat - cHours
+    w.table(
+      ['Date', 'Description', 'Category', 'Hours'],
+      [cDate, cDesc, cCat, cHours],
+      d.completed.map((e) => [
+        fmtShortDate(e.date),
+        e.description || '—',
+        e.category,
+        fmtHours(e.hours),
+      ]),
+      size,
+    )
+    w.totalRow(
+      d.includesCompletedWork ? 'Delivered to date — included' : 'Delivered to date',
+      `${fmtHours(completedHours)} hrs`,
+      [cDate, cDesc, cCat, cHours],
+    )
+    w.sp(4)
+  }
+
+  // ── Planned recurring work ───────────────────────────────────────────────────
+  if (d.planned.length > 0) {
+    w.section('Planned Monthly Work')
+    const pPri = 50, pCat = 84, pHours = 52
+    const pDesc = w.innerW - pPri - pCat - pHours
+    w.table(
+      ['Description', 'Priority', 'Category', 'Est. Hours'],
+      [pDesc, pPri, pCat, pHours],
+      d.planned.map((e) => [
+        e.description || '—',
+        priText(e.priority),
+        e.category,
+        e.hours > 0 ? fmtHours(e.hours) : '—',
+      ]),
+      size,
+    )
+    w.totalRow('Estimated per month', `${fmtHours(plannedHours)} hrs`, [pDesc, pPri, pCat, pHours])
+    w.sp(4)
+  }
+
+  // ── Terms ────────────────────────────────────────────────────────────────────
+  const closing = [
+    `This proposal covers a monthly retainer of ${fmtHours(d.hoursPerMonth)} hours at ${money(d.monthlyFee)} per month.`,
+    'Unused hours do not roll over unless otherwise agreed in writing; hours beyond the monthly allowance are billed at the rate shown above.',
+    d.includesCompletedWork && completedHours > 0
+      ? `The ${fmtHours(completedHours)} hours already delivered are included at no additional charge.`
+      : '',
+    'Billing begins on the start date above. This proposal is not an invoice.',
+  ].filter(Boolean).join(' ')
+  w.sp(10)
+  w.need(wrap(closing, w.normal, 8, w.innerW).length * 12.5)
+  w.body(closing, 8, BRAND.gray6)
+
+  w._drawFooter()
+  return doc.save()
+}
+
 // ── Retainer Monthly Recap PDF — deck slides ────────────────────────────────────
 // A faithful PDF rendering of the "Monthly Recap & Insights" deck: seven landscape
 // 16:9 slides in the deck's paper/teal editorial style (Newsreader / Poppins / IBM

@@ -1054,24 +1054,24 @@ export interface Retainer {
   id: string;
   clientAccount: string | ClientAccount;
   /**
-   * Playbook tier — drives preset fee/hours in the builder.
+   * Playbook tier — drives preset fee/hours in the builder. Nominal while scoping.
    */
   tier: 'basic' | 'growth' | 'enterprise';
   /**
-   * Inactive retainers are hidden from the dashboard; their logged hours are kept.
+   * Scoping = agreed but no plan chosen yet (no cycle, not billable). Inactive retainers are hidden from the dashboard; their logged hours are kept.
    */
-  status: 'active' | 'inactive';
+  status: 'scoping' | 'active' | 'inactive';
   startDate?: string | null;
   /**
-   * Auto-set when activated — the billing-cycle anchor day.
+   * Auto-set when activated — the billing-cycle anchor day. Unset while scoping.
    */
   activatedAt?: string | null;
   /**
-   * USD per month
+   * USD per month — empty while scoping.
    */
   monthlyFee?: number | null;
   /**
-   * Monthly hour cap (no rollover)
+   * Monthly hour cap (no rollover) — empty while scoping.
    */
   hoursPerMonth?: number | null;
   /**
@@ -1083,9 +1083,51 @@ export interface Retainer {
    */
   deactivateOn?: string | null;
   /**
+   * The pitch — what this retainer covers, in client-facing words.
+   */
+  scopeSummary?: string | null;
+  /**
    * Internal notes
    */
   notes?: string | null;
+  proposedTier?: ('basic' | 'growth' | 'enterprise') | null;
+  /**
+   * USD/mo
+   */
+  proposedMonthlyFee?: number | null;
+  /**
+   * Hour cap
+   */
+  proposedHoursPerMonth?: number | null;
+  /**
+   * USD/hr
+   */
+  proposedOverageRate?: number | null;
+  /**
+   * Proposed first cycle start.
+   */
+  proposedStartDate?: string | null;
+  /**
+   * Present the work already delivered as included at no extra charge.
+   */
+  proposalIncludesCompletedWork?: boolean | null;
+  /**
+   * Cover note shown on the proposal document and in the email.
+   */
+  proposalNote?: string | null;
+  /**
+   * Last time the proposal was sent.
+   */
+  proposalSentAt?: string | null;
+  /**
+   * Recipients of the most recent send.
+   */
+  proposalSentTo?:
+    | {
+        email?: string | null;
+        id?: string | null;
+      }[]
+    | null;
   pendingTier?: ('basic' | 'growth' | 'enterprise') | null;
   pendingMonthlyFee?: number | null;
   pendingHoursPerMonth?: number | null;
@@ -1444,7 +1486,7 @@ export interface RetainerTimeEntry {
   date: string;
   hours: number;
   /**
-   * Draft = a planned task with no hours yet; Logged = actual time counted against the cap.
+   * Draft = planned work, hours are an ESTIMATE and never count against the cap; Logged = actual time counted against the cap.
    */
   status: 'draft' | 'logged';
   /**
@@ -2675,7 +2717,22 @@ export interface RetainersSelect<T extends boolean = true> {
   hoursPerMonth?: T;
   overageRate?: T;
   deactivateOn?: T;
+  scopeSummary?: T;
   notes?: T;
+  proposedTier?: T;
+  proposedMonthlyFee?: T;
+  proposedHoursPerMonth?: T;
+  proposedOverageRate?: T;
+  proposedStartDate?: T;
+  proposalIncludesCompletedWork?: T;
+  proposalNote?: T;
+  proposalSentAt?: T;
+  proposalSentTo?:
+    | T
+    | {
+        email?: T;
+        id?: T;
+      };
   pendingTier?: T;
   pendingMonthlyFee?: T;
   pendingHoursPerMonth?: T;

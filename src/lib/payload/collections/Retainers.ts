@@ -5,10 +5,17 @@ import { adminOrUser, adminOnly } from '../access/index'
  * Retainers Collection
  *
  * A monthly retainer agreement for a client account — the tier, fee, and the
- * monthly hour cap staff log work against. One ACTIVE retainer per client at a
+ * monthly hour cap staff log work against. One live retainer per client at a
  * time (enforced in src/actions/retainers.ts). Hours live in the separate
  * `retainer-time-entries` collection and are summed per calendar month against
  * `hoursPerMonth` — there is no rollover.
+ *
+ * Lifecycle: `scoping` → `active` → `inactive`. A SCOPING retainer is an engagement
+ * being pitched: staff log planned work (draft entries with hour estimates) and work
+ * already done (logged entries) against it, but there is no fee, no hour cap, and —
+ * critically — no `activatedAt`, so no billing cycle exists and nothing is billable.
+ * Pricing is set from that evidence afterwards: `activateRetainerPlan` writes the
+ * terms, flips the status, and stamps the cycle anchor.
  *
  * Payment/Stripe is intentionally out of scope: overage is displayed, not charged.
  */
@@ -47,7 +54,7 @@ const Retainers: CollectionConfig = {
             { label: 'Growth', value: 'growth' },
             { label: 'Enterprise', value: 'enterprise' },
           ],
-          admin: { width: '25%', description: 'Playbook tier — drives preset fee/hours in the builder.' },
+          admin: { width: '25%', description: 'Playbook tier — drives preset fee/hours in the builder. Nominal while scoping.' },
         },
         {
           name: 'status',
@@ -56,10 +63,14 @@ const Retainers: CollectionConfig = {
           defaultValue: 'active',
           index: true,
           options: [
+            { label: 'Scoping', value: 'scoping' },
             { label: 'Active', value: 'active' },
             { label: 'Inactive', value: 'inactive' },
           ],
-          admin: { width: '25%', description: 'Inactive retainers are hidden from the dashboard; their logged hours are kept.' },
+          admin: {
+            width: '25%',
+            description: 'Scoping = agreed but no plan chosen yet (no cycle, not billable). Inactive retainers are hidden from the dashboard; their logged hours are kept.',
+          },
         },
         {
           name: 'startDate',
@@ -73,7 +84,7 @@ const Retainers: CollectionConfig = {
             width: '25%',
             readOnly: true,
             date: { pickerAppearance: 'dayOnly' },
-            description: 'Auto-set when activated — the billing-cycle anchor day.',
+            description: 'Auto-set when activated — the billing-cycle anchor day. Unset while scoping.',
           },
           hooks: {
             beforeChange: [
@@ -94,13 +105,13 @@ const Retainers: CollectionConfig = {
           name: 'monthlyFee',
           type: 'number',
           min: 0,
-          admin: { width: '34%', description: 'USD per month' },
+          admin: { width: '34%', description: 'USD per month — empty while scoping.' },
         },
         {
           name: 'hoursPerMonth',
           type: 'number',
           min: 0,
-          admin: { width: '33%', description: 'Monthly hour cap (no rollover)' },
+          admin: { width: '33%', description: 'Monthly hour cap (no rollover) — empty while scoping.' },
         },
         {
           name: 'overageRate',
@@ -121,10 +132,87 @@ const Retainers: CollectionConfig = {
         condition: (data) => Boolean(data?.deactivateOn),
       },
     },
+    // ── Scope ───────────────────────────────────────────────────────────────────
+    // The pitch headline. The scope ITEMS are not stored here — they are ordinary
+    // `retainer-time-entries` on this retainer: drafts = planned work (carrying an
+    // hour estimate), logged = work already done. That way the pitch is built from
+    // the same records the retainer runs on, and carries straight into cycle one.
+    {
+      name: 'scopeSummary',
+      type: 'textarea',
+      admin: { description: 'The pitch — what this retainer covers, in client-facing words.' },
+    },
     {
       name: 'notes',
       type: 'textarea',
       admin: { description: 'Internal notes' },
+    },
+    // ── Proposal (pre-activation) ───────────────────────────────────────────────
+    // The priced offer sent to the client BEFORE the retainer starts. Terms live here
+    // rather than in the live fields so nothing bills off a proposal: activation copies
+    // them across. Written by server actions (setRetainerProposal / send…), not by hand.
+    {
+      type: 'collapsible',
+      label: 'Proposal (pre-activation)',
+      admin: {
+        condition: (data) => data?.status === 'scoping' || Boolean(data?.proposalSentAt),
+        description: 'The priced offer sent to the client. Copied into the live terms on activation.',
+      },
+      fields: [
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'proposedTier',
+              type: 'select',
+              options: [
+                { label: 'Basic', value: 'basic' },
+                { label: 'Growth', value: 'growth' },
+                { label: 'Enterprise', value: 'enterprise' },
+              ],
+              admin: { width: '25%' },
+            },
+            { name: 'proposedMonthlyFee', type: 'number', min: 0, admin: { width: '25%', description: 'USD/mo' } },
+            { name: 'proposedHoursPerMonth', type: 'number', min: 0, admin: { width: '25%', description: 'Hour cap' } },
+            { name: 'proposedOverageRate', type: 'number', min: 0, admin: { width: '25%', description: 'USD/hr' } },
+          ],
+        },
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'proposedStartDate',
+              type: 'date',
+              admin: { width: '50%', date: { pickerAppearance: 'dayOnly' }, description: 'Proposed first cycle start.' },
+            },
+            {
+              name: 'proposalIncludesCompletedWork',
+              type: 'checkbox',
+              defaultValue: false,
+              admin: {
+                width: '50%',
+                description: 'Present the work already delivered as included at no extra charge.',
+              },
+            },
+          ],
+        },
+        {
+          name: 'proposalNote',
+          type: 'textarea',
+          admin: { description: 'Cover note shown on the proposal document and in the email.' },
+        },
+        {
+          name: 'proposalSentAt',
+          type: 'date',
+          admin: { readOnly: true, date: { pickerAppearance: 'dayOnly' }, description: 'Last time the proposal was sent.' },
+        },
+        {
+          name: 'proposalSentTo',
+          type: 'array',
+          admin: { readOnly: true, description: 'Recipients of the most recent send.' },
+          fields: [{ name: 'email', type: 'text' }],
+        },
+      ],
     },
     // ── Scheduled plan change (next cycle) ──────────────────────────────────────
     // One pending change written/read by server actions (not hand-edited), applied
