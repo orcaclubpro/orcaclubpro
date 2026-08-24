@@ -6,12 +6,15 @@ import {
   CalendarClock, PowerOff, FileDown, Check, X, ArrowRight, CalendarPlus, FileText,
   CircleCheck, Circle, Search, Building2, CornerDownLeft, AlertTriangle, Activity, Flame, Send,
   RotateCcw, ClipboardList, Rocket, DollarSign, Lightbulb, Mail, FileSignature,
+  Repeat, Package, BookOpen,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { RetainerRecapModal } from './RetainerRecapModal'
+import { ScopeRecapModal } from './ScopeRecapModal'
 import { RetainerInvoiceModal } from './RetainerInvoiceModal'
 import { getClientAccountsList } from '@/actions/packages'
 import type { RecapData } from '@/lib/retainers/recap'
+import type { ScopeRecapData } from '@/lib/retainers/scopeRecap'
 import {
   getRetainerSummary,
   getRetainerPortfolio,
@@ -28,6 +31,7 @@ import {
   activateRetainerPlan,
   setRetainerProposal,
   sendRetainerProposalEmail,
+  convertScopeToPackage,
   type RetainerDoc,
   type TimeEntryDoc,
   type RetainerTotals,
@@ -230,6 +234,26 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
   const [sendingProposal, setSendingProposal] = useState(false)
   const [sendNotice, setSendNotice] = useState<string | null>(null)
 
+  // The scope recap — the "what we have already done" companion to the proposal.
+  // Composed here so its narrative survives the modal closing and can ride along as a
+  // second attachment on the proposal email. Keyed to the retainer, not a cycle: a
+  // scoping retainer has no cycle, which is the whole reason this document exists.
+  const [scopeRecapOpen, setScopeRecapOpen] = useState(false)
+  const [scopeRecapDraft, setScopeRecapDraft] = useState<{ retainerId: string; data: ScopeRecapData } | null>(null)
+  const [attachRecap, setAttachRecap] = useState(false)
+
+  // ── One-off scopes ─────────────────────────────────────────────────────────
+  // Not every scope is recurring. A one-off is priced per deliverable and handed to
+  // the packages system — which already owns itemized lines, payment schedules,
+  // add-ons, and the proposal PDF — rather than growing a second one in here.
+  const [engagement, setEngagement] = useState<'retainer' | 'oneoff'>('retainer')
+  const [pkgName, setPkgName] = useState('')
+  const [linePrices, setLinePrices] = useState<Record<string, string>>({})
+  const [lineQtys, setLineQtys] = useState<Record<string, string>>({})
+  const [deliveredPrice, setDeliveredPrice] = useState('')
+  const [extraLines, setExtraLines] = useState<{ name: string; qty: string; price: string }[]>([])
+  const [converting, setConverting] = useState(false)
+
   // Setup form
   const [editing, setEditing] = useState(false)
   const [tier, setTier] = useState<RetainerTier>('basic')
@@ -423,6 +447,8 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
     setPickQuery('')
     setPickIdx(0)
     setRecapDraft(null)
+    setScopeRecapDraft(null)
+    setAttachRecap(false)
     setConfirmResetInvoice(false)
     setResetInvoiceError(null)
   }
@@ -438,6 +464,9 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
     setPickIdx(0)
     setInvoiceOpen(false)
     setRecapDraft(null)
+    setScopeRecapOpen(false)
+    setScopeRecapDraft(null)
+    setAttachRecap(false)
     setConfirmResetInvoice(false)
     setResetInvoiceError(null)
   }, [])
@@ -469,6 +498,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
         if (!selectedClientId) return // picker level — let the console handle it
         e.preventDefault()
         e.stopPropagation()
+        if (scopeRecapOpen) { setScopeRecapOpen(false); return }
         if (recapOpen) { setRecapOpen(false); return }
         if (invoiceOpen) { setInvoiceOpen(false); return }
         if (editId) { setEditId(null); setELogMode(false); return }
@@ -480,14 +510,14 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
       if (e.key >= '1' && e.key <= '4' && !e.metaKey && !e.ctrlKey && !e.altKey) {
         const tag = (e.target as HTMLElement)?.tagName
         if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable) return
-        if (!selectedClientId || !retainer || editing || recapOpen || invoiceOpen || loading) return
+        if (!selectedClientId || !retainer || editing || recapOpen || scopeRecapOpen || invoiceOpen || loading) return
         if (retainer.status === 'scoping') return // the pitch console has no stages
         setStage(STAGES[Number(e.key) - 1].id)
       }
     }
     document.addEventListener('keydown', handler, true)
     return () => document.removeEventListener('keydown', handler, true)
-  }, [active, selectedClientId, recapOpen, invoiceOpen, editId, editing, retainer, loading, pricingOpen, clearClient])
+  }, [active, selectedClientId, recapOpen, scopeRecapOpen, invoiceOpen, editId, editing, retainer, loading, pricingOpen, clearClient])
 
   // ── Actions ─────────────────────────────────────────────────────────────────
 
@@ -565,6 +595,50 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
     setAddingDone(false)
   }
 
+  /**
+   * Hand a one-off scope to the packages system: create the proposal, move the
+   * pitched work into its milestone log, then jump the console to it. The retainer
+   * side is retired by the action, so the station falls back to the picker.
+   */
+  async function handleConvertToPackage() {
+    setError(null); setSendNotice(null)
+    if (!retainer) return
+
+    const lineItems = [
+      ...drafts.map((d) => ({
+        name: d.description?.trim() || 'Work item',
+        description: d.hours ? `${fmtHrs(d.hours)}h estimated` : undefined,
+        price: linePriceOf(d.id),
+        quantity: lineQtyOf(d.id),
+      })),
+      ...(deliveredPriceNum > 0
+        ? [{ name: `Work delivered to date (${fmtHrs(doneHours)}h)`, price: deliveredPriceNum, quantity: 1 }]
+        : []),
+      ...extraLines
+        .filter((x) => x.name.trim())
+        .map((x) => ({
+          name: x.name.trim(),
+          price: parseFloat(x.price) || 0,
+          quantity: Math.max(1, parseInt(x.qty, 10) || 1),
+        })),
+    ]
+    if (lineItems.length === 0) { setError('Add at least one line item'); return }
+
+    setConverting(true)
+    const r = await convertScopeToPackage({
+      retainerId: retainer.id,
+      name: pkgName.trim() || undefined,
+      coverMessage: proposalNote.trim() || undefined,
+      lineItems,
+    })
+    setConverting(false)
+    if (!r.success) { setError(r.error ?? 'Failed to create the proposal'); return }
+
+    // Hand off to the Milestones station, which owns packages from here.
+    window.dispatchEvent(new CustomEvent('orcaclub:open-milestones', { detail: { packageId: r.packageId } }))
+    clearClient()
+  }
+
   /** Persist the priced offer without starting anything. Returns ok so the callers
    *  that follow it (preview, send) can bail if the save failed. */
   async function saveProposal(): Promise<boolean> {
@@ -608,11 +682,16 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
       retainerId: retainer.id,
       recipients: sendTo.split(/[,\s]+/).map((x) => x.trim()).filter(Boolean),
       message: sendMsg.trim() || undefined,
+      // The recap re-derives server-side either way — this only carries the narrative.
+      attachScopeRecap: attachRecap,
+      scopeRecap: attachRecap ? scopeRecap : null,
     })
     setSendingProposal(false)
     if (r.success) {
       setSendOpen(false)
-      setSendNotice(`Proposal sent to ${r.recipients.join(', ')}.`)
+      setSendNotice(
+        `Proposal sent to ${r.recipients.join(', ')}.${attachRecap ? (r.recapAttached ? ' Work recap attached.' : ' The work recap could not be attached.') : ''}`,
+      )
       await load()
     } else setError(r.error ?? 'Failed to send proposal')
   }
@@ -842,6 +921,8 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
   // Scoping: pitched but unpriced. No cycle exists, so the cycle stages and navigator
   // are meaningless here — the pitch console stands in for the whole body.
   const scoping = retainer?.status === 'scoping'
+  // Keyed to the retainer so a draft composed for one client never attaches to another.
+  const scopeRecap = scopeRecapDraft && scopeRecapDraft.retainerId === retainer?.id ? scopeRecapDraft.data : null
   const plannedHours = pitch?.plannedHours ?? 0
   const doneHours = pitch?.doneHours ?? 0
   // What the proposed plan implies per hour, and what the scoping work was worth at it.
@@ -851,6 +932,23 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
   const doneValue = doneHours * effRate
   const pitchedTotal = Math.round((plannedHours + doneHours) * 100) / 100
   const capShortfall = aHoursNum > 0 && plannedHours > aHoursNum
+
+  // One-off pricing: every pitched item priced, plus optional extras and a line for
+  // work already delivered. Quantities default to 1 until staff say otherwise.
+  const lineQtyOf = (id: string) => Math.max(1, parseInt(lineQtys[id] ?? '1', 10) || 1)
+  const linePriceOf = (id: string) => parseFloat(linePrices[id] ?? '') || 0
+  const deliveredPriceNum = parseFloat(deliveredPrice) || 0
+  const extrasTotal = extraLines.reduce(
+    (t, x) => t + (parseFloat(x.price) || 0) * Math.max(1, parseInt(x.qty, 10) || 1),
+    0,
+  )
+  const oneOffTotal =
+    Math.round(
+      (drafts.reduce((t, d) => t + linePriceOf(d.id) * lineQtyOf(d.id), 0) + deliveredPriceNum + extrasTotal) * 100,
+    ) / 100
+  const oneOffLineCount =
+    drafts.length + (deliveredPriceNum > 0 ? 1 : 0) + extraLines.filter((x) => x.name.trim()).length
+  const oneOffUnpriced = drafts.filter((d) => linePriceOf(d.id) <= 0).length
 
   const cap = totals?.cap ?? 0
   const used = totals?.used ?? 0
@@ -1306,8 +1404,41 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                 <p className="text-xs text-[var(--space-text-secondary)] leading-relaxed">
                   <span className="font-semibold text-amber-500">Scoping.</span>{' '}
                   Pitch what you plan to do and record what you have already done. Nothing bills
-                  until you set pricing — that is what starts the first cycle.
+                  until you price it — {engagement === 'retainer'
+                    ? 'that is what starts the first cycle.'
+                    : 'that is what creates the proposal.'}
                 </p>
+              </div>
+
+              {/* ── Recurring, or a one-off job? Decides what the pricing step produces ── */}
+              <div className="grid sm:grid-cols-2 gap-2">
+                {([
+                  { id: 'retainer' as const, icon: Repeat, title: 'Recurring retainer', hint: 'Monthly fee and hour cap, billed each cycle.' },
+                  { id: 'oneoff' as const, icon: Package, title: 'One-off project', hint: 'Itemized deliverables, billed on a schedule.' },
+                ]).map((opt) => {
+                  const OptIcon = opt.icon
+                  const on = engagement === opt.id
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => { setEngagement(opt.id); setPricingOpen(false); setSendNotice(null) }}
+                      className={cn(
+                        'flex items-start gap-2.5 px-3 py-2.5 rounded-lg border text-left transition-colors',
+                        on
+                          ? 'bg-[var(--space-bg-card-hover)] text-[var(--space-text-primary)]'
+                          : 'border-[var(--space-border-hard)] text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)]',
+                      )}
+                      style={on ? { borderColor: 'var(--space-accent)' } : {}}
+                    >
+                      <OptIcon className={cn('size-4 shrink-0 mt-0.5', on && 'text-[var(--space-accent)]')} />
+                      <span className="min-w-0">
+                        <span className="block text-xs font-semibold leading-tight">{opt.title}</span>
+                        <span className="block text-[10px] text-[var(--space-text-muted)] mt-0.5 leading-snug">{opt.hint}</span>
+                      </span>
+                    </button>
+                  )
+                })}
               </div>
 
               {/* ── The pitch headline ── */}
@@ -1472,7 +1603,172 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                 </div>
               </div>
 
+              {/* ── The work recap — the companion document that justifies the price ──
+                  Sits above the pricing panel because it belongs to the pitch, not the
+                  offer: both engagement modes send one, and it reads the same two piles
+                  of work regardless of how they end up being billed. */}
+              <button
+                type="button"
+                onClick={() => setScopeRecapOpen(true)}
+                className="w-full group flex items-center gap-3 px-4 py-3 rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card-hover)] text-left transition-colors hover:border-[var(--space-accent-glow)]"
+              >
+                <div className="size-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'var(--space-accent-soft)' }}>
+                  <BookOpen className="size-4" style={{ color: 'var(--space-accent)' }} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-[var(--space-text-primary)] leading-tight">
+                    Work recap {scopeRecap && <span className="text-[10px] font-medium text-[var(--space-accent)]">· composed</span>}
+                  </p>
+                  <p className="text-[11px] text-[var(--space-text-muted)] mt-0.5">
+                    {doneHours > 0
+                      ? `A client-facing deck: ${fmtHrs(doneHours)}h already delivered${plannedHours > 0 ? `, and the ${fmtHrs(plannedHours)}h you propose next` : ''}.`
+                      : 'A client-facing deck of the work you propose — pairs with the proposal.'}
+                  </p>
+                </div>
+                <ArrowRight className="size-4 shrink-0 text-[var(--space-text-muted)] group-hover:translate-x-0.5 transition-transform" />
+              </button>
+
               {/* ── The proposal — price it, send it, then start on acceptance ── */}
+              {engagement === 'oneoff' ? (
+                /* One-off: price each deliverable, then hand the whole thing to the
+                   packages system, which owns proposals, schedules, and add-ons. */
+                <div className="rounded-xl border p-4 sm:p-5 space-y-4 bg-[var(--space-bg-card-hover)]" style={{ borderColor: 'var(--space-accent-glow)' }}>
+                  <div className="flex items-center gap-2">
+                    <Package className="size-3.5" style={{ color: 'var(--space-accent)' }} />
+                    <p className="text-[9px] font-bold tracking-[0.22em] uppercase text-[var(--space-text-tertiary)]">Price the deliverables</p>
+                  </div>
+
+                  <label className="block">
+                    <span className={fieldLabel}>Proposal name</span>
+                    <input
+                      value={pkgName}
+                      onChange={(e) => setPkgName(e.target.value)}
+                      placeholder={`${selectedClient?.company || selectedClient?.name || 'Client'} — ${scopeSummary.trim().slice(0, 40) || 'Project'}`}
+                      className={cn(inputCls, 'mt-1')}
+                    />
+                  </label>
+
+                  {drafts.length === 0 && extraLines.length === 0 && (
+                    <p className="text-xs text-[var(--space-text-muted)]">
+                      Pitch some planned work above and it becomes the line items here — or add lines directly.
+                    </p>
+                  )}
+
+                  {/* Pitched work, now with a price against each item */}
+                  {drafts.length > 0 && (
+                    <div className="rounded-lg border border-[var(--space-border-hard)] divide-y divide-[var(--space-border-hard)] overflow-hidden">
+                      {drafts.map((d) => (
+                        <div key={d.id} className="flex items-center gap-2 px-3 py-2">
+                          <span className="flex-1 min-w-0 text-xs text-[var(--space-text-secondary)] truncate">
+                            {d.description || 'Work item'}
+                            {d.hours ? <span className="text-[var(--space-text-muted)]"> · {fmtHrs(d.hours)}h est</span> : null}
+                          </span>
+                          <input
+                            type="number" min={1} title="Quantity"
+                            value={lineQtys[d.id] ?? '1'}
+                            onChange={(e) => setLineQtys((m) => ({ ...m, [d.id]: e.target.value }))}
+                            className={cn(numCls, 'w-14 text-xs py-1.5')}
+                          />
+                          <input
+                            type="number" min={0} title="Price (USD)" placeholder="$"
+                            value={linePrices[d.id] ?? ''}
+                            onChange={(e) => setLinePrices((m) => ({ ...m, [d.id]: e.target.value }))}
+                            className={cn(numCls, 'w-24 text-xs py-1.5')}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Work already delivered can be billed as its own line, or left off */}
+                  {doneHours > 0 && (
+                    <div className="flex items-center gap-2 rounded-lg border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] px-3 py-2">
+                      <span className="flex-1 min-w-0 text-xs text-[var(--space-text-secondary)]">
+                        Work delivered to date · {fmtHrs(doneHours)}h
+                        <span className="block text-[10px] text-[var(--space-text-muted)]">Leave blank to include it at no charge.</span>
+                      </span>
+                      <input
+                        type="number" min={0} placeholder="$"
+                        value={deliveredPrice}
+                        onChange={(e) => setDeliveredPrice(e.target.value)}
+                        className={cn(numCls, 'w-24 text-xs py-1.5')}
+                      />
+                    </div>
+                  )}
+
+                  {/* Extra lines that were never pitched as work */}
+                  {extraLines.map((x, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <input
+                        value={x.name}
+                        onChange={(e) => setExtraLines((xs) => xs.map((v, j) => (j === i ? { ...v, name: e.target.value } : v)))}
+                        placeholder="Line item — e.g. Stock photography licence"
+                        className={cn(inputCls, 'flex-1 py-1.5 text-xs')}
+                      />
+                      <input
+                        type="number" min={1} title="Quantity"
+                        value={x.qty}
+                        onChange={(e) => setExtraLines((xs) => xs.map((v, j) => (j === i ? { ...v, qty: e.target.value } : v)))}
+                        className={cn(numCls, 'w-14 text-xs py-1.5')}
+                      />
+                      <input
+                        type="number" min={0} placeholder="$"
+                        value={x.price}
+                        onChange={(e) => setExtraLines((xs) => xs.map((v, j) => (j === i ? { ...v, price: e.target.value } : v)))}
+                        className={cn(numCls, 'w-24 text-xs py-1.5')}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setExtraLines((xs) => xs.filter((_, j) => j !== i))}
+                        className="size-7 flex items-center justify-center rounded-md text-[var(--space-text-muted)] hover:text-red-400 transition-colors shrink-0"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                  <button type="button" onClick={() => setExtraLines((xs) => [...xs, { name: '', qty: '1', price: '' }])} className={ghostBtn}>
+                    <Plus className="size-3.5" /> Add line item
+                  </button>
+
+                  <div className="flex items-center justify-between rounded-lg border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] px-3 py-2.5">
+                    <span className="text-xs text-[var(--space-text-secondary)]">
+                      Proposal total <span className="text-[var(--space-text-muted)]">· {oneOffLineCount} line{oneOffLineCount === 1 ? '' : 's'}</span>
+                    </span>
+                    <span className="text-base font-semibold tabular-nums text-[var(--space-text-primary)]">{fmt(oneOffTotal)}</span>
+                  </div>
+
+                  {oneOffUnpriced > 0 && (
+                    <p className="flex items-start gap-1.5 text-[10px] text-amber-500 leading-snug">
+                      <AlertTriangle className="size-3 shrink-0 mt-0.5" />
+                      {oneOffUnpriced} pitched item{oneOffUnpriced === 1 ? '' : 's'} ha{oneOffUnpriced === 1 ? 's' : 've'} no
+                      price — {oneOffUnpriced === 1 ? 'it' : 'they'} will appear on the proposal at $0.
+                    </p>
+                  )}
+
+                  <label className="block">
+                    <span className={fieldLabel}>Cover message (on the proposal)</span>
+                    <textarea
+                      value={proposalNote}
+                      onChange={(e) => setProposalNote(e.target.value)}
+                      rows={2}
+                      placeholder="Following our call — here's the scope and pricing…"
+                      className={cn(inputCls, 'mt-1 resize-y text-xs')}
+                    />
+                  </label>
+
+                  <div className="flex items-center gap-2">
+                    <button onClick={handleConvertToPackage} disabled={converting || oneOffLineCount === 0} className={accentBtn}>
+                      {converting ? <Loader2 className="size-3.5 animate-spin" /> : <Package className="size-3.5" />}
+                      Create proposal
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-[var(--space-text-muted)] leading-relaxed">
+                    This creates a client proposal and <span className="text-[var(--space-text-secondary)]">moves</span> the pitched work into its
+                    milestone log, then opens it in Milestones — where you add the payment schedule, send the PDF, and invoice. The scope closes here.
+                  </p>
+                </div>
+              ) : (
+              <>
               {sendNotice && (
                 <div className="flex items-center gap-2 rounded-lg border border-[var(--space-accent-glow)] bg-[var(--space-accent-soft)] px-3 py-2">
                   <CircleCheck className="size-3.5 shrink-0" style={{ color: 'var(--space-accent)' }} />
@@ -1632,6 +1928,13 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                         <span className="text-[10px] text-[var(--space-text-muted)]">Message (optional — defaults to the cover note)</span>
                         <textarea value={sendMsg} onChange={(e) => setSendMsg(e.target.value)} rows={2} className={cn(inputCls, 'mt-1 resize-y text-xs')} />
                       </label>
+                      <label className="flex items-start gap-2 cursor-pointer">
+                        <input type="checkbox" checked={attachRecap} onChange={(e) => setAttachRecap(e.target.checked)} className="mt-0.5 accent-[var(--space-accent)]" />
+                        <span className="text-xs text-[var(--space-text-secondary)] leading-snug">
+                          Attach the work recap as a second PDF.
+                          {!scopeRecap && <span className="text-[var(--space-text-muted)]"> Not composed yet — it will send with the auto-derived text.</span>}
+                        </span>
+                      </label>
                       <div className="flex items-center gap-2">
                         <button onClick={handleSendProposal} disabled={sendingProposal || !sendTo.trim()} className={accentBtn}>
                           {sendingProposal ? <Loader2 className="size-3.5 animate-spin" /> : <Mail className="size-3.5" />}
@@ -1691,6 +1994,9 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                     Previewing and sending never bill anything. <span className="text-[var(--space-text-secondary)]">Start retainer</span> is the step that opens the first cycle — do it once the client has accepted.
                   </p>
                 </div>
+              )}
+
+              </>
               )}
 
               <button onClick={() => setEditing(true)} className={cn(ghostBtn, 'mx-auto')}>
@@ -2154,6 +2460,16 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
           onClose={() => setRecapOpen(false)}
           draft={recapDraft?.cycleStart === cycle.start ? recapDraft.data : null}
           onDraftChange={(m) => setRecapDraft({ cycleStart: cycle.start, data: m })}
+        />
+      )}
+
+      {/* The scope recap composer — no cycle required, which is the point of it. */}
+      {scopeRecapOpen && retainer && (
+        <ScopeRecapModal
+          retainerId={retainer.id}
+          onClose={() => setScopeRecapOpen(false)}
+          draft={scopeRecap}
+          onDraftChange={(m) => setScopeRecapDraft({ retainerId: retainer.id, data: m })}
         />
       )}
     </div>

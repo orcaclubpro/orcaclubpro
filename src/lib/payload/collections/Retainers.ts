@@ -147,6 +147,16 @@ const Retainers: CollectionConfig = {
       type: 'textarea',
       admin: { description: 'Internal notes' },
     },
+    {
+      name: 'convertedPackage',
+      type: 'relationship',
+      relationTo: 'packages',
+      admin: {
+        readOnly: true,
+        description: 'Set when this scope was converted into a one-off proposal instead of a retainer.',
+        condition: (data) => Boolean(data?.convertedPackage),
+      },
+    },
     // ── Proposal (pre-activation) ───────────────────────────────────────────────
     // The priced offer sent to the client BEFORE the retainer starts. Terms live here
     // rather than in the live fields so nothing bills off a proposal: activation copies

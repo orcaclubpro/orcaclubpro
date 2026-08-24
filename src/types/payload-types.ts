@@ -1090,6 +1090,10 @@ export interface Retainer {
    * Internal notes
    */
   notes?: string | null;
+  /**
+   * Set when this scope was converted into a one-off proposal instead of a retainer.
+   */
+  convertedPackage?: (string | null) | Package;
   proposedTier?: ('basic' | 'growth' | 'enterprise') | null;
   /**
    * USD/mo
@@ -2719,6 +2723,7 @@ export interface RetainersSelect<T extends boolean = true> {
   deactivateOn?: T;
   scopeSummary?: T;
   notes?: T;
+  convertedPackage?: T;
   proposedTier?: T;
   proposedMonthlyFee?: T;
   proposedHoursPerMonth?: T;

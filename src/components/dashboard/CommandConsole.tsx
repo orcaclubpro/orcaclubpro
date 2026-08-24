@@ -99,7 +99,7 @@ export function CommandConsole({ username }: CommandConsoleProps) {
 
   // Deep-link target for the Milestones station — set by a scheduled-payment row
   // (see the `orcaclub:open-milestones` listener below), cleared on close.
-  const [milestoneTarget, setMilestoneTarget] = useState<{ packageId: string; entryId: string } | null>(null)
+  const [milestoneTarget, setMilestoneTarget] = useState<{ packageId: string; entryId?: string | null } | null>(null)
 
   // Search state
   const [query,       setQuery]       = useState('')
@@ -191,16 +191,15 @@ export function CommandConsole({ username }: CommandConsoleProps) {
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Deep link from a scheduled-payment row → the Milestones station, recap stage.
-  // The target is set *before* the station opens, so the freshly mounted MilestonesTab
-  // reads it as its initial state; if the two updates ever land in separate renders,
-  // MilestonesTab's changed-target effect applies it instead. Malformed events are
-  // ignored — a partial detail would strand the station on a package it can't load.
+  // Deep link into the Milestones station. Two callers: a scheduled-payment row,
+  // which names an entry and lands on the recap/Documents stage; and a freshly
+  // converted scope, which has no schedule yet and just opens the package. A missing
+  // packageId is still ignored — it would strand the station on nothing to load.
   useEffect(() => {
     const onOpenMilestones = (e: Event) => {
       const detail = (e as CustomEvent).detail as { packageId?: string; entryId?: string } | undefined
-      if (!detail?.packageId || !detail?.entryId) return
-      setMilestoneTarget({ packageId: detail.packageId, entryId: detail.entryId })
+      if (!detail?.packageId) return
+      setMilestoneTarget({ packageId: detail.packageId, entryId: detail.entryId ?? null })
       if (isOpenRef.current) goStation('milestones')
       else openConsole('milestones')
     }

@@ -1,14 +1,22 @@
 'use server'
 
+import { revalidatePath } from 'next/cache'
 import { getCurrentUser } from '@/actions/auth'
 import { getPayload } from 'payload'
 import config from '@payload-config'
 import { cycleFor, nextCycleStart, type Cycle } from '@/lib/retainers/cycle'
 import { deriveRecapDefaults, mergeRecap, RECAP_CATEGORY_LABEL, type RecapData } from '@/lib/retainers/recap'
+import { deriveScopeRecapDefaults, mergeScopeRecap, type ScopeRecapData } from '@/lib/retainers/scopeRecap'
 import { getStripe } from '@/lib/stripe'
 import { resolveStripeCustomer } from '@/lib/stripe/customers'
 import { createStripeInvoiceForOrder, assertOrderPersisted } from '@/lib/stripe/invoices'
-import { buildRetainerStatementPdf, buildRetainerRecapPdf, buildRetainerProposalPdf } from '@/lib/pdf-generators'
+import {
+  buildRetainerStatementPdf,
+  buildRetainerRecapPdf,
+  buildRetainerProposalPdf,
+  buildScopeRecapPdf,
+} from '@/lib/pdf-generators'
+import { WORK_CATEGORY_LABEL } from '@/lib/packages/workLines'
 import {
   generateGenericInvoiceEmail,
   generateGenericInvoiceEmailText,
@@ -60,6 +68,8 @@ export interface RetainerDoc {
   proposalNote?: string | null
   proposalSentAt?: string | null
   proposalSentTo?: { email?: string | null }[] | null
+  /** Set when this scope became a one-off proposal instead of a retainer. */
+  convertedPackage?: string | { id: string } | null
   // One scheduled change that takes effect next cycle (see setRetainer/settle).
   pendingTier?: RetainerTier | null
   pendingMonthlyFee?: number | null
@@ -934,6 +944,160 @@ export async function activateRetainerPlan(input: {
   }
 }
 
+// ── Conversion — a scope that turns out to be one-off, not recurring ──────────
+
+/**
+ * Retainer work categories don't line up 1:1 with package ones: packages have
+ * `design` where retainers have `reporting`. Reporting folds into `work` — it is the
+ * generic bucket on both sides, and nothing downstream prices off the category.
+ */
+const WORK_CATEGORY_FOR_PACKAGE: Record<TimeEntryCategory, 'work' | 'design' | 'revision' | 'meeting'> = {
+  work: 'work',
+  meeting: 'meeting',
+  revision: 'revision',
+  reporting: 'work',
+}
+
+/**
+ * Turn a scoping retainer into a one-off itemized proposal.
+ *
+ * Some scopes are not recurring — they are a fixed job with a list of deliverables.
+ * Rather than grow a second line-item/scheduling system inside retainers, this hands
+ * the scope to the `packages` proposal machinery, which already does itemized lines,
+ * payment schedules, add-ons, the proposal PDF, and the milestones work log.
+ *
+ * Pitched work MOVES with it: every retainer time entry is rewritten as a
+ * package-work-entry (draft → planned, logged → logged) and the originals are
+ * deleted, so the new package is the single source of truth. The scope itself is
+ * retired to `inactive` and back-linked via `convertedPackage`.
+ *
+ * Staff only. Refuses anything that is not still scoping.
+ */
+export async function convertScopeToPackage(input: {
+  retainerId: string
+  /** Proposal name — defaults to "{client} — {scope headline or 'Project'}". */
+  name?: string
+  /** Cover message on the proposal PDF. Defaults to the scope summary. */
+  coverMessage?: string
+  /** The priced deliverables. Normally the pitched planned work, now with prices. */
+  lineItems: {
+    name: string
+    description?: string
+    price: number
+    quantity?: number
+    isAddOn?: boolean
+  }[]
+}) {
+  try {
+    const user = await getCurrentUser()
+    if (!user || user.role === 'client') return { success: false as const, error: 'Unauthorized' }
+    if (!input.retainerId) return { success: false as const, error: 'No retainer selected' }
+
+    const payload = await getPayload({ config })
+    const retainer = (await payload
+      .findByID({ collection: 'retainers', id: input.retainerId, depth: 0 })
+      .catch(() => null)) as RetainerDoc | null
+    if (!retainer) return { success: false as const, error: 'Retainer not found' }
+    if (!isScoping(retainer)) {
+      return { success: false as const, error: 'Only a scope that has not started can be converted' }
+    }
+
+    // Sanitize the priced lines the same way the package editor would.
+    const lineItems = (input.lineItems ?? [])
+      .map((it) => ({
+        name: (it.name ?? '').trim(),
+        description: it.description?.trim() || undefined,
+        price: Math.max(0, Math.round((it.price || 0) * 100) / 100),
+        quantity: Math.max(1, Math.round(it.quantity ?? 1)),
+        billingType: 'fixed' as const,
+        isRecurring: false,
+        isAddOn: Boolean(it.isAddOn),
+      }))
+      .filter((it) => it.name)
+    if (lineItems.length === 0) {
+      return { success: false as const, error: 'Add at least one priced line item' }
+    }
+
+    const clientAccountId =
+      typeof retainer.clientAccount === 'object' ? retainer.clientAccount.id : retainer.clientAccount
+    const account = (await payload
+      .findByID({ collection: 'client-accounts', id: clientAccountId, depth: 0 })
+      .catch(() => null)) as any
+    const clientLabel = account?.company || account?.name || 'Client'
+
+    // ── The proposal ───────────────────────────────────────────────────────────
+    const pkg = await payload.create({
+      collection: 'packages',
+      data: {
+        name: input.name?.trim() || `${clientLabel} — ${retainer.scopeSummary?.trim().slice(0, 60) || 'Project'}`,
+        description: retainer.scopeSummary ?? undefined,
+        coverMessage: input.coverMessage?.trim() || retainer.proposalNote || undefined,
+        notes: retainer.notes ?? undefined,
+        type: 'proposal',
+        status: 'draft',
+        clientAccount: clientAccountId,
+        lineItems,
+      } as any,
+    })
+
+    // ── Move the pitched work across ───────────────────────────────────────────
+    // Copy first, delete second: a failure mid-way leaves duplicates (visible and
+    // fixable) rather than losing the log entirely.
+    const { docs: entries } = await payload.find({
+      collection: 'retainer-time-entries',
+      where: { retainer: { equals: retainer.id } },
+      sort: 'date',
+      depth: 0,
+      limit: 500,
+    })
+    let migrated = 0
+    for (const entry of entries as TimeEntryDoc[]) {
+      const pkgCategory = WORK_CATEGORY_FOR_PACKAGE[(entry.category ?? 'work') as TimeEntryCategory]
+      await payload.create({
+        collection: 'package-work-entries',
+        data: {
+          date: entry.date,
+          hours: entry.hours ?? undefined,
+          status: entry.status === 'draft' ? 'planned' : 'logged',
+          completion: entry.completion ?? 'incomplete',
+          category: pkgCategory,
+          // package-work-entries requires a description; fall back to the category.
+          description: entry.description?.trim() || WORK_CATEGORY_LABEL[pkgCategory],
+          package: pkg.id,
+          clientAccount: clientAccountId,
+          loggedBy: typeof entry.loggedBy === 'object' ? entry.loggedBy?.id : (entry.loggedBy ?? undefined),
+        } as any,
+      })
+      migrated++
+    }
+    for (const entry of entries as TimeEntryDoc[]) {
+      await payload.delete({ collection: 'retainer-time-entries', id: entry.id }).catch(() => null)
+    }
+
+    // ── Retire the scope, back-linked to what it became ────────────────────────
+    await payload.update({
+      collection: 'retainers',
+      id: retainer.id,
+      data: {
+        status: 'inactive',
+        convertedPackage: pkg.id,
+        proposedTier: null,
+        proposedMonthlyFee: null,
+        proposedHoursPerMonth: null,
+        proposedOverageRate: null,
+        proposedStartDate: null,
+      } as any,
+    })
+
+    if (user.username) revalidatePath(`/u/${user.username}/clients/${clientAccountId}`)
+
+    return { success: true as const, packageId: pkg.id as string, migrated }
+  } catch (error) {
+    console.error('[convertScopeToPackage]', error)
+    return { success: false as const, error: error instanceof Error ? error.message : 'Failed to convert scope' }
+  }
+}
+
 // ── Proposal — the priced document sent before the retainer starts ────────────
 
 /** The terms being offered, resolved from the stored proposal with sane fallbacks. */
@@ -1108,6 +1272,9 @@ export async function sendRetainerProposalEmail(input: {
   retainerId: string
   recipients?: string[]
   message?: string
+  /** Attach the scope recap alongside the proposal, using the composed narrative. */
+  attachScopeRecap?: boolean
+  scopeRecap?: Partial<ScopeRecapData> | null
 }) {
   try {
     const user = await getCurrentUser()
@@ -1145,6 +1312,27 @@ export async function sendRetainerProposalEmail(input: {
       return { success: false as const, error: 'Could not build the proposal PDF' }
     }
 
+    // The recap is a companion, not the offer — unlike the proposal PDF this is
+    // best-effort, so a recap that fails to render never blocks the proposal going out.
+    const attachments: EmailAttachment[] = [attachment]
+    if (input.attachScopeRecap) {
+      try {
+        const recap = await scopeRecapPdfBytes(input.retainerId, input.scopeRecap)
+        if (recap.success) {
+          attachments.push({
+            filename: `ORCACLUB-Work-Recap-${client.company || client.name}.pdf`.replace(/[^\w.\- ]+/g, ''),
+            content: Buffer.from(recap.bytes).toString('base64'),
+            encoding: 'base64',
+            contentType: 'application/pdf',
+          })
+        } else {
+          console.error('[sendRetainerProposalEmail] recap skipped:', recap.error)
+        }
+      } catch (e) {
+        console.error('[sendRetainerProposalEmail] recap PDF failed:', e)
+      }
+    }
+
     const emailData = {
       clientName: client.name,
       clientCompany: client.company,
@@ -1169,7 +1357,7 @@ export async function sendRetainerProposalEmail(input: {
         subject: retainerProposalEmailSubject(emailData),
         html: generateRetainerProposalEmail(emailData),
         text: generateRetainerProposalEmailText(emailData),
-        attachments: [attachment],
+        attachments,
       } as any)
     } catch (e) {
       console.error('[sendRetainerProposalEmail] Email failed:', e)
@@ -1188,11 +1376,104 @@ export async function sendRetainerProposalEmail(input: {
       } as any,
     })
 
-    return { success: true as const, recipients, sentAt }
+    return { success: true as const, recipients, sentAt, recapAttached: attachments.length > 1 }
   } catch (error) {
     console.error('[sendRetainerProposalEmail]', error)
     return { success: false as const, error: error instanceof Error ? error.message : 'Failed to send proposal' }
   }
+}
+
+// ── Scope recap — the document that backs a proposal ────────────────────────────
+// A scoping retainer has no anchor, so no cycle, so neither of the billing-event recaps
+// (getRecapModel / getPackageRecapModel) can describe it. This one is anchored to the
+// pitch instead: work already delivered on one side, work planned next on the other.
+// Engagement-agnostic — the same document precedes a retainer and a one-off package.
+
+/** "$2,400" — whole dollars, which is how every retainer figure is quoted. */
+function moneyLabel(n: number): string {
+  return `$${Math.round(n || 0).toLocaleString('en-US')}`
+}
+
+/**
+ * Everything the scope recap renders. Numbers, buckets and the planned list come from
+ * the work log; the proposed figure comes from the saved proposal slot, so it is absent
+ * until the offer is priced and can never drift from what the proposal itself quotes.
+ * Staff only.
+ */
+export async function getScopeRecapModel(retainerId: string) {
+  try {
+    const user = await getCurrentUser()
+    if (!user || user.role === 'client') return { success: false as const, error: 'Unauthorized' }
+    if (!retainerId) return { success: false as const, error: 'No retainer selected' }
+
+    const payload = await getPayload({ config })
+    const retainer = (await payload
+      .findByID({ collection: 'retainers', id: retainerId, depth: 0 })
+      .catch(() => null)) as RetainerDoc | null
+    if (!retainer) return { success: false as const, error: 'Retainer not found' }
+
+    const clientAccountId =
+      typeof retainer.clientAccount === 'object' ? retainer.clientAccount.id : retainer.clientAccount
+    const [{ docs }, account] = await Promise.all([
+      payload.find({
+        collection: 'retainer-time-entries',
+        where: { retainer: { equals: retainer.id } },
+        sort: 'date',
+        depth: 0,
+        limit: 500,
+      }),
+      payload.findByID({ collection: 'client-accounts', id: clientAccountId, depth: 0 }).catch(() => null),
+    ])
+    const all = docs as TimeEntryDoc[]
+    const shape = (e: TimeEntryDoc) => ({
+      date: e.date,
+      description: e.description ?? '',
+      hours: e.hours ?? null,
+      category: (e.category ?? 'work') as TimeEntryCategory,
+    })
+
+    // Only a priced proposal contributes a figure — an unpriced scope shows no money.
+    const terms = proposalTermsOf(retainer)
+    const priced = terms.monthlyFee > 0 && terms.hoursPerMonth > 0
+
+    const model = deriveScopeRecapDefaults({
+      clientName: ((account as any)?.name ?? 'Client') as string,
+      clientCompany: (((account as any)?.company ?? null) as string | null),
+      scopeSummary: retainer.scopeSummary ?? null,
+      loggedEntries: all.filter((e) => e.status !== 'draft').map(shape),
+      plannedEntries: all.filter((e) => e.status === 'draft').map(shape),
+      proposedAmountLabel: priced ? `${moneyLabel(terms.monthlyFee)}/mo` : null,
+      proposedTermsLabel: priced
+        ? `${TIER_LABEL[terms.tier]} · ${fmtHrsLabel(terms.hoursPerMonth)} hrs/mo included`
+        : null,
+    })
+
+    return { success: true as const, model, retainerId: retainer.id, clientAccountId }
+  } catch (error) {
+    console.error('[getScopeRecapModel]', error)
+    return { success: false as const, error: error instanceof Error ? error.message : 'Failed to build recap' }
+  }
+}
+
+/**
+ * Re-derive the scope recap server-side, overlay the staff-composed narrative, and
+ * render it. Internal: the PDF route and the proposal email both go through here so a
+ * composed recap and its emailed copy can never differ.
+ */
+async function scopeRecapPdfBytes(retainerId: string, composed?: Partial<ScopeRecapData> | null) {
+  const model = await getScopeRecapModel(retainerId)
+  if (!model.success) return { success: false as const, error: model.error }
+  const merged = mergeScopeRecap(model.model, composed)
+  const bytes = await buildScopeRecapPdf({ ...merged, generatedOn: new Date().toISOString() })
+  return { success: true as const, bytes, merged }
+}
+
+/**
+ * Build the scope recap PDF. Exported from a 'use server' module, so it is a public
+ * endpoint — the staff check inside getScopeRecapModel is what gates it.
+ */
+export async function buildScopeRecapPdfFor(retainerId: string, composed?: Partial<ScopeRecapData> | null) {
+  return scopeRecapPdfBytes(retainerId, composed)
 }
 
 /**

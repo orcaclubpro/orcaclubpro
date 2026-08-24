@@ -3,6 +3,7 @@ import fontkit from '@pdf-lib/fontkit'
 import type { NdaFormData, SowFormData } from './document-generators'
 import type { RecapData } from './retainers/recap'
 import type { PackageRecapData } from './packages/recap'
+import type { ScopeRecapData } from './retainers/scopeRecap'
 import { CINZEL_DECORATIVE_BOLD_BASE64 } from './fonts/cinzel-decorative-bold'
 import { NEWSREADER_REGULAR_BASE64 } from './fonts/newsreader-regular'
 import { NEWSREADER_LIGHT_BASE64 } from './fonts/newsreader-light'
@@ -2286,7 +2287,13 @@ function pkgGlance(s: Deck, d: PackageRecapData): void {
 }
 
 // ── Slides 3+ · Accomplished ────────────────────────────────────────────────────
-function pkgAccomplished(newSlide: () => Deck, d: PackageRecapData): void {
+// Typed against only the fields it reads, so the scope recap deck (whose buckets carry
+// no category) renders through the same layout instead of forking it.
+interface RecapAccomplished {
+  accomplishedHeadline: string
+  buckets: { label: string; hours: number; note: string; items: { date: string; description: string; hours: number | null }[] }[]
+}
+function pkgAccomplished(newSlide: () => Deck, d: RecapAccomplished): void {
   const fl = pkgFlow(newSlide, 'Accomplished', d.accomplishedHeadline?.trim() || 'What this payment covers')
   for (const b of d.buckets) {
     // Bucket header — label left, informational hours right (omitted when zero).
@@ -2320,8 +2327,19 @@ function pkgAccomplished(newSlide: () => Deck, d: PackageRecapData): void {
 }
 
 // ── Slides · What's left ────────────────────────────────────────────────────────
-function pkgRemaining(newSlide: () => Deck, d: PackageRecapData): void {
-  const fl = pkgFlow(newSlide, "What's left", d.remainingHeadline?.trim() || 'Still to come')
+// `kicker`/`fallback` let the scope recap reuse this list as "What's next" — its planned
+// rows get the same hairline checkbox treatment.
+interface RecapRemaining {
+  remainingHeadline: string
+  remaining: { kind: 'planned' | 'payment'; label: string; amount: number | null; dueDate: string | null }[]
+}
+function pkgRemaining(
+  newSlide: () => Deck,
+  d: RecapRemaining,
+  kicker = "What's left",
+  fallback = 'Still to come',
+): void {
+  const fl = pkgFlow(newSlide, kicker, d.remainingHeadline?.trim() || fallback)
   for (const r of d.remaining) {
     const planned = r.kind === 'planned'
     const textX = planned ? PADX + 62 : PADX
@@ -2391,6 +2409,120 @@ export async function buildPackageRecapPdf(d: PackageRecapData & { generatedOn: 
 
   if ((d.buckets || []).length > 0) pkgAccomplished(slide, d)
   if ((d.remaining || []).length > 0) pkgRemaining(slide, d)
+
+  const noteCols = [
+    { label: 'Notes', items: (d.notes || []).filter((x) => x?.trim()) },
+    { label: 'Next steps', items: (d.nextSteps || []).filter((x) => x?.trim()) },
+  ].filter((c) => c.items.length > 0)
+  if (noteCols.length > 0) pkgNotes(slide, noteCols)
+
+  return doc.save()
+}
+
+// ── Scope Recap PDF — deck slides ───────────────────────────────────────────────
+// The pre-engagement counterpart to buildPackageRecapPdf and buildRetainerRecapPdf: the
+// same 960×540pt deck, Deck writer, fonts, palette and margins, and it reuses their
+// Accomplished / What's-next / Notes slides outright. Only the cover and the at-a-glance
+// grid differ, because a scoping retainer has no cycle and no payment to report against
+// — the pitch itself is the frame.
+
+// ── Slide 1 · Cover ─────────────────────────────────────────────────────────────
+function scopeCover(s: Deck, d: ScopeRecapData & { generatedOn: string }): void {
+  s.bg(DECK.paper)
+  if (s.logo) s.img(s.logo, PADX, 96, 64, 68.2)
+  s.text('ORCACLUB', s.logo ? 202 : PADX, 138.6, 26, s.f.sans, DECK.ink, { tracking: 26 * 0.42 })
+
+  const kicker = `${d.clientCompany || d.clientName} · SCOPE RECAP`
+  s.text(kicker.toUpperCase(), PADX, 392.6, KICKER.size, s.f.mono, DECK.teal, { tracking: KICKER.tracking })
+
+  s.text('Work recap', PADX, 544.6, 150, s.f.serif, DECK.ink, { tracking: -3 })
+  const title = d.scopeTitle?.trim() || 'Work to date'
+  s.text(title, PADX, 685.6, fitSize(title, s.f.serif, 150, CONTENT_W), s.f.serif, DECK.ink, { tracking: -3 })
+  s.rect(PADX, 761.6, CONTENT_W, 1, DECK.hair18)
+
+  // Footer rail: the period covered on the left, generation stamp on the right.
+  const gen = `Generated ${fmtLongDateUtc(d.generatedOn)}`.toUpperCase()
+  const genW = trackedWidth(gen, LABEL.size * S, s.f.mono, LABEL.tracking * S) / S
+  const foot = d.periodLabel?.trim() || 'Work to date'
+  s.text(ellipsize(foot.toUpperCase(), s.f.mono, LABEL.size, LABEL.tracking, CONTENT_W - genW - 60), PADX, 989, LABEL.size, s.f.mono, DECK.muted, { tracking: LABEL.tracking })
+  s.text(gen, CONTENT_R, 989, LABEL.size, s.f.mono, DECK.muted, { tracking: LABEL.tracking, align: 'right' })
+}
+
+// ── Slide 2 · At a glance ───────────────────────────────────────────────────────
+function scopeGlance(s: Deck, d: ScopeRecapData): void {
+  s.bg(DECK.paper)
+  const headline = d.headline?.trim() || `${d.itemsDelivered} item${d.itemsDelivered === 1 ? '' : 's'} delivered`
+  const ruleY = deckHeader(s, 'At a glance', headline)
+
+  // A scope with nothing delivered yet is legitimate — it reads as a pure plan, so the
+  // delivered cells drop out rather than parading a pair of zeroes.
+  const cells: Array<{ label: string; big: string; desc?: string; teal?: boolean }> = []
+  if (d.itemsDelivered > 0 || d.itemsPlanned === 0) {
+    cells.push({ label: 'Hours delivered', big: fmtHours(d.hoursDelivered), desc: d.periodLabel, teal: true })
+    cells.push({ label: 'Items delivered', big: String(d.itemsDelivered), desc: 'Completed to date' })
+  }
+  if (d.itemsPlanned > 0) {
+    cells.push({
+      label: 'Planned next',
+      big: String(d.itemsPlanned),
+      desc: d.hoursPlanned > 0 ? `${fmtHours(d.hoursPlanned)} hrs estimated` : 'Proposed scope',
+    })
+  }
+  if (d.proposedAmountLabel?.trim()) {
+    cells.push({ label: 'Proposed', big: d.proposedAmountLabel, desc: d.proposedTermsLabel ?? undefined })
+  }
+
+  const gridTop = ruleY + 53
+  const n = cells.length
+  const colW = (CONTENT_W - (n - 1)) / n // 1px hairline gaps
+
+  // A money label is far wider than an item count, so the big number shrinks to fit —
+  // one shared size across the row keeps the baselines level.
+  const bigSize = Math.min(...cells.map((c) => fitSize(c.big, s.f.serif, 132, colW - 80, 34)))
+  const bigBl = gridTop + 238 + bigSize
+
+  s.rect(PADX, gridTop, CONTENT_W, DECK_BOTTOM - gridTop, DECK.hair14)
+  for (let i = 0; i < n; i++) {
+    const x = PADX + i * (colW + 1)
+    const c = cells[i]
+    s.rect(x, gridTop, colW, DECK_BOTTOM - gridTop, DECK.card)
+    s.text(c.label.toUpperCase(), x + 40, gridTop + 73, LABEL.size, s.f.mono, DECK.muted, { tracking: LABEL.tracking })
+    s.text(c.big, x + 40, bigBl, bigSize, s.f.serif, c.teal ? DECK.teal : DECK.ink)
+    if (c.desc?.trim()) {
+      // Bottom-anchored: the last line's baseline sits at gridTop + 625.5.
+      const k = s.lineCount(c.desc, 26, s.f.sansLt, colW - 80)
+      s.para(c.desc, x + 40, gridTop + 625.5 - (k - 1) * 37.7, 26, 37.7, s.f.sansLt, DECK.desc, colW - 80)
+    }
+  }
+}
+
+/**
+ * Render the scope recap that accompanies a proposal. Sections with no content are
+ * skipped entirely rather than rendered empty, so a pitch with nothing delivered yet
+ * produces a plan-only deck and a retrospective with nothing planned produces a
+ * delivered-only one.
+ */
+export async function buildScopeRecapPdf(d: ScopeRecapData & { generatedOn: string }): Promise<Uint8Array> {
+  const doc = await PDFDocument.create()
+  doc.registerFontkit(fontkit)
+  const serif = await doc.embedFont(Buffer.from(NEWSREADER_REGULAR_BASE64, 'base64'), { subset: true })
+  const serifLt = await doc.embedFont(Buffer.from(NEWSREADER_LIGHT_BASE64, 'base64'), { subset: true })
+  const sans = await doc.embedFont(Buffer.from(POPPINS_REGULAR_BASE64, 'base64'), { subset: true })
+  const sansLt = await doc.embedFont(Buffer.from(POPPINS_LIGHT_BASE64, 'base64'), { subset: true })
+  const mono = await doc.embedFont(Buffer.from(IBM_PLEX_MONO_REGULAR_BASE64, 'base64'), { subset: true })
+  const logo = await doc.embedPng(Buffer.from(ORCA_MARK_BLACK_PNG_BASE64, 'base64'))
+  const f: DeckFonts = { serif, serifLt, sans, sansLt, mono }
+  const slide = () => new Deck(doc.addPage([DECK_W, DECK_H]), f, logo)
+
+  scopeCover(slide(), d)
+  scopeGlance(slide(), d)
+
+  if ((d.buckets || []).length > 0) {
+    pkgAccomplished(slide, { accomplishedHeadline: d.accomplishedHeadline, buckets: d.buckets })
+  }
+  if ((d.remaining || []).length > 0) {
+    pkgRemaining(slide, { remainingHeadline: d.remainingHeadline, remaining: d.remaining }, "What's next", 'What we propose to do')
+  }
 
   const noteCols = [
     { label: 'Notes', items: (d.notes || []).filter((x) => x?.trim()) },

@@ -99,7 +99,8 @@ export interface MilestonesTabProps {
   /** Preselect this client's packages when launched from a search result. */
   clientId?: string
   /** Deep-link straight to a package's Documents stage for one schedule entry. */
-  initialTarget?: { packageId: string; entryId: string } | null
+  /** entryId is optional: a converted scope opens its new package with no schedule yet. */
+  initialTarget?: { packageId: string; entryId?: string | null } | null
 }
 
 export function MilestonesTab({ clientId, initialTarget }: MilestonesTabProps) {
@@ -115,7 +116,7 @@ export function MilestonesTab({ clientId, initialTarget }: MilestonesTabProps) {
 
   // Selection
   const [packageId, setPackageId] = useState<string>(initialTarget?.packageId ?? '')
-  const [stage, setStage] = useState<Stage>(initialTarget ? 'documents' : 'overview')
+  const [stage, setStage] = useState<Stage>(initialTarget?.entryId ? 'documents' : 'overview')
   const [summary, setSummary] = useState<WorkSummary | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -163,18 +164,26 @@ export function MilestonesTab({ clientId, initialTarget }: MilestonesTabProps) {
   // A deep link can arrive after mount (the console keeps this station alive), so
   // honour a *changed* target rather than only the initial one.
   const appliedTargetRef = useRef<string | null>(
-    initialTarget ? `${initialTarget.packageId}:${initialTarget.entryId}` : null,
+    initialTarget ? `${initialTarget.packageId}:${initialTarget.entryId ?? ''}` : null,
   )
   useEffect(() => {
-    if (!initialTarget?.packageId || !initialTarget?.entryId) return
-    const key = `${initialTarget.packageId}:${initialTarget.entryId}`
+    if (!initialTarget?.packageId) return
+    const key = `${initialTarget.packageId}:${initialTarget.entryId ?? ''}`
     if (appliedTargetRef.current === key) return
     appliedTargetRef.current = key
     setPackageId(initialTarget.packageId)
-    setStage('documents')
-    setDocEntryId(initialTarget.entryId)
     setRecapOpen(false)
-    setSendEntryId(initialTarget.entryId)
+    // An entry-less target is a package with no schedule yet — a freshly converted
+    // scope. There is no document to compose, so land on Overview instead.
+    if (initialTarget.entryId) {
+      setStage('documents')
+      setDocEntryId(initialTarget.entryId)
+      setSendEntryId(initialTarget.entryId)
+    } else {
+      setStage('overview')
+      setDocEntryId(null)
+      setSendEntryId(null)
+    }
   }, [initialTarget])
 
   // ── Loading ─────────────────────────────────────────────────────────────────
