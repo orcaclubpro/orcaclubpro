@@ -46,6 +46,8 @@ interface BillingModel {
   currentUsage: { hoursUsed: number; overageHours: number; overageRate: number; overageAmount: number; loggedCount: number }
   next: BillingSide
   nextPlanned: string[]
+  /** Billing a closed cycle after the fact — current and next are the same cycle. */
+  arrears?: boolean
 }
 
 export interface RetainerInvoiceModalProps {
@@ -206,7 +208,7 @@ export function RetainerInvoiceModal({
             <span className="text-sm font-semibold text-[var(--space-text-primary)]">Send retainer billing</span>
             {model && (
               <span className="text-xs text-[var(--space-text-muted)] truncate">
-                {(model.client?.company || model.client?.name)} · closing {model.current.monthLabel} → billing {model.next.monthLabel}
+                {(model.client?.company || model.client?.name)} · {model.arrears ? `billing ${model.current.monthLabel} in arrears — the plan has ended` : `closing ${model.current.monthLabel} → billing ${model.next.monthLabel}`}
               </span>
             )}
             <button onClick={onClose} aria-label="Close" className="ml-auto size-8 rounded-lg border border-[var(--space-border-hard)] flex items-center justify-center text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] transition-colors shrink-0">
@@ -318,8 +320,9 @@ export function RetainerInvoiceModal({
                         </div>
                       </div>
 
-                      {/* Planned work */}
-                      {model.nextPlanned.length > 0 && (
+                      {/* Planned work — meaningless on a closed cycle, whose drafts are
+                          unfinished work rather than a plan for the month ahead. */}
+                      {model.nextPlanned.length > 0 && !model.arrears && (
                         <button type="button" onClick={() => setIncludePlanned((v) => !v)} className="w-full flex items-center gap-2 rounded-lg border border-[var(--space-border-hard)] bg-[var(--space-bg-card-hover)] px-3 py-2 text-left">
                           {includePlanned ? <CircleCheck className="size-4 shrink-0" style={{ color: 'var(--space-accent)' }} /> : <Circle className="size-4 shrink-0 text-[var(--space-text-muted)]" />}
                           <span className="text-xs text-[var(--space-text-secondary)]">List {model.nextPlanned.length} planned item{model.nextPlanned.length === 1 ? '' : 's'} for {model.next.monthLabel} in the email</span>

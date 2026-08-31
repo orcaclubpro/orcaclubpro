@@ -1491,6 +1491,30 @@ async function _sendScheduleEntryInvoice(
     } as any,
   })
 
+  // ── Confirm the order actually persisted ──────────────────────────────────────
+  // The same guard sendScheduledPayment uses, and for the same reason: an Orders
+  // afterChange hook can abort the create's Mongo transaction while swallowing the
+  // error, so `payload.create` hands back an id for a row that was rolled back.
+  //
+  // It matters more on this path than on that one. The caller stamps this id onto the
+  // schedule entry, and if that stamp never lands the entry stays unlinked — so the
+  // next push bills the same row again, and the client gets a second Stripe invoice
+  // and a second email for one payment. Verifying before the email means a phantom
+  // order never reaches the customer, and voiding the invoice means a retry starts
+  // clean instead of double-billing.
+  try {
+    await assertOrderPersisted(payload, order.id as string)
+  } catch (e) {
+    console.error('[_sendScheduleEntryInvoice] Order did not persist:', e)
+    await stripe.invoices
+      .voidInvoice(finalizedInvoice.id as string)
+      .catch((v: any) => console.error('[_sendScheduleEntryInvoice] Failed to void orphaned invoice:', v))
+    throw new Error(
+      `"${entry.label}" could not be saved, so it was not billed. ` +
+        'The Stripe invoice has been voided and nothing was charged — please try again.',
+    )
+  }
+
   // Non-blocking invoice email
   ;(async () => {
     try {

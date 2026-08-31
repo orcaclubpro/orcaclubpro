@@ -10,12 +10,18 @@ import { adminOrUser, adminOnly } from '../access/index'
  * `retainer-time-entries` collection and are summed per calendar month against
  * `hoursPerMonth` — there is no rollover.
  *
- * Lifecycle: `scoping` → `active` → `inactive`. A SCOPING retainer is an engagement
- * being pitched: staff log planned work (draft entries with hour estimates) and work
- * already done (logged entries) against it, but there is no fee, no hour cap, and —
- * critically — no `activatedAt`, so no billing cycle exists and nothing is billable.
- * Pricing is set from that evidence afterwards: `activateRetainerPlan` writes the
- * terms, flips the status, and stamps the cycle anchor.
+ * This is really the client's ENGAGEMENT record, and `status` is where it is in its
+ * life: `scoping` (no plan — a Non-Retainer client) → `active` (on a recurring plan)
+ * → `inactive` (closed). The transitions run both ways. A SCOPING record is an
+ * engagement being pitched: staff log planned work (draft entries with hour estimates)
+ * and work already done (logged entries) against it, but there is no fee, no hour cap,
+ * and nothing billable. Pricing is set from that evidence afterwards:
+ * `activateRetainerPlan` writes the terms, flips the status, and stamps the anchor.
+ *
+ * `active → scoping` is the other direction (see `endRetainerPlan`): the client comes
+ * off the recurring plan but stays engaged, so one-off projects can be scoped and sold
+ * against the same record. The hours already logged stay attached as retainer history;
+ * `nonRetainerSince` is what keeps them out of the new pitch.
  *
  * Payment/Stripe is intentionally out of scope: overage is displayed, not charged.
  */
@@ -54,7 +60,7 @@ const Retainers: CollectionConfig = {
             { label: 'Growth', value: 'growth' },
             { label: 'Enterprise', value: 'enterprise' },
           ],
-          admin: { width: '25%', description: 'Playbook tier — drives preset fee/hours in the builder. Nominal while scoping.' },
+          admin: { width: '25%', description: 'Playbook tier — drives preset fee/hours in the builder. Nominal for a non-retainer client.' },
         },
         {
           name: 'status',
@@ -63,13 +69,13 @@ const Retainers: CollectionConfig = {
           defaultValue: 'active',
           index: true,
           options: [
-            { label: 'Scoping', value: 'scoping' },
+            { label: 'Non-Retainer client', value: 'scoping' },
             { label: 'Active', value: 'active' },
             { label: 'Inactive', value: 'inactive' },
           ],
           admin: {
             width: '25%',
-            description: 'Scoping = agreed but no plan chosen yet (no cycle, not billable). Inactive retainers are hidden from the dashboard; their logged hours are kept.',
+            description: 'Non-Retainer client = engaged but on no recurring plan (no cycle, not billable) — the state a one-off project is scoped and sold from. Inactive retainers are hidden from the dashboard; their logged hours are kept.',
           },
         },
         {
@@ -123,13 +129,44 @@ const Retainers: CollectionConfig = {
       ],
     },
     {
-      name: 'deactivateOn',
+      type: 'row',
+      admin: { condition: (data) => Boolean(data?.deactivateOn) },
+      fields: [
+        {
+          name: 'deactivateOn',
+          type: 'date',
+          admin: {
+            width: '50%',
+            readOnly: true,
+            date: { pickerAppearance: 'dayOnly' },
+            description: 'Scheduled wind-down — the plan stays active and billable until this date.',
+          },
+        },
+        {
+          name: 'deactivateTo',
+          type: 'select',
+          options: [
+            { label: 'Close the engagement', value: 'inactive' },
+            { label: 'Keep as a Non-Retainer client', value: 'scoping' },
+          ],
+          admin: {
+            width: '50%',
+            readOnly: true,
+            description: 'Where the wind-down lands. Defaults to closing if unset.',
+          },
+        },
+      ],
+    },
+    {
+      name: 'nonRetainerSince',
       type: 'date',
+      index: true,
       admin: {
         readOnly: true,
         date: { pickerAppearance: 'dayOnly' },
-        description: 'Scheduled deactivation — retainer stays active until this date, then flips inactive.',
-        condition: (data) => Boolean(data?.deactivateOn),
+        description:
+          'When a running plan was switched back to Non-Retainer. Bounds the pitch: only work logged on or after this date counts as scope for the next proposal — everything before it is retainer history.',
+        condition: (data) => Boolean(data?.nonRetainerSince),
       },
     },
     // ── Scope ───────────────────────────────────────────────────────────────────
@@ -148,12 +185,26 @@ const Retainers: CollectionConfig = {
       admin: { description: 'Internal notes' },
     },
     {
+      name: 'convertedPackages',
+      type: 'relationship',
+      relationTo: 'packages',
+      hasMany: true,
+      admin: {
+        readOnly: true,
+        description:
+          'One-off proposals sold against this engagement. A Non-Retainer client stays open after each one, so there can be several.',
+        condition: (data) => Boolean(data?.convertedPackages?.length),
+      },
+    },
+    {
+      // Superseded by `convertedPackages`. Kept so records converted before the change
+      // still show what they became; nothing writes it any more.
       name: 'convertedPackage',
       type: 'relationship',
       relationTo: 'packages',
       admin: {
         readOnly: true,
-        description: 'Set when this scope was converted into a one-off proposal instead of a retainer.',
+        description: 'Deprecated — see Converted Packages.',
         condition: (data) => Boolean(data?.convertedPackage),
       },
     },

@@ -6,7 +6,7 @@ import {
   CalendarClock, PowerOff, FileDown, Check, X, ArrowRight, CalendarPlus, FileText,
   CircleCheck, Circle, Search, Building2, CornerDownLeft, AlertTriangle, Activity, Flame, Send,
   RotateCcw, ClipboardList, Rocket, DollarSign, Lightbulb, Mail, FileSignature,
-  Repeat, Package, BookOpen,
+  Repeat, Package, BookOpen, Milestone,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { RetainerRecapModal } from './RetainerRecapModal'
@@ -20,6 +20,7 @@ import {
   getRetainerPortfolio,
   setRetainer,
   setRetainerActive,
+  endRetainerPlan,
   setRetainerAnchor,
   logHours,
   logPlannedHours,
@@ -31,7 +32,7 @@ import {
   activateRetainerPlan,
   setRetainerProposal,
   sendRetainerProposalEmail,
-  convertScopeToPackage,
+  sendOneOffProject,
   type RetainerDoc,
   type TimeEntryDoc,
   type RetainerTotals,
@@ -42,6 +43,8 @@ import {
   type RetainerHealth,
   type RetainerClientInfo,
   type RetainerNextCycle,
+  type RetainerCycleInvoice,
+  type RetainerHistoryMeta,
   type RetainerPitch,
   type RetainerProposalTerms,
   type TimeEntryCategory,
@@ -96,6 +99,99 @@ const PRIORITY_BADGE: Record<TimeEntryPriority, string> = {
   medium: 'text-[var(--space-text-muted)] border-[var(--space-border-hard)]',
   low: 'text-[var(--space-text-muted)] border-[var(--space-border-hard)]',
 }
+// ── One-off payment schedule ────────────────────────────────────────────────────
+// A row here becomes exactly one Order. `entryType` maps to the Order's invoiceType,
+// so it is a real field rather than a label the server has to string-match.
+
+type SendAs = 'proposal' | 'invoice' | 'sow'
+
+interface SchedRow {
+  key: string
+  label: string
+  entryType: 'deposit' | 'installment' | 'balance'
+  amount: string
+  dueDate: string
+}
+
+let schedKeyCounter = 0
+function schedKey() {
+  schedKeyCounter += 1
+  return `s${schedKeyCounter}`
+}
+
+/** Split `total` into `parts` whole-cent amounts, with the remainder on the last. */
+function splitAmount(total: number, parts: number): number[] {
+  const each = Math.floor((total / parts) * 100) / 100
+  const out = Array.from({ length: parts }, () => each)
+  out[parts - 1] = Math.round((total - each * (parts - 1)) * 100) / 100
+  return out
+}
+
+/** The ways a one-off job actually gets billed. Each rewrites the schedule wholesale. */
+const SCHED_PRESETS: {
+  id: string
+  label: string
+  hint: string
+  build: (total: number) => SchedRow[]
+}[] = [
+  {
+    id: 'full',
+    label: 'Pay in full',
+    hint: 'One invoice',
+    build: (total) => [
+      { key: schedKey(), label: 'Project total', entryType: 'balance', amount: String(total), dueDate: dayInput(30) },
+    ],
+  },
+  {
+    id: 'half',
+    label: '50 / 50',
+    hint: 'Deposit, then balance',
+    build: (total) => {
+      const [a, b] = splitAmount(total, 2)
+      return [
+        { key: schedKey(), label: 'Deposit', entryType: 'deposit', amount: String(a), dueDate: dayInput(0) },
+        { key: schedKey(), label: 'Balance', entryType: 'balance', amount: String(b), dueDate: dayInput(30) },
+      ]
+    },
+  },
+  {
+    id: 'thirds',
+    label: 'Thirds',
+    hint: 'Deposit, midpoint, balance',
+    build: (total) => {
+      const [a, b, c] = splitAmount(total, 3)
+      return [
+        { key: schedKey(), label: 'Deposit', entryType: 'deposit', amount: String(a), dueDate: dayInput(0) },
+        { key: schedKey(), label: 'Midpoint', entryType: 'installment', amount: String(b), dueDate: dayInput(30) },
+        { key: schedKey(), label: 'Balance', entryType: 'balance', amount: String(c), dueDate: dayInput(60) },
+      ]
+    },
+  },
+]
+
+/**
+ * What "send" does about money. One control rather than two checkboxes, because the
+ * old pair was coupled (Stripe billing was meaningless without orders) and its combined
+ * state double-sent: the document email AND one Stripe invoice email per schedule row.
+ *
+ * `stripe` finalizes the invoices, and those emails are the send — each carries the
+ * line items, a payment link, and a link back to the proposal, so the document email
+ * is suppressed server-side.
+ */
+type BillingMode = 'none' | 'orders' | 'stripe'
+
+const BILLING_MODES: { value: BillingMode; label: string; hint: string }[] = [
+  { value: 'none', label: 'No orders yet', hint: 'Send the document only. Bill later from Milestones once they accept.' },
+  { value: 'orders', label: 'Create pending orders', hint: 'One order per schedule row, added to the balance. Nothing is charged.' },
+  { value: 'stripe', label: 'Invoice through Stripe', hint: 'Finalizes and emails a real invoice per schedule row. This replaces the document email.' },
+]
+
+const SEND_AS_OPTIONS: { value: SendAs; label: string; hint: string }[] = [
+  { value: 'proposal', label: 'Proposal', hint: 'Deliverables, pricing, and the payment schedule for review' },
+  { value: 'invoice', label: 'Invoice', hint: 'A straight invoice copy of the same lines' },
+  { value: 'sow', label: 'SOW', hint: 'Scope of Work contract — deliverables, timeline, fees, terms' },
+]
+
 function PriorityBadge({ priority }: { priority?: TimeEntryPriority | null }) {
   const p = (priority ?? 'medium') as TimeEntryPriority
   if (p === 'medium') return null // default — keep rows quiet
@@ -121,6 +217,13 @@ function fmtDay(iso: string | null | undefined) {
 function toDayInput(iso: string | null | undefined) {
   return iso ? String(iso).slice(0, 10) : ''
 }
+/** yyyy-mm-dd, n days from today — payment due dates are all relative offsets. */
+function dayInput(offsetDays = 0) {
+  const d = new Date()
+  d.setDate(d.getDate() + offsetDays)
+  return d.toISOString().split('T')[0]
+}
+
 function todayInput() {
   return new Date().toISOString().slice(0, 10)
 }
@@ -175,6 +278,14 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
   const [scheduled, setScheduled] = useState<RetainerScheduled | null>(null)
   const [clientInfo, setClientInfo] = useState<RetainerClientInfo | null>(null)
   const [nextCycle, setNextCycle] = useState<RetainerNextCycle | null>(null)
+  // The order already raised for the cycle on screen — 'end now' checks it before
+  // warning about hours that would be stranded uninvoiced.
+  const [cycleInvoice, setCycleInvoice] = useState<RetainerCycleInvoice | null>(null)
+  // A Non-Retainer client that came back from a plan owns a retainer past. `history`
+  // carries the navigator's bounds; `view` says whether the body is the pitch or one
+  // of those closed cycles — the two share a status, so a discriminator is required.
+  const [history, setHistory] = useState<RetainerHistoryMeta | null>(null)
+  const [view, setView] = useState<'none' | 'live' | 'pitch' | 'history'>('none')
   const [error, setError] = useState<string | null>(null)
 
   // Invoice flow + the lifted recap draft (keyed to a cycle so stale drafts never attach)
@@ -252,7 +363,35 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
   const [lineQtys, setLineQtys] = useState<Record<string, string>>({})
   const [deliveredPrice, setDeliveredPrice] = useState('')
   const [extraLines, setExtraLines] = useState<{ name: string; qty: string; price: string }[]>([])
-  const [converting, setConverting] = useState(false)
+
+  // The payment schedule. Each row becomes one Order on send, so this — not the line
+  // items — is what decides how the job is billed. Seeded once to the full total so
+  // "create orders" always has something to work from; presets rewrite it wholesale.
+  const [schedRows, setSchedRows] = useState<SchedRow[]>([])
+  const schedSeededRef = useRef(false)
+  // Send options. Orders default ON — creating them is the point of this flow. Stripe
+  // defaults OFF: sending a proposal must never charge a client as a side effect.
+  const [oneOffSendAs, setOneOffSendAs] = useState<SendAs>('proposal')
+  // One setting, three states — the two checkboxes it replaces were coupled (Stripe
+  // was meaningless without orders) and their combination could send three emails for
+  // one press. See BILLING_MODES.
+  const [billing, setBilling] = useState<BillingMode>('orders')
+  const [sendingOneOff, setSendingOneOff] = useState(false)
+
+  // Ending a plan is two questions, not one: when it stops billing, and what the
+  // client becomes afterwards. Held open as a panel rather than a confirm() because
+  // "end now" can strand unbilled hours and staff need to see the count first.
+  const [endOpen, setEndOpen] = useState(false)
+  const [endWhen, setEndWhen] = useState<'cycle-end' | 'now'>('cycle-end')
+  const [endThen, setEndThen] = useState<'close' | 'non-retainer'>('close')
+  // What the send actually did. Held here rather than handed straight to Milestones
+  // because this is the one action in the console that emails a client and can raise
+  // Stripe invoices — staff should read what happened before leaving the surface, and
+  // a partial failure has nowhere else to surface (clearClient wipes the error banner
+  // and the panel unmounts on handoff).
+  const [oneOffResult, setOneOffResult] = useState<
+    { packageId: string; lines: string[]; warnings: string[] } | null
+  >(null)
 
   // Setup form
   const [editing, setEditing] = useState(false)
@@ -329,6 +468,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
       setRetainerDoc(null); setCycle(null); setTerms(null)
       setLogged([]); setDrafts([]); setTotals(null); setScheduled(null)
       setClientInfo(null); setNextCycle(null); setPitch(null); setProposal(null)
+      setCycleInvoice(null); setHistory(null); setView('none')
       return
     }
     const r = await getRetainerSummary(selectedClientId, refDate || undefined)
@@ -342,6 +482,9 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
       setScheduled(r.scheduled)
       setClientInfo(r.client)
       setNextCycle(r.nextCycle)
+      setCycleInvoice(r.cycleInvoice)
+      setHistory(r.history)
+      setView(r.view)
       setPitch(r.pitch)
       setProposal(r.proposal)
     } else {
@@ -469,6 +612,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
     setAttachRecap(false)
     setConfirmResetInvoice(false)
     setResetInvoiceError(null)
+    setOneOffResult(null)
   }, [])
 
   const selectedClient = clients.find((c) => c.id === selectedClientId) ?? null
@@ -595,16 +739,37 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
     setAddingDone(false)
   }
 
-  /**
-   * Hand a one-off scope to the packages system: create the proposal, move the
-   * pitched work into its milestone log, then jump the console to it. The retainer
-   * side is retired by the action, so the station falls back to the picker.
-   */
-  async function handleConvertToPackage() {
-    setError(null); setSendNotice(null)
-    if (!retainer) return
+  /** Schedule-row mutations — the rows are plain state, edited in place. */
+  function patchSched(key: string, patch: Partial<SchedRow>) {
+    setSchedRows((rows) => rows.map((r) => (r.key === key ? { ...r, ...patch } : r)))
+  }
+  function removeSched(key: string) {
+    setSchedRows((rows) => rows.filter((r) => r.key !== key))
+  }
+  function addSchedRow() {
+    schedSeededRef.current = true
+    setSchedRows((rows) => [
+      ...rows,
+      {
+        key: schedKey(),
+        label: rows.length === 0 ? 'Deposit' : `Installment ${rows.length}`,
+        entryType: rows.length === 0 ? 'deposit' : 'installment',
+        // A new row defaults to whatever the schedule has not accounted for yet.
+        amount: schedRemaining > 0 ? String(schedRemaining) : '',
+        dueDate: dayInput(rows.length * 30),
+      },
+    ])
+  }
+  function applySchedPreset(id: string) {
+    const preset = SCHED_PRESETS.find((p) => p.id === id)
+    if (!preset) return
+    schedSeededRef.current = true
+    setSchedRows(preset.build(oneOffTotal))
+  }
 
-    const lineItems = [
+  /** The priced deliverables, assembled from the pitch, the delivered-work line, and extras. */
+  function oneOffLineItems() {
+    return [
       ...drafts.map((d) => ({
         name: d.description?.trim() || 'Work item',
         description: d.hours ? `${fmtHrs(d.hours)}h estimated` : undefined,
@@ -622,20 +787,78 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
           quantity: Math.max(1, parseInt(x.qty, 10) || 1),
         })),
     ]
+  }
+
+  /**
+   * The one-off project's single action. `draft` builds the proposal and stops;
+   * `send` also emails it and creates the Orders behind the payment schedule.
+   *
+   * Either way the packages system takes ownership from here — the scope is retired
+   * server-side, so the station falls back to the picker and hands off to Milestones.
+   */
+  async function handleSendOneOff(mode: 'send' | 'draft') {
+    setError(null); setSendNotice(null)
+    if (!retainer) return
+
+    const lineItems = oneOffLineItems()
     if (lineItems.length === 0) { setError('Add at least one line item'); return }
 
-    setConverting(true)
-    const r = await convertScopeToPackage({
+    const recipients = sendTo.split(/[,\s]+/).map((x) => x.trim()).filter(Boolean)
+    if (mode === 'send' && recipients.length === 0) { setError('Add at least one recipient email'); return }
+    if (mode === 'send' && billing !== 'none' && schedBillable.length === 0) {
+      setError('Add a payment schedule row, or set billing to "No orders yet"')
+      return
+    }
+
+    setSendingOneOff(true)
+    const r = await sendOneOffProject({
       retainerId: retainer.id,
       name: pkgName.trim() || undefined,
       coverMessage: proposalNote.trim() || undefined,
       lineItems,
+      paymentSchedule: schedBillable.map((row) => ({
+        label: row.label.trim(),
+        entryType: row.entryType,
+        amount: parseFloat(row.amount) || 0,
+        dueDate: row.dueDate || undefined,
+      })),
+      send: mode === 'send'
+        ? { recipients, message: sendMsg.trim() || undefined, sendAs: oneOffSendAs }
+        : null,
+      createOrders: mode === 'send' && billing !== 'none',
+      invoiceNow: mode === 'send' && billing === 'stripe',
     })
-    setConverting(false)
+    setSendingOneOff(false)
     if (!r.success) { setError(r.error ?? 'Failed to create the proposal'); return }
 
-    // Hand off to the Milestones station, which owns packages from here.
-    window.dispatchEvent(new CustomEvent('orcaclub:open-milestones', { detail: { packageId: r.packageId } }))
+    // Report, do not hand off. The scope is retired server-side, so reloading would
+    // drop the console back to the setup form and take the receipt with it.
+    const lines = [mode === 'send' ? 'Proposal created and sent.' : 'Draft proposal created.']
+    if (r.migrated > 0) {
+      lines.push(`${r.migrated} work ${r.migrated === 1 ? 'entry' : 'entries'} moved into its milestone log.`)
+    }
+    if (r.emailed > 0) {
+      const asLabel = SEND_AS_OPTIONS.find((o) => o.value === oneOffSendAs)!.label.toLowerCase()
+      lines.push(`Emailed to ${r.emailed} recipient${r.emailed === 1 ? '' : 's'} as a ${asLabel}.`)
+    }
+    if (r.ordersCreated > 0) {
+      const n = r.ordersCreated
+      lines.push(
+        r.invoiced
+          ? `${n} Stripe invoice${n === 1 ? '' : 's'} finalized and emailed — one per schedule row.`
+          : `${n} order${n === 1 ? '' : 's'} created — pending, not yet invoiced.`,
+      )
+    }
+    if (r.documentEmailSuppressed) {
+      lines.push('The invoice email is the send — no separate proposal email went out.')
+    }
+    setOneOffResult({ packageId: r.packageId, lines, warnings: r.warnings })
+  }
+
+  /** Hand the finished proposal to the Milestones station, which owns packages from here. */
+  function openInMilestones(packageId: string) {
+    window.dispatchEvent(new CustomEvent('orcaclub:open-milestones', { detail: { packageId } }))
+    setOneOffResult(null)
     clearClient()
   }
 
@@ -875,14 +1098,26 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
     setDeletingId(null)
   }
 
-  async function handleDeactivate() {
+  /**
+   * End the plan. `then: 'non-retainer'` keeps the same engagement record alive as a
+   * Non-Retainer client, which is what makes one-off work sellable to a client coming
+   * off a retainer — so an immediate switch lands straight in the pitch console.
+   */
+  async function handleEndPlan() {
     if (!retainer) return
-    if (!confirm('Schedule deactivation? The retainer stays active through the end of the current cycle, then turns off. Logged hours are kept.')) return
     setError(null); setDeactivating(true)
-    const r = await setRetainerActive(retainer.id, false)
-    if (r.success) await load()
-    else setError(r.error ?? 'Failed to deactivate retainer')
+    const r = await endRetainerPlan({ retainerId: retainer.id, when: endWhen, then: endThen })
     setDeactivating(false)
+    if (!r.success) { setError(r.error ?? 'Failed to end the plan'); return }
+    setEndOpen(false)
+    // An immediate switch to Non-Retainer changes which console renders — land on the
+    // pitch, ready to scope, rather than on a cycle view that no longer exists.
+    if (r.applied && r.landsOn === 'scoping') {
+      setStage('overview')
+      setRefDate('')
+      setEngagement('oneoff')
+    }
+    await load()
   }
 
   async function handleReactivate() {
@@ -921,6 +1156,29 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
   // Scoping: pitched but unpriced. No cycle exists, so the cycle stages and navigator
   // are meaningless here — the pitch console stands in for the whole body.
   const scoping = retainer?.status === 'scoping'
+  // Reading a closed retainer cycle. Still a scoping record — `view` is what separates
+  // the two, since both share the status.
+  const inHistory = view === 'history'
+  const atFirstHistoryCycle = Boolean(history && history.cycleIndex != null && history.cycleIndex <= 1)
+
+  /** Walk the retainer past. Stepping forward off the last cycle lands on the pitch. */
+  function goHistory(delta: -1 | 1) {
+    if (!history) return
+    if (!inHistory) {
+      // Entering from the pitch — the newest closed cycle is the natural landing spot.
+      if (delta === -1) setRefDate(history.lastCycleStart)
+      return
+    }
+    if (!cycle) return
+    if (delta === 1) {
+      // Past the last cycle there is no more history — that is the pitch.
+      if (cycle.end >= history.since) { setRefDate(''); return }
+      setRefDate(cycle.end)
+      return
+    }
+    if (atFirstHistoryCycle) return
+    setRefDate(new Date(new Date(cycle.start).getTime() - 86_400_000).toISOString())
+  }
   // Keyed to the retainer so a draft composed for one client never attaches to another.
   const scopeRecap = scopeRecapDraft && scopeRecapDraft.retainerId === retainer?.id ? scopeRecapDraft.data : null
   const plannedHours = pitch?.plannedHours ?? 0
@@ -949,6 +1207,23 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
   const oneOffLineCount =
     drafts.length + (deliveredPriceNum > 0 ? 1 : 0) + extraLines.filter((x) => x.name.trim()).length
   const oneOffUnpriced = drafts.filter((d) => linePriceOf(d.id) <= 0).length
+
+  // The schedule is what gets billed, so it is reconciled against the proposal total
+  // rather than derived from it — a deposit-only schedule is a legitimate choice.
+  const schedTotal = Math.round(schedRows.reduce((t, r) => t + (parseFloat(r.amount) || 0), 0) * 100) / 100
+  const schedRemaining = Math.round((oneOffTotal - schedTotal) * 100) / 100
+  const schedBillable = schedRows.filter((r) => r.label.trim() && (parseFloat(r.amount) || 0) > 0)
+
+  // Seed the payment schedule to the whole job the first time it is worth billing, so
+  // "create orders on send" always has a row. Once seeded it is staff's to shape — the
+  // ref keeps a deliberately emptied schedule from refilling itself on the next keystroke.
+  useEffect(() => {
+    if (engagement !== 'oneoff' || schedSeededRef.current) return
+    if (!(oneOffTotal > 0) || schedRows.length > 0) return
+    schedSeededRef.current = true
+    setSchedRows(SCHED_PRESETS[0].build(oneOffTotal))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [engagement, oneOffTotal, schedRows.length])
 
   const cap = totals?.cap ?? 0
   const used = totals?.used ?? 0
@@ -1154,7 +1429,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
             {scoping && !editing && (
               <p className="flex items-center gap-1.5 text-xs text-[var(--space-text-muted)] mt-0.5">
                 <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest border border-amber-500/30 bg-amber-500/10 text-amber-500">
-                  Scoping
+                  Non-Retainer client
                 </span>
                 <span className="tabular-nums">
                   {pitchedTotal > 0 ? `${fmtHrs(pitchedTotal)} hrs pitched · unpriced` : 'No plan yet'}
@@ -1166,6 +1441,47 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
             <Search className="size-3" /> Change client
           </button>
         </div>
+
+        {retainer && scoping && !editing && !loading && history && (
+          /* ── Retainer past. A finite range, unlike the live navigator: it runs from
+             the first cycle to the one holding the switch, then one step further is
+             the pitch. Bounded arrows and "N of M" make that legible. ── */
+          <div className="flex items-center justify-between gap-3 flex-wrap pb-2">
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => goHistory(-1)}
+                disabled={inHistory && atFirstHistoryCycle}
+                title="Earlier cycle"
+                className="size-6 flex items-center justify-center rounded-md text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] hover:bg-[var(--space-bg-card-hover)] disabled:opacity-30 disabled:hover:text-[var(--space-text-muted)] transition-colors"
+              >
+                <ChevronLeft className="size-4" />
+              </button>
+              <span className="text-xs font-medium text-[var(--space-text-secondary)] tabular-nums min-w-[168px] text-center">
+                {inHistory && cycle
+                  ? `Cycle ${history.cycleIndex} of ${history.cycleCount} · ${cycle.label}`
+                  : `Now · pitch`}
+              </span>
+              <button
+                onClick={() => goHistory(1)}
+                disabled={!inHistory}
+                title="Later cycle"
+                className="size-6 flex items-center justify-center rounded-md text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] hover:bg-[var(--space-bg-card-hover)] disabled:opacity-30 disabled:hover:text-[var(--space-text-muted)] transition-colors"
+              >
+                <ChevronRight className="size-4" />
+              </button>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] text-[var(--space-text-muted)] tabular-nums">
+                {TIER_LABEL[history.tier]} · {history.cycleCount} cycle{history.cycleCount === 1 ? '' : 's'} · {fmtHrs(history.totalHours)}h
+              </span>
+              {inHistory && (
+                <button onClick={() => setRefDate('')} className={ghostBtn}>
+                  <ArrowRight className="size-3" /> Back to pitch
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         {retainer && !scoping && !editing && !loading && (
           <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -1319,7 +1635,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
 
               <div className="grid grid-cols-2 gap-2">
                 <label className="block">
-                  <span className={fieldLabel}>{setupMode === 'scope' && !retainer ? 'Scoping since' : 'Start date'}</span>
+                  <span className={fieldLabel}>{setupMode === 'scope' && !retainer ? 'Client since' : 'Start date'}</span>
                   <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className={cn(inputCls, 'mt-1')} />
                 </label>
                 <label className="block">
@@ -1335,7 +1651,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
               )}
               {scoping && (
                 <p className="text-[10px] text-[var(--space-text-muted)]">
-                  Still scoping — pricing is set on the pitch console, which is what starts the first cycle.
+                  Non-retainer client — pricing is set on the pitch console, which is what starts the first cycle.
                 </p>
               )}
 
@@ -1385,7 +1701,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
               <div className="flex items-center gap-2">
                 <button onClick={handleSaveRetainer} disabled={savingRetainer} className={accentBtn}>
                   {savingRetainer ? <Loader2 className="size-3.5 animate-spin" /> : null}
-                  {retainer ? 'Save changes' : setupMode === 'scope' ? 'Start scoping' : 'Set up retainer'}
+                  {retainer ? 'Save changes' : setupMode === 'scope' ? 'Add non-retainer client' : 'Set up retainer'}
                 </button>
                 {retainer && (
                   <button onClick={() => setEditing(false)} className="px-3 py-2 text-xs text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] rounded-lg hover:bg-[var(--space-bg-card)] transition-colors">
@@ -1394,20 +1710,189 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                 )}
               </div>
             </div>
+          ) : scoping && oneOffResult ? (
+            /* ── The receipt. Stands in for the whole console: the scope is retired
+               server-side, so every control above it now points at a dead record —
+               the only honest thing left on this surface is what happened and where
+               the work went. ── */
+            <div className="rounded-xl border p-4 sm:p-5 space-y-4 bg-[var(--space-bg-card-hover)]" style={{ borderColor: 'var(--space-accent-glow)' }}>
+              <div className="flex items-center gap-2">
+                <CircleCheck className="size-4" style={{ color: 'var(--space-accent)' }} />
+                <p className="text-sm font-semibold text-[var(--space-text-primary)]">
+                  {pkgName.trim() || 'Proposal'} is live
+                </p>
+              </div>
+
+              <ul className="space-y-1.5">
+                {oneOffResult.lines.map((line, i) => (
+                  <li key={i} className="flex items-start gap-2 text-xs text-[var(--space-text-secondary)] leading-snug">
+                    <Check className="size-3 shrink-0 mt-0.5" style={{ color: 'var(--space-accent)' }} />
+                    {line}
+                  </li>
+                ))}
+              </ul>
+
+              {oneOffResult.warnings.length > 0 && (
+                <div className="space-y-1.5 rounded-lg border border-amber-500/25 bg-amber-500/[0.06] px-3 py-2.5">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-amber-500">Did not complete</p>
+                  {oneOffResult.warnings.map((w, i) => (
+                    <p key={i} className="flex items-start gap-1.5 text-[11px] text-[var(--space-text-secondary)] leading-snug">
+                      <AlertTriangle className="size-3 shrink-0 mt-0.5 text-amber-500" />
+                      {w}
+                    </p>
+                  ))}
+                  <p className="text-[10px] text-[var(--space-text-muted)] leading-snug">
+                    The proposal itself was created — retry these from Milestones.
+                  </p>
+                </div>
+              )}
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <button onClick={() => openInMilestones(oneOffResult.packageId)} className={accentBtn}>
+                  <Milestone className="size-3.5" /> Open in Milestones
+                </button>
+                <button onClick={() => { setOneOffResult(null); void load() }} className={ghostBtn}>
+                  <ArrowRight className="size-3" /> Back to this client
+                </button>
+                <button
+                  onClick={() => { setOneOffResult(null); clearClient() }}
+                  className="px-3 py-2 text-xs text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] rounded-lg hover:bg-[var(--space-bg-card)] transition-colors"
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+          ) : scoping && inHistory && cycle ? (
+            /* ── A closed retainer cycle, read-only ──────────────────────────────
+               The plan is over, so nothing here composes or edits: its hours were
+               capped and snapshotted, and most were billed. Invoicing stays live on
+               purpose — ending a plan mid-cycle strands that cycle uninvoiced, and
+               this is the only way back to it. */
+            <>
+              <div className="rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card-hover)] px-4 py-3">
+                <p className="text-xs text-[var(--space-text-secondary)] leading-relaxed">
+                  <span className="font-semibold text-[var(--space-text-primary)]">Retainer history.</span>{' '}
+                  {cycle.label} — on the {TIER_LABEL[terms?.tier ?? 'basic']} plan at {fmt(terms?.monthlyFee ?? 0)}/mo
+                  {' '}for {fmtHrs(terms?.hoursPerMonth ?? 0)}h. Closed cycles are read-only; you can still invoice one.
+                </p>
+              </div>
+
+              {/* Burn for the cycle, at the terms that were actually in force */}
+              <div className="rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card-hover)] p-4 space-y-3">
+                <div className="flex items-end justify-between gap-3">
+                  <div>
+                    <p className="text-[9px] font-bold tracking-[0.22em] uppercase text-[var(--space-text-tertiary)]">Hours used</p>
+                    <p className="text-2xl font-semibold tabular-nums text-[var(--space-text-primary)] mt-1 leading-none">
+                      {fmtHrs(used)}<span className="text-base font-normal text-[var(--space-text-muted)]">/{fmtHrs(cap)}h</span>
+                    </p>
+                  </div>
+                  {over && (
+                    <span className="text-xs font-semibold text-amber-500 tabular-nums">
+                      {fmtHrs(totals?.overageHours ?? 0)}h over · {fmt(totals?.overageAmount ?? 0)}
+                    </span>
+                  )}
+                </div>
+                <div className="h-1.5 rounded-full overflow-hidden bg-[var(--space-bg-base)]">
+                  <div
+                    className="h-full rounded-full transition-all"
+                    style={{ width: `${pct}%`, background: over ? 'rgb(245 158 11)' : 'var(--space-accent)' }}
+                  />
+                </div>
+                <div className="flex flex-wrap gap-x-4 gap-y-1">
+                  {(Object.keys(CATEGORY_LABEL) as TimeEntryCategory[])
+                    .filter((c) => (totals?.byCategory?.[c] ?? 0) > 0)
+                    .map((c) => (
+                      <span key={c} className="text-[11px] text-[var(--space-text-muted)] tabular-nums">
+                        {CATEGORY_LABEL[c]} <span className="text-[var(--space-text-secondary)] font-medium">{fmtHrs(totals!.byCategory[c])}h</span>
+                      </span>
+                    ))}
+                </div>
+              </div>
+
+              {/* Billing for this cycle — the reason history is not purely a viewer */}
+              <div className="flex items-center justify-between gap-3 flex-wrap rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card-hover)] px-4 py-3">
+                {cycleInvoice ? (
+                  <>
+                    <p className="text-xs text-[var(--space-text-secondary)]">
+                      Invoiced {cycleInvoice.orderNumber} · {fmt(cycleInvoice.amount)}{' '}
+                      <span className={cn('font-semibold', cycleInvoice.status === 'paid' ? 'text-[var(--space-accent)]' : 'text-amber-500')}>
+                        {cycleInvoice.status}
+                      </span>
+                    </p>
+                    {cycleInvoice.stripeInvoiceUrl && (
+                      <a href={cycleInvoice.stripeInvoiceUrl} target="_blank" rel="noreferrer" className={ghostBtn}>
+                        View invoice
+                      </a>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <p className="flex items-start gap-1.5 text-xs text-amber-500 leading-snug">
+                      <AlertTriangle className="size-3.5 shrink-0 mt-0.5" />
+                      Never invoiced — {fmt(terms?.monthlyFee ?? 0)}{over ? ` + ${fmt(totals?.overageAmount ?? 0)} overage` : ''} was not billed.
+                    </p>
+                    <button onClick={() => setInvoiceOpen(true)} className={accentBtn}>
+                      <Send className="size-3.5" /> Send invoice
+                    </button>
+                  </>
+                )}
+              </div>
+
+              <button onClick={handleExport} className={cn(ghostBtn, 'mx-auto')}>
+                <FileDown className="size-3" /> Statement PDF
+              </button>
+
+              {/* The log, read-only */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <ClipboardList className="size-3.5 text-[var(--space-text-muted)]" />
+                  <p className="text-[9px] font-bold tracking-[0.22em] uppercase text-[var(--space-text-tertiary)]">
+                    Logged this cycle
+                  </p>
+                  <span className="text-[10px] text-[var(--space-text-muted)] tabular-nums">
+                    {logged.length} entr{logged.length === 1 ? 'y' : 'ies'}
+                  </span>
+                </div>
+                {logged.length === 0 ? (
+                  <p className="text-xs text-[var(--space-text-muted)]">No hours were logged in this cycle.</p>
+                ) : (
+                  <div className="rounded-xl border border-[var(--space-border-hard)] divide-y divide-[var(--space-border-hard)] overflow-hidden">
+                    {logged.map((l) => (
+                      <div key={l.id} className="flex items-center gap-2.5 px-3 py-2.5">
+                        <span className="text-[10px] tabular-nums text-[var(--space-text-muted)] shrink-0 w-14">{fmtDay(l.date)}</span>
+                        <span className="flex-1 min-w-0 text-xs text-[var(--space-text-secondary)] truncate">
+                          {l.description || CATEGORY_LABEL[(l.category ?? 'work') as TimeEntryCategory]}
+                        </span>
+                        <span className="text-xs tabular-nums text-[var(--space-text-muted)] shrink-0">{fmtHrs(l.hours)}h</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
           ) : scoping ? (
             /* ── Scoping console — pitch the work, then price it ────────────────
                No cycle exists yet, so this replaces the whole stage body. Planned
                and completed work accumulate here; the pricing panel below reads
                those totals back as the basis for the plan that starts the cycle. */
             <>
-              <div className="rounded-xl border border-amber-500/25 bg-amber-500/[0.06] px-4 py-3">
+              <div className="rounded-xl border border-amber-500/25 bg-amber-500/[0.06] px-4 py-3 space-y-1.5">
                 <p className="text-xs text-[var(--space-text-secondary)] leading-relaxed">
-                  <span className="font-semibold text-amber-500">Scoping.</span>{' '}
+                  <span className="font-semibold text-amber-500">Non-retainer client.</span>{' '}
                   Pitch what you plan to do and record what you have already done. Nothing bills
                   until you price it — {engagement === 'retainer'
                     ? 'that is what starts the first cycle.'
                     : 'that is what creates the proposal.'}
                 </p>
+                {retainer?.nonRetainerSince && (
+                  /* Came off a plan rather than starting here — say so, and say where the
+                     old hours went, because the pitch below deliberately excludes them. */
+                  <p className="text-[11px] text-[var(--space-text-muted)] leading-relaxed">
+                    Came off the {TIER_LABEL[retainer.tier]} plan on {fmtDay(retainer.nonRetainerSince)}. Hours logged
+                    under it stay as retainer history and are not counted in this pitch. Pick{' '}
+                    <span className="text-[var(--space-text-secondary)]">Recurring retainer</span> below to put them back on a plan.
+                  </p>
+                )}
               </div>
 
               {/* ── Recurring, or a one-off job? Decides what the pricing step produces ── */}
@@ -1756,15 +2241,216 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                     />
                   </label>
 
-                  <div className="flex items-center gap-2">
-                    <button onClick={handleConvertToPackage} disabled={converting || oneOffLineCount === 0} className={accentBtn}>
-                      {converting ? <Loader2 className="size-3.5 animate-spin" /> : <Package className="size-3.5" />}
-                      Create proposal
+                  {/* ── How it gets billed — one row here is one Order on send ── */}
+                  <div className="space-y-2.5 rounded-lg border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] px-3 py-2.5">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <CalendarClock className="size-3.5" style={{ color: 'var(--space-accent)' }} />
+                      <p className={fieldLabel}>Payment schedule</p>
+                      <span className="flex-1" />
+                      {SCHED_PRESETS.map((preset) => (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          onClick={() => applySchedPreset(preset.id)}
+                          disabled={!(oneOffTotal > 0)}
+                          title={preset.hint}
+                          className="px-2 py-1 text-[10px] font-semibold rounded-md border border-[var(--space-border-hard)] text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] hover:border-[var(--space-accent-glow)] disabled:opacity-40 disabled:hover:text-[var(--space-text-muted)] transition-colors"
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {schedRows.length === 0 ? (
+                      <p className="text-[11px] text-[var(--space-text-muted)]">
+                        No schedule — the proposal sends without one and nothing is invoiced.
+                      </p>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {schedRows.map((row) => (
+                          <div key={row.key} className="flex items-center gap-1.5 flex-wrap">
+                            <input
+                              value={row.label}
+                              onChange={(e) => patchSched(row.key, { label: e.target.value })}
+                              placeholder="Deposit"
+                              className={cn(inputCls, 'flex-1 min-w-[110px] py-1.5 text-xs')}
+                            />
+                            <select
+                              value={row.entryType}
+                              onChange={(e) => patchSched(row.key, { entryType: e.target.value as SchedRow['entryType'] })}
+                              className={cn(selectCls, 'py-1.5')}
+                              title="Invoice type"
+                            >
+                              <option value="deposit">Deposit</option>
+                              <option value="installment">Installment</option>
+                              <option value="balance">Balance</option>
+                            </select>
+                            <input
+                              type="number" min={0} placeholder="$"
+                              value={row.amount}
+                              onChange={(e) => patchSched(row.key, { amount: e.target.value })}
+                              className={cn(numCls, 'w-24 text-xs py-1.5')}
+                            />
+                            <input
+                              type="date"
+                              value={row.dueDate}
+                              onChange={(e) => patchSched(row.key, { dueDate: e.target.value })}
+                              title="Due date"
+                              className={cn(numCls, 'w-[130px] text-xs py-1.5')}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeSched(row.key)}
+                              className="size-7 flex items-center justify-center rounded-md text-[var(--space-text-muted)] hover:text-red-400 transition-colors shrink-0"
+                            >
+                              <Trash2 className="size-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <button type="button" onClick={addSchedRow} className={ghostBtn}>
+                        <Plus className="size-3.5" /> Add payment
+                      </button>
+                      <span className="flex-1" />
+                      <span className="text-[11px] tabular-nums text-[var(--space-text-muted)]">
+                        Scheduled <span className="text-[var(--space-text-secondary)] font-medium">{fmt(schedTotal)}</span> of {fmt(oneOffTotal)}
+                      </span>
+                    </div>
+
+                    {schedRows.length > 0 && Math.abs(schedRemaining) >= 0.01 && (
+                      <p className="flex items-start gap-1.5 text-[10px] text-amber-500 leading-snug">
+                        <AlertTriangle className="size-3 shrink-0 mt-0.5" />
+                        {schedRemaining > 0
+                          ? `${fmt(schedRemaining)} of the proposal total is not scheduled — it will never be invoiced.`
+                          : `The schedule bills ${fmt(Math.abs(schedRemaining))} more than the proposal total.`}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* ── Send to the client ── */}
+                  <div className="space-y-2.5 rounded-lg border px-3 py-2.5" style={{ borderColor: 'var(--space-accent-glow)', background: 'var(--space-accent-soft)' }}>
+                    <div className="flex items-center gap-2">
+                      <Mail className="size-3.5" style={{ color: 'var(--space-accent)' }} />
+                      <p className={fieldLabel}>Send</p>
+                    </div>
+
+                    {billing === 'stripe' ? (
+                      <p className="text-[11px] text-[var(--space-text-muted)] leading-snug rounded-lg border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] px-3 py-2">
+                        Stripe sends the invoices, so there is no separate document to choose. Each one lists the
+                        line items, carries a payment link, and links back to the full proposal.
+                      </p>
+                    ) : (
+                    <>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {SEND_AS_OPTIONS.map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => setOneOffSendAs(opt.value)}
+                          title={opt.hint}
+                          className={cn(
+                            'py-2 rounded-lg border text-xs font-semibold transition-colors',
+                            oneOffSendAs === opt.value
+                              ? 'bg-[var(--space-bg-card-hover)] text-[var(--space-text-primary)]'
+                              : 'border-[var(--space-border-hard)] text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)]',
+                          )}
+                          style={oneOffSendAs === opt.value ? { borderColor: 'var(--space-accent)' } : {}}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-[var(--space-text-muted)] leading-snug">
+                      {SEND_AS_OPTIONS.find((o) => o.value === oneOffSendAs)!.hint}
+                    </p>
+                    </>
+                    )}
+
+                    <label className="block">
+                      <span className="text-[10px] text-[var(--space-text-muted)]">To (comma-separated)</span>
+                      <input value={sendTo} onChange={(e) => setSendTo(e.target.value)} placeholder="client@example.com" className={cn(inputCls, 'mt-1 text-xs py-1.5')} />
+                    </label>
+                    <label className="block">
+                      <span className="text-[10px] text-[var(--space-text-muted)]">
+                        {billing === 'stripe'
+                          ? 'Message (optional — shown on the proposal page, not in the invoice email)'
+                          : 'Message (optional — replaces the cover message)'}
+                      </span>
+                      <textarea value={sendMsg} onChange={(e) => setSendMsg(e.target.value)} rows={2} className={cn(inputCls, 'mt-1 resize-y text-xs')} />
+                    </label>
+
+                    {/* ── Billing: one setting, three states ── */}
+                    <div className="space-y-1.5">
+                      <span className={fieldLabel}>Billing</span>
+                      {BILLING_MODES.map((opt) => (
+                        <label
+                          key={opt.value}
+                          className={cn(
+                            'flex items-start gap-2.5 px-3 py-2 rounded-lg border cursor-pointer transition-colors',
+                            billing === opt.value ? 'bg-[var(--space-bg-card)]' : 'border-[var(--space-border-hard)] hover:border-[var(--space-accent-glow)]',
+                          )}
+                          style={billing === opt.value ? { borderColor: 'var(--space-accent)' } : {}}
+                        >
+                          <input type="radio" name="oneoff-billing" checked={billing === opt.value} onChange={() => setBilling(opt.value)} className="mt-0.5 accent-[var(--space-accent)]" />
+                          <span className="min-w-0">
+                            <span className="block text-xs font-semibold leading-tight text-[var(--space-text-primary)]">
+                              {opt.label}
+                              {opt.value !== 'none' && schedBillable.length > 0 && (
+                                <span className="font-normal text-[var(--space-text-muted)]">
+                                  {' '}· {schedBillable.length} × {fmt(schedTotal)}
+                                </span>
+                              )}
+                            </span>
+                            <span className="block text-[10px] text-[var(--space-text-muted)] mt-0.5 leading-snug">{opt.hint}</span>
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+
+                    {billing !== 'none' && schedBillable.length === 0 && (
+                      <p className="flex items-start gap-1.5 text-[10px] text-amber-500 leading-snug">
+                        <AlertTriangle className="size-3 shrink-0 mt-0.5" />
+                        No payment schedule rows — add one above, or set billing to &ldquo;No orders yet&rdquo;.
+                      </p>
+                    )}
+
+                    {billing === 'stripe' && schedBillable.length > 0 && (
+                      <p className="flex items-start gap-1.5 text-[10px] text-amber-500 leading-snug">
+                        <AlertTriangle className="size-3 shrink-0 mt-0.5" />
+                        The client is charged {fmt(schedTotal)} across {schedBillable.length} invoice{schedBillable.length === 1 ? '' : 's'} as soon as you send.
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      onClick={() => handleSendOneOff('send')}
+                      disabled={sendingOneOff || oneOffLineCount === 0 || !sendTo.trim()}
+                      className={accentBtn}
+                    >
+                      {sendingOneOff ? <Loader2 className="size-3.5 animate-spin" /> : <Mail className="size-3.5" />}
+                      Create &amp; send
+                    </button>
+                    <button
+                      onClick={() => handleSendOneOff('draft')}
+                      disabled={sendingOneOff || oneOffLineCount === 0}
+                      className={ghostBtn}
+                    >
+                      <Package className="size-3.5" /> Create draft only
                     </button>
                   </div>
                   <p className="text-[10px] text-[var(--space-text-muted)] leading-relaxed">
-                    This creates a client proposal and <span className="text-[var(--space-text-secondary)]">moves</span> the pitched work into its
-                    milestone log, then opens it in Milestones — where you add the payment schedule, send the PDF, and invoice. The scope closes here.
+                    Either button creates the proposal and <span className="text-[var(--space-text-secondary)]">moves</span> the pitched work into its
+                    milestone log. <span className="text-[var(--space-text-secondary)]">Create &amp; send</span>{' '}
+                    {billing === 'stripe'
+                      ? `emails ${schedBillable.length || 0} Stripe invoice${schedBillable.length === 1 ? '' : 's'} — one per schedule row, and the only mail the client gets`
+                      : `emails the ${SEND_AS_OPTIONS.find((o) => o.value === oneOffSendAs)!.label.toLowerCase()} PDF${
+                          billing === 'orders' ? ` and creates ${schedBillable.length || 0} pending order${schedBillable.length === 1 ? '' : 's'}` : ''
+                        }`}
+                    . The scope closes here — you get a summary and a link into Milestones.
                   </p>
                 </div>
               ) : (
@@ -2010,7 +2696,9 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                 <>
                   {scheduled?.deactivateOn && (
                     <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2">
-                      <span className="text-xs text-amber-500">Deactivating on {fmtDay(scheduled.deactivateOn)} — active until then.</span>
+                      <span className="text-xs text-amber-500">
+                        {scheduled.deactivateTo === 'scoping' ? 'Switching to Non-Retainer' : 'Closing'} on {fmtDay(scheduled.deactivateOn)} — active until then.
+                      </span>
                       <button onClick={handleReactivate} disabled={reactivating} className="text-xs font-semibold text-[var(--space-text-primary)] hover:underline disabled:opacity-50">
                         {reactivating ? 'Keeping…' : 'Keep active'}
                       </button>
@@ -2254,10 +2942,90 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                     <button onClick={() => setEditing(true)} className={ghostBtn}>
                       <Pencil className="size-3" /> Edit terms
                     </button>
-                    <button onClick={handleDeactivate} disabled={deactivating} className={cn(ghostBtn, 'hover:text-red-400 hover:border-red-400/30')} title="Schedule deactivation at end of cycle">
-                      {deactivating ? <Loader2 className="size-3 animate-spin" /> : <PowerOff className="size-3" />} Deactivate
-                    </button>
+                    {!endOpen && (
+                      <button onClick={() => { setEndOpen(true); setError(null) }} className={cn(ghostBtn, 'hover:text-red-400 hover:border-red-400/30')} title="End the recurring plan">
+                        <PowerOff className="size-3" /> End plan
+                      </button>
+                    )}
                   </div>
+
+                  {endOpen && (
+                    /* ── Ending a plan: when it stops billing, and what the client
+                       becomes afterwards. The two are independent — a client can come
+                       off the plan and stay engaged for one-off work. ── */
+                    <div className="rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card-hover)] p-4 space-y-3.5">
+                      <div className="flex items-center gap-2">
+                        <PowerOff className="size-3.5 text-red-400" />
+                        <p className="text-[9px] font-bold tracking-[0.22em] uppercase text-[var(--space-text-tertiary)]">End the plan</p>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <span className={fieldLabel}>When</span>
+                        {([
+                          { id: 'cycle-end' as const, title: `At end of cycle${cycle ? ` — ${fmtDay(cycle.end)}` : ''}`, hint: 'Keeps billing through the current cycle so it can still be invoiced.' },
+                          { id: 'now' as const, title: 'End now', hint: 'Stops the plan immediately. The current cycle is cut short.' },
+                        ]).map((opt) => (
+                          <label
+                            key={opt.id}
+                            className={cn(
+                              'flex items-start gap-2.5 px-3 py-2 rounded-lg border cursor-pointer transition-colors',
+                              endWhen === opt.id ? 'bg-[var(--space-bg-card)]' : 'border-[var(--space-border-hard)] hover:border-[var(--space-accent-glow)]',
+                            )}
+                            style={endWhen === opt.id ? { borderColor: 'var(--space-accent)' } : {}}
+                          >
+                            <input type="radio" name="end-when" checked={endWhen === opt.id} onChange={() => setEndWhen(opt.id)} className="mt-0.5 accent-[var(--space-accent)]" />
+                            <span className="min-w-0">
+                              <span className="block text-xs font-semibold leading-tight text-[var(--space-text-primary)]">{opt.title}</span>
+                              <span className="block text-[10px] text-[var(--space-text-muted)] mt-0.5 leading-snug">{opt.hint}</span>
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+
+                      {endWhen === 'now' && used > 0 && !cycleInvoice && (
+                        <p className="flex items-start gap-1.5 text-[10px] text-amber-500 leading-snug">
+                          <AlertTriangle className="size-3 shrink-0 mt-0.5" />
+                          {fmtHrs(used)}h logged this cycle and no invoice raised yet — ending now leaves it uninvoiced.
+                          Send the invoice from Documents first if you want to bill it.
+                        </p>
+                      )}
+
+                      <div className="space-y-1.5">
+                        <span className={fieldLabel}>Then</span>
+                        {([
+                          { id: 'close' as const, title: 'Close the engagement', hint: 'Retires the record. Logged hours are kept but the client leaves the retainer board.' },
+                          { id: 'non-retainer' as const, title: 'Keep as a Non-Retainer client', hint: 'Same record, no plan — pitch and sell one-off projects against it. Retainer hours stay as history.' },
+                        ]).map((opt) => (
+                          <label
+                            key={opt.id}
+                            className={cn(
+                              'flex items-start gap-2.5 px-3 py-2 rounded-lg border cursor-pointer transition-colors',
+                              endThen === opt.id ? 'bg-[var(--space-bg-card)]' : 'border-[var(--space-border-hard)] hover:border-[var(--space-accent-glow)]',
+                            )}
+                            style={endThen === opt.id ? { borderColor: 'var(--space-accent)' } : {}}
+                          >
+                            <input type="radio" name="end-then" checked={endThen === opt.id} onChange={() => setEndThen(opt.id)} className="mt-0.5 accent-[var(--space-accent)]" />
+                            <span className="min-w-0">
+                              <span className="block text-xs font-semibold leading-tight text-[var(--space-text-primary)]">{opt.title}</span>
+                              <span className="block text-[10px] text-[var(--space-text-muted)] mt-0.5 leading-snug">{opt.hint}</span>
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button onClick={handleEndPlan} disabled={deactivating} className={accentBtn}>
+                          {deactivating ? <Loader2 className="size-3.5 animate-spin" /> : <PowerOff className="size-3.5" />}
+                          {endWhen === 'now'
+                            ? (endThen === 'non-retainer' ? 'Switch to Non-Retainer now' : 'End now')
+                            : 'Schedule it'}
+                        </button>
+                        <button onClick={() => setEndOpen(false)} className="px-3 py-2 text-xs text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] rounded-lg hover:bg-[var(--space-bg-card)] transition-colors">
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
 
@@ -2483,7 +3251,7 @@ const HEALTH_META: Record<RetainerHealth, { label: string; color: string }> = {
   warning: { label: 'Near cap', color: 'rgb(245 158 11)' },
   healthy: { label: 'On track', color: 'var(--space-accent)' },
   open:    { label: 'Open',     color: 'var(--space-text-muted)' },
-  scoping: { label: 'Scoping — needs pricing', color: 'rgb(148 163 184)' },
+  scoping: { label: 'Non-retainer — needs pricing', color: 'rgb(148 163 184)' },
 }
 
 // One retainer in the portfolio board — client, cycle burn, and how much cycle is left.
@@ -2513,7 +3281,7 @@ function BoardRow({
         </p>
         <p className="text-[11px] text-[var(--space-text-muted)] truncate">
           {isScopingRow
-            ? (row.proposalSentAt ? `Scoping · proposal sent ${fmtDay(row.proposalSentAt)}` : 'Scoping · no plan yet')
+            ? (row.proposalSentAt ? `Non-retainer · proposal sent ${fmtDay(row.proposalSentAt)}` : 'Non-retainer · no plan yet')
             : TIER_LABEL[row.tier]}
           {row.deactivateOn ? ' · ending soon' : ''}
         </p>

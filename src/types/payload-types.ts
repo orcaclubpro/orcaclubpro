@@ -1054,11 +1054,11 @@ export interface Retainer {
   id: string;
   clientAccount: string | ClientAccount;
   /**
-   * Playbook tier — drives preset fee/hours in the builder. Nominal while scoping.
+   * Playbook tier — drives preset fee/hours in the builder. Nominal for a non-retainer client.
    */
   tier: 'basic' | 'growth' | 'enterprise';
   /**
-   * Scoping = agreed but no plan chosen yet (no cycle, not billable). Inactive retainers are hidden from the dashboard; their logged hours are kept.
+   * Non-Retainer client = engaged but on no recurring plan (no cycle, not billable) — the state a one-off project is scoped and sold from. Inactive retainers are hidden from the dashboard; their logged hours are kept.
    */
   status: 'scoping' | 'active' | 'inactive';
   startDate?: string | null;
@@ -1079,9 +1079,17 @@ export interface Retainer {
    */
   overageRate?: number | null;
   /**
-   * Scheduled deactivation — retainer stays active until this date, then flips inactive.
+   * Scheduled wind-down — the plan stays active and billable until this date.
    */
   deactivateOn?: string | null;
+  /**
+   * Where the wind-down lands. Defaults to closing if unset.
+   */
+  deactivateTo?: ('inactive' | 'scoping') | null;
+  /**
+   * When a running plan was switched back to Non-Retainer. Bounds the pitch: only work logged on or after this date counts as scope for the next proposal — everything before it is retainer history.
+   */
+  nonRetainerSince?: string | null;
   /**
    * The pitch — what this retainer covers, in client-facing words.
    */
@@ -1091,7 +1099,11 @@ export interface Retainer {
    */
   notes?: string | null;
   /**
-   * Set when this scope was converted into a one-off proposal instead of a retainer.
+   * One-off proposals sold against this engagement. A Non-Retainer client stays open after each one, so there can be several.
+   */
+  convertedPackages?: (string | Package)[] | null;
+  /**
+   * Deprecated — see Converted Packages.
    */
   convertedPackage?: (string | null) | Package;
   proposedTier?: ('basic' | 'growth' | 'enterprise') | null;
@@ -2721,8 +2733,11 @@ export interface RetainersSelect<T extends boolean = true> {
   hoursPerMonth?: T;
   overageRate?: T;
   deactivateOn?: T;
+  deactivateTo?: T;
+  nonRetainerSince?: T;
   scopeSummary?: T;
   notes?: T;
+  convertedPackages?: T;
   convertedPackage?: T;
   proposedTier?: T;
   proposedMonthlyFee?: T;
