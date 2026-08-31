@@ -357,9 +357,20 @@ export interface MilestonePortfolioRow {
   plannedOpenCount: number
   /** A payment is due within 30 days and there is unbilled logged work. */
   needsRecap: boolean
+  /** Still a draft — scoped and being priced, nothing sent or scheduled yet. */
+  isDraft: boolean
 }
 
-/** Every proposal package with a pending scheduled payment, soonest due first. Staff only. */
+/**
+ * Every package the station can still act on, soonest pending payment first. Staff only.
+ *
+ * Two kinds qualify. A package with an un-invoiced schedule entry is live work waiting
+ * to be billed — the board's original job. A DRAFT proposal qualifies whether or not it
+ * has a schedule yet: a draft is a scope being pitched, and planning work against it is
+ * the first thing that happens to one. Excluding them (as this used to) made a freshly
+ * built proposal unreachable here until someone had already given it a payment schedule,
+ * which is backwards — the schedule is decided from the work, not before it.
+ */
 export async function getMilestonePortfolio() {
   try {
     const user = await getCurrentUser()
@@ -373,15 +384,15 @@ export async function getMilestonePortfolio() {
       limit: 300,
     })
 
-    // Keep only packages with at least one un-invoiced schedule entry.
+    // An un-invoiced schedule entry, or a draft still being scoped.
     const candidates = (packages as any[])
       .map((pkg) => {
         const pending = ((pkg.paymentSchedule ?? []) as any[])
           .filter((e) => !(e.orderId && e.invoicedAt))
           .sort((a, b) => String(a.dueDate ?? '9999').localeCompare(String(b.dueDate ?? '9999')))
-        return { pkg, pending }
+        return { pkg, pending, isDraft: pkg.status === 'draft' }
       })
-      .filter((c) => c.pending.length > 0)
+      .filter((c) => c.pending.length > 0 || c.isDraft)
 
     if (candidates.length === 0) return { success: true as const, rows: [] as MilestonePortfolioRow[] }
 
@@ -416,7 +427,7 @@ export async function getMilestonePortfolio() {
     }
 
     const soon = Date.now() + 30 * 86_400_000
-    const rows: MilestonePortfolioRow[] = candidates.map(({ pkg, pending }) => {
+    const rows: MilestonePortfolioRow[] = candidates.map(({ pkg, pending, isDraft }) => {
       const clientAccountId = (typeof pkg.clientAccount === 'object' ? pkg.clientAccount?.id : pkg.clientAccount) as string
       const acct = acctById.get(clientAccountId)
       const counts = byPackage.get(pkg.id as string) ?? { pending: 0, plannedOpen: 0 }
@@ -434,11 +445,16 @@ export async function getMilestonePortfolio() {
         pendingWorkCount: counts.pending,
         plannedOpenCount: counts.plannedOpen,
         needsRecap: dueSoon && counts.pending > 0,
+        isDraft,
       }
     })
 
-    // Soonest pending due date first; undated entries sort last.
+    // Billable work first — a pending payment is a deadline, a draft is not. Within
+    // each group: soonest due date first, undated last, then by client.
     rows.sort((a, b) => {
+      const aDraft = a.isDraft && !a.nextEntry
+      const bDraft = b.isDraft && !b.nextEntry
+      if (aDraft !== bDraft) return aDraft ? 1 : -1
       const ad = a.nextEntry?.dueDate ?? '9999'
       const bd = b.nextEntry?.dueDate ?? '9999'
       if (ad !== bd) return ad.localeCompare(bd)

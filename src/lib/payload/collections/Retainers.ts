@@ -10,18 +10,21 @@ import { adminOrUser, adminOnly } from '../access/index'
  * `retainer-time-entries` collection and are summed per calendar month against
  * `hoursPerMonth` — there is no rollover.
  *
- * This is really the client's ENGAGEMENT record, and `status` is where it is in its
- * life: `scoping` (no plan — a Non-Retainer client) → `active` (on a recurring plan)
- * → `inactive` (closed). The transitions run both ways. A SCOPING record is an
- * engagement being pitched: staff log planned work (draft entries with hour estimates)
- * and work already done (logged entries) against it, but there is no fee, no hour cap,
- * and nothing billable. Pricing is set from that evidence afterwards:
- * `activateRetainerPlan` writes the terms, flips the status, and stamps the anchor.
+ * This is really the client's ENGAGEMENT record, and `status` is its life in one line:
+ * `scoping` (being pitched, no plan yet) → `active` (on a recurring plan) → `inactive`
+ * (closed). A SCOPING record is an engagement being pitched: staff log planned work
+ * (draft entries with hour estimates) and work already done (logged entries) against
+ * it, but there is no fee, no hour cap, and nothing billable. Pricing is set from that
+ * evidence afterwards: `activateRetainerPlan` writes the terms, flips the status, and
+ * stamps the anchor.
  *
- * `active → scoping` is the other direction (see `endRetainerPlan`): the client comes
- * off the recurring plan but stays engaged, so one-off projects can be scoped and sold
- * against the same record. The hours already logged stay attached as retainer history;
- * `nonRetainerSince` is what keeps them out of the new pitch.
+ * Ending a plan (see `endRetainerPlan`) always closes the engagement, stamping
+ * `endedAt`. A closed record stays reachable read-only so a final cycle stranded by an
+ * immediate end can still be invoiced — its hours are kept, never deleted.
+ *
+ * Non-recurring work is NOT modelled here. A fixed-price job is a `packages` proposal,
+ * built in the Build station and run from Milestones, which already own itemized lines,
+ * payment schedules, proposal documents, and a work log.
  *
  * Payment/Stripe is intentionally out of scope: overage is displayed, not charged.
  */
@@ -60,7 +63,7 @@ const Retainers: CollectionConfig = {
             { label: 'Growth', value: 'growth' },
             { label: 'Enterprise', value: 'enterprise' },
           ],
-          admin: { width: '25%', description: 'Playbook tier — drives preset fee/hours in the builder. Nominal for a non-retainer client.' },
+          admin: { width: '25%', description: 'Playbook tier — drives preset fee/hours in the builder. Nominal while scoping.' },
         },
         {
           name: 'status',
@@ -69,13 +72,13 @@ const Retainers: CollectionConfig = {
           defaultValue: 'active',
           index: true,
           options: [
-            { label: 'Non-Retainer client', value: 'scoping' },
+            { label: 'Scoping', value: 'scoping' },
             { label: 'Active', value: 'active' },
             { label: 'Inactive', value: 'inactive' },
           ],
           admin: {
             width: '25%',
-            description: 'Non-Retainer client = engaged but on no recurring plan (no cycle, not billable) — the state a one-off project is scoped and sold from. Inactive retainers are hidden from the dashboard; their logged hours are kept.',
+            description: 'Scoping = being pitched, no plan yet (no cycle, not billable) — pricing it starts the first cycle. Inactive retainers are off the dashboard board but still reachable read-only, so a final unbilled cycle can be invoiced; their logged hours are kept.',
           },
         },
         {
@@ -129,43 +132,38 @@ const Retainers: CollectionConfig = {
       ],
     },
     {
-      type: 'row',
-      admin: { condition: (data) => Boolean(data?.deactivateOn) },
-      fields: [
-        {
-          name: 'deactivateOn',
-          type: 'date',
-          admin: {
-            width: '50%',
-            readOnly: true,
-            date: { pickerAppearance: 'dayOnly' },
-            description: 'Scheduled wind-down — the plan stays active and billable until this date.',
-          },
-        },
-        {
-          name: 'deactivateTo',
-          type: 'select',
-          options: [
-            { label: 'Close the engagement', value: 'inactive' },
-            { label: 'Keep as a Non-Retainer client', value: 'scoping' },
-          ],
-          admin: {
-            width: '50%',
-            readOnly: true,
-            description: 'Where the wind-down lands. Defaults to closing if unset.',
-          },
-        },
-      ],
+      name: 'deactivateOn',
+      type: 'date',
+      admin: {
+        readOnly: true,
+        date: { pickerAppearance: 'dayOnly' },
+        description: 'Scheduled wind-down — the plan stays active and billable until this date, then closes.',
+        condition: (data) => Boolean(data?.deactivateOn),
+      },
     },
     {
-      name: 'nonRetainerSince',
+      name: 'endedAt',
       type: 'date',
       index: true,
       admin: {
         readOnly: true,
         date: { pickerAppearance: 'dayOnly' },
         description:
-          'When a running plan was switched back to Non-Retainer. Bounds the pitch: only work logged on or after this date counts as scope for the next proposal — everything before it is retainer history.',
+          'When the plan stopped billing. Bounds the closed era the read-only cycle view walks — cycles before it are billed history, and the last one may still need an invoice.',
+        condition: (data) => Boolean(data?.endedAt),
+      },
+    },
+    {
+      // Superseded by `endedAt`, which holds the same instant. Kept so records closed
+      // under the old "Non-Retainer client" state still resolve their era; nothing
+      // writes it any more, and settleRetainer migrates them on read.
+      name: 'nonRetainerSince',
+      type: 'date',
+      index: true,
+      admin: {
+        readOnly: true,
+        date: { pickerAppearance: 'dayOnly' },
+        description: 'Deprecated — see Ended At.',
         condition: (data) => Boolean(data?.nonRetainerSince),
       },
     },
@@ -192,7 +190,7 @@ const Retainers: CollectionConfig = {
       admin: {
         readOnly: true,
         description:
-          'One-off proposals sold against this engagement. A Non-Retainer client stays open after each one, so there can be several.',
+          'Deprecated — proposals sold against this engagement back when one-off work was scoped here. Fixed-price work is a package now, owned by Build and Milestones.',
         condition: (data) => Boolean(data?.convertedPackages?.length),
       },
     },

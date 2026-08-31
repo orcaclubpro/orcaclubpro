@@ -135,6 +135,16 @@ const Packages: CollectionConfig = {
       ],
     },
     {
+      name: 'hourlyRate',
+      type: 'number',
+      min: 0,
+      admin: {
+        position: 'sidebar',
+        description:
+          'Default USD/hr for this package. Hourly line items added in the builder start at this rate, so only their hours need setting. Blank = no package rate; each hourly line carries its own.',
+      },
+    },
+    {
       name: 'paymentSchedule',
       type: 'array',
       admin: {

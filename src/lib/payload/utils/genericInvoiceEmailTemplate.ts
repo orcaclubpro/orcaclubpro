@@ -88,6 +88,12 @@ interface ProposalEmailData {
   packageDescription?: string
   coverMessage?: string
   lineItems: Array<{ name: string; description?: string; price: number; quantity?: number; isRecurring?: boolean; recurringInterval?: string }>
+  /**
+   * Optional extras the client can ask for. Quoted in their own block below the total
+   * and never summed into it — `lineItems` and the totals must always agree, or the
+   * proposal states a price for work nobody agreed to.
+   */
+  addOns?: Array<{ name: string; description?: string; price: number; quantity?: number; isRecurring?: boolean; recurringInterval?: string }>
   totalOneTime: number
   totalMonthly: number
   totalAnnual: number
@@ -923,6 +929,37 @@ export function generateProposalEmail(data: ProposalEmailData): string {
     data.totalAnnual > 0 ? `<div class="oc-detail-val" style="font-size:12px;color:#555555;margin-bottom:4px;">Annual: <span class="oc-item-total" style="color:#cccccc;font-weight:600;">${fmtUsd(data.totalAnnual)}/yr</span></div>` : '',
   ].filter(Boolean).join('')
 
+  const addOnsHtml = data.addOns && data.addOns.length > 0 ? `
+  <!-- Optional add-ons -->
+  <tr>
+    <td style="padding:16px 40px 0 40px;">
+      <p class="oc-eyebrow" style="margin:0 0 4px 0;font-size:9px;letter-spacing:0.35em;text-transform:uppercase;color:#3a3a3a;font-weight:400;">Optional Add-ons</p>
+      <p class="oc-detail-val" style="margin:0 0 10px 0;font-size:11px;color:#555555;line-height:1.6;">Not included in the total above &mdash; reply if you'd like any of these added.</p>
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="oc-detail-box" style="background-color:#111111;border:1px dashed #262626;">
+        <tr>
+          <td style="padding:14px 20px;">
+            ${data.addOns.map((item, i) => {
+              const qty = item.quantity ?? 1
+              const total = item.price * qty
+              const per = item.isRecurring ? `/${item.recurringInterval ?? 'mo'}` : ''
+              return `<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="${i > 0 ? 'border-top:1px solid #1a1a1a;' : ''}">
+                <tr>
+                  <td style="padding:8px 0;">
+                    <div class="oc-item-name" style="color:#888888;font-size:13px;">${item.name}${qty > 1 ? ` &times; ${qty}` : ''}</div>
+                    ${item.description ? `<div class="oc-detail-val" style="color:#555555;font-size:11px;margin-top:3px;line-height:1.5;white-space:pre-line;">${item.description}</div>` : ''}
+                  </td>
+                  <td style="padding:8px 0;text-align:right;vertical-align:top;width:100px;">
+                    <span class="oc-detail-val" style="color:#888888;font-size:13px;font-weight:600;">${fmtUsd(total)}<span style="color:#3a3a3a;font-size:11px;font-weight:400;">${per}</span></span>
+                  </td>
+                </tr>
+              </table>`
+            }).join('')}
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>` : ''
+
   const scheduleHtml = data.paymentSchedule && data.paymentSchedule.length > 0 ? `
   <!-- Payment Schedule -->
   <tr>
@@ -1017,6 +1054,7 @@ export function generateProposalEmail(data: ProposalEmailData): string {
             </td>
           </tr>
 
+          ${addOnsHtml}
           ${scheduleHtml}
 
           <!-- Footer note -->
@@ -1064,6 +1102,15 @@ export function generateProposalEmailText(data: ProposalEmailData): string {
     return `  - ${item.name}${recurring}: ${fmtUsd(item.price * qty)}${desc}`
   }).join('\n')
 
+  const addOnsText = data.addOns && data.addOns.length > 0
+    ? `\nOPTIONAL ADD-ONS (not included in the total above):\n${data.addOns.map(item => {
+        const qty = item.quantity ?? 1
+        const recurring = item.isRecurring ? ` (per ${item.recurringInterval ?? 'month'})` : ''
+        const desc = item.description ? `\n    ${item.description.replace(/\n/g, '\n    ')}` : ''
+        return `  - ${item.name}${qty > 1 ? ` x${qty}` : ''}${recurring}: ${fmtUsd(item.price * qty)}${desc}`
+      }).join('\n')}\n`
+    : ''
+
   const scheduleText = data.paymentSchedule && data.paymentSchedule.length > 0
     ? `\nPAYMENT SCHEDULE:\n${data.paymentSchedule.map((e, i) => {
         const dueStr = e.dueDate ? fmtDueDate(e.dueDate) : null
@@ -1080,6 +1127,7 @@ Hello${data.recipientName ? ` ${data.recipientName}` : ''},
 ${data.coverMessage ? `"${data.coverMessage}"\n\n` : data.packageDescription ? `${data.packageDescription}\n\n` : ''}WHAT'S INCLUDED:
 ${lineItemsText}
 ${data.totalOneTime > 0 ? `\nOne-time Total: ${fmtUsd(data.totalOneTime)} USD` : ''}${data.totalMonthly > 0 ? `\nMonthly: ${fmtUsd(data.totalMonthly)}/mo` : ''}${data.totalAnnual > 0 ? `\nAnnual: ${fmtUsd(data.totalAnnual)}/yr` : ''}
+${addOnsText}
 ${scheduleText}
 ---
 The full proposal is attached as a PDF.

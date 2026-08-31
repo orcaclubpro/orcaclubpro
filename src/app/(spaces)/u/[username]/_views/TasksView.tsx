@@ -16,6 +16,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { updateTaskStatus, updateTask, createTask } from '@/actions/tasks'
 import { updateSprint, addSprintNote, deleteSprintNote, updateSprintStatus } from '@/actions/sprints'
 import { cn } from '@/lib/utils'
+import { isTypingTarget } from '@/lib/keyboard'
 import { CreateSprintModal } from '@/components/dashboard/CreateSprintModal'
 
 // ─── constants ────────────────────────────────────────────────────────────────
@@ -1737,10 +1738,8 @@ function TaskBoard({
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return
-      // Block if a Radix Select popover is open (listbox visible in DOM)
-      if (document.querySelector('[role="listbox"]')) return
+      // Covers the open-listbox case too — a Radix popover drives the keyboard.
+      if (isTypingTarget(e.target)) return
       const allActiveIds = new Set([...activeTaskIdsARef.current, ...activeTaskIdsBRef.current])
       if (allActiveIds.size === 0) return
       if (editStateRef.current) return

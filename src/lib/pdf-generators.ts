@@ -86,6 +86,20 @@ function wrap(text: string, font: PDFFont, size: number, maxW: number): string[]
   return lines.length ? lines : ['']
 }
 
+/**
+ * `wrap` for text that carries its own line breaks. A work-log block is one entry per
+ * line, so those newlines are meaning, not formatting slop — collapsing them with the
+ * rest of the whitespace (as a plain `wrap` does) runs the whole log into one
+ * paragraph. Each authored line is wrapped to the column on its own; blank lines
+ * survive as paragraph breaks.
+ */
+function wrapBlock(text: string, font: PDFFont, size: number, maxW: number): string[] {
+  return text.split('\n').flatMap((seg) => {
+    const t = seg.replace(/[ \t]+/g, ' ').trim()
+    return t ? wrap(t, font, size, maxW) : ['']
+  })
+}
+
 // ── DocWriter ──────────────────────────────────────────────────────────────────
 
 class DocWriter {
@@ -1139,6 +1153,12 @@ export interface PackagePdfLineItem {
   rate: number
   isRecurring?: boolean
   recurringInterval?: 'month' | 'year'
+  /**
+   * An optional extra the client can request. Rendered in its own section BELOW the
+   * total and excluded from every subtotal — an option the client has not taken must
+   * never read as money they owe.
+   */
+  isAddOn?: boolean
 }
 
 export interface PackagePdfData {
@@ -1256,8 +1276,12 @@ export async function buildPackagePdf(d: PackagePdfData): Promise<Uint8Array> {
   }
 
   // ── Line items table ────────────────────────────────────────────────────────
+  // Add-ons are quoted, not charged: they get their own table after the total.
+  const priced = d.lineItems.filter((it) => !it.isAddOn)
+  const addOns = d.lineItems.filter((it) => it.isAddOn)
+
   let oneTime = 0, monthly = 0, annual = 0
-  for (const item of d.lineItems) {
+  for (const item of priced) {
     const total = item.rate * item.quantity
     if (item.isRecurring) {
       if (item.recurringInterval === 'year') annual += total
@@ -1273,52 +1297,56 @@ export async function buildPackagePdf(d: PackagePdfData): Promise<Uint8Array> {
   const xRate = xQty + colQty
   const xAmt  = xRate + colRate
 
-  // Header row
-  ensure(40)
-  page.drawRectangle({ x: ML, y: y - 22, width: innerW, height: 22, color: P.headBg })
-  const hy = y - 15
-  tracked('ITEM', ML + 12, hy, 7, bold, P.gray6, 1.2)
-  tracked('QTY', xQty + (colQty - trackedW('QTY', 7, bold, 1.2)) / 2, hy, 7, bold, P.gray6, 1.2)
-  tracked('RATE', xRate + colRate - trackedW('RATE', 7, bold, 1.2) - 12, hy, 7, bold, P.gray6, 1.2)
-  tracked('AMOUNT', xAmt + colAmt - trackedW('AMOUNT', 7, bold, 1.2) - 12, hy, 7, bold, P.gray6, 1.2)
-  y -= 22
+  const drawItemsTable = (items: PackagePdfLineItem[]) => {
+    // Header row
+    ensure(40)
+    page.drawRectangle({ x: ML, y: y - 22, width: innerW, height: 22, color: P.headBg })
+    const hy = y - 15
+    tracked('ITEM', ML + 12, hy, 7, bold, P.gray6, 1.2)
+    tracked('QTY', xQty + (colQty - trackedW('QTY', 7, bold, 1.2)) / 2, hy, 7, bold, P.gray6, 1.2)
+    tracked('RATE', xRate + colRate - trackedW('RATE', 7, bold, 1.2) - 12, hy, 7, bold, P.gray6, 1.2)
+    tracked('AMOUNT', xAmt + colAmt - trackedW('AMOUNT', 7, bold, 1.2) - 12, hy, 7, bold, P.gray6, 1.2)
+    y -= 22
 
-  // Rows
-  for (let i = 0; i < d.lineItems.length; i++) {
-    const item = d.lineItems[i]
-    const per = item.isRecurring ? (item.recurringInterval === 'year' ? '/yr' : '/mo') : ''
-    const nameLines = wrap(item.name.replace(/\s+/g, ' '), bold, 9.5, colName - 24)
-    const descLines = item.description ? wrap(item.description.replace(/\s+/g, ' '), normal, 8, colName - 24) : []
-    const tagH = item.isRecurring ? 12 : 0
-    const rowH = 12 + nameLines.length * 13 + descLines.length * 11 + tagH + 10
-    ensure(rowH)
+    // Rows
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i]
+      const per = item.isRecurring ? (item.recurringInterval === 'year' ? '/yr' : '/mo') : ''
+      const nameLines = wrap(item.name.replace(/\s+/g, ' '), bold, 9.5, colName - 24)
+      const descLines = item.description ? wrapBlock(item.description, normal, 8, colName - 24) : []
+      const tagH = item.isRecurring ? 12 : 0
+      const rowH = 12 + nameLines.length * 13 + descLines.length * 11 + tagH + 10
+      ensure(rowH)
 
-    let ty = y - 12 - 9.5 + 2
-    for (const ln of nameLines) {
-      page.drawText(ln, { x: ML + 12, y: ty, size: 9.5, font: bold, color: P.ink })
-      ty -= 13
-    }
-    for (const ln of descLines) {
-      page.drawText(ln, { x: ML + 12, y: ty, size: 8, font: normal, color: P.gray6 })
-      ty -= 11
-    }
-    if (item.isRecurring) {
-      tracked(item.recurringInterval === 'year' ? 'ANNUAL' : 'MONTHLY', ML + 12, ty, 6.5, bold, P.cyan, 1.2)
-    }
+      let ty = y - 12 - 9.5 + 2
+      for (const ln of nameLines) {
+        page.drawText(ln, { x: ML + 12, y: ty, size: 9.5, font: bold, color: P.ink })
+        ty -= 13
+      }
+      for (const ln of descLines) {
+        if (ln) page.drawText(ln, { x: ML + 12, y: ty, size: 8, font: normal, color: P.gray6 })
+        ty -= 11
+      }
+      if (item.isRecurring) {
+        tracked(item.recurringInterval === 'year' ? 'ANNUAL' : 'MONTHLY', ML + 12, ty, 6.5, bold, P.cyan, 1.2)
+      }
 
-    const vy = y - 12 - 9.5 + 2
-    const qtyStr = String(item.quantity)
-    page.drawText(qtyStr, { x: xQty + (colQty - normal.widthOfTextAtSize(qtyStr, 9)) / 2, y: vy, size: 9, font: normal, color: P.gray6 })
-    const rateStr = `${money(item.rate)}${per}`
-    page.drawText(rateStr, { x: xRate + colRate - normal.widthOfTextAtSize(rateStr, 9) - 12, y: vy, size: 9, font: normal, color: P.gray6 })
-    const amtStr = `${money(item.rate * item.quantity)}${per}`
-    page.drawText(amtStr, { x: xAmt + colAmt - bold.widthOfTextAtSize(amtStr, 9) - 12, y: vy, size: 9, font: bold, color: P.ink })
+      const vy = y - 12 - 9.5 + 2
+      const qtyStr = String(item.quantity)
+      page.drawText(qtyStr, { x: xQty + (colQty - normal.widthOfTextAtSize(qtyStr, 9)) / 2, y: vy, size: 9, font: normal, color: P.gray6 })
+      const rateStr = `${money(item.rate)}${per}`
+      page.drawText(rateStr, { x: xRate + colRate - normal.widthOfTextAtSize(rateStr, 9) - 12, y: vy, size: 9, font: normal, color: P.gray6 })
+      const amtStr = `${money(item.rate * item.quantity)}${per}`
+      page.drawText(amtStr, { x: xAmt + colAmt - bold.widthOfTextAtSize(amtStr, 9) - 12, y: vy, size: 9, font: bold, color: P.ink })
 
-    y -= rowH
-    if (i < d.lineItems.length - 1) {
-      page.drawLine({ start: { x: ML, y }, end: { x: PW - MR, y }, thickness: 0.5, color: P.ruleLt })
+      y -= rowH
+      if (i < items.length - 1) {
+        page.drawLine({ start: { x: ML, y }, end: { x: PW - MR, y }, thickness: 0.5, color: P.ruleLt })
+      }
     }
   }
+
+  drawItemsTable(priced)
   hr()
   y -= 18
 
@@ -1340,6 +1368,24 @@ export async function buildPackagePdf(d: PackagePdfData): Promise<Uint8Array> {
   y -= 6
   totRow('Total due', money(oneTime > 0 ? oneTime : monthly + annual), { boldLabel: true, size: 11 })
   y -= 12
+
+  // ── Optional add-ons — quoted below the total so they never read as owed ─────
+  if (addOns.length > 0) {
+    ensure(80)
+    hr(P.ruleLt)
+    y -= 20
+    tracked('OPTIONAL ADD-ONS', ML, y, 7, bold, P.gray4, 1.6)
+    y -= 12
+    for (const ln of wrap('Not included in the total above. Let us know if you would like any of these added.', normal, 8, innerW)) {
+      ensure(12)
+      page.drawText(ln, { x: ML, y, size: 8, font: normal, color: P.gray4 })
+      y -= 11
+    }
+    y -= 6
+    drawItemsTable(addOns)
+    hr()
+    y -= 18
+  }
 
   // ── Payment schedule (proposal only) ────────────────────────────────────────
   if (!isInvoice && d.paymentSchedule && d.paymentSchedule.length > 0) {

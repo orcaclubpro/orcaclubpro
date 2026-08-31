@@ -7,8 +7,10 @@ import {
   AlertTriangle, Lock, FileDown, FileText, Send,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { isTypingTarget } from '@/lib/keyboard'
 import { SchedulePaymentInvoiceModal } from './SchedulePaymentInvoiceModal'
 import { PackageRecapModal } from './PackageRecapModal'
+import { EmailPackageModal } from './EmailPackageModal'
 import { WORK_CATEGORY_LABEL, type WorkCategory } from '@/lib/packages/workLines'
 import type { PackageRecapData } from '@/lib/packages/recap'
 import {
@@ -25,9 +27,10 @@ import {
 } from '@/actions/packageWork'
 
 // ─── The Milestones station — a focus flow ────────────────────────────────────
-// The fixed-price sibling of the Retainer station, same grammar: landing is an
-// autofocused board of every package with a pending scheduled payment (type, ↑↓,
-// ↵). Once a package is picked, a persistent header holds the client, the package
+// The fixed-price sibling of the Retainer station, and the home of ALL non-recurring
+// work: Build creates the proposal, this runs it. Same grammar: landing is an
+// autofocused board of every package with a pending scheduled payment, plus every
+// draft still being scoped (type, ↑↓, ↵). Once a package is picked, a persistent header holds the client, the package
 // and the stage tabs; the body shows exactly one stage: Overview · Plan · Log ·
 // Documents. Esc walks back one level (recap composer → send modal → editor →
 // board). Keys 1–4 jump stages while not typing.
@@ -99,7 +102,7 @@ export interface MilestonesTabProps {
   /** Preselect this client's packages when launched from a search result. */
   clientId?: string
   /** Deep-link straight to a package's Documents stage for one schedule entry. */
-  /** entryId is optional: a converted scope opens its new package with no schedule yet. */
+  /** entryId is optional: a proposal handed over from Build has no schedule yet. */
   initialTarget?: { packageId: string; entryId?: string | null } | null
 }
 
@@ -156,6 +159,7 @@ export function MilestonesTab({ clientId, initialTarget }: MilestonesTabProps) {
   const [docEntryId, setDocEntryId] = useState<string | null>(initialTarget?.entryId ?? null)
   const [sendEntryId, setSendEntryId] = useState<string | null>(initialTarget?.entryId ?? null)
   const [recapOpen, setRecapOpen] = useState(false)
+  const [emailOpen, setEmailOpen] = useState(false)
   const [recapDrafts, setRecapDrafts] = useState<Record<string, PackageRecapData>>({})
 
   /** The station is kept mounted-but-hidden by the console; only act when on screen. */
@@ -173,8 +177,8 @@ export function MilestonesTab({ clientId, initialTarget }: MilestonesTabProps) {
     appliedTargetRef.current = key
     setPackageId(initialTarget.packageId)
     setRecapOpen(false)
-    // An entry-less target is a package with no schedule yet — a freshly converted
-    // scope. There is no document to compose, so land on Overview instead.
+    // An entry-less target is a package with no schedule yet — a proposal just built
+    // in Build. There is no document to compose, so land on Overview instead.
     if (initialTarget.entryId) {
       setStage('documents')
       setDocEntryId(initialTarget.entryId)
@@ -297,8 +301,7 @@ export function MilestonesTab({ clientId, initialTarget }: MilestonesTabProps) {
         return
       }
       if (e.key >= '1' && e.key <= '4' && !e.metaKey && !e.ctrlKey && !e.altKey) {
-        const tag = (e.target as HTMLElement)?.tagName
-        if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable) return
+        if (isTypingTarget(e.target)) return
         if (!packageId || loading || sendEntryId || recapOpen) return
         setStage(STAGES[Number(e.key) - 1].id)
       }
@@ -978,9 +981,19 @@ export function MilestonesTab({ clientId, initialTarget }: MilestonesTabProps) {
                       disabled={!docEntry}
                       onClick={() => { if (docEntry) setRecapOpen(true) }}
                     />
+                    {/* The pitch itself. Separate from the payment sends above: this is
+                        the whole package as a document, not one scheduled payment, and
+                        it is what a draft proposal needs before anything gets billed. */}
+                    <DocCard
+                      icon={Send}
+                      title="Send the proposal"
+                      desc="Email the whole package as a proposal, invoice copy, or SOW — line items, schedule, and a PDF. Creates no orders."
+                      actionLabel="Compose email"
+                      onClick={() => setEmailOpen(true)}
+                    />
                   </div>
                   <p className="text-[11px] text-[var(--space-text-muted)]">
-                    The recap covers the selected payment — the work log sheet covers the whole package.
+                    The recap covers the selected payment — the work log sheet and the proposal cover the whole package.
                   </p>
                 </>
               )}
@@ -1020,6 +1033,15 @@ export function MilestonesTab({ clientId, initialTarget }: MilestonesTabProps) {
           onClose={() => setRecapOpen(false)}
         />
       )}
+
+      {/* The proposal send — the whole package as a document. Reloads on close so a
+          status flip to 'sent' drops the draft marker off the board. */}
+      {summary && emailOpen && (
+        <EmailPackageModal
+          packageId={summary.package.id}
+          onClose={() => { setEmailOpen(false); void load() }}
+        />
+      )}
     </div>
   )
 }
@@ -1045,8 +1067,13 @@ function BoardRow({
       {isSel && <div className="absolute left-0 top-2 bottom-2 w-[2px] rounded-full" style={{ background: 'var(--space-accent)', opacity: 0.7 }} />}
       <span
         className="size-2 rounded-full shrink-0"
-        style={{ background: row.needsRecap ? 'rgb(245 158 11)' : 'var(--space-accent)' }}
-        title={row.needsRecap ? 'Payment due soon with unbilled work' : 'On track'}
+        style={{
+          background: row.needsRecap ? 'rgb(245 158 11)' : 'var(--space-accent)',
+          // A draft is not yet a commitment — hollow it out so the board reads at a
+          // glance as "billable work" vs "still being scoped".
+          opacity: row.isDraft && !row.nextEntry ? 0.35 : 1,
+        }}
+        title={row.needsRecap ? 'Payment due soon with unbilled work' : row.isDraft ? 'Draft proposal — still being scoped' : 'On track'}
       />
       <div className="flex-1 min-w-0">
         <p className={cn('text-sm truncate', isSel ? 'text-[var(--space-text-primary)] font-medium' : 'text-[var(--space-text-secondary)]')}>
@@ -1066,10 +1093,12 @@ function BoardRow({
       </span>
       <div className="shrink-0 w-[104px] text-right">
         <p className="text-xs font-semibold tabular-nums text-[var(--space-text-secondary)]">
-          {row.nextEntry ? fmt(row.nextEntry.amount) : '—'}
+          {row.nextEntry ? fmt(row.nextEntry.amount) : row.isDraft ? 'Draft' : '—'}
         </p>
         <p className="text-[10px] tabular-nums text-[var(--space-text-muted)] truncate">
-          {row.nextEntry?.dueDate ? fmtDay(row.nextEntry.dueDate) : row.nextEntry?.label || 'No due date'}
+          {row.nextEntry?.dueDate
+            ? fmtDay(row.nextEntry.dueDate)
+            : row.nextEntry?.label || (row.isDraft ? 'Not scheduled' : 'No due date')}
         </p>
       </div>
       {isSel && <CornerDownLeft className="size-3 shrink-0 opacity-60" style={{ color: 'var(--space-accent)' }} />}

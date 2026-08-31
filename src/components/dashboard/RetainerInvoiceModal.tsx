@@ -84,6 +84,9 @@ export function RetainerInvoiceModal({
   const [totalStr, setTotalStr] = useState('')
   const [dueDaysStr, setDueDaysStr] = useState('30')
   const [includePlanned, setIncludePlanned] = useState(true)
+  // Itemize the closing cycle's hours on the billing package + order. On by default:
+  // it is what lets a client match the month's fee to the work behind it.
+  const [includeWorkLog, setIncludeWorkLog] = useState(true)
   const [invoiceTo, setInvoiceTo] = useState('')
   const [invoiceMsg, setInvoiceMsg] = useState('')
   const [forceInvoice, setForceInvoice] = useState(false)
@@ -162,6 +165,7 @@ export function RetainerInvoiceModal({
         recipients: parseEmails(invoiceTo),
         message: invoiceMsg.trim() || undefined,
         plannedWork: includePlanned ? model.nextPlanned : [],
+        includeWorkLog,
         force: forceInvoice || undefined,
       })
       result.invoice = r.success
@@ -319,6 +323,18 @@ export function RetainerInvoiceModal({
                           </div>
                         </div>
                       </div>
+
+                      {/* The month that just closed, itemized on the invoice + package —
+                          the client's record of what the fee bought. */}
+                      {model.currentUsage.loggedCount > 0 && (
+                        <button type="button" onClick={() => setIncludeWorkLog((v) => !v)} className="w-full flex items-center gap-2 rounded-lg border border-[var(--space-border-hard)] bg-[var(--space-bg-card-hover)] px-3 py-2 text-left">
+                          {includeWorkLog ? <CircleCheck className="size-4 shrink-0" style={{ color: 'var(--space-accent)' }} /> : <Circle className="size-4 shrink-0 text-[var(--space-text-muted)]" />}
+                          <span className="text-xs text-[var(--space-text-secondary)]">
+                            Itemize {model.currentUsage.loggedCount} logged {model.currentUsage.loggedCount === 1 ? 'entry' : 'entries'} from {model.current.monthLabel}
+                            <span className="block text-[10px] text-[var(--space-text-muted)]">Dated work log on the invoice and the client&apos;s package. Doesn&apos;t change the total.</span>
+                          </span>
+                        </button>
+                      )}
 
                       {/* Planned work — meaningless on a closed cycle, whose drafts are
                           unfinished work rather than a plan for the month ahead. */}

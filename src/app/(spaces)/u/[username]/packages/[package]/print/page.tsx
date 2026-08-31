@@ -17,6 +17,8 @@ interface LineItem {
   quantity?: number
   isRecurring?: boolean
   recurringInterval?: 'month' | 'year'
+  /** An optional extra — quoted below the total, never counted into it. */
+  isAddOn?: boolean
 }
 
 interface ScheduledEntry {
@@ -70,7 +72,12 @@ export default async function PackagePrintPage({
     if (pkg.type !== 'proposal' || pkgClientId !== clientAccountId) notFound()
   }
 
-  const lineItems: LineItem[] = pkg.lineItems ?? []
+  // Add-ons are an offer, not a charge: they are listed under the total in their own
+  // section and excluded from every subtotal. Counting them in quotes the client a
+  // price for work they have not agreed to.
+  const allLineItems: LineItem[] = pkg.lineItems ?? []
+  const lineItems = allLineItems.filter((i) => !i.isAddOn)
+  const addOns = allLineItems.filter((i) => i.isAddOn)
   const paymentSchedule: ScheduledEntry[] = pkg.paymentSchedule ?? []
   const isDeveloper = user.role === 'admin' || user.role === 'user'
 
@@ -289,6 +296,53 @@ export default async function PackagePrintPage({
                   <span style={{ fontWeight: 800, color: '#111', fontVariantNumeric: 'tabular-nums' }}>{fmt(oneTime)}</span>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* ── OPTIONAL ADD-ONS ─────────────────────── */}
+        {addOns.length > 0 && (
+          <div style={{ marginBottom: 32, paddingTop: 20, borderTop: '1px solid #e5e7eb' }}>
+            <p style={{ fontSize: 10, fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 4 }}>
+              Optional Add-ons
+            </p>
+            <p style={{ fontSize: 11, color: '#9ca3af', marginBottom: 12, lineHeight: 1.5 }}>
+              Not included in the total above. Let us know if you&rsquo;d like any of these added.
+            </p>
+            <div style={{ border: '1px solid #e5e7eb', borderRadius: 8, overflow: 'hidden' }}>
+              {addOns.map((item, i) => {
+                const qty = item.quantity ?? 1
+                const unitRate = item.adjustedPrice ?? item.price ?? 0
+                return (
+                  <div
+                    key={item.id ?? i}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: 12,
+                      padding: '12px 14px',
+                      borderTop: i === 0 ? 'none' : '1px solid #f3f4f6',
+                      background: '#fafafa',
+                    }}
+                  >
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: 13, fontWeight: 600, color: '#111', lineHeight: 1.3 }}>
+                        {item.name}
+                        {qty > 1 && <span style={{ fontWeight: 400, color: '#9ca3af' }}> &times; {qty}</span>}
+                      </p>
+                      {item.description && (
+                        <p style={{ fontSize: 11, color: '#6b7280', marginTop: 3, lineHeight: 1.55, whiteSpace: 'pre-line' }}>{item.description}</p>
+                      )}
+                    </div>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: '#6b7280', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                      {fmt(unitRate * qty)}
+                      {item.isRecurring && (
+                        <span style={{ fontSize: 10, fontWeight: 400, color: '#9ca3af' }}>/{item.recurringInterval === 'year' ? 'yr' : 'mo'}</span>
+                      )}
+                    </p>
+                  </div>
+                )
+              })}
             </div>
           </div>
         )}

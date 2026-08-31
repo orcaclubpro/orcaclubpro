@@ -244,7 +244,9 @@ function parseSowExtrasFromNotes(notes?: string | null) {
 
 /** Map a package/proposal document to a SOW form payload (inverse of createPackageFromSow). */
 function packageToSowData(pkg: any): SowFormData {
-  const lineItems = (pkg.lineItems ?? []) as any[]
+  // A SOW is a contract, so add-ons are excluded outright — an option the client has
+  // not taken must never appear as agreed, priced scope.
+  const lineItems = ((pkg.lineItems ?? []) as any[]).filter((i: any) => !i.isAddOn)
   const amountOf = (item: any) => (item.adjustedPrice ?? item.price ?? 0) * (item.quantity ?? 1)
 
   // Fold the optional line description into the SOW's Description cell so it
@@ -1816,8 +1818,11 @@ export async function emailPackageToSelf(packageId: string) {
     const email = clientAccount?.email
     if (!email) return { success: false, error: 'No email address on file' }
 
-    // Build totals from line items
-    const lineItems = (proposal.lineItems ?? []) as any[]
+    // Build totals from line items. Add-ons are quoted separately and never summed —
+    // the total has to match what the client is actually being asked to buy.
+    const allLineItems = (proposal.lineItems ?? []) as any[]
+    const lineItems = allLineItems.filter((li: any) => !li.isAddOn)
+    const addOns = allLineItems.filter((li: any) => li.isAddOn)
     let totalOneTime = 0, totalMonthly = 0, totalAnnual = 0
     for (const item of lineItems) {
       const total = (item.adjustedPrice ?? item.price ?? 0) * (item.quantity ?? 1)
@@ -1842,6 +1847,15 @@ export async function emailPackageToSelf(packageId: string) {
       coverMessage: (proposal as any).coverMessage ?? undefined,
       lineItems: lineItems.map((item: any) => ({
         name: item.name,
+        description: item.description || undefined,
+        price: item.adjustedPrice ?? item.price ?? 0,
+        quantity: item.quantity ?? 1,
+        isRecurring: item.isRecurring ?? false,
+        recurringInterval: item.recurringInterval ?? undefined,
+      })),
+      addOns: addOns.map((item: any) => ({
+        name: item.name,
+        description: item.description || undefined,
         price: item.adjustedPrice ?? item.price ?? 0,
         quantity: item.quantity ?? 1,
         isRecurring: item.isRecurring ?? false,
@@ -1943,7 +1957,11 @@ export async function sendProposalEmail(
     const pkg = await payload.findByID({ collection: 'packages', id: packageId, depth: 1 })
     if (!pkg) return { success: false, error: 'Package not found' }
 
-    const lineItems = (pkg.lineItems ?? []) as any[]
+    // Add-ons are quoted separately (their own block in the email and PDF) and are
+    // never summed into the total — an option the client has not taken is not a charge.
+    const allLineItems = (pkg.lineItems ?? []) as any[]
+    const lineItems = allLineItems.filter((li: any) => !li.isAddOn)
+    const addOns = allLineItems.filter((li: any) => li.isAddOn)
     let totalOneTime = 0, totalMonthly = 0, totalAnnual = 0
     for (const item of lineItems) {
       const total = (item.adjustedPrice ?? item.price ?? 0) * (item.quantity ?? 1)
@@ -2023,11 +2041,14 @@ export async function sendProposalEmail(
           ].filter(Boolean) as string[],
           description: pkg.description ?? null,
           coverMessage: (pkg as any).coverMessage ?? null,
-          lineItems: lineItems.map((item: any) => ({
+          // The PDF gets BOTH — it renders add-ons in their own section under the
+          // total, so it needs the unfiltered list.
+          lineItems: allLineItems.map((item: any) => ({
             name: item.name,
             description: item.description ?? null,
             quantity: item.quantity ?? 1,
             rate: item.adjustedPrice ?? item.price ?? 0,
+            isAddOn: Boolean(item.isAddOn),
             isRecurring: item.isRecurring ?? false,
             recurringInterval: item.recurringInterval ?? undefined,
           })),
@@ -2086,6 +2107,14 @@ export async function sendProposalEmail(
       packageDescription: pkg.description ?? undefined,
       coverMessage: (pkg as any).coverMessage ?? undefined,
       lineItems: lineItems.map((item: any) => ({
+        name: item.name,
+        description: item.description || undefined,
+        price: item.adjustedPrice ?? item.price ?? 0,
+        quantity: item.quantity ?? 1,
+        isRecurring: item.isRecurring ?? false,
+        recurringInterval: item.recurringInterval ?? 'month',
+      })),
+      addOns: addOns.map((item: any) => ({
         name: item.name,
         description: item.description || undefined,
         price: item.adjustedPrice ?? item.price ?? 0,

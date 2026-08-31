@@ -24,6 +24,8 @@ interface LineItem {
   quantity?: number
   isRecurring?: boolean
   recurringInterval?: 'month' | 'year'
+  /** An optional extra — listed apart from what's included, and left out of the total. */
+  isAddOn?: boolean
 }
 
 interface PackageDoc {
@@ -48,9 +50,11 @@ function fmt(n: number) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
 }
 
+/** Add-ons are an offer, not a charge — they never enter a total. */
 function computeTotals(lineItems: LineItem[] = []) {
   let oneTime = 0, monthly = 0, annual = 0
   for (const item of lineItems) {
+    if (item.isAddOn) continue
     const total = (item.adjustedPrice ?? item.price ?? 0) * (item.quantity ?? 1)
     if (item.isRecurring) {
       if (item.recurringInterval === 'year') annual += total
@@ -114,8 +118,10 @@ function ProposalModal({
   const [sowState, setSowState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
   const [sowError, setSowError] = useState<string | null>(null)
 
-  const lineItems = pkg.lineItems ?? []
-  const { oneTime, monthly, annual } = computeTotals(lineItems)
+  const allLineItems = pkg.lineItems ?? []
+  const lineItems = allLineItems.filter((i) => !i.isAddOn)
+  const addOns = allLineItems.filter((i) => i.isAddOn)
+  const { oneTime, monthly, annual } = computeTotals(allLineItems)
   const clientName = typeof pkg.clientAccount === 'object' && pkg.clientAccount
     ? pkg.clientAccount.name
     : 'Unknown Client'
@@ -270,8 +276,50 @@ function ProposalModal({
                 })}
               </div>
             </div>
-          ) : (
+          ) : addOns.length === 0 ? (
             <p className="text-xs text-[var(--space-text-secondary)] italic py-2">No line items configured.</p>
+          ) : null}
+
+          {/* Optional add-ons — quoted for the client but outside the total */}
+          {addOns.length > 0 && (
+            <div>
+              <p className="text-[9px] font-bold tracking-[0.25em] uppercase text-[var(--space-text-muted)] mb-2.5">
+                Optional add-ons · {addOns.length}
+              </p>
+              <div className="space-y-1.5">
+                {addOns.map((item, i) => {
+                  const itemTotal = (item.adjustedPrice ?? item.price ?? 0) * (item.quantity ?? 1)
+                  return (
+                    <div
+                      key={i}
+                      className="flex items-start gap-3 px-3.5 py-3 rounded-xl border border-dashed"
+                      style={{ borderColor: 'rgba(139,156,182,0.22)', background: 'rgba(139,156,182,0.03)' }}
+                    >
+                      <div className="mt-0.5 size-4 rounded-full border border-dashed flex items-center justify-center shrink-0" style={{ borderColor: 'rgba(139,156,182,0.28)' }}>
+                        <Plus className="size-2.5 text-[var(--space-text-muted)]" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-baseline justify-between gap-2">
+                          <p className="text-sm font-semibold text-[var(--space-text-secondary)]">{item.name}</p>
+                          <span className="text-sm font-bold text-[var(--space-text-muted)] tabular-nums font-mono shrink-0">
+                            {fmt(itemTotal)}
+                            {item.isRecurring && (
+                              <span className="text-xs font-normal">/{item.recurringInterval === 'year' ? 'yr' : 'mo'}</span>
+                            )}
+                          </span>
+                        </div>
+                        {item.description && (
+                          <p className="text-xs text-[var(--space-text-tertiary)] mt-0.5 leading-relaxed whitespace-pre-line">{item.description}</p>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+              <p className="text-[11px] text-[var(--space-text-muted)] mt-2 leading-relaxed">
+                Excluded from the total — the client sees these as options to request.
+              </p>
+            </div>
           )}
 
           {/* Invoice result */}

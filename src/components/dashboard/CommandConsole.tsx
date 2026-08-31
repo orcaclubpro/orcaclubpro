@@ -8,6 +8,7 @@ import {
   Package, Clock, Command, CornerDownLeft, Milestone,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { isTypingTarget } from '@/lib/keyboard'
 import { fetchSearchData } from '@/actions/search'
 import type { SearchClient, SearchProject, SearchSprint } from '@/actions/search'
 import { PackageBuilderTab } from './PackageBuilderTab'
@@ -192,9 +193,10 @@ export function CommandConsole({ username }: CommandConsoleProps) {
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Deep link into the Milestones station. Two callers: a scheduled-payment row,
-  // which names an entry and lands on the recap/Documents stage; and a freshly
-  // converted scope, which has no schedule yet and just opens the package. A missing
-  // packageId is still ignored — it would strand the station on nothing to load.
+  // which names an entry and lands on the recap/Documents stage; and a freshly built
+  // proposal handed over from Build, which has no schedule yet and just opens the
+  // package. A missing packageId is still ignored — it would strand the station on
+  // nothing to load.
   useEffect(() => {
     const onOpenMilestones = (e: Event) => {
       const detail = (e as CustomEvent).detail as { packageId?: string; entryId?: string } | undefined
@@ -212,8 +214,7 @@ export function CommandConsole({ username }: CommandConsoleProps) {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return
-      const tag = (e.target as HTMLElement)?.tagName
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable) return
+      if (isTypingTarget(e.target)) return
       if (e.key === 'l' || e.key === 'L') {
         e.preventDefault()
         if (isOpenRef.current && stationRef.current === 'search') closeConsole()
@@ -243,8 +244,10 @@ export function CommandConsole({ username }: CommandConsoleProps) {
     if (!isOpen) return
     const handler = (e: KeyboardEvent) => {
       // Backtick cycles stations in rail order (search → retainer → build → …), from
-      // any station — including while the search input is focused.
-      if (e.key === '`' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      // any station — including while the search input is focused. Build is the one
+      // exception: there the key opens the service editor (PackageBuilderTab claims it
+      // in the capture phase), so leave that station by the rail or Esc.
+      if (e.key === '`' && !e.metaKey && !e.ctrlKey && !e.altKey && stationRef.current !== 'builder') {
         e.preventDefault()
         const order = STATIONS.map((s) => s.id)
         const idx = order.indexOf(stationRef.current)
@@ -306,11 +309,19 @@ export function CommandConsole({ username }: CommandConsoleProps) {
 
   let globalIdx = 0
 
-  // Build station closes the whole console on save (id present), or drops back to
-  // search on cancel — never a dead end, and never a lost draft on a stray click.
+  // Build station hands the saved proposal to Milestones (id present), or drops back
+  // to search on cancel — never a dead end, and never a lost draft on a stray click.
+  //
+  // It used to close the console outright. That was a dead end for the thing staff
+  // actually do next: a fresh proposal is a scope, and planning work against it,
+  // pricing the schedule, and sending it all live one station over. Milestones now
+  // lists drafts, and its deep-link effect lands an entry-less target on Overview.
   const onBuilderClose = (createdId?: string) => {
-    if (createdId) { closeConsole(); router.refresh() }
-    else goStation('search')
+    if (createdId) {
+      setMilestoneTarget({ packageId: createdId, entryId: null })
+      goStation('milestones')
+      router.refresh()
+    } else goStation('search')
   }
 
   if (!mounted) return null
@@ -631,6 +642,7 @@ export function CommandConsole({ username }: CommandConsoleProps) {
                       username={username}
                       clientId={launchClientId}
                       onClose={onBuilderClose}
+                      active={station === 'builder'}
                     />
                   </div>
                 )}

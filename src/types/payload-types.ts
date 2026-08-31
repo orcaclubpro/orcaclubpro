@@ -921,6 +921,10 @@ export interface Package {
       }[]
     | null;
   /**
+   * Default USD/hr for this package. Hourly line items added in the builder start at this rate, so only their hours need setting. Blank = no package rate; each hourly line carries its own.
+   */
+  hourlyRate?: number | null;
+  /**
    * Planned payment schedule — entries are invoiced individually when ready
    */
   paymentSchedule?:
@@ -1054,11 +1058,11 @@ export interface Retainer {
   id: string;
   clientAccount: string | ClientAccount;
   /**
-   * Playbook tier — drives preset fee/hours in the builder. Nominal for a non-retainer client.
+   * Playbook tier — drives preset fee/hours in the builder. Nominal while scoping.
    */
   tier: 'basic' | 'growth' | 'enterprise';
   /**
-   * Non-Retainer client = engaged but on no recurring plan (no cycle, not billable) — the state a one-off project is scoped and sold from. Inactive retainers are hidden from the dashboard; their logged hours are kept.
+   * Scoping = being pitched, no plan yet (no cycle, not billable) — pricing it starts the first cycle. Inactive retainers are off the dashboard board but still reachable read-only, so a final unbilled cycle can be invoiced; their logged hours are kept.
    */
   status: 'scoping' | 'active' | 'inactive';
   startDate?: string | null;
@@ -1079,15 +1083,15 @@ export interface Retainer {
    */
   overageRate?: number | null;
   /**
-   * Scheduled wind-down — the plan stays active and billable until this date.
+   * Scheduled wind-down — the plan stays active and billable until this date, then closes.
    */
   deactivateOn?: string | null;
   /**
-   * Where the wind-down lands. Defaults to closing if unset.
+   * When the plan stopped billing. Bounds the closed era the read-only cycle view walks — cycles before it are billed history, and the last one may still need an invoice.
    */
-  deactivateTo?: ('inactive' | 'scoping') | null;
+  endedAt?: string | null;
   /**
-   * When a running plan was switched back to Non-Retainer. Bounds the pitch: only work logged on or after this date counts as scope for the next proposal — everything before it is retainer history.
+   * Deprecated — see Ended At.
    */
   nonRetainerSince?: string | null;
   /**
@@ -1099,7 +1103,7 @@ export interface Retainer {
    */
   notes?: string | null;
   /**
-   * One-off proposals sold against this engagement. A Non-Retainer client stays open after each one, so there can be several.
+   * Deprecated — proposals sold against this engagement back when one-off work was scoped here. Fixed-price work is a package now, owned by Build and Milestones.
    */
   convertedPackages?: (string | Package)[] | null;
   /**
@@ -2652,6 +2656,7 @@ export interface PackagesSelect<T extends boolean = true> {
         requestedAt?: T;
         id?: T;
       };
+  hourlyRate?: T;
   paymentSchedule?:
     | T
     | {
@@ -2733,7 +2738,7 @@ export interface RetainersSelect<T extends boolean = true> {
   hoursPerMonth?: T;
   overageRate?: T;
   deactivateOn?: T;
-  deactivateTo?: T;
+  endedAt?: T;
   nonRetainerSince?: T;
   scopeSummary?: T;
   notes?: T;

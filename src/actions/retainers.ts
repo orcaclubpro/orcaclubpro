@@ -16,11 +16,6 @@ import {
   buildRetainerProposalPdf,
   buildScopeRecapPdf,
 } from '@/lib/pdf-generators'
-import { WORK_CATEGORY_LABEL } from '@/lib/packages/workLines'
-// The one-off send reuses the packages system's own billing + email paths rather than
-// re-copying the Stripe sequences. packages.ts does not import this module, so there
-// is no cycle.
-import { sendProposalEmail, pushPackageSchedule, linkScheduleEntriesToOrders } from '@/actions/packages'
 import {
   generateGenericInvoiceEmail,
   generateGenericInvoiceEmailText,
@@ -58,9 +53,9 @@ export interface RetainerDoc {
   startDate?: string | null
   activatedAt?: string | null
   deactivateOn?: string | null
-  /** Where a scheduled wind-down lands. Absent means 'inactive' (close). */
-  deactivateTo?: 'inactive' | 'scoping' | null
-  /** When a running plan was switched back to Non-Retainer — bounds the new pitch. */
+  /** When the plan stopped billing — bounds the closed era the history view walks. */
+  endedAt?: string | null
+  /** Legacy: the same instant, stamped when ending a plan could land on Non-Retainer. */
   nonRetainerSince?: string | null
   notes?: string | null
   // The pitch headline. Scope ITEMS are draft/logged time entries, not a field here.
@@ -125,16 +120,14 @@ export interface RetainerTotals {
 
 export interface RetainerScheduled {
   deactivateOn: string | null
-  /** Where the scheduled wind-down lands. Null when nothing is scheduled. */
-  deactivateTo: 'inactive' | 'scoping' | null
   pendingEffectiveFrom: string | null
   pending: { tier?: RetainerTier | null; monthlyFee?: number | null; hoursPerMonth?: number | null; overageRate?: number | null } | null
 }
 
 /**
- * What a Non-Retainer client's console needs to walk its retainer past: the bounds of
- * the navigator and which cycle is on screen. Present only on records that came back
- * from a running plan — a record that was only ever scoped has no history to show.
+ * What a closed retainer's console needs to walk the era it billed: the bounds of
+ * the navigator and which cycle is on screen. Present only on records that actually ran
+ * a plan — one that was only ever scoped and then closed has no history to show.
  */
 export interface RetainerHistoryMeta {
   /** ISO start of the first retainer cycle. */
@@ -177,6 +170,13 @@ export interface RetainerNextCycle {
   /** Month name of the next cycle, e.g. "August". */
   monthLabel: string
   invoice: RetainerCycleInvoice | null
+  /**
+   * The terms the NEXT cycle will actually run on — the scheduled change if one lands
+   * on or before its start, otherwise the live terms. Carried explicitly because the
+   * billing preview is about next month: without it the UI can only reach `terms`,
+   * which describes the cycle now closing, and quietly quotes the old fee.
+   */
+  terms: RetainerTerms
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────────
@@ -204,12 +204,21 @@ function isScoping(r: RetainerDoc | null | undefined): boolean {
   return r?.status === 'scoping'
 }
 
+/** Closed — the plan is over. Read-only, but its cycles are still billable. */
+function isClosed(r: RetainerDoc | null | undefined): boolean {
+  return r?.status === 'inactive'
+}
+
 /**
- * The retainer era of a record that came back to Non-Retainer: `[first cycle, switch)`.
- * Null when the record was only ever scoped, so there is no history to walk.
+ * The billed era of a closed retainer: `[first cycle, ended)`.
+ *
+ * Null when the record never ran a plan — scoped and abandoned — so there is no history
+ * to walk. `nonRetainerSince` is read as a fallback: records closed before `endedAt`
+ * existed stamped the same instant there, under the Non-Retainer state that used to
+ * follow a wind-down.
  */
 function retainerEraOf(r: RetainerDoc): { anchor: string; since: string } | null {
-  const since = iso(r.nonRetainerSince)
+  const since = iso(r.endedAt) ?? iso(r.nonRetainerSince)
   const anchor = iso(r.activatedAt)
   return since && anchor ? { anchor, since } : null
 }
@@ -217,10 +226,9 @@ function retainerEraOf(r: RetainerDoc): { anchor: string; since: string } | null
 /**
  * The time-entry filter for one HISTORICAL cycle — the mirror of `pitchWhere`.
  *
- * The final cycle is clipped at the switch. Ending a plan mid-cycle ("end now") leaves
- * a window that runs past `nonRetainerSince`, and the entries in that tail are pitch
- * work, not retainer hours. Without the clip they would be counted twice: once against
- * the retainer's cap here, and again as scope for the next proposal.
+ * The final cycle is clipped at the end date. Ending a plan mid-cycle ("end now")
+ * leaves a window that runs past `endedAt`; nothing should have been logged in that
+ * tail, and anything that was is not retainer work. The clip keeps it off the cap.
  */
 function historyWhere(r: RetainerDoc, cycle: Cycle, since: string): Record<string, unknown> {
   return {
@@ -233,22 +241,22 @@ function historyWhere(r: RetainerDoc, cycle: Cycle, since: string): Record<strin
 }
 
 /**
- * Refuse writes that would land in — or disturb — a closed retainer era.
+ * Refuse writes against a closed retainer.
  *
- * Once a plan is switched off, the cycles it ran are billed history: their hours were
- * capped, snapshotted onto the entries, and usually invoiced. Editing them after the
- * fact changes what a client was charged for. The history view is read-only by design;
- * this is what makes that true for any caller, not just the one that hides the buttons.
+ * Once a plan is over, the cycles it ran are billed history: their hours were capped,
+ * snapshotted onto the entries, and usually invoiced. Editing them after the fact
+ * changes what a client was charged for. The closed view is read-only by design; this
+ * is what makes that true for any caller, not just the one that hides the buttons.
+ *
+ * Invoicing is the deliberate exception and does not come through here — ending a plan
+ * mid-cycle strands that cycle unbilled, and sending it later is the whole reason a
+ * closed retainer stays reachable.
  *
  * Returns an error string, or null when the write is fine.
  */
-function historyLockError(r: RetainerDoc | null | undefined, ...dates: (string | null | undefined)[]): string | null {
-  if (!r || !isScoping(r)) return null
-  const era = retainerEraOf(r)
-  if (!era) return null
-  const hits = dates.some((d) => d && d < era.since)
-  return hits
-    ? 'That date falls inside the closed retainer period — those cycles are billed history and cannot be edited.'
+function historyLockError(r: RetainerDoc | null | undefined): string | null {
+  return isClosed(r)
+    ? 'This retainer is closed — its cycles are billed history and cannot be edited.'
     : null
 }
 
@@ -261,21 +269,15 @@ function cycleIndexOf(anchor: string, cycleStart: string): number {
 }
 
 /**
- * The time-entry filter for a scoping record's PITCH.
+ * The time-entry filter for a scoping record's PITCH — all of its entries.
  *
- * A record that has only ever been scoped owns all of its entries. One that came back
- * from a running plan (`endRetainerPlan` with `then: 'non-retainer'`) does not: the
- * hours logged under that plan are retainer history — already billed, already capped —
- * and must never be re-offered as scope, re-dated onto a new anchor, or migrated into a
- * one-off package. `nonRetainerSince` is the line between the two.
- *
- * Every read that treats entries as "the pitch" goes through this.
+ * Scoping means pre-activation, always: a record either becomes a plan or is closed, and
+ * a closed one never reopens. So a scoping record owns every entry against it, with no
+ * billed era to exclude. (This used to be bounded by `nonRetainerSince`, back when a
+ * running plan could drop back into scoping as a "Non-Retainer client".)
  */
 function pitchWhere(r: RetainerDoc): Record<string, unknown> {
-  const since = iso(r.nonRetainerSince)
-  return since
-    ? { and: [{ retainer: { equals: r.id } }, { date: { greater_than_equal: since } }] }
-    : { retainer: { equals: r.id } }
+  return { retainer: { equals: r.id } }
 }
 
 /** What a scoping retainer has accumulated — the evidence pricing is set from. */
@@ -376,6 +378,20 @@ async function settleRetainer(
   retainer: RetainerDoc,
   nowIso: string,
 ): Promise<RetainerDoc> {
+  // Legacy self-heal. A scoping record carrying an end stamp is a "Non-Retainer client"
+  // — a state that no longer exists: it meant "off the plan but still engaged, so one-off
+  // work can be pitched against the record". One-off work lives in packages now, so the
+  // honest landing place for those records is closed, with the era they billed intact
+  // and reachable. Done lazily on read so no migration is needed.
+  if (isScoping(retainer) && iso(retainer.nonRetainerSince)) {
+    const healed = await payload.update({
+      collection: 'retainers',
+      id: retainer.id,
+      data: { status: 'inactive', endedAt: iso(retainer.nonRetainerSince) } as any,
+    })
+    return healed as unknown as RetainerDoc
+  }
+
   // Scoping retainers carry no anchor, no pending change, and no deactivation date —
   // there is nothing for the clock to promote or expire.
   if (isScoping(retainer)) return retainer
@@ -384,17 +400,15 @@ async function settleRetainer(
   const deactivateOn = iso(retainer.deactivateOn)
   const pendingFrom = iso(retainer.pendingEffectiveFrom)
 
+  // A due wind-down beats a due term change: the plan is ending, so new terms have
+  // nothing to apply to. CLEAR_PENDING below drops the change. setRetainer refuses to
+  // write one while a wind-down is scheduled, so this should only ever clear leftovers.
   if (deactivateOn && nowIso >= deactivateOn) {
-    // A wind-down either closes the engagement or drops it back to Non-Retainer, where
-    // one-off work can be scoped against the same record. Unset means close, so records
-    // scheduled before `deactivateTo` existed keep their original behaviour.
-    const landsOn = retainer.deactivateTo === 'scoping' ? 'scoping' : 'inactive'
-    updates.status = landsOn
+    updates.status = 'inactive'
     updates.deactivateOn = null
-    updates.deactivateTo = null
-    // The switch date bounds the next pitch: work logged under the plan is history,
-    // not scope. Stamped to the wind-down date, not now, so a late settle is accurate.
-    if (landsOn === 'scoping') updates.nonRetainerSince = deactivateOn
+    // Stamped to the wind-down date, not now, so a late settle still bounds the closed
+    // era correctly — that boundary is what the read-only history view walks.
+    updates.endedAt = deactivateOn
     Object.assign(updates, CLEAR_PENDING)
   } else if (pendingFrom && nowIso >= pendingFrom) {
     if (retainer.pendingTier != null) updates.tier = retainer.pendingTier
@@ -440,6 +454,30 @@ async function loadLiveRetainer(
   return settled.status === 'active' || settled.status === 'scoping' ? settled : null
 }
 
+/**
+ * The client's most recent CLOSED retainer, if it ever ran a plan.
+ *
+ * Only reached when nothing is live. Ending a plan mid-cycle strands that cycle
+ * unbilled, and this is what keeps it reachable: the record resolves read-only, its
+ * cycles walkable, and invoicing still live on them. A record that was only ever scoped
+ * and then closed has no era and is not worth surfacing, so it stays hidden.
+ */
+async function loadClosedRetainer(
+  payload: Awaited<ReturnType<typeof getPayload>>,
+  clientAccountId: string,
+): Promise<RetainerDoc | null> {
+  const { docs } = await payload.find({
+    collection: 'retainers',
+    where: {
+      and: [{ clientAccount: { equals: clientAccountId } }, { status: { equals: 'inactive' } }],
+    },
+    sort: '-updatedAt',
+    limit: 4,
+    depth: 0,
+  })
+  return ((docs as RetainerDoc[]).find((r) => retainerEraOf(r)) ?? null)
+}
+
 // ── Reads ────────────────────────────────────────────────────────────────────────
 
 /**
@@ -455,7 +493,12 @@ export async function getRetainerSummary(clientAccountId: string, refDate?: stri
 
     const payload = await getPayload({ config })
     const now = new Date().toISOString()
-    const retainer = await loadLiveRetainer(payload, clientAccountId, now)
+    // Live first. Falling back to the closed record is what keeps a wound-down plan
+    // reachable: ending one mid-cycle strands that cycle unbilled, and the read-only
+    // view below is the only way back to invoice it.
+    const retainer =
+      (await loadLiveRetainer(payload, clientAccountId, now)) ??
+      (await loadClosedRetainer(payload, clientAccountId))
 
     if (!retainer) {
       return {
@@ -477,113 +520,114 @@ export async function getRetainerSummary(clientAccountId: string, refDate?: stri
       }
     }
 
-    // ── Non-Retainer: no live cycle, so `refDate` selects the VIEW, not a slice ──
-    // Two things live under one status. By default the console is the pitch: every
-    // planned and completed item since scoping began, with null cycle/terms keeping it
-    // out of the billing paths. But a record that came back from a running plan also
-    // owns a retainer past, and pointing `refDate` into that era returns the cycle
-    // instead — read-only history, priced at the terms frozen onto its own entries.
-    if (isScoping(retainer)) {
-      const era = retainerEraOf(retainer)
-      const refIso = refDate ? new Date(refDate).toISOString() : null
+    // ── Closed: the plan is over, and every cycle it billed is read-only ────────
+    // `refDate` picks one cycle inside the era; unset lands on the LAST one, which is
+    // the cycle most likely to still need an invoice. Terms come from the snapshot
+    // frozen onto each cycle's own entries, not from today's (cleared) plan fields.
+    const era = retainerEraOf(retainer)
+    if (isClosed(retainer) && era) {
+      const { docs: eraDocs } = await payload.find({
+        collection: 'retainer-time-entries',
+        where: {
+          and: [
+            { retainer: { equals: retainer.id } },
+            { date: { less_than: era.since } },
+            { status: { not_equals: 'draft' } },
+          ],
+        },
+        select: { hours: true } as any,
+        depth: 0,
+        limit: 2000,
+      })
+      const firstCycleStart = cycleFor(era.anchor, era.anchor).start
+      const lastCycleStart = cycleFor(era.anchor, era.since).start
+      const history: RetainerHistoryMeta = {
+        firstCycleStart,
+        lastCycleStart,
+        cycleCount: cycleIndexOf(era.anchor, lastCycleStart),
+        cycleIndex: null,
+        since: era.since,
+        totalHours:
+          Math.round((eraDocs as { hours?: number | null }[]).reduce((t, e) => t + (e.hours ?? 0), 0) * 100) / 100,
+        tier: retainer.tier,
+      }
 
-      // Everything the navigator needs, whichever view is showing. One extra read, and
-      // only for records that actually have a past.
-      let history: RetainerHistoryMeta | null = null
-      if (era) {
-        const { docs: eraDocs } = await payload.find({
+      // Clamp into the era at BOTH ends: nothing past its end exists to navigate to,
+      // and a date before the first cycle would index one the plan never ran. Bounded
+      // on `firstCycleStart`, not the anchor — the anchor is an instant inside that
+      // cycle, so an exact first-cycle-start ref would fail an anchor comparison. The
+      // last cycle is the landing spot for a record opened cold: it is the one most
+      // likely to still need an invoice.
+      const asked = refDate ? new Date(refDate).toISOString() : null
+      const inEra = asked !== null && asked >= firstCycleStart && asked < era.since
+      const refIso = inEra ? asked : lastCycleStart
+      const histCycle = cycleFor(era.anchor, refIso)
+      const [{ docs: histDocs }, histAccount, { docs: histOrders }] = await Promise.all([
+        payload.find({
           collection: 'retainer-time-entries',
+          where: historyWhere(retainer, histCycle, era.since) as any,
+          sort: '-date',
+          depth: 0,
+          limit: 500,
+        }),
+        payload.findByID({ collection: 'client-accounts', id: clientAccountId, depth: 0 }).catch(() => null),
+        payload.find({
+          collection: 'orders',
           where: {
             and: [
-              { retainer: { equals: retainer.id } },
-              { date: { less_than: era.since } },
-              { status: { not_equals: 'draft' } },
+              { retainerRef: { equals: retainer.id } },
+              { retainerCycleStart: { equals: histCycle.start } },
+              { status: { not_equals: 'cancelled' } },
             ],
           },
-          select: { hours: true } as any,
+          sort: '-createdAt',
           depth: 0,
-          limit: 2000,
-        })
-        history = {
-          firstCycleStart: cycleFor(era.anchor, era.anchor).start,
-          lastCycleStart: cycleFor(era.anchor, era.since).start,
-          cycleCount: cycleIndexOf(era.anchor, cycleFor(era.anchor, era.since).start),
-          cycleIndex: null,
-          since: era.since,
-          totalHours:
-            Math.round((eraDocs as { hours?: number | null }[]).reduce((t, e) => t + (e.hours ?? 0), 0) * 100) / 100,
-          tier: retainer.tier,
-        }
+          limit: 5,
+        }),
+      ])
+      const histAll = histDocs as TimeEntryDoc[]
+      const histLogged = histAll.filter((e) => e.status !== 'draft')
+      const histDrafts = histAll.filter((e) => e.status === 'draft')
+      // The era is over, so every cycle in it is past — termsForCycle reads the
+      // snapshot frozen onto the entries rather than today's (cleared) plan fields.
+      const histTerms = termsForCycle(retainer, histCycle, histLogged, now)
+      const histOrder = (histOrders as any[])[0]
+      return {
+        success: true as const,
+        view: 'history' as const,
+        retainer,
+        cycle: histCycle,
+        terms: histTerms,
+        logged: histLogged,
+        drafts: histDrafts,
+        totals: computeTotals(histLogged, histTerms.hoursPerMonth, histTerms.overageRate),
+        scheduled: null,
+        client: histAccount
+          ? {
+              name: (histAccount as any).name ?? 'Client',
+              company: ((histAccount as any).company ?? null) as string | null,
+              email: ((histAccount as any).email ?? null) as string | null,
+            }
+          : null,
+        cycleInvoice: histOrder
+          ? {
+              orderId: histOrder.id,
+              orderNumber: histOrder.orderNumber,
+              status: histOrder.status,
+              amount: histOrder.amount,
+              stripeInvoiceUrl: histOrder.stripeInvoiceUrl ?? null,
+              createdAt: histOrder.createdAt,
+            }
+          : null,
+        nextCycle: null as RetainerNextCycle | null,
+        pitch: null as RetainerPitch | null,
+        proposal: null as RetainerProposalTerms | null,
+        history: { ...history, cycleIndex: cycleIndexOf(era.anchor, histCycle.start) },
       }
+    }
 
-      // ── History: one past retainer cycle, read-only ─────────────────────────
-      if (era && history && refIso && refIso < era.since) {
-        const histCycle = cycleFor(era.anchor, refIso)
-        const [{ docs: histDocs }, histAccount, { docs: histOrders }] = await Promise.all([
-          payload.find({
-            collection: 'retainer-time-entries',
-            where: historyWhere(retainer, histCycle, era.since) as any,
-            sort: '-date',
-            depth: 0,
-            limit: 500,
-          }),
-          payload.findByID({ collection: 'client-accounts', id: clientAccountId, depth: 0 }).catch(() => null),
-          payload.find({
-            collection: 'orders',
-            where: {
-              and: [
-                { retainerRef: { equals: retainer.id } },
-                { retainerCycleStart: { equals: histCycle.start } },
-                { status: { not_equals: 'cancelled' } },
-              ],
-            },
-            sort: '-createdAt',
-            depth: 0,
-            limit: 5,
-          }),
-        ])
-        const histAll = histDocs as TimeEntryDoc[]
-        const histLogged = histAll.filter((e) => e.status !== 'draft')
-        const histDrafts = histAll.filter((e) => e.status === 'draft')
-        // The era is over, so every cycle in it is past — termsForCycle reads the
-        // snapshot frozen onto the entries rather than today's (cleared) plan fields.
-        const histTerms = termsForCycle(retainer, histCycle, histLogged, now)
-        const histOrder = (histOrders as any[])[0]
-        return {
-          success: true as const,
-          view: 'history' as const,
-          retainer,
-          cycle: histCycle,
-          terms: histTerms,
-          logged: histLogged,
-          drafts: histDrafts,
-          totals: computeTotals(histLogged, histTerms.hoursPerMonth, histTerms.overageRate),
-          scheduled: null,
-          client: histAccount
-            ? {
-                name: (histAccount as any).name ?? 'Client',
-                company: ((histAccount as any).company ?? null) as string | null,
-                email: ((histAccount as any).email ?? null) as string | null,
-              }
-            : null,
-          cycleInvoice: histOrder
-            ? {
-                orderId: histOrder.id,
-                orderNumber: histOrder.orderNumber,
-                status: histOrder.status,
-                amount: histOrder.amount,
-                stripeInvoiceUrl: histOrder.stripeInvoiceUrl ?? null,
-                createdAt: histOrder.createdAt,
-              }
-            : null,
-          nextCycle: null as RetainerNextCycle | null,
-          pitch: null as RetainerPitch | null,
-          proposal: null as RetainerProposalTerms | null,
-          history: { ...history, cycleIndex: cycleIndexOf(era.anchor, histCycle.start) },
-        }
-      }
-
-      // ── The pitch ───────────────────────────────────────────────────────────
+    // ── The pitch: scoped, not yet priced. No cycle, no cap, nothing billable. ──
+    if (isScoping(retainer)) {
       const [{ docs: scopeDocs }, scopeAccount] = await Promise.all([
         payload.find({
           collection: 'retainer-time-entries',
@@ -618,7 +662,7 @@ export async function getRetainerSummary(clientAccountId: string, refDate?: stri
         nextCycle: null as RetainerNextCycle | null,
         pitch: computePitch(scopeDrafts, scopeLogged),
         proposal: proposalTermsOf(retainer),
-        history,
+        history: null as RetainerHistoryMeta | null,
       }
     }
 
@@ -690,12 +734,14 @@ export async function getRetainerSummary(clientAccountId: string, refDate?: stri
       label: nextCycle.label,
       monthLabel: cycleMonthName(nextCycle.start),
       invoice: nextInvoice,
+      // Not `termsForCycle` — that snapshots from logged entries, and the next cycle has
+      // none yet. effectiveTerms is what resolves a pending change against a date.
+      terms: effectiveTerms(retainer, nextCycle.start),
     }
 
     const terms = termsForCycle(retainer, cycle, logged, now)
     const scheduled: RetainerScheduled = {
       deactivateOn: iso(retainer.deactivateOn),
-      deactivateTo: retainer.deactivateOn ? (retainer.deactivateTo ?? 'inactive') : null,
       pendingEffectiveFrom: iso(retainer.pendingEffectiveFrom),
       pending: retainer.pendingEffectiveFrom
         ? {
@@ -996,11 +1042,61 @@ export async function setRetainer(input: {
     }
 
     // Editing an active retainer: notes/start date now; term changes next cycle.
-    const termsChanged =
-      input.tier !== existing.tier ||
-      (input.monthlyFee ?? null) !== (existing.monthlyFee ?? null) ||
-      (input.hoursPerMonth ?? null) !== (existing.hoursPerMonth ?? null) ||
-      overageRate !== (existing.overageRate ?? 65)
+
+    // A wind-down and a term change are both scheduled for the next cycle start, and
+    // settleRetainer's deactivation branch runs CLEAR_PENDING — so a change written now
+    // would be shown in the banner and then silently discarded, having never applied.
+    // Refuse instead of accepting an edit that cannot take effect.
+    if (existing.deactivateOn) {
+      const touchesTerms =
+        input.tier !== existing.tier ||
+        (input.monthlyFee ?? null) !== (existing.monthlyFee ?? null) ||
+        (input.hoursPerMonth ?? null) !== (existing.hoursPerMonth ?? null) ||
+        overageRate !== (existing.overageRate ?? 65)
+      if (touchesTerms) {
+        return {
+          success: false as const,
+          error:
+            'This plan is winding down at the end of the cycle, so new terms would never take effect. Cancel the wind-down first ("Keep active"), then change the terms.',
+        }
+      }
+    }
+
+    // The baseline is what the NEXT cycle is currently set to run on — the scheduled
+    // change if there is one, else the live terms. Comparing against the live terms
+    // instead (as this used to) made a pending change impossible to revise back: editing
+    // the numbers to match what is running now read as "nothing changed", so the stale
+    // schedule survived untouched with no way to clear it.
+    const scheduledBaseline = existing.pendingEffectiveFrom
+      ? {
+          tier: (existing.pendingTier ?? existing.tier) as RetainerTier,
+          monthlyFee: existing.pendingMonthlyFee ?? null,
+          hoursPerMonth: existing.pendingHoursPerMonth ?? null,
+          overageRate: existing.pendingOverageRate ?? 65,
+        }
+      : {
+          tier: existing.tier,
+          monthlyFee: existing.monthlyFee ?? null,
+          hoursPerMonth: existing.hoursPerMonth ?? null,
+          overageRate: existing.overageRate ?? 65,
+        }
+    const wanted = {
+      tier: input.tier,
+      monthlyFee: input.monthlyFee ?? null,
+      hoursPerMonth: input.hoursPerMonth ?? null,
+      overageRate,
+    }
+    const same = (a: typeof wanted, b: typeof wanted) =>
+      a.tier === b.tier &&
+      a.monthlyFee === b.monthlyFee &&
+      a.hoursPerMonth === b.hoursPerMonth &&
+      a.overageRate === b.overageRate
+    const liveTerms = {
+      tier: existing.tier,
+      monthlyFee: existing.monthlyFee ?? null,
+      hoursPerMonth: existing.hoursPerMonth ?? null,
+      overageRate: existing.overageRate ?? 65,
+    }
 
     const data: Record<string, unknown> = {
       startDate: input.startDate ? dayToIso(input.startDate) : undefined,
@@ -1008,21 +1104,59 @@ export async function setRetainer(input: {
       scopeSummary: input.scopeSummary ?? undefined,
     }
 
-    let scheduledFor: string | null = null
-    if (termsChanged) {
-      scheduledFor = nextCycleStart(anchorOf(existing), now)
-      data.pendingTier = input.tier
-      data.pendingMonthlyFee = input.monthlyFee ?? null
-      data.pendingHoursPerMonth = input.hoursPerMonth ?? null
-      data.pendingOverageRate = overageRate
-      data.pendingEffectiveFrom = scheduledFor
+    let scheduledFor: string | null = existing.pendingEffectiveFrom ? iso(existing.pendingEffectiveFrom) : null
+    let cancelled = false
+    if (!same(wanted, scheduledBaseline)) {
+      if (same(wanted, liveTerms)) {
+        // Back to what is running now — there is nothing left to schedule.
+        Object.assign(data, CLEAR_PENDING)
+        scheduledFor = null
+        cancelled = true
+      } else {
+        scheduledFor = nextCycleStart(anchorOf(existing), now)
+        data.pendingTier = input.tier
+        data.pendingMonthlyFee = input.monthlyFee ?? null
+        data.pendingHoursPerMonth = input.hoursPerMonth ?? null
+        data.pendingOverageRate = overageRate
+        data.pendingEffectiveFrom = scheduledFor
+      }
     }
 
     await payload.update({ collection: 'retainers', id: existing.id, data: data as any })
-    return { success: true as const, id: existing.id, scheduledFor }
+    return { success: true as const, id: existing.id, scheduledFor, cancelled }
   } catch (error) {
     console.error('[setRetainer]', error)
     return { success: false as const, error: error instanceof Error ? error.message : 'Failed to save retainer' }
+  }
+}
+
+/**
+ * Drop a scheduled plan change so the next cycle runs on the live terms.
+ *
+ * The edit form can clear one by being set back to the current terms, but that is a
+ * roundabout way to say "never mind" — and it only works if you remember what the
+ * current terms were. This is the direct route, wired to the banner that announces the
+ * change. Staff only.
+ */
+export async function cancelScheduledChange(retainerId: string) {
+  try {
+    const user = await getCurrentUser()
+    if (!user || user.role === 'client') return { success: false as const, error: 'Unauthorized' }
+    if (!retainerId) return { success: false as const, error: 'No retainer selected' }
+
+    const payload = await getPayload({ config })
+    const r = (await payload
+      .findByID({ collection: 'retainers', id: retainerId, depth: 0 })
+      .catch(() => null)) as RetainerDoc | null
+    if (!r) return { success: false as const, error: 'Retainer not found' }
+    if (!r.pendingEffectiveFrom) return { success: false as const, error: 'No scheduled change to cancel' }
+
+    await payload.update({ collection: 'retainers', id: retainerId, data: { ...CLEAR_PENDING } as any })
+    if (user.username) revalidatePath(`/u/${user.username}/clients`)
+    return { success: true as const }
+  } catch (error) {
+    console.error('[cancelScheduledChange]', error)
+    return { success: false as const, error: error instanceof Error ? error.message : 'Failed to cancel the change' }
   }
 }
 
@@ -1167,395 +1301,6 @@ export async function activateRetainerPlan(input: {
     return { success: false as const, error: error instanceof Error ? error.message : 'Failed to start retainer' }
   }
 }
-
-// ── Conversion — a scope that turns out to be one-off, not recurring ──────────
-
-/**
- * Retainer work categories don't line up 1:1 with package ones: packages have
- * `design` where retainers have `reporting`. Reporting folds into `work` — it is the
- * generic bucket on both sides, and nothing downstream prices off the category.
- */
-const WORK_CATEGORY_FOR_PACKAGE: Record<TimeEntryCategory, 'work' | 'design' | 'revision' | 'meeting'> = {
-  work: 'work',
-  meeting: 'meeting',
-  revision: 'revision',
-  reporting: 'work',
-}
-
-/** A priced deliverable on a one-off proposal. */
-export interface OneOffLineInput {
-  name: string
-  description?: string
-  /** Per-unit price. For an hourly line this is the RATE — hours multiply it. */
-  price: number
-  quantity?: number
-  /** Optional extra the client can request; excluded from the proposal total. */
-  isAddOn?: boolean
-  billingType?: 'fixed' | 'hourly' | 'recurring'
-  hours?: number
-  recurringInterval?: 'month' | 'year'
-}
-
-/** One planned payment on a one-off proposal — the unit an Order is created from. */
-export interface OneOffScheduleInput {
-  label: string
-  entryType?: 'deposit' | 'installment' | 'balance'
-  amount: number
-  /** yyyy-mm-dd */
-  dueDate?: string
-}
-
-/**
- * Normalize a builder line the way the package editor would before storing it.
- *
- * Deliberately mirrors `normalizeLineItem` in actions/package-builder.ts rather than
- * importing it: that module is 'use server', so it can only export async functions.
- * Keep the two in step — both define how a package line is persisted.
- */
-function normalizeOneOffLine(it: OneOffLineInput) {
-  const billingType = it.billingType ?? 'fixed'
-  const round2 = (n: number) => Math.max(0, Math.round((n || 0) * 100) / 100)
-  const hours = billingType === 'hourly' ? Math.max(0, it.hours ?? 1) : undefined
-  // Packages store hourly lines as rate × hours in `price`, keeping `hours` for display.
-  const price = billingType === 'hourly' ? round2((it.price || 0) * (hours ?? 1)) : round2(it.price)
-  return {
-    name: (it.name ?? '').trim(),
-    description: it.description?.trim() || undefined,
-    price,
-    quantity: Math.max(1, Math.round(it.quantity ?? 1)),
-    billingType,
-    hours,
-    // isRecurring/recurringInterval are the legacy mirror of billingType — keep them true to it.
-    isRecurring: billingType === 'recurring',
-    recurringInterval: billingType === 'recurring' ? (it.recurringInterval ?? 'month') : undefined,
-    isAddOn: Boolean(it.isAddOn),
-  }
-}
-
-/** Normalize a schedule row; drops anything unlabelled or non-positive. */
-function normalizeOneOffSchedule(rows: OneOffScheduleInput[] | undefined) {
-  return (rows ?? [])
-    .map((r) => ({
-      label: (r.label ?? '').trim(),
-      entryType: r.entryType ?? 'installment',
-      amount: Math.max(0, Math.round((r.amount || 0) * 100) / 100),
-      dueDate: r.dueDate ? dayToIso(r.dueDate) : undefined,
-    }))
-    .filter((r) => r.label && r.amount > 0)
-}
-
-/**
- * Turn a non-retainer client's scope into a one-off itemized proposal.
- *
- * Some scopes are not recurring — they are a fixed job with a list of deliverables.
- * Rather than grow a second line-item/scheduling system inside retainers, this hands
- * the scope to the `packages` proposal machinery, which already does itemized lines,
- * payment schedules, add-ons, the proposal PDF, and the milestones work log.
- *
- * Pitched work MOVES with it: every PITCH time entry is rewritten as a
- * package-work-entry (draft → planned, logged → logged) and the originals are deleted,
- * so the new package is the single source of truth. Retainer history is out of scope —
- * `pitchWhere` bounds both the copy and the delete at `nonRetainerSince`.
- *
- * The engagement stays OPEN afterwards: the client remains a Non-Retainer client with
- * their history intact, and the new package is appended to `convertedPackages`.
- *
- * This only ever produces a DRAFT proposal — emailing it and creating Orders are
- * `sendOneOffProject`'s job, so a failure there never leaves a half-sent package.
- *
- * Staff only. Refuses anything that is not still a non-retainer scope.
- */
-export async function convertScopeToPackage(input: {
-  retainerId: string
-  /** Proposal name — defaults to "{client} — {scope headline or 'Project'}". */
-  name?: string
-  /** Cover message on the proposal PDF. Defaults to the scope summary. */
-  coverMessage?: string
-  /** The priced deliverables. Normally the pitched planned work, now with prices. */
-  lineItems: OneOffLineInput[]
-  /** Planned payments — each becomes one Order when the proposal is sent. */
-  paymentSchedule?: OneOffScheduleInput[]
-  /** Project to attach the proposal to, if there is one. */
-  projectRef?: string | null
-}) {
-  try {
-    const user = await getCurrentUser()
-    if (!user || user.role === 'client') return { success: false as const, error: 'Unauthorized' }
-    if (!input.retainerId) return { success: false as const, error: 'No client selected' }
-
-    const payload = await getPayload({ config })
-    const retainer = (await payload
-      .findByID({ collection: 'retainers', id: input.retainerId, depth: 0 })
-      .catch(() => null)) as RetainerDoc | null
-    if (!retainer) return { success: false as const, error: 'Retainer not found' }
-    if (!isScoping(retainer)) {
-      return { success: false as const, error: 'Only a scope that has not started can be converted' }
-    }
-
-    const lineItems = (input.lineItems ?? []).map(normalizeOneOffLine).filter((it) => it.name)
-    if (lineItems.length === 0) {
-      return { success: false as const, error: 'Add at least one priced line item' }
-    }
-    const paymentSchedule = normalizeOneOffSchedule(input.paymentSchedule)
-
-    const clientAccountId =
-      typeof retainer.clientAccount === 'object' ? retainer.clientAccount.id : retainer.clientAccount
-    const account = (await payload
-      .findByID({ collection: 'client-accounts', id: clientAccountId, depth: 0 })
-      .catch(() => null)) as any
-    const clientLabel = account?.company || account?.name || 'Client'
-
-    // ── The proposal ───────────────────────────────────────────────────────────
-    const pkg = await payload.create({
-      collection: 'packages',
-      data: {
-        name: input.name?.trim() || `${clientLabel} — ${retainer.scopeSummary?.trim().slice(0, 60) || 'Project'}`,
-        description: retainer.scopeSummary ?? undefined,
-        coverMessage: input.coverMessage?.trim() || retainer.proposalNote || undefined,
-        notes: retainer.notes ?? undefined,
-        type: 'proposal',
-        status: 'draft',
-        clientAccount: clientAccountId,
-        projectRef: input.projectRef || undefined,
-        lineItems,
-        paymentSchedule,
-      } as any,
-    })
-
-    // ── Move the pitched work across ───────────────────────────────────────────
-    // Copy first, delete second: a failure mid-way leaves duplicates (visible and
-    // fixable) rather than losing the log entirely.
-    const { docs: entries } = await payload.find({
-      collection: 'retainer-time-entries',
-      where: pitchWhere(retainer) as any,
-      sort: 'date',
-      depth: 0,
-      limit: 500,
-    })
-    let migrated = 0
-    for (const entry of entries as TimeEntryDoc[]) {
-      const pkgCategory = WORK_CATEGORY_FOR_PACKAGE[(entry.category ?? 'work') as TimeEntryCategory]
-      await payload.create({
-        collection: 'package-work-entries',
-        data: {
-          date: entry.date,
-          hours: entry.hours ?? undefined,
-          status: entry.status === 'draft' ? 'planned' : 'logged',
-          completion: entry.completion ?? 'incomplete',
-          category: pkgCategory,
-          // package-work-entries requires a description; fall back to the category.
-          description: entry.description?.trim() || WORK_CATEGORY_LABEL[pkgCategory],
-          package: pkg.id,
-          clientAccount: clientAccountId,
-          loggedBy: typeof entry.loggedBy === 'object' ? entry.loggedBy?.id : (entry.loggedBy ?? undefined),
-        } as any,
-      })
-      migrated++
-    }
-    for (const entry of entries as TimeEntryDoc[]) {
-      await payload.delete({ collection: 'retainer-time-entries', id: entry.id }).catch(() => null)
-    }
-
-    // ── Record what it became, and LEAVE THE ENGAGEMENT OPEN ───────────────────
-    // This used to flip the record to `inactive`. That was right when a scoping record
-    // was throwaway scaffolding — created only to pitch, then either activated into a
-    // retainer or converted and discarded.
-    //
-    // It is wrong now that `scoping` also means "Non-Retainer client", which is a
-    // durable relationship that can carry years of retainer history behind it. Closing
-    // it on conversion made every read path (loadLiveRetainer, getRetainerPortfolio,
-    // setRetainer) drop the record — all three filter to ['active','scoping'] — so
-    // selling a client one project silently took their whole retainer past off the
-    // dashboard. The entries were never deleted; nothing could reach them any more.
-    //
-    // So the client stays a Non-Retainer client, with their history and cycle navigator
-    // intact, ready for the next project. Which is why the back-link is a list.
-    const priorPackages = (retainer.convertedPackages ?? []).map((x) =>
-      typeof x === 'object' ? x.id : x,
-    )
-    await payload.update({
-      collection: 'retainers',
-      id: retainer.id,
-      data: {
-        convertedPackages: [...priorPackages, pkg.id],
-        proposedTier: null,
-        proposedMonthlyFee: null,
-        proposedHoursPerMonth: null,
-        proposedOverageRate: null,
-        proposedStartDate: null,
-      } as any,
-    })
-
-    if (user.username) revalidatePath(`/u/${user.username}/clients/${clientAccountId}`)
-
-    return { success: true as const, packageId: pkg.id as string, clientAccountId, migrated }
-  } catch (error) {
-    console.error('[convertScopeToPackage]', error)
-    return { success: false as const, error: error instanceof Error ? error.message : 'Failed to convert scope' }
-  }
-}
-
-/**
- * The one-off project's single "send" — everything the retainer branch spreads over
- * three surfaces, done in one call so staff never leave the pitch console.
- *
- * In order: build the proposal (see convertScopeToPackage), email it to the client,
- * then create the Orders behind the payment schedule.
- *
- * Order matters and is deliberate. The email goes FIRST because it is the pitch: a
- * client must never receive an invoice for a proposal they have not seen. And every
- * step after the package exists is reported rather than thrown — the package is the
- * expensive, work-migrating part, so once it is created a failed email or a declined
- * Stripe call comes back as a warning against a real packageId that staff can retry
- * from Milestones, not as an error that hides what was already built.
- *
- * `invoiceNow` is the only step that charges anyone. It is off unless explicitly
- * asked for, and it requires `createOrders` — there is no path where a proposal
- * bills a client as a side effect of being sent.
- *
- * Staff only.
- */
-export async function sendOneOffProject(input: {
-  retainerId: string
-  name?: string
-  coverMessage?: string
-  lineItems: OneOffLineInput[]
-  paymentSchedule?: OneOffScheduleInput[]
-  projectRef?: string | null
-  /** Email the proposal. Omit to create the draft and stop there. */
-  send?: {
-    recipients: string[]
-    /** Overrides the cover message on the document and in the email. */
-    message?: string
-    sendAs?: 'proposal' | 'invoice' | 'sow'
-  } | null
-  /** Create an Order per payment-schedule entry. */
-  createOrders?: boolean
-  /** Finalize a Stripe invoice for each of those Orders. Requires createOrders. */
-  invoiceNow?: boolean
-}) {
-  try {
-    const user = await getCurrentUser()
-    if (!user || user.role === 'client') return { success: false as const, error: 'Unauthorized' }
-
-    const recipients = (input.send?.recipients ?? [])
-      .map((e) => e.trim())
-      .filter((e) => e.includes('@'))
-    const wantsSend = Boolean(input.send) && recipients.length > 0
-    if (input.send && recipients.length === 0) {
-      return { success: false as const, error: 'Add at least one valid recipient email' }
-    }
-
-    const schedule = normalizeOneOffSchedule(input.paymentSchedule)
-    // Orders are created from schedule entries — without one there is nothing to bill.
-    if (input.createOrders && schedule.length === 0) {
-      return {
-        success: false as const,
-        error: 'Add a payment schedule row, or turn off "Create orders on send"',
-      }
-    }
-    if (input.invoiceNow && !input.createOrders) {
-      return { success: false as const, error: 'Invoicing through Stripe requires creating orders' }
-    }
-
-    // The send message is what the document says — write it in before anything renders it.
-    const coverMessage = input.send?.message?.trim() || input.coverMessage?.trim() || undefined
-
-    // ── 1. The proposal ────────────────────────────────────────────────────────
-    const built = await convertScopeToPackage({
-      retainerId: input.retainerId,
-      name: input.name,
-      coverMessage,
-      lineItems: input.lineItems,
-      paymentSchedule: schedule,
-      projectRef: input.projectRef,
-    })
-    if (!built.success) return built
-
-    const packageId = built.packageId
-    const warnings: string[] = []
-    let emailed = 0
-
-    // ── 2. The pitch, before any bill ──────────────────────────────────────────
-    // Unless Stripe is doing the billing. Each Stripe invoice email already carries the
-    // line items, a payment link, and a link back to the proposal page — so finalizing
-    // IS the send. Firing the document email as well puts two pieces of mail in the
-    // client's inbox for one button press, and three on a two-row schedule.
-    const documentEmailSuppressed = wantsSend && Boolean(input.invoiceNow)
-    if (wantsSend && !documentEmailSuppressed) {
-      try {
-        const res = await sendProposalEmail(packageId, recipients, input.send?.sendAs ?? 'proposal')
-        emailed = 'sent' in res ? (res.sent ?? 0) : 0
-        if (emailed > 0) {
-          const payload = await getPayload({ config })
-          await payload
-            .update({ collection: 'packages', id: packageId, data: { status: 'sent' } as any })
-            .catch(() => null)
-        } else {
-          warnings.push(('error' in res && res.error) || 'The proposal email could not be sent')
-        }
-      } catch (e) {
-        console.error('[sendOneOffProject] proposal email failed:', e)
-        warnings.push('The proposal email could not be sent')
-      }
-    }
-
-    // ── 3. The money ───────────────────────────────────────────────────────────
-    let ordersCreated = 0
-    const invoiceUrls: string[] = []
-    if (input.createOrders) {
-      try {
-        if (input.invoiceNow) {
-          const res = await pushPackageSchedule(packageId)
-          if (res.success) {
-            ordersCreated = res.count ?? 0
-            invoiceUrls.push(...(res.invoiceUrls ?? []))
-          } else {
-            warnings.push(res.error ?? 'Could not invoice the payment schedule')
-          }
-        } else {
-          const res = await linkScheduleEntriesToOrders(packageId)
-          if (res.success) ordersCreated = res.created ?? 0
-          else warnings.push(res.error ?? 'Could not create the orders')
-        }
-      } catch (e) {
-        console.error('[sendOneOffProject] order creation failed:', e)
-        warnings.push('Could not create the orders')
-      }
-    }
-
-    if (user.username) {
-      revalidatePath(`/u/${user.username}/clients/${built.clientAccountId}`)
-      revalidatePath(`/u/${user.username}/packages`)
-    }
-
-    // Billing through Stripe marks the proposal sent too — the client has it, just as
-    // an invoice rather than a quote.
-    if (documentEmailSuppressed && ordersCreated > 0) {
-      const payload = await getPayload({ config })
-      await payload
-        .update({ collection: 'packages', id: packageId, data: { status: 'sent' } as any })
-        .catch(() => null)
-    }
-
-    return {
-      success: true as const,
-      packageId,
-      migrated: built.migrated,
-      emailed,
-      /** True when the Stripe invoices replaced the document email. */
-      documentEmailSuppressed,
-      ordersCreated,
-      invoiceUrls,
-      invoiced: Boolean(input.invoiceNow) && ordersCreated > 0,
-      warnings,
-    }
-  } catch (error) {
-    console.error('[sendOneOffProject]', error)
-    return { success: false as const, error: error instanceof Error ? error.message : 'Failed to send the project' }
-  }
-}
-
 
 // ── Proposal — the priced document sent before the retainer starts ────────────
 
@@ -1941,33 +1686,25 @@ export async function buildScopeRecapPdfFor(retainerId: string, composed?: Parti
  * Reactivating cancels a pending deactivation, or restarts an already-inactive retainer
  * with a fresh cycle anchor. Staff only.
  */
-/** What ending a plan leaves behind. */
-export type RetainerEndTo = 'close' | 'non-retainer'
-
 /**
- * End a running retainer plan — the one action behind the console's Deactivate.
+ * End a running retainer plan — the one action behind the console's End plan.
  *
- * Two independent choices, because they answer different questions:
+ * One choice: `when`. 'cycle-end' (default) lets the current cycle finish so it can
+ * still be invoiced; 'now' stops it on the spot. Only 'now' can strand unbilled hours,
+ * which is why the caller is told the count before confirming.
  *
- *   `when`  — 'cycle-end' (default) lets the current cycle finish so it can still be
- *             invoiced; 'now' stops it on the spot. Only 'now' can strand unbilled
- *             hours, which is why the caller is told the count before confirming.
- *   `then`  — 'close' retires the engagement to `inactive`. 'non-retainer' drops it
- *             back to `scoping`, so the SAME record carries on as a Non-Retainer
- *             client and one-off projects can be scoped and sold against it.
+ * Either way the engagement closes. `endedAt` bounds the era it billed, and the record
+ * stays reachable read-only so a stranded final cycle can still be invoiced.
  *
- * Choosing 'non-retainer' is a status transition, not a new record: hours, notes and
- * the scope headline all stay put, and `nonRetainerSince` marks the line so the
- * retainer-era hours are treated as history rather than as scope for the next pitch
- * (see `pitchWhere`). Deferred ends store the choice in `deactivateTo`; `settleRetainer`
- * applies it when the date arrives.
+ * There used to be a second choice — land on `scoping` as a "Non-Retainer client", so
+ * one-off projects could be pitched against the same record. One-off work is a package
+ * now, built in the Build station and run from Milestones, so that state is gone.
  *
  * Staff only.
  */
 export async function endRetainerPlan(input: {
   retainerId: string
   when?: 'cycle-end' | 'now'
-  then?: RetainerEndTo
 }) {
   try {
     const user = await getCurrentUser()
@@ -1984,8 +1721,6 @@ export async function endRetainerPlan(input: {
       return { success: false as const, error: 'Only a running plan can be ended' }
     }
 
-    const landsOn = input.then === 'non-retainer' ? 'scoping' : 'inactive'
-
     // Deferred: record the intent and let settleRetainer apply it. The plan stays
     // active and billable until then, which is the whole point of this option.
     if (input.when !== 'now') {
@@ -1993,29 +1728,21 @@ export async function endRetainerPlan(input: {
       await payload.update({
         collection: 'retainers',
         id: input.retainerId,
-        data: { deactivateOn, deactivateTo: landsOn } as any,
+        data: { deactivateOn } as any,
       })
       if (user.username) revalidatePath(`/u/${user.username}/clients`)
-      return { success: true as const, applied: false as const, deactivateOn, landsOn }
+      return { success: true as const, applied: false as const, deactivateOn }
     }
 
-    // Immediate.
+    // Immediate. `endedAt` is stamped now — it is the boundary the closed view walks.
     await payload.update({
       collection: 'retainers',
       id: input.retainerId,
-      data: {
-        status: landsOn,
-        deactivateOn: null,
-        deactivateTo: null,
-        // Stamped now: everything logged from here is scope for the next pitch, and
-        // everything before it stays retainer history.
-        ...(landsOn === 'scoping' ? { nonRetainerSince: now } : {}),
-        ...CLEAR_PENDING,
-      } as any,
+      data: { status: 'inactive', deactivateOn: null, endedAt: now, ...CLEAR_PENDING } as any,
     })
 
     if (user.username) revalidatePath(`/u/${user.username}/clients`)
-    return { success: true as const, applied: true as const, deactivateOn: null, landsOn }
+    return { success: true as const, applied: true as const, deactivateOn: null }
   } catch (error) {
     console.error('[endRetainerPlan]', error)
     return { success: false as const, error: error instanceof Error ? error.message : 'Failed to end the plan' }
@@ -2036,13 +1763,12 @@ export async function setRetainerActive(retainerId: string, active: boolean) {
     if (!r) return { success: false as const, error: 'Retainer not found' }
 
     if (!active) {
-      // Legacy entry point — defers to closing the engagement. New callers use
-      // endRetainerPlan, which also chooses where the wind-down lands.
+      // Legacy entry point — defers to endRetainerPlan's scheduled wind-down.
       const deactivateOn = nextCycleStart(anchorOf(r), now)
       await payload.update({
         collection: 'retainers',
         id: retainerId,
-        data: { deactivateOn, deactivateTo: 'inactive' } as any,
+        data: { deactivateOn } as any,
       })
       return { success: true as const, deactivateOn }
     }
@@ -2053,13 +1779,14 @@ export async function setRetainerActive(retainerId: string, active: boolean) {
       await payload.update({
         collection: 'retainers',
         id: retainerId,
-        data: { deactivateOn: null, deactivateTo: null } as any,
+        data: { deactivateOn: null } as any,
       })
     } else {
       await payload.update({
         collection: 'retainers',
         id: retainerId,
-        data: { status: 'active', activatedAt: now, deactivateOn: null, deactivateTo: null, ...CLEAR_PENDING } as any,
+        // Reopening clears the closed-era stamp — the record is live again.
+        data: { status: 'active', activatedAt: now, deactivateOn: null, endedAt: null, ...CLEAR_PENDING } as any,
       })
     }
     return { success: true as const, deactivateOn: null }
@@ -2125,7 +1852,7 @@ export async function logHours(input: {
       .findByID({ collection: 'retainers', id: input.retainerId, depth: 0 })
       .catch(() => null)) as RetainerDoc | null
     const retainer = raw ? await settleRetainer(payload, raw, now) : null
-    const locked = historyLockError(retainer, entryDate)
+    const locked = historyLockError(retainer)
     if (locked) return { success: false as const, error: locked }
     const terms = retainer ? effectiveTerms(retainer, entryDate) : null
 
@@ -2181,7 +1908,7 @@ export async function createDraft(input: {
     const draftFor = (await payload
       .findByID({ collection: 'retainers', id: input.retainerId, depth: 0 })
       .catch(() => null)) as RetainerDoc | null
-    const draftLocked = historyLockError(draftFor, dayToIso(input.date))
+    const draftLocked = historyLockError(draftFor)
     if (draftLocked) return { success: false as const, error: draftLocked }
 
     const entry = await payload.create({
@@ -2234,17 +1961,12 @@ export async function updateTimeEntry(input: {
       .catch(() => null)) as TimeEntryDoc | null
     if (!entry) return { success: false as const, error: 'Entry not found' }
 
-    // Both ends matter: an entry already inside the closed era cannot be edited, and a
-    // live one cannot be re-dated into it.
+    // Nothing on a closed retainer is editable — its cycles are billed history.
     const entryRetainerId = typeof entry.retainer === 'object' ? entry.retainer.id : entry.retainer
     const entryRetainer = (await payload
       .findByID({ collection: 'retainers', id: entryRetainerId, depth: 0 })
       .catch(() => null)) as RetainerDoc | null
-    const editLocked = historyLockError(
-      entryRetainer,
-      iso(entry.date),
-      input.date !== undefined ? dayToIso(input.date) : null,
-    )
+    const editLocked = historyLockError(entryRetainer)
     if (editLocked) return { success: false as const, error: editLocked }
 
     const data: Record<string, unknown> = {}
@@ -2418,10 +2140,10 @@ export async function getRetainerBillingModel(clientAccountId: string, ref?: str
       return { success: false as const, error: 'No active retainer cycle to bill' }
     }
 
-    // A closed cycle is still billable — that is the whole point of keeping the history
-    // view live. Ending a plan mid-cycle strands its hours uninvoiced, and scrolling
-    // back to send that invoice is the only way to recover them. There is no "next
-    // cycle" to preview, so the model reports the same one on both sides.
+    // A closed cycle is still billable — that is the whole point of keeping a wound-down
+    // retainer reachable. Ending a plan mid-cycle strands its hours uninvoiced, and
+    // scrolling back to send that invoice is the only way to recover them. There is no
+    // "next cycle" to preview, so the model reports the same one on both sides.
     const isHistory = current.view === 'history'
     const next = isHistory ? current : await getRetainerSummary(clientAccountId, current.cycle.end)
     if (!next.success || !next.cycle || !next.terms) {
@@ -2507,6 +2229,12 @@ export async function sendRetainerInvoice(input: {
   message?: string
   /** Planned-work lines shown in the email (defaults to the billed cycle's drafts). */
   plannedWork?: string[]
+  /**
+   * Itemize the closing cycle's logged hours on the billing package and order.
+   * Defaults ON — it is what lets a client match the fee to the work. Off strips the
+   * detail to the fee/overage lines alone; the totals are identical either way.
+   */
+  includeWorkLog?: boolean
   /** Send even though this cycle already has an order. */
   force?: boolean
 }) {
@@ -2577,8 +2305,9 @@ export async function sendRetainerInvoice(input: {
       new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
     const prevRef = new Date(new Date(cycle.start).getTime() - 86_400_000).toISOString()
     const prevSummary = await getRetainerSummary(input.clientAccountId, prevRef)
+    const includeWorkLog = input.includeWorkLog ?? true
     const workLines: { title: string; description: string; hours: number; value: number }[] = []
-    if (prevSummary.success && prevSummary.cycle && prevSummary.terms) {
+    if (includeWorkLog && prevSummary.success && prevSummary.cycle && prevSummary.terms) {
       const pTerms = prevSummary.terms
       const effRate = pTerms.hoursPerMonth > 0 ? pTerms.monthlyFee / pTerms.hoursPerMonth : 0
       let running = 0
@@ -3061,7 +2790,7 @@ export async function deleteTimeEntry(id: string) {
       const ownerDoc = (await payload
         .findByID({ collection: 'retainers', id: owner, depth: 0 })
         .catch(() => null)) as RetainerDoc | null
-      const locked = historyLockError(ownerDoc, iso(doomed.date))
+      const locked = historyLockError(ownerDoc)
       if (locked) return { success: false as const, error: locked }
     }
 

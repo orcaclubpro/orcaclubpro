@@ -121,6 +121,7 @@ export async function createServiceItem(data: {
   defaultPrice?: number
   defaultRate?: number
   defaultInterval?: 'month' | 'year'
+  starred?: boolean
 }) {
   try {
     const user = await getCurrentUser()
@@ -130,12 +131,13 @@ export async function createServiceItem(data: {
     const item = await payload.create({
       collection: 'service-items',
       data: {
-        name: data.name,
-        description: data.description,
+        name: data.name.trim(),
+        description: data.description?.trim() || undefined,
         billingType: data.billingType,
         defaultPrice: data.defaultPrice,
         defaultRate: data.defaultRate ?? 40,
         defaultInterval: data.defaultInterval ?? 'month',
+        starred: data.starred ?? false,
         archived: false,
         usageCount: 0,
       } as any,
@@ -145,6 +147,53 @@ export async function createServiceItem(data: {
   } catch (error) {
     console.error('[createServiceItem]', error)
     return { success: false, error: error instanceof Error ? error.message : 'Failed to create service item' }
+  }
+}
+
+/**
+ * Edit a catalog item in place. Existing package lines are NOT touched — they hold a
+ * snapshot taken when they were placed (see the ServiceItems doc comment), which is the
+ * whole point of the copy model: fixing a typo in the catalog must never rewrite a
+ * proposal a client has already been sent.
+ */
+export async function updateServiceItem(
+  id: string,
+  data: {
+    name: string
+    description?: string | null
+    billingType: 'fixed' | 'hourly' | 'recurring'
+    defaultPrice?: number | null
+    defaultRate?: number | null
+    defaultInterval?: 'month' | 'year'
+    starred?: boolean
+  },
+) {
+  try {
+    const user = await getCurrentUser()
+    if (!user || user.role === 'client') return { success: false as const, error: 'Unauthorized' }
+    if (!id) return { success: false as const, error: 'No catalog item selected' }
+    if (!data.name?.trim()) return { success: false as const, error: 'A name is required' }
+
+    const payload = await getPayload({ config })
+    const item = await payload.update({
+      collection: 'service-items',
+      id,
+      data: {
+        name: data.name.trim(),
+        // null clears the field; undefined would leave the old text in place.
+        description: data.description?.trim() || null,
+        billingType: data.billingType,
+        defaultPrice: data.billingType === 'hourly' ? null : (data.defaultPrice ?? null),
+        defaultRate: data.billingType === 'hourly' ? (data.defaultRate ?? 40) : undefined,
+        defaultInterval: data.billingType === 'recurring' ? (data.defaultInterval ?? 'month') : undefined,
+        ...(data.starred === undefined ? {} : { starred: data.starred }),
+      } as any,
+    })
+
+    return { success: true as const, item: item as ServiceItem }
+  } catch (error) {
+    console.error('[updateServiceItem]', error)
+    return { success: false as const, error: error instanceof Error ? error.message : 'Failed to update service item' }
   }
 }
 
@@ -180,6 +229,8 @@ export async function createProposal(input: {
   coverMessage?: string
   notes?: string
   projectRef?: string | null
+  /** Default USD/hr for hourly lines added in the builder. Null clears it. */
+  hourlyRate?: number | null
   lineItems: BuilderLineItem[]
   paymentSchedule?: Array<{
     label: string
@@ -210,6 +261,7 @@ export async function createProposal(input: {
         status: 'draft',
         clientAccount: input.clientAccountId,
         projectRef: input.projectRef || undefined,
+        hourlyRate: input.hourlyRate ?? undefined,
         lineItems,
         paymentSchedule: input.paymentSchedule ?? [],
       } as any,
@@ -238,6 +290,8 @@ export async function updateProposal(input: {
   coverMessage?: string
   notes?: string
   projectRef?: string | null
+  /** Default USD/hr for hourly lines added in the builder. Null clears it. */
+  hourlyRate?: number | null
   lineItems: BuilderLineItem[]
   paymentSchedule?: Array<{
     label: string
@@ -267,6 +321,7 @@ export async function updateProposal(input: {
         coverMessage: input.coverMessage,
         notes: input.notes,
         projectRef: input.projectRef || null,
+        hourlyRate: input.hourlyRate ?? null,
         lineItems,
         ...(input.paymentSchedule ? { paymentSchedule: input.paymentSchedule } : {}),
         ...statusReset,

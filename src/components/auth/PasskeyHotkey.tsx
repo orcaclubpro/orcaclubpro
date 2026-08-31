@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Fingerprint, Loader2, CheckCircle2 } from 'lucide-react'
 import { startAuthentication } from '@simplewebauthn/browser'
+import { isTypingTarget } from '@/lib/keyboard'
 
 type Phase = 'idle' | 'prompting' | 'success' | 'error'
 
@@ -73,9 +74,7 @@ export function PasskeyHotkey() {
         return
       }
       if (e.metaKey || e.ctrlKey || e.altKey) return
-      const target = e.target as HTMLElement | null
-      const tag = target?.tagName
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable) return
+      if (isTypingTarget(e.target)) return
       if (e.key !== 'k' && e.key !== 'K') return
       e.preventDefault()
       void run()

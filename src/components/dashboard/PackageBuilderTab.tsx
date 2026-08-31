@@ -4,10 +4,12 @@ import { useState, useEffect, useMemo } from 'react'
 import {
   Search, Plus, PlusCircle, X, Trash2, Loader2,
   ChevronRight, ArrowUp, ArrowDown,
-  Package, MoreHorizontal, Layers, CalendarClock, Star,
+  Package, MoreHorizontal, Layers, CalendarClock, Star, Pencil, Clock,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ServiceItem } from '@/types/payload-types'
+import { ServiceItemModal, type ServiceItemDraft } from './ServiceItemModal'
+import { isTypingTarget } from '@/lib/keyboard'
 import {
   getServiceCatalog,
   createServiceItem,
@@ -46,6 +48,7 @@ export interface ExistingProposal {
   coverMessage?: string | null
   notes?: string | null
   projectRef?: string | { id: string; name?: string } | null
+  hourlyRate?: number | null
   lineItems?: any[]
   paymentSchedule?: any[]
   clientAccount?: { id: string; name: string; company?: string | null } | string | null
@@ -57,6 +60,13 @@ export interface PackageBuilderTabProps {
   clientId?: string
   existing?: ExistingProposal
   onClose: (createdOrUpdatedId?: string) => void
+  /**
+   * Whether this builder is the surface the user is looking at. The command console
+   * keeps every visited station mounted behind `hidden`, so without this the backtick
+   * shortcut would fire from the retainer station too. Defaults true for the standalone
+   * modal on the packages page, which is only ever mounted when it is on screen.
+   */
+  active?: boolean
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -170,16 +180,10 @@ const selectCls =
   'px-2 py-1.5 text-xs bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] rounded-md text-[var(--space-text-secondary)] focus:outline-none focus:border-[rgba(139,156,182,0.20)] transition-colors'
 const numCls =
   'text-xs bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] rounded-md text-[var(--space-text-primary)] px-2 py-1.5 focus:outline-none focus:border-[rgba(139,156,182,0.20)] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none'
-// Field-height select that matches inputCls (used in the new-service mini-form)
-const fieldSelectCls =
-  'px-3 py-2 text-sm bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] rounded-lg text-[var(--space-text-secondary)] focus:outline-none focus:border-[rgba(139,156,182,0.20)] transition-colors cursor-pointer'
-// Number input matching inputCls height (spinners stripped)
-const numFieldCls =
-  'px-3 py-2 text-sm bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] rounded-lg text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)] focus:outline-none focus:border-[rgba(139,156,182,0.20)] transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none'
 
 // ── Component ────────────────────────────────────────────────────────────────────
 
-export function PackageBuilderTab({ mode, username, clientId, existing, onClose }: PackageBuilderTabProps) {
+export function PackageBuilderTab({ mode, username, clientId, existing, onClose, active = true }: PackageBuilderTabProps) {
   // Data
   const [catalog, setCatalog] = useState<ServiceItem[]>([])
   const [clients, setClients] = useState<ClientOption[]>([])
@@ -199,6 +203,21 @@ export function PackageBuilderTab({ mode, username, clientId, existing, onClose 
   const [description, setDescription] = useState(existing?.description ?? '')
   const [coverMessage, setCoverMessage] = useState(existing?.coverMessage ?? '')
   const [notes, setNotes] = useState(existing?.notes ?? '')
+  // The package's default hourly rate. Once set, a new hourly service starts at it and
+  // only its hours need typing. Editing an older proposal that predates the field falls
+  // back to the rate its hourly lines were priced at — recovered the same way seedLine
+  // recovers a rate, so the two never disagree.
+  const [hourlyRateStr, setHourlyRateStr] = useState(() => {
+    if (existing?.hourlyRate != null) return String(existing.hourlyRate)
+    const inferred = (existing?.lineItems ?? [])
+      .map((raw: any) => {
+        const bt = raw?.billingType ?? (raw?.isRecurring ? 'recurring' : 'fixed')
+        if (bt !== 'hourly' || !(raw?.hours > 0)) return null
+        return Math.round(((raw.price ?? 0) / raw.hours) * 100) / 100
+      })
+      .find((r: number | null) => r != null && r > 0)
+    return inferred != null ? String(inferred) : ''
+  })
   const projectRef = useMemo(() => {
     const p = existing?.projectRef
     if (!p) return null
@@ -231,14 +250,10 @@ export function PackageBuilderTab({ mode, username, clientId, existing, onClose 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // New service item mini-form
-  const [showNewForm, setShowNewForm] = useState(false)
-  const [nsName, setNsName] = useState('')
-  const [nsPrice, setNsPrice] = useState('')
-  const [nsBilling, setNsBilling] = useState<BillingType>('fixed')
-  const [nsInterval, setNsInterval] = useState<'month' | 'year'>('month')
-  const [nsSave, setNsSave] = useState(true)
-  const [nsBusy, setNsBusy] = useState(false)
+  // The service editor. `null` = closed; `{ item: null }` = create; `{ item }` = edit
+  // an existing catalog entry. It replaced an inline mini-form that captured only a
+  // name and a price, which is why so many placed lines reach clients undescribed.
+  const [serviceEditor, setServiceEditor] = useState<{ item: ServiceItem | null } | null>(null)
 
   // ── Load catalog + clients ─────────────────────────────────────────────────
   useEffect(() => {
@@ -311,49 +326,59 @@ export function PackageBuilderTab({ mode, username, clientId, existing, onClose 
     })
   }
 
+  // A blank or zero field means "no package rate" — hourly lines then carry their own.
+  const packageHourlyRate = (() => {
+    const n = parseFloat(hourlyRateStr)
+    return isFinite(n) && n > 0 ? n : null
+  })()
+
+  // ── ` opens the service editor ──────────────────────────────────────────────
+  // Capture phase and stopPropagation: the command console binds backtick to cycling
+  // stations, and on this station the key means "new service" instead. Guarded by
+  // isTypingTarget so a backtick typed into a name or description is just a character.
+  useEffect(() => {
+    if (!active || serviceEditor) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== '`' || e.metaKey || e.ctrlKey || e.altKey) return
+      if (isTypingTarget(e.target)) return
+      e.preventDefault()
+      e.stopPropagation()
+      setServiceEditor({ item: null })
+    }
+    document.addEventListener('keydown', handler, true)
+    return () => document.removeEventListener('keydown', handler, true)
+  }, [active, serviceEditor])
+
   // ── New service item ───────────────────────────────────────────────────────
-  async function handleAddNewService() {
-    const priceNum = parseFloat(nsPrice)
-    if (!nsName.trim() || isNaN(priceNum)) {
-      setError('New service needs a name and price')
-      return
-    }
+  /**
+   * The modal has already written to the catalog if it was asked to; all that is left
+   * is placing the line. A saved item is placed through `catalogToLine` so it carries
+   * its `sourceServiceItem` provenance, exactly as picking it off the rail would.
+   */
+  async function handleServiceDone(draft: ServiceItemDraft) {
+    const wasEditing = Boolean(serviceEditor?.item)
+    setServiceEditor(null)
     setError(null)
-    setNsBusy(true)
-    try {
-      if (nsSave) {
-        const res = await createServiceItem({
-          name: nsName.trim(),
-          billingType: nsBilling,
-          defaultPrice: nsBilling === 'hourly' ? undefined : priceNum,
-          defaultRate: nsBilling === 'hourly' ? priceNum : undefined,
-          defaultInterval: nsBilling === 'recurring' ? nsInterval : undefined,
-        })
-        if (!res.success || !res.item) {
-          setError(res.error ?? 'Failed to save service item')
-          setNsBusy(false)
-          return
+
+    if (draft.catalogItem) await refreshCatalog()
+    // Editing an existing catalog entry is a catalog edit, not a request for a line.
+    if (wasEditing) return
+
+    const line: BuilderLineItem = draft.catalogItem
+      ? { ...catalogToLine(draft.catalogItem), quantity: draft.quantity, isAddOn: draft.isAddOn }
+      : {
+          name: draft.name,
+          description: draft.description,
+          billingType: draft.billingType,
+          price: draft.price,
+          quantity: draft.quantity,
+          hours: draft.billingType === 'hourly' ? draft.hours : undefined,
+          recurringInterval: draft.billingType === 'recurring' ? draft.recurringInterval : undefined,
+          isAddOn: draft.isAddOn,
         }
-        addLine({ ...catalogToLine(res.item) })
-        await refreshCatalog()
-      } else {
-        const oneOff: BuilderLineItem =
-          nsBilling === 'hourly'
-            ? { name: nsName.trim(), billingType: 'hourly', price: priceNum, hours: 1, quantity: 1 }
-            : nsBilling === 'recurring'
-              ? { name: nsName.trim(), billingType: 'recurring', price: priceNum, recurringInterval: nsInterval, quantity: 1 }
-              : { name: nsName.trim(), billingType: 'fixed', price: priceNum, quantity: 1 }
-        addLine(oneOff)
-      }
-      // reset
-      setNsName('')
-      setNsPrice('')
-      setNsBilling('fixed')
-      setNsInterval('month')
-      setShowNewForm(false)
-    } finally {
-      setNsBusy(false)
-    }
+    // catalogToLine seeds hours at 1 — carry the hours the modal actually quoted.
+    if (draft.catalogItem && draft.billingType === 'hourly') line.hours = draft.hours
+    addLine(line)
   }
 
   // ── Save ───────────────────────────────────────────────────────────────────
@@ -370,6 +395,7 @@ export function PackageBuilderTab({ mode, username, clientId, existing, onClose 
     setSaving(true)
 
     const payloadLines: BuilderLineItem[] = lines.map(({ _key, ...rest }) => rest)
+    const hourlyRate = hourlyRateStr.trim() === '' ? null : Math.max(0, parseFloat(hourlyRateStr) || 0)
     const payloadSchedule = schedule
       .filter((s) => s.label.trim() || s.amount)
       .map((s) => ({ label: s.label.trim(), entryType: s.entryType, amount: s.amount, dueDate: s.dueDate || undefined }))
@@ -383,6 +409,7 @@ export function PackageBuilderTab({ mode, username, clientId, existing, onClose 
           coverMessage: coverMessage || undefined,
           notes: notes || undefined,
           projectRef,
+          hourlyRate,
           lineItems: payloadLines,
           paymentSchedule: payloadSchedule,
         })
@@ -396,6 +423,7 @@ export function PackageBuilderTab({ mode, username, clientId, existing, onClose 
           coverMessage: coverMessage || undefined,
           notes: notes || undefined,
           projectRef,
+          hourlyRate,
           lineItems: payloadLines,
           paymentSchedule: payloadSchedule,
         })
@@ -425,6 +453,7 @@ export function PackageBuilderTab({ mode, username, clientId, existing, onClose 
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
+    <>
     <div className="relative flex flex-col h-full min-h-0">
       {/* Click-away catcher for the catalog item menu */}
       {catalogMenuId && (
@@ -517,6 +546,13 @@ export function PackageBuilderTab({ mode, username, clientId, existing, onClose 
                       <p className="text-[10px] text-[var(--space-text-muted)] tabular-nums font-mono mt-0.5">
                         {catalogPriceHint(item)}
                       </p>
+                      {/* The description travels with the item onto the proposal — showing
+                          it here is how staff know whether a line will arrive explained. */}
+                      {item.description ? (
+                        <p className="text-[10px] text-[var(--space-text-muted)] mt-1 line-clamp-2 leading-snug">{item.description}</p>
+                      ) : (
+                        <p className="text-[10px] text-[var(--space-text-muted)]/60 italic mt-1">No description</p>
+                      )}
                     </div>
                     <PlusCircle className="size-4 shrink-0 text-[var(--space-text-muted)] opacity-0 group-hover:opacity-100 group-hover:text-[var(--space-accent)] transition-all" />
                   </button>
@@ -531,6 +567,13 @@ export function PackageBuilderTab({ mode, username, clientId, existing, onClose 
 
                   {catalogMenuId === item.id && (
                     <div className="absolute right-1 top-[calc(100%-4px)] z-30 w-40 rounded-lg border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] shadow-xl shadow-[#000000]/40 py-1">
+                      <button
+                        onClick={() => { setCatalogMenuId(null); setServiceEditor({ item }) }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-xs text-[var(--space-text-tertiary)] hover:bg-[var(--space-bg-card-hover)] hover:text-[var(--space-text-primary)] transition-colors text-left"
+                      >
+                        <Pencil className="size-3.5" />
+                        Edit
+                      </button>
                       <button
                         onClick={() => handleToggleStar(item)}
                         className="w-full flex items-center gap-2 px-3 py-2 text-xs text-[var(--space-text-tertiary)] hover:bg-[var(--space-bg-card-hover)] hover:text-[var(--space-text-primary)] transition-colors text-left"
@@ -552,70 +595,16 @@ export function PackageBuilderTab({ mode, username, clientId, existing, onClose 
             )}
           </div>
 
-          {/* New service item */}
+          {/* New service item — opens the editor. Backtick does the same thing. */}
           <div className="shrink-0 border-t border-[var(--space-border-hard)] p-3">
-            {!showNewForm ? (
-              <button
-                onClick={() => setShowNewForm(true)}
-                className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg border border-dashed border-[var(--space-border-hard)] text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] hover:border-[rgba(139,156,182,0.20)] transition-all"
-              >
-                <Plus className="size-3.5" />
-                New service item
-              </button>
-            ) : (
-              <div className="rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] p-3 space-y-2.5">
-                <div className="flex items-center gap-1.5">
-                  <PlusCircle className="size-3.5" style={{ color: 'var(--space-accent)' }} />
-                  <p className="text-[9px] font-bold tracking-[0.22em] uppercase text-[var(--space-text-tertiary)]">New service</p>
-                </div>
-                <input
-                  value={nsName}
-                  onChange={(e) => setNsName(e.target.value)}
-                  placeholder="Service name"
-                  className={inputCls}
-                />
-                <div className="flex gap-2">
-                  <input
-                    type="number"
-                    value={nsPrice}
-                    onChange={(e) => setNsPrice(e.target.value)}
-                    placeholder={nsBilling === 'hourly' ? 'Rate / hr' : nsBilling === 'recurring' ? 'Amount' : 'Price'}
-                    className={cn(numFieldCls, 'flex-1 min-w-0')}
-                  />
-                  <select value={nsBilling} onChange={(e) => setNsBilling(e.target.value as BillingType)} className={fieldSelectCls}>
-                    <option value="fixed">Fixed</option>
-                    <option value="hourly">Hourly</option>
-                    <option value="recurring">Recurring</option>
-                  </select>
-                </div>
-                {nsBilling === 'recurring' && (
-                  <select value={nsInterval} onChange={(e) => setNsInterval(e.target.value as 'month' | 'year')} className={cn(fieldSelectCls, 'w-full')}>
-                    <option value="month">Billed monthly</option>
-                    <option value="year">Billed yearly</option>
-                  </select>
-                )}
-                <label className="flex items-center gap-2 text-[11px] text-[var(--space-text-tertiary)] cursor-pointer select-none py-0.5">
-                  <input type="checkbox" checked={nsSave} onChange={(e) => setNsSave(e.target.checked)} className="size-3.5 accent-[var(--space-accent)]" />
-                  Save to catalog for reuse
-                </label>
-                <div className="flex items-center gap-2 pt-0.5">
-                  <button
-                    onClick={handleAddNewService}
-                    disabled={nsBusy}
-                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-[var(--space-accent)] text-black hover:opacity-90 transition-all disabled:opacity-50"
-                  >
-                    {nsBusy ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}
-                    Add to package
-                  </button>
-                  <button
-                    onClick={() => { setShowNewForm(false); setError(null) }}
-                    className="px-3 py-2 text-xs text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] rounded-lg hover:bg-[var(--space-bg-card-hover)] transition-colors"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
+            <button
+              onClick={() => setServiceEditor({ item: null })}
+              className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg border border-dashed border-[var(--space-border-hard)] text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] hover:border-[rgba(139,156,182,0.20)] transition-all"
+            >
+              <Plus className="size-3.5" />
+              New service item
+              <kbd className="ml-auto px-1.5 py-0.5 rounded border border-[var(--space-border-hard)] text-[10px] font-mono text-[var(--space-text-muted)]">`</kbd>
+            </button>
           </div>
         </div>
 
@@ -686,6 +675,32 @@ export function PackageBuilderTab({ mode, username, clientId, existing, onClose 
                   </div>
                 </div>
               )}
+            </div>
+
+            {/* Package hourly rate — set once, and every hourly service added after it
+                only needs its hours. Blank leaves each hourly line carrying its own. */}
+            <div className="flex items-center gap-3 rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card-hover)] px-4 py-3">
+              <Clock className="size-4 shrink-0 text-[var(--space-text-muted)]" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-[var(--space-text-tertiary)]">Hourly rate</p>
+                <p className="text-[11px] text-[var(--space-text-muted)] leading-snug">
+                  {packageHourlyRate
+                    ? `New hourly services start at ${fmt(packageHourlyRate)}/hr — set their hours and the line prices itself.`
+                    : 'Set a rate to price hourly services by hours alone.'}
+                </p>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                <span className="text-xs text-[var(--space-text-muted)]">$</span>
+                <input
+                  type="number" min={0} step="1"
+                  value={hourlyRateStr}
+                  onChange={(e) => setHourlyRateStr(e.target.value)}
+                  placeholder="—"
+                  aria-label="Package hourly rate"
+                  className={cn(numCls, 'w-20 text-right')}
+                />
+                <span className="text-xs text-[var(--space-text-muted)]">/hr</span>
+              </div>
             </div>
 
             {/* Line items */}
@@ -989,5 +1004,15 @@ export function PackageBuilderTab({ mode, username, clientId, existing, onClose 
         </div>
       </div>
     </div>
+
+    {serviceEditor && (
+      <ServiceItemModal
+        item={serviceEditor.item}
+        defaultHourlyRate={packageHourlyRate}
+        onDone={handleServiceDone}
+        onClose={() => setServiceEditor(null)}
+      />
+    )}
+    </>
   )
 }

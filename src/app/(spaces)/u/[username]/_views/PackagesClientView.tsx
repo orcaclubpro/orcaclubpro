@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import {
-  ChevronLeft, ChevronRight, Check,
+  ChevronLeft, ChevronRight, Check, Plus,
   Sparkles, CalendarDays,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -17,6 +17,8 @@ interface LineItem {
   quantity?: number
   isRecurring?: boolean
   recurringInterval?: 'month' | 'year'
+  /** An optional extra — shown apart from what's included, and left out of the total. */
+  isAddOn?: boolean
 }
 
 interface ScheduledEntry {
@@ -48,9 +50,11 @@ function fmt(n: number) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
 }
 
+/** Add-ons are an offer, not a charge — they never enter a total. */
 function computeTotals(lineItems: LineItem[] = []) {
   let oneTime = 0, monthly = 0, annual = 0
   for (const item of lineItems) {
+    if (item.isAddOn) continue
     const total = (item.adjustedPrice ?? item.price ?? 0) * (item.quantity ?? 1)
     if (item.isRecurring) {
       if (item.recurringInterval === 'year') annual += total
@@ -95,9 +99,11 @@ function PackageModal({
   username: string
   onClose: () => void
 }) {
-  const lineItems = pkg.lineItems ?? []
+  const allLineItems = pkg.lineItems ?? []
+  const lineItems = allLineItems.filter((i) => !i.isAddOn)
+  const addOns = allLineItems.filter((i) => i.isAddOn)
   const schedule = pkg.paymentSchedule ?? []
-  const { oneTime, monthly, annual } = computeTotals(lineItems)
+  const { oneTime, monthly, annual } = computeTotals(allLineItems)
   const scheduleTotal = schedule.reduce((s, e) => s + e.amount, 0)
 
   // ESC close
@@ -282,6 +288,53 @@ function PackageModal({
                             )}
                           </span>
                         </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Available add-ons — priced, but not part of what was quoted */}
+            {addOns.length > 0 && (
+              <div className="px-5 py-5 border-b border-[var(--space-border)]">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[9px] font-bold tracking-[0.25em] uppercase text-[var(--space-text-muted)]">Available Add-ons</span>
+                  <span className="text-[9px] font-semibold tabular-nums text-[var(--space-text-muted)]">
+                    {addOns.length} option{addOns.length === 1 ? '' : 's'}
+                  </span>
+                </div>
+                <p className="text-[11px] text-[var(--space-text-muted)] leading-relaxed mb-3">
+                  Not included in the total. Reply to your proposal if you&rsquo;d like any of these added.
+                </p>
+                <div>
+                  {addOns.map((item, i) => {
+                    const qty = item.quantity ?? 1
+                    const unit = item.adjustedPrice ?? item.price ?? 0
+                    const isLast = i === addOns.length - 1
+                    return (
+                      <div key={i} className={cn('flex items-start gap-3 py-3', !isLast && 'border-b border-[var(--space-border)]')}>
+                        <div
+                          className="mt-0.5 size-5 rounded-full flex items-center justify-center shrink-0 border border-dashed"
+                          style={{ borderColor: 'rgba(139,156,182,0.28)' }}
+                        >
+                          <Plus className="size-3 text-[var(--space-text-muted)]" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[13px] font-medium text-[var(--space-text-secondary)] leading-snug">
+                            {item.name}
+                            {qty > 1 && <span className="text-[var(--space-text-muted)]"> &times; {qty}</span>}
+                          </p>
+                          {item.description && (
+                            <p className="text-[11px] text-[var(--space-text-muted)] mt-0.5 leading-relaxed whitespace-pre-line">{item.description}</p>
+                          )}
+                        </div>
+                        <span className="shrink-0 pl-2 text-[13px] font-semibold tabular-nums text-[var(--space-text-muted)]">
+                          {fmt(unit * qty)}
+                          {item.isRecurring && (
+                            <span className="text-[11px] font-normal">/{item.recurringInterval === 'year' ? 'yr' : 'mo'}</span>
+                          )}
+                        </span>
                       </div>
                     )
                   })}
