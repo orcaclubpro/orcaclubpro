@@ -128,7 +128,7 @@ export function ClientRowActions({
 
         <DropdownMenuContent
           align="end"
-          className="bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] text-[var(--space-text-primary)] min-w-[140px] shadow-xl"
+          className="bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] text-[var(--space-text-primary)] min-w-[8.75rem] shadow-xl"
           // Prevent the portal click from propagating to the row link
           onClick={(e) => e.stopPropagation()}
         >
@@ -166,7 +166,7 @@ export function ClientRowActions({
           <div className="space-y-4 pt-2">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-[var(--space-text-secondary)] text-[11px] uppercase tracking-wider font-semibold">
+                <Label className="text-[var(--space-text-secondary)] text-[0.6875rem] uppercase tracking-wider font-semibold">
                   First Name
                 </Label>
                 <Input
@@ -179,7 +179,7 @@ export function ClientRowActions({
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-[var(--space-text-secondary)] text-[11px] uppercase tracking-wider font-semibold">
+                <Label className="text-[var(--space-text-secondary)] text-[0.6875rem] uppercase tracking-wider font-semibold">
                   Last Name
                 </Label>
                 <Input
@@ -194,7 +194,7 @@ export function ClientRowActions({
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-[var(--space-text-secondary)] text-[11px] uppercase tracking-wider font-semibold">
+              <Label className="text-[var(--space-text-secondary)] text-[0.6875rem] uppercase tracking-wider font-semibold">
                 Display Name
               </Label>
               <Input
@@ -205,7 +205,7 @@ export function ClientRowActions({
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-[var(--space-text-secondary)] text-[11px] uppercase tracking-wider font-semibold">
+              <Label className="text-[var(--space-text-secondary)] text-[0.6875rem] uppercase tracking-wider font-semibold">
                 Company
               </Label>
               <Input

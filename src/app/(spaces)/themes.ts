@@ -38,6 +38,16 @@ export interface ThemeVars {
   '--space-divider': string         // Internal divider / progress track
   '--space-nav-fg': string          // Nav active text
   '--space-nav-fg-dim': string      // Nav inactive text
+  // Status ramp — six semantic states, each as foreground / soft fill / hairline.
+  // Every status colour in the portal routes through these; never use raw
+  // Tailwind palette classes (amber-400, emerald-400, …) in dashboard code, or
+  // the light themes break.
+  '--space-status-ok': string;      '--space-status-ok-soft': string;      '--space-status-ok-line': string
+  '--space-status-active': string;  '--space-status-active-soft': string;  '--space-status-active-line': string
+  '--space-status-warn': string;    '--space-status-warn-soft': string;    '--space-status-warn-line': string
+  '--space-status-hold': string;    '--space-status-hold-soft': string;    '--space-status-hold-line': string
+  '--space-status-danger': string;  '--space-status-danger-soft': string;  '--space-status-danger-line': string
+  '--space-status-idle': string;    '--space-status-idle-soft': string;    '--space-status-idle-line': string
 }
 
 export interface ThemeDefinition {
@@ -78,6 +88,31 @@ const LIGHT_EXTENDED = {
   '--space-nav-fg-dim': 'rgba(21, 25, 27, 0.45)',
 } as const
 
+// ─── Status ramp ─────────────────────────────────────────────────────────────
+// One hue per semantic state, expanded into foreground / soft fill / hairline.
+// Dark themes need a brighter foreground and a fainter fill than light ones.
+
+const STATUS_HUES = {
+  ok:     { dark: '#34d399', light: '#047857' }, // done, paid, clear
+  active: { dark: '#60a5fa', light: '#1d4ed8' }, // in progress
+  warn:   { dark: '#fbbf24', light: '#b45309' }, // outstanding, overdue, delayed
+  hold:   { dark: '#fb923c', light: '#c2410c' }, // on hold
+  danger: { dark: '#f87171', light: '#b91c1c' }, // cancelled, failed
+  idle:   { dark: '#94a3b8', light: '#64748b' }, // pending, not started
+} as const
+
+function statusVars(mode: ThemeMode): Record<string, string> {
+  const isDark = mode === 'dark'
+  const out: Record<string, string> = {}
+  for (const [name, hues] of Object.entries(STATUS_HUES)) {
+    const hex = isDark ? hues.dark : hues.light
+    out[`--space-status-${name}`] = hex
+    out[`--space-status-${name}-soft`] = hexToRgba(hex, isDark ? 0.12 : 0.09)
+    out[`--space-status-${name}-line`] = hexToRgba(hex, isDark ? 0.28 : 0.22)
+  }
+  return out
+}
+
 // ─── defineTheme: short spec → full ThemeDefinition ──────────────────────────
 
 interface DefineThemeInput {
@@ -116,7 +151,7 @@ function defineTheme(input: DefineThemeInput): ThemeDefinition {
   const isDark = mode === 'dark'
   const extended = isDark ? DARK_EXTENDED : LIGHT_EXTENDED
 
-  const vars: ThemeVars = {
+  const vars = {
     '--space-accent': accent,
     '--space-accent-rgb': accentRgb,
     '--space-accent-dim': input.accentDim ?? accent,
@@ -128,8 +163,9 @@ function defineTheme(input: DefineThemeInput): ThemeDefinition {
     '--space-nav-bg': input.navBg ?? hexToRgba(bgBase, isDark ? 0.85 : 0.92),
     '--space-border': input.border ?? (isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(21, 25, 27, 0.09)'),
     ...extended,
+    ...statusVars(mode),
     ...(input.overrides ?? {}),
-  }
+  } as ThemeVars
 
   return {
     id: input.id,

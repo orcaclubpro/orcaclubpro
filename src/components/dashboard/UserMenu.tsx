@@ -69,7 +69,7 @@ export function UserMenu({ name, email, title, role, isStaff }: UserMenuProps) {
         {open && (
           <div
             role="menu"
-            className="absolute right-0 top-full mt-2 w-[300px] rounded-2xl z-[60] overflow-hidden"
+            className="absolute right-0 top-full mt-2 w-[18.75rem] rounded-2xl z-[60] overflow-hidden"
             style={{
               background: 'var(--space-bg-card)',
               border: '1px solid var(--space-border-hard)',
@@ -87,13 +87,13 @@ export function UserMenu({ name, email, title, role, isStaff }: UserMenuProps) {
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-[var(--space-text-primary)] leading-tight truncate">{name || email}</p>
-                <p className="text-[11px] text-[var(--space-text-muted)] truncate">{email}</p>
+                <p className="text-[0.6875rem] text-[var(--space-text-muted)] truncate">{email}</p>
               </div>
             </div>
 
             {/* Theme */}
             <div className="px-3 py-3 border-b border-[var(--space-border-hard)]">
-              <p className="flex items-center gap-1.5 text-[9px] uppercase tracking-[0.15em] text-[var(--space-text-tertiary)] font-semibold px-1 pb-2">
+              <p className="flex items-center gap-1.5 text-[0.5625rem] uppercase tracking-[0.15em] text-[var(--space-text-tertiary)] font-semibold px-1 pb-2">
                 <Palette className="size-3" /> Theme
               </p>
               <ThemePicker />

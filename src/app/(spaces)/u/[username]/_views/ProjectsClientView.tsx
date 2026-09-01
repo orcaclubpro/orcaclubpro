@@ -1,17 +1,12 @@
-import { ProjectsCarousel } from '@/components/dashboard/ProjectsCarousel'
-import type { SerializedProject } from '@/components/dashboard/ProjectsCarousel'
+import { ProjectsView } from '@/components/dashboard/ProjectsView'
+import type { SerializedProject } from '@/lib/serialization'
 
-interface ProjectsClientViewProps {
+export function ProjectsClientView({
+  serializedProjects,
+  username,
+}: {
   serializedProjects: SerializedProject[]
   username: string
-}
-
-export function ProjectsClientView({ serializedProjects, username }: ProjectsClientViewProps) {
-  return (
-    <ProjectsCarousel
-      projects={serializedProjects}
-      username={username}
-      canCreate={false}
-    />
-  )
+}) {
+  return <ProjectsView projects={serializedProjects} username={username} />
 }

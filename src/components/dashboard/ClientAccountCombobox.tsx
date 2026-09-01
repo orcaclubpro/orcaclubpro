@@ -143,7 +143,7 @@ export function ClientAccountCombobox({
                   <div className="min-w-0">
                     <p className="text-sm text-[var(--space-text-primary)] truncate">{account.name}</p>
                     {account.email && (
-                      <p className="text-[10px] text-[var(--space-text-secondary)] truncate">{account.email}</p>
+                      <p className="text-[0.625rem] text-[var(--space-text-secondary)] truncate">{account.email}</p>
                     )}
                   </div>
                   {account.id === value && (

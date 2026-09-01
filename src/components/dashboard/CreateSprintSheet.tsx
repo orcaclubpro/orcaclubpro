@@ -91,7 +91,7 @@ export function CreateSprintSheet({ projectId, open, onOpenChange }: CreateSprin
 
         {/* Header */}
         <div className="px-7 pt-7 pb-6 border-b border-[var(--space-border-hard)] shrink-0">
-          <p className="text-[10px] tracking-[0.35em] uppercase text-[var(--space-text-secondary)] font-light mb-4">New Sprint</p>
+          <p className="text-[0.625rem] tracking-[0.35em] uppercase text-[var(--space-text-secondary)] font-light mb-4">New Sprint</p>
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-[rgba(139,156,182,0.10)] border border-[rgba(139,156,182,0.15)]">
               <Zap className="size-4 text-[var(--space-accent)]" />
@@ -132,7 +132,7 @@ export function CreateSprintSheet({ projectId, open, onOpenChange }: CreateSprin
               <div className="flex items-start gap-2">
                 {/* Start */}
                 <div className="flex-1 space-y-1">
-                  <p className="text-[10px] text-[var(--space-text-secondary)] uppercase tracking-widest">Start</p>
+                  <p className="text-[0.625rem] text-[var(--space-text-secondary)] uppercase tracking-widest">Start</p>
                   <input
                     type="date"
                     value={startDate}
@@ -150,7 +150,7 @@ export function CreateSprintSheet({ projectId, open, onOpenChange }: CreateSprin
                 <div className="flex flex-col items-center pt-6 px-1 shrink-0">
                   {days ? (
                     <div className="px-2 py-1 rounded-md bg-[rgba(139,156,182,0.10)] border border-[rgba(139,156,182,0.15)] whitespace-nowrap">
-                      <span className="text-[10px] font-semibold text-[var(--space-accent)]">{days}d</span>
+                      <span className="text-[0.625rem] font-semibold text-[var(--space-accent)]">{days}d</span>
                     </div>
                   ) : (
                     <ArrowRight className="size-3.5 text-[var(--space-text-secondary)] mt-1" />
@@ -159,7 +159,7 @@ export function CreateSprintSheet({ projectId, open, onOpenChange }: CreateSprin
 
                 {/* End */}
                 <div className="flex-1 space-y-1">
-                  <p className="text-[10px] text-[var(--space-text-secondary)] uppercase tracking-widest">End</p>
+                  <p className="text-[0.625rem] text-[var(--space-text-secondary)] uppercase tracking-widest">End</p>
                   <input
                     type="date"
                     value={endDate}
@@ -182,7 +182,7 @@ export function CreateSprintSheet({ projectId, open, onOpenChange }: CreateSprin
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <label className="text-xs text-[var(--space-text-secondary)] font-medium tracking-wide">Sprint Goal</label>
-                <span className="text-[10px] text-[var(--space-text-secondary)]">Optional</span>
+                <span className="text-[0.625rem] text-[var(--space-text-secondary)]">Optional</span>
               </div>
               <textarea
                 value={goalDescription}
@@ -198,7 +198,7 @@ export function CreateSprintSheet({ projectId, open, onOpenChange }: CreateSprin
             {showPreview && (
               <div className="relative overflow-hidden rounded-xl border border-[var(--space-border-hard)] bg-[rgba(255,255,255,0.06)] p-4 animate-in fade-in slide-in-from-bottom-1 duration-200">
                 <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-[rgba(139,156,182,0.30)] via-[rgba(139,156,182,0.15)] to-transparent" />
-                <p className="text-[10px] tracking-[0.25em] uppercase text-[rgba(139,156,182,0.30)] mb-3">Preview</p>
+                <p className="text-[0.625rem] tracking-[0.25em] uppercase text-[rgba(139,156,182,0.30)] mb-3">Preview</p>
                 <p className="text-sm font-semibold text-[var(--space-text-primary)] truncate">{name}</p>
                 <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                   <Calendar className="size-3 text-[var(--space-text-secondary)] shrink-0" />

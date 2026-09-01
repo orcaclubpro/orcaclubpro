@@ -131,7 +131,7 @@ export function CreateProjectModal({
       </Button>
 
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] text-[var(--space-text-primary)] p-0 overflow-hidden sm:max-w-[560px] gap-0">
+        <DialogContent className="bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] text-[var(--space-text-primary)] p-0 overflow-hidden sm:max-w-[35rem] gap-0">
           <DialogTitle className="sr-only">Create Project</DialogTitle>
 
           {/* ── Success state ── */}
@@ -182,7 +182,7 @@ export function CreateProjectModal({
                             )}
                           </div>
                           <span
-                            className={`text-[10px] uppercase tracking-wider font-semibold transition-colors duration-200 ${
+                            className={`text-[0.625rem] uppercase tracking-wider font-semibold transition-colors duration-200 ${
                               done ? 'text-[var(--space-text-muted)]' : 'text-[var(--space-text-muted)]'
                             }`}
                             style={current ? { color: 'var(--space-accent)' } : undefined}
@@ -193,7 +193,7 @@ export function CreateProjectModal({
                         {/* Connector line */}
                         {i < STEPS.length - 1 && (
                           <div
-                            className={`h-[1px] w-12 mx-3 mb-5 transition-all duration-300 ${
+                            className={`h-[0.0625rem] w-12 mx-3 mb-5 transition-all duration-300 ${
                               step > s.num ? 'bg-[rgba(139,156,182,0.20)]' : 'bg-[var(--space-divider)]'
                             }`}
                           />
@@ -205,7 +205,7 @@ export function CreateProjectModal({
               </div>
 
               {/* ── Step content ── */}
-              <div className="px-8 py-7 min-h-[240px]">
+              <div className="px-8 py-7 min-h-[15rem]">
 
                 {/* Step 1: Basics */}
                 {step === 1 && (
@@ -380,7 +380,7 @@ export function CreateProjectModal({
 
               {/* ── Footer ── */}
               <div className="flex items-center justify-between gap-4 px-8 py-5 border-t border-[var(--space-border-hard)] bg-[rgba(255,255,255,0.02)]">
-                <span className="text-[10px] uppercase tracking-widest text-[var(--space-text-muted)] font-semibold tabular-nums">
+                <span className="text-[0.625rem] uppercase tracking-widest text-[var(--space-text-muted)] font-semibold tabular-nums">
                   {String(step).padStart(2, '0')} / 03
                 </span>
                 <div className="flex items-center gap-2">
@@ -408,7 +408,7 @@ export function CreateProjectModal({
                   <Button
                     onClick={advance}
                     disabled={!canAdvance() || loading}
-                    className="bg-[var(--space-accent)] hover:bg-[var(--space-accent)]/90 text-black font-semibold gap-1.5 min-w-[120px]"
+                    className="bg-[var(--space-accent)] hover:bg-[var(--space-accent)]/90 text-black font-semibold gap-1.5 min-w-[7.5rem]"
                   >
                     {loading ? (
                       <>

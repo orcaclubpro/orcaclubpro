@@ -42,7 +42,7 @@ function ThemeCard({
             boxShadow: `inset 0 0 0 1px ${v['--space-border']}`,
           }}
         >
-          <span className="text-[10px] font-bold leading-none" style={{ color: v['--space-text-primary'] }}>
+          <span className="text-[0.625rem] font-bold leading-none" style={{ color: v['--space-text-primary'] }}>
             Aa
           </span>
           <span
@@ -64,7 +64,7 @@ function ThemeCard({
         )}
       </div>
       {/* Label */}
-      <span className="text-[10px] font-semibold leading-none px-0.5 text-[var(--space-text-primary)]">
+      <span className="text-[0.625rem] font-semibold leading-none px-0.5 text-[var(--space-text-primary)]">
         {theme.label}
       </span>
     </button>
@@ -89,7 +89,7 @@ export function ThemePicker({ onPick }: { onPick?: () => void }) {
         if (themes.length === 0) return null
         return (
           <div key={mode} className="mt-1.5 first:mt-0">
-            <p className="text-[8px] uppercase tracking-[0.2em] text-[var(--space-text-muted)] font-semibold px-1 pb-1.5">
+            <p className="text-[0.5rem] uppercase tracking-[0.2em] text-[var(--space-text-muted)] font-semibold px-1 pb-1.5">
               {label}
             </p>
             <div className={cn('grid grid-cols-2 gap-1.5')}>
@@ -143,7 +143,7 @@ export function ThemeSwitcher() {
           className="size-2.5 rounded-full flex-shrink-0 ring-1 ring-[var(--space-border-hard)]"
           style={{ background: current.swatch }}
         />
-        <span className="text-[11px] font-semibold uppercase tracking-widest text-[var(--space-nav-fg-dim)] hidden sm:block">
+        <span className="text-[0.6875rem] font-semibold uppercase tracking-widest text-[var(--space-nav-fg-dim)] hidden sm:block">
           {current.label}
         </span>
         <Palette className="size-3.5 text-[var(--space-nav-fg-dim)] sm:hidden" />
@@ -160,7 +160,7 @@ export function ThemeSwitcher() {
             animation: 'themeFadeIn 160ms cubic-bezier(0.22,1,0.36,1) forwards',
           }}
         >
-          <p className="text-[9px] uppercase tracking-[0.15em] text-[var(--space-text-tertiary)] font-semibold px-1 pb-1">
+          <p className="text-[0.5625rem] uppercase tracking-[0.15em] text-[var(--space-text-tertiary)] font-semibold px-1 pb-1">
             Theme
           </p>
           {MODE_ORDER.map(({ mode, label }) => {
@@ -168,7 +168,7 @@ export function ThemeSwitcher() {
             if (themes.length === 0) return null
             return (
               <div key={mode} className="mt-1.5">
-                <p className="text-[8px] uppercase tracking-[0.2em] text-[var(--space-text-muted)] font-semibold px-1 pb-1.5">
+                <p className="text-[0.5rem] uppercase tracking-[0.2em] text-[var(--space-text-muted)] font-semibold px-1 pb-1.5">
                   {label}
                 </p>
                 <div className={cn('grid grid-cols-2 gap-1.5')}>

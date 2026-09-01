@@ -181,10 +181,10 @@ function ResetInvoicedEntry({
   return (
     <>
       {result && 'note' in result && (
-        <span className="text-[10px] text-[var(--space-text-muted)] max-w-[140px] leading-snug">{result.note}</span>
+        <span className="text-[0.625rem] text-[var(--space-text-muted)] max-w-[8.75rem] leading-snug">{result.note}</span>
       )}
       {result && 'error' in result && (
-        <span className="text-[10px] text-red-400 max-w-[140px] leading-snug">{result.error}</span>
+        <span className="text-[0.625rem] text-red-400 max-w-[8.75rem] leading-snug">{result.error}</span>
       )}
       <button
         type="button"
@@ -196,7 +196,7 @@ function ResetInvoicedEntry({
         className={cn(
           'flex items-center gap-1 justify-center rounded transition-all disabled:opacity-40',
           armed
-            ? 'px-1.5 py-0.5 text-[10px] font-semibold text-amber-400 border border-amber-400/30 bg-amber-400/[0.08]'
+            ? 'px-1.5 py-0.5 text-[0.625rem] font-semibold text-amber-400 border border-amber-400/30 bg-amber-400/[0.08]'
             : 'size-6 text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)] hover:bg-[var(--space-bg-card-hover)]',
         )}
       >
@@ -272,7 +272,7 @@ function OptionCard({
               </p>
             )}
             {requested && !selected && (
-              <span className="inline-flex items-center gap-1 mt-1 text-[9px] text-amber-400/80 bg-amber-400/[0.08] border border-amber-400/20 rounded px-1.5 py-0.5 font-semibold uppercase tracking-widest">
+              <span className="inline-flex items-center gap-1 mt-1 text-[0.5625rem] text-amber-400/80 bg-amber-400/[0.08] border border-amber-400/20 rounded px-1.5 py-0.5 font-semibold uppercase tracking-widest">
                 Requested by client
               </span>
             )}
@@ -281,7 +281,7 @@ function OptionCard({
         <div className="flex items-center justify-between pl-8">
           {item.isRecurring && (
             <span className={cn(
-              'text-[10px] rounded-full px-1.5 py-0.5 uppercase tracking-wide font-medium',
+              'text-[0.625rem] rounded-full px-1.5 py-0.5 uppercase tracking-wide font-medium',
               selected
                 ? 'border border-[rgba(139,156,182,0.15)] bg-[rgba(139,156,182,0.06)]'
                 : 'text-[var(--space-text-muted)] bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)]',
@@ -291,7 +291,7 @@ function OptionCard({
           )}
           <div className="ml-auto flex flex-col items-end gap-0.5">
             {hasDiscount && (
-              <span className="text-[11px] font-mono tabular-nums text-[var(--space-text-muted)] line-through leading-none">
+              <span className="text-[0.6875rem] font-mono tabular-nums text-[var(--space-text-muted)] line-through leading-none">
                 {fmt(baseTotal)}
                 {item.isRecurring && (
                   <span className="font-sans">/{item.recurringInterval === 'year' ? 'yr' : 'mo'}</span>
@@ -317,13 +317,13 @@ function OptionCard({
           <div className="flex flex-col gap-2">
             {onAdjustedPriceChange && (
               <div className="flex items-center justify-between">
-                <span className="text-[10px] text-[var(--space-text-muted)] uppercase tracking-widest font-medium">Adjusted Price</span>
+                <span className="text-[0.625rem] text-[var(--space-text-muted)] uppercase tracking-widest font-medium">Adjusted Price</span>
                 <div className="flex items-center gap-1.5">
                   <div className={cn(
                     'flex items-center gap-1 border rounded-md px-2 h-7 transition-colors',
                     item.adjustedPrice != null ? 'border-[rgba(139,156,182,0.20)] bg-[rgba(139,156,182,0.04)]' : 'border-[var(--space-border-hard)] bg-[var(--space-bg-card-hover)]'
                   )}>
-                    <span className={cn('text-[10px] shrink-0', item.adjustedPrice != null ? '' : 'text-[var(--space-text-muted)]')} style={item.adjustedPrice != null ? { color: 'var(--space-accent)', opacity: 0.7 } : {}}>$</span>
+                    <span className={cn('text-[0.625rem] shrink-0', item.adjustedPrice != null ? '' : 'text-[var(--space-text-muted)]')} style={item.adjustedPrice != null ? { color: 'var(--space-accent)', opacity: 0.7 } : {}}>$</span>
                     <input
                       type="number"
                       min={0}
@@ -352,7 +352,7 @@ function OptionCard({
             )}
             {onQuantityChange && (
               <div className="flex items-center justify-between">
-                <span className="text-[10px] text-[var(--space-text-muted)] uppercase tracking-widest font-medium">Quantity</span>
+                <span className="text-[0.625rem] text-[var(--space-text-muted)] uppercase tracking-widest font-medium">Quantity</span>
                 <div className="flex items-center gap-1">
                   <button
                     type="button"
@@ -375,7 +375,7 @@ function OptionCard({
                     className="size-6 flex items-center justify-center rounded-md text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] hover:bg-[var(--space-bg-card-hover)] transition-colors text-sm leading-none"
                   >+</button>
                   {qty > 1 && (
-                    <span className="text-[10px] text-[var(--space-text-muted)] ml-1 tabular-nums">× {fmt(unitPrice)} ea</span>
+                    <span className="text-[0.625rem] text-[var(--space-text-muted)] ml-1 tabular-nums">× {fmt(unitPrice)} ea</span>
                   )}
                 </div>
               </div>
@@ -744,7 +744,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
 
                 {/* Card header */}
                 <div onClick={() => handleRowClick(pkg)} className="px-7 pt-7 pb-6 cursor-pointer select-none">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.3em] mb-4" style={{ color: 'var(--space-accent)', opacity: 0.6 }}>
+                  <p className="text-[0.625rem] font-bold uppercase tracking-[0.3em] mb-4" style={{ color: 'var(--space-accent)', opacity: 0.6 }}>
                     Service Package
                   </p>
 
@@ -752,7 +752,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                     <h3 className="text-xl font-bold text-[var(--space-text-primary)] leading-tight">{pkg.name}</h3>
                     <div className="flex items-center gap-2 shrink-0 mt-1">
                       {pendingRequests > 0 && (
-                        <span className="text-[10px] text-amber-400 bg-amber-400/[0.08] border border-amber-400/25 rounded px-1.5 py-0.5 font-medium">
+                        <span className="text-[0.625rem] text-amber-400 bg-amber-400/[0.08] border border-amber-400/25 rounded px-1.5 py-0.5 font-medium">
                           {pendingRequests} request{pendingRequests !== 1 ? 's' : ''}
                         </span>
                       )}
@@ -823,7 +823,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center justify-between text-[10px] text-[var(--space-text-muted)] tabular-nums">
+                      <div className="flex items-center justify-between text-[0.625rem] text-[var(--space-text-muted)] tabular-nums">
                         <span>
                           <span className={paidAmount > 0 ? 'text-emerald-400' : ''}>{fmt(invoicedAmount)}</span>
                           {' '}invoiced
@@ -868,14 +868,14 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
 
                       {/* Project link */}
                       <div className="flex items-center justify-between gap-3">
-                        <span className="text-[10px] text-[var(--space-text-muted)] uppercase tracking-widest font-semibold shrink-0">
+                        <span className="text-[0.625rem] text-[var(--space-text-muted)] uppercase tracking-widest font-semibold shrink-0">
                           Link to project
                         </span>
                         {projects && projects.length > 0 ? (
                           <select
                             value={selectedProjectId[pkg.id] ?? ''}
                             onChange={e => setSelectedProjectId(prev => ({ ...prev, [pkg.id]: e.target.value }))}
-                            className="flex-1 max-w-[220px] appearance-none px-3 py-1.5 text-xs bg-[var(--space-bg-card)] border border-[var(--space-border-hard)] rounded-lg text-[var(--space-text-primary)] focus:outline-none focus:border-[rgba(139,156,182,0.20)]"
+                            className="flex-1 max-w-[13.75rem] appearance-none px-3 py-1.5 text-xs bg-[var(--space-bg-card)] border border-[var(--space-border-hard)] rounded-lg text-[var(--space-text-primary)] focus:outline-none focus:border-[rgba(139,156,182,0.20)]"
                           >
                             <option value="">No project</option>
                             {projects.map(p => (
@@ -883,7 +883,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                             ))}
                           </select>
                         ) : (
-                          <span className="text-[10px] text-[var(--space-text-muted)] italic">No projects yet</span>
+                          <span className="text-[0.625rem] text-[var(--space-text-muted)] italic">No projects yet</span>
                         )}
                       </div>
 
@@ -892,7 +892,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                       <>
                         {includedItems.length > 0 && (
                           <div>
-                            <p className="text-[10px] text-[var(--space-text-muted)] uppercase tracking-widest font-semibold mb-3">
+                            <p className="text-[0.625rem] text-[var(--space-text-muted)] uppercase tracking-widest font-semibold mb-3">
                               Included services
                             </p>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -918,7 +918,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
 
                         {addOnItems.length > 0 && (
                           <div>
-                            <p className="text-[10px] text-[var(--space-text-muted)] uppercase tracking-widest font-semibold mb-3">
+                            <p className="text-[0.625rem] text-[var(--space-text-muted)] uppercase tracking-widest font-semibold mb-3">
                               Available add-ons
                             </p>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -948,10 +948,10 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                       {pkg.paymentSchedule && pkg.paymentSchedule.length > 0 && (
                         <div className="space-y-2 pt-1 border-t border-[var(--space-border-hard)]">
                           <div className="flex items-center justify-between">
-                            <p className="text-[10px] text-[var(--space-text-muted)] uppercase tracking-widest font-semibold">
+                            <p className="text-[0.625rem] text-[var(--space-text-muted)] uppercase tracking-widest font-semibold">
                               Payment Schedule
                             </p>
-                            <span className="text-[10px] text-[var(--space-text-muted)] tabular-nums">
+                            <span className="text-[0.625rem] text-[var(--space-text-muted)] tabular-nums">
                               {pkg.paymentSchedule.filter(e => e.orderId && e.invoicedAt).length}/{pkg.paymentSchedule.length} invoiced
                             </span>
                           </div>
@@ -964,7 +964,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                                     <span className="text-xs text-[var(--space-text-tertiary)] font-medium">{entry.label}</span>
                                     <span className="text-xs text-[var(--space-text-primary)] tabular-nums font-mono shrink-0">{fmtExact(entry.amount)}</span>
                                     {entry.dueDate && (
-                                      <span className="flex items-center gap-1 text-[10px] text-[var(--space-text-muted)] shrink-0">
+                                      <span className="flex items-center gap-1 text-[0.625rem] text-[var(--space-text-muted)] shrink-0">
                                         <CalendarDays className="size-3" />
                                         {formatDisplayDate(entry.dueDate)}
                                       </span>
@@ -973,7 +973,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                                   <div className="shrink-0 flex items-center gap-2">
                                     {isInvoiced ? (
                                       <>
-                                        <span className="text-[10px] text-emerald-400 bg-emerald-400/[0.08] border border-emerald-400/20 rounded px-1.5 py-0.5 font-semibold">
+                                        <span className="text-[0.625rem] text-emerald-400 bg-emerald-400/[0.08] border border-emerald-400/20 rounded px-1.5 py-0.5 font-semibold">
                                           Invoiced
                                         </span>
                                         <ResetInvoicedEntry
@@ -987,7 +987,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                                       </>
                                     ) : (
                                       <>
-                                        <span className="text-[10px] text-amber-400 bg-amber-400/[0.06] border border-amber-400/20 rounded px-1.5 py-0.5 font-semibold">
+                                        <span className="text-[0.625rem] text-amber-400 bg-amber-400/[0.06] border border-amber-400/20 rounded px-1.5 py-0.5 font-semibold">
                                           Pending
                                         </span>
                                         <button
@@ -1015,7 +1015,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                       {/* ── Invoice type selector ───────────────────────────── */}
                       <div className="space-y-4 pt-1 border-t border-[var(--space-border-hard)]">
                         <div className="flex items-center gap-3">
-                          <span className="text-[10px] text-[var(--space-text-muted)] uppercase tracking-widest font-semibold shrink-0">
+                          <span className="text-[0.625rem] text-[var(--space-text-muted)] uppercase tracking-widest font-semibold shrink-0">
                             Invoice Type
                           </span>
                           <div className="flex items-center rounded-lg border border-[var(--space-border-hard)] overflow-hidden">
@@ -1054,7 +1054,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
 
                             {/* Row 1: Deposit amount + due date */}
                             <div className="space-y-2">
-                              <p className="text-[10px] text-[var(--space-text-muted)] uppercase tracking-widest font-semibold">Deposit</p>
+                              <p className="text-[0.625rem] text-[var(--space-text-muted)] uppercase tracking-widest font-semibold">Deposit</p>
                               <div className="flex items-center gap-2 flex-wrap">
                                 <div className="flex items-center rounded-lg border border-[var(--space-border-hard)] overflow-hidden">
                                   <span className="px-2.5 py-1.5 text-xs text-[var(--space-text-muted)] bg-[var(--space-bg-card-hover)] border-r border-[var(--space-border-hard)]">$</span>
@@ -1075,7 +1075,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                                   className="px-3 py-1.5 text-xs bg-[var(--space-bg-card)] border border-[var(--space-border-hard)] rounded-lg text-[var(--space-text-primary)] focus:outline-none focus:border-[rgba(139,156,182,0.20)] [color-scheme:light]"
                                 />
                                 {packageTotal > 0 && schDeposit > 0 && (
-                                  <span className="text-[10px] text-[var(--space-text-muted)] tabular-nums">
+                                  <span className="text-[0.625rem] text-[var(--space-text-muted)] tabular-nums">
                                     {fmt(schDeposit)} of {fmt(packageTotal)}
                                   </span>
                                 )}
@@ -1084,7 +1084,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
 
                             {/* Row 2: Installments count + frequency (always visible) */}
                             <div className="space-y-2">
-                              <p className="text-[10px] text-[var(--space-text-muted)] uppercase tracking-widest font-semibold">
+                              <p className="text-[0.625rem] text-[var(--space-text-muted)] uppercase tracking-widest font-semibold">
                                 Installments
                                 {packageTotal > 0 && (
                                   <span className="ml-2 font-mono normal-case text-[var(--space-text-primary)]">
@@ -1094,7 +1094,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                               </p>
                               <div className="flex items-center gap-2 flex-wrap">
                                 <div className="flex items-center rounded-lg border border-[var(--space-border-hard)] overflow-hidden">
-                                  <span className="px-2.5 py-1.5 text-[10px] text-[var(--space-text-muted)] bg-[var(--space-bg-card-hover)] border-r border-[var(--space-border-hard)] uppercase tracking-wide">
+                                  <span className="px-2.5 py-1.5 text-[0.625rem] text-[var(--space-text-muted)] bg-[var(--space-bg-card-hover)] border-r border-[var(--space-border-hard)] uppercase tracking-wide">
                                     Split into
                                   </span>
                                   <select
@@ -1135,7 +1135,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                               {/* Start date (non-custom) */}
                               {schFrequency !== 'custom' && (
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="text-[10px] text-[var(--space-text-muted)]">First payment due:</span>
+                                  <span className="text-[0.625rem] text-[var(--space-text-muted)]">First payment due:</span>
                                   <input
                                     type="date"
                                     value={schStartDate}
@@ -1143,7 +1143,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                                     className="px-3 py-1.5 text-xs bg-[var(--space-bg-card)] border border-[var(--space-border-hard)] rounded-lg text-[var(--space-text-primary)] focus:outline-none focus:border-[rgba(139,156,182,0.20)] [color-scheme:light]"
                                   />
                                   {schAmounts[0] > 0 && (
-                                    <span className="text-[10px] text-[var(--space-text-muted)] tabular-nums">
+                                    <span className="text-[0.625rem] text-[var(--space-text-muted)] tabular-nums">
                                       = {fmtExact(schAmounts[0])} each
                                     </span>
                                   )}
@@ -1153,7 +1153,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
 
                             {/* Schedule Preview */}
                             <div className="space-y-1.5">
-                              <p className="text-[10px] text-[var(--space-text-muted)] uppercase tracking-widest font-semibold">Schedule Preview</p>
+                              <p className="text-[0.625rem] text-[var(--space-text-muted)] uppercase tracking-widest font-semibold">Schedule Preview</p>
 
                               <div className="rounded-xl border border-[var(--space-border-hard)] overflow-hidden divide-y divide-[var(--space-divider)]">
                                 {/* Deposit row — only shown when a deposit amount is entered */}
@@ -1161,7 +1161,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                                   <div className="flex items-center gap-3 px-4 py-2.5 bg-[var(--space-bg-card)]">
                                     <span className="text-xs text-[var(--space-text-secondary)] flex-1 font-medium">Deposit</span>
                                     <span className="text-xs text-[var(--space-text-primary)] tabular-nums font-mono shrink-0">{fmtExact(schDeposit)}</span>
-                                    <span className="text-[10px] text-[var(--space-text-muted)] w-24 text-right shrink-0">
+                                    <span className="text-[0.625rem] text-[var(--space-text-muted)] w-24 text-right shrink-0">
                                       {scheduleDepositDate[pkg.id]
                                         ? formatDisplayDate(scheduleDepositDate[pkg.id])
                                         : <em className="text-[var(--space-text-muted)]">no date set</em>}
@@ -1188,10 +1188,10 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                                             type="date"
                                             value={date}
                                             onChange={e => handleCustomDateChange(pkg.id, i, e.target.value)}
-                                            className="w-full px-2 py-1 text-[10px] bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] rounded-lg text-[var(--space-text-primary)] focus:outline-none focus:border-[rgba(139,156,182,0.20)] [color-scheme:light]"
+                                            className="w-full px-2 py-1 text-[0.625rem] bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] rounded-lg text-[var(--space-text-primary)] focus:outline-none focus:border-[rgba(139,156,182,0.20)] [color-scheme:light]"
                                           />
                                         ) : (
-                                          <span className="text-[10px] text-[var(--space-text-muted)]">
+                                          <span className="text-[0.625rem] text-[var(--space-text-muted)]">
                                             {date ? formatDisplayDate(date) : <em className="text-[var(--space-text-muted)]">set start date</em>}
                                           </span>
                                         )}
@@ -1231,7 +1231,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                             {/* Saved schedule entries */}
                             {pkg.paymentSchedule && pkg.paymentSchedule.length > 0 && (
                               <div className="space-y-2 pt-4 border-t border-[var(--space-border-hard)]">
-                                <p className="text-[10px] text-[var(--space-text-muted)] uppercase tracking-widest font-semibold">
+                                <p className="text-[0.625rem] text-[var(--space-text-muted)] uppercase tracking-widest font-semibold">
                                   Saved Schedule
                                 </p>
                                 {pkg.paymentSchedule.map((entry) => {
@@ -1246,7 +1246,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                                         <span className="text-xs text-[var(--space-text-tertiary)] font-medium">{entry.label}</span>
                                         <span className="text-xs text-[var(--space-text-primary)] tabular-nums font-mono shrink-0">{fmtExact(entry.amount)}</span>
                                         {entry.dueDate && (
-                                          <span className="flex items-center gap-1 text-[10px] text-[var(--space-text-muted)] shrink-0">
+                                          <span className="flex items-center gap-1 text-[0.625rem] text-[var(--space-text-muted)] shrink-0">
                                             <CalendarDays className="size-3" />
                                             {formatDisplayDate(entry.dueDate)}
                                           </span>
@@ -1255,7 +1255,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                                       <div className="shrink-0 flex items-center gap-2">
                                         {isInvoiced ? (
                                           <>
-                                            <span className="text-[10px] text-emerald-400 bg-emerald-400/[0.08] border border-emerald-400/20 rounded px-1.5 py-0.5 font-semibold">
+                                            <span className="text-[0.625rem] text-emerald-400 bg-emerald-400/[0.08] border border-emerald-400/20 rounded px-1.5 py-0.5 font-semibold">
                                               Invoiced
                                             </span>
                                             {invoicedOrder?.stripeInvoiceUrl && (
@@ -1275,7 +1275,7 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                                           </>
                                         ) : entryResult && 'url' in entryResult ? (
                                           <a href={entryResult.url} target="_blank" rel="noopener noreferrer"
-                                            className="flex items-center gap-1 text-[10px] text-emerald-400 border border-emerald-400/30 bg-emerald-400/[0.06] rounded px-1.5 py-0.5 hover:bg-emerald-400/10">
+                                            className="flex items-center gap-1 text-[0.625rem] text-emerald-400 border border-emerald-400/30 bg-emerald-400/[0.06] rounded px-1.5 py-0.5 hover:bg-emerald-400/10">
                                             <CheckCircle2 className="size-3" />
                                             Sent
                                             <ExternalLink className="size-3" />
@@ -1283,13 +1283,13 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                                         ) : (
                                           <div className="flex items-center gap-1.5">
                                             {entryResult && 'error' in entryResult && (
-                                              <span className="text-[10px] text-red-400 max-w-[100px] leading-snug">{entryResult.error}</span>
+                                              <span className="text-[0.625rem] text-red-400 max-w-[6.25rem] leading-snug">{entryResult.error}</span>
                                             )}
                                             <button
                                               type="button"
                                               disabled={sendingEntryId === entry.id || removingEntryId === entry.id || resettingEntryId === entry.id}
                                               onClick={() => handleSendScheduledPayment(pkg.id, entry.id, selectedProjectId[pkg.id] || undefined)}
-                                              className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium border border-[rgba(139,156,182,0.18)] bg-[rgba(139,156,182,0.06)] rounded hover:bg-[rgba(139,156,182,0.10)] disabled:opacity-50 transition-all"
+                                              className="flex items-center gap-1 px-2 py-1 text-[0.625rem] font-medium border border-[rgba(139,156,182,0.18)] bg-[rgba(139,156,182,0.06)] rounded hover:bg-[rgba(139,156,182,0.10)] disabled:opacity-50 transition-all"
                                               style={{ color: 'var(--space-accent)' }}
                                             >
                                               {sendingEntryId === entry.id
@@ -1360,14 +1360,14 @@ export function ClientPackagesTab({ packages, clientId, username, projects, pack
                               )
                             }
                             if (result && 'error' in result) {
-                              return <p className="text-[10px] text-red-400 max-w-[160px] leading-snug">{result.error}</p>
+                              return <p className="text-[0.625rem] text-red-400 max-w-[10rem] leading-snug">{result.error}</p>
                             }
                             return null
                           })()}
 
                           {/* Push Schedule result */}
                           {mode === 'schedule' && pushScheduleResult[pkg.id] && (
-                            <span className="text-[10px] text-emerald-400 bg-emerald-400/[0.06] border border-emerald-400/20 rounded px-2 py-1">
+                            <span className="text-[0.625rem] text-emerald-400 bg-emerald-400/[0.06] border border-emerald-400/20 rounded px-2 py-1">
                               ✓ {pushScheduleResult[pkg.id]}
                             </span>
                           )}

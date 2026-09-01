@@ -105,7 +105,7 @@ export function MilestoneEditSheet({
         </div>
 
         <div className="px-7 pt-7 pb-6 border-b border-[var(--space-border-hard)] shrink-0">
-          <p className="text-[10px] tracking-[0.35em] uppercase text-[var(--space-text-secondary)] font-light mb-4">Edit Milestone</p>
+          <p className="text-[0.625rem] tracking-[0.35em] uppercase text-[var(--space-text-secondary)] font-light mb-4">Edit Milestone</p>
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-green-400/10 border border-green-400/20">
               <Flag className="size-4 text-green-400" />
@@ -157,7 +157,7 @@ export function MilestoneEditSheet({
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <label className="text-xs text-[var(--space-text-secondary)] font-medium tracking-wide">Description</label>
-                <span className="text-[10px] text-[var(--space-text-secondary)]">Optional</span>
+                <span className="text-[0.625rem] text-[var(--space-text-secondary)]">Optional</span>
               </div>
               <textarea
                 value={description}

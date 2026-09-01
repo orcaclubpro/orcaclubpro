@@ -53,7 +53,7 @@ export function ProjectSideActions({ project, tasks, username }: ProjectSideActi
         {BUTTONS.map(({ key, icon: Icon, label, color }, i) => (
           <button key={key} onClick={handlers[key]} className={buttonClass(i, false)} aria-label={label}>
             <Icon className={cn('size-3.5', color)} />
-            <span className="text-[9px] font-semibold text-[var(--space-text-secondary)] uppercase tracking-[0.18em] group-hover:text-[var(--space-text-tertiary)] transition-colors [writing-mode:vertical-rl] rotate-180">
+            <span className="text-[0.5625rem] font-semibold text-[var(--space-text-secondary)] uppercase tracking-[0.18em] group-hover:text-[var(--space-text-tertiary)] transition-colors [writing-mode:vertical-rl] rotate-180">
               {label}
             </span>
           </button>
@@ -65,7 +65,7 @@ export function ProjectSideActions({ project, tasks, username }: ProjectSideActi
         {BUTTONS.map(({ key, icon: Icon, label, color }, i) => (
           <button key={key} onClick={handlers[key]} className={buttonClass(i, true)} aria-label={label}>
             <Icon className={cn('size-3', color)} />
-            <span className="text-[8px] font-semibold text-[var(--space-text-secondary)] uppercase tracking-[0.15em] [writing-mode:vertical-rl] rotate-180">
+            <span className="text-[0.5rem] font-semibold text-[var(--space-text-secondary)] uppercase tracking-[0.15em] [writing-mode:vertical-rl] rotate-180">
               {label}
             </span>
           </button>

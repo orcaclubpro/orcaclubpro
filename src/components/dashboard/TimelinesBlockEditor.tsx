@@ -93,7 +93,7 @@ function blockDateRange(block: AnyBlock): string | null {
 
 // ── Label styles ─────────────────────────────────────────────────────────────
 
-const labelClass = 'block text-[9px] font-bold tracking-[0.2em] uppercase text-[var(--space-text-secondary)] mb-1.5'
+const labelClass = 'block text-[0.5625rem] font-bold tracking-[0.2em] uppercase text-[var(--space-text-secondary)] mb-1.5'
 const inputClass = 'w-full px-3 py-2.5 text-sm bg-[var(--space-bg-card)] border border-[var(--space-border-hard)] rounded-xl text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)] focus:outline-none focus:border-[var(--space-border-hard)] focus:bg-[var(--space-bg-card-hover)] transition-all'
 
 // ── Block row in left panel ───────────────────────────────────────────────────
@@ -173,14 +173,14 @@ function BlockRow({
         <div className="flex items-start justify-between gap-1">
           <div className="min-w-0 flex-1">
             <div
-              className="text-[9px] font-bold tracking-[0.14em] uppercase mb-0.5"
+              className="text-[0.5625rem] font-bold tracking-[0.14em] uppercase mb-0.5"
               style={{ color: `${color}99` }}
             >
               {label}
             </div>
             <p className="text-xs font-medium text-[#C0C0C0] truncate leading-tight">{title}</p>
             {dateRange && (
-              <p className="text-[9px] text-[var(--space-text-muted)] mt-0.5 truncate">{dateRange}</p>
+              <p className="text-[0.5625rem] text-[var(--space-text-muted)] mt-0.5 truncate">{dateRange}</p>
             )}
           </div>
           <button
@@ -229,7 +229,7 @@ function BlockTypePicker({ onPick, onCancel }: BlockTypePickerProps) {
 
   return (
     <div className="p-3 rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] space-y-3">
-      <p className="text-[9px] font-bold tracking-[0.2em] uppercase text-[var(--space-text-secondary)]">
+      <p className="text-[0.5625rem] font-bold tracking-[0.2em] uppercase text-[var(--space-text-secondary)]">
         Choose block type
       </p>
       <div className="grid grid-cols-3 gap-2">
@@ -250,16 +250,16 @@ function BlockTypePicker({ onPick, onCancel }: BlockTypePickerProps) {
             >
               <Icon className="size-3.5" style={{ color: `${color}CC` }} />
             </div>
-            <span className="text-[9px] font-bold tracking-[0.06em] uppercase text-[var(--space-text-secondary)] leading-tight">
+            <span className="text-[0.5625rem] font-bold tracking-[0.06em] uppercase text-[var(--space-text-secondary)] leading-tight">
               {label}
             </span>
-            <span className="text-[8px] text-[var(--space-text-muted)] leading-tight">{desc}</span>
+            <span className="text-[0.5rem] text-[var(--space-text-muted)] leading-tight">{desc}</span>
           </button>
         ))}
       </div>
       <button
         onClick={onCancel}
-        className="w-full text-[10px] text-[var(--space-text-muted)] hover:text-[var(--space-text-tertiary)] transition-colors py-1"
+        className="w-full text-[0.625rem] text-[var(--space-text-muted)] hover:text-[var(--space-text-tertiary)] transition-colors py-1"
       >
         Cancel
       </button>
@@ -343,7 +343,7 @@ function PhaseEditor({
                 )}
               >
                 <div className="size-2 rounded-full shrink-0" style={{ background: color }} />
-                <span className="text-[9px] font-semibold text-[var(--space-text-secondary)] truncate">{opt.label}</span>
+                <span className="text-[0.5625rem] font-semibold text-[var(--space-text-secondary)] truncate">{opt.label}</span>
                 {selected && <Check className="size-2.5 ml-auto shrink-0" style={{ color: 'var(--space-accent)', opacity: 0.7 }} />}
               </button>
             )
@@ -386,7 +386,7 @@ function PhaseEditor({
             onClick={addItem}
             className={cn(
               'w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-dashed',
-              'border-[var(--space-border-hard)] text-[var(--space-text-muted)] text-[10px] font-semibold tracking-[0.06em] uppercase',
+              'border-[var(--space-border-hard)] text-[var(--space-text-muted)] text-[0.625rem] font-semibold tracking-[0.06em] uppercase',
               'hover:border-[rgba(139,156,182,0.18)] hover:text-[var(--space-accent)] hover:bg-[rgba(255,255,255,0.02)]',
               'transition-all duration-150',
             )}
@@ -419,12 +419,12 @@ function PhaseEditor({
           >
             <span
               className={cn(
-                'inline-block size-3 rounded-full bg-white transition-transform mt-[0.5px]',
+                'inline-block size-3 rounded-full bg-white transition-transform mt-[0.03125rem]',
                 block.dealerPill?.enabled ? 'translate-x-3' : 'translate-x-0.5',
               )}
             />
           </button>
-          <label className="text-[9px] font-bold tracking-[0.2em] uppercase text-[var(--space-text-secondary)]">
+          <label className="text-[0.5625rem] font-bold tracking-[0.2em] uppercase text-[var(--space-text-secondary)]">
             Notification Pill
           </label>
         </div>
@@ -544,7 +544,7 @@ function ChecklistEditor({
                 <button
                   onClick={() => toggleNote(i)}
                   className={cn(
-                    'shrink-0 text-[8px] font-bold tracking-[0.08em] uppercase px-2 py-1 rounded-lg border transition-all',
+                    'shrink-0 text-[0.5rem] font-bold tracking-[0.08em] uppercase px-2 py-1 rounded-lg border transition-all',
                     expandedNotes.has(i)
                       ? 'border-amber-400/25 text-amber-400/70 bg-amber-400/[0.06]'
                       : 'border-[var(--space-border-hard)] text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)] hover:border-[var(--space-border-hard)]',
@@ -575,7 +575,7 @@ function ChecklistEditor({
             onClick={addItem}
             className={cn(
               'w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-dashed',
-              'border-[var(--space-border-hard)] text-[var(--space-text-muted)] text-[10px] font-semibold tracking-[0.06em] uppercase',
+              'border-[var(--space-border-hard)] text-[var(--space-text-muted)] text-[0.625rem] font-semibold tracking-[0.06em] uppercase',
               'hover:border-[rgba(139,156,182,0.18)] hover:text-[var(--space-accent)] hover:bg-[rgba(255,255,255,0.02)]',
               'transition-all duration-150',
             )}
@@ -680,7 +680,7 @@ function BlockDetailEditor({
           {block.blockType === 'launch' && <Rocket className="size-3.5" style={{ color: `${color}CC` }} />}
         </div>
         <div>
-          <p className="text-[8px] font-bold tracking-[0.18em] uppercase" style={{ color: `${color}80` }}>
+          <p className="text-[0.5rem] font-bold tracking-[0.18em] uppercase" style={{ color: `${color}80` }}>
             {label} Block
           </p>
           <p className="text-sm font-semibold text-[var(--space-text-tertiary)] leading-snug mt-0.5">
@@ -887,7 +887,7 @@ export function TimelinesBlockEditor({ timeline, onClose, onSave }: Props) {
 
         {/* Title */}
         <div className="flex-1 min-w-0">
-          <p className="text-[8px] font-bold tracking-[0.22em] uppercase text-[var(--space-text-muted)]">
+          <p className="text-[0.5rem] font-bold tracking-[0.22em] uppercase text-[var(--space-text-muted)]">
             Block Editor
           </p>
           <h2 className="text-sm font-bold text-[var(--space-text-primary)] leading-none truncate">
@@ -901,7 +901,7 @@ export function TimelinesBlockEditor({ timeline, onClose, onSave }: Props) {
         </div>
 
         {/* Block count badge */}
-        <span className="hidden sm:inline text-[8px] font-bold tracking-[0.1em] uppercase px-2 py-0.5 rounded-full border border-[rgba(139,156,182,0.15)] text-[var(--space-text-secondary)] bg-[rgba(139,156,182,0.06)]">
+        <span className="hidden sm:inline text-[0.5rem] font-bold tracking-[0.1em] uppercase px-2 py-0.5 rounded-full border border-[rgba(139,156,182,0.15)] text-[var(--space-text-secondary)] bg-[rgba(139,156,182,0.06)]">
           {blocks.length} {blocks.length === 1 ? 'block' : 'blocks'}
         </span>
 
@@ -993,7 +993,7 @@ export function TimelinesBlockEditor({ timeline, onClose, onSave }: Props) {
                   <LayoutList className="size-4 text-[var(--space-text-muted)]" />
                 </div>
                 <p className="text-xs text-[var(--space-text-muted)] mb-1">No blocks yet</p>
-                <p className="text-[10px] text-[var(--space-text-muted)]">Add a block below to get started</p>
+                <p className="text-[0.625rem] text-[var(--space-text-muted)]">Add a block below to get started</p>
               </div>
             )}
 
@@ -1029,7 +1029,7 @@ export function TimelinesBlockEditor({ timeline, onClose, onSave }: Props) {
                   onClick={() => setShowPicker(true)}
                   className={cn(
                     'w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-dashed',
-                    'border-[var(--space-border-hard)] text-[var(--space-text-muted)] text-[10px] font-semibold tracking-[0.08em] uppercase',
+                    'border-[var(--space-border-hard)] text-[var(--space-text-muted)] text-[0.625rem] font-semibold tracking-[0.08em] uppercase',
                     'hover:border-[rgba(139,156,182,0.18)] hover:text-[rgba(139,156,182,0.7)] hover:bg-[rgba(255,255,255,0.02)]',
                     'transition-all duration-150',
                   )}

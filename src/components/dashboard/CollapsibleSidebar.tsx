@@ -52,7 +52,7 @@ export function CollapsibleSidebar({ children, railLabel = 'Details' }: Collapsi
       )}
     >
       {/* Sticky panel pins below the header while the aside background spans the page. */}
-      <div className="sticky top-[49px] h-[calc((100vh-64px)/1.3)] flex flex-col overflow-hidden">
+      <div className="sticky top-[var(--space-header)] space-panel-h flex flex-col overflow-hidden">
         {collapsed ? (
           // ── Collapsed rail — click anywhere to expand, labeled for discoverability ──
           <button
@@ -63,7 +63,7 @@ export function CollapsibleSidebar({ children, railLabel = 'Details' }: Collapsi
             <span className="p-1.5 rounded-md group-hover:bg-[var(--space-bg-card-hover)] transition-colors">
               <PanelLeftOpen className="size-4" />
             </span>
-            <span className="text-[9px] font-semibold uppercase tracking-[0.18em] [writing-mode:vertical-rl] rotate-180">
+            <span className="text-[0.5625rem] font-semibold uppercase tracking-[0.18em] [writing-mode:vertical-rl] rotate-180">
               {railLabel}
             </span>
           </button>

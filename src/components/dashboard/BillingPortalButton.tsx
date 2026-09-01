@@ -42,7 +42,7 @@ export function BillingPortalButton({
           {loading ? 'Loading…' : label}
           {!loading && <ExternalLink className="size-3 opacity-60" />}
         </button>
-        {error && <p className="text-[10px] text-red-400 leading-snug max-w-[200px]">{error}</p>}
+        {error && <p className="text-[0.625rem] text-red-400 leading-snug max-w-[12.5rem]">{error}</p>}
       </div>
     )
   }

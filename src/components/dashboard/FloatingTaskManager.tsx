@@ -205,7 +205,7 @@ export function FloatingTaskManager({ project, tasks, sprints }: FloatingTaskMan
 
       {/* Task Manager Slide Panel - Higher z-index */}
       <div
-        className={`fixed top-0 right-0 h-full w-full md:w-[480px] bg-[var(--space-bg-base)] border-l border-[var(--space-border-hard)] z-[90] transform transition-transform duration-300 ${
+        className={`fixed top-0 right-0 h-full w-full md:w-[30rem] bg-[var(--space-bg-base)] border-l border-[var(--space-border-hard)] z-[90] transform transition-transform duration-300 ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         } overflow-hidden flex flex-col`}
       >

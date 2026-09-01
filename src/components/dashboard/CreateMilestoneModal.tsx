@@ -91,7 +91,7 @@ export function CreateMilestoneModal({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="bg-[var(--space-bg-card)] border-[var(--space-border-hard)] sm:max-w-[520px] p-0 overflow-hidden gap-0">
+      <DialogContent className="bg-[var(--space-bg-card)] border-[var(--space-border-hard)] sm:max-w-[32.5rem] p-0 overflow-hidden gap-0">
         <DialogTitle className="sr-only">New Milestone</DialogTitle>
         <DialogDescription className="sr-only">Create a new milestone step by step</DialogDescription>
 
@@ -102,7 +102,7 @@ export function CreateMilestoneModal({
               <div key={i} className="flex items-center flex-1 last:flex-none">
                 <div
                   className={cn(
-                    'size-6 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 transition-all duration-300',
+                    'size-6 rounded-full flex items-center justify-center text-[0.6875rem] font-bold shrink-0 transition-all duration-300',
                     step === i + 1
                       ? 'bg-green-400 text-[var(--space-text-primary)] ring-4 ring-green-400/[0.15]'
                       : i + 1 < step
@@ -128,7 +128,7 @@ export function CreateMilestoneModal({
               <div
                 key={i}
                 className={cn(
-                  'flex-1 last:flex-none text-[10px] font-medium transition-colors duration-300',
+                  'flex-1 last:flex-none text-[0.625rem] font-medium transition-colors duration-300',
                   step === i + 1 ? 'text-[var(--space-text-secondary)]' : i + 1 < step ? 'text-[var(--space-text-secondary)]' : 'text-[var(--space-text-secondary)]'
                 )}
               >
@@ -139,7 +139,7 @@ export function CreateMilestoneModal({
         </div>
 
         {/* Step content */}
-        <div key={step} className="px-8 pt-8 pb-3 min-h-[220px]">
+        <div key={step} className="px-8 pt-8 pb-3 min-h-[13.75rem]">
 
           {/* ── Step 1: Name ── */}
           {step === 1 && (
@@ -214,7 +214,7 @@ export function CreateMilestoneModal({
               {/* Preview card */}
               <div className="relative overflow-hidden rounded-xl border border-[var(--space-border-hard)] bg-[rgba(255,255,255,0.06)] p-4">
                 <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-green-400/50 via-green-400/20 to-transparent" />
-                <p className="text-[10px] tracking-[0.25em] uppercase text-green-400/50 mb-3">Preview</p>
+                <p className="text-[0.625rem] tracking-[0.25em] uppercase text-green-400/50 mb-3">Preview</p>
                 <div className="flex items-start gap-3">
                   <div className="mt-1 size-3 rounded-full border-2 border-[var(--space-border-hard)] shrink-0" />
                   <div className="flex-1 min-w-0">

@@ -75,7 +75,7 @@ function ProjectCard({ project, username }: { project: ClientProjectSummary; use
         <div>
           <div className="flex items-center gap-2 mb-1.5">
             <span className={`size-1.5 rounded-full ${cfg.dot} shrink-0`} />
-            <span className={`text-[10px] font-semibold uppercase tracking-widest ${cfg.color}`}>
+            <span className={`text-[0.625rem] font-semibold uppercase tracking-widest ${cfg.color}`}>
               {cfg.label}
             </span>
           </div>
@@ -94,7 +94,7 @@ function ProjectCard({ project, username }: { project: ClientProjectSummary; use
           <div className="space-y-1.5">
             <div className="flex items-center gap-1.5">
               <Zap className="size-2.5 text-[var(--space-accent)] shrink-0" />
-              <span className="text-[9px] font-semibold uppercase tracking-[0.2em] text-[var(--space-text-secondary)]">
+              <span className="text-[0.5625rem] font-semibold uppercase tracking-[0.2em] text-[var(--space-text-secondary)]">
                 Current Sprint
               </span>
             </div>
@@ -103,7 +103,7 @@ function ProjectCard({ project, username }: { project: ClientProjectSummary; use
                 <span className="text-xs font-medium text-[var(--space-text-tertiary)] truncate">
                   {project.currentSprint.name}
                 </span>
-                <span className={`flex items-center gap-1 text-[9px] font-medium shrink-0 ${sprintCfg.color}`}>
+                <span className={`flex items-center gap-1 text-[0.5625rem] font-medium shrink-0 ${sprintCfg.color}`}>
                   <span className={`size-1 rounded-full ${sprintCfg.dot}`} />
                   {sprintCfg.label}
                 </span>
@@ -116,7 +116,7 @@ function ProjectCard({ project, username }: { project: ClientProjectSummary; use
                       style={{ width: `${sprintProgress}%` }}
                     />
                   </div>
-                  <p className="text-[9px] text-[var(--space-text-secondary)]">
+                  <p className="text-[0.5625rem] text-[var(--space-text-secondary)]">
                     {project.currentSprint.completedTasksCount}/{project.currentSprint.totalTasksCount} tasks · {sprintProgress}%
                   </p>
                 </div>
@@ -130,7 +130,7 @@ function ProjectCard({ project, username }: { project: ClientProjectSummary; use
           <div className="flex items-start gap-2">
             <Circle className="size-3 text-[var(--space-text-secondary)] shrink-0 mt-0.5" />
             <div className="min-w-0">
-              <p className="text-[9px] uppercase tracking-widest text-[var(--space-text-secondary)] font-medium mb-0.5">
+              <p className="text-[0.5625rem] uppercase tracking-widest text-[var(--space-text-secondary)] font-medium mb-0.5">
                 Next Milestone
               </p>
               <p className="text-xs text-[var(--space-text-secondary)] truncate">{nextMilestone.title}</p>
@@ -140,7 +140,7 @@ function ProjectCard({ project, username }: { project: ClientProjectSummary; use
 
         {/* Timeline dates */}
         {(project.startDate || project.endDate) && (
-          <div className="flex items-center gap-1.5 text-[10px] text-[var(--space-text-secondary)]">
+          <div className="flex items-center gap-1.5 text-[0.625rem] text-[var(--space-text-secondary)]">
             <Calendar className="size-3 shrink-0" />
             {project.startDate && project.endDate
               ? `${fmtDate(project.startDate)} → ${fmtDate(project.endDate)}`
@@ -169,7 +169,7 @@ function ProjectCard({ project, username }: { project: ClientProjectSummary; use
               color={cfg.ringColor}
               showLabel
             />
-            <p className="text-[8px] text-[var(--space-text-secondary)] uppercase tracking-wider text-center">Timeline</p>
+            <p className="text-[0.5rem] text-[var(--space-text-secondary)] uppercase tracking-wider text-center">Timeline</p>
           </div>
         )}
 
@@ -183,7 +183,7 @@ function ProjectCard({ project, username }: { project: ClientProjectSummary; use
               color="rgb(30, 58, 110)"
               showLabel
             />
-            <p className="text-[8px] text-[var(--space-text-secondary)] uppercase tracking-wider text-center">
+            <p className="text-[0.5rem] text-[var(--space-text-secondary)] uppercase tracking-wider text-center">
               {completedMilestones}/{totalMilestones}
             </p>
           </div>

@@ -127,7 +127,7 @@ export function CreateSprintModal({ projectId, open, onOpenChange, onSuccess }: 
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="bg-[var(--space-bg-card)] border-[var(--space-border-hard)] sm:max-w-[520px] p-0 overflow-hidden gap-0">
+      <DialogContent className="bg-[var(--space-bg-card)] border-[var(--space-border-hard)] sm:max-w-[32.5rem] p-0 overflow-hidden gap-0">
         <DialogTitle className="sr-only">New Sprint</DialogTitle>
         <DialogDescription className="sr-only">Create a new sprint step by step</DialogDescription>
 
@@ -138,7 +138,7 @@ export function CreateSprintModal({ projectId, open, onOpenChange, onSuccess }: 
               <div key={i} className="flex items-center flex-1 last:flex-none">
                 <div
                   className={cn(
-                    'size-6 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 transition-all duration-300',
+                    'size-6 rounded-full flex items-center justify-center text-[0.6875rem] font-bold shrink-0 transition-all duration-300',
                     step === i + 1
                       ? 'bg-[var(--space-accent)] text-[var(--space-text-primary)] ring-4 ring-[rgba(139,156,182,0.10)]'
                       : i + 1 < step
@@ -164,7 +164,7 @@ export function CreateSprintModal({ projectId, open, onOpenChange, onSuccess }: 
               <div
                 key={i}
                 className={cn(
-                  'flex-1 last:flex-none text-[10px] font-medium transition-colors duration-300',
+                  'flex-1 last:flex-none text-[0.625rem] font-medium transition-colors duration-300',
                   step === i + 1 ? 'text-[var(--space-text-secondary)]' : i + 1 < step ? 'text-[var(--space-text-secondary)]' : 'text-[var(--space-text-secondary)]'
                 )}
               >
@@ -175,7 +175,7 @@ export function CreateSprintModal({ projectId, open, onOpenChange, onSuccess }: 
         </div>
 
         {/* Step content */}
-        <div key={step} className="px-8 pt-8 pb-3 min-h-[220px]">
+        <div key={step} className="px-8 pt-8 pb-3 min-h-[13.75rem]">
           {step === 1 && (
             <div className="space-y-5">
               <div>
@@ -264,7 +264,7 @@ export function CreateSprintModal({ projectId, open, onOpenChange, onSuccess }: 
               </div>
 
               {draftTasks.length > 0 && (
-                <div className="space-y-2.5 max-h-[320px] overflow-y-auto pr-1 -mr-1">
+                <div className="space-y-2.5 max-h-[20rem] overflow-y-auto pr-1 -mr-1">
                   {draftTasks.map((task, i) => (
                     <div
                       key={i}
@@ -294,19 +294,19 @@ export function CreateSprintModal({ projectId, open, onOpenChange, onSuccess }: 
                         onChange={(e) => updateDraftTask(i, 'description', e.target.value)}
                         placeholder="Add a description... (optional)"
                         rows={2}
-                        className="w-full bg-transparent border-0 text-[var(--space-text-secondary)] placeholder:text-[var(--space-text-secondary)] resize-none text-xs leading-relaxed focus-visible:ring-0 focus-visible:outline-none p-0 ml-[18px] min-h-0"
+                        className="w-full bg-transparent border-0 text-[var(--space-text-secondary)] placeholder:text-[var(--space-text-secondary)] resize-none text-xs leading-relaxed focus-visible:ring-0 focus-visible:outline-none p-0 ml-[1.125rem] min-h-0"
                       />
 
                       {/* Priority pills */}
-                      <div className="flex items-center gap-1 ml-[18px]">
-                        <span className="text-[10px] text-[var(--space-text-secondary)] mr-1">Priority:</span>
+                      <div className="flex items-center gap-1 ml-[1.125rem]">
+                        <span className="text-[0.625rem] text-[var(--space-text-secondary)] mr-1">Priority:</span>
                         {(Object.keys(PRIORITY_CONFIG) as Priority[]).map((p) => (
                           <button
                             key={p}
                             type="button"
                             onClick={() => updateDraftTask(i, 'priority', p)}
                             className={cn(
-                              'text-[10px] font-semibold px-2 py-0.5 rounded-full border transition-all',
+                              'text-[0.625rem] font-semibold px-2 py-0.5 rounded-full border transition-all',
                               task.priority === p
                                 ? PRIORITY_CONFIG[p].activeClass
                                 : 'text-[var(--space-text-secondary)] border-transparent hover:border-[var(--space-border-hard)] hover:text-[var(--space-text-tertiary)]'

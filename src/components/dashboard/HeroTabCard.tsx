@@ -83,7 +83,7 @@ export function HeroTabCard({ revenue, projects }: HeroTabCardProps) {
     <div
       className="relative overflow-hidden rounded-2xl border border-[rgba(139,156,182,0.15)]
                  bg-gradient-to-br from-[#06181d] via-[#091c22] to-[#060c0e]
-                 p-6 sm:p-8 flex flex-col min-h-[230px] sm:min-h-[260px]"
+                 p-6 sm:p-8 flex flex-col min-h-[14.375rem] sm:min-h-[16.25rem]"
     >
       {/* Glows */}
       <div className="absolute -top-16 -right-16 w-64 h-64 rounded-full bg-[var(--space-accent)]/[0.15] blur-3xl pointer-events-none" />
@@ -107,7 +107,7 @@ export function HeroTabCard({ revenue, projects }: HeroTabCardProps) {
               <button
                 key={t}
                 onClick={() => setTab(t)}
-                className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all duration-200 ${
+                className={`px-3 py-1 rounded-md text-[0.625rem] font-bold uppercase tracking-wider transition-all duration-200 ${
                   tab === t
                     ? 'bg-[var(--space-accent)] text-white shadow-sm'
                     : 'text-[var(--space-text-secondary)] hover:text-[var(--space-text-tertiary)]'
@@ -137,7 +137,7 @@ export function HeroTabCard({ revenue, projects }: HeroTabCardProps) {
               </p>
               <div className="pb-1.5">
                 <p className="text-xs text-[var(--space-text-secondary)] font-medium leading-none mb-1">active</p>
-                <p className={`text-[10px] font-semibold ${healthColor}`}>{healthLabel}</p>
+                <p className={`text-[0.625rem] font-semibold ${healthColor}`}>{healthLabel}</p>
               </div>
             </div>
 
@@ -150,7 +150,7 @@ export function HeroTabCard({ revenue, projects }: HeroTabCardProps) {
                     className={`flex items-center gap-2.5 animate-in fade-in slide-in-from-left-2 duration-300 ${DELAY[Math.min(i, 3)]}`}
                     style={{ animationFillMode: 'both' }}
                   >
-                    <span className="text-[9px] text-[var(--space-text-secondary)] uppercase tracking-wider w-[76px] shrink-0">
+                    <span className="text-[0.5625rem] text-[var(--space-text-secondary)] uppercase tracking-wider w-[4.75rem] shrink-0">
                       {s.label}
                     </span>
                     <div className="flex-1 h-1 bg-[rgba(255,255,255,0.06)] rounded-full overflow-hidden">
@@ -159,7 +159,7 @@ export function HeroTabCard({ revenue, projects }: HeroTabCardProps) {
                         style={{ width: `${Math.max((s.count / maxCount) * 100, 6)}%` }}
                       />
                     </div>
-                    <span className={`text-[10px] font-bold tabular-nums w-5 text-right shrink-0 ${s.text}`}>
+                    <span className={`text-[0.625rem] font-bold tabular-nums w-5 text-right shrink-0 ${s.text}`}>
                       {s.count}
                     </span>
                   </div>
@@ -173,7 +173,7 @@ export function HeroTabCard({ revenue, projects }: HeroTabCardProps) {
               style={{ animationFillMode: 'both' }}
             >
               <div>
-                <p className="text-[9px] text-[var(--space-text-secondary)] uppercase tracking-wider font-semibold">Total</p>
+                <p className="text-[0.5625rem] text-[var(--space-text-secondary)] uppercase tracking-wider font-semibold">Total</p>
                 <p className="text-lg sm:text-xl font-bold text-[var(--space-text-primary)] tabular-nums mt-0.5">{projects.total}</p>
               </div>
 
@@ -181,7 +181,7 @@ export function HeroTabCard({ revenue, projects }: HeroTabCardProps) {
                 <div className="flex items-center gap-1.5">
                   <CheckCircle2 className="size-3 text-green-400 shrink-0" />
                   <div>
-                    <p className="text-[9px] text-[var(--space-text-secondary)] uppercase tracking-wider font-semibold">Tasks</p>
+                    <p className="text-[0.5625rem] text-[var(--space-text-secondary)] uppercase tracking-wider font-semibold">Tasks</p>
                     <p className="text-lg sm:text-xl font-bold text-[var(--space-text-primary)] tabular-nums mt-0.5">{projects.tasksCompleted}</p>
                   </div>
                 </div>
@@ -191,7 +191,7 @@ export function HeroTabCard({ revenue, projects }: HeroTabCardProps) {
                 <div className="flex items-center gap-1.5">
                   <Zap className="size-3 text-[var(--space-accent)] shrink-0" />
                   <div>
-                    <p className="text-[9px] text-[var(--space-text-secondary)] uppercase tracking-wider font-semibold">Sprints</p>
+                    <p className="text-[0.5625rem] text-[var(--space-text-secondary)] uppercase tracking-wider font-semibold">Sprints</p>
                     <p className="text-lg sm:text-xl font-bold text-[var(--space-text-primary)] tabular-nums mt-0.5">{projects.sprintsCompleted}</p>
                   </div>
                 </div>
@@ -199,7 +199,7 @@ export function HeroTabCard({ revenue, projects }: HeroTabCardProps) {
 
               {projects.totalMilestones > 0 && (
                 <div>
-                  <p className="text-[9px] text-[var(--space-text-secondary)] uppercase tracking-wider font-semibold">Progress</p>
+                  <p className="text-[0.5625rem] text-[var(--space-text-secondary)] uppercase tracking-wider font-semibold">Progress</p>
                   <p className="text-lg sm:text-xl font-bold text-[var(--space-accent)] tabular-nums mt-0.5">
                     {milestonePercent}%
                   </p>
@@ -214,7 +214,7 @@ export function HeroTabCard({ revenue, projects }: HeroTabCardProps) {
           <div key="revenue" className="flex-1 flex flex-col gap-4 animate-in fade-in duration-200">
 
             <div className="flex-1">
-              <p className="text-[9px] text-[var(--space-text-secondary)] tracking-wider animate-in fade-in duration-300">
+              <p className="text-[0.5625rem] text-[var(--space-text-secondary)] tracking-wider animate-in fade-in duration-300">
                 {revenue.windowStartLabel} – Today · {revenue.timeframeLabel}
               </p>
 
@@ -259,17 +259,17 @@ export function HeroTabCard({ revenue, projects }: HeroTabCardProps) {
               style={{ animationFillMode: 'both' }}
             >
               <div>
-                <p className="text-[9px] text-[var(--space-text-secondary)] uppercase tracking-wider font-semibold">Orders</p>
+                <p className="text-[0.5625rem] text-[var(--space-text-secondary)] uppercase tracking-wider font-semibold">Orders</p>
                 <p className="text-lg sm:text-xl font-bold text-[var(--space-text-primary)] tabular-nums mt-0.5">{revenue.windowOrderCount}</p>
               </div>
               {revenue.windowPendingCount > 0 && (
                 <div>
-                  <p className="text-[9px] text-[var(--space-text-secondary)] uppercase tracking-wider font-semibold">Pending</p>
+                  <p className="text-[0.5625rem] text-[var(--space-text-secondary)] uppercase tracking-wider font-semibold">Pending</p>
                   <p className="text-lg sm:text-xl font-bold text-amber-400 tabular-nums mt-0.5">{revenue.windowPendingCount}</p>
                 </div>
               )}
               <div>
-                <p className="text-[9px] text-[var(--space-text-secondary)] uppercase tracking-wider font-semibold">Active Projects</p>
+                <p className="text-[0.5625rem] text-[var(--space-text-secondary)] uppercase tracking-wider font-semibold">Active Projects</p>
                 <p className="text-lg sm:text-xl font-bold text-[var(--space-text-primary)] tabular-nums mt-0.5">{revenue.activeProjects}</p>
               </div>
             </div>

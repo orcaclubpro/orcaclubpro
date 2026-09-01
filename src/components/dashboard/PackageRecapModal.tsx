@@ -14,9 +14,9 @@ const accentBtn =
   'flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg bg-[var(--space-accent)] text-black hover:opacity-90 transition-all disabled:opacity-50'
 const ghostBtn =
   'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-[var(--space-border-hard)] text-[var(--space-text-tertiary)] hover:text-[var(--space-text-primary)] hover:bg-[var(--space-bg-card-hover)] transition-all disabled:opacity-50'
-const labelCls = 'text-[10px] font-semibold uppercase tracking-widest text-[var(--space-text-muted)]'
+const labelCls = 'text-[0.625rem] font-semibold uppercase tracking-widest text-[var(--space-text-muted)]'
 const sectionLabel =
-  'text-[9px] font-bold tracking-[0.25em] uppercase text-[var(--space-accent)]'
+  'text-[0.5625rem] font-bold tracking-[0.25em] uppercase text-[var(--space-accent)]'
 
 function fmt(n: number) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(n || 0)
@@ -125,7 +125,7 @@ export function PackageRecapModal({
   return (
     <div className="fixed inset-0 z-[80] print:hidden">
       <div className="absolute inset-0 animate-in fade-in duration-150" style={{ background: 'rgba(0,0,0,0.62)', backdropFilter: 'blur(3px)' }} onClick={onClose} />
-      <div className="absolute left-1/2 -translate-x-1/2 top-3 bottom-3 w-full px-3 max-w-[760px]">
+      <div className="absolute left-1/2 -translate-x-1/2 top-3 bottom-3 w-full px-3 max-w-[47.5rem]">
         <div
           className="flex flex-col h-full overflow-hidden rounded-2xl shadow-[0_40px_100px_rgba(0,0,0,0.7)]"
           style={{ background: 'var(--space-bg-card)', border: '1px solid var(--space-border-hard)' }}
@@ -175,11 +175,11 @@ export function PackageRecapModal({
                     <div className="flex items-center justify-between gap-3">
                       <div className="min-w-0">
                         <p className="text-xs font-semibold text-[var(--space-text-primary)] truncate">{model.paymentLabel || entryLabel}</p>
-                        <p className="text-[10px] text-[var(--space-text-muted)] mt-0.5">{model.paymentPosition}</p>
+                        <p className="text-[0.625rem] text-[var(--space-text-muted)] mt-0.5">{model.paymentPosition}</p>
                       </div>
                       <span className="text-lg font-semibold tabular-nums text-[var(--space-text-primary)] shrink-0">{fmt(model.paymentAmount)}</span>
                     </div>
-                    <div className="flex items-center gap-3 flex-wrap text-[10px] text-[var(--space-text-muted)]">
+                    <div className="flex items-center gap-3 flex-wrap text-[0.625rem] text-[var(--space-text-muted)]">
                       <span>{due ? `Due ${due}` : 'No due date'}</span>
                       <span className="tabular-nums">{fmt(model.amountPaid)} paid of {fmt(model.packageTotal)}</span>
                       <span className="tabular-nums">{fmt(model.amountRemaining)} remaining</span>
@@ -246,8 +246,8 @@ export function PackageRecapModal({
                         </div>
                         <ul className="space-y-0.5">
                           {b.items.map((it, k) => (
-                            <li key={k} className="flex items-start gap-2 text-[10px] text-[var(--space-text-muted)]">
-                              <span className="tabular-nums shrink-0 w-[86px]">{fmtDay(it.date) ?? '—'}</span>
+                            <li key={k} className="flex items-start gap-2 text-[0.625rem] text-[var(--space-text-muted)]">
+                              <span className="tabular-nums shrink-0 w-[5.375rem]">{fmtDay(it.date) ?? '—'}</span>
                               <span className="flex-1 min-w-0 text-[var(--space-text-tertiary)]">{it.description}</span>
                               <span className="tabular-nums shrink-0">{it.hours != null ? `${it.hours}h` : '—'}</span>
                             </li>
@@ -280,12 +280,12 @@ export function PackageRecapModal({
                     <ul className="rounded-lg border border-[var(--space-border-hard)] bg-[var(--space-bg-card-hover)] divide-y divide-[var(--space-border-hard)]">
                       {model.remaining.map((r, i) => (
                         <li key={i} className="flex items-center gap-3 px-3 py-2">
-                          <span className="text-[9px] font-bold tracking-widest uppercase text-[var(--space-text-muted)] shrink-0 w-14">
+                          <span className="text-[0.5625rem] font-bold tracking-widest uppercase text-[var(--space-text-muted)] shrink-0 w-14">
                             {r.kind === 'payment' ? 'Payment' : 'Planned'}
                           </span>
                           <span className="flex-1 min-w-0 text-xs text-[var(--space-text-tertiary)] truncate">{r.label}</span>
                           {r.dueDate && (
-                            <span className="text-[10px] tabular-nums text-[var(--space-text-muted)] shrink-0">{fmtDay(r.dueDate)}</span>
+                            <span className="text-[0.625rem] tabular-nums text-[var(--space-text-muted)] shrink-0">{fmtDay(r.dueDate)}</span>
                           )}
                           {r.amount != null && (
                             <span className="text-xs font-semibold tabular-nums text-[var(--space-text-primary)] shrink-0">{fmt(r.amount)}</span>
@@ -315,7 +315,7 @@ export function PackageRecapModal({
 // ── Marks a block as server-derived, not editable ───────────────────────────────
 function DerivedTag() {
   return (
-    <span className="inline-flex items-center gap-1 text-[9px] font-semibold uppercase tracking-widest text-[var(--space-text-muted)] border border-[var(--space-border-hard)] rounded px-1.5 py-0.5">
+    <span className="inline-flex items-center gap-1 text-[0.5625rem] font-semibold uppercase tracking-widest text-[var(--space-text-muted)] border border-[var(--space-border-hard)] rounded px-1.5 py-0.5">
       <Lock className="size-2.5" /> Derived
     </span>
   )

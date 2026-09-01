@@ -160,7 +160,7 @@ export function ClientSettingsCard({
             <h2 className="text-xl font-semibold text-[var(--space-text-primary)] leading-tight truncate">{name}</h2>
             {stripeCustomerId && (
               <span
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider"
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.625rem] font-semibold uppercase tracking-wider"
                 style={{ background: 'rgba(52,211,153,0.08)', color: '#34d399', border: '1px solid rgba(52,211,153,0.2)' }}
               >
                 <Check className="size-2.5" strokeWidth={3} />
@@ -251,7 +251,7 @@ export function ClientSettingsCard({
       {/* ── Team ── */}
       {allUsers.length > 0 && (
         <div className="px-5 py-3.5 border-t border-[var(--space-border-hard)] flex items-center gap-3 flex-wrap">
-          <span className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-[var(--space-text-tertiary)] font-semibold shrink-0">
+          <span className="flex items-center gap-1.5 text-[0.625rem] uppercase tracking-widest text-[var(--space-text-tertiary)] font-semibold shrink-0">
             <Users className="size-3" />
             Team
           </span>
@@ -277,7 +277,7 @@ export function ClientSettingsCard({
 
       {/* ── Edit Dialog ── */}
       <Dialog open={editOpen} onOpenChange={(v) => { if (!v) handleCloseEdit(); else setEditOpen(true) }}>
-        <DialogContent className="bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] text-[var(--space-text-primary)] sm:max-w-[480px] rounded-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] text-[var(--space-text-primary)] sm:max-w-[30rem] rounded-2xl max-h-[90vh] overflow-y-auto">
           <DialogTitle className="text-base font-semibold text-[var(--space-text-primary)]">Edit Client Info</DialogTitle>
           <div className="space-y-3 pt-1">
             <div className="grid grid-cols-2 gap-2.5">
@@ -327,7 +327,7 @@ export function ClientSettingsCard({
               <div className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)]">
                 <div className="space-y-0.5">
                   <p className="text-xs font-medium text-[var(--space-text-tertiary)]">Send setup email</p>
-                  <p className="text-[10px] text-[var(--space-text-muted)] leading-snug">
+                  <p className="text-[0.625rem] text-[var(--space-text-muted)] leading-snug">
                     {emailChanged
                       ? 'Sends a new setup link to the updated address'
                       : 'Resends a setup link on save (only if email changes)'}

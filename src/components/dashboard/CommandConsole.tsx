@@ -356,8 +356,8 @@ export function CommandConsole({ username }: CommandConsoleProps) {
         className={cn(
           'absolute left-1/2 -translate-x-1/2 w-full px-3 transition-[max-width,top,bottom] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]',
           expanded
-            ? 'top-3 bottom-3 max-w-[1360px]'
-            : 'top-[9vh] max-w-[600px]',
+            ? 'top-3 bottom-3 max-w-[85rem]'
+            : 'top-[9vh] max-w-[37.5rem]',
         )}
       >
         <div
@@ -371,7 +371,7 @@ export function CommandConsole({ username }: CommandConsoleProps) {
           {/* ── Vertical station spine (expanded only) ── */}
           {expanded && (
             <aside
-              className="shrink-0 w-[76px] flex flex-col items-center gap-1 py-3 border-r border-[var(--space-border-hard)]"
+              className="shrink-0 w-[4.75rem] flex flex-col items-center gap-1 py-3 border-r border-[var(--space-border-hard)]"
               style={{ background: 'rgba(0,0,0,0.14)' }}
             >
               {STATIONS.map((s) => (
@@ -419,7 +419,7 @@ export function CommandConsole({ username }: CommandConsoleProps) {
                       <X className="size-3" />
                     </button>
                   ) : (
-                    <kbd className="hidden sm:inline text-[10px] text-[var(--space-text-muted)] bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] rounded px-1.5 py-0.5 font-mono tracking-wide">
+                    <kbd className="hidden sm:inline text-[0.625rem] text-[var(--space-text-muted)] bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] rounded px-1.5 py-0.5 font-mono tracking-wide">
                       L
                     </kbd>
                   )}
@@ -490,7 +490,7 @@ export function CommandConsole({ username }: CommandConsoleProps) {
                               <p className="text-sm font-semibold text-[var(--space-text-primary)] tabular-nums leading-none">
                                 {data ? count : '—'}
                               </p>
-                              <p className="text-[9px] text-[var(--space-text-muted)] mt-0.5">
+                              <p className="text-[0.5625rem] text-[var(--space-text-muted)] mt-0.5">
                                 {label}{count !== 1 ? 's' : ''}
                               </p>
                             </div>
@@ -498,7 +498,7 @@ export function CommandConsole({ username }: CommandConsoleProps) {
                         ))}
                       </div>
                       <div className="space-y-1.5">
-                        <p className="text-[9px] tracking-[0.4em] uppercase text-[var(--space-text-muted)] font-semibold px-1">
+                        <p className="text-[0.5625rem] tracking-[0.4em] uppercase text-[var(--space-text-muted)] font-semibold px-1">
                           Jump to a tool
                         </p>
                         <div className="grid grid-cols-2 gap-2">
@@ -507,7 +507,7 @@ export function CommandConsole({ username }: CommandConsoleProps) {
                           <LaunchCard icon={Package}   title="Package Builder" hint="Draft a proposal"  onClick={() => goStation('builder', undefined)} />
                         </div>
                       </div>
-                      <p className="text-[11px] text-[var(--space-text-muted)] px-1 leading-relaxed">
+                      <p className="text-[0.6875rem] text-[var(--space-text-muted)] px-1 leading-relaxed">
                         Start typing to search — then build or open a retainer for any client.
                       </p>
                     </div>
@@ -597,7 +597,7 @@ export function CommandConsole({ username }: CommandConsoleProps) {
                     { key: 'K',  label: 'retainer' },
                     { key: 'esc', label: 'close'   },
                   ].map(({ key, label }) => (
-                    <span key={key} className="flex items-center gap-1.5 text-[10px] text-[var(--space-text-muted)]">
+                    <span key={key} className="flex items-center gap-1.5 text-[0.625rem] text-[var(--space-text-muted)]">
                       <kbd className="font-mono text-[var(--space-text-tertiary)] bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] rounded px-1.5 py-0.5">
                         {key}
                       </kbd>
@@ -616,7 +616,7 @@ export function CommandConsole({ username }: CommandConsoleProps) {
                 </span>
                 <button
                   onClick={() => goStation('search')}
-                  className="flex items-center gap-1.5 text-[11px] text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)] transition-colors"
+                  className="flex items-center gap-1.5 text-[0.6875rem] text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)] transition-colors"
                 >
                   <CornerDownLeft className="size-3" />
                   Back to search
@@ -686,13 +686,13 @@ function RailButton({
       type="button"
       onClick={onClick}
       className={cn(
-        'w-[60px] flex flex-col items-center gap-1 py-2 rounded-xl transition-colors group',
+        'w-[3.75rem] flex flex-col items-center gap-1 py-2 rounded-xl transition-colors group',
         active ? 'text-[var(--space-accent)]' : 'text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] hover:bg-[var(--space-bg-base)]',
       )}
       style={active ? { background: 'var(--space-accent-soft)' } : undefined}
     >
       <Icon className="size-4" />
-      <span className="text-[9px] font-semibold uppercase tracking-wider">{label}</span>
+      <span className="text-[0.5625rem] font-semibold uppercase tracking-wider">{label}</span>
     </button>
   )
 }
@@ -712,7 +712,7 @@ function LaunchCard({
       </div>
       <div className="min-w-0">
         <p className="text-xs font-semibold text-[var(--space-text-primary)] leading-tight">{title}</p>
-        <p className="text-[10px] text-[var(--space-text-muted)] mt-0.5">{hint}</p>
+        <p className="text-[0.625rem] text-[var(--space-text-muted)] mt-0.5">{hint}</p>
       </div>
       <ArrowRight className="ml-auto size-3.5 shrink-0 text-[var(--space-text-muted)] opacity-0 -translate-x-1 group-hover:opacity-60 group-hover:translate-x-0 transition-all" />
     </button>
@@ -726,8 +726,8 @@ function ResultGroup({
     <div className={divided ? 'mt-1 border-t border-[var(--space-border-hard)]' : ''}>
       <div className="flex items-center gap-2 px-4 py-2 mt-1">
         <Icon className="size-2.5 text-[var(--space-text-muted)]" />
-        <span className="text-[9px] font-semibold uppercase tracking-[0.4em] text-[var(--space-text-muted)]">{label}</span>
-        <span className="ml-auto text-[9px] text-[var(--space-text-muted)] tabular-nums">{count}</span>
+        <span className="text-[0.5625rem] font-semibold uppercase tracking-[0.4em] text-[var(--space-text-muted)]">{label}</span>
+        <span className="ml-auto text-[0.5625rem] text-[var(--space-text-muted)] tabular-nums">{count}</span>
       </div>
       {children}
     </div>
@@ -754,7 +754,7 @@ function ResultRow({
       )}
     >
       {isSelected && (
-        <div className="absolute left-0 top-1 bottom-1 w-[2px] rounded-full" style={{ background: 'var(--space-accent)', opacity: 0.7 }} />
+        <div className="absolute left-0 top-1 bottom-1 w-[0.125rem] rounded-full" style={{ background: 'var(--space-accent)', opacity: 0.7 }} />
       )}
       <button type="button" onClick={onClick} className="flex-1 min-w-0 flex items-center gap-3 text-left">
         <Icon className={cn('size-3.5 shrink-0 transition-colors', isSelected ? 'text-[var(--space-accent)]' : 'text-[var(--space-text-muted)]')} />
@@ -763,7 +763,7 @@ function ResultRow({
             {primary}
           </p>
           {secondary && (
-            <p className="text-[11px] truncate text-[var(--space-text-muted)]">{secondary}</p>
+            <p className="text-[0.6875rem] truncate text-[var(--space-text-muted)]">{secondary}</p>
           )}
         </div>
       </button>
@@ -780,7 +780,7 @@ function ResultRow({
                 onClick={a.onClick}
                 title={a.title}
                 aria-label={a.title}
-                className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium text-[var(--space-text-muted)] hover:text-[var(--space-accent)] transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                className="flex items-center gap-1 px-2 py-1 rounded-md text-[0.625rem] font-medium text-[var(--space-text-muted)] hover:text-[var(--space-accent)] transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
                 style={{ background: 'var(--space-bg-base)' }}
               >
                 <AIcon className="size-3" />

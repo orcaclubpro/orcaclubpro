@@ -78,9 +78,9 @@ export function ClientViewList({ autoFocus = false }: { autoFocus?: boolean }) {
                   : <Building2 className="size-3 text-[var(--space-text-muted)]" />}
               </span>
               <span className="flex-1 min-w-0">
-                <span className="block text-[13px] font-medium text-[var(--space-text-secondary)] truncate">{c.name}</span>
+                <span className="block text-[0.8125rem] font-medium text-[var(--space-text-secondary)] truncate">{c.name}</span>
                 {c.company && (
-                  <span className="block text-[10px] text-[var(--space-text-muted)] truncate">{c.company}</span>
+                  <span className="block text-[0.625rem] text-[var(--space-text-muted)] truncate">{c.company}</span>
                 )}
               </span>
             </button>

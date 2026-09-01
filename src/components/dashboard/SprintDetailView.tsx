@@ -275,7 +275,7 @@ function TaskCard({
                 type="button"
                 onClick={() => onEditPriorityChange(p)}
                 className={cn(
-                  'text-[10px] font-medium px-2 py-0.5 rounded-full border transition-colors capitalize',
+                  'text-[0.625rem] font-medium px-2 py-0.5 rounded-full border transition-colors capitalize',
                   editTaskPriority === p
                     ? cn(PRIORITY[p].text, 'border-current bg-current/10')
                     : 'text-[var(--space-text-muted)] border-[var(--space-border-hard)] hover:border-[var(--space-border-hard)]',
@@ -289,7 +289,7 @@ function TaskCard({
             type="date"
             value={editTaskDueDate}
             onChange={(e) => onEditDueDateChange(e.target.value)}
-            className="ml-auto text-[11px] text-[var(--space-text-secondary)] bg-transparent border border-[var(--space-border-hard)] rounded px-2 py-0.5 focus:outline-none focus:border-[var(--space-border-hard)]"
+            className="ml-auto text-[0.6875rem] text-[var(--space-text-secondary)] bg-transparent border border-[var(--space-border-hard)] rounded px-2 py-0.5 focus:outline-none focus:border-[var(--space-border-hard)]"
           />
         </div>
       </div>
@@ -346,7 +346,7 @@ function TaskCard({
       {/* Priority badge (only on active tasks) */}
       {priorityCfg && !isDone && (
         <span className={cn(
-          'shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded border',
+          'shrink-0 text-[0.625rem] font-medium px-1.5 py-0.5 rounded border',
           priorityCfg.badge,
         )}>
           {priorityCfg.label}
@@ -356,7 +356,7 @@ function TaskCard({
       {/* Due date */}
       {task.dueDate && !isDone && (
         <span className={cn(
-          'flex items-center gap-1 text-[11px] tabular-nums shrink-0',
+          'flex items-center gap-1 text-[0.6875rem] tabular-nums shrink-0',
           isOverdue ? 'text-red-400' : 'text-[var(--space-text-muted)]',
         )}>
           {isOverdue && <AlertCircle className="size-2.5" />}
@@ -366,7 +366,7 @@ function TaskCard({
 
       {/* Assignee initials */}
       {initials && !isDone && (
-        <span className="shrink-0 size-5 rounded-full bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] flex items-center justify-center text-[9px] font-semibold text-[var(--space-text-secondary)]">
+        <span className="shrink-0 size-5 rounded-full bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] flex items-center justify-center text-[0.5625rem] font-semibold text-[var(--space-text-secondary)]">
           {initials}
         </span>
       )}
@@ -501,7 +501,7 @@ function InlineTaskCreate({
               type="button"
               onClick={() => setPriority(p)}
               className={cn(
-                'text-[10px] font-medium px-2 py-0.5 rounded-full border transition-colors capitalize',
+                'text-[0.625rem] font-medium px-2 py-0.5 rounded-full border transition-colors capitalize',
                 priority === p
                   ? cn(PRIORITY[p].text, 'border-current bg-current/10')
                   : 'text-[var(--space-text-muted)] border-[var(--space-border-hard)] hover:border-[var(--space-border-hard)]',
@@ -517,7 +517,7 @@ function InlineTaskCreate({
           value={dueDate}
           onChange={(e) => setDueDate(e.target.value)}
           disabled={isPending}
-          className="ml-auto text-[11px] text-[var(--space-text-secondary)] bg-transparent border border-[var(--space-border-hard)] rounded px-2 py-0.5 focus:outline-none focus:border-[var(--space-border-hard)]"
+          className="ml-auto text-[0.6875rem] text-[var(--space-text-secondary)] bg-transparent border border-[var(--space-border-hard)] rounded px-2 py-0.5 focus:outline-none focus:border-[var(--space-border-hard)]"
         />
       </div>
 
@@ -629,7 +629,7 @@ function BacklogPicker({
                   <div className="size-1.5 rounded-full bg-[#555555] shrink-0" />
                   <span className="text-sm text-[var(--space-text-tertiary)] truncate flex-1">{task.title}</span>
                   {task.priority && (
-                    <span className={cn('text-[10px] shrink-0', PRIORITY[task.priority as keyof typeof PRIORITY]?.text)}>
+                    <span className={cn('text-[0.625rem] shrink-0', PRIORITY[task.priority as keyof typeof PRIORITY]?.text)}>
                       {PRIORITY[task.priority as keyof typeof PRIORITY]?.label}
                     </span>
                   )}
@@ -660,7 +660,7 @@ function SidebarStat({
     <div className="flex flex-col gap-1 px-3 py-2.5 rounded-lg bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)]">
       <div className="flex items-center gap-1 text-[var(--space-text-muted)]">
         <Icon className="size-2.5" />
-        <span className="text-[9px] font-semibold uppercase tracking-widest">{label}</span>
+        <span className="text-[0.5625rem] font-semibold uppercase tracking-widest">{label}</span>
       </div>
       <span className={cn('text-base font-bold text-[var(--space-text-primary)] tabular-nums leading-none', valueClass)}>
         {value}
@@ -888,11 +888,11 @@ export function SprintDetailView({
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="lg:flex fluid-enter" style={{ minHeight: 'calc((100vh - 64px) / 1.3)' }}>
+    <div className="lg:flex fluid-enter" style={{ minHeight: 'calc(100svh - var(--space-header))' }}>
 
       {/* ── Sidebar (desktop) ─────────────────────────────────────────── */}
       <aside className={cn(
-        'hidden lg:flex flex-col shrink-0 border-r border-[var(--space-border-hard)] bg-[var(--space-bg-card-hover)] sticky top-[49px] self-start h-[calc((100vh-64px)/1.3)] overflow-hidden transition-[width] duration-300 ease-in-out',
+        'hidden lg:flex flex-col shrink-0 border-r border-[var(--space-border-hard)] bg-[var(--space-bg-card-hover)] sticky top-[var(--space-header)] self-start space-panel-h overflow-hidden transition-[width] duration-300 ease-in-out',
         sidebarCollapsed ? 'w-12' : 'w-72 xl:w-80',
       )}>
         {/* Top bar: back nav + collapse toggle */}
@@ -933,7 +933,7 @@ export function SprintDetailView({
                   {/* Status badge */}
                   <div className="mt-2">
                     <span className={cn(
-                      'inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-full border',
+                      'inline-flex items-center gap-1.5 text-[0.6875rem] font-medium px-2 py-0.5 rounded-full border',
                       statusCfg.text, statusCfg.bg, statusCfg.border,
                     )}>
                       <span className={cn('size-1.5 rounded-full', statusCfg.dot)} />
@@ -1059,7 +1059,7 @@ export function SprintDetailView({
                         className="rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] p-4 space-y-3 animate-in fade-in slide-in-from-top-1 duration-150"
                       >
                         <div className="space-y-1.5">
-                          <Label className="text-[10px] text-[var(--space-text-secondary)] uppercase tracking-wider">Sprint Name</Label>
+                          <Label className="text-[0.625rem] text-[var(--space-text-secondary)] uppercase tracking-wider">Sprint Name</Label>
                           <Input
                             value={editName}
                             onChange={(e) => setEditName(e.target.value)}
@@ -1070,7 +1070,7 @@ export function SprintDetailView({
                         </div>
 
                         <div className="space-y-1.5">
-                          <Label className="text-[10px] text-[var(--space-text-secondary)] uppercase tracking-wider">Description</Label>
+                          <Label className="text-[0.625rem] text-[var(--space-text-secondary)] uppercase tracking-wider">Description</Label>
                           <Textarea
                             value={editDescription}
                             onChange={(e) => setEditDescription(e.target.value)}
@@ -1081,7 +1081,7 @@ export function SprintDetailView({
                         </div>
 
                         <div className="space-y-1.5">
-                          <Label className="text-[10px] text-[var(--space-text-secondary)] uppercase tracking-wider">Start Date</Label>
+                          <Label className="text-[0.625rem] text-[var(--space-text-secondary)] uppercase tracking-wider">Start Date</Label>
                           <Input
                             type="date"
                             value={editStartDate}
@@ -1091,7 +1091,7 @@ export function SprintDetailView({
                         </div>
 
                         <div className="space-y-1.5">
-                          <Label className="text-[10px] text-[var(--space-text-secondary)] uppercase tracking-wider">End Date</Label>
+                          <Label className="text-[0.625rem] text-[var(--space-text-secondary)] uppercase tracking-wider">End Date</Label>
                           <Input
                             type="date"
                             value={editEndDate}
@@ -1101,7 +1101,7 @@ export function SprintDetailView({
                         </div>
 
                         <div className="space-y-1.5">
-                          <Label className="text-[10px] text-[var(--space-text-secondary)] uppercase tracking-wider">Goal</Label>
+                          <Label className="text-[0.625rem] text-[var(--space-text-secondary)] uppercase tracking-wider">Goal</Label>
                           <Textarea
                             value={editGoal}
                             onChange={(e) => setEditGoal(e.target.value)}
@@ -1192,7 +1192,7 @@ export function SprintDetailView({
                         </button>
 
                         {deleteMenuOpen && (
-                          <div className="absolute bottom-full left-0 mb-1.5 bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] rounded-xl shadow-2xl z-50 overflow-hidden min-w-[150px]">
+                          <div className="absolute bottom-full left-0 mb-1.5 bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] rounded-xl shadow-2xl z-50 overflow-hidden min-w-[9.375rem]">
                             <button
                               type="button"
                               onClick={(e) => { e.stopPropagation(); handleDelete() }}
@@ -1235,7 +1235,7 @@ export function SprintDetailView({
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-semibold text-[var(--space-text-tertiary)] tracking-wide">Ongoing</span>
                   <span className={cn(
-                    'text-[10px] tabular-nums px-1.5 py-0.5 rounded-full font-medium',
+                    'text-[0.625rem] tabular-nums px-1.5 py-0.5 rounded-full font-medium',
                     ongoingTasks.length > 0
                       ? 'bg-[rgba(139,156,182,0.06)] text-[var(--space-accent)] border border-[rgba(139,156,182,0.15)]'
                       : 'bg-[var(--space-bg-card-hover)] text-[var(--space-text-muted)] border border-[var(--space-border-hard)]',
@@ -1294,7 +1294,7 @@ export function SprintDetailView({
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-semibold text-[var(--space-text-secondary)] tracking-wide">Finished</span>
                   <span className={cn(
-                    'text-[10px] tabular-nums px-1.5 py-0.5 rounded-full font-medium',
+                    'text-[0.625rem] tabular-nums px-1.5 py-0.5 rounded-full font-medium',
                     doneTasks.length > 0
                       ? 'bg-green-400/10 text-green-400/70 border border-green-400/20'
                       : 'bg-[var(--space-bg-card-hover)] text-[var(--space-text-muted)] border border-[var(--space-border-hard)]',
@@ -1305,7 +1305,7 @@ export function SprintDetailView({
                 {doneTasks.length === totalCount && totalCount > 0 && (
                   <div className="flex items-center gap-1">
                     <CheckCircle2 className="size-3 text-green-400/60" />
-                    <span className="text-[10px] text-green-400/60">Complete</span>
+                    <span className="text-[0.625rem] text-green-400/60">Complete</span>
                   </div>
                 )}
               </div>

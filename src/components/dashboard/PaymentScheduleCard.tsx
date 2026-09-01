@@ -52,13 +52,13 @@ export function PaymentScheduleCard({
           <div key={pkg.id}>
             {/* Package header */}
             <div className="flex items-center justify-between px-4 py-2.5 bg-[rgba(255,255,255,0.02)]">
-              <span className="text-[9px] font-bold uppercase tracking-widest text-[var(--space-text-secondary)]">
+              <span className="text-[0.5625rem] font-bold uppercase tracking-widest text-[var(--space-text-secondary)]">
                 {pkg.name}
               </span>
               {pkgHref && (
                 <Link
                   href={pkgHref}
-                  className="text-[9px] transition-colors ml-2 shrink-0 text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)]"
+                  className="text-[0.5625rem] transition-colors ml-2 shrink-0 text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)]"
                   style={{ color: 'rgba(139,156,182,0.25)' }}
                   onMouseEnter={e => (e.currentTarget.style.color = 'rgba(139,156,182,0.70)')}
                   onMouseLeave={e => (e.currentTarget.style.color = 'rgba(139,156,182,0.25)')}
@@ -81,11 +81,11 @@ export function PaymentScheduleCard({
                       {entry.label}
                     </p>
                     {entry.dueDate && (
-                      <p className={`text-[10px] mt-0.5 flex items-center gap-1 ${soon ? 'text-amber-400' : 'text-[var(--space-text-muted)]'}`}>
+                      <p className={`text-[0.625rem] mt-0.5 flex items-center gap-1 ${soon ? 'text-amber-400' : 'text-[var(--space-text-muted)]'}`}>
                         <CalendarDays className="size-3 shrink-0" />
                         Due {fmtScheduleDate(entry.dueDate)}
                         {soon && (
-                          <span className="text-[9px] px-1 py-px rounded-full bg-amber-400/10 border border-amber-400/20 ml-0.5">
+                          <span className="text-[0.5625rem] px-1 py-px rounded-full bg-amber-400/10 border border-amber-400/20 ml-0.5">
                             Soon
                           </span>
                         )}
@@ -106,7 +106,7 @@ export function PaymentScheduleCard({
         <div className="px-4 py-2.5 bg-[rgba(255,255,255,0.02)]">
           <Link
             href={footerLink.href}
-            className="text-[10px] text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)] transition-colors flex items-center gap-1"
+            className="text-[0.625rem] text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)] transition-colors flex items-center gap-1"
           >
             {footerLink.label}
             <ArrowRight className="size-2.5" />

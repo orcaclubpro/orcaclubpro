@@ -174,7 +174,7 @@ function TeamModal({
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) { onClose(); resetAddForm() } }}>
-      <DialogContent className="bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] text-[var(--space-text-primary)] p-0 overflow-hidden sm:max-w-[520px] gap-0">
+      <DialogContent className="bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] text-[var(--space-text-primary)] p-0 overflow-hidden sm:max-w-[32.5rem] gap-0">
         <DialogTitle className="sr-only">Manage Team</DialogTitle>
 
         {/* Header */}
@@ -201,7 +201,7 @@ function TeamModal({
               >
                 <Icon className="size-3.5" />
                 {label}
-                <span className={`text-[10px] tabular-nums px-1.5 py-0.5 rounded-full font-normal ${
+                <span className={`text-[0.625rem] tabular-nums px-1.5 py-0.5 rounded-full font-normal ${
                   tab === key ? 'bg-[rgba(139,156,182,0.06)] text-[var(--space-accent)]' : 'bg-[var(--space-bg-card-hover)] text-[var(--space-text-muted)]'
                 }`}>
                   {count}
@@ -212,7 +212,7 @@ function TeamModal({
         </div>
 
         {/* Tab content */}
-        <div className="px-7 py-5 min-h-[200px] max-h-[420px] overflow-y-auto">
+        <div className="px-7 py-5 min-h-[12.5rem] max-h-[26.25rem] overflow-y-auto">
 
           {/* Admin / Staff tab */}
           {tab === 'admin' && (
@@ -228,7 +228,7 @@ function TeamModal({
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-[var(--space-text-tertiary)] truncate">{m.name}</p>
                       {m.title && (
-                        <p className="text-[11px] text-[var(--space-text-muted)] truncate">{m.title}</p>
+                        <p className="text-[0.6875rem] text-[var(--space-text-muted)] truncate">{m.title}</p>
                       )}
                     </div>
                   </div>
@@ -257,14 +257,14 @@ function TeamModal({
                           <div className="flex-1 min-w-0">
                             <p className="text-sm text-[var(--space-text-tertiary)] truncate">{u.name}</p>
                             {!isEditing && (
-                              <p className="text-[11px] text-[var(--space-text-muted)] truncate">{u.email}</p>
+                              <p className="text-[0.6875rem] text-[var(--space-text-muted)] truncate">{u.email}</p>
                             )}
                           </div>
                           {!isEditing && (
                             <>
                               <button
                                 onClick={() => { setEmailEditing({ id: u.id, value: u.email }); setEmailError(null) }}
-                                className="flex items-center gap-1 px-2 py-1.5 rounded-md border border-[var(--space-border-hard)] text-[10px] text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] hover:border-[var(--space-border-hard)] hover:bg-[var(--space-bg-card-hover)] transition-all shrink-0"
+                                className="flex items-center gap-1 px-2 py-1.5 rounded-md border border-[var(--space-border-hard)] text-[0.625rem] text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] hover:border-[var(--space-border-hard)] hover:bg-[var(--space-bg-card-hover)] transition-all shrink-0"
                               >
                                 <Pencil className="size-3" />
                                 Email
@@ -272,7 +272,7 @@ function TeamModal({
                               <button
                                 onClick={() => handlePasswordReset(u.email)}
                                 disabled={rs === 'loading' || rs === 'sent'}
-                                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-[var(--space-border-hard)] text-[10px] text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] hover:border-[var(--space-border-hard)] hover:bg-[var(--space-bg-card-hover)] transition-all disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-[var(--space-border-hard)] text-[0.625rem] text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] hover:border-[var(--space-border-hard)] hover:bg-[var(--space-bg-card-hover)] transition-all disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
                               >
                                 {rs === 'loading' ? (
                                   <Loader2 className="size-3 animate-spin" />
@@ -329,7 +329,7 @@ function TeamModal({
                               </button>
                             </div>
                             {emailError && (
-                              <p className="text-[10px] text-red-400">{emailError}</p>
+                              <p className="text-[0.625rem] text-red-400">{emailError}</p>
                             )}
                           </div>
                         )}
@@ -364,7 +364,7 @@ function TeamModal({
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <p className="text-[10px] uppercase tracking-widest text-[var(--space-text-muted)] font-semibold">Add Client</p>
+                  <p className="text-[0.625rem] uppercase tracking-widest text-[var(--space-text-muted)] font-semibold">Add Client</p>
                   <div className="grid grid-cols-2 gap-2.5">
                     <div className="space-y-1.5">
                       <Label className="text-[var(--space-text-muted)] text-xs">First name</Label>
@@ -500,7 +500,7 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
       <div className="px-5 pt-4 pb-3 border-b border-[var(--space-border-hard)] shrink-0">
         <Link
           href={`/u/${username}/clients`}
-          className="text-[11px] text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)] transition-colors"
+          className="text-[0.6875rem] text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)] transition-colors"
         >
           ← All clients
         </Link>
@@ -515,15 +515,15 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
             className="w-full px-4 py-2.5 flex items-center gap-2 select-none hover:bg-[var(--space-bg-card-hover)] transition-colors"
             aria-expanded={clientsOpen}
           >
-            <p className="text-[10px] font-semibold text-[var(--space-text-muted)] uppercase tracking-widest flex-1 text-left">Switch client</p>
-            <span className="text-[10px] tabular-nums text-[var(--space-text-muted)] bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] px-1.5 py-0.5 rounded-md">
+            <p className="text-[0.625rem] font-semibold text-[var(--space-text-muted)] uppercase tracking-widest flex-1 text-left">Switch client</p>
+            <span className="text-[0.625rem] tabular-nums text-[var(--space-text-muted)] bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] px-1.5 py-0.5 rounded-md">
               {allClients.length}
             </span>
             <ChevronDown className={`size-3 text-[var(--space-text-muted)] transition-transform duration-200 ${clientsOpen ? 'rotate-180' : ''}`} />
           </button>
           {/* Expandable list */}
-          <div className={`overflow-hidden transition-[max-height] duration-300 ease-in-out ${clientsOpen ? 'max-h-[320px]' : 'max-h-0'}`}>
-            <div className="px-3 pb-3 space-y-0.5 overflow-y-auto max-h-[320px]">
+          <div className={`overflow-hidden transition-[max-height] duration-300 ease-in-out ${clientsOpen ? 'max-h-[20rem]' : 'max-h-0'}`}>
+            <div className="px-3 pb-3 space-y-0.5 overflow-y-auto max-h-[20rem]">
               {allClients.map((c) => {
                 const isCurrent = c.id === id
                 const cInitials = getInitials(c.name)
@@ -538,12 +538,12 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
                     }`}
                   >
                     <div className="size-6 rounded-md bg-[rgba(139,156,182,0.06)] border border-[rgba(139,156,182,0.10)] flex items-center justify-center shrink-0">
-                      <span className="text-[9px] font-bold" style={{ color: 'var(--space-accent)' }}>{cInitials}</span>
+                      <span className="text-[0.5625rem] font-bold" style={{ color: 'var(--space-accent)' }}>{cInitials}</span>
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="truncate leading-tight">{c.name}</p>
                       {c.company && (
-                        <p className="text-[10px] text-[var(--space-text-muted)] truncate leading-tight">{c.company}</p>
+                        <p className="text-[0.625rem] text-[var(--space-text-muted)] truncate leading-tight">{c.company}</p>
                       )}
                     </div>
                     {isCurrent && (
@@ -577,7 +577,7 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
             {!editing && (
               <button
                 onClick={() => setEditing(true)}
-                className="text-[11px] text-[var(--space-text-muted)] hover:text-[var(--space-text-tertiary)] transition-colors px-2.5 py-1 rounded-md border border-transparent hover:border-[var(--space-border-hard)] hover:bg-[var(--space-bg-card-hover)]"
+                className="text-[0.6875rem] text-[var(--space-text-muted)] hover:text-[var(--space-text-tertiary)] transition-colors px-2.5 py-1 rounded-md border border-transparent hover:border-[var(--space-border-hard)] hover:bg-[var(--space-bg-card-hover)]"
               >
                 Edit
               </button>
@@ -588,7 +588,7 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
-                  <Label className="text-[var(--space-text-muted)] text-[10px] uppercase tracking-wider font-semibold">First</Label>
+                  <Label className="text-[var(--space-text-muted)] text-[0.625rem] uppercase tracking-wider font-semibold">First</Label>
                   <Input
                     value={form.firstName}
                     onChange={(e) => {
@@ -599,7 +599,7 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-[var(--space-text-muted)] text-[10px] uppercase tracking-wider font-semibold">Last</Label>
+                  <Label className="text-[var(--space-text-muted)] text-[0.625rem] uppercase tracking-wider font-semibold">Last</Label>
                   <Input
                     value={form.lastName}
                     onChange={(e) => {
@@ -611,7 +611,7 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
                 </div>
               </div>
               <div className="space-y-1">
-                <Label className="text-[var(--space-text-muted)] text-[10px] uppercase tracking-wider font-semibold">Display Name</Label>
+                <Label className="text-[var(--space-text-muted)] text-[0.625rem] uppercase tracking-wider font-semibold">Display Name</Label>
                 <Input
                   value={form.name}
                   onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
@@ -619,7 +619,7 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-[var(--space-text-muted)] text-[10px] uppercase tracking-wider font-semibold">Email</Label>
+                <Label className="text-[var(--space-text-muted)] text-[0.625rem] uppercase tracking-wider font-semibold">Email</Label>
                 <Input
                   type="email"
                   value={form.email}
@@ -629,7 +629,7 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-[var(--space-text-muted)] text-[10px] uppercase tracking-wider font-semibold">Company</Label>
+                <Label className="text-[var(--space-text-muted)] text-[0.625rem] uppercase tracking-wider font-semibold">Company</Label>
                 <Input
                   value={form.company}
                   onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))}
@@ -676,7 +676,7 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
               <AlertCircle className="size-4 text-amber-400 shrink-0" />
               <div>
                 <p className="text-xs font-semibold text-amber-400">{fmt(accountBalance)} due</p>
-                <p className="text-[10px] text-amber-700">Outstanding balance</p>
+                <p className="text-[0.625rem] text-amber-700">Outstanding balance</p>
               </div>
             </div>
           )}
@@ -692,7 +692,7 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
               <div key={label}>
                 <div className="flex items-center gap-1.5 mb-1">
                   <Icon className="size-3 text-[var(--space-text-muted)]" />
-                  <span className="text-[10px] uppercase tracking-widest text-[var(--space-text-muted)] font-semibold">{label}</span>
+                  <span className="text-[0.625rem] uppercase tracking-widest text-[var(--space-text-muted)] font-semibold">{label}</span>
                 </div>
                 <p className={`text-base font-bold font-mono tabular-nums truncate ${amber ? 'text-amber-400' : 'text-[var(--space-text-primary)]'}`}>
                   {value}
@@ -703,7 +703,7 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
 
           {/* Contact */}
           <div className="space-y-2.5">
-            <p className="text-[10px] uppercase tracking-widest text-[var(--space-text-muted)] font-semibold">Contact</p>
+            <p className="text-[0.625rem] uppercase tracking-widest text-[var(--space-text-muted)] font-semibold">Contact</p>
             <div className="space-y-2">
               {email && (
                 <div className="flex items-center gap-2 text-[var(--space-text-muted)] text-xs">
@@ -723,7 +723,7 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
           {/* Team */}
           <div className="space-y-2.5">
             <div className="flex items-center justify-between">
-              <p className="text-[10px] uppercase tracking-widest text-[var(--space-text-muted)] font-semibold">
+              <p className="text-[0.625rem] uppercase tracking-widest text-[var(--space-text-muted)] font-semibold">
                 Team
                 {allUsers.length > 0 && (
                   <span className="ml-1.5 text-[var(--space-text-muted)] font-normal">{allUsers.length}</span>
@@ -731,7 +731,7 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
               </p>
               <button
                 onClick={() => setTeamModalOpen(true)}
-                className="text-[10px] text-[var(--space-text-muted)] hover:text-[var(--space-accent)] transition-colors flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-[rgba(139,156,182,0.04)]"
+                className="text-[0.625rem] text-[var(--space-text-muted)] hover:text-[var(--space-accent)] transition-colors flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-[rgba(139,156,182,0.04)]"
               >
                 <Users className="size-3" />
                 Modify
@@ -739,7 +739,7 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
             </div>
 
             {allUsers.length === 0 ? (
-              <p className="text-[11px] text-[var(--space-text-muted)]">No users associated.</p>
+              <p className="text-[0.6875rem] text-[var(--space-text-muted)]">No users associated.</p>
             ) : (
               <div className="space-y-1.5">
                 {allUsers.map((u) => (
@@ -752,7 +752,7 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
                     <span className={`truncate ${u.type === 'developer' ? 'text-[var(--space-text-muted)]' : 'text-[var(--space-text-secondary)]'}`}>
                       {u.name}
                     </span>
-                    <span className={`ml-auto text-[9px] uppercase tracking-wider font-semibold shrink-0 ${
+                    <span className={`ml-auto text-[0.5625rem] uppercase tracking-wider font-semibold shrink-0 ${
                       u.type === 'developer' ? 'text-[var(--space-text-muted)]' : 'text-[var(--space-text-secondary)]'
                     }`}>
                       {u.type === 'developer' ? (u.title ?? 'developer') : 'client'}
@@ -800,7 +800,7 @@ export function ClientSidebar(props: ClientSidebarProps) {
         aria-label="Open client details"
       >
         <SlidersHorizontal className="size-3.5" style={{ color: 'var(--space-accent)' }} />
-        <span className="text-[8px] font-semibold text-[var(--space-text-muted)] uppercase tracking-[0.15em] [writing-mode:vertical-rl] rotate-180">
+        <span className="text-[0.5rem] font-semibold text-[var(--space-text-muted)] uppercase tracking-[0.15em] [writing-mode:vertical-rl] rotate-180">
           Details
         </span>
       </button>

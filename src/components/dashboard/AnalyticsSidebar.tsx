@@ -19,10 +19,10 @@ function ChartTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null
   return (
     <div className="bg-[var(--space-bg-base)] border border-[#262626] rounded-lg px-3 py-2 text-xs shadow-2xl shadow-black/60">
-      <p className="text-[#555] mb-0.5 uppercase tracking-wider text-[10px]">{label}</p>
+      <p className="text-[#555] mb-0.5 uppercase tracking-wider text-[0.625rem]">{label}</p>
       <p className="text-[var(--space-text-primary)] font-semibold tabular-nums">{fmt(payload[0]?.value ?? 0)}</p>
       {payload[0]?.payload?.orders > 0 && (
-        <p className="text-[#444] text-[10px]">{payload[0].payload.orders} order{payload[0].payload.orders !== 1 ? 's' : ''}</p>
+        <p className="text-[#444] text-[0.625rem]">{payload[0].payload.orders} order{payload[0].payload.orders !== 1 ? 's' : ''}</p>
       )}
     </div>
   )
@@ -95,14 +95,14 @@ function InvoiceCard({ order }: { order: any }) {
       {/* Content */}
       <div className="px-4 pt-3.5 pb-3 space-y-1.5">
         <div className="flex items-start justify-between gap-3">
-          <p className="text-[13px] font-semibold text-[var(--space-text-primary)] leading-tight truncate">{clientName}</p>
-          <p className="text-[15px] font-bold text-amber-400 tabular-nums shrink-0 leading-tight">{fmt(order.amount ?? 0)}</p>
+          <p className="text-[0.8125rem] font-semibold text-[var(--space-text-primary)] leading-tight truncate">{clientName}</p>
+          <p className="text-[0.9375rem] font-bold text-amber-400 tabular-nums shrink-0 leading-tight">{fmt(order.amount ?? 0)}</p>
         </div>
         <div className="flex items-center justify-between gap-2">
-          {projectName && <span className="text-[11px] text-[#555] truncate">{projectName}</span>}
-          <span className="text-[10px] text-[var(--space-text-tertiary)] font-mono shrink-0 ml-auto">{invoiceLabel}</span>
+          {projectName && <span className="text-[0.6875rem] text-[#555] truncate">{projectName}</span>}
+          <span className="text-[0.625rem] text-[var(--space-text-tertiary)] font-mono shrink-0 ml-auto">{invoiceLabel}</span>
         </div>
-        <span className={`inline-block text-[10px] font-semibold whitespace-nowrap ${dueCls}`}>{dueLabel}</span>
+        <span className={`inline-block text-[0.625rem] font-semibold whitespace-nowrap ${dueCls}`}>{dueLabel}</span>
       </div>
 
       {/* Send button — a proper CTA */}
@@ -111,7 +111,7 @@ function InvoiceCard({ order }: { order: any }) {
         disabled={sendState === 'sending' || sendState === 'sent'}
         aria-label={`${btnLabel} — ${clientName}`}
         className={[
-          'w-full flex items-center justify-center gap-2 px-4 py-2.5 text-[11px] font-semibold',
+          'w-full flex items-center justify-center gap-2 px-4 py-2.5 text-[0.6875rem] font-semibold',
           'border-t transition-all duration-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--space-accent)]/60',
           sendState === 'sent'
             ? 'border-emerald-500/20 bg-emerald-500/[0.08] text-emerald-400 cursor-default'
@@ -137,8 +137,8 @@ function InvoiceCard({ order }: { order: any }) {
 function SectionHead({ label, aside }: { label: string; aside?: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between">
-      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#555]">{label}</p>
-      {aside && <span className="text-[10px] text-[var(--space-text-tertiary)] tabular-nums">{aside}</span>}
+      <p className="text-[0.625rem] font-bold uppercase tracking-[0.2em] text-[#555]">{label}</p>
+      {aside && <span className="text-[0.625rem] text-[var(--space-text-tertiary)] tabular-nums">{aside}</span>}
     </div>
   )
 }
@@ -148,7 +148,7 @@ function SectionHead({ label, aside }: { label: string; aside?: React.ReactNode 
 function SegBar({ segments }: { segments: { pct: number; color: string; label: string }[] }) {
   return (
     <div
-      className="h-[5px] w-full rounded-full overflow-hidden flex gap-px bg-[var(--space-bg-base)]"
+      className="h-[0.3125rem] w-full rounded-full overflow-hidden flex gap-px bg-[var(--space-bg-base)]"
       role="img"
       aria-label={segments.map(s => `${s.label}: ${Math.round(s.pct)}%`).join(', ')}
     >
@@ -180,10 +180,10 @@ function KpiMini({
       ].join(' ')}
     >
       <div className="flex items-center justify-between mb-2.5">
-        <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#555]">{label}</span>
+        <span className="text-[0.625rem] font-bold uppercase tracking-[0.18em] text-[#555]">{label}</span>
         <Icon className={`size-3 ${accent ? 'text-[var(--space-accent)]/60' : 'text-[var(--space-text-muted)]'}`} aria-hidden="true" />
       </div>
-      <p className={`text-[18px] font-bold tabular-nums leading-none ${accent ? 'text-[var(--space-accent)]' : 'text-[#D0D0D0]'}`}>
+      <p className={`text-[1.125rem] font-bold tabular-nums leading-none ${accent ? 'text-[var(--space-accent)]' : 'text-[#D0D0D0]'}`}>
         {value}
       </p>
     </div>
@@ -248,7 +248,7 @@ function SidebarContent({
           {/* Total callout */}
           <div className="rounded-xl border border-amber-400/15 bg-amber-400/[0.03] px-4 py-3 flex items-center justify-between">
             <div>
-              <p className="text-[9px] uppercase tracking-[0.18em] text-amber-400/50 font-semibold mb-1">Total Outstanding</p>
+              <p className="text-[0.5625rem] uppercase tracking-[0.18em] text-amber-400/50 font-semibold mb-1">Total Outstanding</p>
               <p className="text-2xl font-bold text-amber-400 tabular-nums leading-none">{fmt(pendingTotal)}</p>
             </div>
             <div className="size-9 rounded-full bg-amber-400/[0.06] border border-amber-400/15 flex items-center justify-center" aria-hidden="true">
@@ -265,7 +265,7 @@ function SidebarContent({
             ))}
           </div>
           {pendingOrders.length > 5 && (
-            <p className="text-center text-[10px] text-[var(--space-text-tertiary)] pt-1">
+            <p className="text-center text-[0.625rem] text-[var(--space-text-tertiary)] pt-1">
               +{pendingOrders.length - 5} more not shown
             </p>
           )}
@@ -322,13 +322,13 @@ function SidebarContent({
               : []),
           ].map(({ dot, label, value, count }) => (
             <div key={label} className="flex items-center justify-between">
-              <dt className="flex items-center gap-2 text-[11px] text-[var(--space-text-muted)]">
-                <span className={`size-[5px] rounded-full ${dot} shrink-0`} aria-hidden="true" />
+              <dt className="flex items-center gap-2 text-[0.6875rem] text-[var(--space-text-muted)]">
+                <span className={`size-[0.3125rem] rounded-full ${dot} shrink-0`} aria-hidden="true" />
                 {label}
               </dt>
-              <dd className="text-[11px] tabular-nums text-[#666] font-medium">
+              <dd className="text-[0.6875rem] tabular-nums text-[#666] font-medium">
                 {value}
-                <span className="text-[9px] text-[var(--space-text-tertiary)] ml-1.5">{count}</span>
+                <span className="text-[0.5625rem] text-[var(--space-text-tertiary)] ml-1.5">{count}</span>
               </dd>
             </div>
           ))}
@@ -350,11 +350,11 @@ function SidebarContent({
             { dot: 'bg-[#333]',                   label: 'Completed', value: projectStatus.completed },
           ].map(({ dot, label, value }) => (
             <div key={label} className="flex items-center justify-between">
-              <dt className="flex items-center gap-2 text-[11px] text-[var(--space-text-muted)]">
-                <span className={`size-[5px] rounded-full ${dot} shrink-0`} aria-hidden="true" />
+              <dt className="flex items-center gap-2 text-[0.6875rem] text-[var(--space-text-muted)]">
+                <span className={`size-[0.3125rem] rounded-full ${dot} shrink-0`} aria-hidden="true" />
                 {label}
               </dt>
-              <dd className="text-[11px] tabular-nums text-[#666] font-medium">{value}</dd>
+              <dd className="text-[0.6875rem] tabular-nums text-[#666] font-medium">{value}</dd>
             </div>
           ))}
         </dl>
@@ -467,7 +467,7 @@ export function AnalyticsSidebar({
         <span
           aria-hidden="true"
           className={[
-            'text-[8px] font-bold uppercase tracking-[0.22em] transition-colors duration-200',
+            'text-[0.5rem] font-bold uppercase tracking-[0.22em] transition-colors duration-200',
             '[writing-mode:vertical-rl]',
             open
               ? 'text-[var(--space-accent)]/70'
@@ -480,7 +480,7 @@ export function AnalyticsSidebar({
         {pendingCount > 0 && (
           <span
             aria-hidden="true"
-            className="text-[9px] font-bold tabular-nums text-amber-400/60"
+            className="text-[0.5625rem] font-bold tabular-nums text-amber-400/60"
           >
             {pendingCount}
           </span>
@@ -492,7 +492,7 @@ export function AnalyticsSidebar({
         role="presentation"
         className={[
           'fixed inset-0 z-[65]',
-          'bg-black/60 backdrop-blur-[2px]',
+          'bg-black/60 backdrop-blur-[0.125rem]',
           'transition-opacity duration-300',
           open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none',
         ].join(' ')}
@@ -508,7 +508,7 @@ export function AnalyticsSidebar({
         aria-hidden={!open}
         className={[
           'hidden md:flex fixed top-16 right-0 bottom-0 z-[70]',
-          'w-[320px] lg:w-[340px] xl:w-[380px] flex-col',
+          'w-[20rem] lg:w-[21.25rem] xl:w-[23.75rem] flex-col',
           'bg-[var(--space-bg-card)] border-l border-[var(--space-border-hard)]',
           'transition-transform duration-300 ease-[cubic-bezier(0.25,0,0.3,1)]',
           open ? 'translate-x-0' : 'translate-x-full',
@@ -517,7 +517,7 @@ export function AnalyticsSidebar({
         {/* Accent line at top */}
         <div
           aria-hidden="true"
-          className="h-[2px] w-full shrink-0"
+          className="h-[0.125rem] w-full shrink-0"
           style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(139,156,182,0.35) 40%, rgba(139,156,182,0.12) 100%)' }}
         />
 
@@ -531,8 +531,8 @@ export function AnalyticsSidebar({
               <TrendingUp className="size-3.5 text-[var(--space-accent)]/70" />
             </div>
             <div>
-              <h2 id={titleId} className="text-[13px] font-semibold text-[var(--space-text-primary)] leading-none">Analytics</h2>
-              <p className="text-[9px] text-[var(--space-text-tertiary)] mt-1 uppercase tracking-[0.18em]">
+              <h2 id={titleId} className="text-[0.8125rem] font-semibold text-[var(--space-text-primary)] leading-none">Analytics</h2>
+              <p className="text-[0.5625rem] text-[var(--space-text-tertiary)] mt-1 uppercase tracking-[0.18em]">
                 Last 30 days{pendingCount > 0 ? ` · ${pendingCount} pending` : ''}
               </p>
             </div>
@@ -574,11 +574,11 @@ export function AnalyticsSidebar({
       >
         {/* Drag handle */}
         <div className="flex justify-center pt-4 pb-1 shrink-0" aria-hidden="true">
-          <div className="w-8 h-[3px] rounded-full bg-[var(--space-bg-base)]" />
+          <div className="w-8 h-[0.1875rem] rounded-full bg-[var(--space-bg-base)]" />
         </div>
 
         {/* Accent line */}
-        <div aria-hidden="true" className="h-[1px] mx-6 mb-1 shrink-0"
+        <div aria-hidden="true" className="h-[0.0625rem] mx-6 mb-1 shrink-0"
           style={{ background: 'linear-gradient(90deg, transparent, rgba(139,156,182,0.25), transparent)' }}
         />
 
@@ -589,8 +589,8 @@ export function AnalyticsSidebar({
               <TrendingUp className="size-3.5 text-[var(--space-accent)]/70" />
             </div>
             <div>
-              <h2 id={`${titleId}-mobile`} className="text-[13px] font-semibold text-[var(--space-text-primary)] leading-none">Analytics</h2>
-              <p className="text-[9px] text-[var(--space-text-tertiary)] mt-1 uppercase tracking-[0.18em]">
+              <h2 id={`${titleId}-mobile`} className="text-[0.8125rem] font-semibold text-[var(--space-text-primary)] leading-none">Analytics</h2>
+              <p className="text-[0.5625rem] text-[var(--space-text-tertiary)] mt-1 uppercase tracking-[0.18em]">
                 Last 30 days{pendingCount > 0 ? ` · ${pendingCount} pending` : ''}
               </p>
             </div>

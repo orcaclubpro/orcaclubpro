@@ -102,7 +102,7 @@ export function DashboardGreeting({ firstName, subtitle, size = 'default', meta 
     return (
       <div>
         {meta && (
-          <p className="text-[10px] uppercase tracking-[0.25em] text-[var(--space-text-muted)] mb-2 select-none">{meta}</p>
+          <p className="text-[0.625rem] uppercase tracking-[0.25em] text-[var(--space-text-muted)] mb-2 select-none">{meta}</p>
         )}
         <h1 className={headingClass}>
           Good{' '}
@@ -119,7 +119,7 @@ export function DashboardGreeting({ firstName, subtitle, size = 'default', meta 
   return (
     <div>
       {meta && (
-        <p className="text-[10px] uppercase tracking-[0.25em] text-[var(--space-text-muted)] mb-2 select-none">{meta}</p>
+        <p className="text-[0.625rem] uppercase tracking-[0.25em] text-[var(--space-text-muted)] mb-2 select-none">{meta}</p>
       )}
       <div
         className="transition-all duration-500 ease-in-out"

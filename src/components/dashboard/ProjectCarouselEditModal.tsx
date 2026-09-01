@@ -7,7 +7,7 @@ const ProjectSettingsModal = dynamic(
   () => import('./ProjectSettingsModal').then(m => ({ default: m.ProjectSettingsModal })),
   { ssr: false }
 )
-import type { SerializedProject } from './ProjectsCarousel'
+import type { SerializedProject } from '@/lib/serialization'
 
 export function ProjectCarouselEditModal({ project, large }: { project: SerializedProject; large?: boolean }) {
   const [open, setOpen] = useState(false)

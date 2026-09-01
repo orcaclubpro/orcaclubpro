@@ -96,7 +96,7 @@ const accentBtn =
   'flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg bg-[var(--space-accent)] text-black hover:opacity-90 transition-all disabled:opacity-50'
 const ghostBtn =
   'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-[var(--space-border-hard)] text-[var(--space-text-tertiary)] hover:text-[var(--space-text-primary)] hover:bg-[var(--space-bg-card-hover)] transition-all disabled:opacity-50'
-const fieldLabel = 'text-[10px] font-semibold uppercase tracking-widest text-[var(--space-text-muted)]'
+const fieldLabel = 'text-[0.625rem] font-semibold uppercase tracking-widest text-[var(--space-text-muted)]'
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -472,7 +472,7 @@ export function MilestonesTab({ clientId, username, initialTarget }: MilestonesT
   const renderEditor = () => (
     <div className="space-y-1.5">
       {eLogMode && (
-        <p className="text-[10px] text-[var(--space-text-muted)] px-1">
+        <p className="text-[0.625rem] text-[var(--space-text-muted)] px-1">
           Logging this keeps the item in Planned Work and marks it complete.
         </p>
       )}
@@ -484,7 +484,7 @@ export function MilestonesTab({ clientId, username, initialTarget }: MilestonesT
         <select value={eCategory} onChange={(e) => setECategory(e.target.value as WorkCategory)} className={cn(selectCls, 'py-1.5')}>
           {CATEGORIES.map((c) => <option key={c} value={c}>{WORK_CATEGORY_LABEL[c]}</option>)}
         </select>
-        <input value={eDesc} onChange={(e) => setEDesc(e.target.value)} placeholder="Description" className={cn(inputCls, 'flex-1 min-w-[140px] py-1.5 text-xs')} />
+        <input value={eDesc} onChange={(e) => setEDesc(e.target.value)} placeholder="Description" className={cn(inputCls, 'flex-1 min-w-[8.75rem] py-1.5 text-xs')} />
         <button onClick={handleEditorSave} disabled={eSaving} className={accentBtn}>
           {eSaving ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />} {eLogMode ? 'Log' : 'Save'}
         </button>
@@ -507,15 +507,15 @@ export function MilestonesTab({ clientId, username, initialTarget }: MilestonesT
           isBilled && 'opacity-55',
         )}
       >
-        <span className="text-[11px] font-mono tabular-nums text-[var(--space-text-muted)] shrink-0 w-14">{String(e.date).slice(5, 10)}</span>
+        <span className="text-[0.6875rem] font-mono tabular-nums text-[var(--space-text-muted)] shrink-0 w-14">{String(e.date).slice(5, 10)}</span>
         <span className="text-sm font-bold tabular-nums text-[var(--space-text-primary)] shrink-0 w-12">
           {e.hours != null && e.hours > 0 ? `${fmtHrs(e.hours)}h` : '—'}
         </span>
-        <span className="text-[10px] uppercase tracking-wide text-[var(--space-text-muted)] shrink-0 w-20">{WORK_CATEGORY_LABEL[e.category ?? 'work']}</span>
+        <span className="text-[0.625rem] uppercase tracking-wide text-[var(--space-text-muted)] shrink-0 w-20">{WORK_CATEGORY_LABEL[e.category ?? 'work']}</span>
         <span className="text-xs text-[var(--space-text-tertiary)] flex-1 min-w-0 truncate">{e.description || '—'}</span>
         {isBilled ? (
           <span
-            className="shrink-0 flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide rounded border border-[var(--space-border-hard)] text-[var(--space-text-muted)]"
+            className="shrink-0 flex items-center gap-1 px-1.5 py-0.5 text-[0.5625rem] font-semibold uppercase tracking-wide rounded border border-[var(--space-border-hard)] text-[var(--space-text-muted)]"
             title="Already on an invoice — frozen"
           >
             <Lock className="size-2.5" /> billed
@@ -543,7 +543,7 @@ export function MilestonesTab({ clientId, username, initialTarget }: MilestonesT
         <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           <div className="max-w-2xl mx-auto w-full pt-[4vh] pb-8 space-y-5">
             <div className="text-center space-y-1.5">
-              <p className="text-[9px] font-bold tracking-[0.3em] uppercase text-[var(--space-text-tertiary)]">Milestones</p>
+              <p className="text-[0.5625rem] font-bold tracking-[0.3em] uppercase text-[var(--space-text-tertiary)]">Milestones</p>
               <p className="text-xs text-[var(--space-text-muted)]">
                 Open a package to log the work its next payment will document.
               </p>
@@ -579,7 +579,7 @@ export function MilestonesTab({ clientId, username, initialTarget }: MilestonesT
                 placeholder="Search packages or clients…"
                 className="flex-1 bg-transparent text-sm text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)] outline-none"
               />
-              <kbd className="hidden sm:inline text-[10px] text-[var(--space-text-muted)] bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] rounded px-1.5 py-0.5 font-mono">↵</kbd>
+              <kbd className="hidden sm:inline text-[0.625rem] text-[var(--space-text-muted)] bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] rounded px-1.5 py-0.5 font-mono">↵</kbd>
             </div>
 
             {!portfolioLoaded ? (
@@ -593,11 +593,11 @@ export function MilestonesTab({ clientId, username, initialTarget }: MilestonesT
             ) : (
               <div className="space-y-2.5">
                 <div className="flex items-center gap-2 px-1">
-                  <p className="text-[9px] font-bold tracking-[0.3em] uppercase text-[var(--space-text-muted)]">
+                  <p className="text-[0.5625rem] font-bold tracking-[0.3em] uppercase text-[var(--space-text-muted)]">
                     Packages · {filtered.length}
                   </p>
                   {needsRecapCount > 0 && (
-                    <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-500">
+                    <span className="flex items-center gap-1 text-[0.625rem] font-semibold text-amber-500">
                       <AlertTriangle className="size-3" /> {needsRecapCount} need a recap
                     </span>
                   )}
@@ -681,7 +681,7 @@ export function MilestonesTab({ clientId, username, initialTarget }: MilestonesT
                   <Icon className="size-3.5" />
                   {s.label}
                   {count !== null && count > 0 && (
-                    <span className={cn('text-[10px] tabular-nums', isActive ? 'opacity-70' : 'text-[var(--space-text-muted)]')}>{count}</span>
+                    <span className={cn('text-[0.625rem] tabular-nums', isActive ? 'opacity-70' : 'text-[var(--space-text-muted)]')}>{count}</span>
                   )}
                 </button>
               )
@@ -704,7 +704,7 @@ export function MilestonesTab({ clientId, username, initialTarget }: MilestonesT
                 <>
                   {/* Payment schedule — where this package stands */}
                   <div className="rounded-xl border border-[var(--space-border-hard)] p-4 sm:p-5 bg-[var(--space-bg-card-hover)] space-y-3">
-                    <p className="text-[9px] font-bold tracking-[0.22em] uppercase text-[var(--space-text-tertiary)] flex items-center gap-1.5">
+                    <p className="text-[0.5625rem] font-bold tracking-[0.22em] uppercase text-[var(--space-text-tertiary)] flex items-center gap-1.5">
                       <Milestone className="size-3" /> Payment schedule
                     </p>
                     {schedule.length === 0 ? (
@@ -726,8 +726,8 @@ export function MilestonesTab({ clientId, username, initialTarget }: MilestonesT
                               <span className={cn('text-xs flex-1 min-w-0 truncate', state === 'pending' ? 'text-[var(--space-text-tertiary)]' : 'text-[var(--space-text-secondary)]')}>
                                 {s.label || 'Payment'}
                               </span>
-                              <span className="text-[10px] uppercase tracking-wide text-[var(--space-text-muted)] shrink-0 w-16 text-right">{state}</span>
-                              <span className="text-[11px] tabular-nums text-[var(--space-text-muted)] shrink-0 w-24 text-right">{fmtDay(s.dueDate) || '—'}</span>
+                              <span className="text-[0.625rem] uppercase tracking-wide text-[var(--space-text-muted)] shrink-0 w-16 text-right">{state}</span>
+                              <span className="text-[0.6875rem] tabular-nums text-[var(--space-text-muted)] shrink-0 w-24 text-right">{fmtDay(s.dueDate) || '—'}</span>
                               <span className="text-xs font-semibold tabular-nums text-[var(--space-text-primary)] shrink-0 w-20 text-right">{fmt(s.amount)}</span>
                             </>
                           )
@@ -752,7 +752,7 @@ export function MilestonesTab({ clientId, username, initialTarget }: MilestonesT
                       </div>
                     )}
                     {pendingEntries.length > 0 && (
-                      <p className="text-[10px] text-[var(--space-text-muted)]">
+                      <p className="text-[0.625rem] text-[var(--space-text-muted)]">
                         Pick a pending payment to send its invoice.
                       </p>
                     )}
@@ -773,7 +773,7 @@ export function MilestonesTab({ clientId, username, initialTarget }: MilestonesT
                       onChange={(e) => setLogDesc(e.target.value)}
                       onKeyDown={(e) => { if (e.key === 'Enter' && !logging) void handleLog() }}
                       placeholder="Log work on this package — what did you do? ↵"
-                      className={cn(inputCls, 'flex-1 min-w-[160px] py-1.5')}
+                      className={cn(inputCls, 'flex-1 min-w-[10rem] py-1.5')}
                     />
                     <button onClick={handleLog} disabled={logging} className={accentBtn}>
                       {logging ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />} Log
@@ -782,7 +782,7 @@ export function MilestonesTab({ clientId, username, initialTarget }: MilestonesT
 
                   {/* Unbilled work — what the next payment will document */}
                   <div className="space-y-1.5">
-                    <p className="text-[9px] font-bold tracking-[0.25em] uppercase text-[var(--space-accent)] flex items-center gap-1.5">
+                    <p className="text-[0.5625rem] font-bold tracking-[0.25em] uppercase text-[var(--space-accent)] flex items-center gap-1.5">
                       <ListChecks className="size-3" /> Unbilled work · {pending.length}
                       {pendingHours > 0 && <span className="text-[var(--space-text-muted)] tracking-normal normal-case font-medium">{fmtHrs(pendingHours)}h</span>}
                     </p>
@@ -795,7 +795,7 @@ export function MilestonesTab({ clientId, username, initialTarget }: MilestonesT
                       <div className="space-y-1.5">{pending.slice(0, 5).map(renderLoggedRow)}</div>
                     )}
                     {pending.length > 5 && (
-                      <button onClick={() => setStage('log')} className="text-[11px] font-semibold text-[var(--space-accent)] hover:underline px-1">
+                      <button onClick={() => setStage('log')} className="text-[0.6875rem] font-semibold text-[var(--space-accent)] hover:underline px-1">
                         See all {pending.length} entries
                       </button>
                     )}
@@ -829,7 +829,7 @@ export function MilestonesTab({ clientId, username, initialTarget }: MilestonesT
               {stage === 'plan' && (
                 <>
                   <div className="rounded-xl border border-[var(--space-border-hard)] p-4 space-y-3 bg-[var(--space-bg-card-hover)]">
-                    <p className="text-[9px] font-bold tracking-[0.22em] uppercase text-[var(--space-text-tertiary)] flex items-center gap-1.5">
+                    <p className="text-[0.5625rem] font-bold tracking-[0.22em] uppercase text-[var(--space-text-tertiary)] flex items-center gap-1.5">
                       <CalendarPlus className="size-3" /> Plan work — what&apos;s left on this package
                     </p>
                     <input
@@ -874,15 +874,15 @@ export function MilestonesTab({ clientId, username, initialTarget }: MilestonesT
                               ? <CircleCheck className="size-4" style={{ color: 'var(--space-accent)' }} />
                               : <Circle className="size-4" />}
                           </button>
-                          <span className="text-[11px] font-mono tabular-nums text-[var(--space-text-muted)] shrink-0 w-14">{String(e.date).slice(5, 10)}</span>
-                          <span className="text-[10px] uppercase tracking-wide text-[var(--space-text-muted)] shrink-0 w-20">{WORK_CATEGORY_LABEL[e.category ?? 'work']}</span>
+                          <span className="text-[0.6875rem] font-mono tabular-nums text-[var(--space-text-muted)] shrink-0 w-14">{String(e.date).slice(5, 10)}</span>
+                          <span className="text-[0.625rem] uppercase tracking-wide text-[var(--space-text-muted)] shrink-0 w-20">{WORK_CATEGORY_LABEL[e.category ?? 'work']}</span>
                           <span className={cn('text-sm flex-1 min-w-0 truncate', e.completion === 'complete' ? 'text-[var(--space-text-muted)] line-through' : 'text-[var(--space-text-secondary)]')}>
                             {e.description || '—'}
                           </span>
                           <button onClick={() => openEditor(e, false)} className="shrink-0 size-6 flex items-center justify-center rounded-md text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] hover:bg-[var(--space-bg-card)] transition-colors" title="Edit planned item">
                             <Pencil className="size-3.5" />
                           </button>
-                          <button onClick={() => openEditor(e, true)} className="shrink-0 flex items-center gap-1 px-2 py-1 text-[11px] font-semibold rounded-md text-[var(--space-accent)] hover:bg-[var(--space-bg-card)] transition-colors" title="Log this planned work as done">
+                          <button onClick={() => openEditor(e, true)} className="shrink-0 flex items-center gap-1 px-2 py-1 text-[0.6875rem] font-semibold rounded-md text-[var(--space-accent)] hover:bg-[var(--space-bg-card)] transition-colors" title="Log this planned work as done">
                             Log <ArrowRight className="size-3" />
                           </button>
                           <button onClick={() => handleDelete(e.id)} disabled={deletingId === e.id} className="shrink-0 size-6 flex items-center justify-center rounded-md text-[var(--space-text-muted)] hover:text-red-400 hover:bg-[var(--space-bg-card)] transition-colors disabled:opacity-50" title="Delete planned item">
@@ -899,7 +899,7 @@ export function MilestonesTab({ clientId, username, initialTarget }: MilestonesT
               {stage === 'log' && (
                 <>
                   <div className="rounded-xl border border-[var(--space-border-hard)] p-4 space-y-3 bg-[var(--space-bg-card-hover)]">
-                    <p className="text-[9px] font-bold tracking-[0.22em] uppercase text-[var(--space-text-tertiary)] flex items-center gap-1.5">
+                    <p className="text-[0.5625rem] font-bold tracking-[0.22em] uppercase text-[var(--space-text-tertiary)] flex items-center gap-1.5">
                       <Plus className="size-3" /> Log completed work
                     </p>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -931,13 +931,13 @@ export function MilestonesTab({ clientId, username, initialTarget }: MilestonesT
                         {logging ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />} Log
                       </button>
                     </div>
-                    <p className="text-[10px] text-[var(--space-text-muted)]">
+                    <p className="text-[0.625rem] text-[var(--space-text-muted)]">
                       Hours are informational only — never billed. The next scheduled payment carries these as $0 lines.
                     </p>
                   </div>
 
                   <div>
-                    <p className="text-[9px] font-bold tracking-[0.25em] uppercase text-[var(--space-accent)] mb-2.5">
+                    <p className="text-[0.5625rem] font-bold tracking-[0.25em] uppercase text-[var(--space-accent)] mb-2.5">
                       Unbilled · {pending.length}
                     </p>
                     {pending.length === 0 ? (
@@ -952,7 +952,7 @@ export function MilestonesTab({ clientId, username, initialTarget }: MilestonesT
 
                   {billed.length > 0 && (
                     <div>
-                      <p className="text-[9px] font-bold tracking-[0.25em] uppercase text-[var(--space-text-muted)] mb-2.5">
+                      <p className="text-[0.5625rem] font-bold tracking-[0.25em] uppercase text-[var(--space-text-muted)] mb-2.5">
                         Billed · {billed.length}
                       </p>
                       <div className="space-y-1.5">{billed.map(renderLoggedRow)}</div>
@@ -972,7 +972,7 @@ export function MilestonesTab({ clientId, username, initialTarget }: MilestonesT
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      <p className="text-[9px] font-bold tracking-[0.25em] uppercase text-[var(--space-text-muted)]">
+                      <p className="text-[0.5625rem] font-bold tracking-[0.25em] uppercase text-[var(--space-text-muted)]">
                         Pending payments · {pendingEntries.length}
                       </p>
                       {pendingEntries.map((s) => (
@@ -992,7 +992,7 @@ export function MilestonesTab({ clientId, username, initialTarget }: MilestonesT
                             : <Circle className="size-3.5 shrink-0 text-[var(--space-text-muted)]" />}
                           <div className="flex-1 min-w-0">
                             <p className="text-sm text-[var(--space-text-secondary)] truncate">{s.label || 'Payment'}</p>
-                            <p className="text-[11px] text-[var(--space-text-muted)] tabular-nums truncate">
+                            <p className="text-[0.6875rem] text-[var(--space-text-muted)] tabular-nums truncate">
                               {fmtDay(s.dueDate) || 'No due date'} · {pending.length} unbilled item{pending.length === 1 ? '' : 's'}
                             </p>
                           </div>
@@ -1029,7 +1029,7 @@ export function MilestonesTab({ clientId, username, initialTarget }: MilestonesT
                       onClick={() => setEmailOpen(true)}
                     />
                   </div>
-                  <p className="text-[11px] text-[var(--space-text-muted)]">
+                  <p className="text-[0.6875rem] text-[var(--space-text-muted)]">
                     The recap covers the selected payment — the work log sheet and the proposal cover the whole package.
                   </p>
                 </>
@@ -1112,7 +1112,7 @@ function BoardRow({
         isSel ? 'bg-[var(--space-bg-card-hover)] border-[var(--space-accent-glow)]' : 'border-[var(--space-border-hard)] hover:bg-[var(--space-bg-card-hover)]',
       )}
     >
-      {isSel && <div className="absolute left-0 top-2 bottom-2 w-[2px] rounded-full" style={{ background: 'var(--space-accent)', opacity: 0.7 }} />}
+      {isSel && <div className="absolute left-0 top-2 bottom-2 w-[0.125rem] rounded-full" style={{ background: 'var(--space-accent)', opacity: 0.7 }} />}
       <span
         className="size-2 rounded-full shrink-0"
         style={{
@@ -1128,22 +1128,22 @@ function BoardRow({
           {row.clientName}
           {row.clientCompany && <span className="font-normal text-[var(--space-text-muted)]"> · {row.clientCompany}</span>}
         </p>
-        <p className="text-[11px] text-[var(--space-text-muted)] truncate">{row.packageName}</p>
+        <p className="text-[0.6875rem] text-[var(--space-text-muted)] truncate">{row.packageName}</p>
       </div>
 
       {row.needsRecap && (
-        <span className="hidden sm:flex shrink-0 items-center gap-1 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide rounded border border-amber-500/30 bg-amber-500/10 text-amber-500">
+        <span className="hidden sm:flex shrink-0 items-center gap-1 px-1.5 py-0.5 text-[0.5625rem] font-semibold uppercase tracking-wide rounded border border-amber-500/30 bg-amber-500/10 text-amber-500">
           <AlertTriangle className="size-2.5" /> recap
         </span>
       )}
-      <span className="text-[11px] tabular-nums text-[var(--space-text-muted)] shrink-0 w-16 text-right">
+      <span className="text-[0.6875rem] tabular-nums text-[var(--space-text-muted)] shrink-0 w-16 text-right">
         {row.pendingWorkCount} unbilled
       </span>
-      <div className="shrink-0 w-[104px] text-right">
+      <div className="shrink-0 w-[6.5rem] text-right">
         <p className="text-xs font-semibold tabular-nums text-[var(--space-text-secondary)]">
           {row.nextEntry ? fmt(row.nextEntry.amount) : row.isDraft ? 'Draft' : '—'}
         </p>
-        <p className="text-[10px] tabular-nums text-[var(--space-text-muted)] truncate">
+        <p className="text-[0.625rem] tabular-nums text-[var(--space-text-muted)] truncate">
           {row.nextEntry?.dueDate
             ? fmtDay(row.nextEntry.dueDate)
             : row.nextEntry?.label || (row.isDraft ? 'Not scheduled' : 'No due date')}
@@ -1168,7 +1168,7 @@ function JumpCard({
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-xs font-semibold text-[var(--space-text-primary)] leading-tight">{title}</p>
-        <p className="text-[10px] text-[var(--space-text-muted)] mt-0.5 truncate">{hint}</p>
+        <p className="text-[0.625rem] text-[var(--space-text-muted)] mt-0.5 truncate">{hint}</p>
       </div>
       <ArrowRight className="size-3.5 shrink-0 text-[var(--space-text-muted)] opacity-0 -translate-x-1 group-hover:opacity-60 group-hover:translate-x-0 transition-all" />
     </button>

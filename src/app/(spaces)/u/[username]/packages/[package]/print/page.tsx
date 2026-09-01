@@ -454,9 +454,11 @@ export default async function PackagePrintPage({
           :root { --space-bg-base: #ffffff !important; --space-text: #111111 !important; }
           html, body { background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           header, footer, nav { display: none !important; }
-          /* The spaces layout scales <main> with zoom:1.3 and pads for the fixed
-             header/bottom nav — undo both or the invoice overflows the page */
-          main { zoom: 1 !important; padding: 0 !important; min-height: 0 !important; }
+          /* The spaces layout pads <main> for the fixed header and bottom nav,
+             and raises the root font size — undo all three or the invoice
+             overflows the page */
+          html { font-size: 16px !important; }
+          main { padding: 0 !important; min-height: 0 !important; }
         }
       `}</style>
     </div>

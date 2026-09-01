@@ -92,9 +92,8 @@ export function EmailPackageModal({
 
   if (typeof document === 'undefined') return null
 
-  // Portaled to <body> — inside the dashboard layout's zoomed <main>, fixed
-  // positioning resolves against the zoomed box and the modal scrolls with
-  // the page instead of centering in the viewport.
+  // Portaled to <body> so the overlay is never trapped by an ancestor's
+  // transform/overflow context and always centers against the viewport.
   return createPortal(
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
       {/* Backdrop */}
@@ -117,7 +116,7 @@ export function EmailPackageModal({
 
         {/* Send as */}
         <div className="space-y-1.5">
-          <label className="text-[10px] font-semibold uppercase tracking-widest text-[var(--space-text-muted)]">
+          <label className="text-[0.625rem] font-semibold uppercase tracking-widest text-[var(--space-text-muted)]">
             Send as
           </label>
           <div className="grid grid-cols-3 gap-2">
@@ -143,12 +142,12 @@ export function EmailPackageModal({
               )
             })}
           </div>
-          <p className="text-[10px] text-[var(--space-text-muted)] leading-relaxed">{hint}</p>
+          <p className="text-[0.625rem] text-[var(--space-text-muted)] leading-relaxed">{hint}</p>
         </div>
 
         {/* Addresses */}
         <div className="space-y-1.5">
-          <label className="text-[10px] font-semibold uppercase tracking-widest text-[var(--space-text-muted)]">
+          <label className="text-[0.625rem] font-semibold uppercase tracking-widest text-[var(--space-text-muted)]">
             Email addresses
           </label>
           <textarea
@@ -158,7 +157,7 @@ export function EmailPackageModal({
             rows={3}
             className="w-full px-3 py-2.5 text-sm bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] rounded-xl text-[var(--space-text-primary)] placeholder-[#555555] focus:outline-none focus:border-[rgba(139,156,182,0.20)] resize-none"
           />
-          <p className="text-[10px] text-[var(--space-text-muted)]">Separate multiple addresses with commas</p>
+          <p className="text-[0.625rem] text-[var(--space-text-muted)]">Separate multiple addresses with commas</p>
         </div>
 
         {/* Bill to override — proposal & invoice only */}
@@ -170,10 +169,10 @@ export function EmailPackageModal({
               className="w-full flex items-center gap-2 px-3 py-2.5 text-left"
             >
               <ChevronRight className={cn('size-3.5 text-[var(--space-text-muted)] transition-transform', showBillTo && 'rotate-90')} />
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--space-text-muted)]">Bill to override</span>
+              <span className="text-[0.625rem] font-semibold uppercase tracking-widest text-[var(--space-text-muted)]">Bill to override</span>
               <span
                 className={cn(
-                  'ml-auto text-[9px] font-semibold uppercase tracking-widest',
+                  'ml-auto text-[0.5625rem] font-semibold uppercase tracking-widest',
                   billToComplete ? 'text-emerald-400' : 'text-[var(--space-text-muted)]',
                 )}
               >
@@ -182,7 +181,7 @@ export function EmailPackageModal({
             </button>
             {showBillTo && (
               <div className="px-3 pb-3 pt-1 space-y-2 border-t border-[var(--space-border-hard)]">
-                <p className="text-[10px] text-[var(--space-text-muted)] leading-relaxed pt-2">
+                <p className="text-[0.625rem] text-[var(--space-text-muted)] leading-relaxed pt-2">
                   Prefilled from the client's saved details — edit any field to change the bill-to on this send. Used only when Name, Email, Street, City, State, and ZIP are all filled.
                 </p>
                 <div className="grid grid-cols-2 gap-2">

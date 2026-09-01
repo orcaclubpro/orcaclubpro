@@ -311,7 +311,7 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
 
             {/* Project identity */}
             <div className="relative z-10 flex-1 flex flex-col justify-center px-10">
-              <p className="text-[10px] tracking-[0.4em] uppercase text-[var(--space-accent)] font-medium mb-4">
+              <p className="text-[0.625rem] tracking-[0.4em] uppercase text-[var(--space-accent)] font-medium mb-4">
                 Project
               </p>
               <h3 className="text-2xl font-bold text-[var(--space-accent)] leading-tight mb-2 line-clamp-2">
@@ -353,7 +353,7 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
                       { label: 'Pending', value: pendingTasks, color: 'text-yellow-400' },
                     ].map(({ label, value, color }) => (
                       <div key={label} className="flex items-center justify-between">
-                        <span className="text-[10px] tracking-[0.25em] uppercase text-[var(--space-accent)] font-medium">
+                        <span className="text-[0.625rem] tracking-[0.25em] uppercase text-[var(--space-accent)] font-medium">
                           {label}
                         </span>
                         <span className={cn('text-sm font-semibold tabular-nums', color)}>
@@ -364,14 +364,14 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
                   </div>
                 </div>
               ) : (
-                <p className="text-[11px] text-[var(--space-text-muted)] tracking-wide">No tasks assigned yet</p>
+                <p className="text-[0.6875rem] text-[var(--space-text-muted)] tracking-wide">No tasks assigned yet</p>
               )}
             </div>
 
             {/* Client info — pinned to bottom */}
             {clientAccount && (
               <div className="relative z-10 px-10 pb-10 pt-6 border-t border-[var(--space-border-hard)]">
-                <p className="text-[10px] tracking-[0.4em] uppercase text-[var(--space-accent)] font-medium mb-3">
+                <p className="text-[0.625rem] tracking-[0.4em] uppercase text-[var(--space-accent)] font-medium mb-3">
                   Client
                 </p>
                 <div className="flex items-center gap-3">
@@ -403,7 +403,7 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
 
             {/* Header */}
             <div className="px-10 pt-10 pb-6 border-b border-[var(--space-border-hard)] flex-shrink-0">
-              <p className="text-[10px] tracking-[0.4em] uppercase text-[var(--space-accent)] font-medium mb-4">
+              <p className="text-[0.625rem] tracking-[0.4em] uppercase text-[var(--space-accent)] font-medium mb-4">
                 Configuration
               </p>
               <DialogTitle className={`${gothic.className} text-2xl text-[var(--space-text-primary)]`}>
@@ -423,7 +423,7 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
             >
               {/* ── Identity ── */}
               <section className="space-y-5">
-                <p className="text-[10px] tracking-[0.4em] uppercase text-[var(--space-accent)] font-medium">
+                <p className="text-[0.625rem] tracking-[0.4em] uppercase text-[var(--space-accent)] font-medium">
                   Identity
                 </p>
 
@@ -459,7 +459,7 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
 
               {/* ── Client Account ── */}
               <section className="space-y-4">
-                <p className="text-[10px] tracking-[0.4em] uppercase text-[var(--space-accent)] font-medium">
+                <p className="text-[0.625rem] tracking-[0.4em] uppercase text-[var(--space-accent)] font-medium">
                   Client Account
                 </p>
                 <ClientAccountCombobox
@@ -473,7 +473,7 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
 
               {/* ── Status ── */}
               <section className="space-y-4">
-                <p className="text-[10px] tracking-[0.4em] uppercase text-[var(--space-accent)] font-medium">
+                <p className="text-[0.625rem] tracking-[0.4em] uppercase text-[var(--space-accent)] font-medium">
                   Status
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -504,7 +504,7 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
 
               {/* ── Timeline ── */}
               <section className="space-y-4">
-                <p className="text-[10px] tracking-[0.4em] uppercase text-[var(--space-accent)] font-medium">
+                <p className="text-[0.625rem] tracking-[0.4em] uppercase text-[var(--space-accent)] font-medium">
                   Timeline
                 </p>
                 <div className="grid grid-cols-2 gap-4">
@@ -557,7 +557,7 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
 
               {/* ── Budget ── */}
               <section className="space-y-4">
-                <p className="text-[10px] tracking-[0.4em] uppercase text-[var(--space-accent)] font-medium">
+                <p className="text-[0.625rem] tracking-[0.4em] uppercase text-[var(--space-accent)] font-medium">
                   Budget
                 </p>
                 <div className="flex gap-3">
@@ -596,7 +596,7 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
 
               {/* ── Danger Zone ── */}
               <section className="space-y-3 border-t border-red-500/10 pt-6">
-                <p className="text-[10px] tracking-[0.4em] uppercase text-red-400/70 font-medium flex items-center gap-2">
+                <p className="text-[0.625rem] tracking-[0.4em] uppercase text-red-400/70 font-medium flex items-center gap-2">
                   <AlertTriangle className="size-3" />
                   Danger Zone
                 </p>
@@ -615,7 +615,7 @@ export function ProjectSettingsModal({ project, tasks, open: controlledOpen, onO
                   <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-5 space-y-4 animate-in fade-in slide-in-from-bottom-1 duration-200">
                     <div className="space-y-1">
                       <p className="text-xs text-red-400/80 font-medium">This action is irreversible.</p>
-                      <p className="text-[11px] text-[var(--space-text-muted)]">
+                      <p className="text-[0.6875rem] text-[var(--space-text-muted)]">
                         Type <span className="font-mono text-[var(--space-text-secondary)]">{project.name}</span> to confirm.
                       </p>
                     </div>

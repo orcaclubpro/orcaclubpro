@@ -143,7 +143,7 @@ export function AssignPackageModal({ clientId }: AssignPackageModalProps) {
                           {t.description && (
                             <div className="text-xs text-[var(--space-text-muted)] mt-0.5 truncate">{t.description}</div>
                           )}
-                          <div className="text-[10px] text-[var(--space-text-muted)] mt-1">{lineCount} line {lineCount === 1 ? 'item' : 'items'}</div>
+                          <div className="text-[0.625rem] text-[var(--space-text-muted)] mt-1">{lineCount} line {lineCount === 1 ? 'item' : 'items'}</div>
                         </button>
                       )
                     })}
@@ -160,7 +160,7 @@ export function AssignPackageModal({ clientId }: AssignPackageModalProps) {
                       placeholder="Enter a name for this proposal…"
                       className="bg-[var(--space-bg-card)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)] focus-visible:ring-0 focus-visible:border-[rgba(139,156,182,0.15)] h-9 text-sm"
                     />
-                    <p className="text-[10px] text-[var(--space-text-muted)]">
+                    <p className="text-[0.625rem] text-[var(--space-text-muted)]">
                       Defaults to the template name. Rename to personalise for this client.
                     </p>
                   </div>

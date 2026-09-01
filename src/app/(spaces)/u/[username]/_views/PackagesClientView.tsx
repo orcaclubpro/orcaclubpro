@@ -142,7 +142,7 @@ function PackageModal({
           'rounded-t-3xl sm:rounded-2xl',
           'border-t border-x border-[var(--space-border)] sm:border',
           // height constraints — the only source of truth
-          'max-h-[96dvh] sm:max-h-[82vh] sm:max-w-[700px]',
+          'max-h-[96dvh] sm:max-h-[82vh] sm:max-w-[43.75rem]',
         )}
         style={{ background: 'var(--space-bg-card)' }}
       >
@@ -164,12 +164,12 @@ function PackageModal({
           </button>
 
           <div className="flex-1 min-w-0">
-            <p className="text-[9px] font-semibold tracking-[0.28em] uppercase text-[var(--space-text-muted)]">Service Package</p>
+            <p className="text-[0.5625rem] font-semibold tracking-[0.28em] uppercase text-[var(--space-text-muted)]">Service Package</p>
             <h2 className="text-sm font-semibold text-[var(--space-text-primary)] truncate leading-tight">{pkg.name}</h2>
           </div>
 
           {pkg.status === 'accepted' && (
-            <span className="shrink-0 text-[9px] font-bold uppercase tracking-[0.15em] px-2.5 py-1 rounded-full"
+            <span className="shrink-0 text-[0.5625rem] font-bold uppercase tracking-[0.15em] px-2.5 py-1 rounded-full"
               style={{ color: '#4ade80', background: 'rgba(74,222,128,0.09)', border: '1px solid rgba(74,222,128,0.18)' }}
             >Accepted</span>
           )}
@@ -184,7 +184,7 @@ function PackageModal({
               'shrink-0 flex flex-col gap-4 px-5 py-5',
               'border-b sm:border-b-0 sm:border-r border-[var(--space-border)]',
               // mobile: compact horizontal strip; desktop: fixed-width sidebar
-              'sm:w-[240px] sm:overflow-y-auto',
+              'sm:w-[15rem] sm:overflow-y-auto',
             )}
             style={{ background: 'rgba(103,232,249,0.015)' }}
           >
@@ -199,7 +199,7 @@ function PackageModal({
                     >
                       {fmt(oneTime)}
                     </p>
-                    <p className="text-[10px] uppercase tracking-[0.22em] text-[var(--space-text-muted)] mt-1.5">one-time</p>
+                    <p className="text-[0.625rem] uppercase tracking-[0.22em] text-[var(--space-text-muted)] mt-1.5">one-time</p>
                   </div>
                 )}
                 {monthly > 0 && (
@@ -208,7 +208,7 @@ function PackageModal({
                       <p className="text-3xl font-bold tabular-nums leading-none" style={{ color: '#F5F5F5', letterSpacing: '-0.02em' }}>{fmt(monthly)}</p>
                       <span className="text-sm text-[var(--space-text-muted)]">/mo</span>
                     </div>
-                    <p className="text-[10px] uppercase tracking-[0.22em] text-[var(--space-text-muted)] mt-1.5">monthly</p>
+                    <p className="text-[0.625rem] uppercase tracking-[0.22em] text-[var(--space-text-muted)] mt-1.5">monthly</p>
                   </div>
                 )}
                 {annual > 0 && (
@@ -217,7 +217,7 @@ function PackageModal({
                       <p className="text-3xl font-bold tabular-nums leading-none" style={{ color: '#F5F5F5', letterSpacing: '-0.02em' }}>{fmt(annual)}</p>
                       <span className="text-sm text-[var(--space-text-muted)]">/yr</span>
                     </div>
-                    <p className="text-[10px] uppercase tracking-[0.22em] text-[var(--space-text-muted)] mt-1.5">annually</p>
+                    <p className="text-[0.625rem] uppercase tracking-[0.22em] text-[var(--space-text-muted)] mt-1.5">annually</p>
                   </div>
                 )}
               </div>
@@ -225,13 +225,13 @@ function PackageModal({
 
             {/* Description */}
             {pkg.description && (
-              <p className="text-[12px] text-[var(--space-text-tertiary)] leading-relaxed">{pkg.description}</p>
+              <p className="text-[0.75rem] text-[var(--space-text-tertiary)] leading-relaxed">{pkg.description}</p>
             )}
 
             {/* Cover message */}
             {pkg.coverMessage && (
               <div className="rounded-xl px-3.5 py-3" style={{ background: 'rgba(255,255,255,0.03)', borderLeft: '2px solid rgba(103,232,249,0.2)' }}>
-                <p className="text-[12px] text-[var(--space-text-tertiary)] leading-relaxed whitespace-pre-wrap">{pkg.coverMessage}</p>
+                <p className="text-[0.75rem] text-[var(--space-text-tertiary)] leading-relaxed whitespace-pre-wrap">{pkg.coverMessage}</p>
               </div>
             )}
 
@@ -244,8 +244,8 @@ function PackageModal({
             {lineItems.length > 0 && (
               <div className="px-5 py-5 border-b border-[var(--space-border)]">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-[9px] font-bold tracking-[0.25em] uppercase text-[var(--space-text-muted)]">Included</span>
-                  <span className="text-[9px] font-semibold tabular-nums" style={{ color: 'rgba(103,232,249,0.6)' }}>
+                  <span className="text-[0.5625rem] font-bold tracking-[0.25em] uppercase text-[var(--space-text-muted)]">Included</span>
+                  <span className="text-[0.5625rem] font-semibold tabular-nums" style={{ color: 'rgba(103,232,249,0.6)' }}>
                     {lineItems.length} {lineItems.length === 1 ? 'item' : 'items'}
                   </span>
                 </div>
@@ -269,22 +269,22 @@ function PackageModal({
                           <Check className="size-3" style={{ color: '#67e8f9' }} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-[13px] font-medium text-[var(--space-text-primary)] leading-snug">{item.name}</p>
+                          <p className="text-[0.8125rem] font-medium text-[var(--space-text-primary)] leading-snug">{item.name}</p>
                           {item.description && (
-                            <p className="text-[11px] text-[var(--space-text-muted)] mt-0.5 leading-relaxed">{item.description}</p>
+                            <p className="text-[0.6875rem] text-[var(--space-text-muted)] mt-0.5 leading-relaxed">{item.description}</p>
                           )}
                         </div>
                         <div className="flex flex-col items-end shrink-0 gap-0.5 pl-2">
                           {hasDiscount && (
-                            <span className="text-[11px] text-[var(--space-text-muted)] line-through tabular-nums">{fmt(baseTotal)}</span>
+                            <span className="text-[0.6875rem] text-[var(--space-text-muted)] line-through tabular-nums">{fmt(baseTotal)}</span>
                           )}
                           <span
-                            className="text-[13px] font-semibold tabular-nums"
+                            className="text-[0.8125rem] font-semibold tabular-nums"
                             style={{ color: hasDiscount ? '#67e8f9' : 'rgba(255,255,255,0.7)' }}
                           >
                             {fmt(adjustedTotal)}
                             {item.isRecurring && (
-                              <span className="text-[11px] font-normal text-[var(--space-text-muted)]">/{item.recurringInterval === 'year' ? 'yr' : 'mo'}</span>
+                              <span className="text-[0.6875rem] font-normal text-[var(--space-text-muted)]">/{item.recurringInterval === 'year' ? 'yr' : 'mo'}</span>
                             )}
                           </span>
                         </div>
@@ -347,7 +347,7 @@ function PackageModal({
               <div className="px-5 py-5">
                 <div className="flex items-center gap-2 mb-3">
                   <CalendarDays className="size-3 text-[var(--space-text-muted)]" />
-                  <span className="text-[9px] font-bold tracking-[0.25em] uppercase text-[var(--space-text-muted)]">Payment Schedule</span>
+                  <span className="text-[0.5625rem] font-bold tracking-[0.25em] uppercase text-[var(--space-text-muted)]">Payment Schedule</span>
                 </div>
                 <div className="space-y-1.5">
                   {schedule.map((entry, i) => {
@@ -365,20 +365,20 @@ function PackageModal({
                           style={{ background: isInvoiced ? '#4ade80' : 'rgba(103,232,249,0.55)' }}
                         />
                         <div className="flex-1 min-w-0">
-                          <p className={cn('text-[13px] font-medium leading-snug', isInvoiced ? 'text-[var(--space-text-muted)]' : 'text-[var(--space-text-secondary)]')}>
+                          <p className={cn('text-[0.8125rem] font-medium leading-snug', isInvoiced ? 'text-[var(--space-text-muted)]' : 'text-[var(--space-text-secondary)]')}>
                             {entry.label}
                           </p>
                           {entry.dueDate && (
-                            <p className="text-[10px] text-[var(--space-text-muted)] mt-0.5">Due {formatDisplayDate(entry.dueDate)}</p>
+                            <p className="text-[0.625rem] text-[var(--space-text-muted)] mt-0.5">Due {formatDisplayDate(entry.dueDate)}</p>
                           )}
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           {isInvoiced && (
-                            <span className="text-[9px] font-bold uppercase tracking-[0.1em] px-1.5 py-0.5 rounded"
+                            <span className="text-[0.5625rem] font-bold uppercase tracking-[0.1em] px-1.5 py-0.5 rounded"
                               style={{ color: '#4ade80', background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.15)' }}
                             >Invoiced</span>
                           )}
-                          <span className="text-[13px] font-semibold tabular-nums"
+                          <span className="text-[0.8125rem] font-semibold tabular-nums"
                             style={{ color: isInvoiced ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.75)' }}
                           >{fmt(entry.amount)}</span>
                         </div>
@@ -390,8 +390,8 @@ function PackageModal({
                 {/* Total */}
                 {scheduleTotal > 0 && (
                   <div className="flex items-center justify-between mt-3 pt-3 border-t border-[var(--space-border)]">
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--space-text-muted)]">Total</span>
-                    <span className="text-[15px] font-bold tabular-nums" style={{ color: 'rgba(255,255,255,0.8)' }}>{fmt(scheduleTotal)}</span>
+                    <span className="text-[0.625rem] font-semibold uppercase tracking-[0.2em] text-[var(--space-text-muted)]">Total</span>
+                    <span className="text-[0.9375rem] font-bold tabular-nums" style={{ color: 'rgba(255,255,255,0.8)' }}>{fmt(scheduleTotal)}</span>
                   </div>
                 )}
               </div>
@@ -400,7 +400,7 @@ function PackageModal({
             {/* Empty state */}
             {lineItems.length === 0 && schedule.length === 0 && (
               <div className="flex items-center justify-center px-6 py-12">
-                <p className="text-[13px] text-[var(--space-text-muted)] text-center">Your team is still configuring this package.</p>
+                <p className="text-[0.8125rem] text-[var(--space-text-muted)] text-center">Your team is still configuring this package.</p>
               </div>
             )}
           </div>
@@ -417,7 +417,7 @@ function PackageModal({
         >
           <button
             onClick={onClose}
-            className="px-4 py-2.5 rounded-xl text-[13px] font-medium transition-all active:scale-95"
+            className="px-4 py-2.5 rounded-xl text-[0.8125rem] font-medium transition-all active:scale-95"
             style={{ color: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)' }}
           >
             Close
@@ -477,7 +477,7 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
         {/* Header */}
         <div className="px-6 lg:px-10 pt-8 pb-6 flex items-end justify-between">
           <div>
-            <p className="text-[9px] font-bold tracking-[0.32em] uppercase mb-1.5" style={{ color: 'var(--space-accent)' }}>
+            <p className="text-[0.5625rem] font-bold tracking-[0.32em] uppercase mb-1.5" style={{ color: 'var(--space-accent)' }}>
               Service Packages
             </p>
             <h2 className="text-xl font-bold text-[var(--space-text-primary)] tracking-tight">Your Packages</h2>
@@ -523,12 +523,12 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                     <div className="p-5 sm:p-8 lg:p-10">
                       {/* Eyebrow + status */}
                       <div className="flex items-center justify-between mb-5 lg:mb-8">
-                        <p className="text-[9px] font-bold tracking-[0.32em] uppercase" style={{ color: 'var(--space-accent)' }}>
+                        <p className="text-[0.5625rem] font-bold tracking-[0.32em] uppercase" style={{ color: 'var(--space-accent)' }}>
                           Service Package
                         </p>
                         {pkg.status && pkg.status !== 'draft' && (
                           <span className={cn(
-                            'text-[9px] font-bold uppercase tracking-[0.18em] px-2.5 py-1 rounded-full border',
+                            'text-[0.5625rem] font-bold uppercase tracking-[0.18em] px-2.5 py-1 rounded-full border',
                             statusStyle(pkg.status),
                           )}>
                             {pkg.status}
@@ -553,7 +553,7 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                           {oneTime > 0 && (
                             <div>
                               <p className="text-3xl sm:text-4xl font-bold text-[var(--space-text-primary)] tabular-nums tracking-tight">{fmt(oneTime)}</p>
-                              <p className="text-[9px] text-[var(--space-text-tertiary)] mt-1.5 uppercase tracking-[0.2em]">one-time</p>
+                              <p className="text-[0.5625rem] text-[var(--space-text-tertiary)] mt-1.5 uppercase tracking-[0.2em]">one-time</p>
                             </div>
                           )}
                           {monthly > 0 && (
@@ -562,7 +562,7 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                                 <p className="text-3xl sm:text-4xl font-bold text-[var(--space-text-primary)] tabular-nums tracking-tight">{fmt(monthly)}</p>
                                 <p className="text-xl text-[var(--space-text-tertiary)] font-normal">/mo</p>
                               </div>
-                              <p className="text-[9px] text-[var(--space-text-tertiary)] mt-1.5 uppercase tracking-[0.2em]">monthly</p>
+                              <p className="text-[0.5625rem] text-[var(--space-text-tertiary)] mt-1.5 uppercase tracking-[0.2em]">monthly</p>
                             </div>
                           )}
                           {annual > 0 && (
@@ -571,7 +571,7 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                                 <p className="text-3xl sm:text-4xl font-bold text-[var(--space-text-primary)] tabular-nums tracking-tight">{fmt(annual)}</p>
                                 <p className="text-xl text-[var(--space-text-tertiary)] font-normal">/yr</p>
                               </div>
-                              <p className="text-[9px] text-[var(--space-text-tertiary)] mt-1.5 uppercase tracking-[0.2em]">annually</p>
+                              <p className="text-[0.5625rem] text-[var(--space-text-tertiary)] mt-1.5 uppercase tracking-[0.2em]">annually</p>
                             </div>
                           )}
                         </div>
@@ -595,7 +595,7 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                                 className="size-6 rounded-full bg-[var(--space-bg-card-hover)] border-2 flex items-center justify-center"
                                 style={{ borderColor: '#404040' }}
                               >
-                                <span className="text-[9px] text-[var(--space-text-secondary)] font-bold">+{lineItems.length - 6}</span>
+                                <span className="text-[0.5625rem] text-[var(--space-text-secondary)] font-bold">+{lineItems.length - 6}</span>
                               </div>
                             )}
                           </div>
@@ -680,7 +680,7 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
         {/* ── Package selector strip ────────────────────────────────────────── */}
         {total > 1 && (
           <div className="px-6 lg:px-10 pt-4 pb-10">
-            <p className="text-[9px] font-bold tracking-[0.28em] uppercase text-[var(--space-accent)] mb-3">
+            <p className="text-[0.5625rem] font-bold tracking-[0.28em] uppercase text-[var(--space-accent)] mb-3">
               All Packages
             </p>
             <div className="flex gap-2.5 overflow-x-auto scrollbar-none pb-1">
@@ -700,7 +700,7 @@ export function PackagesClientView({ clientPackages, username }: PackagesClientV
                     style={{ minWidth: 150, maxWidth: 200 }}
                   >
                     <div className="flex items-center gap-1.5">
-                      <span className={cn('text-[9px] font-bold tabular-nums', isActive ? '' : 'text-[var(--space-text-muted)]')} style={isActive ? { color: 'var(--space-accent)', opacity: 0.6 } : {}}>
+                      <span className={cn('text-[0.5625rem] font-bold tabular-nums', isActive ? '' : 'text-[var(--space-text-muted)]')} style={isActive ? { color: 'var(--space-accent)', opacity: 0.6 } : {}}>
                         {pad(i + 1)}
                       </span>
                     </div>

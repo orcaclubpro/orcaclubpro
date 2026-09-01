@@ -21,7 +21,7 @@ const accentBtn =
   'flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg bg-[var(--space-accent)] text-black hover:opacity-90 transition-all disabled:opacity-50'
 const ghostBtn =
   'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-[var(--space-border-hard)] text-[var(--space-text-tertiary)] hover:text-[var(--space-text-primary)] hover:bg-[var(--space-bg-card-hover)] transition-all disabled:opacity-50'
-const labelCls = 'text-[10px] font-semibold uppercase tracking-widest text-[var(--space-text-muted)]'
+const labelCls = 'text-[0.625rem] font-semibold uppercase tracking-widest text-[var(--space-text-muted)]'
 
 function fmt(n: number) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(n || 0)
@@ -187,7 +187,7 @@ export function CreateOrderModal({ clientId, clientName, projectId, onClose }: C
         style={{ background: 'rgba(0,0,0,0.62)', backdropFilter: 'blur(3px)' }}
         onClick={onClose}
       />
-      <div className="absolute left-1/2 top-3 bottom-3 -translate-x-1/2 w-full px-3 max-w-[600px]">
+      <div className="absolute left-1/2 top-3 bottom-3 -translate-x-1/2 w-full px-3 max-w-[37.5rem]">
         <div
           className="flex flex-col h-full overflow-hidden rounded-2xl shadow-[0_40px_100px_rgba(0,0,0,0.7)]"
           style={{ background: 'var(--space-bg-card)', border: '1px solid var(--space-border-hard)' }}
@@ -227,14 +227,14 @@ export function CreateOrderModal({ clientId, clientName, projectId, onClose }: C
                       {outcome.emailed ? ' and emailed' : ', no email sent'}
                     </p>
                     {outcome.notice && (
-                      <p className="text-[11px] text-[var(--space-text-muted)] mt-1">{outcome.notice}</p>
+                      <p className="text-[0.6875rem] text-[var(--space-text-muted)] mt-1">{outcome.notice}</p>
                     )}
                     {outcome.url && (
                       <a
                         href={outcome.url}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--space-accent)] hover:underline mt-1"
+                        className="inline-flex items-center gap-1 text-[0.6875rem] font-semibold text-[var(--space-accent)] hover:underline mt-1"
                       >
                         {outcome.customLink ? 'View invoice link' : 'View Stripe invoice'}{' '}
                         <ArrowRight className="size-3" />
@@ -254,7 +254,7 @@ export function CreateOrderModal({ clientId, clientName, projectId, onClose }: C
                     <Receipt className="size-3.5 shrink-0 text-[var(--space-text-muted)]" />
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold text-[var(--space-text-primary)]">Line items</p>
-                      <p className="text-[10px] text-[var(--space-text-muted)] mt-0.5">
+                      <p className="text-[0.625rem] text-[var(--space-text-muted)] mt-0.5">
                         {createStripe
                           ? 'Each line appears on the Stripe invoice at price × quantity.'
                           : 'Each line is recorded on the order at price × quantity.'}
@@ -405,9 +405,9 @@ export function CreateOrderModal({ clientId, clientName, projectId, onClose }: C
                       />
                     </label>
                     {linkTouched && linkError ? (
-                      <p className="text-[10px] text-red-400 mt-1">{linkError}</p>
+                      <p className="text-[0.625rem] text-red-400 mt-1">{linkError}</p>
                     ) : (
-                      <p className="text-[10px] text-[var(--space-text-muted)] mt-1">
+                      <p className="text-[0.625rem] text-[var(--space-text-muted)] mt-1">
                         {createStripe
                           ? 'Replaces the Stripe hosted payment link on this order — leave blank to use Stripe’s.'
                           : 'Where the client can pay or view the invoice you already sent. Leave blank to record the order with no link.'}
@@ -438,7 +438,7 @@ export function CreateOrderModal({ clientId, clientName, projectId, onClose }: C
           {/* ── Footer send bar ── */}
           {!outcome && (
             <div className="shrink-0 border-t border-[var(--space-border-hard)] px-5 py-3 flex items-center justify-between gap-3">
-              <p className="text-[11px] text-[var(--space-text-muted)]">
+              <p className="text-[0.6875rem] text-[var(--space-text-muted)]">
                 {[
                   `${rows.length} line${rows.length === 1 ? '' : 's'} · ${fmt(total)}`,
                   `net ${dueDays} day${dueDays === 1 ? '' : 's'}`,
@@ -488,7 +488,7 @@ function ToggleRow({
       <Icon className="size-3.5 shrink-0 text-[var(--space-text-muted)]" />
       <div className="flex-1 min-w-0">
         <p className="text-xs font-semibold text-[var(--space-text-primary)]">{title}</p>
-        <p className="text-[10px] text-[var(--space-text-muted)] mt-0.5">{hint}</p>
+        <p className="text-[0.625rem] text-[var(--space-text-muted)] mt-0.5">{hint}</p>
       </div>
     </button>
   )

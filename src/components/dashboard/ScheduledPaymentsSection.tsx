@@ -126,7 +126,7 @@ export function ScheduledPaymentsSection({ packages, username, workCounts }: Sch
               type="button"
               onClick={() => setTimeframe(opt.value)}
               className={[
-                'px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide transition-all',
+                'px-2.5 py-1 text-[0.625rem] font-semibold uppercase tracking-wide transition-all',
                 i < arr.length - 1 ? 'border-r border-[var(--space-border-hard)]' : '',
                 timeframe === opt.value
                   ? 'bg-[rgba(139,156,182,0.10)] text-[var(--space-accent)]'
@@ -148,7 +148,7 @@ export function ScheduledPaymentsSection({ packages, username, workCounts }: Sch
           {scheduledPackages.map((pkg) => (
             <div key={pkg.id}>
               <div className="px-5 py-2.5 bg-[var(--space-bg-card)]">
-                <span className="text-[10px] text-[var(--space-text-secondary)] uppercase tracking-widest font-semibold">
+                <span className="text-[0.625rem] text-[var(--space-text-secondary)] uppercase tracking-widest font-semibold">
                   {pkg.name}
                 </span>
               </div>
@@ -184,7 +184,7 @@ export function ScheduledPaymentsSection({ packages, username, workCounts }: Sch
                                 }),
                               )
                             }
-                            className="text-[10px] text-[var(--space-text-secondary)] hover:text-[var(--space-accent)] tabular-nums shrink-0 transition-colors"
+                            className="text-[0.625rem] text-[var(--space-text-secondary)] hover:text-[var(--space-accent)] tabular-nums shrink-0 transition-colors"
                             title="Open the work log for this package"
                           >
                             {c.pending} logged{c.plannedOpen > 0 ? ` · ${c.plannedOpen} planned open` : ''}
@@ -208,7 +208,7 @@ export function ScheduledPaymentsSection({ packages, username, workCounts }: Sch
                       ) : (
                         <div className="flex items-center gap-2">
                           {entryResult && 'error' in entryResult && (
-                            <span className="text-[10px] text-red-400 max-w-[140px] leading-snug">
+                            <span className="text-[0.625rem] text-red-400 max-w-[8.75rem] leading-snug">
                               {entryResult.error}
                             </span>
                           )}

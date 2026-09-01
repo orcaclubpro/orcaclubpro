@@ -85,7 +85,7 @@ export function BalanceCard({ orders, activeProjectCount, mostRecentOrder }: Bal
       )}
 
       <div className="relative z-10">
-        <p className="text-[9px] font-semibold uppercase tracking-[0.25em] text-[var(--space-text-muted)] mb-5">
+        <p className="text-[0.5625rem] font-semibold uppercase tracking-[0.25em] text-[var(--space-text-muted)] mb-5">
           Account Overview
         </p>
 
@@ -112,15 +112,15 @@ export function BalanceCard({ orders, activeProjectCount, mostRecentOrder }: Bal
               <div className="text-center px-1">
                 {pendingAmount > 0 ? (
                   <>
-                    <p className="text-[8px] text-amber-400/70 font-semibold uppercase tracking-wider leading-none mb-0.5">due</p>
-                    <p className="text-[10px] font-black text-amber-400 tabular-nums leading-none">
+                    <p className="text-[0.5rem] text-amber-400/70 font-semibold uppercase tracking-wider leading-none mb-0.5">due</p>
+                    <p className="text-[0.625rem] font-black text-amber-400 tabular-nums leading-none">
                       {fmtCompact(pendingAmount)}
                     </p>
                   </>
                 ) : hasOrders ? (
                   <p className="text-base font-bold text-green-400 leading-none">✓</p>
                 ) : (
-                  <p className="text-[9px] text-[var(--space-text-muted)] leading-none">—</p>
+                  <p className="text-[0.5625rem] text-[var(--space-text-muted)] leading-none">—</p>
                 )}
               </div>
             </div>
@@ -140,12 +140,12 @@ export function BalanceCard({ orders, activeProjectCount, mostRecentOrder }: Bal
                 </div>
                 <div className="flex items-center gap-3 flex-wrap">
                   {paidAmount > 0 && (
-                    <span className="flex items-center gap-1 text-[10px] text-[var(--space-text-secondary)]">
+                    <span className="flex items-center gap-1 text-[0.625rem] text-[var(--space-text-secondary)]">
                       <span className="size-1.5 rounded-full bg-green-400 shrink-0" />
                       {fmt(paidAmount)} paid
                     </span>
                   )}
-                  <span className="flex items-center gap-1 text-[10px] text-[var(--space-text-secondary)]">
+                  <span className="flex items-center gap-1 text-[0.625rem] text-[var(--space-text-secondary)]">
                     <span className="size-1.5 rounded-full bg-amber-400 shrink-0" />
                     {fmt(pendingAmount)} due
                   </span>
@@ -169,7 +169,7 @@ export function BalanceCard({ orders, activeProjectCount, mostRecentOrder }: Bal
                   </p>
                 </div>
                 {paidAmount > 0 && (
-                  <span className="flex items-center gap-1 text-[10px] text-[var(--space-text-secondary)]">
+                  <span className="flex items-center gap-1 text-[0.625rem] text-[var(--space-text-secondary)]">
                     <span className="size-1.5 rounded-full bg-green-400 shrink-0" />
                     {fmt(paidAmount)} paid total
                   </span>
@@ -185,19 +185,19 @@ export function BalanceCard({ orders, activeProjectCount, mostRecentOrder }: Bal
         {/* Bottom metrics */}
         <div className="grid grid-cols-3 gap-4">
           <div>
-            <p className="text-[9px] text-[var(--space-text-muted)] uppercase tracking-wider font-semibold mb-1">Projects</p>
+            <p className="text-[0.5625rem] text-[var(--space-text-muted)] uppercase tracking-wider font-semibold mb-1">Projects</p>
             <p className="text-2xl font-bold text-[var(--space-text-primary)] tabular-nums">{activeProjectCount}</p>
-            <p className="text-[10px] text-[var(--space-text-muted)]">Active</p>
+            <p className="text-[0.625rem] text-[var(--space-text-muted)]">Active</p>
           </div>
           <div>
-            <p className="text-[9px] text-[var(--space-text-muted)] uppercase tracking-wider font-semibold mb-1">Invoices</p>
+            <p className="text-[0.5625rem] text-[var(--space-text-muted)] uppercase tracking-wider font-semibold mb-1">Invoices</p>
             <p className="text-2xl font-bold text-[var(--space-text-primary)] tabular-nums">{orders.length}</p>
-            <p className="text-[10px] text-[var(--space-text-muted)]">Total</p>
+            <p className="text-[0.625rem] text-[var(--space-text-muted)]">Total</p>
           </div>
           {mostRecentOrder && (
             <div>
-              <p className="text-[9px] text-[var(--space-text-muted)] uppercase tracking-wider font-semibold mb-1">Latest</p>
-              <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border mt-1 ${
+              <p className="text-[0.5625rem] text-[var(--space-text-muted)] uppercase tracking-wider font-semibold mb-1">Latest</p>
+              <span className={`inline-flex items-center gap-1 text-[0.625rem] font-semibold px-2 py-0.5 rounded-full border mt-1 ${
                 mostRecentOrder.status === 'paid'
                   ? 'text-green-400 bg-green-400/10 border-green-400/20'
                   : mostRecentOrder.status === 'pending'
@@ -233,7 +233,7 @@ export function BalanceCard({ orders, activeProjectCount, mostRecentOrder }: Bal
                   <p className="text-sm font-semibold text-[var(--space-text-primary)] truncate">
                     {order.orderNumber ?? `INV-${order.id.slice(-6).toUpperCase()}`}
                   </p>
-                  <p className="text-[10px] text-[var(--space-text-secondary)] mt-0.5">
+                  <p className="text-[0.625rem] text-[var(--space-text-secondary)] mt-0.5">
                     {new Date(order.createdAt).toLocaleDateString('en-US', {
                       month: 'short',
                       day: 'numeric',

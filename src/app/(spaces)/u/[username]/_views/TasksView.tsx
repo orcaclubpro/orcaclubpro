@@ -140,14 +140,14 @@ function SidebarTask({ task }: { task: any }) {
   const over = isOverdue(task.dueDate) && task.status !== 'completed'
   const projectName = getProjectName(task)
   return (
-    <div className="flex items-center gap-2 px-2 py-[5px] rounded hover:bg-[var(--space-bg-card-hover)] transition-colors">
+    <div className="flex items-center gap-2 px-2 py-[0.3125rem] rounded hover:bg-[var(--space-bg-card-hover)] transition-colors">
       <span className={`shrink-0 size-1.5 rounded-full ${STATUS_DOT[task.status] ?? 'bg-gray-500'}`} />
       <div className="flex-1 min-w-0">
-        <p className="text-[11px] text-[var(--space-text-secondary)] truncate leading-tight">{task.title}</p>
-        {projectName && <p className="text-[9px] text-[var(--space-text-secondary)] truncate">{projectName}</p>}
+        <p className="text-[0.6875rem] text-[var(--space-text-secondary)] truncate leading-tight">{task.title}</p>
+        {projectName && <p className="text-[0.5625rem] text-[var(--space-text-secondary)] truncate">{projectName}</p>}
       </div>
       {over && <span className="shrink-0 size-1 rounded-full bg-red-400/70" />}
-      <span className={`shrink-0 text-[9px] font-bold px-1 rounded border leading-4 ${pc.color} ${pc.bg}`}>
+      <span className={`shrink-0 text-[0.5625rem] font-bold px-1 rounded border leading-4 ${pc.color} ${pc.bg}`}>
         {pc.short}
       </span>
     </div>
@@ -237,7 +237,7 @@ function TaskCard({
                 type="button"
                 onClick={() => onEditChange({ priority: p })}
                 className={cn(
-                  'text-[10px] font-medium px-2 py-0.5 rounded-full border transition-colors',
+                  'text-[0.625rem] font-medium px-2 py-0.5 rounded-full border transition-colors',
                   editState.priority === p
                     ? cn(PRIORITY_CFG[p].text, 'border-current bg-current/10')
                     : 'text-[var(--space-text-muted)] border-[var(--space-border-hard)] hover:border-[var(--space-border-hard)]',
@@ -251,7 +251,7 @@ function TaskCard({
             type="date"
             value={editState.dueDate}
             onChange={(e) => onEditChange({ dueDate: e.target.value })}
-            className="ml-auto text-[11px] text-[var(--space-text-secondary)] bg-transparent border border-[var(--space-border-hard)] rounded px-2 py-0.5 focus:outline-none focus:border-[var(--space-border-hard)]"
+            className="ml-auto text-[0.6875rem] text-[var(--space-text-secondary)] bg-transparent border border-[var(--space-border-hard)] rounded px-2 py-0.5 focus:outline-none focus:border-[var(--space-border-hard)]"
           />
         </div>
       </div>
@@ -275,7 +275,7 @@ function TaskCard({
         onClick={(e) => { e.stopPropagation(); onToggle(task) }}
         title={done ? 'Mark pending' : 'Mark done'}
         className={cn(
-          'shrink-0 mt-[3px] size-4 rounded-full border flex items-center justify-center transition-all focus:outline-none',
+          'shrink-0 mt-[0.1875rem] size-4 rounded-full border flex items-center justify-center transition-all focus:outline-none',
           done
             ? 'bg-green-400/80 border-green-400/80 hover:bg-green-300/70'
             : task.status === 'in-progress'
@@ -302,7 +302,7 @@ function TaskCard({
             : <p className="text-xs text-[var(--space-text-muted)] mt-0.5 truncate leading-snug">{desc}</p>
         })()}
         <div className="flex items-center gap-2 mt-1 flex-wrap">
-          {projectName && <span className="text-[10px] text-[var(--space-text-muted)]">{projectName}</span>}
+          {projectName && <span className="text-[0.625rem] text-[var(--space-text-muted)]">{projectName}</span>}
           {priorityPickerOpen ? (
             <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
               {(['low', 'medium', 'high', 'urgent'] as Priority[]).map((p) => {
@@ -313,7 +313,7 @@ function TaskCard({
                     type="button"
                     onClick={(e) => { e.stopPropagation(); onPriorityChange(task, p); setPriorityPickerOpen(false) }}
                     className={cn(
-                      'text-[9px] font-bold px-1.5 rounded border leading-4 transition-all',
+                      'text-[0.5625rem] font-bold px-1.5 rounded border leading-4 transition-all',
                       task.priority === p ? cn(cfg.color, cfg.bg) : 'text-[var(--space-text-muted)] border-[var(--space-border-hard)] hover:text-[var(--space-text-tertiary)] hover:border-[var(--space-border-hard)]',
                     )}
                   >
@@ -326,38 +326,38 @@ function TaskCard({
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); setPriorityPickerOpen(true) }}
-              className={cn('text-[10px] font-semibold px-1.5 rounded border leading-4 transition-opacity hover:opacity-60', pc.color, pc.bg)}
+              className={cn('text-[0.625rem] font-semibold px-1.5 rounded border leading-4 transition-opacity hover:opacity-60', pc.color, pc.bg)}
               title="Change priority"
             >
               {pc.short}
             </button>
           )}
           {task.dueDate && (
-            <span className={`text-[10px] ${over ? 'text-red-400' : 'text-[var(--space-text-muted)]'}`}>
+            <span className={`text-[0.625rem] ${over ? 'text-red-400' : 'text-[var(--space-text-muted)]'}`}>
               {fmtDate(task.dueDate)}{over ? ' · overdue' : ''}
             </span>
           )}
         </div>
         {isLocallyActive && (
           <div className="mt-2 pt-2 border-t border-[var(--space-border-hard)] flex flex-wrap gap-x-3 gap-y-1">
-            <span className={`text-[10px] font-medium ${STATUS_DOT[task.status] ? '' : ''}`}>
+            <span className={`text-[0.625rem] font-medium ${STATUS_DOT[task.status] ? '' : ''}`}>
               <span className={`inline-block size-1.5 rounded-full mr-1 ${STATUS_DOT[task.status] ?? 'bg-gray-500'}`} />
               <span className="text-[var(--space-text-secondary)]">{STATUS_LABEL[task.status] ?? 'Pending'}</span>
             </span>
             {task.estimatedHours != null && (
-              <span className="text-[10px] text-[var(--space-text-muted)]">
+              <span className="text-[0.625rem] text-[var(--space-text-muted)]">
                 Est <span className="text-[var(--space-text-secondary)]">{task.estimatedHours}h</span>
               </span>
             )}
             {task.actualHours != null && (
-              <span className="text-[10px] text-[var(--space-text-muted)]">
+              <span className="text-[0.625rem] text-[var(--space-text-muted)]">
                 Actual <span className="text-[var(--space-text-secondary)]">{task.actualHours}h</span>
               </span>
             )}
             {(() => {
               const sprint = getSprintObj(task)
               return sprint?.name
-                ? <span className="text-[10px] text-[var(--space-text-muted)]">Sprint <span className="text-[var(--space-text-secondary)]">{sprint.name}</span></span>
+                ? <span className="text-[0.625rem] text-[var(--space-text-muted)]">Sprint <span className="text-[var(--space-text-secondary)]">{sprint.name}</span></span>
                 : null
             })()}
           </div>
@@ -407,7 +407,7 @@ function InlineAdd({ projectId, sprintId, onCreated }: { projectId: string; spri
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="flex items-center gap-1.5 w-full px-3 py-2 text-[11px] text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)] hover:bg-[var(--space-bg-card-hover)] transition-colors shrink-0"
+        className="flex items-center gap-1.5 w-full px-3 py-2 text-[0.6875rem] text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)] hover:bg-[var(--space-bg-card-hover)] transition-colors shrink-0"
       >
         <Plus className="size-3" />
         Add task
@@ -447,7 +447,7 @@ function InlineAdd({ projectId, sprintId, onCreated }: { projectId: string; spri
                 type="button"
                 onClick={() => setPriority(p)}
                 className={cn(
-                  'text-[9px] font-bold px-1.5 rounded border leading-4 transition-colors',
+                  'text-[0.5625rem] font-bold px-1.5 rounded border leading-4 transition-colors',
                   priority === p ? `${pc.color} ${pc.bg}` : 'text-[var(--space-text-muted)] border-[var(--space-border-hard)] hover:text-[var(--space-text-secondary)]',
                 )}
               >
@@ -510,7 +510,7 @@ function UnassignedInlineAdd({
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="flex items-center gap-1.5 w-full px-3 py-2 text-[11px] text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)] hover:bg-[var(--space-bg-card-hover)] transition-colors shrink-0"
+        className="flex items-center gap-1.5 w-full px-3 py-2 text-[0.6875rem] text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)] hover:bg-[var(--space-bg-card-hover)] transition-colors shrink-0"
       >
         <Plus className="size-3" />
         Add task
@@ -526,7 +526,7 @@ function UnassignedInlineAdd({
     >
       {projects.length > 1 && (
         <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
-          <SelectTrigger className="h-7 border-0 border-b border-[var(--space-border-hard)] rounded-none bg-transparent text-[var(--space-text-secondary)] focus:ring-0 text-[11px] px-3">
+          <SelectTrigger className="h-7 border-0 border-b border-[var(--space-border-hard)] rounded-none bg-transparent text-[var(--space-text-secondary)] focus:ring-0 text-[0.6875rem] px-3">
             <SelectValue placeholder="Select project" />
           </SelectTrigger>
           <SelectContent className="bg-[var(--space-bg-base)] border-[var(--space-border-hard)] z-[300]">
@@ -562,7 +562,7 @@ function UnassignedInlineAdd({
                 type="button"
                 onClick={() => setPriority(p)}
                 className={cn(
-                  'text-[9px] font-bold px-1.5 rounded border leading-4 transition-colors',
+                  'text-[0.5625rem] font-bold px-1.5 rounded border leading-4 transition-colors',
                   priority === p ? `${pc.color} ${pc.bg}` : 'text-[var(--space-text-muted)] border-[var(--space-border-hard)] hover:text-[var(--space-text-secondary)]',
                 )}
               >
@@ -638,14 +638,14 @@ function ColumnBody({
       <div className="sticky top-0 z-10 bg-[var(--space-bg-card)]">
         <div className="px-4 pt-4 pb-3 border-b border-[var(--space-border-hard)] shrink-0">
           <div className="flex items-center justify-between mb-2.5">
-            <span className="text-[9px] font-bold text-[var(--space-accent)] uppercase tracking-[0.15em]">{label}</span>
+            <span className="text-[0.5625rem] font-bold text-[var(--space-accent)] uppercase tracking-[0.15em]">{label}</span>
             <div className="flex items-center gap-2">
-              {sCfg && <span className={`text-[10px] font-medium ${sCfg.text}`}>{sCfg.label}</span>}
+              {sCfg && <span className={`text-[0.625rem] font-medium ${sCfg.text}`}>{sCfg.label}</span>}
               <button
                 type="button"
                 onClick={isExpanded ? onCollapse : onExpand}
                 className={cn(
-                  'flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium transition-colors',
+                  'flex items-center gap-1 px-2 py-0.5 rounded-md text-[0.625rem] font-medium transition-colors',
                   isExpanded
                     ? 'text-[var(--space-text-secondary)] hover:text-[var(--space-text-primary)] bg-[var(--space-bg-card-hover)] hover:bg-[var(--space-bg-card-hover)]'
                     : 'text-[var(--space-text-muted)] hover:text-[var(--space-text-tertiary)] hover:bg-[var(--space-bg-card-hover)]'
@@ -677,10 +677,10 @@ function ColumnBody({
           </Select>
           {columnTasks.length > 0 && (
             <div className="flex items-center gap-2 mt-2.5">
-              <div className="flex-1 h-[3px] bg-[var(--space-divider)] rounded-full overflow-hidden">
+              <div className="flex-1 h-[0.1875rem] bg-[var(--space-divider)] rounded-full overflow-hidden">
                 <div className={`h-full rounded-full transition-all duration-500 ${sCfg?.bar ?? 'bg-[var(--space-accent)]/60'}`} style={{ width: `${progress}%` }} />
               </div>
-              <span className="text-[10px] text-[var(--space-text-tertiary)] shrink-0 tabular-nums">{completedCount}/{columnTasks.length}</span>
+              <span className="text-[0.625rem] text-[var(--space-text-tertiary)] shrink-0 tabular-nums">{completedCount}/{columnTasks.length}</span>
             </div>
           )}
         </div>
@@ -707,11 +707,11 @@ function ColumnBody({
             <div>
               <div className="flex items-center gap-1.5 px-3 py-1.5">
                 <span className="size-1.5 rounded-full bg-[var(--space-accent)] shrink-0" style={{ boxShadow: '0 0 6px rgba(139,156,182,0.25)' }} />
-                <span className="text-[9px] font-semibold text-[var(--space-accent)] uppercase tracking-[0.12em]">Active</span>
-                {activeTasks.length > 0 && <span className="text-[9px] text-[var(--space-text-secondary)]">· {activeTasks.length}</span>}
+                <span className="text-[0.5625rem] font-semibold text-[var(--space-accent)] uppercase tracking-[0.12em]">Active</span>
+                {activeTasks.length > 0 && <span className="text-[0.5625rem] text-[var(--space-text-secondary)]">· {activeTasks.length}</span>}
               </div>
               {activeTasks.length === 0 ? (
-                <p className="text-[10px] text-[var(--space-text-muted)] px-3 pb-1">Click a task to focus it here</p>
+                <p className="text-[0.625rem] text-[var(--space-text-muted)] px-3 pb-1">Click a task to focus it here</p>
               ) : (
                 activeTasks.map((task) => (
                   <TaskCard
@@ -746,8 +746,8 @@ function ColumnBody({
               <div key={status}>
                 <div className="flex items-center gap-1.5 px-3 py-1.5">
                   <span className={`size-1 rounded-full ${STATUS_DOT[status] ?? 'bg-gray-500'}`} />
-                  <span className="text-[9px] font-semibold text-[var(--space-accent)] uppercase tracking-[0.12em]">{STATUS_LABEL[status]}</span>
-                  <span className="text-[9px] text-[var(--space-text-secondary)]">· {tasks.length}</span>
+                  <span className="text-[0.5625rem] font-semibold text-[var(--space-accent)] uppercase tracking-[0.12em]">{STATUS_LABEL[status]}</span>
+                  <span className="text-[0.5625rem] text-[var(--space-text-secondary)]">· {tasks.length}</span>
                 </div>
                 {tasks.map((task) => (
                   <TaskCard
@@ -773,7 +773,7 @@ function ColumnBody({
               <button
                 type="button"
                 onClick={onExpand}
-                className="w-full flex items-center gap-2 px-3 py-2 text-[10px] text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)] transition-colors"
+                className="w-full flex items-center gap-2 px-3 py-2 text-[0.625rem] text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)] transition-colors"
               >
                 <span className="size-1 rounded-full bg-green-400/40 shrink-0" />
                 {hiddenDoneCount} completed · expand to view
@@ -887,16 +887,16 @@ function TaskTimeline({
       {/* Header row */}
       <div className="flex items-center justify-between px-4 py-2">
         <div className="flex items-center gap-2">
-          <span className="text-[8px] font-bold text-[var(--space-text-muted)] uppercase tracking-[0.16em]">Project Track</span>
+          <span className="text-[0.5rem] font-bold text-[var(--space-text-muted)] uppercase tracking-[0.16em]">Project Track</span>
           {sprintBands.length > 0 && (
-            <span className="text-[8px] text-[var(--space-text-muted)]">{sprintBands.length} sprint{sprintBands.length !== 1 ? 's' : ''}</span>
+            <span className="text-[0.5rem] text-[var(--space-text-muted)]">{sprintBands.length} sprint{sprintBands.length !== 1 ? 's' : ''}</span>
           )}
         </div>
         <div className="flex items-center gap-2">
           {isOpen && todayPx > 0 && todayPx < timelineWidth && (
             <button type="button"
               onClick={() => { const el = scrollRef.current; if (el) el.scrollTo({ left: Math.max(0, todayPx - el.clientWidth * 0.35), behavior: 'smooth' }) }}
-              className="text-[8px] text-[var(--space-accent)]/50 hover:text-[var(--space-accent)] transition-colors"
+              className="text-[0.5rem] text-[var(--space-accent)]/50 hover:text-[var(--space-accent)] transition-colors"
             >→ today</button>
           )}
           <button type="button" onClick={() => setIsOpen((p) => !p)}
@@ -914,7 +914,7 @@ function TaskTimeline({
           <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-[#FFFFFF] to-transparent z-10 pointer-events-none" />
           <div
             ref={scrollRef}
-            className="overflow-x-auto [&::-webkit-scrollbar]:h-[3px] [&::-webkit-scrollbar-thumb]:bg-[#555555] [&::-webkit-scrollbar-track]:bg-transparent"
+            className="overflow-x-auto [&::-webkit-scrollbar]:h-[0.1875rem] [&::-webkit-scrollbar-thumb]:bg-[#555555] [&::-webkit-scrollbar-track]:bg-transparent"
             style={{ scrollbarWidth: 'thin', scrollbarColor: '#555555 transparent' }}
           >
             <div className="relative select-none" style={{ width: timelineWidth, height: innerH }}>
@@ -933,7 +933,7 @@ function TaskTimeline({
                     style={{ left: sprint.leftPx, top, width: sprint.widthPx, height: TL_SPRINT_H }}
                   >
                     {sprint.widthPx > 36 && (
-                      <span className={cn('text-[8px] font-semibold truncate leading-none', sprint.cfg.text)}>
+                      <span className={cn('text-[0.5rem] font-semibold truncate leading-none', sprint.cfg.text)}>
                         {sprint.name}
                       </span>
                     )}
@@ -951,7 +951,7 @@ function TaskTimeline({
               {todayPx > 0 && todayPx < timelineWidth && (
                 <div className="absolute pointer-events-none z-20" style={{ left: todayPx, top: 0, height: innerH, transform: 'translateX(-50%)' }}>
                   <div className="absolute left-1/2 -translate-x-1/2 w-px h-full" style={{ background: 'linear-gradient(to bottom, rgba(139,156,182,0.22), rgba(139,156,182,0.04))' }} />
-                  <p className="absolute left-1/2 -translate-x-1/2 text-[7px] tracking-[0.15em] uppercase text-[var(--space-accent)]/60 font-medium whitespace-nowrap" style={{ top: 2 }}>
+                  <p className="absolute left-1/2 -translate-x-1/2 text-[0.4375rem] tracking-[0.15em] uppercase text-[var(--space-accent)]/60 font-medium whitespace-nowrap" style={{ top: 2 }}>
                     today
                   </p>
                   <div className="absolute left-1/2 z-30" style={{ top: TL_TRACK_Y - 3, transform: 'translateX(-50%)' }}>
@@ -964,7 +964,7 @@ function TaskTimeline({
               {monthTicks.map((tick) => (
                 <div key={tick.px} className="absolute pointer-events-none" style={{ left: tick.px, top: tickY }}>
                   <div className="w-px h-2 bg-[#555555] mx-auto" />
-                  <p className="text-[7px] text-[var(--space-text-muted)] text-center mt-0.5 whitespace-nowrap -translate-x-1/2">{tick.label}</p>
+                  <p className="text-[0.4375rem] text-[var(--space-text-muted)] text-center mt-0.5 whitespace-nowrap -translate-x-1/2">{tick.label}</p>
                 </div>
               ))}
 
@@ -1035,8 +1035,8 @@ function SprintDonutChart({
         ) : (
           <>
             <span className="text-3xl font-bold text-[var(--space-text-primary)] tabular-nums leading-none">{pct}%</span>
-            <span className="text-[9px] text-[var(--space-text-muted)] uppercase tracking-[0.1em] mt-1">complete</span>
-            <span className="text-[10px] text-[var(--space-text-secondary)] tabular-nums mt-0.5">{completed}/{total}</span>
+            <span className="text-[0.5625rem] text-[var(--space-text-muted)] uppercase tracking-[0.1em] mt-1">complete</span>
+            <span className="text-[0.625rem] text-[var(--space-text-secondary)] tabular-nums mt-0.5">{completed}/{total}</span>
           </>
         )}
       </div>
@@ -1192,7 +1192,7 @@ function SprintColumn({
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-1.5">
                 <span className={cn('size-1.5 rounded-full', sCfg?.dot ?? 'bg-gray-500')} />
-                <span className={cn('text-[9px] font-bold uppercase tracking-[0.14em]', sCfg?.text ?? 'text-gray-500')}>{sCfg?.label}</span>
+                <span className={cn('text-[0.5625rem] font-bold uppercase tracking-[0.14em]', sCfg?.text ?? 'text-gray-500')}>{sCfg?.label}</span>
               </div>
               {!editMode ? (
                 <button type="button" onClick={() => enterEditMode(sprint)} title="Edit sprint"
@@ -1202,12 +1202,12 @@ function SprintColumn({
               ) : (
                 <div className="flex items-center gap-1.5">
                   <button type="button" onClick={() => handleSaveSprint(sprint)} disabled={isSavingSprint}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-semibold bg-[var(--space-accent)]/10 text-[var(--space-accent)] hover:bg-[var(--space-accent)]/20 transition-colors disabled:opacity-50">
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[0.625rem] font-semibold bg-[var(--space-accent)]/10 text-[var(--space-accent)] hover:bg-[var(--space-accent)]/20 transition-colors disabled:opacity-50">
                     {isSavingSprint ? <Loader2 className="size-3 animate-spin" /> : <Check className="size-3" />}
                     Save
                   </button>
                   <button type="button" onClick={() => setEditMode(false)}
-                    className="px-2 py-1 rounded-lg text-[10px] text-[var(--space-text-muted)] hover:text-[var(--space-text-tertiary)] hover:bg-[var(--space-divider)] transition-colors">
+                    className="px-2 py-1 rounded-lg text-[0.625rem] text-[var(--space-text-muted)] hover:text-[var(--space-text-tertiary)] hover:bg-[var(--space-divider)] transition-colors">
                     Cancel
                   </button>
                 </div>
@@ -1231,7 +1231,7 @@ function SprintColumn({
               <div className="flex items-start gap-3">
                 <div className="w-0.5 self-stretch bg-[var(--space-accent)]/50 rounded-full shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-[9px] font-bold text-[var(--space-accent)] uppercase tracking-[0.14em] mb-2">Goal</p>
+                  <p className="text-[0.5625rem] font-bold text-[var(--space-accent)] uppercase tracking-[0.14em] mb-2">Goal</p>
                   {editMode ? (
                     <Textarea value={editDraft.goalDescription}
                       onChange={(e) => setEditDraft((p) => ({ ...p, goalDescription: e.target.value }))}
@@ -1252,23 +1252,23 @@ function SprintColumn({
             {columnTasks.length > 0 && (
               <div className="flex flex-wrap justify-center gap-1.5">
                 {inProg > 0 && (
-                  <span className="text-[10px] text-[var(--space-accent)]/80 bg-[var(--space-accent)]/[0.06] border border-[var(--space-accent)]/[0.12] rounded-full px-2.5 py-0.5">
+                  <span className="text-[0.625rem] text-[var(--space-accent)]/80 bg-[var(--space-accent)]/[0.06] border border-[var(--space-accent)]/[0.12] rounded-full px-2.5 py-0.5">
                     {inProg} active
                   </span>
                 )}
                 {pendingC > 0 && (
-                  <span className="text-[10px] text-[var(--space-text-tertiary)] bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] rounded-full px-2.5 py-0.5">
+                  <span className="text-[0.625rem] text-[var(--space-text-tertiary)] bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] rounded-full px-2.5 py-0.5">
                     {pendingC} pending
                   </span>
                 )}
                 {completedCount > 0 && (
-                  <span className="text-[10px] text-blue-400/70 bg-blue-400/[0.05] border border-blue-400/[0.12] rounded-full px-2.5 py-0.5">
+                  <span className="text-[0.625rem] text-blue-400/70 bg-blue-400/[0.05] border border-blue-400/[0.12] rounded-full px-2.5 py-0.5">
                     {completedCount} done
                   </span>
                 )}
               </div>
             )}
-            <div className="flex items-center gap-3 text-[9px] text-[var(--space-text-muted)]">
+            <div className="flex items-center gap-3 text-[0.5625rem] text-[var(--space-text-muted)]">
               <span className="flex items-center gap-1.5">
                 <span className="size-2 rounded-full shrink-0" style={{ background: 'linear-gradient(to right, #1E3A6E, #2B4A8A)' }} />
                 Completed
@@ -1287,9 +1287,9 @@ function SprintColumn({
           {/* Notes list — inside scroll area, under project progression */}
           <div className="px-6 pt-5 pb-4 border-b border-[var(--space-border-hard)]">
             <div className="flex items-center gap-2 mb-3">
-              <span className="text-[9px] font-bold text-[var(--space-text-secondary)] uppercase tracking-[0.14em]">Notes</span>
+              <span className="text-[0.5625rem] font-bold text-[var(--space-text-secondary)] uppercase tracking-[0.14em]">Notes</span>
               {localNotes.length > 0 && (
-                <span className="text-[9px] text-[var(--space-text-muted)] tabular-nums">{localNotes.length}</span>
+                <span className="text-[0.5625rem] text-[var(--space-text-muted)] tabular-nums">{localNotes.length}</span>
               )}
             </div>
             {localNotes.length === 0 && (
@@ -1301,7 +1301,7 @@ function SprintColumn({
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-[var(--space-text-tertiary)] leading-relaxed break-words">{note.text}</p>
                     {note.createdAt && (
-                      <p className="text-[9px] text-[var(--space-text-muted)] mt-0.5">
+                      <p className="text-[0.5625rem] text-[var(--space-text-muted)] mt-0.5">
                         {new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(note.createdAt))}
                       </p>
                     )}
@@ -1342,7 +1342,7 @@ function SprintColumn({
             <div className="px-6 py-5 border-b border-[var(--space-border-hard)]">
               {editMode ? (
                 <div className="space-y-2">
-                  <p className="text-[9px] text-[var(--space-text-muted)] uppercase tracking-wider">Timeline</p>
+                  <p className="text-[0.5625rem] text-[var(--space-text-muted)] uppercase tracking-wider">Timeline</p>
                   <div className="flex items-center gap-2">
                     <Input type="date" value={editDraft.startDate} disabled={isSavingSprint}
                       onChange={(e) => setEditDraft((p) => ({ ...p, startDate: e.target.value }))}
@@ -1428,7 +1428,7 @@ function SprintColumn({
             <div className="px-6 pt-6 pb-5 border-b border-[var(--space-border-hard)]">
               <div className="flex items-center gap-1.5 mb-2">
                 <span className="size-1.5 rounded-full bg-gray-500 shrink-0" />
-                <span className="text-[9px] font-bold uppercase tracking-[0.14em] text-[var(--space-text-muted)]">Unassigned</span>
+                <span className="text-[0.5625rem] font-bold uppercase tracking-[0.14em] text-[var(--space-text-muted)]">Unassigned</span>
               </div>
               <h3 className="text-lg font-bold text-[var(--space-text-primary)] leading-snug">Session</h3>
               <p className="text-xs text-[var(--space-text-muted)] mt-0.5">In-memory only · resets on refresh</p>
@@ -1439,7 +1439,7 @@ function SprintColumn({
               <div className="flex items-start gap-3">
                 <div className="w-0.5 self-stretch bg-[var(--space-accent)]/50 rounded-full shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-[9px] font-bold text-[var(--space-accent)] uppercase tracking-[0.14em] mb-2">
+                  <p className="text-[0.5625rem] font-bold text-[var(--space-accent)] uppercase tracking-[0.14em] mb-2">
                     <Target className="size-2.5 inline-block mr-1 -mt-px" />
                     Session Goal
                   </p>
@@ -1460,17 +1460,17 @@ function SprintColumn({
               {columnTasks.length > 0 && (
                 <div className="flex flex-wrap justify-center gap-1.5">
                   {inProg > 0 && (
-                    <span className="text-[10px] text-[var(--space-accent)]/80 bg-[var(--space-accent)]/[0.06] border border-[var(--space-accent)]/[0.12] rounded-full px-2.5 py-0.5">
+                    <span className="text-[0.625rem] text-[var(--space-accent)]/80 bg-[var(--space-accent)]/[0.06] border border-[var(--space-accent)]/[0.12] rounded-full px-2.5 py-0.5">
                       {inProg} active
                     </span>
                   )}
                   {pendingC > 0 && (
-                    <span className="text-[10px] text-[var(--space-text-secondary)] bg-[var(--space-bg-card)] border border-[var(--space-border-hard)] rounded-full px-2.5 py-0.5">
+                    <span className="text-[0.625rem] text-[var(--space-text-secondary)] bg-[var(--space-bg-card)] border border-[var(--space-border-hard)] rounded-full px-2.5 py-0.5">
                       {pendingC} pending
                     </span>
                   )}
                   {completedCount > 0 && (
-                    <span className="text-[10px] text-blue-400/70 bg-blue-400/[0.05] border border-blue-400/[0.12] rounded-full px-2.5 py-0.5">
+                    <span className="text-[0.625rem] text-blue-400/70 bg-blue-400/[0.05] border border-blue-400/[0.12] rounded-full px-2.5 py-0.5">
                       {completedCount} done
                     </span>
                   )}
@@ -1481,9 +1481,9 @@ function SprintColumn({
             {/* Session Notes list */}
             <div className="px-6 pt-5 pb-4">
               <div className="flex items-center gap-2 mb-3">
-                <span className="text-[9px] font-bold text-[var(--space-text-secondary)] uppercase tracking-[0.14em]">Session Notes</span>
+                <span className="text-[0.5625rem] font-bold text-[var(--space-text-secondary)] uppercase tracking-[0.14em]">Session Notes</span>
                 {sessionNotes.length > 0 && (
-                  <span className="text-[9px] text-[var(--space-text-muted)] tabular-nums">{sessionNotes.length}</span>
+                  <span className="text-[0.5625rem] text-[var(--space-text-muted)] tabular-nums">{sessionNotes.length}</span>
                 )}
               </div>
               {sessionNotes.length === 0 && (
@@ -1494,7 +1494,7 @@ function SprintColumn({
                   <div key={i} className="flex items-start gap-2 group">
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-gray-200 leading-relaxed break-words">{note.text}</p>
-                      <p className="text-[9px] text-gray-600 mt-0.5">
+                      <p className="text-[0.5625rem] text-gray-600 mt-0.5">
                         {new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(note.createdAt))}
                       </p>
                     </div>
@@ -1600,7 +1600,7 @@ function MobileOverview({
         ].map(({ label, value, color }) => (
           <div key={label} className="rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card-hover)] px-3 py-3 text-center">
             <p className={`text-xl font-bold tabular-nums ${color}`}>{value}</p>
-            <p className="text-[9px] text-[var(--space-text-muted)] uppercase tracking-widest mt-0.5">{label}</p>
+            <p className="text-[0.5625rem] text-[var(--space-text-muted)] uppercase tracking-widest mt-0.5">{label}</p>
           </div>
         ))}
       </div>
@@ -1610,7 +1610,7 @@ function MobileOverview({
         <div>
           <div className="flex items-center gap-2 mb-2">
             <span className="size-1.5 rounded-full bg-[var(--space-accent)] shrink-0" style={{ boxShadow: '0 0 6px rgba(139,156,182,0.25)' }} />
-            <p className="text-[10px] font-semibold text-[var(--space-accent)] uppercase tracking-[0.15em]">
+            <p className="text-[0.625rem] font-semibold text-[var(--space-accent)] uppercase tracking-[0.15em]">
               Active Focus · {focusedTasks.length}
             </p>
           </div>
@@ -1623,9 +1623,9 @@ function MobileOverview({
                   <span className={`shrink-0 size-1.5 rounded-full ${STATUS_DOT[t.status] ?? 'bg-gray-500'}`} />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-[var(--space-text-primary)] font-medium truncate">{t.title}</p>
-                    {projName && <p className="text-[10px] text-[var(--space-text-muted)] mt-0.5 truncate">{projName}</p>}
+                    {projName && <p className="text-[0.625rem] text-[var(--space-text-muted)] mt-0.5 truncate">{projName}</p>}
                   </div>
-                  <span className={`shrink-0 text-[9px] font-bold px-1.5 rounded border leading-4 ${pc.color} ${pc.bg}`}>{pc.short}</span>
+                  <span className={`shrink-0 text-[0.5625rem] font-bold px-1.5 rounded border leading-4 ${pc.color} ${pc.bg}`}>{pc.short}</span>
                 </div>
               )
             })}
@@ -1641,7 +1641,7 @@ function MobileOverview({
         </div>
       ) : (
         <div>
-          <p className="text-[9px] font-bold text-[var(--space-accent)] uppercase tracking-[0.2em] mb-3">
+          <p className="text-[0.5625rem] font-bold text-[var(--space-accent)] uppercase tracking-[0.2em] mb-3">
             All Sprints · {allSprints.length}
           </p>
           <div className="space-y-2.5">
@@ -1663,16 +1663,16 @@ function MobileOverview({
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-[var(--space-text-primary)] leading-snug truncate">{sprint.name}</p>
-                      {projName && <p className="text-[10px] text-[var(--space-text-muted)] mt-0.5 truncate">{projName}</p>}
+                      {projName && <p className="text-[0.625rem] text-[var(--space-text-muted)] mt-0.5 truncate">{projName}</p>}
                     </div>
-                    <span className={`shrink-0 text-[9px] font-bold uppercase tracking-wide ${cfg.text}`}>{cfg.label}</span>
+                    <span className={`shrink-0 text-[0.5625rem] font-bold uppercase tracking-wide ${cfg.text}`}>{cfg.label}</span>
                   </div>
                   {sTasks.length > 0 && (
                     <div className="flex items-center gap-2">
-                      <div className="flex-1 h-[3px] bg-[var(--space-divider)] rounded-full overflow-hidden">
+                      <div className="flex-1 h-[0.1875rem] bg-[var(--space-divider)] rounded-full overflow-hidden">
                         <div className={`h-full rounded-full ${cfg.bar}`} style={{ width: `${pct}%` }} />
                       </div>
-                      <span className="text-[10px] text-[var(--space-text-muted)] shrink-0 tabular-nums">{done}/{sTasks.length}</span>
+                      <span className="text-[0.625rem] text-[var(--space-text-muted)] shrink-0 tabular-nums">{done}/{sTasks.length}</span>
                     </div>
                   )}
                 </div>
@@ -1877,10 +1877,10 @@ function TaskBoard({
       {/* ── TOP BAR ─────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--space-border-hard)] shrink-0">
         <div className="flex items-center gap-2.5">
-          <span className="text-[10px] font-bold text-[var(--space-accent)] uppercase tracking-[0.14em]">Tasks</span>
-          <span className="text-[10px] text-[var(--space-text-tertiary)] tabular-nums">{tasks.length} · {completedCount} done</span>
+          <span className="text-[0.625rem] font-bold text-[var(--space-accent)] uppercase tracking-[0.14em]">Tasks</span>
+          <span className="text-[0.625rem] text-[var(--space-text-tertiary)] tabular-nums">{tasks.length} · {completedCount} done</span>
           {(activeTaskIdsA.size + activeTaskIdsB.size) > 0 && (
-            <span className="text-[10px] text-[var(--space-accent)] tabular-nums">· {activeTaskIdsA.size + activeTaskIdsB.size} active</span>
+            <span className="text-[0.625rem] text-[var(--space-accent)] tabular-nums">· {activeTaskIdsA.size + activeTaskIdsB.size} active</span>
           )}
         </div>
         {/* Expand only on desktop */}
@@ -1888,7 +1888,7 @@ function TaskBoard({
           type="button"
           onClick={onExpandToggle}
           title={isPopup ? 'Close' : 'Open in popup'}
-          className="hidden lg:flex items-center gap-1.5 px-2 py-1 rounded text-[var(--space-text-muted)] hover:text-[var(--space-text-tertiary)] hover:bg-[var(--space-bg-card-hover)] transition-colors text-[10px]"
+          className="hidden lg:flex items-center gap-1.5 px-2 py-1 rounded text-[var(--space-text-muted)] hover:text-[var(--space-text-tertiary)] hover:bg-[var(--space-bg-card-hover)] transition-colors text-[0.625rem]"
         >
           {isPopup ? <><X className="size-3" /><span>Close</span></> : <><Maximize2 className="size-3" /><span>Expand</span></>}
         </button>
@@ -1902,7 +1902,7 @@ function TaskBoard({
             type="button"
             onClick={() => setMobileTab(tab.id)}
             className={cn(
-              'flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-all duration-150',
+              'flex-1 py-1.5 rounded-lg text-[0.6875rem] font-semibold transition-all duration-150',
               mobileTab === tab.id
                 ? 'bg-[var(--space-divider)] text-[var(--space-text-primary)]'
                 : 'text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)]',
@@ -1963,7 +1963,7 @@ function TaskBoard({
               {/* Header */}
               <div className="flex items-center gap-2 px-3 py-2.5 border-b border-[var(--space-border-hard)] shrink-0">
                 <Zap className="size-3 text-[var(--space-accent)] shrink-0" />
-                <span className="text-[9px] font-bold text-[var(--space-accent)] uppercase tracking-[0.12em]">Active Sprints</span>
+                <span className="text-[0.5625rem] font-bold text-[var(--space-accent)] uppercase tracking-[0.12em]">Active Sprints</span>
               </div>
 
               {/* New Sprint — top of sidebar */}
@@ -1971,7 +1971,7 @@ function TaskBoard({
                 <div className="shrink-0 border-b border-[var(--space-border-hard)]">
                   {showProjectPicker ? (
                     <div className="p-2 space-y-1">
-                      <p className="text-[9px] text-[var(--space-text-muted)] px-1 pb-0.5 uppercase tracking-wider">Select project</p>
+                      <p className="text-[0.5625rem] text-[var(--space-text-muted)] px-1 pb-0.5 uppercase tracking-wider">Select project</p>
                       {projects.map((p) => (
                         <button
                           key={p.id}
@@ -1982,7 +1982,7 @@ function TaskBoard({
                           {p.name}
                         </button>
                       ))}
-                      <button type="button" onClick={() => setShowProjectPicker(false)} className="text-[10px] text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)] px-2 py-1 transition-colors">
+                      <button type="button" onClick={() => setShowProjectPicker(false)} className="text-[0.625rem] text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)] px-2 py-1 transition-colors">
                         Cancel
                       </button>
                     </div>
@@ -1997,7 +1997,7 @@ function TaskBoard({
                           setShowProjectPicker(true)
                         }
                       }}
-                      className="flex items-center gap-1.5 w-full px-3 py-2.5 text-[10px] text-[var(--space-text-secondary)] hover:text-[var(--space-text-primary)] hover:bg-[var(--space-divider)] transition-colors"
+                      className="flex items-center gap-1.5 w-full px-3 py-2.5 text-[0.625rem] text-[var(--space-text-secondary)] hover:text-[var(--space-text-primary)] hover:bg-[var(--space-divider)] transition-colors"
                     >
                       <Plus className="size-3" />
                       New Sprint
@@ -2044,9 +2044,9 @@ function TaskBoard({
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center justify-between gap-1">
                                 <span className="text-xs font-medium text-[var(--space-text-primary)] truncate leading-tight">{sprint.name}</span>
-                                <span className={`shrink-0 text-[9px] font-bold ${cfg.text}`}>{cfg.label}</span>
+                                <span className={`shrink-0 text-[0.5625rem] font-bold ${cfg.text}`}>{cfg.label}</span>
                               </div>
-                              {projName && <p className="text-[9px] text-[var(--space-text-secondary)] truncate">{projName}</p>}
+                              {projName && <p className="text-[0.5625rem] text-[var(--space-text-secondary)] truncate">{projName}</p>}
                             </div>
                           </button>
 
@@ -2055,7 +2055,7 @@ function TaskBoard({
                             <div className="pb-2 space-y-2">
                               {/* Goal / description */}
                               {(sprint.goalDescription || sprint.description) && (
-                                <p className="text-[10px] text-[var(--space-text-tertiary)] px-3 leading-relaxed line-clamp-3">
+                                <p className="text-[0.625rem] text-[var(--space-text-tertiary)] px-3 leading-relaxed line-clamp-3">
                                   {sprint.goalDescription || sprint.description}
                                 </p>
                               )}
@@ -2063,10 +2063,10 @@ function TaskBoard({
                               {/* Progress bar */}
                               {sTasks.length > 0 && (
                                 <div className="flex items-center gap-1.5 px-3">
-                                  <div className="flex-1 h-[2px] bg-[var(--space-divider)] rounded-full overflow-hidden">
+                                  <div className="flex-1 h-[0.125rem] bg-[var(--space-divider)] rounded-full overflow-hidden">
                                     <div className={`h-full rounded-full ${cfg.bar}`} style={{ width: `${pct}%` }} />
                                   </div>
-                                  <span className="text-[9px] text-[var(--space-text-secondary)] shrink-0 tabular-nums">{done}/{sTasks.length} · {pct}%</span>
+                                  <span className="text-[0.5625rem] text-[var(--space-text-secondary)] shrink-0 tabular-nums">{done}/{sTasks.length} · {pct}%</span>
                                 </div>
                               )}
 
@@ -2074,17 +2074,17 @@ function TaskBoard({
                               {sTasks.length > 0 && (
                                 <div className="flex flex-wrap gap-1 px-3">
                                   {inProg > 0 && (
-                                    <span className="text-[9px] text-[var(--space-accent)]/80 bg-[var(--space-accent)]/[0.06] border border-[var(--space-accent)]/[0.12] rounded-full px-1.5 py-0.5">
+                                    <span className="text-[0.5625rem] text-[var(--space-accent)]/80 bg-[var(--space-accent)]/[0.06] border border-[var(--space-accent)]/[0.12] rounded-full px-1.5 py-0.5">
                                       {inProg} active
                                     </span>
                                   )}
                                   {pendingC > 0 && (
-                                    <span className="text-[9px] text-[var(--space-text-tertiary)] bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] rounded-full px-1.5 py-0.5">
+                                    <span className="text-[0.5625rem] text-[var(--space-text-tertiary)] bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] rounded-full px-1.5 py-0.5">
                                       {pendingC} pending
                                     </span>
                                   )}
                                   {done > 0 && (
-                                    <span className="text-[9px] text-green-400/70 bg-green-400/[0.05] border border-green-400/[0.12] rounded-full px-1.5 py-0.5">
+                                    <span className="text-[0.5625rem] text-green-400/70 bg-green-400/[0.05] border border-green-400/[0.12] rounded-full px-1.5 py-0.5">
                                       {done} done
                                     </span>
                                   )}
@@ -2093,7 +2093,7 @@ function TaskBoard({
 
                               {/* Date footer */}
                               {(sprint.startDate || sprint.endDate) && (
-                                <div className="flex items-center gap-1 px-3 text-[9px] text-[var(--space-text-muted)]">
+                                <div className="flex items-center gap-1 px-3 text-[0.5625rem] text-[var(--space-text-muted)]">
                                   <Calendar className="size-2.5 shrink-0" />
                                   <span>{fmtDate(sprint.startDate) ?? 'TBD'} → {fmtDate(sprint.endDate) ?? 'TBD'}</span>
                                 </div>
@@ -2103,11 +2103,11 @@ function TaskBoard({
                               {sTasks.length > 0 && (
                                 <div className="px-1 pt-1 border-t border-[var(--space-border-hard)]">
                                   {sTasks.slice(0, 8).map((t) => <SidebarTask key={t.id} task={t} />)}
-                                  {sTasks.length > 8 && <p className="text-[10px] text-gray-400 px-2 py-1">+{sTasks.length - 8} more</p>}
+                                  {sTasks.length > 8 && <p className="text-[0.625rem] text-gray-400 px-2 py-1">+{sTasks.length - 8} more</p>}
                                 </div>
                               )}
                               {sTasks.length === 0 && (
-                                <p className="text-[10px] text-gray-600 px-3 pb-1">No tasks yet</p>
+                                <p className="text-[0.625rem] text-gray-600 px-3 pb-1">No tasks yet</p>
                               )}
                             </div>
                           )}
@@ -2185,11 +2185,7 @@ export function TasksView({ tasks, sprints = [], projects = [] }: TasksViewProps
 
   return (
     <>
-      {/* main has zoom:1.3 — divide by zoom factor so visual height = viewport minus header */}
-      <div
-        className="rounded-xl border border-[var(--space-border-hard)] overflow-hidden"
-        style={{ height: 'calc(100svh / 1.3 - 49px)' }}
-      >
+      <div className="rounded-xl border border-[var(--space-border-hard)] overflow-hidden space-panel-h">
         <TaskBoard {...boardProps} isPopup={false} onExpandToggle={() => setPopup(true)} />
       </div>
 

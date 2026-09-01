@@ -78,11 +78,11 @@ export function WelcomeInfoButton({ firstName, showTips }: WelcomeInfoButtonProp
 
       {/* Panel — top-right on desktop, centered on mobile */}
       <div
-        className="absolute inset-0 flex items-center justify-center p-4 sm:items-start sm:justify-end sm:p-6 sm:pt-[72px]"
+        className="absolute inset-0 flex items-center justify-center p-4 sm:items-start sm:justify-end sm:p-6 sm:pt-[4.5rem]"
         onClick={closeModal}
       >
         <div
-          className="relative w-full max-w-[340px] rounded-2xl border border-[var(--space-border-hard)] bg-[var(--space-bg-base)] shadow-2xl overflow-hidden"
+          className="relative w-full max-w-[21.25rem] rounded-2xl border border-[var(--space-border-hard)] bg-[var(--space-bg-base)] shadow-2xl overflow-hidden"
           onClick={e => e.stopPropagation()}
           style={{
             transition: 'opacity 300ms ease-out, transform 300ms cubic-bezier(0.34,1.56,0.64,1)',
@@ -119,7 +119,7 @@ export function WelcomeInfoButton({ firstName, showTips }: WelcomeInfoButtonProp
                   <Info className="size-4 text-blue-400" />
                 </div>
                 <div>
-                  <p className="text-[9px] font-semibold uppercase tracking-[0.25em] text-blue-400/60 mb-0.5">
+                  <p className="text-[0.5625rem] font-semibold uppercase tracking-[0.25em] text-blue-400/60 mb-0.5">
                     Client Portal
                   </p>
                   <h3 className="text-sm font-bold text-[var(--space-text-primary)]">
@@ -166,7 +166,7 @@ export function WelcomeInfoButton({ firstName, showTips }: WelcomeInfoButtonProp
                 <FolderOpen className="size-3.5 text-[var(--space-text-muted)] group-hover:text-blue-400 transition-colors shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-semibold text-[var(--space-text-primary)]">Track milestones &amp; sprints</p>
-                  <p className="text-[10px] text-[var(--space-text-muted)] mt-0.5">View your project progress</p>
+                  <p className="text-[0.625rem] text-[var(--space-text-muted)] mt-0.5">View your project progress</p>
                 </div>
                 <ArrowRight className="size-3 text-[var(--space-text-muted)] group-hover:text-blue-400 transition-colors shrink-0" />
               </button>
@@ -178,7 +178,7 @@ export function WelcomeInfoButton({ firstName, showTips }: WelcomeInfoButtonProp
                 <Receipt className="size-3.5 text-[var(--space-text-muted)] group-hover:text-blue-400 transition-colors shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-semibold text-[var(--space-text-primary)]">View and pay invoices</p>
-                  <p className="text-[10px] text-[var(--space-text-muted)] mt-0.5">Manage your payments</p>
+                  <p className="text-[0.625rem] text-[var(--space-text-muted)] mt-0.5">Manage your payments</p>
                 </div>
                 <ArrowRight className="size-3 text-[var(--space-text-muted)] group-hover:text-blue-400 transition-colors shrink-0" />
               </button>
@@ -191,11 +191,11 @@ export function WelcomeInfoButton({ firstName, showTips }: WelcomeInfoButtonProp
                 <Package className="size-3.5 text-blue-400 shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-semibold text-blue-300">View packages</p>
-                  <p className="text-[10px] text-blue-400/60 mt-0.5">Your service proposals</p>
+                  <p className="text-[0.625rem] text-blue-400/60 mt-0.5">Your service proposals</p>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
                   {packageCount > 0 && (
-                    <span className="min-w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center px-1 leading-none shadow-sm">
+                    <span className="min-w-[1.125rem] h-[1.125rem] rounded-full bg-red-500 text-white text-[0.5625rem] font-bold flex items-center justify-center px-1 leading-none shadow-sm">
                       {packageCount > 9 ? '9+' : packageCount}
                     </span>
                   )}
@@ -226,7 +226,7 @@ export function WelcomeInfoButton({ firstName, showTips }: WelcomeInfoButtonProp
                 {dontShow && <Check className="size-2.5 text-white" strokeWidth={3} />}
               </button>
               <span
-                className="text-[10px] text-[var(--space-text-muted)] select-none cursor-pointer"
+                className="text-[0.625rem] text-[var(--space-text-muted)] select-none cursor-pointer"
                 onClick={() => setDontShow(v => !v)}
               >
                 Don&apos;t show again

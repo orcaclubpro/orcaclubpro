@@ -96,7 +96,7 @@ function ProjectCard({ project, username }: { project: CarouselProject; username
           const statusCfg = PROJECT_STATUS_CFG[project.status as keyof typeof PROJECT_STATUS_CFG] ?? PROJECT_STATUS_CFG.pending
           return (
             <div className="space-y-1 pt-2 border-t border-[var(--space-border-hard)]">
-              <div className="flex justify-between text-[9px] text-[var(--space-text-muted)]">
+              <div className="flex justify-between text-[0.5625rem] text-[var(--space-text-muted)]">
                 <span>Timeline</span>
                 <span>{pct}%</span>
               </div>

@@ -196,7 +196,7 @@ export function UserSettingsPanel({ open, onClose, name, email, title, role }: U
 
           {/* Panel — the panel itself scrolls; header is sticky */}
           <div
-            className="fixed top-0 right-0 bottom-0 z-[61] w-full sm:w-[380px] overflow-y-auto border-l border-[var(--space-border-hard)]"
+            className="fixed top-0 right-0 bottom-0 z-[61] w-full sm:w-[23.75rem] overflow-y-auto border-l border-[var(--space-border-hard)]"
             style={{
               background: PANEL_BG,
               transform: visible ? 'translateX(0)' : 'translateX(100%)',
@@ -212,7 +212,7 @@ export function UserSettingsPanel({ open, onClose, name, email, title, role }: U
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-[var(--space-text-primary)] leading-tight">{name || email}</p>
-                    <p className="text-[11px] text-[var(--space-text-muted)] mt-0.5 tracking-wide">Account Settings</p>
+                    <p className="text-[0.6875rem] text-[var(--space-text-muted)] mt-0.5 tracking-wide">Account Settings</p>
                   </div>
                 </div>
                 <button
@@ -231,7 +231,7 @@ export function UserSettingsPanel({ open, onClose, name, email, title, role }: U
 
               {/* ── Profile section — admin/staff only ── */}
               {!isClient && <div className="px-6 py-6 space-y-4 border-b border-[var(--space-border-hard)]">
-                <p className="text-[10px] tracking-[0.15em] uppercase text-[var(--space-text-muted)] font-semibold">Profile</p>
+                <p className="text-[0.625rem] tracking-[0.15em] uppercase text-[var(--space-text-muted)] font-semibold">Profile</p>
 
                 <div className="space-y-1.5">
                   <label className="block text-xs text-[var(--space-text-secondary)]">Name</label>
@@ -260,7 +260,7 @@ export function UserSettingsPanel({ open, onClose, name, email, title, role }: U
                     placeholder="e.g. Lead Developer"
                     className={fieldClass}
                   />
-                  <p className="text-[10px] text-[var(--space-text-muted)]">Shown to clients on their team view</p>
+                  <p className="text-[0.625rem] text-[var(--space-text-muted)]">Shown to clients on their team view</p>
                 </div>
 
                 {profileError && (
@@ -292,7 +292,7 @@ export function UserSettingsPanel({ open, onClose, name, email, title, role }: U
                 >
                   <div className="flex items-center gap-2">
                     <KeyRound className="size-3.5 text-[var(--space-text-muted)]" />
-                    <p className="text-[10px] tracking-[0.15em] uppercase text-[var(--space-text-muted)] font-semibold">Change Password</p>
+                    <p className="text-[0.625rem] tracking-[0.15em] uppercase text-[var(--space-text-muted)] font-semibold">Change Password</p>
                   </div>
                   <ChevronDown className={`size-3.5 text-[var(--space-text-muted)] transition-transform duration-200 ${showPassword ? 'rotate-180' : ''}`} />
                 </button>
@@ -359,19 +359,19 @@ export function UserSettingsPanel({ open, onClose, name, email, title, role }: U
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
                     <Fingerprint className="size-3.5 text-[var(--space-text-muted)]" />
-                    <p className="text-[10px] tracking-[0.15em] uppercase text-[var(--space-text-muted)] font-semibold">Passkey</p>
+                    <p className="text-[0.625rem] tracking-[0.15em] uppercase text-[var(--space-text-muted)] font-semibold">Passkey</p>
                   </div>
                   {/* Status badge */}
                   {passkeys !== null && !passkeyLoading && (
                     passkeys.length > 0 ? (
                       <div className="flex items-center gap-1.5">
                         <ShieldCheck className="size-3.5" style={{ color: 'var(--space-accent)' }} />
-                        <span className="text-[11px] font-medium" style={{ color: 'var(--space-accent)' }}>
+                        <span className="text-[0.6875rem] font-medium" style={{ color: 'var(--space-accent)' }}>
                           {passkeys.length === 1 ? 'Passkey set' : `${passkeys.length} passkeys`}
                         </span>
                       </div>
                     ) : (
-                      <span className="text-[11px] text-[var(--space-text-muted)]">Not set up</span>
+                      <span className="text-[0.6875rem] text-[var(--space-text-muted)]">Not set up</span>
                     )
                   )}
                 </div>
@@ -401,7 +401,7 @@ export function UserSettingsPanel({ open, onClose, name, email, title, role }: U
                           <div className="min-w-0">
                             <p className="text-xs font-medium text-[var(--space-text-primary)] truncate">{pk.deviceName}</p>
                             {pk.registeredAt && (
-                              <p className="text-[10px] text-[var(--space-text-muted)]">Added {fmtDate(pk.registeredAt)}{pk.credentialBackedUp ? ' · Synced' : ''}</p>
+                              <p className="text-[0.625rem] text-[var(--space-text-muted)]">Added {fmtDate(pk.registeredAt)}{pk.credentialBackedUp ? ' · Synced' : ''}</p>
                             )}
                           </div>
                         </div>

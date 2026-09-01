@@ -128,7 +128,7 @@ function DueDateEditor({
         )}
         {!value && !isDirty && <span className="text-xs text-[var(--space-text-muted)]">No due date set</span>}
         {hasStripe && !saving && (
-          <span className="ml-auto flex items-center gap-1 text-[10px] text-[var(--space-text-muted)]">
+          <span className="ml-auto flex items-center gap-1 text-[0.625rem] text-[var(--space-text-muted)]">
             <Zap className="size-3" />Syncs to Stripe
           </span>
         )}
@@ -260,10 +260,10 @@ function LineItemsEditor({
                   )}
                   <div className="flex items-center gap-2 mt-1.5">
                     {(item.quantity ?? 1) > 1 && (
-                      <span className="text-[11px] text-[var(--space-text-muted)]">×{item.quantity}</span>
+                      <span className="text-[0.6875rem] text-[var(--space-text-muted)]">×{item.quantity}</span>
                     )}
                     {item.isRecurring && (
-                      <span className="text-[10px] border rounded-full px-1.5 py-0.5 uppercase tracking-wide border-[rgba(139,156,182,0.15)] bg-[rgba(139,156,182,0.06)]" style={{ color: 'var(--space-accent)' }}>
+                      <span className="text-[0.625rem] border rounded-full px-1.5 py-0.5 uppercase tracking-wide border-[rgba(139,156,182,0.15)] bg-[rgba(139,156,182,0.06)]" style={{ color: 'var(--space-accent)' }}>
                         {item.recurringInterval === 'year' ? 'Annual' : 'Monthly'}
                       </span>
                     )}
@@ -279,7 +279,7 @@ function LineItemsEditor({
                     )}
                   </p>
                   {(item.quantity ?? 1) > 1 && (
-                    <p className="text-[10px] text-[var(--space-text-muted)] mt-0.5">{fmt(item.price)} ea.</p>
+                    <p className="text-[0.625rem] text-[var(--space-text-muted)] mt-0.5">{fmt(item.price)} ea.</p>
                   )}
                 </div>
               </div>
@@ -312,7 +312,7 @@ function LineItemsEditor({
             </div>
           )}
           {hasStripe && !warning && !synced && (
-            <span className="ml-auto flex items-center gap-1 text-[10px] text-[var(--space-text-muted)]">
+            <span className="ml-auto flex items-center gap-1 text-[0.625rem] text-[var(--space-text-muted)]">
               <Zap className="size-3" />Syncs to Stripe if draft
             </span>
           )}
@@ -333,7 +333,7 @@ function LineItemsEditor({
           >
             {/* Title row */}
             <div className="flex items-center gap-2">
-              <span className="text-[10px] text-[var(--space-text-muted)] font-semibold uppercase tracking-widest w-4 shrink-0">
+              <span className="text-[0.625rem] text-[var(--space-text-muted)] font-semibold uppercase tracking-widest w-4 shrink-0">
                 {i + 1}
               </span>
               <input
@@ -365,7 +365,7 @@ function LineItemsEditor({
             {/* Qty × Price = Total */}
             <div className="flex items-center gap-2 flex-wrap">
               <div className="flex items-center gap-1.5">
-                <label className="text-[10px] text-[var(--space-text-muted)] uppercase tracking-widest font-semibold">Qty</label>
+                <label className="text-[0.625rem] text-[var(--space-text-muted)] uppercase tracking-widest font-semibold">Qty</label>
                 <input
                   type="number"
                   min={1}
@@ -379,7 +379,7 @@ function LineItemsEditor({
               <span className="text-[var(--space-text-muted)] text-xs">×</span>
 
               <div className="flex items-center gap-1.5">
-                <label className="text-[10px] text-[var(--space-text-muted)] uppercase tracking-widest font-semibold">Price</label>
+                <label className="text-[0.625rem] text-[var(--space-text-muted)] uppercase tracking-widest font-semibold">Price</label>
                 <div className="relative">
                   <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-[var(--space-text-muted)]">$</span>
                   <input
@@ -419,7 +419,7 @@ function LineItemsEditor({
 
       {/* Stripe note */}
       {hasStripe && (
-        <p className="flex items-center gap-1.5 text-[10px] text-[var(--space-text-muted)]">
+        <p className="flex items-center gap-1.5 text-[0.625rem] text-[var(--space-text-muted)]">
           <Zap className="size-3" />
           Changes sync to Stripe only if the invoice is still a draft. Finalized invoices are updated in Payload only.
         </p>
@@ -484,7 +484,7 @@ function MarkAsPaidButton({ orderId, onPaid }: { orderId: string; onPaid: () => 
         {saving ? <Loader2 className="size-3 animate-spin" /> : <CheckCircle className="size-3.5" />}
         {confirm ? 'Confirm payment' : 'Mark as Paid'}
       </button>
-      {error && <p className="text-[10px] text-red-400">{error}</p>}
+      {error && <p className="text-[0.625rem] text-red-400">{error}</p>}
     </div>
   )
 }
@@ -531,7 +531,7 @@ function DeleteOrderButton({ orderId, onDeleted }: { orderId: string; onDeleted:
         {deleting ? <Loader2 className="size-3 animate-spin" /> : <Trash2 className="size-3.5" />}
         {confirm ? 'Confirm delete' : 'Delete Order'}
       </button>
-      {error && <p className="text-[10px] text-red-400">{error}</p>}
+      {error && <p className="text-[0.625rem] text-red-400">{error}</p>}
     </div>
   )
 }
@@ -598,7 +598,7 @@ function OrderCard({
               </span>
               <Badge
                 variant="outline"
-                className={`${cfg.color} ${cfg.bg} border ${cfg.border} text-[10px] px-1.5 py-0 inline-flex items-center gap-1 shrink-0`}
+                className={`${cfg.color} ${cfg.bg} border ${cfg.border} text-[0.625rem] px-1.5 py-0 inline-flex items-center gap-1 shrink-0`}
               >
                 <StatusIcon className="size-2.5" />{cfg.label}
               </Badge>
@@ -610,7 +610,7 @@ function OrderCard({
             )}
 
             {/* Order number */}
-            <p className="text-[11px] font-mono text-[var(--space-text-muted)] mb-2">#{order.orderNumber}</p>
+            <p className="text-[0.6875rem] font-mono text-[var(--space-text-muted)] mb-2">#{order.orderNumber}</p>
 
             {/* Dates */}
             <div className="flex items-center gap-4 flex-wrap">
@@ -670,7 +670,7 @@ function OrderCard({
 
             {/* Due date */}
             <div className="space-y-2">
-              <p className="text-[10px] text-[var(--space-text-secondary)] uppercase tracking-widest font-semibold">Due Date</p>
+              <p className="text-[0.625rem] text-[var(--space-text-secondary)] uppercase tracking-widest font-semibold">Due Date</p>
               {canEditDueDate ? (
                 <DueDateEditor orderId={order.id} dueDate={order.dueDate} hasStripe={!!order.stripeInvoiceId} />
               ) : (
@@ -682,7 +682,7 @@ function OrderCard({
 
             {/* Line items */}
             <div className="space-y-2">
-              <p className="text-[10px] text-[var(--space-text-secondary)] uppercase tracking-widest font-semibold">Line Items</p>
+              <p className="text-[0.625rem] text-[var(--space-text-secondary)] uppercase tracking-widest font-semibold">Line Items</p>
               {canEditLineItems ? (
                 <LineItemsEditor
                   orderId={order.id}
@@ -701,9 +701,9 @@ function OrderCard({
                           <p className="text-sm text-[var(--space-text-primary)] font-medium">{item.title}</p>
                           {item.description && <p className="text-xs text-[var(--space-text-secondary)] mt-1 leading-relaxed">{item.description}</p>}
                           <div className="flex items-center gap-2 mt-1.5">
-                            {(item.quantity ?? 1) > 1 && <span className="text-[11px] text-[var(--space-text-muted)]">×{item.quantity}</span>}
+                            {(item.quantity ?? 1) > 1 && <span className="text-[0.6875rem] text-[var(--space-text-muted)]">×{item.quantity}</span>}
                             {item.isRecurring && (
-                              <span className="text-[10px] border rounded-full px-1.5 py-0.5 uppercase tracking-wide border-[rgba(139,156,182,0.15)] bg-[rgba(139,156,182,0.06)]" style={{ color: 'var(--space-accent)' }}>
+                              <span className="text-[0.625rem] border rounded-full px-1.5 py-0.5 uppercase tracking-wide border-[rgba(139,156,182,0.15)] bg-[rgba(139,156,182,0.06)]" style={{ color: 'var(--space-accent)' }}>
                                 {item.recurringInterval === 'year' ? 'Annual' : 'Monthly'}
                               </span>
                             )}
@@ -803,7 +803,7 @@ export function ClientOrdersTab({
         <div key={section.label} className="space-y-3">
           <div className="flex items-center gap-2">
             <section.icon className={`size-3.5 ${section.color}`} />
-            <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--space-text-secondary)]">
+            <span className="text-[0.625rem] font-bold uppercase tracking-widest text-[var(--space-text-secondary)]">
               {section.label} · {section.items.length}
             </span>
           </div>

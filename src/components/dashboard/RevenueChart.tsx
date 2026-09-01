@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import { TrendingUp, TrendingDown, Minus, Info } from 'lucide-react'
-import type { Range } from './PortfolioTimeline'
+import type { Range } from '@/lib/dashboard/range'
 
 // ── Range → lookback window ────────────────────────────────────────────────────
 const RANGE_DAYS: Record<Range, number> = { week: 7, month: 30, year: 365 }
@@ -69,7 +69,7 @@ function DeltaBadge({ current, prev }: { current: number; prev: number }) {
 
   if (isNew && current > 0) {
     return (
-      <span className="text-[9px] font-semibold tracking-wide" style={{ color: 'var(--space-accent)' }}>
+      <span className="text-[0.5625rem] font-semibold tracking-wide" style={{ color: 'var(--space-accent)' }}>
         new
       </span>
     )
@@ -86,7 +86,7 @@ function DeltaBadge({ current, prev }: { current: number; prev: number }) {
   return (
     <span className="flex items-center gap-0.5" style={{ color }}>
       <Icon style={{ width: 9, height: 9 }} />
-      <span className="text-[9px] font-semibold tabular-nums">
+      <span className="text-[0.5625rem] font-semibold tabular-nums">
         {pct === 0 ? '—' : `${isUp ? '+' : ''}${pct}%`}
       </span>
     </span>
@@ -101,7 +101,7 @@ function RateDelta({ current, prev }: { current: number; prev: number }) {
   const up = pp > 0
   return (
     <span
-      className="text-[9px] font-semibold tabular-nums"
+      className="text-[0.5625rem] font-semibold tabular-nums"
       style={{ color: up ? '#4ade80' : '#f87171' }}
     >
       {up ? '+' : ''}{pp}pp
@@ -217,10 +217,10 @@ export function RevenueChart({
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
               {cur.total > 0 ? (
                 <>
-                  <p className="text-[28px] font-black tabular-nums leading-none" style={{ color: 'var(--space-accent)' }}>
+                  <p className="text-[1.75rem] font-black tabular-nums leading-none" style={{ color: 'var(--space-accent)' }}>
                     {cur.collectRate}%
                   </p>
-                  <p className="text-[9px] uppercase tracking-[0.2em] text-[var(--space-text-muted)] mt-1">
+                  <p className="text-[0.5625rem] uppercase tracking-[0.2em] text-[var(--space-text-muted)] mt-1">
                     collected
                   </p>
                   <div className="mt-1.5">
@@ -228,17 +228,17 @@ export function RevenueChart({
                   </div>
                 </>
               ) : (
-                <p className="text-[10px] uppercase tracking-wider text-[var(--space-text-muted)]">No data</p>
+                <p className="text-[0.625rem] uppercase tracking-wider text-[var(--space-text-muted)]">No data</p>
               )}
             </div>
           </div>
 
           {/* Breakdown */}
           <div className="flex-1 min-w-0">
-            <p className="text-[11px] tracking-[0.3em] uppercase font-semibold text-[var(--space-text-secondary)] mb-1">
+            <p className="text-[0.6875rem] tracking-[0.3em] uppercase font-semibold text-[var(--space-text-secondary)] mb-1">
               Revenue
             </p>
-            <p className="text-[10px] text-[var(--space-text-muted)] mb-5">{RANGE_LABEL[range]}</p>
+            <p className="text-[0.625rem] text-[var(--space-text-muted)] mb-5">{RANGE_LABEL[range]}</p>
 
             <div className="space-y-3.5">
 
@@ -250,14 +250,14 @@ export function RevenueChart({
                     style={{ background: 'var(--space-accent)', boxShadow: '0 0 8px rgba(139,156,182,0.45)' }}
                   />
                   <div>
-                    <p className="text-[12px] font-medium text-[var(--space-text-secondary)] leading-none">Collected</p>
+                    <p className="text-[0.75rem] font-medium text-[var(--space-text-secondary)] leading-none">Collected</p>
                     {cur.paidCt > 0 && (
-                      <p className="text-[10px] text-[var(--space-text-muted)] mt-0.5">{cur.paidCt} order{cur.paidCt !== 1 ? 's' : ''}</p>
+                      <p className="text-[0.625rem] text-[var(--space-text-muted)] mt-0.5">{cur.paidCt} order{cur.paidCt !== 1 ? 's' : ''}</p>
                     )}
                   </div>
                 </div>
                 <div className="text-right shrink-0">
-                  <p className="text-[14px] font-bold tabular-nums leading-none" style={{ color: 'var(--space-accent)' }}>
+                  <p className="text-[0.875rem] font-bold tabular-nums leading-none" style={{ color: 'var(--space-accent)' }}>
                     {fmt(cur.paidAmt)}
                   </p>
                   <div className="flex justify-end mt-0.5">
@@ -274,14 +274,14 @@ export function RevenueChart({
                     style={{ boxShadow: '0 0 7px rgba(251,191,36,0.45)' }}
                   />
                   <div>
-                    <p className="text-[12px] font-medium text-[var(--space-text-secondary)] leading-none">Pending</p>
+                    <p className="text-[0.75rem] font-medium text-[var(--space-text-secondary)] leading-none">Pending</p>
                     {cur.pendingCt > 0 && (
-                      <p className="text-[10px] text-[var(--space-text-muted)] mt-0.5">{cur.pendingCt} order{cur.pendingCt !== 1 ? 's' : ''}</p>
+                      <p className="text-[0.625rem] text-[var(--space-text-muted)] mt-0.5">{cur.pendingCt} order{cur.pendingCt !== 1 ? 's' : ''}</p>
                     )}
                   </div>
                 </div>
                 <div className="text-right shrink-0">
-                  <p className="text-[14px] font-bold text-amber-400 tabular-nums leading-none">
+                  <p className="text-[0.875rem] font-bold text-amber-400 tabular-nums leading-none">
                     {fmt(cur.pendingAmt)}
                   </p>
                   <div className="flex justify-end mt-0.5">
@@ -296,14 +296,14 @@ export function RevenueChart({
                   <div className="flex items-center gap-3">
                     <div className="size-3 rounded-full shrink-0" style={{ background: 'rgba(248,113,113,0.45)' }} />
                     <div>
-                      <p className="text-[12px] font-medium text-[var(--space-text-muted)] leading-none">Cancelled</p>
+                      <p className="text-[0.75rem] font-medium text-[var(--space-text-muted)] leading-none">Cancelled</p>
                       {cur.cancelledCt > 0 && (
-                        <p className="text-[10px] text-[var(--space-text-muted)] mt-0.5">{cur.cancelledCt} order{cur.cancelledCt !== 1 ? 's' : ''}</p>
+                        <p className="text-[0.625rem] text-[var(--space-text-muted)] mt-0.5">{cur.cancelledCt} order{cur.cancelledCt !== 1 ? 's' : ''}</p>
                       )}
                     </div>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="text-[14px] font-medium text-red-400/50 tabular-nums leading-none">
+                    <p className="text-[0.875rem] font-medium text-red-400/50 tabular-nums leading-none">
                       {fmt(cur.cancelledAmt)}
                     </p>
                     <div className="flex justify-end mt-0.5">
@@ -316,15 +316,15 @@ export function RevenueChart({
               {/* Pipeline total */}
               <div className="pt-3.5 border-t border-[var(--space-border-hard)] flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--space-text-muted)] leading-none">Pipeline</p>
+                  <p className="text-[0.625rem] uppercase tracking-[0.2em] text-[var(--space-text-muted)] leading-none">Pipeline</p>
                   {prev.total > 0 && (
-                    <p className="text-[9px] text-[var(--space-text-muted)] mt-0.5">
+                    <p className="text-[0.5625rem] text-[var(--space-text-muted)] mt-0.5">
                       prev. {fmt(prev.total)}
                     </p>
                   )}
                 </div>
                 <div className="text-right">
-                  <p className="text-[18px] font-black text-[var(--space-text-primary)] tabular-nums leading-none">{fmt(cur.total)}</p>
+                  <p className="text-[1.125rem] font-black text-[var(--space-text-primary)] tabular-nums leading-none">{fmt(cur.total)}</p>
                   <div className="flex justify-end mt-0.5">
                     <DeltaBadge current={cur.total} prev={prev.total} />
                   </div>

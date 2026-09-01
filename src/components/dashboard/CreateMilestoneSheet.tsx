@@ -78,7 +78,7 @@ export function CreateMilestoneSheet({ projectId, open, onOpenChange }: CreateMi
 
         {/* Header */}
         <div className="px-7 pt-7 pb-6 border-b border-[var(--space-border-hard)] shrink-0">
-          <p className="text-[10px] tracking-[0.35em] uppercase text-[var(--space-text-secondary)] font-light mb-4">New Milestone</p>
+          <p className="text-[0.625rem] tracking-[0.35em] uppercase text-[var(--space-text-secondary)] font-light mb-4">New Milestone</p>
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-green-400/10 border border-green-400/20">
               <Flag className="size-4 text-green-400" />
@@ -137,7 +137,7 @@ export function CreateMilestoneSheet({ projectId, open, onOpenChange }: CreateMi
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <label className="text-xs text-[var(--space-text-secondary)] font-medium tracking-wide">Description</label>
-                <span className="text-[10px] text-[var(--space-text-secondary)]">Optional</span>
+                <span className="text-[0.625rem] text-[var(--space-text-secondary)]">Optional</span>
               </div>
               <textarea
                 value={description}
@@ -153,7 +153,7 @@ export function CreateMilestoneSheet({ projectId, open, onOpenChange }: CreateMi
             {showPreview && (
               <div className="relative overflow-hidden rounded-xl border border-[var(--space-border-hard)] bg-[rgba(255,255,255,0.06)] p-4 animate-in fade-in slide-in-from-bottom-1 duration-200">
                 <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-green-400/50 via-green-400/20 to-transparent" />
-                <p className="text-[10px] tracking-[0.25em] uppercase text-green-400/50 mb-3">Preview</p>
+                <p className="text-[0.625rem] tracking-[0.25em] uppercase text-green-400/50 mb-3">Preview</p>
                 <div className="flex items-start gap-3">
                   <div className="mt-1 size-3 rounded-full border-2 border-[var(--space-border-hard)] shrink-0" />
                   <div className="flex-1 min-w-0">

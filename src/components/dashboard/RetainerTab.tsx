@@ -105,7 +105,7 @@ function PriorityBadge({ priority }: { priority?: TimeEntryPriority | null }) {
   const p = (priority ?? 'medium') as TimeEntryPriority
   if (p === 'medium') return null // default — keep rows quiet
   return (
-    <span className={cn('shrink-0 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide rounded border', PRIORITY_BADGE[p])}>
+    <span className={cn('shrink-0 px-1.5 py-0.5 text-[0.5625rem] font-semibold uppercase tracking-wide rounded border', PRIORITY_BADGE[p])}>
       {PRIORITY_LABEL[p]}
     </span>
   )
@@ -145,7 +145,7 @@ const accentBtn =
   'flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg bg-[var(--space-accent)] text-black hover:opacity-90 transition-all disabled:opacity-50'
 const ghostBtn =
   'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-[var(--space-border-hard)] text-[var(--space-text-tertiary)] hover:text-[var(--space-text-primary)] hover:bg-[var(--space-bg-card-hover)] transition-all disabled:opacity-50'
-const fieldLabel = 'text-[10px] font-semibold uppercase tracking-widest text-[var(--space-text-muted)]'
+const fieldLabel = 'text-[0.625rem] font-semibold uppercase tracking-widest text-[var(--space-text-muted)]'
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -979,7 +979,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
   const renderEditor = () => (
     <div className="space-y-1.5">
       {eLogMode && (
-        <p className="text-[10px] text-[var(--space-text-muted)] px-1">
+        <p className="text-[0.625rem] text-[var(--space-text-muted)] px-1">
           Logging hours keeps this item in Planned Work and marks it complete.
         </p>
       )}
@@ -994,7 +994,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
         <select value={ePriority} onChange={(e) => setEPriority(e.target.value as TimeEntryPriority)} className={cn(selectCls, 'py-1.5')} title="Priority">
           {(Object.keys(PRIORITY_LABEL) as TimeEntryPriority[]).map((p) => <option key={p} value={p}>{PRIORITY_LABEL[p]}</option>)}
         </select>
-        <input value={eDesc} onChange={(e) => setEDesc(e.target.value)} placeholder="Description" className={cn(inputCls, 'flex-1 min-w-[140px] py-1.5 text-xs')} />
+        <input value={eDesc} onChange={(e) => setEDesc(e.target.value)} placeholder="Description" className={cn(inputCls, 'flex-1 min-w-[8.75rem] py-1.5 text-xs')} />
         <button onClick={handleEditorSave} disabled={eSaving} className={accentBtn}>
           {eSaving ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />} {eLogMode ? 'Log' : 'Save'}
         </button>
@@ -1014,7 +1014,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
         <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           <div className="max-w-2xl mx-auto w-full pt-[4vh] pb-8 space-y-5">
             <div className="text-center space-y-1.5">
-              <p className="text-[9px] font-bold tracking-[0.3em] uppercase text-[var(--space-text-tertiary)]">Retainer</p>
+              <p className="text-[0.5625rem] font-bold tracking-[0.3em] uppercase text-[var(--space-text-tertiary)]">Retainer</p>
               <p className="text-xs text-[var(--space-text-muted)]">
                 {showingBoard ? 'Open a retainer to manage — or search any client to set one up.' : 'Type to search, ↵ to select.'}
               </p>
@@ -1050,7 +1050,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                 placeholder="Search clients…"
                 className="flex-1 bg-transparent text-sm text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)] outline-none"
               />
-              <kbd className="hidden sm:inline text-[10px] text-[var(--space-text-muted)] bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] rounded px-1.5 py-0.5 font-mono">↵</kbd>
+              <kbd className="hidden sm:inline text-[0.625rem] text-[var(--space-text-muted)] bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] rounded px-1.5 py-0.5 font-mono">↵</kbd>
             </div>
 
             {!pq ? (
@@ -1064,11 +1064,11 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
               ) : (
                 <div className="space-y-2.5">
                   <div className="flex items-center gap-2 px-1">
-                    <p className="text-[9px] font-bold tracking-[0.3em] uppercase text-[var(--space-text-muted)]">
+                    <p className="text-[0.5625rem] font-bold tracking-[0.3em] uppercase text-[var(--space-text-muted)]">
                       Active retainers · {portfolio.length}
                     </p>
                     {attentionCount > 0 && (
-                      <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-500">
+                      <span className="flex items-center gap-1 text-[0.625rem] font-semibold text-amber-500">
                         <AlertTriangle className="size-3" /> {attentionCount} need attention
                       </span>
                     )}
@@ -1110,12 +1110,12 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                         )}
                       >
                         {isSel && (
-                          <div className="absolute left-0 top-1 bottom-1 w-[2px] rounded-full" style={{ background: 'var(--space-accent)', opacity: 0.7 }} />
+                          <div className="absolute left-0 top-1 bottom-1 w-[0.125rem] rounded-full" style={{ background: 'var(--space-accent)', opacity: 0.7 }} />
                         )}
                         <Building2 className={cn('size-3.5 shrink-0', isSel ? 'text-[var(--space-accent)]' : 'text-[var(--space-text-muted)]')} />
                         <div className="flex-1 min-w-0">
                           <p className={cn('text-sm truncate', isSel ? 'text-[var(--space-text-primary)] font-medium' : 'text-[var(--space-text-secondary)]')}>{c.name}</p>
-                          {c.company && <p className="text-[11px] text-[var(--space-text-muted)] truncate">{c.company}</p>}
+                          {c.company && <p className="text-[0.6875rem] text-[var(--space-text-muted)] truncate">{c.company}</p>}
                         </div>
                         {isSel && <CornerDownLeft className="size-3 shrink-0 opacity-60" style={{ color: 'var(--space-accent)' }} />}
                       </button>
@@ -1235,7 +1235,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                     <Icon className="size-3.5" />
                     {s.label}
                     {count !== null && count > 0 && (
-                      <span className={cn('text-[10px] tabular-nums', isActive ? 'opacity-70' : 'text-[var(--space-text-muted)]')}>{count}</span>
+                      <span className={cn('text-[0.625rem] tabular-nums', isActive ? 'opacity-70' : 'text-[var(--space-text-muted)]')}>{count}</span>
                     )}
                   </button>
                 )
@@ -1246,7 +1246,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                 <button onClick={() => goCycle(-1)} className="size-6 flex items-center justify-center rounded-md text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] hover:bg-[var(--space-bg-card-hover)] transition-colors">
                   <ChevronLeft className="size-4" />
                 </button>
-                <span className="text-xs font-medium text-[var(--space-text-secondary)] tabular-nums min-w-[132px] text-center">{cycle.label}</span>
+                <span className="text-xs font-medium text-[var(--space-text-secondary)] tabular-nums min-w-[8.25rem] text-center">{cycle.label}</span>
                 <button onClick={() => goCycle(1)} className="size-6 flex items-center justify-center rounded-md text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] hover:bg-[var(--space-bg-card-hover)] transition-colors">
                   <ChevronRight className="size-4" />
                 </button>
@@ -1269,7 +1269,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
             <div className="rounded-xl border border-[var(--space-border-hard)] p-4 sm:p-5 space-y-4 bg-[var(--space-bg-card-hover)]">
               <div className="flex items-center gap-2">
                 <Clock className="size-3.5" style={{ color: 'var(--space-accent)' }} />
-                <p className="text-[9px] font-bold tracking-[0.22em] uppercase text-[var(--space-text-tertiary)]">
+                <p className="text-[0.5625rem] font-bold tracking-[0.22em] uppercase text-[var(--space-text-tertiary)]">
                   {retainer ? 'Edit retainer' : 'Set up retainer'}
                 </p>
               </div>
@@ -1336,7 +1336,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                     style={tier === t ? { borderColor: 'var(--space-accent)' } : {}}
                   >
                     {TIER_LABEL[t]}
-                    <span className="text-[9px] font-normal text-[var(--space-text-muted)]">
+                    <span className="text-[0.5625rem] font-normal text-[var(--space-text-muted)]">
                       {t === 'enterprise' ? 'custom' : `${TIER_PRESETS[t].hours}h · ${fmt(TIER_PRESETS[t].fee)}`}
                     </span>
                   </button>
@@ -1419,7 +1419,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                         <span className={fieldLabel}>Cycle start date</span>
                         <input type="date" value={anchorDate} onChange={(e) => setAnchorDate(e.target.value)} className={cn(inputCls, 'mt-1')} />
                       </label>
-                      <p className="text-[10px] leading-relaxed text-amber-500">
+                      <p className="text-[0.625rem] leading-relaxed text-amber-500">
                         Only the day of the month sets when cycles begin. This re-dates history — existing logged hours may shift into a different cycle. Applies immediately.
                       </p>
                       <div className="flex items-center gap-2">
@@ -2051,7 +2051,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                       </div>
                       <div className="text-right shrink-0">
                         <p className="text-xs text-[var(--space-text-muted)] tabular-nums">{cycle?.label ?? '—'}</p>
-                        <p className="text-[11px] mt-0.5 tabular-nums text-[var(--space-text-tertiary)]">
+                        <p className="text-[0.6875rem] mt-0.5 tabular-nums text-[var(--space-text-tertiary)]">
                           {isCurrentCycle ? `${daysLeft} day${daysLeft === 1 ? '' : 's'} left` : isPastCycle ? 'Cycle ended' : 'Upcoming cycle'}
                         </p>
                       </div>
@@ -2071,7 +2071,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                       )}
                     </div>
                     {isCurrentCycle && cap > 0 && (
-                      <div className="flex items-center justify-between text-[10px] text-[var(--space-text-muted)] -mt-1">
+                      <div className="flex items-center justify-between text-[0.625rem] text-[var(--space-text-muted)] -mt-1">
                         <span className="tabular-nums">Day {dayOfCycle} of {cycleDays}</span>
                         <span className={cn('font-medium', aheadOfPace && !over ? 'text-amber-500' : '')}>
                           {over ? 'over cap' : aheadOfPace ? 'ahead of pace' : 'on pace'}
@@ -2106,7 +2106,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                           </p>
                           <div className="flex items-center gap-2">
                             {resetInvoiceError && (
-                              <span className="text-[10px] text-red-400 max-w-[220px] leading-snug">{resetInvoiceError}</span>
+                              <span className="text-[0.625rem] text-red-400 max-w-[13.75rem] leading-snug">{resetInvoiceError}</span>
                             )}
                             {nextCycle.invoice.stripeInvoiceUrl && (
                               <a href={nextCycle.invoice.stripeInvoiceUrl} target="_blank" rel="noreferrer" className={ghostBtn}>
@@ -2136,7 +2136,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                                 className={cn(
                                   'flex items-center gap-1 justify-center rounded-lg transition-all disabled:opacity-40',
                                   confirmResetInvoice
-                                    ? 'px-2.5 py-1.5 text-[10px] font-semibold text-amber-400 border border-amber-400/30 bg-amber-400/[0.08]'
+                                    ? 'px-2.5 py-1.5 text-[0.625rem] font-semibold text-amber-400 border border-amber-400/30 bg-amber-400/[0.08]'
                                     : 'size-8 text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)] hover:bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)]',
                                 )}
                               >
@@ -2177,7 +2177,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                       onChange={(e) => setLogNote(e.target.value)}
                       onKeyDown={(e) => { if (e.key === 'Enter' && !logging) void handleLog() }}
                       placeholder={`Log time to ${cycle?.label ?? 'this cycle'} — what did you do? ↵`}
-                      className={cn(inputCls, 'flex-1 min-w-[160px] py-1.5')}
+                      className={cn(inputCls, 'flex-1 min-w-[10rem] py-1.5')}
                     />
                     <button onClick={handleLog} disabled={logging} className={accentBtn}>
                       {logging ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />} Log
@@ -2187,7 +2187,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                   {/* Needs attention — high-priority planned work still open */}
                   {attention.length > 0 && (
                     <div className="space-y-1.5">
-                      <p className="text-[9px] font-bold tracking-[0.25em] uppercase text-amber-500 flex items-center gap-1.5">
+                      <p className="text-[0.5625rem] font-bold tracking-[0.25em] uppercase text-amber-500 flex items-center gap-1.5">
                         <Flame className="size-3" /> Needs attention
                       </p>
                       {attention.map((e) => (
@@ -2195,11 +2195,11 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                           <button onClick={() => handleToggleComplete(e)} disabled={togglingId === e.id} className="shrink-0 size-5 flex items-center justify-center rounded-md text-[var(--space-text-muted)] hover:text-[var(--space-accent)] transition-colors disabled:opacity-50" title="Mark complete">
                             {togglingId === e.id ? <Loader2 className="size-3.5 animate-spin" /> : <Circle className="size-4" />}
                           </button>
-                          <span className="text-[10px] uppercase tracking-wide text-[var(--space-text-muted)] shrink-0 w-16">
+                          <span className="text-[0.625rem] uppercase tracking-wide text-[var(--space-text-muted)] shrink-0 w-16">
                             {CATEGORY_LABEL[(e.category ?? 'work') as TimeEntryCategory]}
                           </span>
                           <span className="text-sm flex-1 min-w-0 truncate text-[var(--space-text-secondary)]">{e.description || '—'}</span>
-                          <button onClick={() => { setStage('plan'); openEditor(e, true) }} className="shrink-0 flex items-center gap-1 px-2 py-1 text-[11px] font-semibold rounded-md text-[var(--space-accent)] hover:bg-[var(--space-bg-card)] transition-colors" title="Log hours for this item">
+                          <button onClick={() => { setStage('plan'); openEditor(e, true) }} className="shrink-0 flex items-center gap-1 px-2 py-1 text-[0.6875rem] font-semibold rounded-md text-[var(--space-accent)] hover:bg-[var(--space-bg-card)] transition-colors" title="Log hours for this item">
                             Log hours <ArrowRight className="size-3" />
                           </button>
                         </div>
@@ -2210,7 +2210,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                   {/* Recent activity — the latest logged time this cycle */}
                   {recent.length > 0 && (
                     <div className="space-y-1.5">
-                      <p className="text-[9px] font-bold tracking-[0.25em] uppercase text-[var(--space-text-muted)] flex items-center gap-1.5">
+                      <p className="text-[0.5625rem] font-bold tracking-[0.25em] uppercase text-[var(--space-text-muted)] flex items-center gap-1.5">
                         <Activity className="size-3" /> Recent activity
                       </p>
                       {recent.map((e) => (
@@ -2220,9 +2220,9 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                           onClick={() => { setStage('log'); openEditor(e) }}
                           className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg border border-[var(--space-border-hard)] bg-[var(--space-bg-card-hover)] text-left hover:border-[var(--space-accent-glow)] transition-colors"
                         >
-                          <span className="text-[11px] font-mono tabular-nums text-[var(--space-text-muted)] shrink-0 w-12">{String(e.date).slice(5, 10)}</span>
+                          <span className="text-[0.6875rem] font-mono tabular-nums text-[var(--space-text-muted)] shrink-0 w-12">{String(e.date).slice(5, 10)}</span>
                           <span className="text-sm font-bold tabular-nums text-[var(--space-text-primary)] shrink-0 w-12">{fmtHrs(e.hours)}h</span>
-                          <span className="text-[10px] uppercase tracking-wide text-[var(--space-text-muted)] shrink-0 w-16">{CATEGORY_LABEL[(e.category ?? 'work') as TimeEntryCategory]}</span>
+                          <span className="text-[0.625rem] uppercase tracking-wide text-[var(--space-text-muted)] shrink-0 w-16">{CATEGORY_LABEL[(e.category ?? 'work') as TimeEntryCategory]}</span>
                           <span className="text-xs text-[var(--space-text-tertiary)] flex-1 min-w-0 truncate">{e.description || '—'}</span>
                         </button>
                       ))}
@@ -2329,7 +2329,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
               {stage === 'plan' && (
                 <>
                   <div className="rounded-xl border border-[var(--space-border-hard)] p-4 space-y-3 bg-[var(--space-bg-card-hover)]">
-                    <p className="text-[9px] font-bold tracking-[0.22em] uppercase text-[var(--space-text-tertiary)] flex items-center gap-1.5">
+                    <p className="text-[0.5625rem] font-bold tracking-[0.22em] uppercase text-[var(--space-text-tertiary)] flex items-center gap-1.5">
                       <CalendarPlus className="size-3" /> Plan work for {cycle?.label ?? 'this cycle'}
                     </p>
                     <input
@@ -2374,7 +2374,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                                 ? <CircleCheck className="size-4" style={{ color: 'var(--space-accent)' }} />
                                 : <Circle className="size-4" />}
                           </button>
-                          <span className="text-[10px] uppercase tracking-wide text-[var(--space-text-muted)] shrink-0 w-16">
+                          <span className="text-[0.625rem] uppercase tracking-wide text-[var(--space-text-muted)] shrink-0 w-16">
                             {CATEGORY_LABEL[(e.category ?? 'work') as TimeEntryCategory]}
                           </span>
                           <span className={cn('text-sm flex-1 min-w-0 truncate', e.completion === 'complete' ? 'text-[var(--space-text-muted)] line-through' : 'text-[var(--space-text-secondary)]')}>{e.description || '—'}</span>
@@ -2382,7 +2382,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                           <button onClick={() => openEditor(e, false)} className="shrink-0 size-6 flex items-center justify-center rounded-md text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] hover:bg-[var(--space-bg-card)] transition-colors" title="Edit planned item">
                             <Pencil className="size-3.5" />
                           </button>
-                          <button onClick={() => openEditor(e, true)} className="shrink-0 flex items-center gap-1 px-2 py-1 text-[11px] font-semibold rounded-md text-[var(--space-accent)] hover:bg-[var(--space-bg-card)] transition-colors" title="Log hours for this item">
+                          <button onClick={() => openEditor(e, true)} className="shrink-0 flex items-center gap-1 px-2 py-1 text-[0.6875rem] font-semibold rounded-md text-[var(--space-accent)] hover:bg-[var(--space-bg-card)] transition-colors" title="Log hours for this item">
                             Log hours <ArrowRight className="size-3" />
                           </button>
                           <button onClick={() => handleDelete(e.id)} disabled={deletingId === e.id} className="shrink-0 size-6 flex items-center justify-center rounded-md text-[var(--space-text-muted)] hover:text-red-400 hover:bg-[var(--space-bg-card)] transition-colors disabled:opacity-50">
@@ -2399,7 +2399,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
               {stage === 'log' && (
                 <>
                   <div className="rounded-xl border border-[var(--space-border-hard)] p-4 space-y-3 bg-[var(--space-bg-card-hover)]">
-                    <p className="text-[9px] font-bold tracking-[0.22em] uppercase text-[var(--space-text-tertiary)] flex items-center gap-1.5">
+                    <p className="text-[0.5625rem] font-bold tracking-[0.22em] uppercase text-[var(--space-text-tertiary)] flex items-center gap-1.5">
                       <Plus className="size-3" /> Log hours
                     </p>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -2439,7 +2439,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                   </div>
 
                   <div>
-                    <p className="text-[9px] font-bold tracking-[0.25em] uppercase text-[var(--space-accent)] mb-2.5">
+                    <p className="text-[0.5625rem] font-bold tracking-[0.25em] uppercase text-[var(--space-accent)] mb-2.5">
                       Entries · {logged.length}
                     </p>
                     {logged.length === 0 ? (
@@ -2453,9 +2453,9 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                           <div key={e.id}>{renderEditor()}</div>
                         ) : (
                           <div key={e.id} className="flex items-center gap-3 px-3.5 py-3 rounded-lg border border-[var(--space-border-hard)] bg-[var(--space-bg-card-hover)]">
-                            <span className="text-[11px] font-mono tabular-nums text-[var(--space-text-muted)] shrink-0 w-14">{String(e.date).slice(5, 10)}</span>
+                            <span className="text-[0.6875rem] font-mono tabular-nums text-[var(--space-text-muted)] shrink-0 w-14">{String(e.date).slice(5, 10)}</span>
                             <span className="text-sm font-bold tabular-nums text-[var(--space-text-primary)] shrink-0 w-12">{fmtHrs(e.hours)}h</span>
-                            <span className="text-[10px] uppercase tracking-wide text-[var(--space-text-muted)] shrink-0 w-16">{CATEGORY_LABEL[(e.category ?? 'work') as TimeEntryCategory]}</span>
+                            <span className="text-[0.625rem] uppercase tracking-wide text-[var(--space-text-muted)] shrink-0 w-16">{CATEGORY_LABEL[(e.category ?? 'work') as TimeEntryCategory]}</span>
                             <span className="text-xs text-[var(--space-text-tertiary)] flex-1 min-w-0 truncate">{e.description || '—'}</span>
                             <PriorityBadge priority={e.priority} />
                             <button onClick={() => openEditor(e)} className="shrink-0 size-6 flex items-center justify-center rounded-md text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] hover:bg-[var(--space-bg-card)] transition-colors" title="Edit entry">
@@ -2491,7 +2491,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                       onClick={() => setRecapOpen(true)}
                     />
                   </div>
-                  <p className="text-[11px] text-[var(--space-text-muted)]">
+                  <p className="text-[0.6875rem] text-[var(--space-text-muted)]">
                     Both documents cover the cycle shown in the header — use ‹ › up there to pick a different one.
                   </p>
                 </>
@@ -2568,7 +2568,7 @@ function BoardRow({
         isSel ? 'bg-[var(--space-bg-card-hover)] border-[var(--space-accent-glow)]' : 'border-[var(--space-border-hard)] hover:bg-[var(--space-bg-card-hover)]',
       )}
     >
-      {isSel && <div className="absolute left-0 top-2 bottom-2 w-[2px] rounded-full" style={{ background: 'var(--space-accent)', opacity: 0.7 }} />}
+      {isSel && <div className="absolute left-0 top-2 bottom-2 w-[0.125rem] rounded-full" style={{ background: 'var(--space-accent)', opacity: 0.7 }} />}
       <span className="size-2 rounded-full shrink-0" style={{ background: meta.color }} title={meta.label} />
       <div className="flex-1 min-w-0">
         <p className={cn('text-sm truncate', isSel ? 'text-[var(--space-text-primary)] font-medium' : 'text-[var(--space-text-secondary)]')}>
@@ -2622,7 +2622,7 @@ function JumpCard({
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-xs font-semibold text-[var(--space-text-primary)] leading-tight">{title}</p>
-        <p className="text-[10px] text-[var(--space-text-muted)] mt-0.5 truncate">{hint}</p>
+        <p className="text-[0.625rem] text-[var(--space-text-muted)] mt-0.5 truncate">{hint}</p>
       </div>
       <ArrowRight className="size-3.5 shrink-0 text-[var(--space-text-muted)] opacity-0 -translate-x-1 group-hover:opacity-60 group-hover:translate-x-0 transition-all" />
     </button>

@@ -49,7 +49,7 @@ function AccountDonut({
     { pct: cancelledPct, offset: paidPct + pendingPct, color: 'rgba(255,255,255,0.06)' },
   ]
   return (
-    <div className="relative w-[68px] h-[68px] shrink-0">
+    <div className="relative w-[4.25rem] h-[4.25rem] shrink-0">
       <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
         <circle cx="50" cy="50" r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="16" />
         {!hasOrders ? (
@@ -64,8 +64,8 @@ function AccountDonut({
       <div className="absolute inset-0 flex items-center justify-center">
         {pendingAmount > 0 ? (
           <div className="text-center px-1">
-            <p className="text-[7px] text-amber-400/50 font-bold uppercase tracking-wider leading-none">due</p>
-            <p className="text-[9px] font-black text-amber-400 tabular-nums leading-snug mt-px">{fmtCurrency(pendingAmount)}</p>
+            <p className="text-[0.4375rem] text-amber-400/50 font-bold uppercase tracking-wider leading-none">due</p>
+            <p className="text-[0.5625rem] font-black text-amber-400 tabular-nums leading-snug mt-px">{fmtCurrency(pendingAmount)}</p>
           </div>
         ) : hasOrders ? (
           <CheckCircle className="size-3.5 text-emerald-400" />
@@ -93,7 +93,7 @@ function InvoiceRow({ order, isLast }: { order: Order; isLast: boolean }) {
     <div className="flex gap-0">
       {/* Timeline track */}
       <div className="flex flex-col items-center w-5 shrink-0">
-        <div className={`size-2 rounded-full ring-[3px] ring-[#252525] shrink-0 mt-[18px] ${cfg.dotClass}`} />
+        <div className={`size-2 rounded-full ring-[0.1875rem] ring-[#252525] shrink-0 mt-[1.125rem] ${cfg.dotClass}`} />
         {!isLast && (
           <div className={`w-px flex-1 mt-1.5 ${cfg.lineClass}`} style={{ minHeight: 28 }} />
         )}
@@ -108,22 +108,22 @@ function InvoiceRow({ order, isLast }: { order: Order; isLast: boolean }) {
             <p className={`text-sm font-semibold leading-snug truncate ${cfg.titleClass}`}>
               {primaryTitle}
               {extraCount > 0 && (
-                <span className="text-[11px] text-[var(--space-text-muted)] font-normal ml-2">+{extraCount} more</span>
+                <span className="text-[0.6875rem] text-[var(--space-text-muted)] font-normal ml-2">+{extraCount} more</span>
               )}
             </p>
             <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-              <span className="text-[10px] text-[var(--space-text-muted)] font-mono">
+              <span className="text-[0.625rem] text-[var(--space-text-muted)] font-mono">
                 #{order.orderNumber ?? `INV-${order.id.slice(-6).toUpperCase()}`}
               </span>
-              <span className="text-[var(--space-text-muted)] text-[8px]">·</span>
-              <span className="text-[10px] text-[var(--space-text-muted)]">{fmtDate(order.createdAt)}</span>
+              <span className="text-[var(--space-text-muted)] text-[0.5rem]">·</span>
+              <span className="text-[0.625rem] text-[var(--space-text-muted)]">{fmtDate(order.createdAt)}</span>
             </div>
           </div>
           <div className="flex items-start gap-2 shrink-0">
             <span className={`text-base font-bold tabular-nums leading-tight ${cfg.amountClass}`}>
               {fmtCurrencyFull(order.amount ?? 0)}
             </span>
-            <span className={`mt-0.5 text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border ${cfg.badgeClass}`}>
+            <span className={`mt-0.5 text-[0.5625rem] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border ${cfg.badgeClass}`}>
               {cfg.label}
             </span>
           </div>
@@ -136,7 +136,7 @@ function InvoiceRow({ order, isLast }: { order: Order; isLast: boolean }) {
               onClick={() => setExpanded(e => !e)}
               className="w-full flex items-center justify-between px-4 py-2 hover:bg-[var(--space-bg-card-hover)] transition-colors group"
             >
-              <span className="flex items-center gap-1.5 text-[10px] text-[var(--space-text-muted)] group-hover:text-[var(--space-text-secondary)] transition-colors font-medium">
+              <span className="flex items-center gap-1.5 text-[0.625rem] text-[var(--space-text-muted)] group-hover:text-[var(--space-text-secondary)] transition-colors font-medium">
                 <Package className="size-3 group-hover:opacity-80 transition-colors" style={{ color: 'var(--space-accent)', opacity: 0.5 }} />
                 {lineItems.length} line {lineItems.length === 1 ? 'item' : 'items'}
               </span>
@@ -148,7 +148,7 @@ function InvoiceRow({ order, isLast }: { order: Order; isLast: boolean }) {
                   <div key={i} className="flex items-center justify-between gap-4 py-1.5 px-3 rounded-lg bg-[var(--space-bg-card)] border border-[var(--space-border-hard)]">
                     <div className="flex-1 min-w-0">
                       <p className="text-xs text-[var(--space-text-tertiary)] font-medium truncate">{item.title}</p>
-                      <p className="text-[10px] text-[var(--space-text-muted)] mt-0.5">{item.quantity ?? 1} × {fmtCurrencyFull(item.price ?? 0)}</p>
+                      <p className="text-[0.625rem] text-[var(--space-text-muted)] mt-0.5">{item.quantity ?? 1} × {fmtCurrencyFull(item.price ?? 0)}</p>
                     </div>
                     <p className="text-xs font-semibold text-[var(--space-text-primary)] tabular-nums shrink-0">
                       {fmtCurrencyFull((item.quantity ?? 1) * (item.price ?? 0))}
@@ -195,7 +195,7 @@ function MonthGroup({ monthLabel, orders, isLastGroup }: {
           <div className="w-5 flex justify-center shrink-0">
             <div className="size-1 rounded-full bg-[#555555]" />
           </div>
-          <span className="ml-4 text-[9px] font-bold uppercase tracking-[0.22em] text-[var(--space-accent)] font-semibold">
+          <span className="ml-4 text-[0.5625rem] font-bold uppercase tracking-[0.22em] text-[var(--space-accent)] font-semibold">
             {monthLabel}
           </span>
         </div>
@@ -275,12 +275,12 @@ export function OrdersView({ allOrders, clientAccount, clientPackages = [], user
       <div className="flex flex-col lg:flex-row gap-7 items-start">
 
         {/* ── SIDEBAR ──────────────────────────────────────────────────── */}
-        <div className="w-full lg:w-[268px] xl:w-[288px] shrink-0 space-y-4 lg:sticky lg:top-24">
+        <div className="w-full lg:w-[16.75rem] xl:w-[18rem] shrink-0 space-y-4 lg:sticky lg:top-24">
 
           {/* Account Balance Card */}
           <div className="rounded-2xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] overflow-hidden">
             <div className="px-5 pt-5 pb-4">
-              <p className="text-[9px] font-bold uppercase tracking-[0.28em] text-[var(--space-accent)] font-semibold mb-4">
+              <p className="text-[0.5625rem] font-bold uppercase tracking-[0.28em] text-[var(--space-accent)] font-semibold mb-4">
                 Account Overview
               </p>
 
@@ -299,11 +299,11 @@ export function OrdersView({ allOrders, clientAccount, clientPackages = [], user
                       <p className="text-2xl font-black text-amber-400 tabular-nums leading-none">
                         {fmtCurrency(pendingAmount)}
                       </p>
-                      <p className="text-[11px] text-[var(--space-text-muted)] mt-1">outstanding balance</p>
+                      <p className="text-[0.6875rem] text-[var(--space-text-muted)] mt-1">outstanding balance</p>
                       {paidAmount > 0 && (
                         <div className="flex items-center gap-1.5 mt-2">
                           <span className="size-1.5 rounded-full bg-emerald-400 shrink-0" />
-                          <span className="text-[10px] text-[var(--space-text-muted)]">{fmtCurrency(paidAmount)} paid</span>
+                          <span className="text-[0.625rem] text-[var(--space-text-muted)]">{fmtCurrency(paidAmount)} paid</span>
                         </div>
                       )}
                     </>
@@ -312,13 +312,13 @@ export function OrdersView({ allOrders, clientAccount, clientPackages = [], user
                       <p className="text-xl font-black text-emerald-400 leading-none">
                         {allOrders.length > 0 ? 'All clear' : 'No invoices'}
                       </p>
-                      <p className="text-[11px] text-[var(--space-text-muted)] mt-1">
+                      <p className="text-[0.6875rem] text-[var(--space-text-muted)] mt-1">
                         {allOrders.length > 0 ? 'No outstanding balance' : 'Nothing here yet'}
                       </p>
                       {paidAmount > 0 && (
                         <div className="flex items-center gap-1.5 mt-2">
                           <span className="size-1.5 rounded-full bg-emerald-400 shrink-0" />
-                          <span className="text-[10px] text-[var(--space-text-muted)]">{fmtCurrency(paidAmount)} total paid</span>
+                          <span className="text-[0.625rem] text-[var(--space-text-muted)]">{fmtCurrency(paidAmount)} total paid</span>
                         </div>
                       )}
                     </>
@@ -331,19 +331,19 @@ export function OrdersView({ allOrders, clientAccount, clientPackages = [], user
                 {paidPct > 0 && (
                   <div className="flex items-center gap-1.5">
                     <span className="size-1.5 rounded-full bg-emerald-400 shrink-0" />
-                    <span className="text-[10px] text-[var(--space-text-tertiary)]">Paid</span>
+                    <span className="text-[0.625rem] text-[var(--space-text-tertiary)]">Paid</span>
                   </div>
                 )}
                 {pendingPct > 0 && (
                   <div className="flex items-center gap-1.5">
                     <span className="size-1.5 rounded-full bg-amber-400 shrink-0" />
-                    <span className="text-[10px] text-[var(--space-text-tertiary)]">Pending</span>
+                    <span className="text-[0.625rem] text-[var(--space-text-tertiary)]">Pending</span>
                   </div>
                 )}
                 {cancelledPct > 0 && (
                   <div className="flex items-center gap-1.5">
                     <span className="size-1.5 rounded-full bg-[#555555] shrink-0" />
-                    <span className="text-[10px] text-[var(--space-text-tertiary)]">Cancelled</span>
+                    <span className="text-[0.625rem] text-[var(--space-text-tertiary)]">Cancelled</span>
                   </div>
                 )}
               </div>
@@ -351,17 +351,17 @@ export function OrdersView({ allOrders, clientAccount, clientPackages = [], user
               {/* Stats grid */}
               <div className="grid grid-cols-3 gap-3 pt-4 border-t border-[var(--space-border-hard)]">
                 <div>
-                  <p className="text-[9px] text-[var(--space-accent)] font-semibold uppercase tracking-wider font-semibold mb-0.5">Total</p>
+                  <p className="text-[0.5625rem] text-[var(--space-accent)] font-semibold uppercase tracking-wider font-semibold mb-0.5">Total</p>
                   <p className="text-xl font-bold text-[var(--space-text-primary)] tabular-nums">{allOrders.length}</p>
                 </div>
                 <div>
-                  <p className="text-[9px] text-[var(--space-accent)] font-semibold uppercase tracking-wider font-semibold mb-0.5">Paid</p>
+                  <p className="text-[0.5625rem] text-[var(--space-accent)] font-semibold uppercase tracking-wider font-semibold mb-0.5">Paid</p>
                   <p className={`text-xl font-bold tabular-nums ${paidOrders.length > 0 ? 'text-emerald-400' : 'text-[var(--space-text-muted)]'}`}>
                     {paidOrders.length}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[9px] text-[var(--space-accent)] font-semibold uppercase tracking-wider font-semibold mb-0.5">Due</p>
+                  <p className="text-[0.5625rem] text-[var(--space-accent)] font-semibold uppercase tracking-wider font-semibold mb-0.5">Due</p>
                   <p className={`text-xl font-bold tabular-nums ${pendingOrders.length > 0 ? 'text-amber-400' : 'text-[var(--space-text-muted)]'}`}>
                     {pendingOrders.length}
                   </p>
@@ -385,7 +385,7 @@ export function OrdersView({ allOrders, clientAccount, clientPackages = [], user
           <div className="rounded-2xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] overflow-hidden">
             <div className="flex items-center gap-2 px-5 py-3.5 border-b border-[var(--space-border-hard)]">
               <CalendarDays className="size-3.5 shrink-0" style={{ color: 'var(--space-accent)', opacity: 0.6 }} />
-              <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-[var(--space-accent)] font-semibold">
+              <p className="text-[0.5625rem] font-bold uppercase tracking-[0.25em] text-[var(--space-accent)] font-semibold">
                 Payment Schedule
               </p>
             </div>
@@ -421,7 +421,7 @@ export function OrdersView({ allOrders, clientAccount, clientPackages = [], user
                 >
                   {tab.label}
                   {tab.count > 0 && (
-                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full leading-none ${countClass}`}>
+                    <span className={`text-[0.5625rem] font-bold px-1.5 py-0.5 rounded-full leading-none ${countClass}`}>
                       {tab.count}
                     </span>
                   )}

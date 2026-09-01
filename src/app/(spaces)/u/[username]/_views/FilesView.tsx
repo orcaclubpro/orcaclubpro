@@ -113,7 +113,7 @@ function fileTypeIcon(rec: FileRecord) {
 function FieldGroup({ label, children, col = '' }: { label: string; children: React.ReactNode; col?: string }) {
   return (
     <div className={col}>
-      <label className="block text-[10px] font-semibold uppercase tracking-widest text-[var(--space-text-secondary)] mb-1.5">
+      <label className="block text-[0.625rem] font-semibold uppercase tracking-widest text-[var(--space-text-secondary)] mb-1.5">
         {label}
       </label>
       {children}
@@ -175,7 +175,7 @@ function FormSelect({ value, onChange, options, placeholder }: {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-[9px] font-bold uppercase tracking-widest text-[var(--space-accent)] border-b border-[var(--space-border-hard)] pb-1.5 mb-3">
+    <p className="text-[0.5625rem] font-bold uppercase tracking-widest text-[var(--space-accent)] border-b border-[var(--space-border-hard)] pb-1.5 mb-3">
       {children}
     </p>
   )
@@ -498,7 +498,7 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
 
       {/* Filters */}
       <div className="flex flex-wrap gap-2 mb-5">
-        <div className="relative flex-1 min-w-[180px]">
+        <div className="relative flex-1 min-w-[11.25rem]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-[var(--space-text-secondary)]" />
           <input
             value={search}
@@ -562,23 +562,23 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
                 <p className="text-sm font-medium text-[var(--space-text-primary)] truncate">{rec.name}</p>
                 <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                   {rec.documentTemplate && (
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--space-accent)]">
+                    <span className="text-[0.625rem] font-bold uppercase tracking-widest text-[var(--space-accent)]">
                       {docTypeLabel(rec.documentTemplate)}
                     </span>
                   )}
                   {rec.documentBrand && (
-                    <span className="text-[10px] text-[var(--space-text-muted)]">
+                    <span className="text-[0.625rem] text-[var(--space-text-muted)]">
                       {rec.documentBrand === 'orcaclub' ? 'ORCACLUB' : 'Personal'}
                     </span>
                   )}
                   {getProjectName(rec) && (
-                    <span className="text-[10px] text-[var(--space-text-secondary)] flex items-center gap-0.5">
+                    <span className="text-[0.625rem] text-[var(--space-text-secondary)] flex items-center gap-0.5">
                       <FolderOpen className="size-2.5" />
                       {getProjectName(rec)}
                     </span>
                   )}
                   {getSprintName(rec) && (
-                    <span className="text-[10px] text-[var(--space-text-secondary)]">· {getSprintName(rec)}</span>
+                    <span className="text-[0.625rem] text-[var(--space-text-secondary)]">· {getSprintName(rec)}</span>
                   )}
                 </div>
               </div>
@@ -615,7 +615,7 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
 
       {/* Document Generator Modal — rendered via portal to escape stacking context */}
       {modalOpen && mounted && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center px-0 sm:px-4 pb-[76px] sm:pb-4 pt-0 sm:pt-4">
+        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center px-0 sm:px-4 pb-[4.75rem] sm:pb-4 pt-0 sm:pt-4">
           <div className="absolute inset-0 bg-black/70" onClick={closeModal} />
           <div className="relative w-full sm:max-w-2xl bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] rounded-2xl flex flex-col max-h-[calc(100dvh-76px)] sm:max-h-[88dvh] overflow-hidden shadow-2xl">
 
@@ -717,7 +717,7 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
                     <FormInput value={ndaForm.clientAddress} onChange={v => setNdaForm(f => ({ ...f, clientAddress: v }))} placeholder="Street, City, State, ZIP" />
                   </FieldGroup>
                   {brand === 'personal' && (
-                    <p className="text-[10px] text-[var(--space-text-muted)] bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] rounded-lg px-3 py-2">
+                    <p className="text-[0.625rem] text-[var(--space-text-muted)] bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] rounded-lg px-3 py-2">
                       Personal version includes Kawai America employer firewall clauses specific to Chance Noonan.
                     </p>
                   )}
@@ -765,12 +765,12 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
                       <SectionLabel>Scope of Work</SectionLabel>
                       <button
                         onClick={() => setSowForm(f => ({ ...f, scopeItems: [...f.scopeItems, ''] }))}
-                        className="text-[10px] text-[var(--space-accent)] hover:underline"
+                        className="text-[0.625rem] text-[var(--space-accent)] hover:underline"
                       >+ Add Item</button>
                     </div>
                     {sowForm.scopeItems.map((item, i) => (
                       <div key={i} className="flex gap-2 items-center">
-                        <span className="text-[10px] text-[var(--space-text-muted)] w-4 shrink-0">{i + 1}.</span>
+                        <span className="text-[0.625rem] text-[var(--space-text-muted)] w-4 shrink-0">{i + 1}.</span>
                         <FormInput
                           value={item}
                           onChange={v => setSowForm(f => ({ ...f, scopeItems: f.scopeItems.map((x, j) => j === i ? v : x) }))}
@@ -791,7 +791,7 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
                       <SectionLabel>Milestones</SectionLabel>
                       <button
                         onClick={() => setSowForm(f => ({ ...f, milestones: [...f.milestones, { name: '', date: '', notes: '' }] }))}
-                        className="text-[10px] text-[var(--space-accent)] hover:underline"
+                        className="text-[0.625rem] text-[var(--space-accent)] hover:underline"
                       >+ Add</button>
                     </div>
                     {sowForm.milestones.map((m, i) => (
@@ -833,7 +833,7 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
 
                     {(sowForm.pricingType === 'project' || sowForm.pricingType === 'both') && (
                       <div className="space-y-1.5">
-                        <p className="text-[10px] text-[var(--space-text-secondary)] uppercase tracking-widest">Project Line Items</p>
+                        <p className="text-[0.625rem] text-[var(--space-text-secondary)] uppercase tracking-widest">Project Line Items</p>
                         {sowForm.projectItems.map((item, i) => (
                           <div key={i} className="flex gap-2 items-center">
                             <FormInput value={item.desc} onChange={v => setSowForm(f => ({ ...f, projectItems: f.projectItems.map((x, j) => j === i ? { ...x, desc: v } : x) }))} placeholder="Description" />
@@ -843,13 +843,13 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
                             )}
                           </div>
                         ))}
-                        <button onClick={() => setSowForm(f => ({ ...f, projectItems: [...f.projectItems, { desc: '', amount: '' }] }))} className="text-[10px] text-[var(--space-accent)] hover:underline">+ Add Line Item</button>
+                        <button onClick={() => setSowForm(f => ({ ...f, projectItems: [...f.projectItems, { desc: '', amount: '' }] }))} className="text-[0.625rem] text-[var(--space-accent)] hover:underline">+ Add Line Item</button>
                       </div>
                     )}
 
                     {(sowForm.pricingType === 'retainer' || sowForm.pricingType === 'both') && (
                       <div className="space-y-1.5">
-                        <p className="text-[10px] text-[var(--space-text-secondary)] uppercase tracking-widest">Retainer Line Items</p>
+                        <p className="text-[0.625rem] text-[var(--space-text-secondary)] uppercase tracking-widest">Retainer Line Items</p>
                         {sowForm.retainerItems.map((item, i) => (
                           <div key={i} className="flex gap-2 items-center">
                             <FormInput value={item.desc} onChange={v => setSowForm(f => ({ ...f, retainerItems: f.retainerItems.map((x, j) => j === i ? { ...x, desc: v } : x) }))} placeholder="Monthly service" />
@@ -859,7 +859,7 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
                             )}
                           </div>
                         ))}
-                        <button onClick={() => setSowForm(f => ({ ...f, retainerItems: [...f.retainerItems, { desc: '', amount: '' }] }))} className="text-[10px] text-[var(--space-accent)] hover:underline">+ Add Line Item</button>
+                        <button onClick={() => setSowForm(f => ({ ...f, retainerItems: [...f.retainerItems, { desc: '', amount: '' }] }))} className="text-[0.625rem] text-[var(--space-accent)] hover:underline">+ Add Line Item</button>
                         <div className="grid grid-cols-2 gap-3 mt-2">
                           <FieldGroup label="Billing Cycle">
                             <FormSelect value={sowForm.billingCycle} onChange={v => setSowForm(f => ({ ...f, billingCycle: v }))} options={[{ value: 'Weekly', label: 'Weekly' }, { value: 'Bi-Weekly', label: 'Bi-Weekly' }, { value: 'Monthly', label: 'Monthly' }]} />
@@ -878,14 +878,14 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
                         <SectionLabel>Payment Schedule</SectionLabel>
                         <button
                           onClick={() => setSowForm(f => ({ ...f, paymentSchedule: [...f.paymentSchedule, { label: '', pct: '', note: '' }] }))}
-                          className="text-[10px] text-[var(--space-accent)] hover:underline"
+                          className="text-[0.625rem] text-[var(--space-accent)] hover:underline"
                         >+ Add Payment</button>
                       </div>
-                      <p className="text-[10px] text-[var(--space-text-secondary)] mb-2">Percentages should add up to 100%</p>
+                      <p className="text-[0.625rem] text-[var(--space-text-secondary)] mb-2">Percentages should add up to 100%</p>
                       <div className="grid grid-cols-[1fr_56px_1fr_28px] gap-1.5 mb-1.5">
-                        <span className="text-[10px] text-[var(--space-text-secondary)] font-semibold uppercase tracking-widest">Payment Label</span>
-                        <span className="text-[10px] text-[var(--space-text-secondary)] font-semibold uppercase tracking-widest text-right">%</span>
-                        <span className="text-[10px] text-[var(--space-text-secondary)] font-semibold uppercase tracking-widest">Trigger / Note</span>
+                        <span className="text-[0.625rem] text-[var(--space-text-secondary)] font-semibold uppercase tracking-widest">Payment Label</span>
+                        <span className="text-[0.625rem] text-[var(--space-text-secondary)] font-semibold uppercase tracking-widest text-right">%</span>
+                        <span className="text-[0.625rem] text-[var(--space-text-secondary)] font-semibold uppercase tracking-widest">Trigger / Note</span>
                         <span />
                       </div>
                       {sowForm.paymentSchedule.map((entry, i) => (
@@ -923,7 +923,7 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
                             <div className="flex-1 h-1.5 bg-[var(--space-bg-base)] rounded-full overflow-hidden">
                               <div className={cn('h-full rounded-full transition-all', barColor)} style={{ width: `${Math.min(totalPct, 100)}%` }} />
                             </div>
-                            <span className={cn('text-[10px] font-semibold shrink-0', totalPct === 100 ? 'text-[var(--space-accent)]' : totalPct > 100 ? 'text-red-400' : 'text-[var(--space-text-secondary)]')}>
+                            <span className={cn('text-[0.625rem] font-semibold shrink-0', totalPct === 100 ? 'text-[var(--space-accent)]' : totalPct > 100 ? 'text-red-400' : 'text-[var(--space-text-secondary)]')}>
                               {totalPct}% of total
                             </span>
                           </div>

@@ -151,7 +151,7 @@ function CredentialCard({
         {/* Logo/initial mark */}
         <div
           className={cn(
-            'size-9 rounded-lg flex items-center justify-center text-[13px] font-bold border shrink-0 mt-0.5',
+            'size-9 rounded-lg flex items-center justify-center text-[0.8125rem] font-bold border shrink-0 mt-0.5',
             badge.bg,
             badge.border,
             badge.text,
@@ -163,7 +163,7 @@ function CredentialCard({
         {/* Name block */}
         <div className="flex-1 min-w-0">
           {showEyebrow && (
-            <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[var(--space-text-muted)] leading-none mb-1.5 truncate">
+            <p className="text-[0.5625rem] font-semibold uppercase tracking-[0.18em] text-[var(--space-text-muted)] leading-none mb-1.5 truncate">
               {credential.title}
             </p>
           )}
@@ -175,13 +175,13 @@ function CredentialCard({
               className="group/link flex items-baseline gap-1.5 min-w-0"
               onClick={(e) => e.stopPropagation()}
             >
-              <span className="text-[15px] font-semibold text-[var(--space-text-primary)] truncate leading-snug group-hover/link:text-[var(--space-accent)] transition-colors duration-150">
+              <span className="text-[0.9375rem] font-semibold text-[var(--space-text-primary)] truncate leading-snug group-hover/link:text-[var(--space-accent)] transition-colors duration-150">
                 {displayName}
               </span>
               <Globe className="size-2.5 text-[var(--space-text-muted)] group-hover/link:text-[var(--space-accent)] transition-colors shrink-0 mb-px" />
             </a>
           ) : (
-            <p className="text-[15px] font-semibold text-[var(--space-text-primary)] truncate leading-snug">
+            <p className="text-[0.9375rem] font-semibold text-[var(--space-text-primary)] truncate leading-snug">
               {displayName}
             </p>
           )}
@@ -214,7 +214,7 @@ function CredentialCard({
           {credential.username && (
             <div className="flex items-center gap-2 px-3 py-2 group/row">
               <User2 className="size-3 text-[var(--space-text-muted)] shrink-0" />
-              <span className="flex-1 font-mono text-[12px] text-[var(--space-text-tertiary)] min-w-0 truncate">
+              <span className="flex-1 font-mono text-[0.75rem] text-[var(--space-text-tertiary)] min-w-0 truncate">
                 {credential.username}
               </span>
               <CopyButton value={credential.username} />
@@ -226,7 +226,7 @@ function CredentialCard({
               <Lock className="size-3 text-[var(--space-text-muted)] shrink-0" />
               <span
                 className={cn(
-                  'flex-1 font-mono text-[12px] min-w-0 truncate select-none',
+                  'flex-1 font-mono text-[0.75rem] min-w-0 truncate select-none',
                   showPassword
                     ? 'text-[var(--space-text-tertiary)]'
                     : 'tracking-[0.18em] text-[var(--space-text-muted)]',
@@ -251,7 +251,7 @@ function CredentialCard({
                 className="w-full flex items-center gap-2 px-3 py-2 text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)] transition-colors"
               >
                 <KeyRound className="size-3 shrink-0" />
-                <span className="flex-1 text-left text-[11px] font-medium">
+                <span className="flex-1 text-left text-[0.6875rem] font-medium">
                   {secrets.length} secret{secrets.length !== 1 ? 's' : ''}
                 </span>
                 {showSecrets ? <ChevronUp className="size-3 shrink-0" /> : <ChevronDown className="size-3 shrink-0" />}
@@ -278,13 +278,13 @@ function SecretRow({ label, value }: { label: string; value: string }) {
 
   return (
     <div className="flex items-center gap-2 group/row py-1">
-      <span className="text-[11px] text-[var(--space-text-secondary)] flex-[0_0_auto] max-w-[40%] truncate font-mono">
+      <span className="text-[0.6875rem] text-[var(--space-text-secondary)] flex-[0_0_auto] max-w-[40%] truncate font-mono">
         {label}
       </span>
-      <span className="text-[11px] text-[var(--space-text-muted)] shrink-0">:</span>
+      <span className="text-[0.6875rem] text-[var(--space-text-muted)] shrink-0">:</span>
       <span
         className={cn(
-          'text-[12px] font-mono text-[var(--space-text-tertiary)] flex-1 min-w-0 truncate',
+          'text-[0.75rem] font-mono text-[var(--space-text-tertiary)] flex-1 min-w-0 truncate',
           !revealed && 'tracking-[0.2em] text-[var(--space-text-secondary)]',
         )}
       >
@@ -412,7 +412,7 @@ function CredentialFormModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[var(--space-bg-base)] border-[var(--space-border-hard)] sm:max-w-[480px] p-0 overflow-hidden gap-0">
+      <DialogContent className="bg-[var(--space-bg-base)] border-[var(--space-border-hard)] sm:max-w-[30rem] p-0 overflow-hidden gap-0">
         <DialogTitle className="sr-only">
           {isEditing ? 'Edit Credential' : 'New Credential'}
         </DialogTitle>
@@ -592,7 +592,7 @@ function DeleteConfirmModal({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[var(--space-bg-base)] border-[var(--space-border-hard)] sm:max-w-[400px] p-6 gap-4">
+      <DialogContent className="bg-[var(--space-bg-base)] border-[var(--space-border-hard)] sm:max-w-[25rem] p-6 gap-4">
         <DialogTitle className="text-base font-semibold text-[var(--space-text-primary)]">Delete credential?</DialogTitle>
         <DialogDescription className="text-sm text-[var(--space-text-secondary)]">
           <span className="text-[var(--space-text-tertiary)] font-medium">{credentialTitle}</span> will be permanently
@@ -655,7 +655,7 @@ function VaultLockGate({ onUnlock }: { onUnlock: (expiresAt: number) => void }) 
         </div>
       </div>
 
-      <div className="w-full max-w-[280px] space-y-3">
+      <div className="w-full max-w-[17.5rem] space-y-3">
         <div className="relative">
           <Input
             type={show ? 'text' : 'password'}
@@ -769,11 +769,11 @@ export function CredentialsTab({
       {/* Header */}
       <div className="flex items-center gap-3">
         <h2 className="text-base font-semibold text-[var(--space-text-primary)]">Accounts</h2>
-        <span className="text-[11px] text-[var(--space-text-muted)] font-mono tabular-nums bg-[var(--space-bg-card)] border border-[var(--space-border-hard)] rounded px-1.5 py-0.5">
+        <span className="text-[0.6875rem] text-[var(--space-text-muted)] font-mono tabular-nums bg-[var(--space-bg-card)] border border-[var(--space-border-hard)] rounded px-1.5 py-0.5">
           {credentials.length}
         </span>
         {unlocked && (
-          <span className="flex items-center gap-1 text-[10px] text-emerald-500/70 font-medium ml-1">
+          <span className="flex items-center gap-1 text-[0.625rem] text-emerald-500/70 font-medium ml-1">
             <ShieldCheck className="size-3" /> Unlocked
             {vaultExpiresAt && (
               <span className="text-[var(--space-text-muted)] font-normal">
@@ -785,7 +785,7 @@ export function CredentialsTab({
         {unlocked && (
           <button
             onClick={handleLock}
-            className="flex items-center gap-1 text-[10px] text-[var(--space-text-muted)] hover:text-red-400 transition-colors font-medium"
+            className="flex items-center gap-1 text-[0.625rem] text-[var(--space-text-muted)] hover:text-red-400 transition-colors font-medium"
             title="Lock vault"
           >
             <Lock className="size-3" /> Lock

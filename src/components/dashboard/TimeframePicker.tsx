@@ -22,7 +22,7 @@ export function TimeframePicker({ active, basePath }: TimeframePickerProps) {
           href={`${basePath}?timeframe=${tf.value}`}
           scroll={false}
           prefetch={false}
-          className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all duration-150 ${
+          className={`px-2.5 py-1 rounded-md text-[0.625rem] font-bold uppercase tracking-wider transition-all duration-150 ${
             active === tf.value
               ? 'bg-[var(--space-accent)] text-white shadow-sm'
               : 'text-[var(--space-text-secondary)] hover:text-[var(--space-text-tertiary)]'

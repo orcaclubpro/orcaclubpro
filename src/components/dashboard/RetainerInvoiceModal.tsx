@@ -21,7 +21,7 @@ const accentBtn =
   'flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg bg-[var(--space-accent)] text-black hover:opacity-90 transition-all disabled:opacity-50'
 const ghostBtn =
   'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-[var(--space-border-hard)] text-[var(--space-text-tertiary)] hover:text-[var(--space-text-primary)] hover:bg-[var(--space-bg-card-hover)] transition-all disabled:opacity-50'
-const labelCls = 'text-[10px] font-semibold uppercase tracking-widest text-[var(--space-text-muted)]'
+const labelCls = 'text-[0.625rem] font-semibold uppercase tracking-widest text-[var(--space-text-muted)]'
 
 function fmt(n: number) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(n || 0)
@@ -202,7 +202,7 @@ export function RetainerInvoiceModal({
   return (
     <div className="fixed inset-0 z-[80] print:hidden">
       <div className="absolute inset-0 animate-in fade-in duration-150" style={{ background: 'rgba(0,0,0,0.62)', backdropFilter: 'blur(3px)' }} onClick={onClose} />
-      <div className="absolute left-1/2 top-3 bottom-3 -translate-x-1/2 w-full px-3 max-w-[600px]">
+      <div className="absolute left-1/2 top-3 bottom-3 -translate-x-1/2 w-full px-3 max-w-[37.5rem]">
         <div
           className="flex flex-col h-full overflow-hidden rounded-2xl shadow-[0_40px_100px_rgba(0,0,0,0.7)]"
           style={{ background: 'var(--space-bg-card)', border: '1px solid var(--space-border-hard)' }}
@@ -257,18 +257,18 @@ export function RetainerInvoiceModal({
                     <div className="flex items-start gap-2 rounded-lg border border-amber-500/25 bg-amber-500/[0.06] px-3 py-2.5">
                       <AlertTriangle className="size-3.5 text-amber-500 shrink-0 mt-0.5" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-[11px] text-[var(--space-text-tertiary)] leading-relaxed">
+                        <p className="text-[0.6875rem] text-[var(--space-text-tertiary)] leading-relaxed">
                           {model.next.monthLabel} is already invoiced — <span className="font-semibold text-[var(--space-text-primary)]">#{nextInvoice.orderNumber}</span> · {fmt(nextInvoice.amount)} · {nextInvoice.status}.
                           {!forceInvoice && ' Billing again creates a second invoice.'}
                         </p>
                         {nextInvoice.stripeInvoiceUrl && (
-                          <a href={nextInvoice.stripeInvoiceUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--space-accent)] hover:underline mt-1">
+                          <a href={nextInvoice.stripeInvoiceUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[0.6875rem] font-semibold text-[var(--space-accent)] hover:underline mt-1">
                             <ExternalLink className="size-3" /> View invoice
                           </a>
                         )}
                       </div>
                       {!forceInvoice && (
-                        <button onClick={() => { setForceInvoice(true); setInvoiceOn(true) }} className="shrink-0 text-[11px] font-semibold text-amber-500 hover:underline">
+                        <button onClick={() => { setForceInvoice(true); setInvoiceOn(true) }} className="shrink-0 text-[0.6875rem] font-semibold text-amber-500 hover:underline">
                           Bill again
                         </button>
                       )}
@@ -318,7 +318,7 @@ export function RetainerInvoiceModal({
                         <div className="flex items-center justify-between gap-3 px-3 py-2">
                           <span className="font-semibold text-[var(--space-text-primary)]">Total</span>
                           <div className="flex items-center gap-2">
-                            {overridden && <span className="text-[10px] text-[var(--space-text-muted)] line-through tabular-nums">{fmt(computedTotal)}</span>}
+                            {overridden && <span className="text-[0.625rem] text-[var(--space-text-muted)] line-through tabular-nums">{fmt(computedTotal)}</span>}
                             <input type="number" min={0} value={totalStr} onChange={(e) => setTotalStr(e.target.value)} placeholder={String(computedTotal)} title="Override the total" className={cn(numCls, 'w-28 py-1.5 text-right font-semibold')} />
                           </div>
                         </div>
@@ -393,7 +393,7 @@ export function RetainerInvoiceModal({
           {/* ── Footer send bar ── */}
           {!loading && model && !outcome && (
             <div className="shrink-0 border-t border-[var(--space-border-hard)] px-5 py-3 flex items-center justify-between gap-3">
-              <p className="text-[11px] text-[var(--space-text-muted)]">
+              <p className="text-[0.6875rem] text-[var(--space-text-muted)]">
                 {[invoiceOn && !invoiceBlocked ? '1 invoice' : null, recapOn ? '1 recap email' : null].filter(Boolean).join(' + ') || 'Nothing selected'}
               </p>
               <button onClick={handleSend} disabled={sending || (!(invoiceOn && !invoiceBlocked) && !recapOn)} className={accentBtn}>
@@ -418,7 +418,7 @@ function SectionCard({
         {on ? <CircleCheck className="size-4 shrink-0" style={{ color: 'var(--space-accent)' }} /> : <Circle className="size-4 shrink-0 text-[var(--space-text-muted)]" />}
         <div className="flex-1 min-w-0">
           <p className="text-xs font-semibold text-[var(--space-text-primary)]">{title}</p>
-          <p className="text-[10px] text-[var(--space-text-muted)] mt-0.5 truncate">{subtitle}</p>
+          <p className="text-[0.625rem] text-[var(--space-text-muted)] mt-0.5 truncate">{subtitle}</p>
         </div>
       </button>
       {on && <div className="px-4 pb-4 space-y-3">{children}</div>}
@@ -431,7 +431,7 @@ function RecipientsField({ label, value, onChange }: { label: string; value: str
     <label className="block">
       <span className={labelCls}>{label}</span>
       <input value={value} onChange={(e) => onChange(e.target.value)} placeholder="name@company.com, cc@company.com" className={cn(inputCls, 'mt-1 text-xs')} />
-      <span className="text-[10px] text-[var(--space-text-muted)] mt-1 block">Comma-separated for multiple recipients.</span>
+      <span className="text-[0.625rem] text-[var(--space-text-muted)] mt-1 block">Comma-separated for multiple recipients.</span>
     </label>
   )
 }
@@ -447,7 +447,7 @@ function AttachRow({
       <Icon className="size-3.5 shrink-0 text-[var(--space-text-muted)]" />
       <div className="flex-1 min-w-0">
         <p className="text-xs font-semibold text-[var(--space-text-primary)]">{title}</p>
-        <p className="text-[10px] text-[var(--space-text-muted)] mt-0.5">{hint}</p>
+        <p className="text-[0.625rem] text-[var(--space-text-muted)] mt-0.5">{hint}</p>
       </div>
       {action}
     </div>
@@ -459,10 +459,10 @@ function ResultLine({ ok, msg, url, label }: { ok: boolean; msg: string; url?: s
     <div className="flex items-start gap-2.5 rounded-lg border border-[var(--space-border-hard)] bg-[var(--space-bg-card-hover)] px-3 py-2.5">
       {ok ? <Check className="size-4 shrink-0 mt-0.5" style={{ color: 'var(--space-accent)' }} /> : <X className="size-4 shrink-0 mt-0.5 text-red-400" />}
       <div className="flex-1 min-w-0">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-[var(--space-text-muted)]">{label}</p>
+        <p className="text-[0.625rem] font-semibold uppercase tracking-widest text-[var(--space-text-muted)]">{label}</p>
         <p className="text-xs text-[var(--space-text-secondary)] mt-0.5">{msg}</p>
         {url && (
-          <a href={url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--space-accent)] hover:underline mt-1">
+          <a href={url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[0.6875rem] font-semibold text-[var(--space-accent)] hover:underline mt-1">
             View Stripe invoice <ArrowRight className="size-3" />
           </a>
         )}

@@ -24,8 +24,9 @@ import { ClientCredentialsTab } from '@/components/dashboard/ClientCredentialsTa
 import { ClientOrdersTab } from '@/components/dashboard/ClientOrdersTab'
 import { ScheduledPaymentsSection } from '@/components/dashboard/ScheduledPaymentsSection'
 import { ClientSettingsCard } from '@/components/dashboard/ClientSettingsCard'
-import { ClientPortfolioTimeline } from '@/components/dashboard/ClientPortfolioTimeline'
-import type { SerializedProject } from '@/components/dashboard/ProjectsCarousel'
+import { Spine } from '@/components/dashboard/Spine'
+import { clientSpineEvents } from '@/lib/dashboard/spine-events'
+import type { SerializedProject } from '@/lib/serialization'
 import { ProjectRowActions } from '@/components/dashboard/ProjectRowActions'
 import { CreateProjectModal } from '@/components/dashboard/CreateProjectModal'
 import { CreateOrderModal } from '@/components/dashboard/CreateOrderModal'
@@ -123,7 +124,7 @@ function ProjectRow({
         href={`/u/${username}/projects/${project.id}`}
         className="flex-1 flex items-center gap-4 px-5 py-4 min-w-0"
       >
-        <div className="absolute left-0 top-0 h-full w-[2px] opacity-0 group-hover:opacity-100 transition-opacity duration-200" style={{ background: 'var(--space-accent)' }} />
+        <div className="absolute left-0 top-0 h-full w-[0.125rem] opacity-0 group-hover:opacity-100 transition-opacity duration-200" style={{ background: 'var(--space-accent)' }} />
 
         <div
           className={`size-8 rounded-lg ${cfg.bg} border ${cfg.border} flex items-center justify-center shrink-0`}
@@ -138,7 +139,7 @@ function ProjectRow({
             </span>
             <Badge
               variant="outline"
-              className={`${cfg.color} ${cfg.bg} border ${cfg.border} text-[10px] px-1.5 py-0`}
+              className={`${cfg.color} ${cfg.bg} border ${cfg.border} text-[0.625rem] px-1.5 py-0`}
             >
               {cfg.label}
             </Badge>
@@ -274,7 +275,7 @@ export function ClientDetailTabView({
 
   return (
     <>
-      <div className="sticky top-[49px] z-10 bg-[var(--space-bg-card)] border-b border-[var(--space-border-hard)]">
+      <div className="sticky top-[3.0625rem] z-10 bg-[var(--space-bg-card)] border-b border-[var(--space-border-hard)]">
         <ClientTabNav activeTab={activeTab} onTabChange={(tab) => navigate(tab as Tab)} />
       </div>
 
@@ -377,7 +378,7 @@ export function ClientDetailTabView({
                     style={{ background: `linear-gradient(90deg, transparent, ${stat.accent}, transparent)` }}
                   />
                   <div className="flex items-start justify-between gap-2 mb-3">
-                    <p className="text-[10px] text-[var(--space-text-tertiary)] uppercase tracking-widest font-semibold">
+                    <p className="text-[0.625rem] text-[var(--space-text-tertiary)] uppercase tracking-widest font-semibold">
                       {stat.label}
                     </p>
                     <div
@@ -390,19 +391,15 @@ export function ClientDetailTabView({
                   <p className="text-2xl font-bold tabular-nums leading-none" style={{ color: '#F0F0F0' }}>
                     {stat.value}
                   </p>
-                  <p className="text-[11px] text-[var(--space-text-tertiary)] mt-1.5">{stat.sub}</p>
+                  <p className="text-[0.6875rem] text-[var(--space-text-tertiary)] mt-1.5">{stat.sub}</p>
                 </div>
               ))}
             </div>
 
-            {serializedProjects.length > 0 && (
-              <ClientPortfolioTimeline
-                clientAccounts={[{ id: clientId, name: clientAccount.name }]}
-                serializedProjects={serializedProjects}
-                allOrders={orders as any[]}
-                username={username}
-              />
-            )}
+            <Spine
+              events={clientSpineEvents(serializedProjects, orders as any[], username)}
+              emptyMessage="No projects or invoices for this client yet."
+            />
           </>
         )}
 

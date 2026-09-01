@@ -32,7 +32,7 @@ function fmtCurrency(amount: number | null | undefined, currency = 'USD') {
 // Shared micro-label — matches the client sidebar's section headers.
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-[10px] uppercase tracking-widest text-[var(--space-text-muted)] font-semibold">{children}</p>
+    <p className="text-[0.625rem] uppercase tracking-widest text-[var(--space-text-muted)] font-semibold">{children}</p>
   )
 }
 
@@ -109,7 +109,7 @@ export function ProjectSidebar({ project, tasks, username, readOnly, clientProje
       <div className="px-5 pt-4 pb-3 border-b border-[var(--space-border-hard)] shrink-0">
         <Link
           href={`/u/${username}/projects`}
-          className="group flex items-center gap-1.5 text-[11px] text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)] transition-colors"
+          className="group flex items-center gap-1.5 text-[0.6875rem] text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)] transition-colors"
         >
           <ArrowLeft className="size-3 group-hover:-translate-x-0.5 transition-transform" />
           All projects
@@ -149,7 +149,7 @@ export function ProjectSidebar({ project, tasks, username, readOnly, clientProje
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <SectionLabel>Progress</SectionLabel>
-                <span className="text-[11px] text-[var(--space-text-secondary)] font-semibold tabular-nums">
+                <span className="text-[0.6875rem] text-[var(--space-text-secondary)] font-semibold tabular-nums">
                   {completedTasks}/{totalTasks} tasks · {progress}%
                 </span>
               </div>
@@ -167,7 +167,7 @@ export function ProjectSidebar({ project, tasks, username, readOnly, clientProje
                 <div key={label} className="flex items-start gap-2.5">
                   <Icon className="size-3.5 text-[var(--space-text-muted)] mt-0.5 shrink-0" />
                   <div className="min-w-0">
-                    <p className="text-[11px] text-[var(--space-text-muted)] leading-tight">{label}</p>
+                    <p className="text-[0.6875rem] text-[var(--space-text-muted)] leading-tight">{label}</p>
                     <p className="text-xs text-[var(--space-text-primary)] font-medium leading-snug break-words">{value}</p>
                   </div>
                 </div>

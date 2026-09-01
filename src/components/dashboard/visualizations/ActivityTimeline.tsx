@@ -95,7 +95,7 @@ export function ActivityTimeline({ events, maxEvents = 5 }: ActivityTimelineProp
           <div key={event.id} className="relative group">
             {/* Timeline line */}
             {!isLast && (
-              <div className="absolute left-[18px] top-[36px] bottom-[-4px] w-px bg-[var(--space-bg-surface)]" />
+              <div className="absolute left-[1.125rem] top-[2.25rem] bottom-[-4px] w-px bg-[var(--space-bg-surface)]" />
             )}
 
             {/* Event content */}

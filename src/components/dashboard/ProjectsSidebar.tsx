@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { X, Layers, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
-import type { SerializedProject } from './ProjectsCarousel'
+import type { SerializedProject } from '@/lib/serialization'
 import { CreateProjectModal } from './CreateProjectModal'
 
 // ─── Status config (compact) ──────────────────────────────────────────────────
@@ -78,11 +78,11 @@ function ProjectRow({
               style={{ width: `${progress}%` }}
             />
           </div>
-          <span className="text-[9px] text-[var(--space-text-secondary)] tabular-nums shrink-0 w-6 text-right">
+          <span className="text-[0.5625rem] text-[var(--space-text-secondary)] tabular-nums shrink-0 w-6 text-right">
             {progress}%
           </span>
         </div>
-        <p className="text-[9px] text-[var(--space-text-secondary)] mt-0.5 uppercase tracking-wider">{label}</p>
+        <p className="text-[0.5625rem] text-[var(--space-text-secondary)] mt-0.5 uppercase tracking-wider">{label}</p>
       </div>
 
       {/* Arrow */}
@@ -122,11 +122,11 @@ function SidebarContent({
     <div className="space-y-1">
       {/* Summary pills */}
       <div className="flex items-center gap-2 px-4 pb-3">
-        <span className="inline-flex items-center gap-1 text-[9px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded-full bg-[rgba(139,156,182,0.10)] text-[var(--space-accent)] border border-[rgba(139,156,182,0.15)]">
+        <span className="inline-flex items-center gap-1 text-[0.5625rem] font-semibold uppercase tracking-widest px-2 py-0.5 rounded-full bg-[rgba(139,156,182,0.10)] text-[var(--space-accent)] border border-[rgba(139,156,182,0.15)]">
           <span className="size-1 rounded-full bg-[var(--space-accent)]" />
           {activeCount} active
         </span>
-        <span className="text-[9px] text-[var(--space-text-secondary)]">{projects.length} total</span>
+        <span className="text-[0.5625rem] text-[var(--space-text-secondary)]">{projects.length} total</span>
       </div>
 
       {sorted.length === 0 ? (
@@ -164,7 +164,7 @@ function PanelHeader({
     <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--space-border-hard)] shrink-0">
       <div>
         <h2 className="text-sm font-semibold text-[var(--space-text-primary)]">All Projects</h2>
-        <p className="text-[10px] text-[var(--space-text-secondary)] mt-0.5 uppercase tracking-wider">
+        <p className="text-[0.625rem] text-[var(--space-text-secondary)] mt-0.5 uppercase tracking-wider">
           {count} project{count !== 1 ? 's' : ''}
         </p>
       </div>
@@ -210,7 +210,7 @@ export function ProjectsSidebar({
       >
         <Layers className="size-3.5 text-[var(--space-accent)]" />
         <span
-          className="text-[9px] font-semibold text-[var(--space-text-secondary)] uppercase tracking-[0.18em]
+          className="text-[0.5625rem] font-semibold text-[var(--space-text-secondary)] uppercase tracking-[0.18em]
                      group-hover:text-[var(--space-text-tertiary)] transition-colors
                      [writing-mode:vertical-rl] rotate-180"
         >
@@ -232,7 +232,7 @@ export function ProjectsSidebar({
       >
         <Layers className="size-3.5 text-[var(--space-accent)]" />
         <span
-          className="text-[8px] font-semibold text-[var(--space-text-secondary)] uppercase tracking-[0.15em]
+          className="text-[0.5rem] font-semibold text-[var(--space-text-secondary)] uppercase tracking-[0.15em]
                      [writing-mode:vertical-rl] rotate-180"
         >
           Projects
@@ -250,8 +250,8 @@ export function ProjectsSidebar({
 
       {/* ── Desktop: slide-in panel from right ──────────────────────────── */}
       <aside
-        className={`hidden md:flex fixed top-[88px] right-0 bottom-0 z-40
-                    w-[320px] xl:w-[360px] flex-col
+        className={`hidden md:flex fixed top-[5.5rem] right-0 bottom-0 z-40
+                    w-[20rem] xl:w-[22.5rem] flex-col
                     bg-[var(--space-bg-card)] border-l border-[var(--space-border-hard)]
                     transition-transform duration-300 ease-in-out
                     ${open ? 'translate-x-0' : 'translate-x-full'}`}

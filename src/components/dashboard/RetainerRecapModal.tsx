@@ -14,9 +14,9 @@ const accentBtn =
   'flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg bg-[var(--space-accent)] text-black hover:opacity-90 transition-all disabled:opacity-50'
 const ghostBtn =
   'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-[var(--space-border-hard)] text-[var(--space-text-tertiary)] hover:text-[var(--space-text-primary)] hover:bg-[var(--space-bg-card-hover)] transition-all disabled:opacity-50'
-const labelCls = 'text-[10px] font-semibold uppercase tracking-widest text-[var(--space-text-muted)]'
+const labelCls = 'text-[0.625rem] font-semibold uppercase tracking-widest text-[var(--space-text-muted)]'
 const sectionLabel =
-  'text-[9px] font-bold tracking-[0.25em] uppercase text-[var(--space-accent)]'
+  'text-[0.5625rem] font-bold tracking-[0.25em] uppercase text-[var(--space-accent)]'
 
 export interface RetainerRecapModalProps {
   retainerId: string
@@ -96,7 +96,7 @@ export function RetainerRecapModal({ retainerId, clientId, cycleRef, onClose, dr
   return (
     <div className="fixed inset-0 z-[80] print:hidden">
       <div className="absolute inset-0 animate-in fade-in duration-150" style={{ background: 'rgba(0,0,0,0.62)', backdropFilter: 'blur(3px)' }} onClick={onClose} />
-      <div className="absolute left-1/2 -translate-x-1/2 top-3 bottom-3 w-full px-3 max-w-[760px]">
+      <div className="absolute left-1/2 -translate-x-1/2 top-3 bottom-3 w-full px-3 max-w-[47.5rem]">
         <div
           className="flex flex-col h-full overflow-hidden rounded-2xl shadow-[0_40px_100px_rgba(0,0,0,0.7)]"
           style={{ background: 'var(--space-bg-card)', border: '1px solid var(--space-border-hard)' }}

@@ -32,7 +32,10 @@ export function SpacesHeader({ user, showTips }: SpacesHeaderProps) {
   const { title, subtitle } = useHeaderTitle()
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 h-[88px] border-b border-[var(--space-border)]" style={{ background: 'var(--space-bg-base)' }}>
+    <header
+      className="fixed top-0 left-0 right-0 z-50 border-b border-[var(--space-border)]"
+      style={{ height: 'var(--space-header, 88px)', background: 'var(--space-bg-base)' }}
+    >
       <nav className="flex h-full w-full items-center justify-between px-8 lg:px-12" aria-label="Global">
 
         {/* Logo / breadcrumb */}

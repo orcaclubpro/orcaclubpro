@@ -1,7 +1,8 @@
 import Link from 'next/link'
 import { DashboardGreeting } from '@/components/dashboard/DashboardGreeting'
 import { ClientActiveProjects } from '@/components/dashboard/ClientActiveProjects'
-import { ClientInvoiceTimeline } from '@/components/dashboard/ClientInvoiceTimeline'
+import { Spine } from '@/components/dashboard/Spine'
+import { invoiceSpineEvents } from '@/lib/dashboard/spine-events'
 import { BalanceCard } from '@/components/dashboard/BalanceCard'
 import { PaymentScheduleCard } from '@/components/dashboard/PaymentScheduleCard'
 import type { ClientProjectSummary } from '@/components/dashboard/ClientActiveProjects'
@@ -193,7 +194,10 @@ export function ClientHomeView({
             View all <ArrowRight className="size-3" />
           </Link>
         </div>
-        <ClientInvoiceTimeline orders={serializedOrders} />
+        <Spine
+          events={invoiceSpineEvents(serializedOrders)}
+          emptyMessage="No invoices yet. They appear here once work begins."
+        />
       </div>
 
     </div>

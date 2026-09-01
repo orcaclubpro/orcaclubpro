@@ -161,7 +161,7 @@ function ProposalModal({
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div className="absolute inset-0 bg-[#000000]/60" onClick={onClose} />
       <div
-        className="relative z-10 w-full sm:max-w-[540px] max-h-[92vh] sm:max-h-[85vh] flex flex-col rounded-t-3xl sm:rounded-2xl border border-[var(--space-border-hard)] overflow-hidden"
+        className="relative z-10 w-full sm:max-w-[33.75rem] max-h-[92vh] sm:max-h-[85vh] flex flex-col rounded-t-3xl sm:rounded-2xl border border-[var(--space-border-hard)] overflow-hidden"
         style={{ background: 'var(--space-bg-card)' }}
       >
         {/* Top line */}
@@ -179,12 +179,12 @@ function ProposalModal({
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap mb-2">
-                <p className="text-[9px] font-bold tracking-[0.28em] uppercase" style={{ color: 'var(--space-accent)' }}>
+                <p className="text-[0.5625rem] font-bold tracking-[0.28em] uppercase" style={{ color: 'var(--space-accent)' }}>
                   Proposal
                 </p>
                 {pkg.status && (
                   <span className={cn(
-                    'text-[9px] font-bold uppercase tracking-[0.18em] px-2 py-0.5 rounded-full border',
+                    'text-[0.5625rem] font-bold uppercase tracking-[0.18em] px-2 py-0.5 rounded-full border',
                     statusStyle(pkg.status),
                   )}>
                     {pkg.status}
@@ -216,7 +216,7 @@ function ProposalModal({
               {oneTime > 0 && (
                 <div>
                   <p className="text-2xl font-bold text-[var(--space-text-primary)] tabular-nums">{fmt(oneTime)}</p>
-                  <p className="text-[9px] text-[var(--space-text-tertiary)] mt-1 uppercase tracking-[0.18em]">one-time</p>
+                  <p className="text-[0.5625rem] text-[var(--space-text-tertiary)] mt-1 uppercase tracking-[0.18em]">one-time</p>
                 </div>
               )}
               {monthly > 0 && (
@@ -225,7 +225,7 @@ function ProposalModal({
                     <p className="text-2xl font-bold text-[var(--space-text-primary)] tabular-nums">{fmt(monthly)}</p>
                     <p className="text-sm text-[var(--space-text-muted)]">/mo</p>
                   </div>
-                  <p className="text-[9px] text-[var(--space-text-tertiary)] mt-1 uppercase tracking-[0.18em]">monthly</p>
+                  <p className="text-[0.5625rem] text-[var(--space-text-tertiary)] mt-1 uppercase tracking-[0.18em]">monthly</p>
                 </div>
               )}
               {annual > 0 && (
@@ -234,7 +234,7 @@ function ProposalModal({
                     <p className="text-2xl font-bold text-[var(--space-text-primary)] tabular-nums">{fmt(annual)}</p>
                     <p className="text-sm text-[var(--space-text-muted)]">/yr</p>
                   </div>
-                  <p className="text-[9px] text-[var(--space-text-tertiary)] mt-1 uppercase tracking-[0.18em]">annually</p>
+                  <p className="text-[0.5625rem] text-[var(--space-text-tertiary)] mt-1 uppercase tracking-[0.18em]">annually</p>
                 </div>
               )}
             </div>
@@ -243,7 +243,7 @@ function ProposalModal({
           {/* Line items */}
           {lineItems.length > 0 ? (
             <div>
-              <p className="text-[9px] font-bold tracking-[0.25em] uppercase text-[var(--space-accent)] mb-2.5">
+              <p className="text-[0.5625rem] font-bold tracking-[0.25em] uppercase text-[var(--space-accent)] mb-2.5">
                 Included · {lineItems.length}
               </p>
               <div className="space-y-1.5">
@@ -444,7 +444,7 @@ function ProposalCard({
       {/* Status */}
       <div className="flex items-center justify-between">
         <span className={cn(
-          'text-[9px] font-bold uppercase tracking-[0.2em] px-2 py-0.5 rounded-full border',
+          'text-[0.5625rem] font-bold uppercase tracking-[0.2em] px-2 py-0.5 rounded-full border',
           statusStyle(pkg.status),
         )}>
           {pkg.status ?? 'draft'}
@@ -468,7 +468,7 @@ function ProposalCard({
       <div>
         <PricingSummary lineItems={lineItems} />
         {lineItems.length > 0 && (
-          <p className="text-[10px] text-[var(--space-text-secondary)] mt-1">
+          <p className="text-[0.625rem] text-[var(--space-text-secondary)] mt-1">
             {lineItems.length} service{lineItems.length !== 1 ? 's' : ''}
           </p>
         )}
@@ -510,7 +510,7 @@ function TemplateRow({ pkg }: { pkg: PackageDoc }) {
           )}
         </div>
         <div className="flex items-center gap-2.5 shrink-0">
-          <span className="text-[10px] text-[var(--space-text-secondary)] tabular-nums">{lineItems.length} item{lineItems.length !== 1 ? 's' : ''}</span>
+          <span className="text-[0.625rem] text-[var(--space-text-secondary)] tabular-nums">{lineItems.length} item{lineItems.length !== 1 ? 's' : ''}</span>
           <div className={cn('size-5 rounded-md border border-[var(--space-border-hard)] flex items-center justify-center transition-all', expanded && 'bg-[var(--space-bg-card-hover)]')}>
             <ChevronRight className={cn('size-3 text-[var(--space-text-muted)] transition-transform', expanded && 'rotate-90')} />
           </div>
@@ -527,7 +527,7 @@ function TemplateRow({ pkg }: { pkg: PackageDoc }) {
                     <div className="flex items-center gap-1.5">
                       <span className="text-[var(--space-text-secondary)] font-medium">{item.name}</span>
                       {item.isRecurring && (
-                        <span className="text-[10px] uppercase tracking-wide" style={{ color: 'var(--space-accent)', opacity: 0.6 }}>
+                        <span className="text-[0.625rem] uppercase tracking-wide" style={{ color: 'var(--space-accent)', opacity: 0.6 }}>
                           {item.recurringInterval === 'year' ? 'annual' : 'monthly'}
                         </span>
                       )}
@@ -610,7 +610,7 @@ export function PackagesAdminView({ allPackages, username }: PackagesAdminViewPr
         {/* ── Header ─────────────────────────────────────────────────────── */}
         <div className="flex items-start gap-4 flex-wrap">
           <div className="flex-1">
-            <p className="text-[9px] font-bold tracking-[0.32em] uppercase mb-1" style={{ color: 'var(--space-accent)' }}>
+            <p className="text-[0.5625rem] font-bold tracking-[0.32em] uppercase mb-1" style={{ color: 'var(--space-accent)' }}>
               Operations
             </p>
             <h2 className="text-xl font-bold text-[var(--space-text-primary)] tracking-tight">Packages</h2>
@@ -628,7 +628,7 @@ export function PackagesAdminView({ allPackages, username }: PackagesAdminViewPr
                 className="flex flex-col items-center px-3 py-2 rounded-lg bg-[var(--space-bg-card)] border border-[var(--space-border-hard)]"
               >
                 <span className="text-lg font-bold text-[var(--space-text-primary)] tabular-nums">{s.value}</span>
-                <span className="text-[9px] text-[var(--space-text-tertiary)] uppercase tracking-[0.15em] mt-0.5">{s.label}</span>
+                <span className="text-[0.5625rem] text-[var(--space-text-tertiary)] uppercase tracking-[0.15em] mt-0.5">{s.label}</span>
               </div>
             ))}
           </div>
@@ -663,10 +663,10 @@ export function PackagesAdminView({ allPackages, username }: PackagesAdminViewPr
                     <div>
                       <p className="text-sm font-semibold text-[var(--space-text-primary)] leading-none">{group.clientName}</p>
                       {group.clientCompany && (
-                        <p className="text-[10px] text-[var(--space-text-muted)] mt-0.5">{group.clientCompany}</p>
+                        <p className="text-[0.625rem] text-[var(--space-text-muted)] mt-0.5">{group.clientCompany}</p>
                       )}
                     </div>
-                    <span className="text-[10px] text-[var(--space-text-secondary)] ml-1 tabular-nums">
+                    <span className="text-[0.625rem] text-[var(--space-text-secondary)] ml-1 tabular-nums">
                       {group.proposals.length} package{group.proposals.length !== 1 ? 's' : ''}
                     </span>
                   </div>
@@ -723,17 +723,17 @@ export function PackagesAdminView({ allPackages, username }: PackagesAdminViewPr
           <div>
             <div className="flex items-center gap-2 mb-3">
               <Layers className="size-3.5 text-[var(--space-text-muted)]" />
-              <p className="text-[10px] font-bold text-[var(--space-text-muted)] uppercase tracking-[0.2em]">
+              <p className="text-[0.625rem] font-bold text-[var(--space-text-muted)] uppercase tracking-[0.2em]">
                 Templates
               </p>
-              <span className="text-[10px] text-[var(--space-text-secondary)] tabular-nums ml-0.5">{filteredTemplates.length}</span>
+              <span className="text-[0.625rem] text-[var(--space-text-secondary)] tabular-nums ml-0.5">{filteredTemplates.length}</span>
             </div>
             <div className="space-y-1.5">
               {filteredTemplates.map(t => (
                 <TemplateRow key={t.id} pkg={t} />
               ))}
             </div>
-            <p className="text-[10px] text-[var(--space-text-secondary)] mt-4 text-center">
+            <p className="text-[0.625rem] text-[var(--space-text-secondary)] mt-4 text-center">
               Manage templates in the{' '}
               <a href="/admin/collections/packages" className="text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)] underline transition-colors">
                 admin panel

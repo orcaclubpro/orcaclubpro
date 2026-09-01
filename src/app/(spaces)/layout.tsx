@@ -49,6 +49,7 @@ export default async function SpacesLayout({
       {/* Wrapper fills the full viewport — inline theme vars applied server-side
           so the background is correct before JS hydration (avoids black flash). */}
       <div
+        id="spaces-root"
         className="min-h-screen"
         style={{ backgroundColor: 'var(--space-bg-base)', color: 'var(--space-text-primary)' } as React.CSSProperties}
       >
@@ -59,12 +60,21 @@ export default async function SpacesLayout({
           }}
         />
         <SpacesHeader user={user} showTips={(user as any)?.showTips !== false && experience === 'client' && !previewClientName} />
-        {/* zoom: 1.3 scales up the entire spaces UI for better legibility.
-            Note: `zoom` is non-standard CSS; Firefox ignores it. For cross-browser
-            support, this should eventually migrate to transform:scale(1.3) with
-            compensating width/height calculations.
-            min-h-[calc(100vh/1.3)] — with zoom:1.3, visually fills exactly 100vh. pb-28 reserved for mobile bottom nav only. */}
-        <main className="pt-[68px] min-h-[calc(100vh/1.3)] pb-28 lg:pb-0 [overflow-x:clip]" style={{ zoom: 1.3 }}>
+        {/* The portal is scaled by the root font size (see `html:has(#spaces-root)`
+            in globals.css), not by `zoom` — so 100svh means 100svh and panels can
+            subtract --space-header honestly. pb-28 reserves the mobile bottom nav. */}
+        <main
+          className="pb-28 lg:pb-0 [overflow-x:clip]"
+          style={{
+            paddingTop: 'var(--space-header)',
+            // border-box, so this spans exactly the viewport and the content box
+            // below the fixed header is `100svh - var(--space-header)` — the same
+            // figure `.space-panel-h` uses. `min-h-screen` alongside the padding
+            // overflowed by exactly the header height, which is what put a
+            // permanent scrollbar beside every full-height panel.
+            minHeight: '100svh',
+          }}
+        >
           {previewClientName && <ClientPreviewBanner clientName={previewClientName} />}
           {children}
         </main>

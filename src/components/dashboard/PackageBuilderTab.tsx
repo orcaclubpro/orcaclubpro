@@ -580,7 +580,7 @@ export function PackageBuilderTab({ mode, username, clientId, existing, onClose,
         {/* LEFT — catalog rail */}
         <div
           className={cn(
-            'flex-col w-full sm:w-[300px] sm:shrink-0 border-r border-[var(--space-border-hard)] min-h-0 bg-[rgba(0,0,0,0.13)]',
+            'flex-col w-full sm:w-[18.75rem] sm:shrink-0 border-r border-[var(--space-border-hard)] min-h-0 bg-[rgba(0,0,0,0.13)]',
             mobilePane === 'catalog' ? 'flex' : 'hidden sm:flex',
           )}
         >
@@ -588,7 +588,7 @@ export function PackageBuilderTab({ mode, username, clientId, existing, onClose,
           <div className="shrink-0 p-3 border-b border-[var(--space-border-hard)] space-y-2.5">
             <div className="flex items-center gap-2 px-0.5">
               <Layers className="size-3 text-[var(--space-text-muted)]" />
-              <p className="text-[9px] font-bold tracking-[0.24em] uppercase text-[var(--space-text-muted)]">
+              <p className="text-[0.5625rem] font-bold tracking-[0.24em] uppercase text-[var(--space-text-muted)]">
                 Catalog{catalog.length > 0 ? ` · ${catalog.length}` : ''}
               </p>
             </div>
@@ -618,7 +618,7 @@ export function PackageBuilderTab({ mode, username, clientId, existing, onClose,
                   {q ? 'No matching services' : 'No saved services yet'}
                 </p>
                 {!q && (
-                  <p className="text-[11px] text-[var(--space-text-muted)] leading-relaxed max-w-[200px]">
+                  <p className="text-[0.6875rem] text-[var(--space-text-muted)] leading-relaxed max-w-[12.5rem]">
                     Add a service below and check “Save to catalog” to reuse it on future packages.
                   </p>
                 )}
@@ -641,7 +641,7 @@ export function PackageBuilderTab({ mode, username, clientId, existing, onClose,
                         )}
                         <p className="text-sm font-medium text-[var(--space-text-secondary)] truncate">{item.name}</p>
                       </div>
-                      <p className="text-[10px] text-[var(--space-text-muted)] tabular-nums font-mono mt-0.5">
+                      <p className="text-[0.625rem] text-[var(--space-text-muted)] tabular-nums font-mono mt-0.5">
                         {catalogPriceHint(item)}
                       </p>
                       {/* The description travels with the item onto the proposal — showing
@@ -790,15 +790,15 @@ export function PackageBuilderTab({ mode, username, clientId, existing, onClose,
               {showMeta && (
                 <div className="px-4 pb-4 space-y-3 border-t border-[var(--space-border-hard)] pt-3">
                   <div>
-                    <label className="text-[10px] uppercase tracking-widest text-[var(--space-text-muted)]">Description</label>
+                    <label className="text-[0.625rem] uppercase tracking-widest text-[var(--space-text-muted)]">Description</label>
                     <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className={cn(inputCls, 'mt-1 resize-none')} />
                   </div>
                   <div>
-                    <label className="text-[10px] uppercase tracking-widest text-[var(--space-text-muted)]">Cover message</label>
+                    <label className="text-[0.625rem] uppercase tracking-widest text-[var(--space-text-muted)]">Cover message</label>
                     <textarea value={coverMessage} onChange={(e) => setCoverMessage(e.target.value)} rows={2} className={cn(inputCls, 'mt-1 resize-none')} />
                   </div>
                   <div>
-                    <label className="text-[10px] uppercase tracking-widest text-[var(--space-text-muted)]">Internal notes</label>
+                    <label className="text-[0.625rem] uppercase tracking-widest text-[var(--space-text-muted)]">Internal notes</label>
                     <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} className={cn(inputCls, 'mt-1 resize-none')} />
                   </div>
                 </div>
@@ -833,7 +833,7 @@ export function PackageBuilderTab({ mode, username, clientId, existing, onClose,
 
             {/* Line items */}
             <div>
-              <p className="text-[9px] font-bold tracking-[0.25em] uppercase text-[var(--space-accent)] mb-2.5">
+              <p className="text-[0.5625rem] font-bold tracking-[0.25em] uppercase text-[var(--space-accent)] mb-2.5">
                 Line items · {lines.length}
               </p>
               {lines.length === 0 ? (
@@ -886,7 +886,7 @@ export function PackageBuilderTab({ mode, username, clientId, existing, onClose,
                                 )}
                               </p>
                             )}
-                            {item.isAddOn && <span className="text-[9px] uppercase tracking-widest text-[var(--space-text-muted)]">add-on · excluded</span>}
+                            {item.isAddOn && <span className="text-[0.5625rem] uppercase tracking-widest text-[var(--space-text-muted)]">add-on · excluded</span>}
                           </div>
                           <button onClick={() => setOverflowKey(overflowKey === item._key ? null : item._key)} className="shrink-0 size-6 flex items-center justify-center rounded-md text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] hover:bg-[var(--space-bg-card)] transition-colors">
                             <MoreHorizontal className="size-3.5" />
@@ -915,7 +915,7 @@ export function PackageBuilderTab({ mode, username, clientId, existing, onClose,
                             <option value="recurring">Recurring</option>
                           </select>
 
-                          <label className="flex items-center gap-1 text-[10px] text-[var(--space-text-muted)]">
+                          <label className="flex items-center gap-1 text-[0.625rem] text-[var(--space-text-muted)]">
                             <span>{item.billingType === 'hourly' ? 'Rate' : 'Price'}</span>
                             <input
                               type="number"
@@ -926,7 +926,7 @@ export function PackageBuilderTab({ mode, username, clientId, existing, onClose,
                           </label>
 
                           {item.billingType === 'hourly' && (
-                            <label className="flex items-center gap-1 text-[10px] text-[var(--space-text-muted)]">
+                            <label className="flex items-center gap-1 text-[0.625rem] text-[var(--space-text-muted)]">
                               <span>Hours</span>
                               <input
                                 type="number"
@@ -949,7 +949,7 @@ export function PackageBuilderTab({ mode, username, clientId, existing, onClose,
                                 <option value="month">/mo</option>
                                 <option value="year">/yr</option>
                               </select>
-                              <label className="flex items-center gap-1 text-[10px] text-[var(--space-text-muted)]">
+                              <label className="flex items-center gap-1 text-[0.625rem] text-[var(--space-text-muted)]">
                                 <span>Term (mo)</span>
                                 <input
                                   type="number"
@@ -962,7 +962,7 @@ export function PackageBuilderTab({ mode, username, clientId, existing, onClose,
                             </>
                           )}
 
-                          <label className="flex items-center gap-1 text-[10px] text-[var(--space-text-muted)]">
+                          <label className="flex items-center gap-1 text-[0.625rem] text-[var(--space-text-muted)]">
                             <span>Qty</span>
                             <input
                               type="number"
@@ -979,7 +979,7 @@ export function PackageBuilderTab({ mode, username, clientId, existing, onClose,
                           <button
                             onClick={() => patchLine(item._key, { isAddOn: !item.isAddOn })}
                             className={cn(
-                              'text-[10px] font-semibold uppercase tracking-wide px-2 py-1 rounded-md border transition-colors',
+                              'text-[0.625rem] font-semibold uppercase tracking-wide px-2 py-1 rounded-md border transition-colors',
                               item.isAddOn
                                 ? 'text-[var(--space-text-tertiary)] border-[rgba(139,156,182,0.20)] bg-[rgba(139,156,182,0.06)]'
                                 : 'text-[var(--space-text-muted)] border-[var(--space-border-hard)]',
@@ -992,7 +992,7 @@ export function PackageBuilderTab({ mode, username, clientId, existing, onClose,
                         {/* Overflow: discount / description */}
                         {overflowKey === item._key && (
                           <div className="mt-2 pl-6 pt-2 border-t border-[var(--space-border-hard)] space-y-2">
-                            <label className="flex items-center gap-2 text-[10px] text-[var(--space-text-muted)]">
+                            <label className="flex items-center gap-2 text-[0.625rem] text-[var(--space-text-muted)]">
                               <span className="uppercase tracking-widest">Discount / override</span>
                               <input
                                 type="number"
@@ -1030,7 +1030,7 @@ export function PackageBuilderTab({ mode, username, clientId, existing, onClose,
                 <ChevronRight className={cn('size-3.5 text-[var(--space-text-muted)] transition-transform', showSchedule && 'rotate-90')} />
                 <CalendarClock className="size-3.5 text-[var(--space-text-muted)]" />
                 <span className="text-xs font-semibold text-[var(--space-text-tertiary)]">Payment schedule (optional)</span>
-                {schedule.length > 0 && <span className="text-[10px] text-[var(--space-text-muted)] tabular-nums">{schedule.length}</span>}
+                {schedule.length > 0 && <span className="text-[0.625rem] text-[var(--space-text-muted)] tabular-nums">{schedule.length}</span>}
               </button>
               {showSchedule && (
                 <div className="px-4 pb-4 space-y-2 border-t border-[var(--space-border-hard)] pt-3">
@@ -1113,19 +1113,19 @@ export function PackageBuilderTab({ mode, username, clientId, existing, onClose,
           {oneTime > 0 && (
             <div>
               <p className="text-lg font-bold text-[var(--space-text-primary)] tabular-nums leading-none">{fmt(oneTime)}</p>
-              <p className="text-[9px] text-[var(--space-text-tertiary)] uppercase tracking-[0.18em] mt-1">one-time</p>
+              <p className="text-[0.5625rem] text-[var(--space-text-tertiary)] uppercase tracking-[0.18em] mt-1">one-time</p>
             </div>
           )}
           {monthly > 0 && (
             <div>
               <p className="text-lg font-bold tabular-nums leading-none" style={{ color: 'var(--space-accent)' }}>{fmt(monthly)}<span className="text-sm text-[var(--space-text-muted)]">/mo</span></p>
-              <p className="text-[9px] text-[var(--space-text-tertiary)] uppercase tracking-[0.18em] mt-1">monthly</p>
+              <p className="text-[0.5625rem] text-[var(--space-text-tertiary)] uppercase tracking-[0.18em] mt-1">monthly</p>
             </div>
           )}
           {annual > 0 && (
             <div>
               <p className="text-lg font-bold tabular-nums leading-none" style={{ color: 'var(--space-accent)' }}>{fmt(annual)}<span className="text-sm text-[var(--space-text-muted)]">/yr</span></p>
-              <p className="text-[9px] text-[var(--space-text-tertiary)] uppercase tracking-[0.18em] mt-1">annually</p>
+              <p className="text-[0.5625rem] text-[var(--space-text-tertiary)] uppercase tracking-[0.18em] mt-1">annually</p>
             </div>
           )}
           {oneTime === 0 && monthly === 0 && annual === 0 && (

@@ -8,11 +8,11 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import DynamicGreeting from '@/components/layout/dynamic-greeting'
-import { PortfolioTimeline } from '@/components/dashboard/PortfolioTimeline'
-import { ClientPortfolioTimeline } from '@/components/dashboard/ClientPortfolioTimeline'
-import type { SerializedProject, SerializedSprint } from '@/components/dashboard/ProjectsCarousel'
-import type { Range } from '@/components/dashboard/PortfolioTimeline'
-import { RANGE_CFG } from '@/components/dashboard/PortfolioTimeline'
+import { Spine } from '@/components/dashboard/Spine'
+import { clientSpineEvents, withinRange } from '@/lib/dashboard/spine-events'
+import type { SerializedProject, SerializedSprint } from '@/lib/serialization'
+import type { Range } from '@/lib/dashboard/range'
+import { RANGE_CFG } from '@/lib/dashboard/range'
 import { cn } from '@/lib/utils'
 import { tabVariants, stagger, fadeUp, fadeLeft } from '@/lib/animations'
 
@@ -117,7 +117,7 @@ function SprintCarousel({ sprints, username }: { sprints: ActiveSprint[]; userna
     <div className="space-y-4" aria-label={`Sprint ${safeIdx + 1} of ${sprints.length}`}>
       {sprints.length > 1 && (
         <div className="flex items-center justify-between">
-          <span className="text-[11px] text-[#444]" aria-live="polite">{safeIdx + 1} of {sprints.length} active</span>
+          <span className="text-[0.6875rem] text-[#444]" aria-live="polite">{safeIdx + 1} of {sprints.length} active</span>
           <div className="flex items-center gap-1.5" role="group" aria-label="Sprint navigation">
             <button
               onClick={prev} disabled={safeIdx === 0}
@@ -145,21 +145,21 @@ function SprintCarousel({ sprints, username }: { sprints: ActiveSprint[]; userna
         >
           <div className="p-5">
             <div className="flex items-center justify-between gap-4 mb-5">
-              <span className={`text-[9px] font-bold uppercase tracking-[0.18em] px-2 py-0.5 rounded-full border ${cfg.badge}`}>
+              <span className={`text-[0.5625rem] font-bold uppercase tracking-[0.18em] px-2 py-0.5 rounded-full border ${cfg.badge}`}>
                 {cfg.label}
               </span>
               <div className="flex items-center gap-3 shrink-0">
-                <span className={`text-[11px] font-medium tabular-nums ${daysLeft < 0 ? 'text-red-400' : daysLeft <= 3 ? 'text-amber-500' : cfg.daysColor}`}>
+                <span className={`text-[0.6875rem] font-medium tabular-nums ${daysLeft < 0 ? 'text-red-400' : daysLeft <= 3 ? 'text-amber-500' : cfg.daysColor}`}>
                   {daysLeft < 0 ? `${Math.abs(daysLeft)}d overdue` : daysLeft === 0 ? 'Due today' : daysLeft === 1 ? 'Due tomorrow' : `${daysLeft}d left`}
                 </span>
-                <span className="flex items-center gap-0.5 text-[10px] text-[var(--space-text-tertiary)] group-hover:text-[#555] transition-colors" aria-hidden="true">
+                <span className="flex items-center gap-0.5 text-[0.625rem] text-[var(--space-text-tertiary)] group-hover:text-[#555] transition-colors" aria-hidden="true">
                   Open <ArrowRight className="size-2.5 group-hover:translate-x-0.5 transition-transform" />
                 </span>
               </div>
             </div>
 
             <h3 className="text-xl font-bold text-[var(--space-text-primary)] leading-snug mb-1">{sprint.name}</h3>
-            <p className="text-[11px] text-[#444] mb-4">
+            <p className="text-[0.6875rem] text-[#444] mb-4">
               {sprint.projectName}
               <span className="mx-1.5 text-[#333]">·</span>
               {fmtShort(sprint.startDate)} → {fmtShort(sprint.endDate)}
@@ -172,14 +172,14 @@ function SprintCarousel({ sprints, username }: { sprints: ActiveSprint[]; userna
             {sprint.totalTasksCount > 0 && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-[9px] uppercase tracking-[0.15em] text-[#444] font-semibold">Tasks</span>
-                  <span className="text-[11px] text-[#555] tabular-nums">
+                  <span className="text-[0.5625rem] uppercase tracking-[0.15em] text-[#444] font-semibold">Tasks</span>
+                  <span className="text-[0.6875rem] text-[#555] tabular-nums">
                     {sprint.completedTasksCount}/{sprint.totalTasksCount}
                     <span className="ml-1.5 text-[var(--space-text-tertiary)]">· {pct}%</span>
                   </span>
                 </div>
                 <div
-                  className="h-[3px] rounded-full bg-[var(--space-bg-base)] overflow-hidden"
+                  className="h-[0.1875rem] rounded-full bg-[var(--space-bg-base)] overflow-hidden"
                   role="progressbar"
                   aria-valuenow={pct}
                   aria-valuemin={0}
@@ -237,7 +237,7 @@ function MiniBarChart({ data }: { data: { label: string; revenue: number }[] }) 
               }}
             />
           </div>
-          <span className="text-[9px] text-[var(--space-text-tertiary)] whitespace-nowrap">{d.label}</span>
+          <span className="text-[0.5625rem] text-[var(--space-text-tertiary)] whitespace-nowrap">{d.label}</span>
         </div>
       ))}
     </div>
@@ -360,7 +360,7 @@ export function AdminHomeView({
 
       {/* ── Page header ────────────────────────────────────────────────── */}
       <div className="mb-5">
-        <p className="text-[11px] font-semibold text-[var(--space-accent)] uppercase tracking-[0.25em]">
+        <p className="text-[0.6875rem] font-semibold text-[var(--space-accent)] uppercase tracking-[0.25em]">
           {user.role === 'admin' ? 'Admin' : 'Workspace'} · ORCACLUB Spaces
         </p>
       </div>
@@ -373,7 +373,7 @@ export function AdminHomeView({
 
           <div>
             <DynamicGreeting />
-            <p className="text-[10px] text-[var(--space-text-tertiary)] text-center mt-1">
+            <p className="text-[0.625rem] text-[var(--space-text-tertiary)] text-center mt-1">
               {user.role === 'admin'
                 ? `Overseeing ${clientAccounts.length} client${clientAccounts.length !== 1 ? 's' : ''} · ${activeProjects} active project${activeProjects !== 1 ? 's' : ''}`
                 : `${clientAccounts.length} assigned client${clientAccounts.length !== 1 ? 's' : ''} · ${activeProjects} active project${activeProjects !== 1 ? 's' : ''}`
@@ -394,22 +394,22 @@ export function AdminHomeView({
               >
                 {/* Collected */}
                 <motion.div variants={fadeUp} className="px-4 py-4 border-b border-[var(--space-border-hard)]">
-                  <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#333] mb-2">Collected</p>
+                  <p className="text-[0.5625rem] font-bold uppercase tracking-[0.2em] text-[#333] mb-2">Collected</p>
                   <p className="text-2xl font-black tabular-nums text-[var(--space-accent)] leading-none">
                     {fmtUsd(orderPipeline.paidAmount)}
                   </p>
-                  <p className="text-[10px] text-[var(--space-text-tertiary)] mt-1">
+                  <p className="text-[0.625rem] text-[var(--space-text-tertiary)] mt-1">
                     {orderPipeline.paidCount} paid order{orderPipeline.paidCount !== 1 ? 's' : ''}
                   </p>
                 </motion.div>
 
                 {/* Pending orders */}
                 <motion.div variants={fadeUp} className="px-4 py-4 border-b border-[var(--space-border-hard)]">
-                  <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#333] mb-2">Pending Orders</p>
+                  <p className="text-[0.5625rem] font-bold uppercase tracking-[0.2em] text-[#333] mb-2">Pending Orders</p>
                   <p className="text-2xl font-black tabular-nums text-[var(--space-text-primary)] leading-none">
                     {fmtUsd(totalPendingAmount)}
                   </p>
-                  <p className="text-[10px] text-[var(--space-text-tertiary)] mt-1">
+                  <p className="text-[0.625rem] text-[var(--space-text-tertiary)] mt-1">
                     {orderPipeline.pendingCount > 0 && `${orderPipeline.pendingCount} open invoice${orderPipeline.pendingCount !== 1 ? 's' : ''}`}
                     {orderPipeline.pendingCount > 0 && uninvoicedCount > 0 && ' · '}
                     {uninvoicedCount > 0 && `${uninvoicedCount} scheduled`}
@@ -419,17 +419,17 @@ export function AdminHomeView({
 
                 {/* Active sprints */}
                 <motion.div variants={fadeUp} className="px-4 py-4">
-                  <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#333] mb-2">Active Sprints</p>
+                  <p className="text-[0.5625rem] font-bold uppercase tracking-[0.2em] text-[#333] mb-2">Active Sprints</p>
                   <p className="text-2xl font-black tabular-nums text-[var(--space-text-primary)] leading-none">
                     {activeSprints.length}
                   </p>
                   {activeSprints.length > 0 ? (
-                    <p className="text-[10px] text-[var(--space-text-tertiary)] mt-1 truncate">
+                    <p className="text-[0.625rem] text-[var(--space-text-tertiary)] mt-1 truncate">
                       {activeSprints.slice(0, 2).map(s => s.name).join(' · ')}
                       {activeSprints.length > 2 ? ` +${activeSprints.length - 2}` : ''}
                     </p>
                   ) : (
-                    <p className="text-[10px] text-[var(--space-text-tertiary)] mt-1">no sprints in progress</p>
+                    <p className="text-[0.625rem] text-[var(--space-text-tertiary)] mt-1">no sprints in progress</p>
                   )}
                 </motion.div>
               </motion.div>
@@ -441,7 +441,7 @@ export function AdminHomeView({
             <motion.div key="sprints" variants={tabVariants} initial="initial" animate="animate" exit="exit" className="space-y-4">
               <motion.div variants={fadeUp} className="flex items-center gap-2">
                 <Zap className="size-3.5 text-[var(--space-accent)]/40" aria-hidden="true" />
-                <span className="text-[10px] font-bold text-[var(--space-text-tertiary)] uppercase tracking-[0.25em]">
+                <span className="text-[0.625rem] font-bold text-[var(--space-text-tertiary)] uppercase tracking-[0.25em]">
                   {activeSprints.length} Active Sprint{activeSprints.length !== 1 ? 's' : ''}
                 </span>
               </motion.div>
@@ -458,13 +458,13 @@ export function AdminHomeView({
               {/* Open invoices */}
               <motion.div variants={fadeUp} className="rounded-2xl border border-[var(--space-border-hard)] bg-[var(--space-bg-base)] overflow-hidden">
                 <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--space-border-hard)]">
-                  <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#444]">Open Invoices</p>
-                  <span className="text-[9px] font-bold tabular-nums text-amber-400/70">
+                  <p className="text-[0.5625rem] font-bold uppercase tracking-[0.2em] text-[#444]">Open Invoices</p>
+                  <span className="text-[0.5625rem] font-bold tabular-nums text-amber-400/70">
                     {orderPipeline.pendingCount > 0 ? fmtUsd(orderPipeline.pendingAmount) : 'none'}
                   </span>
                 </div>
                 {allPendingOrders.length === 0 ? (
-                  <p className="px-4 py-5 text-[11px] text-[#333]">No open invoices</p>
+                  <p className="px-4 py-5 text-[0.6875rem] text-[#333]">No open invoices</p>
                 ) : (
                   <motion.ul role="list" variants={stagger} initial="initial" animate="animate">
                     {allPendingOrders.map((order: any, i: number) => {
@@ -484,18 +484,18 @@ export function AdminHomeView({
                         >
                           <ReceiptText className="size-3.5 text-[var(--space-text-muted)] shrink-0" aria-hidden="true" />
                           <div className="flex-1 min-w-0">
-                            <div className="text-[11px] font-semibold text-[var(--space-text-tertiary)] truncate leading-none">
+                            <div className="text-[0.6875rem] font-semibold text-[var(--space-text-tertiary)] truncate leading-none">
                               {order.orderNumber}
                             </div>
-                            <div className="text-[9px] text-[#444] mt-0.5 truncate">{name}</div>
+                            <div className="text-[0.5625rem] text-[#444] mt-0.5 truncate">{name}</div>
                           </div>
                           <div className="text-right shrink-0">
-                            <div className="text-[11px] font-bold tabular-nums text-amber-400 leading-none">
+                            <div className="text-[0.6875rem] font-bold tabular-nums text-amber-400 leading-none">
                               {fmtUsd(order.amount)}
                             </div>
                             {daysLeft !== null && (
                               <div className={cn(
-                                'text-[9px] mt-0.5 tabular-nums',
+                                'text-[0.5625rem] mt-0.5 tabular-nums',
                                 daysLeft < 0 ? 'text-red-400' : daysLeft <= 3 ? 'text-amber-500' : 'text-[#444]',
                               )}>
                                 {daysLeft < 0 ? `${Math.abs(daysLeft)}d over` : daysLeft === 0 ? 'today' : `${daysLeft}d`}
@@ -512,13 +512,13 @@ export function AdminHomeView({
               {/* Uninvoiced schedule entries */}
               <motion.div variants={fadeUp} className="rounded-2xl border border-[var(--space-border-hard)] bg-[var(--space-bg-base)] overflow-hidden">
                 <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--space-border-hard)]">
-                  <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#444]">Scheduled</p>
-                  <span className="text-[9px] font-bold tabular-nums text-[var(--space-accent)]/70">
+                  <p className="text-[0.5625rem] font-bold uppercase tracking-[0.2em] text-[#444]">Scheduled</p>
+                  <span className="text-[0.5625rem] font-bold tabular-nums text-[var(--space-accent)]/70">
                     {uninvoicedCount > 0 ? fmtUsd(uninvoicedAmount) : 'none'}
                   </span>
                 </div>
                 {uninvoicedEntries.length === 0 ? (
-                  <p className="px-4 py-5 text-[11px] text-[#333]">No scheduled payments</p>
+                  <p className="px-4 py-5 text-[0.6875rem] text-[#333]">No scheduled payments</p>
                 ) : (
                   <motion.ul role="list" variants={stagger} initial="initial" animate="animate">
                     {uninvoicedEntries.map((entry: any, i: number) => {
@@ -536,18 +536,18 @@ export function AdminHomeView({
                         >
                           <Wallet className="size-3.5 text-[var(--space-text-muted)] shrink-0" aria-hidden="true" />
                           <div className="flex-1 min-w-0">
-                            <div className="text-[11px] font-semibold text-[var(--space-text-tertiary)] truncate leading-none">
+                            <div className="text-[0.6875rem] font-semibold text-[var(--space-text-tertiary)] truncate leading-none">
                               {entry.label || 'Payment'}
                             </div>
-                            <div className="text-[9px] text-[#444] mt-0.5 truncate">{entry.packageName}</div>
+                            <div className="text-[0.5625rem] text-[#444] mt-0.5 truncate">{entry.packageName}</div>
                           </div>
                           <div className="text-right shrink-0">
-                            <div className="text-[11px] font-bold tabular-nums text-[var(--space-accent)] leading-none">
+                            <div className="text-[0.6875rem] font-bold tabular-nums text-[var(--space-accent)] leading-none">
                               {fmtUsd(entry.amount || 0)}
                             </div>
                             {daysLeft !== null && (
                               <div className={cn(
-                                'text-[9px] mt-0.5 tabular-nums',
+                                'text-[0.5625rem] mt-0.5 tabular-nums',
                                 daysLeft < 0 ? 'text-red-400' : daysLeft <= 7 ? 'text-amber-500' : 'text-[#444]',
                               )}>
                                 {daysLeft < 0 ? `${Math.abs(daysLeft)}d over` : daysLeft === 0 ? 'today' : `${daysLeft}d`}
@@ -568,7 +568,7 @@ export function AdminHomeView({
           {homeTab === 'schedule' && (
             <motion.div key="schedule" variants={tabVariants} initial="initial" animate="animate" exit="exit" className="space-y-6">
               <div className="flex items-center justify-between">
-                <p className="text-[10px] font-bold text-[var(--space-text-tertiary)] uppercase tracking-[0.25em]">Schedule</p>
+                <p className="text-[0.625rem] font-bold text-[var(--space-text-tertiary)] uppercase tracking-[0.25em]">Schedule</p>
                 <div
                   className="flex items-center p-1 bg-[var(--space-bg-base)] rounded-xl border border-[var(--space-border-hard)]"
                   role="group"
@@ -580,7 +580,7 @@ export function AdminHomeView({
                       onClick={() => setRange(r)}
                       aria-pressed={range === r}
                       className={cn(
-                        'px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all duration-150',
+                        'px-3 py-1.5 rounded-lg text-[0.6875rem] font-medium transition-all duration-150',
                         'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--space-accent)]/40',
                         range === r
                           ? 'bg-[var(--space-bg-base)] text-[var(--space-text-primary)] shadow-sm'
@@ -593,23 +593,13 @@ export function AdminHomeView({
                 </div>
               </div>
 
-              {serializedProjects.length > 0 && (
-                <PortfolioTimeline
-                  projects={serializedProjects}
-                  allOrders={allOrders}
-                  username={username}
-                  externalRange={range}
-                  onRangeChange={setRange}
-                />
-              )}
-              {clientAccounts.length > 0 && (
-                <ClientPortfolioTimeline
-                  clientAccounts={clientAccounts}
-                  serializedProjects={serializedProjects}
-                  allOrders={allOrders}
-                  username={username}
-                  externalRange={range}
-                  onRangeChange={setRange}
+              {(serializedProjects.length > 0 || allOrders.length > 0) && (
+                <Spine
+                  events={withinRange(
+                    clientSpineEvents(serializedProjects, allOrders, username),
+                    range,
+                  )}
+                  emptyMessage={`Nothing scheduled or invoiced in this ${range}.`}
                 />
               )}
               {serializedProjects.length === 0 && clientAccounts.length === 0 && (
@@ -631,16 +621,16 @@ export function AdminHomeView({
 
               <motion.div variants={fadeUp} className="bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] rounded-2xl p-5 space-y-4">
                 <div className="flex items-center justify-between">
-                  <p className="text-[10px] font-bold text-[#444] uppercase tracking-[0.2em]">Weekly Revenue</p>
+                  <p className="text-[0.625rem] font-bold text-[#444] uppercase tracking-[0.2em]">Weekly Revenue</p>
                   <span className="text-sm font-bold text-[var(--space-text-primary)] tabular-nums">{fmtUsd(pulseKpis.revenue30d)}</span>
                 </div>
                 <MiniBarChart data={weeklyRevenue} />
               </motion.div>
 
               <motion.div variants={fadeUp} className="bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] rounded-2xl p-5 space-y-4">
-                <p className="text-[10px] font-bold text-[#444] uppercase tracking-[0.2em]">Order Pipeline · All Time</p>
+                <p className="text-[0.625rem] font-bold text-[#444] uppercase tracking-[0.2em]">Order Pipeline · All Time</p>
                 <div
-                  className="h-[5px] rounded-full overflow-hidden flex gap-px"
+                  className="h-[0.3125rem] rounded-full overflow-hidden flex gap-px"
                   role="img"
                   aria-label={`Paid: ${paidPct}%, Pending: ${pendingPct}%`}
                 >
@@ -656,18 +646,18 @@ export function AdminHomeView({
                   ].map(s => (
                     <div key={s.label} className="space-y-1.5">
                       <div className="flex items-center gap-1.5">
-                        <span className={`size-[5px] rounded-full ${s.dot}`} aria-hidden="true" />
-                        <dt className="text-[9px] text-[#444] uppercase tracking-widest">{s.label}</dt>
+                        <span className={`size-[0.3125rem] rounded-full ${s.dot}`} aria-hidden="true" />
+                        <dt className="text-[0.5625rem] text-[#444] uppercase tracking-widest">{s.label}</dt>
                       </div>
                       <dd className={`text-sm font-bold tabular-nums ${s.color}`}>{fmtUsd(s.amount)}</dd>
-                      <p className="text-[9px] text-[#333]">{s.count} order{s.count !== 1 ? 's' : ''}</p>
+                      <p className="text-[0.5625rem] text-[#333]">{s.count} order{s.count !== 1 ? 's' : ''}</p>
                     </div>
                   ))}
                 </dl>
               </motion.div>
 
               <motion.div variants={fadeUp} className="bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] rounded-2xl p-5 space-y-4">
-                <p className="text-[10px] font-bold text-[#444] uppercase tracking-[0.2em]">Project Health</p>
+                <p className="text-[0.625rem] font-bold text-[#444] uppercase tracking-[0.2em]">Project Health</p>
                 <dl className="grid grid-cols-3 gap-4">
                   {[
                     { label: 'Active',    value: projectStatus.active,    color: 'text-[var(--space-accent)]', bar: 'bg-[var(--space-accent)]/50' },
@@ -677,7 +667,7 @@ export function AdminHomeView({
                     <div key={s.label} className="space-y-2">
                       <dd className="text-2xl font-bold tabular-nums text-[var(--space-text-primary)]">{s.value}</dd>
                       <div
-                        className="h-[3px] rounded-full bg-[var(--space-bg-base)] overflow-hidden"
+                        className="h-[0.1875rem] rounded-full bg-[var(--space-bg-base)] overflow-hidden"
                         role="progressbar"
                         aria-valuenow={s.value}
                         aria-valuemax={Math.max(allProjects.length, 1)}
@@ -687,7 +677,7 @@ export function AdminHomeView({
                           style={{ width: `${Math.min(100, (s.value / Math.max(allProjects.length, 1)) * 100)}%` }}
                         />
                       </div>
-                      <dt className="text-[9px] text-[var(--space-text-tertiary)] uppercase tracking-widest">{s.label}</dt>
+                      <dt className="text-[0.5625rem] text-[var(--space-text-tertiary)] uppercase tracking-widest">{s.label}</dt>
                     </div>
                   ))}
                 </dl>
@@ -698,8 +688,8 @@ export function AdminHomeView({
               {pendingOrders.length > 0 && (
                 <div className="bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] rounded-2xl overflow-hidden">
                   <div className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--space-border-hard)]">
-                    <p className="text-[10px] font-bold text-[#444] uppercase tracking-[0.2em]">Pending Invoices</p>
-                    <span className="text-[11px] text-amber-500/80 tabular-nums font-medium">{orderPipeline.pendingCount} open</span>
+                    <p className="text-[0.625rem] font-bold text-[#444] uppercase tracking-[0.2em]">Pending Invoices</p>
+                    <span className="text-[0.6875rem] text-amber-500/80 tabular-nums font-medium">{orderPipeline.pendingCount} open</span>
                   </div>
                   <ul role="list">
                     {pendingOrders.map((order: any, i: number) => {
@@ -712,10 +702,10 @@ export function AdminHomeView({
                         >
                           <ReceiptText className="size-3.5 text-[var(--space-text-muted)] shrink-0" aria-hidden="true" />
                           <div className="flex-1 min-w-0">
-                            <div className="text-[12px] text-[var(--space-text-tertiary)] font-medium truncate">{order.orderNumber}</div>
-                            <div className="text-[10px] text-[#444] truncate">{name}</div>
+                            <div className="text-[0.75rem] text-[var(--space-text-tertiary)] font-medium truncate">{order.orderNumber}</div>
+                            <div className="text-[0.625rem] text-[#444] truncate">{name}</div>
                           </div>
-                          <div className="text-[12px] font-semibold text-amber-400 tabular-nums shrink-0">
+                          <div className="text-[0.75rem] font-semibold text-amber-400 tabular-nums shrink-0">
                             {fmtUsd(order.amount)}
                           </div>
                         </li>
@@ -765,7 +755,7 @@ export function AdminHomeView({
                 {id === 'sprints' && activeSprints.length > 0 && (
                   <span
                     className={cn(
-                      'absolute top-1.5 right-1.5 size-[4px] rounded-full',
+                      'absolute top-1.5 right-1.5 size-[0.25rem] rounded-full',
                       isActive ? 'bg-[var(--space-accent)]' : 'bg-[var(--space-text-muted)]',
                     )}
                     aria-hidden="true"
@@ -774,7 +764,7 @@ export function AdminHomeView({
                 {id === 'payments' && totalPendingCount > 0 && (
                   <span
                     className={cn(
-                      'absolute top-1.5 right-1.5 size-[4px] rounded-full',
+                      'absolute top-1.5 right-1.5 size-[0.25rem] rounded-full',
                       isActive ? 'bg-amber-400' : 'bg-amber-400/50',
                     )}
                     aria-hidden="true"
@@ -791,12 +781,12 @@ export function AdminHomeView({
           {kpiStats.map(({ label, value, accent }) => (
             <div key={label} className="flex flex-col items-center text-center w-full py-2">
               <span className={cn(
-                'text-[11px] font-bold tabular-nums leading-none',
+                'text-[0.6875rem] font-bold tabular-nums leading-none',
                 accent ? 'text-[var(--space-accent)]' : 'text-[var(--space-text-tertiary)]',
               )}>
                 {value}
               </span>
-              <span className="text-[7px] uppercase tracking-[0.12em] text-[#333] mt-1 leading-none">
+              <span className="text-[0.4375rem] uppercase tracking-[0.12em] text-[#333] mt-1 leading-none">
                 {label}
               </span>
             </div>

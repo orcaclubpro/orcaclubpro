@@ -145,11 +145,11 @@ function SidebarTask({ task }: { task: Task }) {
   const pc = PRIORITY_CFG[p]
   const over = isOverdue(task.dueDate) && task.status !== 'completed'
   return (
-    <div className="flex items-center gap-2 px-2 py-[5px] rounded hover:bg-[rgba(255,255,255,0.02)] transition-colors">
+    <div className="flex items-center gap-2 px-2 py-[0.3125rem] rounded hover:bg-[rgba(255,255,255,0.02)] transition-colors">
       <span className={`shrink-0 size-1.5 rounded-full ${STATUS_DOT[task.status]}`} />
       <span className="flex-1 min-w-0 text-xs text-[var(--space-text-primary)] truncate leading-tight">{task.title}</span>
       {over && <span className="shrink-0 size-1 rounded-full bg-red-400/70" />}
-      <span className={`shrink-0 text-[10px] font-bold px-1 rounded border leading-4 ${pc.color} ${pc.bg}`}>
+      <span className={`shrink-0 text-[0.625rem] font-bold px-1 rounded border leading-4 ${pc.color} ${pc.bg}`}>
         {pc.label[0]}
       </span>
     </div>
@@ -247,7 +247,7 @@ function TaskCard({
                 type="button"
                 onClick={() => onEditChange({ priority: pri })}
                 className={cn(
-                  'text-[10px] font-medium px-2 py-0.5 rounded-full border transition-colors',
+                  'text-[0.625rem] font-medium px-2 py-0.5 rounded-full border transition-colors',
                   editState.priority === pri
                     ? cn(PRIORITY_CFG[pri].text, 'border-current bg-current/10')
                     : 'text-[var(--space-text-muted)] border-[var(--space-border-hard)] hover:border-[var(--space-border-hard)]',
@@ -261,7 +261,7 @@ function TaskCard({
             type="date"
             value={editState.dueDate}
             onChange={(e) => onEditChange({ dueDate: e.target.value })}
-            className="ml-auto text-[11px] text-[var(--space-text-secondary)] bg-transparent border border-[var(--space-border-hard)] rounded px-2 py-0.5 focus:outline-none focus:border-[var(--space-border-hard)]"
+            className="ml-auto text-[0.6875rem] text-[var(--space-text-secondary)] bg-transparent border border-[var(--space-border-hard)] rounded px-2 py-0.5 focus:outline-none focus:border-[var(--space-border-hard)]"
           />
         </div>
       </div>
@@ -282,7 +282,7 @@ function TaskCard({
       )}
     >
       {readOnly ? (
-        <span className="shrink-0 mt-[3px] size-5 flex items-center justify-center">
+        <span className="shrink-0 mt-[0.1875rem] size-5 flex items-center justify-center">
           <span className={`size-1.5 rounded-full ${STATUS_DOT[task.status]}`} />
         </span>
       ) : (
@@ -291,7 +291,7 @@ function TaskCard({
           onClick={() => onToggle(task)}
           title={done ? 'Mark pending' : 'Mark done'}
           className={cn(
-            'shrink-0 mt-[3px] size-4 rounded-full border flex items-center justify-center transition-all focus:outline-none',
+            'shrink-0 mt-[0.1875rem] size-4 rounded-full border flex items-center justify-center transition-all focus:outline-none',
             done
               ? 'bg-green-400/80 border-green-400/80 hover:bg-green-300/70'
               : task.status === 'in-progress'
@@ -330,7 +330,7 @@ function TaskCard({
               title={`Priority: ${pc.label} — click to cycle`}
               disabled={isSaving || updating}
               className={cn(
-                'text-[10px] font-semibold px-1.5 rounded border leading-4 transition-opacity',
+                'text-[0.625rem] font-semibold px-1.5 rounded border leading-4 transition-opacity',
                 pc.color, pc.bg,
                 'hover:opacity-70 active:scale-95 disabled:cursor-not-allowed',
               )}
@@ -338,7 +338,7 @@ function TaskCard({
               {pc.label[0]}
             </button>
           ) : (
-            <span className={`text-[10px] font-semibold px-1.5 rounded border leading-4 ${pc.color} ${pc.bg}`}>
+            <span className={`text-[0.625rem] font-semibold px-1.5 rounded border leading-4 ${pc.color} ${pc.bg}`}>
               {pc.label[0]}
             </span>
           )}
@@ -580,7 +580,7 @@ function SprintColumn({
         </Select>
         {columnTasks.length > 0 && (
           <div className="flex items-center gap-2 mt-2.5">
-            <div className="flex-1 h-[3px] bg-[var(--space-divider)] rounded-full overflow-hidden">
+            <div className="flex-1 h-[0.1875rem] bg-[var(--space-divider)] rounded-full overflow-hidden">
               <div
                 className={`h-full rounded-full transition-all duration-500 ${sCfg?.bar ?? 'bg-[var(--space-accent)]/60'}`}
                 style={{ width: `${progress}%` }}
@@ -599,7 +599,7 @@ function SprintColumn({
           {/* header strip */}
           <div className="flex items-center gap-2 px-4 py-2.5 border-b border-[var(--space-border-hard)] bg-[var(--space-bg-card-hover)]">
             <span className="size-1 rounded-full bg-[var(--space-accent)] opacity-60" />
-            <span className="text-[10px] font-bold text-[var(--space-text-secondary)] uppercase tracking-[0.12em]">Sprint Overview</span>
+            <span className="text-[0.625rem] font-bold text-[var(--space-text-secondary)] uppercase tracking-[0.12em]">Sprint Overview</span>
           </div>
           <div className="px-4 py-3 space-y-3">
             {/* dates */}
@@ -632,7 +632,7 @@ function SprintColumn({
               <div className="flex items-start gap-2.5">
                 <Target className="size-3 text-[var(--space-accent)] opacity-50 shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-[10px] font-bold text-[var(--space-text-muted)] uppercase tracking-wider mb-1">Goal</p>
+                  <p className="text-[0.625rem] font-bold text-[var(--space-text-muted)] uppercase tracking-wider mb-1">Goal</p>
                   <p className="text-sm text-[var(--space-text-tertiary)] leading-relaxed">{sprint.goalDescription}</p>
                 </div>
               </div>
@@ -642,7 +642,7 @@ function SprintColumn({
               <div className="flex items-start gap-2.5">
                 <AlignLeft className="size-3 text-[var(--space-text-muted)] shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-[10px] font-bold text-[var(--space-text-muted)] uppercase tracking-wider mb-1">Description</p>
+                  <p className="text-[0.625rem] font-bold text-[var(--space-text-muted)] uppercase tracking-wider mb-1">Description</p>
                   <p className="text-sm text-[var(--space-text-secondary)] leading-relaxed">{sprint.description}</p>
                 </div>
               </div>
@@ -1014,11 +1014,11 @@ export function TasksTab({ tasks, sprints, projectId, readOnly }: TasksTabProps)
                         <div className="px-3 py-1.5">
                           <div className="flex items-center justify-between gap-1 mb-1.5">
                             <span className="text-sm font-semibold text-[var(--space-text-primary)] truncate leading-tight">{sprint.name}</span>
-                            <span className={`shrink-0 text-[9px] font-bold ${cfg.text}`}>{cfg.label}</span>
+                            <span className={`shrink-0 text-[0.5625rem] font-bold ${cfg.text}`}>{cfg.label}</span>
                           </div>
                           {sTasks.length > 0 && (
                             <div className="flex items-center gap-1.5 mb-1">
-                              <div className="flex-1 h-[2px] bg-[var(--space-divider)] rounded-full overflow-hidden">
+                              <div className="flex-1 h-[0.125rem] bg-[var(--space-divider)] rounded-full overflow-hidden">
                                 <div className={`h-full rounded-full ${cfg.bar}`} style={{ width: `${pct}%` }} />
                               </div>
                               <span className="text-xs text-[var(--space-text-tertiary)] shrink-0 tabular-nums">{pct}%</span>

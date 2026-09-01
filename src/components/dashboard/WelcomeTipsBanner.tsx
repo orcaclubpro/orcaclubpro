@@ -24,7 +24,7 @@ export function WelcomeTipsBanner({ firstName }: WelcomeTipsBannerProps) {
   return (
     <div className="relative rounded-xl border border-[rgba(139,156,182,0.15)] bg-[rgba(255,255,255,0.03)] overflow-hidden">
       {/* Subtle left accent bar */}
-      <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-[rgba(139,156,182,0.50)] rounded-l-xl" />
+      <div className="absolute left-0 top-0 bottom-0 w-[0.1875rem] bg-[rgba(139,156,182,0.50)] rounded-l-xl" />
 
       <div className="px-5 py-4 pl-6 flex items-start gap-4">
 
@@ -35,7 +35,7 @@ export function WelcomeTipsBanner({ firstName }: WelcomeTipsBannerProps) {
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <p className="text-[10px] font-semibold text-[var(--space-accent)] uppercase tracking-[0.25em] mb-1">
+          <p className="text-[0.625rem] font-semibold text-[var(--space-accent)] uppercase tracking-[0.25em] mb-1">
             Welcome to ORCACLUB{firstName ? `, ${firstName}` : ''}
           </p>
           <p className="text-sm text-gray-300 font-light leading-relaxed">
@@ -44,12 +44,12 @@ export function WelcomeTipsBanner({ firstName }: WelcomeTipsBannerProps) {
 
           {/* Quick tips row */}
           <div className="flex flex-wrap gap-4 mt-3">
-            <span className="flex items-center gap-1.5 text-[11px] text-gray-500">
+            <span className="flex items-center gap-1.5 text-[0.6875rem] text-gray-500">
               <FolderOpen className="size-3 text-[rgba(139,156,182,0.50)]" />
               Track project milestones &amp; sprints
               <ArrowRight className="size-3 opacity-40" />
             </span>
-            <span className="flex items-center gap-1.5 text-[11px] text-gray-500">
+            <span className="flex items-center gap-1.5 text-[0.6875rem] text-gray-500">
               <Receipt className="size-3 text-[rgba(139,156,182,0.50)]" />
               View and pay invoices
               <ArrowRight className="size-3 opacity-40" />

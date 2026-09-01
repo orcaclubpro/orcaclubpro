@@ -1,24 +1,22 @@
-import { ProjectsCarousel } from '@/components/dashboard/ProjectsCarousel'
-import type { SerializedProject } from '@/components/dashboard/ProjectsCarousel'
+import { ProjectsView } from '@/components/dashboard/ProjectsView'
+import type { SerializedProject } from '@/lib/serialization'
 import type { ClientOption } from '@/components/dashboard/CreateProjectModal'
-
-interface ProjectsAdminViewProps {
-  serializedProjects: SerializedProject[]
-  clientOptions: ClientOption[]
-  username: string
-  userRole: string
-}
 
 export function ProjectsAdminView({
   serializedProjects,
   clientOptions,
   username,
-}: ProjectsAdminViewProps) {
+}: {
+  serializedProjects: SerializedProject[]
+  clientOptions: ClientOption[]
+  username: string
+  userRole: string
+}) {
   return (
-    <ProjectsCarousel
+    <ProjectsView
       projects={serializedProjects}
       username={username}
-      canCreate={true}
+      canCreate
       clients={clientOptions}
     />
   )

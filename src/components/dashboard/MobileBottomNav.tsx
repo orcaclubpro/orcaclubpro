@@ -97,13 +97,13 @@ export function MobileBottomNav({ experience }: MobileBottomNavProps) {
         <div className="relative">
           <Icon className={cn('size-5 transition-all duration-200', active ? 'text-[var(--space-nav-fg)]' : 'text-[var(--space-nav-fg-dim)]')} />
           {item.tab === 'packages' && isClient && packageCount > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] rounded-full bg-red-500 text-white text-[8px] font-bold flex items-center justify-center px-0.5 leading-none shadow-sm">
+            <span className="absolute -top-1.5 -right-1.5 min-w-[0.875rem] h-[0.875rem] rounded-full bg-red-500 text-white text-[0.5rem] font-bold flex items-center justify-center px-0.5 leading-none shadow-sm">
               {packageCount > 9 ? '9+' : packageCount}
             </span>
           )}
         </div>
         <span className={cn(
-          'text-[10px] font-semibold uppercase tracking-widest transition-colors duration-200 leading-none',
+          'text-[0.625rem] font-semibold uppercase tracking-widest transition-colors duration-200 leading-none',
           active ? 'text-[var(--space-nav-fg)]' : 'text-[var(--space-nav-fg-dim)]',
         )}>
           {item.label}
@@ -177,7 +177,7 @@ export function MobileBottomNav({ experience }: MobileBottomNavProps) {
         >
           <MoreHorizontal className={cn('size-5 transition-all duration-200', menuOpen || anySecondaryActive ? 'text-[var(--space-nav-fg)]' : 'text-[var(--space-nav-fg-dim)]')} />
           <span className={cn(
-            'text-[10px] font-semibold uppercase tracking-widest leading-none',
+            'text-[0.625rem] font-semibold uppercase tracking-widest leading-none',
             menuOpen || anySecondaryActive ? 'text-[var(--space-nav-fg)]' : 'text-[var(--space-nav-fg-dim)]',
           )}>
             More

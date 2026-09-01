@@ -555,19 +555,19 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
                         <div className="absolute top-2 left-2.5 right-2 flex flex-col gap-0.5">
                           <div className="flex items-center gap-1.5">
                             <div className={cn('size-1.5 rounded-full shrink-0', sprint.cfg.dot)} />
-                            <span className={cn('text-[10px] font-medium truncate', sprint.cfg.text)}
+                            <span className={cn('text-[0.625rem] font-medium truncate', sprint.cfg.text)}
                               style={{ maxWidth: sprint.widthPx - 28 }}>
                               {sprint.name}
                             </span>
                           </div>
                           {(sprint.goalDescription || sprint.description) && sprint.widthPx > 100 && (
-                            <p className="text-[9px] text-[var(--space-text-secondary)] truncate leading-tight pl-3"
+                            <p className="text-[0.5625rem] text-[var(--space-text-secondary)] truncate leading-tight pl-3"
                               style={{ maxWidth: sprint.widthPx - 36 }}>
                               {sprint.goalDescription || sprint.description}
                             </p>
                           )}
                           {sprint.widthPx > 120 && (
-                            <p className="text-[9px] text-[var(--space-text-muted)] truncate leading-tight pl-3"
+                            <p className="text-[0.5625rem] text-[var(--space-text-muted)] truncate leading-tight pl-3"
                               style={{ maxWidth: sprint.widthPx - 36 }}>
                               {formatDate(sprint.startDate)} → {formatDate(sprint.endDate)}
                             </p>
@@ -610,7 +610,7 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
                       style={{ top: LABEL_Y, height: INNER_H - LABEL_Y, background: 'linear-gradient(to bottom, rgba(139,156,182,0.22), rgba(139,156,182,0.10), transparent)' }}
                     />
                     {/* "TODAY" label */}
-                    <p className="absolute left-1/2 -translate-x-1/2 text-[9px] tracking-[0.2em] uppercase font-medium whitespace-nowrap"
+                    <p className="absolute left-1/2 -translate-x-1/2 text-[0.5625rem] tracking-[0.2em] uppercase font-medium whitespace-nowrap"
                       style={{ top: LABEL_Y, color: 'var(--space-accent)' }}>
                       Today
                     </p>
@@ -640,7 +640,7 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
                     >
                       {/* Title label */}
                       <div
-                        className="absolute w-[84px] text-center pointer-events-none transition-opacity duration-200"
+                        className="absolute w-[5.25rem] text-center pointer-events-none transition-opacity duration-200"
                         style={{ top: LABEL_Y, left: '50%', transform: 'translateX(-50%)', opacity: isHov ? 1 : 0.55 }}
                       >
                         <p className={cn(
@@ -713,7 +713,7 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
                         >
                           <div className="bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] rounded-lg px-2.5 py-1.5 flex items-center gap-1.5 shadow-xl whitespace-nowrap">
                             <Pencil className="size-3 text-[var(--space-text-secondary)]" />
-                            <span className="text-[10px] text-[var(--space-text-secondary)]">Edit</span>
+                            <span className="text-[0.625rem] text-[var(--space-text-secondary)]">Edit</span>
                           </div>
                         </div>
                       )}
@@ -750,7 +750,7 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
           {/* Legend strip */}
           <div className="flex items-center flex-wrap gap-x-5 gap-y-1.5 px-6 py-4 border-t border-[var(--space-border-hard)]">
             <div className="flex items-center gap-2">
-              <div className="h-[3px] w-6 rounded-full bg-gradient-to-r from-[#1E3A6E] to-blue-500" />
+              <div className="h-[0.1875rem] w-6 rounded-full bg-gradient-to-r from-[#1E3A6E] to-blue-500" />
               <span className="text-sm text-[var(--space-text-tertiary)]">Elapsed</span>
             </div>
             <div className="flex items-center gap-2">
@@ -890,7 +890,7 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
               <div className="flex items-center justify-between gap-2">
                 <p className="text-sm font-semibold text-[var(--space-text-primary)] leading-snug truncate">{fixedTooltip.sprint.name}</p>
                 <span className={cn(
-                  'shrink-0 text-[9px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded-full border',
+                  'shrink-0 text-[0.5625rem] font-semibold tracking-wider uppercase px-2 py-0.5 rounded-full border',
                   fixedTooltip.sprint.cfg.text, fixedTooltip.sprint.cfg.bg, fixedTooltip.sprint.cfg.border,
                 )}>
                   {fixedTooltip.sprint.cfg.label}
@@ -918,7 +918,7 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
                 </div>
               )}
               {username && (
-                <p className="text-[10px] pt-1" style={{ color: 'var(--space-accent)' }}>Click to open sprint →</p>
+                <p className="text-[0.625rem] pt-1" style={{ color: 'var(--space-accent)' }}>Click to open sprint →</p>
               )}
             </div>
           </div>

@@ -156,7 +156,7 @@ function SprintMenu({ sprint, openMenuId, setOpenMenuId, onDelete, deletingId }:
         <MoreHorizontal className="size-3.5" />
       </button>
       {openMenuId === sprint.id && (
-        <div className="absolute top-full right-0 mt-1 bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] rounded-xl shadow-2xl z-50 overflow-hidden min-w-[150px]">
+        <div className="absolute top-full right-0 mt-1 bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] rounded-xl shadow-2xl z-50 overflow-hidden min-w-[9.375rem]">
           <button
             type="button"
             onClick={() => onDelete(sprint.id)}
@@ -325,7 +325,7 @@ export function SprintsTab({ sprints: initialSprints, tasks, projectId, username
                       {total > 0 && (
                         <div className="flex flex-wrap gap-1.5">
                           {inProg > 0 && (
-                            <span className="text-[11px] bg-[rgba(139,156,182,0.06)] border border-[rgba(139,156,182,0.15)] rounded-full px-2 py-0.5" style={{ color: 'var(--space-accent)' }}>
+                            <span className="text-[0.6875rem] bg-[rgba(139,156,182,0.06)] border border-[rgba(139,156,182,0.15)] rounded-full px-2 py-0.5" style={{ color: 'var(--space-accent)' }}>
                               {inProg} active
                             </span>
                           )}
@@ -335,7 +335,7 @@ export function SprintsTab({ sprints: initialSprints, tasks, projectId, username
                             </span>
                           )}
                           {done > 0 && (
-                            <span className="text-[11px] text-green-400/70 bg-green-400/[0.05] border border-green-400/[0.12] rounded-full px-2 py-0.5">
+                            <span className="text-[0.6875rem] text-green-400/70 bg-green-400/[0.05] border border-green-400/[0.12] rounded-full px-2 py-0.5">
                               {done} done
                             </span>
                           )}
@@ -410,7 +410,7 @@ export function SprintsTab({ sprints: initialSprints, tasks, projectId, username
                       className="group flex items-center gap-3 px-4 py-3.5 transition-all duration-150 hover:bg-[var(--space-bg-card-hover)] border-l-2 border-l-transparent hover:border-l-[rgba(139,156,182,0.30)]"
                     >
                       {/* Status dot + label */}
-                      <span className={cn('flex items-center gap-1.5 text-xs font-medium shrink-0 w-[60px]', cfg.text)}>
+                      <span className={cn('flex items-center gap-1.5 text-xs font-medium shrink-0 w-[3.75rem]', cfg.text)}>
                         <span className={cn('size-1.5 rounded-full shrink-0', cfg.dot)} />
                         {cfg.label}
                       </span>
@@ -421,7 +421,7 @@ export function SprintsTab({ sprints: initialSprints, tasks, projectId, username
                       </span>
 
                       {/* Dates */}
-                      <span className="text-sm text-[var(--space-text-tertiary)] shrink-0 w-[130px] hidden sm:block tabular-nums">
+                      <span className="text-sm text-[var(--space-text-tertiary)] shrink-0 w-[8.125rem] hidden sm:block tabular-nums">
                         {startLabel ? `${startLabel} → ${endLabel ?? '…'}` : '—'}
                       </span>
 
