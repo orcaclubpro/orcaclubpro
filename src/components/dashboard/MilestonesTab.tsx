@@ -8,6 +8,8 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { isTypingTarget } from '@/lib/keyboard'
+import { PackageBuilderModal, type ExistingProposal } from './PackageBuilderModal'
+import { getPackageForBuilder } from '@/actions/package-builder'
 import { SchedulePaymentInvoiceModal } from './SchedulePaymentInvoiceModal'
 import { PackageRecapModal } from './PackageRecapModal'
 import { EmailPackageModal } from './EmailPackageModal'
@@ -101,12 +103,14 @@ const fieldLabel = 'text-[10px] font-semibold uppercase tracking-widest text-[va
 export interface MilestonesTabProps {
   /** Preselect this client's packages when launched from a search result. */
   clientId?: string
+  /** Needed by the package builder this station can open. */
+  username: string
   /** Deep-link straight to a package's Documents stage for one schedule entry. */
   /** entryId is optional: a proposal handed over from Build has no schedule yet. */
   initialTarget?: { packageId: string; entryId?: string | null } | null
 }
 
-export function MilestonesTab({ clientId, initialTarget }: MilestonesTabProps) {
+export function MilestonesTab({ clientId, username, initialTarget }: MilestonesTabProps) {
   const rootRef = useRef<HTMLDivElement>(null)
 
   // Board
@@ -161,6 +165,27 @@ export function MilestonesTab({ clientId, initialTarget }: MilestonesTabProps) {
   const [recapOpen, setRecapOpen] = useState(false)
   const [emailOpen, setEmailOpen] = useState(false)
   const [recapDrafts, setRecapDrafts] = useState<Record<string, PackageRecapData>>({})
+
+  // ── Editing the package itself ─────────────────────────────────────────────
+  // Milestones tracks the WORK against a package; the package's own lines, schedule
+  // and copy live in the builder. Scope changes surface here first — a client asks for
+  // something mid-project — so the builder opens over this station rather than sending
+  // staff to the packages page and back.
+  const [builderDoc, setBuilderDoc] = useState<ExistingProposal | null>(null)
+  const [openingBuilder, setOpeningBuilder] = useState(false)
+
+  async function openBuilder() {
+    if (!packageId || openingBuilder) return
+    setOpeningBuilder(true)
+    setError(null)
+    try {
+      const res = await getPackageForBuilder(packageId, 'edit')
+      if (!res.success) { setError(res.error ?? 'Could not open the package builder'); return }
+      setBuilderDoc(res.package as ExistingProposal)
+    } finally {
+      setOpeningBuilder(false)
+    }
+  }
 
   /** The station is kept mounted-but-hidden by the console; only act when on screen. */
   const isVisible = useCallback(() => Boolean(rootRef.current?.offsetParent), [])
@@ -294,6 +319,10 @@ export function MilestonesTab({ clientId, initialTarget }: MilestonesTabProps) {
         if (!packageId) return // board level — let the console handle it
         e.preventDefault()
         e.stopPropagation()
+        // The builder is a whole tool on top of this station, with its own nested
+        // dialogs. Let it keep the key — closing it from here would yank the surface
+        // out from under a picker that is still open.
+        if (builderDoc) { e.stopPropagation(); return }
         if (recapOpen) { setRecapOpen(false); return }
         if (sendEntryId) { setSendEntryId(null); return }
         if (editId) { setEditId(null); setELogMode(false); return }
@@ -302,13 +331,13 @@ export function MilestonesTab({ clientId, initialTarget }: MilestonesTabProps) {
       }
       if (e.key >= '1' && e.key <= '4' && !e.metaKey && !e.ctrlKey && !e.altKey) {
         if (isTypingTarget(e.target)) return
-        if (!packageId || loading || sendEntryId || recapOpen) return
+        if (!packageId || loading || sendEntryId || recapOpen || builderDoc) return
         setStage(STAGES[Number(e.key) - 1].id)
       }
     }
     document.addEventListener('keydown', handler, true)
     return () => document.removeEventListener('keydown', handler, true)
-  }, [packageId, sendEntryId, recapOpen, editId, loading, clearPackage, isVisible])
+  }, [packageId, sendEntryId, recapOpen, editId, loading, builderDoc, clearPackage, isVisible])
 
   // ── Derived ─────────────────────────────────────────────────────────────────
 
@@ -616,6 +645,14 @@ export function MilestonesTab({ clientId, initialTarget }: MilestonesTabProps) {
               </p>
             )}
           </div>
+          <button
+            onClick={() => void openBuilder()}
+            disabled={!packageId || openingBuilder}
+            className={ghostBtn}
+            title="Edit this package's line items, schedule and copy"
+          >
+            {openingBuilder ? <Loader2 className="size-3 animate-spin" /> : <Pencil className="size-3" />} Edit package
+          </button>
           <button onClick={clearPackage} className={ghostBtn} title="Change package (esc)">
             <Search className="size-3" /> Change package
           </button>
@@ -1003,6 +1040,17 @@ export function MilestonesTab({ clientId, initialTarget }: MilestonesTabProps) {
           {error && <p className="text-xs text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2">{error}</p>}
         </div>
       </div>
+
+      {/* Editing the package itself. Reloads on close either way: the builder can change
+          line items and the payment schedule, both of which this station renders. */}
+      {builderDoc && (
+        <PackageBuilderModal
+          mode="edit"
+          username={username}
+          existing={builderDoc}
+          onClose={() => { setBuilderDoc(null); void load() }}
+        />
+      )}
 
       {/* The one and only send path. */}
       {summary && sendEntry && (

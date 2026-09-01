@@ -4,11 +4,12 @@ import { useState, useEffect, useMemo } from 'react'
 import {
   Search, Plus, PlusCircle, X, Trash2, Loader2,
   ChevronRight, ArrowUp, ArrowDown,
-  Package, MoreHorizontal, Layers, CalendarClock, Star, Pencil, Clock,
+  Package, MoreHorizontal, Layers, CalendarClock, Star, Pencil, Clock, Copy, Lock,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ServiceItem } from '@/types/payload-types'
 import { ServiceItemModal, type ServiceItemDraft } from './ServiceItemModal'
+import { PackagePickerModal } from './PackagePickerModal'
 import { isTypingTarget } from '@/lib/keyboard'
 import {
   getServiceCatalog,
@@ -17,6 +18,7 @@ import {
   updateProposal,
   toggleServiceItemStar,
   deleteServiceItem,
+  getPackageForBuilder,
   type BuilderLineItem,
 } from '@/actions/package-builder'
 import { getClientAccountsList } from '@/actions/packages'
@@ -33,6 +35,32 @@ interface SchedRow {
   entryType: 'deposit' | 'installment' | 'balance'
   amount: number
   dueDate?: string
+  /**
+   * Billing stamps set when the entry was invoiced. The builder never writes them, but
+   * it MUST carry them: `updateProposal` replaces the whole schedule array, so a row
+   * that came back unstamped would read as never invoiced — and `pushPackageSchedule`
+   * only skips stamped rows, so the client would be billed for it a second time.
+   */
+  orderId?: string | null
+  invoicedAt?: string | null
+}
+
+/** Already invoiced — the client has this payment; the builder must not rewrite it. */
+function isInvoiced(row: SchedRow): boolean {
+  return Boolean(row.orderId)
+}
+
+/** Package schedule doc → editable row, stamps intact. */
+function seedSchedRow(e: any): SchedRow {
+  return {
+    _key: genKey(),
+    label: e?.label ?? '',
+    entryType: (e?.entryType ?? 'installment') as SchedRow['entryType'],
+    amount: e?.amount ?? 0,
+    dueDate: e?.dueDate ? String(e.dueDate).split('T')[0] : undefined,
+    orderId: e?.orderId ?? null,
+    invoicedAt: e?.invoicedAt ?? null,
+  }
 }
 
 interface ClientOption {
@@ -218,25 +246,19 @@ export function PackageBuilderTab({ mode, username, clientId, existing, onClose,
       .find((r: number | null) => r != null && r > 0)
     return inferred != null ? String(inferred) : ''
   })
-  const projectRef = useMemo(() => {
+  // State, not derived: loading another package into the builder has to be able to
+  // move it (an edit adopts the target's project; a clone starts unattached).
+  const [projectRef, setProjectRef] = useState<string | null>(() => {
     const p = existing?.projectRef
     if (!p) return null
     return typeof p === 'string' ? p : p.id
-  }, [existing])
+  })
 
   const [lines, setLines] = useState<EditLine[]>(
     mode === 'edit' ? (existing?.lineItems ?? []).map(seedLine) : [],
   )
   const [schedule, setSchedule] = useState<SchedRow[]>(
-    mode === 'edit'
-      ? (existing?.paymentSchedule ?? []).map((e: any) => ({
-          _key: genKey(),
-          label: e?.label ?? '',
-          entryType: (e?.entryType ?? 'installment') as SchedRow['entryType'],
-          amount: e?.amount ?? 0,
-          dueDate: e?.dueDate ? String(e.dueDate).split('T')[0] : undefined,
-        }))
-      : [],
+    mode === 'edit' ? (existing?.paymentSchedule ?? []).map(seedSchedRow) : [],
   )
 
   // UI state
@@ -254,6 +276,17 @@ export function PackageBuilderTab({ mode, username, clientId, existing, onClose,
   // an existing catalog entry. It replaced an inline mini-form that captured only a
   // name and a price, which is why so many placed lines reach clients undescribed.
   const [serviceEditor, setServiceEditor] = useState<{ item: ServiceItem | null } | null>(null)
+
+  // ── What this builder is writing to ────────────────────────────────────────
+  // `mode` is only the STARTING position. Opening a proposal from the picker turns a
+  // create session into an edit, and cloning turns an edit session back into a create,
+  // so the save path keys off this rather than the prop. Non-null = update that id.
+  const [editingId, setEditingId] = useState<string | null>(mode === 'edit' ? (existing?.id ?? null) : null)
+  const [sourcePackage, setSourcePackage] = useState<string | null>(null)
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [loadingPackage, setLoadingPackage] = useState(false)
+  /** Set right after a load so the pane says what just happened. */
+  const [loadedFrom, setLoadedFrom] = useState<{ name: string; action: 'edit' | 'clone' } | null>(null)
 
   // ── Load catalog + clients ─────────────────────────────────────────────────
   useEffect(() => {
@@ -332,6 +365,52 @@ export function PackageBuilderTab({ mode, username, clientId, existing, onClose,
     return isFinite(n) && n > 0 ? n : null
   })()
 
+  // ── Opening another package into this builder ──────────────────────────────
+  /**
+   * Replaces the whole session with the chosen package. An `edit` keeps its identity,
+   * so saving writes back to the same proposal for the same client; a `clone` drops the
+   * identity (and the client stays editable) so saving creates a new one.
+   *
+   * The server does the stripping that matters — a clone arrives with its payment
+   * schedule's invoice stamps already cleared. See getPackageForBuilder.
+   */
+  async function loadPackage(packageId: string, action: 'edit' | 'clone') {
+    setPickerOpen(false)
+    setLoadingPackage(true)
+    setError(null)
+    try {
+      const res = await getPackageForBuilder(packageId, action)
+      if (!res.success) { setError(res.error ?? 'Could not open that package'); return }
+      const pkg = res.package
+
+      setName(pkg.name)
+      setDescription(pkg.description ?? '')
+      setCoverMessage(pkg.coverMessage ?? '')
+      setNotes(pkg.notes ?? '')
+      setHourlyRateStr(pkg.hourlyRate != null ? String(pkg.hourlyRate) : '')
+      setProjectRef(typeof pkg.projectRef === 'string' ? pkg.projectRef : (pkg.projectRef as any)?.id ?? null)
+      setLines((pkg.lineItems ?? []).map(seedLine))
+      // A clone arrives with its stamps already cleared server-side, so this is safe
+      // for both actions — see getPackageForBuilder.
+      setSchedule((pkg.paymentSchedule ?? []).map(seedSchedRow))
+
+      const ca = pkg.clientAccount
+      const caId = ca ? (typeof ca === 'string' ? ca : ca.id) : ''
+      // Editing is bound to the assignment. Cloning suggests the source's client but
+      // leaves the field open — a copy usually exists because it is going elsewhere.
+      setSelectedClientId(caId)
+      setEditingId(action === 'edit' ? pkg.id : null)
+      setSourcePackage(action === 'clone' ? pkg.sourcePackage : null)
+      setLoadedFrom({ name: pkg.name, action })
+      // Meta is worth showing when there is meta to see.
+      if (pkg.description || pkg.coverMessage || pkg.notes) setShowMeta(true)
+      if ((pkg.paymentSchedule ?? []).length > 0) setShowSchedule(true)
+      setMobilePane('package')
+    } finally {
+      setLoadingPackage(false)
+    }
+  }
+
   // ── ` opens the service editor ──────────────────────────────────────────────
   // Capture phase and stopPropagation: the command console binds backtick to cycling
   // stations, and on this station the key means "new service" instead. Guarded by
@@ -388,7 +467,7 @@ export function PackageBuilderTab({ mode, username, clientId, existing, onClose,
       setError('A package name is required')
       return
     }
-    if (mode === 'create' && !selectedClientId) {
+    if (!editingId && !selectedClientId) {
       setError('A client is required')
       return
     }
@@ -398,12 +477,20 @@ export function PackageBuilderTab({ mode, username, clientId, existing, onClose,
     const hourlyRate = hourlyRateStr.trim() === '' ? null : Math.max(0, parseFloat(hourlyRateStr) || 0)
     const payloadSchedule = schedule
       .filter((s) => s.label.trim() || s.amount)
-      .map((s) => ({ label: s.label.trim(), entryType: s.entryType, amount: s.amount, dueDate: s.dueDate || undefined }))
+      .map((s) => ({
+        label: s.label.trim(),
+        entryType: s.entryType,
+        amount: s.amount,
+        dueDate: s.dueDate || undefined,
+        // Round-tripped, never authored here. Dropping them un-invoices the entry.
+        orderId: s.orderId ?? undefined,
+        invoicedAt: s.invoicedAt ?? undefined,
+      }))
 
     try {
-      if (mode === 'edit' && existing) {
+      if (editingId) {
         const res = await updateProposal({
-          packageId: existing.id,
+          packageId: editingId,
           name: name.trim(),
           description: description || undefined,
           coverMessage: coverMessage || undefined,
@@ -424,11 +511,19 @@ export function PackageBuilderTab({ mode, username, clientId, existing, onClose,
           notes: notes || undefined,
           projectRef,
           hourlyRate,
+          sourcePackage,
           lineItems: payloadLines,
           paymentSchedule: payloadSchedule,
         })
-        if (res.success) onClose(res.id)
-        else setError(res.error ?? 'Failed to create proposal')
+        if (res.success) {
+          // Adopt the proposal that was just created. The console keeps this builder
+          // mounted after a save, so without this a second Save would create a second
+          // copy of the same package instead of updating the one we just made.
+          setEditingId(res.id as string)
+          setSourcePackage(null)
+          setLoadedFrom(null)
+          onClose(res.id)
+        } else setError(res.error ?? 'Failed to create proposal')
       }
     } finally {
       setSaving(false)
@@ -443,13 +538,16 @@ export function PackageBuilderTab({ mode, username, clientId, existing, onClose,
   )
   const { oneTime, monthly, annual } = computeTotals(lines)
 
+  // Resolved from the live selection, so it tracks a package opened from the picker
+  // rather than only the one the builder was mounted with.
   const editClientLabel = useMemo(() => {
+    const found = clients.find((c) => c.id === selectedClientId)
+    if (found) return found.name + (found.company ? ` · ${found.company}` : '')
     if (typeof existing?.clientAccount === 'object' && existing?.clientAccount) {
       return existing.clientAccount.name + (existing.clientAccount.company ? ` · ${existing.clientAccount.company}` : '')
     }
-    const found = clients.find((c) => c.id === existingClientId)
-    return found ? found.name + (found.company ? ` · ${found.company}` : '') : 'Client'
-  }, [existing, clients, existingClientId])
+    return 'Client'
+  }, [existing, clients, selectedClientId])
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -619,6 +717,36 @@ export function PackageBuilderTab({ mode, username, clientId, existing, onClose,
             {/* Name + client */}
             <div className="space-y-3">
               <div>
+                {/* Start from something that already exists — continue a client's
+                    proposal, or take a copy of any package as the basis for a new one. */}
+                <button
+                  type="button"
+                  onClick={() => setPickerOpen(true)}
+                  disabled={loadingPackage}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg border border-dashed border-[var(--space-border-hard)] text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] hover:border-[rgba(139,156,182,0.20)] transition-all disabled:opacity-50"
+                >
+                  {loadingPackage ? <Loader2 className="size-3.5 animate-spin" /> : <Layers className="size-3.5" />}
+                  {loadingPackage ? 'Opening…' : 'Open or clone a package'}
+                </button>
+                {loadedFrom && (
+                  <p className="mt-1.5 flex items-start gap-1.5 text-[11px] text-[var(--space-text-muted)] leading-snug">
+                    {loadedFrom.action === 'edit' ? <Pencil className="size-3 shrink-0 mt-0.5" /> : <Copy className="size-3 shrink-0 mt-0.5" />}
+                    {loadedFrom.action === 'edit' ? (
+                      <span>
+                        Editing <span className="text-[var(--space-text-tertiary)] font-medium">{loadedFrom.name}</span> — saving updates
+                        the proposal already assigned to this client.
+                      </span>
+                    ) : (
+                      <span>
+                        Copied from <span className="text-[var(--space-text-tertiary)] font-medium">{loadedFrom.name}</span> — saving
+                        creates a new proposal and leaves the original untouched.
+                      </span>
+                    )}
+                  </p>
+                )}
+              </div>
+
+              <div>
                 <label className="text-[10px] font-semibold uppercase tracking-widest text-[var(--space-text-muted)]">Package name *</label>
                 <input
                   value={name}
@@ -629,7 +757,7 @@ export function PackageBuilderTab({ mode, username, clientId, existing, onClose,
               </div>
               <div>
                 <label className="text-[10px] font-semibold uppercase tracking-widest text-[var(--space-text-muted)]">Client *</label>
-                {mode === 'edit' ? (
+                {editingId ? (
                   <div className="mt-1.5 px-3 py-2 text-sm rounded-lg bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] text-[var(--space-text-tertiary)]">
                     {editClientLabel}
                   </div>
@@ -906,18 +1034,26 @@ export function PackageBuilderTab({ mode, username, clientId, existing, onClose,
               </button>
               {showSchedule && (
                 <div className="px-4 pb-4 space-y-2 border-t border-[var(--space-border-hard)] pt-3">
-                  {schedule.map((row, i) => (
+                  {schedule.map((row, i) => {
+                    // An invoiced entry is a document the client already has. Editing
+                    // its amount or deleting it here would silently disagree with the
+                    // Stripe invoice and orphan the Order — reset it from Milestones
+                    // instead, which voids the invoice properly.
+                    const locked = isInvoiced(row)
+                    return (
                     <div key={row._key} className="flex items-center gap-2 flex-wrap">
                       <input
                         value={row.label}
+                        readOnly={locked}
                         onChange={(e) => setSchedule((prev) => prev.map((r, j) => (j === i ? { ...r, label: e.target.value } : r)))}
                         placeholder="Label"
-                        className={cn(inputCls, 'flex-1 min-w-[120px] py-1.5 text-xs')}
+                        className={cn(inputCls, 'flex-1 min-w-[120px] py-1.5 text-xs', locked && 'opacity-60 cursor-not-allowed')}
                       />
                       <select
                         value={row.entryType}
+                        disabled={locked}
                         onChange={(e) => setSchedule((prev) => prev.map((r, j) => (j === i ? { ...r, entryType: e.target.value as SchedRow['entryType'] } : r)))}
-                        className={selectCls}
+                        className={cn(selectCls, locked && 'opacity-60 cursor-not-allowed')}
                       >
                         <option value="deposit">Deposit</option>
                         <option value="installment">Installment</option>
@@ -927,20 +1063,32 @@ export function PackageBuilderTab({ mode, username, clientId, existing, onClose,
                         type="number"
                         value={row.amount || ''}
                         placeholder="Amount"
+                        readOnly={locked}
                         onChange={(e) => setSchedule((prev) => prev.map((r, j) => (j === i ? { ...r, amount: e.target.value === '' ? 0 : parseFloat(e.target.value) } : r)))}
-                        className={cn(numCls, 'w-24')}
+                        className={cn(numCls, 'w-24', locked && 'opacity-60 cursor-not-allowed')}
                       />
                       <input
                         type="date"
                         value={row.dueDate ?? ''}
+                        readOnly={locked}
                         onChange={(e) => setSchedule((prev) => prev.map((r, j) => (j === i ? { ...r, dueDate: e.target.value || undefined } : r)))}
-                        className={cn(numCls, 'w-36')}
+                        className={cn(numCls, 'w-36', locked && 'opacity-60 cursor-not-allowed')}
                       />
-                      <button onClick={() => setSchedule((prev) => prev.filter((_, j) => j !== i))} className="size-6 flex items-center justify-center rounded-md text-[var(--space-text-muted)] hover:text-red-400 transition-colors">
-                        <Trash2 className="size-3.5" />
-                      </button>
+                      {locked ? (
+                        <span
+                          title="Already invoiced — reset it from Milestones to change or remove it"
+                          className="flex items-center gap-1 px-2 h-6 rounded-md text-[9px] font-semibold uppercase tracking-widest text-[var(--space-text-muted)] border border-[var(--space-border-hard)]"
+                        >
+                          <Lock className="size-2.5" /> Invoiced
+                        </span>
+                      ) : (
+                        <button onClick={() => setSchedule((prev) => prev.filter((_, j) => j !== i))} className="size-6 flex items-center justify-center rounded-md text-[var(--space-text-muted)] hover:text-red-400 transition-colors">
+                          <Trash2 className="size-3.5" />
+                        </button>
+                      )}
                     </div>
-                  ))}
+                    )
+                  })}
                   <button
                     onClick={() => setSchedule((prev) => [...prev, { _key: genKey(), label: '', entryType: 'installment', amount: 0 }])}
                     className="flex items-center gap-1.5 text-xs font-semibold text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] transition-colors pt-1"
@@ -999,11 +1147,19 @@ export function PackageBuilderTab({ mode, username, clientId, existing, onClose,
             className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-xl bg-[var(--space-accent)] text-black hover:opacity-90 transition-all disabled:opacity-50"
           >
             {saving ? <Loader2 className="size-3.5 animate-spin" /> : null}
-            {mode === 'edit' ? 'Save changes' : 'Save draft'}
+            {editingId ? 'Save changes' : 'Save draft'}
           </button>
         </div>
       </div>
     </div>
+
+    {pickerOpen && (
+      <PackagePickerModal
+        excludeId={editingId}
+        onPick={(row, action) => void loadPackage(row.id, action)}
+        onClose={() => setPickerOpen(false)}
+      />
+    )}
 
     {serviceEditor && (
       <ServiceItemModal

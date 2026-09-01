@@ -660,6 +660,7 @@ export function CommandConsole({ username }: CommandConsoleProps) {
                     <MilestonesTab
                       key={`milestones-${launchClientId ?? 'blank'}`}
                       clientId={launchClientId}
+                      username={username}
                       initialTarget={milestoneTarget}
                     />
                   </div>

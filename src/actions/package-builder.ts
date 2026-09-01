@@ -216,6 +216,137 @@ async function bumpUsage(payload: Awaited<ReturnType<typeof getPayload>>, ids: s
   )
 }
 
+// ── Opening an existing package in the builder ──────────────────────────────────
+
+/** One row in the builder's package picker — enough to choose by, nothing heavier. */
+export interface BuilderPackageRow {
+  id: string
+  name: string
+  type: 'template' | 'proposal'
+  status: string | null
+  clientId: string | null
+  clientLabel: string | null
+  lineCount: number
+  total: number
+  updatedAt: string
+}
+
+/**
+ * Everything the builder can open: templates to clone from, and proposals to edit or
+ * clone. Deliberately light — `select` keeps the list query off the full line-item
+ * arrays, and the chosen package is fetched whole by `getPackageForBuilder`.
+ */
+export async function getBuilderPackages() {
+  try {
+    const user = await getCurrentUser()
+    if (!user || user.role === 'client') {
+      return { success: false as const, packages: [] as BuilderPackageRow[], error: 'Unauthorized' }
+    }
+
+    const payload = await getPayload({ config })
+    const { docs } = await payload.find({
+      collection: 'packages',
+      sort: '-updatedAt',
+      limit: 200,
+      depth: 1,
+      select: {
+        name: true, type: true, status: true, clientAccount: true, lineItems: true, updatedAt: true,
+      } as any,
+    })
+
+    const packages: BuilderPackageRow[] = (docs as any[]).map((d) => {
+      const ca = d.clientAccount
+      const items = (d.lineItems ?? []) as any[]
+      // Add-ons are an offer, not a price — same rule the proposal documents follow.
+      const total = items
+        .filter((li) => !li.isAddOn)
+        .reduce((sum, li) => sum + (li.adjustedPrice ?? li.price ?? 0) * (li.quantity ?? 1), 0)
+      return {
+        id: d.id as string,
+        name: (d.name as string) ?? 'Untitled',
+        type: (d.type as 'template' | 'proposal') ?? 'template',
+        status: (d.status as string) ?? null,
+        clientId: ca ? (typeof ca === 'string' ? ca : (ca.id as string)) : null,
+        clientLabel: ca && typeof ca === 'object' ? (ca.company || ca.name) ?? null : null,
+        lineCount: items.length,
+        total: Math.round(total * 100) / 100,
+        updatedAt: String(d.updatedAt ?? ''),
+      }
+    })
+
+    return { success: true as const, packages }
+  } catch (error) {
+    console.error('[getBuilderPackages]', error)
+    return {
+      success: false as const,
+      packages: [] as BuilderPackageRow[],
+      error: error instanceof Error ? error.message : 'Failed to load packages',
+    }
+  }
+}
+
+/**
+ * The full package, shaped for the builder to load.
+ *
+ * `mode: 'clone'` strips everything that belongs to the ORIGINAL rather than to the
+ * work: the payment schedule's `orderId`/`invoicedAt` stamps above all. Copying those
+ * would make a brand-new package look already invoiced, and `pushPackageSchedule`
+ * skips stamped rows — so the clone could never be billed.
+ */
+export async function getPackageForBuilder(packageId: string, mode: 'edit' | 'clone' = 'edit') {
+  try {
+    const user = await getCurrentUser()
+    if (!user || user.role === 'client') return { success: false as const, error: 'Unauthorized' }
+    if (!packageId) return { success: false as const, error: 'No package selected' }
+
+    const payload = await getPayload({ config })
+    const doc = (await payload.findByID({ collection: 'packages', id: packageId, depth: 1 }).catch(() => null)) as any
+    if (!doc) return { success: false as const, error: 'Package not found' }
+
+    const cloning = mode === 'clone'
+    const ca = doc.clientAccount
+    const schedule = ((doc.paymentSchedule ?? []) as any[]).map((e) => ({
+      label: e?.label ?? '',
+      entryType: e?.entryType ?? 'installment',
+      amount: e?.amount ?? 0,
+      dueDate: e?.dueDate ?? null,
+      // Billing state stays with the original.
+      orderId: cloning ? null : (e?.orderId ?? null),
+      invoicedAt: cloning ? null : (e?.invoicedAt ?? null),
+    }))
+
+    return {
+      success: true as const,
+      package: {
+        id: doc.id as string,
+        // A template becomes a proposal on clone, so its name carries over as-is; a
+        // cloned proposal is marked so two rows for one client stay tellable apart.
+        name: cloning && doc.type === 'proposal' ? `${doc.name} (copy)` : (doc.name as string),
+        type: (doc.type as 'template' | 'proposal') ?? 'template',
+        description: doc.description ?? null,
+        coverMessage: doc.coverMessage ?? null,
+        notes: doc.notes ?? null,
+        hourlyRate: doc.hourlyRate ?? null,
+        // A clone is unattached work until it is saved somewhere — carrying the source's
+        // project would silently file it under a job it has nothing to do with.
+        projectRef: cloning ? null : (doc.projectRef ?? null),
+        clientAccount: ca
+          ? typeof ca === 'string'
+            ? ca
+            : { id: ca.id as string, name: (ca.name as string) ?? '', company: ca.company ?? null }
+          : null,
+        lineItems: (doc.lineItems ?? []) as any[],
+        paymentSchedule: schedule,
+        /** The template a clone came from — recorded as provenance on save. */
+        sourcePackage: cloning && doc.type === 'template' ? (doc.id as string) : null,
+      },
+    }
+  } catch (error) {
+    console.error('[getPackageForBuilder]', error)
+    return { success: false as const, error: error instanceof Error ? error.message : 'Failed to load package' }
+  }
+}
+
 // ── Proposal creation (replaces template → assignPackageToClient) ────────────────
 
 /**
@@ -231,12 +362,17 @@ export async function createProposal(input: {
   projectRef?: string | null
   /** Default USD/hr for hourly lines added in the builder. Null clears it. */
   hourlyRate?: number | null
+  /** Template this proposal was cloned from — provenance only. */
+  sourcePackage?: string | null
   lineItems: BuilderLineItem[]
   paymentSchedule?: Array<{
     label: string
     entryType?: 'deposit' | 'installment' | 'balance'
     amount: number
     dueDate?: string
+    /** Round-tripped from the stored entry — the builder never authors these. */
+    orderId?: string | null
+    invoicedAt?: string | null
   }>
 }) {
   try {
@@ -262,6 +398,7 @@ export async function createProposal(input: {
         clientAccount: input.clientAccountId,
         projectRef: input.projectRef || undefined,
         hourlyRate: input.hourlyRate ?? undefined,
+        sourcePackage: input.sourcePackage || undefined,
         lineItems,
         paymentSchedule: input.paymentSchedule ?? [],
       } as any,
@@ -298,6 +435,9 @@ export async function updateProposal(input: {
     entryType?: 'deposit' | 'installment' | 'balance'
     amount: number
     dueDate?: string
+    /** Round-tripped from the stored entry — the builder never authors these. */
+    orderId?: string | null
+    invoicedAt?: string | null
   }>
 }) {
   try {
