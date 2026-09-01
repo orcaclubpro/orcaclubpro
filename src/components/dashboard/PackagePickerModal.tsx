@@ -108,7 +108,7 @@ export function PackagePickerModal({ excludeId, onPick, onClose }: PackagePicker
         style={{ background: 'rgba(0,0,0,0.62)', backdropFilter: 'blur(3px)' }}
         onClick={onClose}
       />
-      <div className="absolute left-1/2 top-4 bottom-4 -translate-x-1/2 w-full px-3 max-w-[620px]">
+      <div className="absolute left-1/2 top-4 bottom-4 -translate-x-1/2 w-full px-3 max-w-[38.75rem]">
         <div
           className="flex flex-col h-full overflow-hidden rounded-2xl shadow-[0_40px_100px_rgba(0,0,0,0.7)] animate-in fade-in zoom-in-95 duration-150"
           style={{ background: 'var(--space-bg-card)', border: '1px solid var(--space-border-hard)' }}
@@ -121,7 +121,7 @@ export function PackagePickerModal({ excludeId, onPick, onClose }: PackagePicker
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-[var(--space-text-primary)] leading-tight">Open or clone a package</p>
-                <p className="text-[11px] text-[var(--space-text-muted)] truncate">
+                <p className="text-[0.6875rem] text-[var(--space-text-muted)] truncate">
                   Continue a client&rsquo;s proposal, or start from a copy of any package.
                 </p>
               </div>
@@ -142,7 +142,7 @@ export function PackagePickerModal({ excludeId, onPick, onClose }: PackagePicker
                 placeholder="Search by package or client…"
                 className="flex-1 bg-transparent text-sm text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)] focus:outline-none py-1"
               />
-              <span className="text-[10px] text-[var(--space-text-muted)] shrink-0">
+              <span className="text-[0.625rem] text-[var(--space-text-muted)] shrink-0">
                 {filtered.length} of {rows.length}
               </span>
             </div>
@@ -181,7 +181,7 @@ export function PackagePickerModal({ excludeId, onPick, onClose }: PackagePicker
 
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-[var(--space-text-primary)] truncate">{row.name}</p>
-                      <p className="text-[11px] text-[var(--space-text-muted)] truncate">
+                      <p className="text-[0.6875rem] text-[var(--space-text-muted)] truncate">
                         {isProposal ? (row.clientLabel ?? 'Unassigned') : 'Template'}
                         {row.status && (
                           <span className={cn('ml-1.5 capitalize', STATUS_TONE[row.status] ?? '')}>· {row.status}</span>
@@ -199,7 +199,7 @@ export function PackagePickerModal({ excludeId, onPick, onClose }: PackagePicker
                           type="button"
                           onClick={() => onPick(row, 'edit')}
                           title="Continue this proposal for its client"
-                          className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold rounded-lg border border-[var(--space-border-hard)] text-[var(--space-text-tertiary)] hover:text-[var(--space-text-primary)] transition-colors"
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 text-[0.6875rem] font-semibold rounded-lg border border-[var(--space-border-hard)] text-[var(--space-text-tertiary)] hover:text-[var(--space-text-primary)] transition-colors"
                         >
                           <Pencil className="size-3" /> Edit
                         </button>
@@ -208,7 +208,7 @@ export function PackagePickerModal({ excludeId, onPick, onClose }: PackagePicker
                         type="button"
                         onClick={() => onPick(row, 'clone')}
                         title="Start a new proposal from a copy of this one"
-                        className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold rounded-lg border border-[var(--space-border-hard)] text-[var(--space-text-tertiary)] hover:text-[var(--space-text-primary)] transition-colors"
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 text-[0.6875rem] font-semibold rounded-lg border border-[var(--space-border-hard)] text-[var(--space-text-tertiary)] hover:text-[var(--space-text-primary)] transition-colors"
                       >
                         <Copy className="size-3" /> Clone
                       </button>
@@ -219,7 +219,7 @@ export function PackagePickerModal({ excludeId, onPick, onClose }: PackagePicker
             )}
           </div>
 
-          <div className="shrink-0 px-5 py-2.5 border-t border-[var(--space-border-hard)] text-[10px] text-[var(--space-text-muted)]">
+          <div className="shrink-0 px-5 py-2.5 border-t border-[var(--space-border-hard)] text-[0.625rem] text-[var(--space-text-muted)]">
             <kbd className="px-1 py-0.5 rounded border border-[var(--space-border-hard)] font-mono">&uarr;&darr;</kbd> move ·{' '}
             <kbd className="px-1 py-0.5 rounded border border-[var(--space-border-hard)] font-mono">&crarr;</kbd> edit a proposal / clone a template ·{' '}
             <kbd className="px-1 py-0.5 rounded border border-[var(--space-border-hard)] font-mono">esc</kbd> close

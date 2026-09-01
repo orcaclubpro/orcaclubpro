@@ -670,36 +670,39 @@ h4, .text-heading-4 {
    and `100svh` means what it says. #spaces-root is rendered only by the spaces
    layout, so marketing pages keep the 16px root. */
 html:has(#spaces-root) {
-  font-size: 20.8px; /* 16 × 1.3 — matches the visual size of the old zoom */
+  font-size: 24px; /* 16 × 1.5 — portal runs a step larger than the old zoom */
 }
 
 /* Header height. Absolute px because the fixed header sits outside the scaled
    content flow and sizes itself in px — one token, so the two cannot drift. */
 #spaces-root {
-  --space-header: 88px;
+  --space-header: 101px;
 }
 
 @media (max-width: 1023px) {
   html:has(#spaces-root) {
-    font-size: 17.6px; /* phones don't need the desktop bump — keep tap targets sane */
+    font-size: 20px; /* phones don't need the full desktop bump — keep tap targets sane */
   }
 }
 
-/* Opt a subtree out of the portal's 1.3 root scale.
+/* Opt a subtree out of the portal's 1.5 root scale.
 
    The scale exists to rescue the legacy views, whose type is authored at 9–11px.
    Components written after the redesign use their final sizes directly, so they
-   need spacing at face value too: dividing --spacing (Tailwind v4's spacing
-   base) by the same 1.3 makes `p-4` mean 16px again inside the subtree. Type in
-   these subtrees is authored in px, which the root font size never touches. */
+   opt out and size themselves in px, which the root font size never touches —
+   letting them follow the root scale would take a 13px list row to 19.5px.
+   These subtrees were bumped ~15% by hand instead, so they land in the same
+   13–17px band the scaled legacy views now occupy. --spacing moves with them,
+   keeping padding proportional to the larger type. */
 .space-true-scale {
-  --spacing: 4px; /* absolute, so the opt-out holds at any root font size */
+  --spacing: 4.5px; /* absolute, so the opt-out holds at any root font size */
 }
 
 /* Legacy controls rendered inside a true-scale subtree still size their text
-   from Tailwind's rem scale, so they arrive 1.3× too large. Pull them back. */
+   from Tailwind's rem scale, so they arrive far too large. Pull them back to
+   the subtree's own body size. */
 .space-true-scale :is(button, a[role="button"]) {
-  font-size: 13px; /* absolute, so it matches the surrounding px-authored type */
+  font-size: 15px; /* absolute, so it matches the surrounding px-authored type */
 }
 
 /* Full-height portal panel: viewport minus the fixed header. `svh` keeps mobile

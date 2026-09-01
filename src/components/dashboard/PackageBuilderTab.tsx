@@ -647,9 +647,9 @@ export function PackageBuilderTab({ mode, username, clientId, existing, onClose,
                       {/* The description travels with the item onto the proposal — showing
                           it here is how staff know whether a line will arrive explained. */}
                       {item.description ? (
-                        <p className="text-[10px] text-[var(--space-text-muted)] mt-1 line-clamp-2 leading-snug">{item.description}</p>
+                        <p className="text-[0.625rem] text-[var(--space-text-muted)] mt-1 line-clamp-2 leading-snug">{item.description}</p>
                       ) : (
-                        <p className="text-[10px] text-[var(--space-text-muted)]/60 italic mt-1">No description</p>
+                        <p className="text-[0.625rem] text-[var(--space-text-muted)]/60 italic mt-1">No description</p>
                       )}
                     </div>
                     <PlusCircle className="size-4 shrink-0 text-[var(--space-text-muted)] opacity-0 group-hover:opacity-100 group-hover:text-[var(--space-accent)] transition-all" />
@@ -701,7 +701,7 @@ export function PackageBuilderTab({ mode, username, clientId, existing, onClose,
             >
               <Plus className="size-3.5" />
               New service item
-              <kbd className="ml-auto px-1.5 py-0.5 rounded border border-[var(--space-border-hard)] text-[10px] font-mono text-[var(--space-text-muted)]">`</kbd>
+              <kbd className="ml-auto px-1.5 py-0.5 rounded border border-[var(--space-border-hard)] text-[0.625rem] font-mono text-[var(--space-text-muted)]">`</kbd>
             </button>
           </div>
         </div>
@@ -729,7 +729,7 @@ export function PackageBuilderTab({ mode, username, clientId, existing, onClose,
                   {loadingPackage ? 'Opening…' : 'Open or clone a package'}
                 </button>
                 {loadedFrom && (
-                  <p className="mt-1.5 flex items-start gap-1.5 text-[11px] text-[var(--space-text-muted)] leading-snug">
+                  <p className="mt-1.5 flex items-start gap-1.5 text-[0.6875rem] text-[var(--space-text-muted)] leading-snug">
                     {loadedFrom.action === 'edit' ? <Pencil className="size-3 shrink-0 mt-0.5" /> : <Copy className="size-3 shrink-0 mt-0.5" />}
                     {loadedFrom.action === 'edit' ? (
                       <span>
@@ -747,7 +747,7 @@ export function PackageBuilderTab({ mode, username, clientId, existing, onClose,
               </div>
 
               <div>
-                <label className="text-[10px] font-semibold uppercase tracking-widest text-[var(--space-text-muted)]">Package name *</label>
+                <label className="text-[0.625rem] font-semibold uppercase tracking-widest text-[var(--space-text-muted)]">Package name *</label>
                 <input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -756,7 +756,7 @@ export function PackageBuilderTab({ mode, username, clientId, existing, onClose,
                 />
               </div>
               <div>
-                <label className="text-[10px] font-semibold uppercase tracking-widest text-[var(--space-text-muted)]">Client *</label>
+                <label className="text-[0.625rem] font-semibold uppercase tracking-widest text-[var(--space-text-muted)]">Client *</label>
                 {editingId ? (
                   <div className="mt-1.5 px-3 py-2 text-sm rounded-lg bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] text-[var(--space-text-tertiary)]">
                     {editClientLabel}
@@ -811,7 +811,7 @@ export function PackageBuilderTab({ mode, username, clientId, existing, onClose,
               <Clock className="size-4 shrink-0 text-[var(--space-text-muted)]" />
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-semibold text-[var(--space-text-tertiary)]">Hourly rate</p>
-                <p className="text-[11px] text-[var(--space-text-muted)] leading-snug">
+                <p className="text-[0.6875rem] text-[var(--space-text-muted)] leading-snug">
                   {packageHourlyRate
                     ? `New hourly services start at ${fmt(packageHourlyRate)}/hr — set their hours and the line prices itself.`
                     : 'Set a rate to price hourly services by hours alone.'}
@@ -1047,7 +1047,7 @@ export function PackageBuilderTab({ mode, username, clientId, existing, onClose,
                         readOnly={locked}
                         onChange={(e) => setSchedule((prev) => prev.map((r, j) => (j === i ? { ...r, label: e.target.value } : r)))}
                         placeholder="Label"
-                        className={cn(inputCls, 'flex-1 min-w-[120px] py-1.5 text-xs', locked && 'opacity-60 cursor-not-allowed')}
+                        className={cn(inputCls, 'flex-1 min-w-[7.5rem] py-1.5 text-xs', locked && 'opacity-60 cursor-not-allowed')}
                       />
                       <select
                         value={row.entryType}
@@ -1077,7 +1077,7 @@ export function PackageBuilderTab({ mode, username, clientId, existing, onClose,
                       {locked ? (
                         <span
                           title="Already invoiced — reset it from Milestones to change or remove it"
-                          className="flex items-center gap-1 px-2 h-6 rounded-md text-[9px] font-semibold uppercase tracking-widest text-[var(--space-text-muted)] border border-[var(--space-border-hard)]"
+                          className="flex items-center gap-1 px-2 h-6 rounded-md text-[0.5625rem] font-semibold uppercase tracking-widest text-[var(--space-text-muted)] border border-[var(--space-border-hard)]"
                         >
                           <Lock className="size-2.5" /> Invoiced
                         </span>

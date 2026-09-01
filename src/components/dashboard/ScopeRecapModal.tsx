@@ -14,8 +14,8 @@ const accentBtn =
   'flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg bg-[var(--space-accent)] text-black hover:opacity-90 transition-all disabled:opacity-50'
 const ghostBtn =
   'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-[var(--space-border-hard)] text-[var(--space-text-tertiary)] hover:text-[var(--space-text-primary)] hover:bg-[var(--space-bg-card-hover)] transition-all disabled:opacity-50'
-const labelCls = 'text-[10px] font-semibold uppercase tracking-widest text-[var(--space-text-muted)]'
-const sectionLabel = 'text-[9px] font-bold tracking-[0.25em] uppercase text-[var(--space-accent)]'
+const labelCls = 'text-[0.625rem] font-semibold uppercase tracking-widest text-[var(--space-text-muted)]'
+const sectionLabel = 'text-[0.5625rem] font-bold tracking-[0.25em] uppercase text-[var(--space-accent)]'
 
 export interface ScopeRecapModalProps {
   retainerId: string
@@ -99,7 +99,7 @@ export function ScopeRecapModal({ retainerId, onClose, draft, onDraftChange }: S
   return (
     <div className="fixed inset-0 z-[80] print:hidden">
       <div className="absolute inset-0 animate-in fade-in duration-150" style={{ background: 'rgba(0,0,0,0.62)', backdropFilter: 'blur(3px)' }} onClick={onClose} />
-      <div className="absolute left-1/2 -translate-x-1/2 top-3 bottom-3 w-full px-3 max-w-[760px]">
+      <div className="absolute left-1/2 -translate-x-1/2 top-3 bottom-3 w-full px-3 max-w-[47.5rem]">
         <div
           className="flex flex-col h-full overflow-hidden rounded-2xl shadow-[0_40px_100px_rgba(0,0,0,0.7)]"
           style={{ background: 'var(--space-bg-card)', border: '1px solid var(--space-border-hard)' }}
@@ -137,7 +137,7 @@ export function ScopeRecapModal({ retainerId, onClose, draft, onDraftChange }: S
                   <div>
                     <label className={labelCls}>Document title</label>
                     <input value={model.scopeTitle} onChange={(e) => patch({ scopeTitle: e.target.value })} placeholder="Work to date" className={cn(inputCls, 'mt-1.5')} />
-                    <p className="text-[10px] text-[var(--space-text-muted)] mt-1">
+                    <p className="text-[0.625rem] text-[var(--space-text-muted)] mt-1">
                       Seeded from the scope summary. Sits under &ldquo;Work recap&rdquo; on the cover slide.
                     </p>
                   </div>
@@ -154,20 +154,20 @@ export function ScopeRecapModal({ retainerId, onClose, draft, onDraftChange }: S
                     <div className="rounded-lg border border-[var(--space-border-hard)] px-3 py-2 bg-[var(--space-bg-card-hover)]">
                       <span className={labelCls}>Delivered</span>
                       <p className="text-sm font-semibold tabular-nums text-[var(--space-text-primary)] mt-1">{model.hoursDelivered}h</p>
-                      <p className="text-[10px] text-[var(--space-text-muted)]">{model.itemsDelivered} item{model.itemsDelivered === 1 ? '' : 's'}</p>
+                      <p className="text-[0.625rem] text-[var(--space-text-muted)]">{model.itemsDelivered} item{model.itemsDelivered === 1 ? '' : 's'}</p>
                     </div>
                     <div className="rounded-lg border border-[var(--space-border-hard)] px-3 py-2 bg-[var(--space-bg-card-hover)]">
                       <span className={labelCls}>Planned</span>
                       <p className="text-sm font-semibold tabular-nums text-[var(--space-text-primary)] mt-1">{model.hoursPlanned}h</p>
-                      <p className="text-[10px] text-[var(--space-text-muted)]">{model.itemsPlanned} item{model.itemsPlanned === 1 ? '' : 's'}</p>
+                      <p className="text-[0.625rem] text-[var(--space-text-muted)]">{model.itemsPlanned} item{model.itemsPlanned === 1 ? '' : 's'}</p>
                     </div>
                     <div className="rounded-lg border border-[var(--space-border-hard)] px-3 py-2 bg-[var(--space-bg-card-hover)]">
                       <span className={labelCls}>Proposed</span>
                       <p className="text-sm font-semibold tabular-nums text-[var(--space-text-primary)] mt-1">{model.proposedAmountLabel ?? '—'}</p>
-                      <p className="text-[10px] text-[var(--space-text-muted)] truncate">{model.proposedTermsLabel ?? 'Price the proposal to show this'}</p>
+                      <p className="text-[0.625rem] text-[var(--space-text-muted)] truncate">{model.proposedTermsLabel ?? 'Price the proposal to show this'}</p>
                     </div>
                   </div>
-                  <p className="text-[10px] text-[var(--space-text-muted)] leading-relaxed">
+                  <p className="text-[0.625rem] text-[var(--space-text-muted)] leading-relaxed">
                     These figures come from the work log and the saved proposal — they are re-derived when the PDF is built, so they always match.
                   </p>
                 </section>
@@ -197,7 +197,7 @@ export function ScopeRecapModal({ retainerId, onClose, draft, onDraftChange }: S
                         placeholder="What this covered, in a sentence…"
                         className={cn(areaCls, 'text-xs')}
                       />
-                      <p className="text-[10px] text-[var(--space-text-muted)]">
+                      <p className="text-[0.625rem] text-[var(--space-text-muted)]">
                         {b.items.length} item{b.items.length === 1 ? '' : 's'} listed on the slide.
                       </p>
                     </div>
@@ -220,7 +220,7 @@ export function ScopeRecapModal({ retainerId, onClose, draft, onDraftChange }: S
                       ))}
                     </ul>
                   )}
-                  <p className="text-[10px] text-[var(--space-text-muted)]">
+                  <p className="text-[0.625rem] text-[var(--space-text-muted)]">
                     Pulled from the planned work on the pitch — edit it there, not here.
                   </p>
                 </section>

@@ -331,7 +331,7 @@ export function RetainerInvoiceModal({
                           {includeWorkLog ? <CircleCheck className="size-4 shrink-0" style={{ color: 'var(--space-accent)' }} /> : <Circle className="size-4 shrink-0 text-[var(--space-text-muted)]" />}
                           <span className="text-xs text-[var(--space-text-secondary)]">
                             Itemize {model.currentUsage.loggedCount} logged {model.currentUsage.loggedCount === 1 ? 'entry' : 'entries'} from {model.current.monthLabel}
-                            <span className="block text-[10px] text-[var(--space-text-muted)]">Dated work log on the invoice and the client&apos;s package. Doesn&apos;t change the total.</span>
+                            <span className="block text-[0.625rem] text-[var(--space-text-muted)]">Dated work log on the invoice and the client&apos;s package. Doesn&apos;t change the total.</span>
                           </span>
                         </button>
                       )}

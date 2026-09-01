@@ -58,7 +58,7 @@ const BILLING: { value: BillingType; label: string; hint: string }[] = [
 const inputCls =
   'w-full px-3 py-2 text-sm bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] rounded-lg text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)] focus:outline-none focus:border-[rgba(139,156,182,0.20)] transition-colors'
 const numCls = cn(inputCls, '[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none')
-const labelCls = 'block text-[10px] font-semibold uppercase tracking-widest text-[var(--space-text-muted)] mb-1.5'
+const labelCls = 'block text-[0.625rem] font-semibold uppercase tracking-widest text-[var(--space-text-muted)] mb-1.5'
 
 function fmt(n: number) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(n || 0)
@@ -206,7 +206,7 @@ export function ServiceItemModal({ item, defaultHourlyRate, onDone, onClose }: S
         style={{ background: 'rgba(0,0,0,0.62)', backdropFilter: 'blur(3px)' }}
         onClick={() => !busy && onClose()}
       />
-      <div className="absolute left-1/2 top-4 bottom-4 -translate-x-1/2 w-full px-3 max-w-[560px]">
+      <div className="absolute left-1/2 top-4 bottom-4 -translate-x-1/2 w-full px-3 max-w-[35rem]">
         <div
           className="flex flex-col h-full overflow-hidden rounded-2xl shadow-[0_40px_100px_rgba(0,0,0,0.7)] animate-in fade-in zoom-in-95 duration-150"
           style={{ background: 'var(--space-bg-card)', border: '1px solid var(--space-border-hard)' }}
@@ -220,7 +220,7 @@ export function ServiceItemModal({ item, defaultHourlyRate, onDone, onClose }: S
               <p className="text-sm font-semibold text-[var(--space-text-primary)] leading-tight">
                 {editing ? 'Edit service' : 'New service'}
               </p>
-              <p className="text-[11px] text-[var(--space-text-muted)] truncate">
+              <p className="text-[0.6875rem] text-[var(--space-text-muted)] truncate">
                 {editing
                   ? 'Changes apply to the catalog — proposals already sent keep their snapshot.'
                   : 'Add it to this package, and optionally to the catalog for reuse.'}
@@ -287,7 +287,7 @@ export function ServiceItemModal({ item, defaultHourlyRate, onDone, onClose }: S
                   </button>
                 ))}
               </div>
-              <p className="mt-1.5 text-[11px] text-[var(--space-text-muted)] leading-relaxed">
+              <p className="mt-1.5 text-[0.6875rem] text-[var(--space-text-muted)] leading-relaxed">
                 {BILLING.find((b) => b.value === billingType)!.hint}
               </p>
             </div>
@@ -318,12 +318,12 @@ export function ServiceItemModal({ item, defaultHourlyRate, onDone, onClose }: S
                 />
                 {packageRate != null && billingType === 'hourly' && (
                   parseFloat(priceStr) === packageRate ? (
-                    <p className="mt-1 text-[11px] text-[var(--space-text-muted)]">Package rate — just set the hours.</p>
+                    <p className="mt-1 text-[0.6875rem] text-[var(--space-text-muted)]">Package rate — just set the hours.</p>
                   ) : (
                     <button
                       type="button"
                       onClick={() => setPriceStr(String(packageRate))}
-                      className="mt-1 text-[11px] text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)] transition-colors underline underline-offset-2"
+                      className="mt-1 text-[0.6875rem] text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)] transition-colors underline underline-offset-2"
                     >
                       Reset to package rate ({fmt(packageRate)}/hr)
                     </button>
@@ -391,7 +391,7 @@ export function ServiceItemModal({ item, defaultHourlyRate, onDone, onClose }: S
                 </span>
                 <span className="text-xs text-[var(--space-text-secondary)]">
                   Offer as an optional add-on
-                  <span className="block text-[11px] text-[var(--space-text-muted)] mt-0.5">
+                  <span className="block text-[0.6875rem] text-[var(--space-text-muted)] mt-0.5">
                     Listed on the proposal for the client to request, and left out of the total.
                   </span>
                 </span>
@@ -405,7 +405,7 @@ export function ServiceItemModal({ item, defaultHourlyRate, onDone, onClose }: S
                   <input type="checkbox" checked={saveToCatalog} onChange={(e) => setSaveToCatalog(e.target.checked)} className="size-3.5 accent-[var(--space-accent)]" />
                   <span className="text-xs text-[var(--space-text-secondary)]">
                     Save to the catalog for reuse
-                    <span className="block text-[11px] text-[var(--space-text-muted)]">Off adds it to this package only.</span>
+                    <span className="block text-[0.6875rem] text-[var(--space-text-muted)]">Off adds it to this package only.</span>
                   </span>
                 </label>
               )}
@@ -418,7 +418,7 @@ export function ServiceItemModal({ item, defaultHourlyRate, onDone, onClose }: S
                 <Star className={cn('size-3.5 shrink-0', starred && 'fill-current')} style={starred ? { color: 'var(--space-accent)' } : { color: 'var(--space-text-muted)' }} />
                 <span className="text-xs text-[var(--space-text-secondary)]">
                   Star it
-                  <span className="block text-[11px] text-[var(--space-text-muted)]">Starred services sort to the top of the catalog rail.</span>
+                  <span className="block text-[0.6875rem] text-[var(--space-text-muted)]">Starred services sort to the top of the catalog rail.</span>
                 </span>
               </button>
             </div>
@@ -431,7 +431,7 @@ export function ServiceItemModal({ item, defaultHourlyRate, onDone, onClose }: S
           {/* ── Footer — the running line total, so the price is confirmed before it lands ── */}
           <div className="shrink-0 flex items-center gap-3 px-5 py-3.5 border-t border-[var(--space-border-hard)]">
             <div className="min-w-0">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-[var(--space-text-muted)]">
+              <p className="text-[0.625rem] font-semibold uppercase tracking-widest text-[var(--space-text-muted)]">
                 {isAddOn ? 'Add-on · excluded from total' : 'Line total'}
               </p>
               <p className="text-base font-semibold tabular-nums text-[var(--space-text-primary)] leading-tight">
@@ -452,7 +452,7 @@ export function ServiceItemModal({ item, defaultHourlyRate, onDone, onClose }: S
               >
                 {busy ? <Loader2 className="size-3.5 animate-spin" /> : editing ? <Save className="size-3.5" /> : <Plus className="size-3.5" />}
                 {editing ? 'Save changes' : 'Add to package'}
-                <kbd className="ml-0.5 px-1 py-0.5 rounded bg-black/15 text-[9px] font-mono leading-none">&crarr;</kbd>
+                <kbd className="ml-0.5 px-1 py-0.5 rounded bg-black/15 text-[0.5625rem] font-mono leading-none">&crarr;</kbd>
               </button>
             </div>
           </div>

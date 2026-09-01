@@ -182,7 +182,7 @@ function ClientDetail({
                 <button
                   type="button"
                   onClick={() => setEditOpen(true)}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-[var(--space-border-hard)] px-3 py-2 text-[13px] font-medium text-[var(--space-text-secondary)] transition-colors hover:text-[var(--space-text-primary)]"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-[var(--space-border-hard)] px-3 py-2 text-[0.8125rem] font-medium text-[var(--space-text-secondary)] transition-colors hover:text-[var(--space-text-primary)]"
                 >
                   <Settings className="size-3.5" />
                   Edit
@@ -198,7 +198,7 @@ function ClientDetail({
         <Section
           heading="Timeline"
           aside={
-            <span className="text-[12px] text-[var(--space-text-muted)]">
+            <span className="text-[0.75rem] text-[var(--space-text-muted)]">
               Work and invoices, newest first
             </span>
           }
@@ -219,10 +219,10 @@ function EmptyState({ canCreate, username }: { canCreate: boolean; username: str
   return (
     <div className="mx-auto max-w-sm text-center">
       <Users className="mx-auto mb-4 size-8 text-[var(--space-text-muted)]" />
-      <p className="mb-1 text-[15px] font-semibold text-[var(--space-text-primary)]">
+      <p className="mb-1 text-[0.9375rem] font-semibold text-[var(--space-text-primary)]">
         No clients yet
       </p>
-      <p className="mb-6 text-[13px] text-[var(--space-text-secondary)]">
+      <p className="mb-6 text-[0.8125rem] text-[var(--space-text-secondary)]">
         Add a client account to start tracking their projects and invoices.
       </p>
       {canCreate && (

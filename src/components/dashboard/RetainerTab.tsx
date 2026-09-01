@@ -1150,7 +1150,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
             )}
             {inHistory && !editing && history && (
               <p className="flex items-center gap-1.5 text-xs text-[var(--space-text-muted)] mt-0.5">
-                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest border border-[var(--space-border-hard)] text-[var(--space-text-muted)]">
+                <span className="px-1.5 py-0.5 rounded text-[0.5625rem] font-bold uppercase tracking-widest border border-[var(--space-border-hard)] text-[var(--space-text-muted)]">
                   Closed
                 </span>
                 <span className="tabular-nums">Plan ended {fmtDay(history.since)} · read-only</span>
@@ -1158,7 +1158,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
             )}
             {scoping && !editing && (
               <p className="flex items-center gap-1.5 text-xs text-[var(--space-text-muted)] mt-0.5">
-                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest border border-amber-500/30 bg-amber-500/10 text-amber-500">
+                <span className="px-1.5 py-0.5 rounded text-[0.5625rem] font-bold uppercase tracking-widest border border-amber-500/30 bg-amber-500/10 text-amber-500">
                   Scoping
                 </span>
                 <span className="tabular-nums">
@@ -1186,7 +1186,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
               >
                 <ChevronLeft className="size-4" />
               </button>
-              <span className="text-xs font-medium text-[var(--space-text-secondary)] tabular-nums min-w-[168px] text-center">
+              <span className="text-xs font-medium text-[var(--space-text-secondary)] tabular-nums min-w-[10.5rem] text-center">
                 {cycle ? `Cycle ${history.cycleIndex} of ${history.cycleCount} · ${cycle.label}` : 'Closed'}
               </span>
               <button
@@ -1199,7 +1199,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
               </button>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-[11px] text-[var(--space-text-muted)] tabular-nums">
+              <span className="text-[0.6875rem] text-[var(--space-text-muted)] tabular-nums">
                 {TIER_LABEL[history.tier]} · {history.cycleCount} cycle{history.cycleCount === 1 ? '' : 's'} · {fmtHrs(history.totalHours)}h
               </span>
               {!atLastHistoryCycle && (
@@ -1299,7 +1299,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                         <OptIcon className={cn('size-4 shrink-0 mt-0.5', on && 'text-[var(--space-accent)]')} />
                         <span className="min-w-0">
                           <span className="block text-xs font-semibold leading-tight">{opt.title}</span>
-                          <span className="block text-[10px] text-[var(--space-text-muted)] mt-0.5 leading-snug">{opt.hint}</span>
+                          <span className="block text-[0.625rem] text-[var(--space-text-muted)] mt-0.5 leading-snug">{opt.hint}</span>
                         </span>
                       </button>
                     )
@@ -1373,7 +1373,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
               </div>
 
               {retainer && !scoping && (
-                <p className="text-[10px] text-[var(--space-text-muted)] leading-relaxed">
+                <p className="text-[0.625rem] text-[var(--space-text-muted)] leading-relaxed">
                   {scheduled?.deactivateOn ? (
                     <span className="text-amber-500">
                       This plan is winding down on {fmtDay(scheduled.deactivateOn)}, so new terms would never take
@@ -1391,7 +1391,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                 </p>
               )}
               {scoping && (
-                <p className="text-[10px] text-[var(--space-text-muted)]">
+                <p className="text-[0.625rem] text-[var(--space-text-muted)]">
                   Scoping — pricing is set on the pitch console, which is what starts the first cycle.
                 </p>
               )}
@@ -1470,7 +1470,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
               <div className="rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card-hover)] p-4 space-y-3">
                 <div className="flex items-end justify-between gap-3">
                   <div>
-                    <p className="text-[9px] font-bold tracking-[0.22em] uppercase text-[var(--space-text-tertiary)]">Hours used</p>
+                    <p className="text-[0.5625rem] font-bold tracking-[0.22em] uppercase text-[var(--space-text-tertiary)]">Hours used</p>
                     <p className="text-2xl font-semibold tabular-nums text-[var(--space-text-primary)] mt-1 leading-none">
                       {fmtHrs(used)}<span className="text-base font-normal text-[var(--space-text-muted)]">/{fmtHrs(cap)}h</span>
                     </p>
@@ -1491,7 +1491,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                   {(Object.keys(CATEGORY_LABEL) as TimeEntryCategory[])
                     .filter((c) => (totals?.byCategory?.[c] ?? 0) > 0)
                     .map((c) => (
-                      <span key={c} className="text-[11px] text-[var(--space-text-muted)] tabular-nums">
+                      <span key={c} className="text-[0.6875rem] text-[var(--space-text-muted)] tabular-nums">
                         {CATEGORY_LABEL[c]} <span className="text-[var(--space-text-secondary)] font-medium">{fmtHrs(totals!.byCategory[c])}h</span>
                       </span>
                     ))}
@@ -1535,10 +1535,10 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <ClipboardList className="size-3.5 text-[var(--space-text-muted)]" />
-                  <p className="text-[9px] font-bold tracking-[0.22em] uppercase text-[var(--space-text-tertiary)]">
+                  <p className="text-[0.5625rem] font-bold tracking-[0.22em] uppercase text-[var(--space-text-tertiary)]">
                     Logged this cycle
                   </p>
-                  <span className="text-[10px] text-[var(--space-text-muted)] tabular-nums">
+                  <span className="text-[0.625rem] text-[var(--space-text-muted)] tabular-nums">
                     {logged.length} entr{logged.length === 1 ? 'y' : 'ies'}
                   </span>
                 </div>
@@ -1548,7 +1548,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                   <div className="rounded-xl border border-[var(--space-border-hard)] divide-y divide-[var(--space-border-hard)] overflow-hidden">
                     {logged.map((l) => (
                       <div key={l.id} className="flex items-center gap-2.5 px-3 py-2.5">
-                        <span className="text-[10px] tabular-nums text-[var(--space-text-muted)] shrink-0 w-14">{fmtDay(l.date)}</span>
+                        <span className="text-[0.625rem] tabular-nums text-[var(--space-text-muted)] shrink-0 w-14">{fmtDay(l.date)}</span>
                         <span className="flex-1 min-w-0 text-xs text-[var(--space-text-secondary)] truncate">
                           {l.description || CATEGORY_LABEL[(l.category ?? 'work') as TimeEntryCategory]}
                         </span>
@@ -1571,7 +1571,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                   Pitch what you plan to do and record what you have already done. Nothing
                   bills until you price it — that is what starts the first cycle.
                 </p>
-                <p className="text-[11px] text-[var(--space-text-muted)] leading-relaxed">
+                <p className="text-[0.6875rem] text-[var(--space-text-muted)] leading-relaxed">
                   This is a recurring plan being priced. A fixed-price job is a package instead —
                   build it in <span className="text-[var(--space-text-secondary)]">Build</span> and run it
                   from <span className="text-[var(--space-text-secondary)]">Milestones</span>.
@@ -1606,10 +1606,10 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                     <div key={c.label} className="rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card-hover)] px-3 py-2.5">
                       <div className="flex items-center gap-1.5">
                         <CIcon className="size-3 text-[var(--space-text-muted)]" />
-                        <span className="text-[9px] font-bold uppercase tracking-widest text-[var(--space-text-muted)]">{c.label}</span>
+                        <span className="text-[0.5625rem] font-bold uppercase tracking-widest text-[var(--space-text-muted)]">{c.label}</span>
                       </div>
                       <p className="text-lg font-semibold tabular-nums text-[var(--space-text-primary)] mt-1 leading-none">{c.value}</p>
-                      <p className="text-[10px] text-[var(--space-text-muted)] mt-1">{c.sub}</p>
+                      <p className="text-[0.625rem] text-[var(--space-text-muted)] mt-1">{c.sub}</p>
                     </div>
                   )
                 })}
@@ -1619,10 +1619,10 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <ClipboardList className="size-3.5" style={{ color: 'var(--space-accent)' }} />
-                  <p className="text-[9px] font-bold tracking-[0.22em] uppercase text-[var(--space-text-tertiary)]">
+                  <p className="text-[0.5625rem] font-bold tracking-[0.22em] uppercase text-[var(--space-text-tertiary)]">
                     Planned work
                   </p>
-                  <span className="text-[10px] text-[var(--space-text-muted)] tabular-nums">
+                  <span className="text-[0.625rem] text-[var(--space-text-muted)] tabular-nums">
                     {fmtHrs(plannedHours)}h estimated
                   </span>
                 </div>
@@ -1660,7 +1660,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                     onChange={(e) => setPDesc(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter') handleAddPlanned() }}
                     placeholder="Planned work — e.g. Monthly performance report"
-                    className={cn(inputCls, 'flex-1 min-w-[180px] py-1.5 text-xs')}
+                    className={cn(inputCls, 'flex-1 min-w-[11.25rem] py-1.5 text-xs')}
                   />
                   <input
                     type="number" min={0} step="0.25" title="Estimated hours per month"
@@ -1686,10 +1686,10 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <Check className="size-3.5" style={{ color: 'var(--space-accent)' }} />
-                  <p className="text-[9px] font-bold tracking-[0.22em] uppercase text-[var(--space-text-tertiary)]">
+                  <p className="text-[0.5625rem] font-bold tracking-[0.22em] uppercase text-[var(--space-text-tertiary)]">
                     Work done so far
                   </p>
-                  <span className="text-[10px] text-[var(--space-text-muted)] tabular-nums">{fmtHrs(doneHours)}h logged</span>
+                  <span className="text-[0.625rem] text-[var(--space-text-muted)] tabular-nums">{fmtHrs(doneHours)}h logged</span>
                 </div>
 
                 {logged.length > 0 && (
@@ -1699,7 +1699,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                         <div key={l.id} className="p-2">{renderEditor()}</div>
                       ) : (
                         <div key={l.id} className="flex items-center gap-2.5 px-3 py-2.5 group">
-                          <span className="text-[10px] tabular-nums text-[var(--space-text-muted)] shrink-0 w-14">{fmtDay(l.date).replace(/, \d{4}$/, '')}</span>
+                          <span className="text-[0.625rem] tabular-nums text-[var(--space-text-muted)] shrink-0 w-14">{fmtDay(l.date).replace(/, \d{4}$/, '')}</span>
                           <span className="flex-1 min-w-0 text-xs text-[var(--space-text-secondary)] truncate">
                             {l.description || CATEGORY_LABEL[(l.category ?? 'work') as TimeEntryCategory]}
                           </span>
@@ -1732,7 +1732,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                     onChange={(e) => setDDesc(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter') handleAddDone() }}
                     placeholder="What was done"
-                    className={cn(inputCls, 'flex-1 min-w-[160px] py-1.5 text-xs')}
+                    className={cn(inputCls, 'flex-1 min-w-[10rem] py-1.5 text-xs')}
                   />
                   <button onClick={handleAddDone} disabled={addingDone || !(parseFloat(dHours) > 0)} className={accentBtn}>
                     {addingDone ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />} Log
@@ -1753,9 +1753,9 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-[var(--space-text-primary)] leading-tight">
-                    Work recap {scopeRecap && <span className="text-[10px] font-medium text-[var(--space-accent)]">· composed</span>}
+                    Work recap {scopeRecap && <span className="text-[0.625rem] font-medium text-[var(--space-accent)]">· composed</span>}
                   </p>
-                  <p className="text-[11px] text-[var(--space-text-muted)] mt-0.5">
+                  <p className="text-[0.6875rem] text-[var(--space-text-muted)] mt-0.5">
                     {doneHours > 0
                       ? `A client-facing deck: ${fmtHrs(doneHours)}h already delivered${plannedHours > 0 ? `, and the ${fmtHrs(plannedHours)}h you propose next` : ''}.`
                       : 'A client-facing deck of the work you propose — pairs with the proposal.'}
@@ -1786,7 +1786,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                     <p className="text-sm font-semibold text-[var(--space-text-primary)] leading-tight">
                       {proposal?.sentAt ? 'Proposal sent — review or start the retainer' : 'Build the proposal'}
                     </p>
-                    <p className="text-[11px] text-[var(--space-text-muted)] mt-0.5">
+                    <p className="text-[0.6875rem] text-[var(--space-text-muted)] mt-0.5">
                       {proposal?.sentAt
                         ? `${fmt(proposal.monthlyFee)}/mo · ${fmtHrs(proposal.hoursPerMonth)} hrs · sent ${fmtDay(proposal.sentAt)}${proposal.sentTo.length ? ` to ${proposal.sentTo.join(', ')}` : ''}`
                         : pitchedTotal > 0
@@ -1800,16 +1800,16 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                 <div className="rounded-xl border p-4 sm:p-5 space-y-4 bg-[var(--space-bg-card-hover)]" style={{ borderColor: 'var(--space-accent-glow)' }}>
                   <div className="flex items-center gap-2">
                     <FileSignature className="size-3.5" style={{ color: 'var(--space-accent)' }} />
-                    <p className="text-[9px] font-bold tracking-[0.22em] uppercase text-[var(--space-text-tertiary)]">Proposal</p>
+                    <p className="text-[0.5625rem] font-bold tracking-[0.22em] uppercase text-[var(--space-text-tertiary)]">Proposal</p>
                     {proposal?.sentAt && (
-                      <span className="text-[10px] text-[var(--space-text-muted)]">
+                      <span className="text-[0.625rem] text-[var(--space-text-muted)]">
                         Sent {fmtDay(proposal.sentAt)}{proposal.sentTo.length ? ` · ${proposal.sentTo.join(', ')}` : ''}
                       </span>
                     )}
                   </div>
 
                   {pitchedTotal > 0 && (
-                    <p className="text-[11px] text-[var(--space-text-muted)] leading-relaxed">
+                    <p className="text-[0.6875rem] text-[var(--space-text-muted)] leading-relaxed">
                       Suggested from the pitch: <span className="text-[var(--space-text-secondary)] font-medium tabular-nums">{fmtHrs(plannedHours)}h/mo planned</span>
                       {doneHours > 0 && <> · <span className="text-[var(--space-text-secondary)] font-medium tabular-nums">{fmtHrs(doneHours)}h already delivered</span></>}
                     </p>
@@ -1835,7 +1835,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                         style={aTier === t ? { borderColor: 'var(--space-accent)' } : {}}
                       >
                         {TIER_LABEL[t]}
-                        <span className="text-[9px] font-normal text-[var(--space-text-muted)]">
+                        <span className="text-[0.5625rem] font-normal text-[var(--space-text-muted)]">
                           {t === 'enterprise' ? 'custom' : `${TIER_PRESETS[t].hours}h · ${fmt(TIER_PRESETS[t].fee)}`}
                         </span>
                       </button>
@@ -1884,7 +1884,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                   <label className="block">
                     <span className={fieldLabel}>First cycle starts</span>
                     <input type="date" value={aStart} onChange={(e) => setAStart(e.target.value)} className={cn(inputCls, 'mt-1')} />
-                    <span className="block text-[10px] text-[var(--space-text-muted)] mt-1">
+                    <span className="block text-[0.625rem] text-[var(--space-text-muted)] mt-1">
                       Quoted on the proposal, and the day of the month that anchors every future cycle.
                     </span>
                   </label>
@@ -1901,7 +1901,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                       </label>
                     )}
                     <label className="block">
-                      <span className="text-[10px] text-[var(--space-text-muted)]">Cover note (appears on the PDF and in the email)</span>
+                      <span className="text-[0.625rem] text-[var(--space-text-muted)]">Cover note (appears on the PDF and in the email)</span>
                       <textarea
                         value={proposalNote}
                         onChange={(e) => setProposalNote(e.target.value)}
@@ -1917,11 +1917,11 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                     <div className="space-y-2.5 rounded-lg border px-3 py-2.5" style={{ borderColor: 'var(--space-accent-glow)', background: 'var(--space-accent-soft)' }}>
                       <p className={fieldLabel}>Send proposal</p>
                       <label className="block">
-                        <span className="text-[10px] text-[var(--space-text-muted)]">To (comma-separated)</span>
+                        <span className="text-[0.625rem] text-[var(--space-text-muted)]">To (comma-separated)</span>
                         <input value={sendTo} onChange={(e) => setSendTo(e.target.value)} placeholder="client@example.com" className={cn(inputCls, 'mt-1 text-xs py-1.5')} />
                       </label>
                       <label className="block">
-                        <span className="text-[10px] text-[var(--space-text-muted)]">Message (optional — defaults to the cover note)</span>
+                        <span className="text-[0.625rem] text-[var(--space-text-muted)]">Message (optional — defaults to the cover note)</span>
                         <textarea value={sendMsg} onChange={(e) => setSendMsg(e.target.value)} rows={2} className={cn(inputCls, 'mt-1 resize-y text-xs')} />
                       </label>
                       <label className="flex items-start gap-2 cursor-pointer">
@@ -1986,7 +1986,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                       Close
                     </button>
                   </div>
-                  <p className="text-[10px] text-[var(--space-text-muted)] leading-relaxed">
+                  <p className="text-[0.625rem] text-[var(--space-text-muted)] leading-relaxed">
                     Previewing and sending never bill anything. <span className="text-[var(--space-text-secondary)]">Start retainer</span> is the step that opens the first cycle — do it once the client has accepted.
                   </p>
                 </div>
@@ -2270,7 +2270,7 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                     <div className="rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card-hover)] p-4 space-y-3.5">
                       <div className="flex items-center gap-2">
                         <PowerOff className="size-3.5 text-red-400" />
-                        <p className="text-[9px] font-bold tracking-[0.22em] uppercase text-[var(--space-text-tertiary)]">End the plan</p>
+                        <p className="text-[0.5625rem] font-bold tracking-[0.22em] uppercase text-[var(--space-text-tertiary)]">End the plan</p>
                       </div>
 
                       <div className="space-y-1.5">
@@ -2290,21 +2290,21 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
                             <input type="radio" name="end-when" checked={endWhen === opt.id} onChange={() => setEndWhen(opt.id)} className="mt-0.5 accent-[var(--space-accent)]" />
                             <span className="min-w-0">
                               <span className="block text-xs font-semibold leading-tight text-[var(--space-text-primary)]">{opt.title}</span>
-                              <span className="block text-[10px] text-[var(--space-text-muted)] mt-0.5 leading-snug">{opt.hint}</span>
+                              <span className="block text-[0.625rem] text-[var(--space-text-muted)] mt-0.5 leading-snug">{opt.hint}</span>
                             </span>
                           </label>
                         ))}
                       </div>
 
                       {endWhen === 'now' && used > 0 && !cycleInvoice && (
-                        <p className="flex items-start gap-1.5 text-[10px] text-amber-500 leading-snug">
+                        <p className="flex items-start gap-1.5 text-[0.625rem] text-amber-500 leading-snug">
                           <AlertTriangle className="size-3 shrink-0 mt-0.5" />
                           {fmtHrs(used)}h logged this cycle and no invoice raised yet — ending now leaves it uninvoiced.
                           Send the invoice from Documents first if you want to bill it.
                         </p>
                       )}
 
-                      <p className="text-[10px] text-[var(--space-text-muted)] leading-relaxed">
+                      <p className="text-[0.625rem] text-[var(--space-text-muted)] leading-relaxed">
                         The engagement closes either way. Logged hours are kept, and the record stays
                         reachable read-only — search the client here to walk its cycles, or to invoice
                         one the wind-down left unbilled. Fixed-price work from here is a package: build
@@ -2575,7 +2575,7 @@ function BoardRow({
           {row.clientName}
           {row.clientCompany && <span className="font-normal text-[var(--space-text-muted)]"> · {row.clientCompany}</span>}
         </p>
-        <p className="text-[11px] text-[var(--space-text-muted)] truncate">
+        <p className="text-[0.6875rem] text-[var(--space-text-muted)] truncate">
           {isScopingRow
             ? (row.proposalSentAt ? `Scoping · proposal sent ${fmtDay(row.proposalSentAt)}` : 'Scoping · no plan yet')
             : TIER_LABEL[row.tier]}
@@ -2589,7 +2589,7 @@ function BoardRow({
           <span className="text-xs tabular-nums shrink-0 text-[var(--space-text-secondary)]">
             {fmtHrs((row.pitch?.plannedHours ?? 0) + (row.pitch?.doneHours ?? 0))}h pitched
           </span>
-          <span className="text-[11px] font-semibold shrink-0 w-[86px] text-right" style={{ color: 'var(--space-accent)' }}>
+          <span className="text-[0.6875rem] font-semibold shrink-0 w-[5.375rem] text-right" style={{ color: 'var(--space-accent)' }}>
             {row.proposalSentAt ? 'Awaiting reply' : 'Set pricing'}
           </span>
         </>
@@ -2598,10 +2598,10 @@ function BoardRow({
           <div className="hidden sm:block w-24 h-1.5 rounded-full bg-[var(--space-bg-card)] overflow-hidden shrink-0">
             <div className="h-full rounded-full" style={{ width: `${row.pct}%`, background: amber ? 'rgb(245 158 11)' : 'var(--space-accent)' }} />
           </div>
-          <span className={cn('text-xs tabular-nums shrink-0 w-[68px] text-right', amber ? 'text-amber-500 font-semibold' : 'text-[var(--space-text-secondary)]')}>
+          <span className={cn('text-xs tabular-nums shrink-0 w-[4.25rem] text-right', amber ? 'text-amber-500 font-semibold' : 'text-[var(--space-text-secondary)]')}>
             {row.cap > 0 ? `${fmtHrs(row.used)}/${fmtHrs(row.cap)}h` : `${fmtHrs(row.used)}h`}
           </span>
-          <span className="text-[11px] tabular-nums text-[var(--space-text-muted)] shrink-0 w-14 text-right">{row.daysLeft}d left</span>
+          <span className="text-[0.6875rem] tabular-nums text-[var(--space-text-muted)] shrink-0 w-14 text-right">{row.daysLeft}d left</span>
         </>
       )}
     </button>

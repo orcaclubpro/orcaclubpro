@@ -197,7 +197,7 @@ function ProjectDetail({
       }
     >
       {project.description && (
-        <p className="mb-8 max-w-prose text-[14px] leading-relaxed text-[var(--space-text-secondary)]">
+        <p className="mb-8 max-w-prose text-[16px] leading-relaxed text-[var(--space-text-secondary)]">
           {project.description}
         </p>
       )}
@@ -207,7 +207,7 @@ function ProjectDetail({
       <Section
         heading="Timeline"
         aside={
-          <span className="text-[12px] text-[var(--space-text-muted)]">
+          <span className="text-[14px] text-[var(--space-text-muted)]">
             Sprints and milestones, newest first
           </span>
         }
@@ -247,10 +247,10 @@ function CurrentSprint({
       >
         <div className="mb-3 flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="truncate text-[14px] font-semibold text-[var(--space-text-primary)]">
+            <p className="truncate text-[16px] font-semibold text-[var(--space-text-primary)]">
               {sprint.name}
             </p>
-            <p className="mt-0.5 text-[12px] text-[var(--space-text-muted)]">
+            <p className="mt-0.5 text-[14px] text-[var(--space-text-muted)]">
               {shortDate.format(new Date(sprint.startDate))} –{' '}
               {shortDate.format(new Date(sprint.endDate))}
             </p>
@@ -260,7 +260,7 @@ function CurrentSprint({
 
         {sprint.totalTasksCount > 0 ? (
           <>
-            <div className="mb-1.5 flex items-baseline justify-between text-[12px] text-[var(--space-text-secondary)]">
+            <div className="mb-1.5 flex items-baseline justify-between text-[14px] text-[var(--space-text-secondary)]">
               <span className="tabular-nums">
                 {sprint.completedTasksCount} of {sprint.totalTasksCount} tasks done
               </span>
@@ -284,11 +284,11 @@ function CurrentSprint({
             </div>
           </>
         ) : (
-          <p className="text-[12px] text-[var(--space-text-muted)]">No tasks assigned yet.</p>
+          <p className="text-[14px] text-[var(--space-text-muted)]">No tasks assigned yet.</p>
         )}
 
         {sprint.goalDescription && (
-          <p className="mt-4 border-t border-[var(--space-border-hard)] pt-3 text-[13px] leading-relaxed text-[var(--space-text-secondary)]">
+          <p className="mt-4 border-t border-[var(--space-border-hard)] pt-3 text-[15px] leading-relaxed text-[var(--space-text-secondary)]">
             {sprint.goalDescription}
           </p>
         )}
@@ -309,10 +309,10 @@ function EmptyState({
   return (
     <div className="mx-auto max-w-sm text-center">
       <FolderOpen className="mx-auto mb-4 size-8 text-[var(--space-text-muted)]" />
-      <p className="mb-1 text-[15px] font-semibold text-[var(--space-text-primary)]">
+      <p className="mb-1 text-[17px] font-semibold text-[var(--space-text-primary)]">
         No projects yet
       </p>
-      <p className="mb-6 text-[13px] text-[var(--space-text-secondary)]">
+      <p className="mb-6 text-[15px] text-[var(--space-text-secondary)]">
         {canCreate
           ? 'Create a project to plan sprints and track milestones.'
           : 'Projects appear here once work is scheduled.'}

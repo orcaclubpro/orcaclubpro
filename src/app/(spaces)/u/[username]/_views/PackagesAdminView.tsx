@@ -283,7 +283,7 @@ function ProposalModal({
           {/* Optional add-ons — quoted for the client but outside the total */}
           {addOns.length > 0 && (
             <div>
-              <p className="text-[9px] font-bold tracking-[0.25em] uppercase text-[var(--space-text-muted)] mb-2.5">
+              <p className="text-[0.5625rem] font-bold tracking-[0.25em] uppercase text-[var(--space-text-muted)] mb-2.5">
                 Optional add-ons · {addOns.length}
               </p>
               <div className="space-y-1.5">
@@ -316,7 +316,7 @@ function ProposalModal({
                   )
                 })}
               </div>
-              <p className="text-[11px] text-[var(--space-text-muted)] mt-2 leading-relaxed">
+              <p className="text-[0.6875rem] text-[var(--space-text-muted)] mt-2 leading-relaxed">
                 Excluded from the total — the client sees these as options to request.
               </p>
             </div>
