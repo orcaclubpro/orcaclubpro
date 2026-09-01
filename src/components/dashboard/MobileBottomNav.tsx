@@ -32,7 +32,6 @@ const SETTLE = 'cubic-bezier(0.32, 0.72, 0, 1)'      // calm, no overshoot
 
 const OPEN_DELAY = 80    // ms — swallows a pointer sweeping across the bottom edge
 const CLOSE_DELAY = 400  // ms — survives a brief exit without flickering shut
-const REVEAL_MS = 1800   // ms — arrive open; a control nobody sees is a control nobody finds
 
 interface MobileBottomNavProps {
   /** Effective experience — reflects staff "view as client" preview. */
@@ -82,13 +81,12 @@ export function MobileBottomNav({ experience }: MobileBottomNavProps) {
     return () => cancelAnimationFrame(r)
   }, [])
 
-  // Arrive open, then settle to the line, so the collapse is witnessed rather
-  // than discovered later by accident.
+  // Arrive already closed. The bar is a known fixture rather than something to
+  // be discovered, so it starts as the line and stays out of the way until a
+  // pointer comes for it. Touch has no hover to bring it back, so there it
+  // stays open.
   useEffect(() => {
-    if (!canHover) { setOpen(true); return }
-    setOpen(true)
-    const t = setTimeout(() => setOpen(false), REVEAL_MS)
-    return () => clearTimeout(t)
+    setOpen(!canHover)
   }, [canHover])
 
   // The shell is sized explicitly in both states so width/height have real
@@ -185,6 +183,7 @@ export function MobileBottomNav({ experience }: MobileBottomNavProps) {
           'background-color 170ms linear',
           'border-color 170ms linear',
           'box-shadow 240ms linear',
+          'opacity 260ms linear',
         ].join(', ')
       : [
           `width ${COLLAPSE_MS}ms ${SETTLE}`,
@@ -193,6 +192,7 @@ export function MobileBottomNav({ experience }: MobileBottomNavProps) {
           'background-color 200ms linear 60ms',
           'border-color 140ms linear',
           'box-shadow 200ms linear',
+          'opacity 260ms linear',
         ].join(', ')
 
   const contentTransition = reduceMotion
