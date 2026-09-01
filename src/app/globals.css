@@ -290,11 +290,6 @@ body {
   .page-enter { animation: none; }
 }
 
-@keyframes navSlideUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
 @keyframes tabContentEnterFromRight {
   from { opacity: 0; transform: translateX(20px); }
   to   { opacity: 1; transform: translateX(0); }
