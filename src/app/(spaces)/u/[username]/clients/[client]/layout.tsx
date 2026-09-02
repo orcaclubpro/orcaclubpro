@@ -5,7 +5,7 @@ import config from '@payload-config'
 import { getClientAccountDetail } from './detail-data'
 import { AlertCircle } from 'lucide-react'
 import { CollapsibleSidebar } from '@/components/dashboard/CollapsibleSidebar'
-import { ClientSidebar, ClientSidebarContent } from '@/components/dashboard/ClientSidebar'
+import { ClientSidebar, ClientSidebarContent, ClientSidebarRail } from '@/components/dashboard/ClientSidebar'
 import { SetHeaderTitle } from '@/components/layout/SetHeaderTitle'
 import { PageEnterAnimation } from '@/components/dashboard/PageEnterAnimation'
 import type { ClientAccount, User as UserType } from '@/types/payload-types'
@@ -126,7 +126,15 @@ export default async function ClientDetailLayout({
     <div className="lg:flex" style={{ minHeight: 'calc((100vh - 64px) / 1.3)' }}>
       <SetHeaderTitle title={clientAccount.name} />
 
-      <CollapsibleSidebar railLabel="Client">
+      <CollapsibleSidebar
+        railLabel="Client"
+        rail={
+          <ClientSidebarRail
+            name={clientAccount.name}
+            accountBalance={clientAccount.accountBalance ?? 0}
+          />
+        }
+      >
         <ClientSidebarContent {...sidebarProps} />
       </CollapsibleSidebar>
 

@@ -3,31 +3,24 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import {
-  Mail,
-  Building2,
-  DollarSign,
-  ShoppingCart,
-  FolderKanban,
-  Users,
-  TrendingUp,
-  AlertCircle,
-  SlidersHorizontal,
-  Loader2,
-  Check,
-  UserPlus,
-  KeyRound,
-  Shield,
-  User,
-  Pencil,
-  X,
-  ChevronDown,
-} from 'lucide-react'
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
+import { ChevronDown, Loader2, X } from 'lucide-react'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { updateClientAccount, inviteClientUser, updateClientUserEmail, removeClientUser } from '@/actions/clients'
+import { updateClientAccount } from '@/actions/clients'
+import { TeamModal } from '@/components/dashboard/ClientTeamModal'
+import { toneColor, type StatusTone } from '@/lib/dashboard/status'
+import { fadeUp, stagger } from '@/lib/animations'
+import { cn } from '@/lib/utils'
+
+// ─── The client panel ────────────────────────────────────────────────────────
+// Written to the same rules as the staff ledger (`_views/AdminHomeView`):
+//
+//   • Every colour is a --space-* token or a status-ramp tone. No raw hex, no
+//     Tailwind palette classes — `sonar` (warm paper) is the default theme.
+//   • Type is authored in real px inside .space-true-scale, not in rem against
+//     the portal's 1.5 root scale.
+//   • Hairlines, not cards. A row's status lives in its left rule, so the panel
+//     needs no pills, badges or icon chips to say what state something is in.
 
 export interface ClientSidebarProps {
   id: string
@@ -59,413 +52,160 @@ function getInitials(name: string) {
     .join('')
 }
 
-function fmt(n: number) {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n)
-}
+const usd = new Intl.NumberFormat('en-US', {
+  style: 'currency', currency: 'USD', maximumFractionDigits: 0,
+})
 
-// ── Team Modify Modal ───────────────────────────────────────────────────────────
+// ─── Panel furniture ─────────────────────────────────────────────────────────
 
-function TeamModal({
-  open,
-  onClose,
-  clientAccountId,
-  clientAccountName,
-  teamMembers,
-  clientUsers,
-}: {
-  open: boolean
-  onClose: () => void
-  clientAccountId: string
-  clientAccountName: string
-  teamMembers: Array<{ id: string; name: string; title?: string | null }>
-  clientUsers: Array<{ id: string; name: string; email: string }>
-}) {
-  const router = useRouter()
-  const [tab, setTab] = useState<'admin' | 'clients'>('admin')
-
-  // ── Add client form ──
-  const [addForm, setAddForm] = useState({ firstName: '', lastName: '', email: '' })
-  const [addLoading, setAddLoading] = useState(false)
-  const [addError, setAddError] = useState<string | null>(null)
-  const [addSuccess, setAddSuccess] = useState<string | null>(null) // name of added person
-
-  // ── Client user local state (for optimistic removal) ──
-  const [clientList, setClientList] = useState(clientUsers)
-  const [removingClientId, setRemovingClientId] = useState<string | null>(null)
-
-  async function handleRemoveClient(userId: string) {
-    setRemovingClientId(userId)
-    const result = await removeClientUser({ userId })
-    setRemovingClientId(null)
-    if (result.success) {
-      setClientList((c) => c.filter((u) => u.id !== userId))
-      router.refresh()
-    }
-  }
-
-  // ── Per-client password reset ──
-  const [resetStates, setResetStates] = useState<Record<string, 'idle' | 'loading' | 'sent' | 'error'>>({})
-
-  // ── Per-client email editing ──
-  const [emailEditing, setEmailEditing] = useState<{ id: string; value: string } | null>(null)
-  const [emailSaving, setEmailSaving] = useState(false)
-  const [emailError, setEmailError] = useState<string | null>(null)
-
-  async function handleSaveEmail() {
-    if (!emailEditing) return
-    if (!emailEditing.value.trim()) {
-      setEmailError('Email is required')
-      return
-    }
-    setEmailSaving(true)
-    setEmailError(null)
-    const result = await updateClientUserEmail({ userId: emailEditing.id, email: emailEditing.value.trim() })
-    setEmailSaving(false)
-    if (result.success) {
-      setEmailEditing(null)
-      router.refresh()
-    } else {
-      setEmailError(result.error ?? 'Failed to update email')
-    }
-  }
-
-  function resetAddForm() {
-    setAddForm({ firstName: '', lastName: '', email: '' })
-    setAddError(null)
-    setAddSuccess(null)
-  }
-
-  async function handleAddClient() {
-    if (!addForm.firstName.trim() || !addForm.lastName.trim() || !addForm.email.trim()) {
-      setAddError('All fields are required')
-      return
-    }
-    setAddLoading(true)
-    setAddError(null)
-    const result = await inviteClientUser({
-      clientAccountId,
-      email: addForm.email.trim(),
-      firstName: addForm.firstName.trim(),
-      lastName: addForm.lastName.trim(),
-    })
-    setAddLoading(false)
-    if (result.success) {
-      setAddSuccess(addForm.firstName.trim())
-      router.refresh()
-    } else {
-      setAddError(result.error ?? 'Failed to add client')
-    }
-  }
-
-  async function handlePasswordReset(email: string) {
-    setResetStates((s) => ({ ...s, [email]: 'loading' }))
-    try {
-      const res = await fetch('/api/auth/forgot-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      })
-      setResetStates((s) => ({ ...s, [email]: res.ok ? 'sent' : 'error' }))
-    } catch {
-      setResetStates((s) => ({ ...s, [email]: 'error' }))
-    }
-    setTimeout(() => setResetStates((s) => ({ ...s, [email]: 'idle' })), 3000)
-  }
-
+function SectionLabel({ children, aside }: { children: React.ReactNode; aside?: React.ReactNode }) {
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) { onClose(); resetAddForm() } }}>
-      <DialogContent className="bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] text-[var(--space-text-primary)] p-0 overflow-hidden sm:max-w-[32.5rem] gap-0">
-        <DialogTitle className="sr-only">Manage Team</DialogTitle>
-
-        {/* Header */}
-        <div className="px-7 pt-7 pb-0">
-          <p className="text-xs uppercase tracking-widest text-[var(--space-text-muted)] font-semibold mb-1">Team</p>
-          <h3 className="text-lg font-bold text-[var(--space-text-primary)] mb-5">
-            {clientAccountName}
-          </h3>
-
-          {/* Tabs */}
-          <div className="flex gap-1 border-b border-[var(--space-border-hard)]">
-            {([
-              { key: 'admin' as const,   label: 'Admin / Developer', Icon: Shield, count: teamMembers.length  },
-              { key: 'clients' as const, label: 'Clients',       Icon: User,   count: clientList.length  },
-            ]).map(({ key, label, Icon, count }) => (
-              <button
-                key={key}
-                onClick={() => setTab(key)}
-                className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold border-b-2 -mb-px transition-colors ${
-                  tab === key
-                    ? 'border-[var(--space-accent)] text-[var(--space-accent)]'
-                    : 'border-transparent text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)]'
-                }`}
-              >
-                <Icon className="size-3.5" />
-                {label}
-                <span className={`text-[0.625rem] tabular-nums px-1.5 py-0.5 rounded-full font-normal ${
-                  tab === key ? 'bg-[rgba(139,156,182,0.06)] text-[var(--space-accent)]' : 'bg-[var(--space-bg-card-hover)] text-[var(--space-text-muted)]'
-                }`}>
-                  {count}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Tab content */}
-        <div className="px-7 py-5 min-h-[12.5rem] max-h-[26.25rem] overflow-y-auto">
-
-          {/* Admin / Staff tab */}
-          {tab === 'admin' && (
-            <div className="space-y-2">
-              {teamMembers.length === 0 ? (
-                <p className="text-sm text-[var(--space-text-muted)] py-4 text-center">No developers assigned to this account.</p>
-              ) : (
-                teamMembers.map((m) => (
-                  <div key={m.id} className="flex items-center gap-3 rounded-lg bg-[var(--space-bg-card)] border border-[var(--space-border-hard)] px-4 py-3">
-                    <div className="size-7 rounded-lg bg-[var(--space-bg-card-hover)] flex items-center justify-center shrink-0">
-                      <Shield className="size-3.5 text-[var(--space-text-muted)]" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-[var(--space-text-tertiary)] truncate">{m.name}</p>
-                      {m.title && (
-                        <p className="text-[0.6875rem] text-[var(--space-text-muted)] truncate">{m.title}</p>
-                      )}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          )}
-
-          {/* Clients tab */}
-          {tab === 'clients' && (
-            <div className="space-y-5">
-              {/* Existing clients */}
-              <div className="space-y-2">
-                {clientList.length === 0 ? (
-                  <p className="text-sm text-[var(--space-text-muted)] py-2 text-center">No client users yet.</p>
-                ) : (
-                  clientList.map((u) => {
-                    const rs = resetStates[u.email] ?? 'idle'
-                    const isEditing = emailEditing?.id === u.id
-                    return (
-                      <div key={u.id} className="rounded-lg bg-[var(--space-bg-card)] border border-[var(--space-border-hard)] px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <div className="size-7 rounded-lg bg-[rgba(139,156,182,0.06)] flex items-center justify-center shrink-0">
-                            <User className="size-3.5" style={{ color: 'var(--space-accent)', opacity: 0.6 }} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm text-[var(--space-text-tertiary)] truncate">{u.name}</p>
-                            {!isEditing && (
-                              <p className="text-[0.6875rem] text-[var(--space-text-muted)] truncate">{u.email}</p>
-                            )}
-                          </div>
-                          {!isEditing && (
-                            <>
-                              <button
-                                onClick={() => { setEmailEditing({ id: u.id, value: u.email }); setEmailError(null) }}
-                                className="flex items-center gap-1 px-2 py-1.5 rounded-md border border-[var(--space-border-hard)] text-[0.625rem] text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] hover:border-[var(--space-border-hard)] hover:bg-[var(--space-bg-card-hover)] transition-all shrink-0"
-                              >
-                                <Pencil className="size-3" />
-                                Email
-                              </button>
-                              <button
-                                onClick={() => handlePasswordReset(u.email)}
-                                disabled={rs === 'loading' || rs === 'sent'}
-                                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-[var(--space-border-hard)] text-[0.625rem] text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] hover:border-[var(--space-border-hard)] hover:bg-[var(--space-bg-card-hover)] transition-all disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-                              >
-                                {rs === 'loading' ? (
-                                  <Loader2 className="size-3 animate-spin" />
-                                ) : rs === 'sent' ? (
-                                  <Check className="size-3 text-emerald-400" />
-                                ) : (
-                                  <KeyRound className="size-3" />
-                                )}
-                                <span className={rs === 'sent' ? 'text-emerald-400' : rs === 'error' ? 'text-red-400' : ''}>
-                                  {rs === 'loading' ? 'Sending' : rs === 'sent' ? 'Sent' : rs === 'error' ? 'Failed' : 'Reset'}
-                                </span>
-                              </button>
-                              <button
-                                onClick={() => handleRemoveClient(u.id)}
-                                disabled={removingClientId === u.id}
-                                title="Remove client access"
-                                className="flex items-center justify-center size-7 rounded-md border border-[var(--space-border-hard)] text-[var(--space-text-muted)] hover:text-red-400 hover:border-red-500/20 hover:bg-red-500/[0.05] transition-all shrink-0 disabled:opacity-40"
-                              >
-                                {removingClientId === u.id
-                                  ? <Loader2 className="size-3 animate-spin" />
-                                  : <X className="size-3" />
-                                }
-                              </button>
-                            </>
-                          )}
-                        </div>
-                        {isEditing && (
-                          <div className="mt-2.5 space-y-1.5">
-                            <div className="flex items-center gap-1.5">
-                              <Input
-                                type="email"
-                                value={emailEditing.value}
-                                onChange={(e) => setEmailEditing((prev) => prev ? { ...prev, value: e.target.value } : null)}
-                                autoFocus
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') handleSaveEmail()
-                                  if (e.key === 'Escape') { setEmailEditing(null); setEmailError(null) }
-                                }}
-                                className="flex-1 h-8 text-xs bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] focus-visible:ring-[rgba(139,156,182,0.20)] focus-visible:ring-1"
-                              />
-                              <button
-                                onClick={handleSaveEmail}
-                                disabled={emailSaving}
-                                className="flex items-center justify-center size-8 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 transition-colors shrink-0 disabled:opacity-50"
-                              >
-                                {emailSaving ? <Loader2 className="size-3 animate-spin" /> : <Check className="size-3" />}
-                              </button>
-                              <button
-                                onClick={() => { setEmailEditing(null); setEmailError(null) }}
-                                disabled={emailSaving}
-                                className="flex items-center justify-center size-8 rounded-md border border-[var(--space-border-hard)] text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] hover:bg-[var(--space-bg-card-hover)] transition-colors shrink-0"
-                              >
-                                <X className="size-3" />
-                              </button>
-                            </div>
-                            {emailError && (
-                              <p className="text-[0.625rem] text-red-400">{emailError}</p>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })
-                )}
-              </div>
-
-              {/* Divider */}
-              <div className="border-t border-[var(--space-border-hard)]" />
-
-              {/* Add client form */}
-              {addSuccess ? (
-                <div className="flex flex-col items-center text-center gap-3 py-4">
-                  <div className="size-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-                    <Check className="size-5 text-emerald-400" strokeWidth={2.5} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-[var(--space-text-primary)]">Invite sent</p>
-                    <p className="text-xs text-[var(--space-text-muted)] mt-0.5">
-                      <span className="text-[var(--space-text-tertiary)]">{addSuccess}</span> will receive a setup email.
-                    </p>
-                  </div>
-                  <button
-                    onClick={resetAddForm}
-                    className="text-xs hover:underline mt-1"
-                    style={{ color: 'var(--space-accent)' }}
-                  >
-                    Add another
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <p className="text-[0.625rem] uppercase tracking-widest text-[var(--space-text-muted)] font-semibold">Add Client</p>
-                  <div className="grid grid-cols-2 gap-2.5">
-                    <div className="space-y-1.5">
-                      <Label className="text-[var(--space-text-muted)] text-xs">First name</Label>
-                      <Input
-                        value={addForm.firstName}
-                        onChange={(e) => setAddForm((f) => ({ ...f, firstName: e.target.value }))}
-                        placeholder="Jane"
-                        className="bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)] h-9 text-sm focus-visible:ring-[rgba(139,156,182,0.20)]"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-[var(--space-text-muted)] text-xs">Last name</Label>
-                      <Input
-                        value={addForm.lastName}
-                        onChange={(e) => setAddForm((f) => ({ ...f, lastName: e.target.value }))}
-                        placeholder="Doe"
-                        className="bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)] h-9 text-sm focus-visible:ring-[rgba(139,156,182,0.20)]"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-[var(--space-text-muted)] text-xs">Email</Label>
-                    <Input
-                      type="email"
-                      value={addForm.email}
-                      onChange={(e) => setAddForm((f) => ({ ...f, email: e.target.value }))}
-                      placeholder="jane@example.com"
-                      className="bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)] h-9 text-sm focus-visible:ring-[rgba(139,156,182,0.20)]"
-                      onKeyDown={(e) => e.key === 'Enter' && handleAddClient()}
-                    />
-                  </div>
-                  {addError && (
-                    <p className="text-xs text-red-400">{addError}</p>
-                  )}
-                  <Button
-                    onClick={handleAddClient}
-                    disabled={addLoading}
-                    className="w-full bg-[var(--space-accent)] hover:bg-[var(--space-accent)]/90 text-white font-semibold gap-2 h-9"
-                  >
-                    {addLoading ? (
-                      <><Loader2 className="size-3.5 animate-spin" /> Adding...</>
-                    ) : (
-                      <><UserPlus className="size-3.5" /> Add &amp; Send Setup Email</>
-                    )}
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="flex justify-end px-7 py-4 border-t border-[var(--space-border-hard)]">
-          <Button
-            variant="ghost"
-            onClick={() => { onClose(); resetAddForm() }}
-            className="text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] hover:bg-[var(--space-bg-card-hover)] text-sm"
-          >
-            Close
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+    <div className="flex items-baseline gap-3 pb-3">
+      <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--space-text-tertiary)]">
+        {children}
+      </span>
+      {aside && <div className="ml-auto text-[12px] text-[var(--space-text-tertiary)]">{aside}</div>}
+    </div>
   )
 }
 
-// ── Shared sidebar content ─────────────────────────────────────────────────────
+/** A quiet text control — the panel's only button shape. */
+function QuietButton({
+  children, onClick, disabled,
+}: {
+  children: React.ReactNode
+  onClick: () => void
+  disabled?: boolean
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="shrink-0 rounded-md px-2 py-1 text-[12px] text-[var(--space-text-tertiary)] transition-colors duration-150 hover:bg-[var(--space-bg-card)] hover:text-[var(--space-text-primary)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--space-accent)] disabled:opacity-50"
+    >
+      {children}
+    </button>
+  )
+}
+
+/**
+ * One of the four standing figures. Dividers sit *between* figures, so which
+ * edges get a rule depends on the cell's place in the 2×2 — same rule the
+ * ledger's `figureEdges` follows.
+ */
+function Figure({
+  label, value, tone, index,
+}: {
+  label: string
+  value: string
+  tone?: StatusTone
+  index: number
+}) {
+  return (
+    <div
+      className={cn(
+        'py-4',
+        index % 2 === 0 ? 'pr-4' : 'border-l border-[var(--space-divider)] pl-4',
+        index >= 2 && 'border-t border-[var(--space-divider)]',
+      )}
+    >
+      <span
+        className="block truncate text-[21px] font-semibold leading-none tracking-[-0.02em] tabular-nums"
+        style={{ color: tone ? toneColor(tone) : 'var(--space-text-primary)' }}
+      >
+        {value}
+      </span>
+      <span className="mt-2 block text-[12px] text-[var(--space-text-tertiary)]">{label}</span>
+    </div>
+  )
+}
+
+// `md:text-[14px]` is not redundant: shadcn's Input carries a `md:text-base`
+// that tailwind-merge cannot drop against a base-size class, and 1rem is 24px
+// under the portal's root scale.
+const fieldClass =
+  'h-[34px] rounded-md border-[var(--space-border-hard)] bg-[var(--space-bg-card)] px-2.5 text-[14px] md:text-[14px] text-[var(--space-text-primary)] placeholder:text-[var(--space-text-tertiary)] shadow-none focus-visible:border-[var(--space-accent)] focus-visible:ring-0'
+
+function Field({
+  label, value, onChange, type, placeholder, autoFocus,
+}: {
+  label: string
+  value: string
+  onChange: (v: string) => void
+  type?: string
+  placeholder?: string
+  autoFocus?: boolean
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-[11px] uppercase tracking-[0.14em] text-[var(--space-text-tertiary)]">
+        {label}
+      </span>
+      <Input
+        type={type}
+        value={value}
+        autoFocus={autoFocus}
+        placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+        className={fieldClass}
+      />
+    </label>
+  )
+}
+
+// ─── The collapsed rail ──────────────────────────────────────────────────────
+// What survives at 54px: who this is, and whether they owe anything.
+
+export function ClientSidebarRail({ name, accountBalance }: { name: string; accountBalance: number }) {
+  return (
+    <>
+      <span className="flex flex-col items-center gap-2">
+        <span className="text-[13px] font-semibold tracking-[0.04em] text-[var(--space-text-primary)]">
+          {getInitials(name)}
+        </span>
+        {accountBalance > 0 && (
+          <span
+            className="size-[5px] rounded-full"
+            style={{ background: toneColor('warn') }}
+            aria-hidden="true"
+          />
+        )}
+      </span>
+      <span className="min-h-0 flex-1 overflow-hidden text-[11px] uppercase tracking-[0.18em] [writing-mode:vertical-rl]">
+        {name}
+      </span>
+    </>
+  )
+}
+
+// ─── Shared panel content ────────────────────────────────────────────────────
 
 export function ClientSidebarContent(props: ClientSidebarProps) {
   const {
-    id,
-    name,
-    firstName,
-    lastName,
-    email,
-    company,
-    accountBalance,
-    totalRevenue,
-    ordersCount,
-    projectsCount,
-    stripeCustomerId,
-    teamMembers,
-    clientUsers = [],
-    username,
-    allClients,
+    id, name, firstName, lastName, email, company,
+    accountBalance, totalRevenue, ordersCount, projectsCount,
+    stripeCustomerId, teamMembers, clientUsers = [], username, allClients,
   } = props
 
   const router = useRouter()
+  const reduce = useReducedMotion()
   const [editing, setEditing] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [teamModalOpen, setTeamModalOpen] = useState(false)
-  const [clientsOpen, setClientsOpen] = useState(false)
+  const [switcherOpen, setSwitcherOpen] = useState(false)
   const [form, setForm] = useState({ name, firstName, lastName, company: company ?? '', email: email ?? '' })
 
-  const initials = getInitials(name)
   const hasOutstanding = accountBalance > 0
-  const allUsers = [
-    ...teamMembers.map((m) => ({ ...m, type: 'developer' as const })),
-    ...clientUsers.map((u) => ({ ...u, type: 'client' as const })),
+  const people = [
+    ...teamMembers.map((m) => ({ id: m.id, name: m.name, role: m.title ?? 'developer', staff: true })),
+    ...clientUsers.map((u) => ({ id: u.id, name: u.name, role: 'client', staff: false })),
   ]
+
+  // The pipeline hairline: what has been collected against what is still owed.
+  const booked = totalRevenue + accountBalance
+  const paidShare = booked > 0 ? (totalRevenue / booked) * 100 : 0
 
   async function handleSave() {
     setLoading(true)
@@ -494,280 +234,256 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
   }
 
   return (
-    <div className="flex flex-col h-full">
-
-      {/* ── Nav ── */}
-      <div className="px-5 pt-4 pb-3 border-b border-[var(--space-border-hard)] shrink-0">
+    <motion.div
+      variants={reduce ? undefined : stagger}
+      initial="initial"
+      animate="animate"
+      className="flex flex-col"
+    >
+      {/* ── Back ─────────────────────────────────────────────────────────── */}
+      <motion.div variants={reduce ? undefined : fadeUp} className="border-b border-[var(--space-divider)]">
         <Link
           href={`/u/${username}/clients`}
-          className="text-[0.6875rem] text-[var(--space-text-muted)] hover:text-[var(--space-text-secondary)] transition-colors"
+          className="block px-5 py-3 text-[13px] text-[var(--space-text-tertiary)] transition-colors duration-150 hover:bg-[var(--space-bg-card)] hover:text-[var(--space-text-primary)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[var(--space-accent)]"
         >
           ← All clients
         </Link>
-      </div>
+      </motion.div>
 
-      {/* ── All clients — click to expand quick switcher ── */}
+      {/* ── Switch client ────────────────────────────────────────────────── */}
       {allClients && allClients.length > 0 && (
-        <div className="border-b border-[var(--space-border-hard)] shrink-0">
-          {/* Compact header — click toggles the list */}
+        <motion.div variants={reduce ? undefined : fadeUp} className="border-b border-[var(--space-divider)]">
           <button
-            onClick={() => setClientsOpen((o) => !o)}
-            className="w-full px-4 py-2.5 flex items-center gap-2 select-none hover:bg-[var(--space-bg-card-hover)] transition-colors"
-            aria-expanded={clientsOpen}
+            type="button"
+            onClick={() => setSwitcherOpen((o) => !o)}
+            aria-expanded={switcherOpen}
+            className="flex w-full items-center gap-2 px-5 py-3 text-left transition-colors duration-150 hover:bg-[var(--space-bg-card)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[var(--space-accent)]"
           >
-            <p className="text-[0.625rem] font-semibold text-[var(--space-text-muted)] uppercase tracking-widest flex-1 text-left">Switch client</p>
-            <span className="text-[0.625rem] tabular-nums text-[var(--space-text-muted)] bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] px-1.5 py-0.5 rounded-md">
-              {allClients.length}
+            <span className="flex-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--space-text-tertiary)]">
+              Switch client
             </span>
-            <ChevronDown className={`size-3 text-[var(--space-text-muted)] transition-transform duration-200 ${clientsOpen ? 'rotate-180' : ''}`} />
+            <span className="text-[12px] tabular-nums text-[var(--space-text-tertiary)]">{allClients.length}</span>
+            <ChevronDown
+              className={cn(
+                'size-[13px] shrink-0 text-[var(--space-text-tertiary)] transition-transform duration-200',
+                switcherOpen && 'rotate-180',
+              )}
+              aria-hidden="true"
+            />
           </button>
-          {/* Expandable list */}
-          <div className={`overflow-hidden transition-[max-height] duration-300 ease-in-out ${clientsOpen ? 'max-h-[20rem]' : 'max-h-0'}`}>
-            <div className="px-3 pb-3 space-y-0.5 overflow-y-auto max-h-[20rem]">
-              {allClients.map((c) => {
-                const isCurrent = c.id === id
-                const cInitials = getInitials(c.name)
-                return (
-                  <Link
-                    key={c.id}
-                    href={`/u/${username}/clients/${c.id}`}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                      isCurrent
-                        ? 'bg-[var(--space-bg-card-hover)] text-[var(--space-text-primary)]'
-                        : 'text-[var(--space-text-secondary)] hover:text-[var(--space-text-primary)] hover:bg-[var(--space-bg-card-hover)]'
-                    }`}
-                  >
-                    <div className="size-6 rounded-md bg-[rgba(139,156,182,0.06)] border border-[rgba(139,156,182,0.10)] flex items-center justify-center shrink-0">
-                      <span className="text-[0.5625rem] font-bold" style={{ color: 'var(--space-accent)' }}>{cInitials}</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="truncate leading-tight">{c.name}</p>
-                      {c.company && (
-                        <p className="text-[0.625rem] text-[var(--space-text-muted)] truncate leading-tight">{c.company}</p>
-                      )}
-                    </div>
-                    {isCurrent && (
-                      <span className="size-1.5 rounded-full shrink-0" style={{ background: 'var(--space-accent)' }} />
-                    )}
-                  </Link>
-                )
-              })}
-            </div>
-          </div>
-        </div>
+
+          <AnimatePresence initial={false}>
+            {switcherOpen && (
+              <motion.div
+                key="switcher"
+                initial={reduce ? false : { height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={reduce ? undefined : { height: 0, opacity: 0 }}
+                transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                className="overflow-hidden"
+              >
+                <div className="scrollbar-none max-h-[280px] overflow-y-auto pb-2">
+                  {allClients.map((c) => {
+                    const isCurrent = c.id === id
+                    return (
+                      <Link
+                        key={c.id}
+                        href={`/u/${username}/clients/${c.id}`}
+                        aria-current={isCurrent ? 'page' : undefined}
+                        className={cn(
+                          'group relative block py-2.5 pl-5 pr-4 transition-colors duration-150 focus-visible:outline-none',
+                          isCurrent
+                            ? 'bg-[var(--space-bg-card)]'
+                            : 'hover:bg-[var(--space-bg-card)] focus-visible:bg-[var(--space-bg-card)]',
+                        )}
+                      >
+                        {isCurrent && (
+                          <span
+                            aria-hidden="true"
+                            className="absolute left-0 top-0 h-full w-[2px]"
+                            style={{ background: 'var(--space-accent)' }}
+                          />
+                        )}
+                        <span
+                          className={cn(
+                            'block truncate text-[14px]',
+                            isCurrent
+                              ? 'text-[var(--space-text-primary)]'
+                              : 'text-[var(--space-text-secondary)] group-hover:text-[var(--space-text-primary)]',
+                          )}
+                        >
+                          {c.name}
+                        </span>
+                        {c.company && (
+                          <span className="mt-0.5 block truncate text-[12px] text-[var(--space-text-tertiary)]">
+                            {c.company}
+                          </span>
+                        )}
+                      </Link>
+                    )
+                  })}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
       )}
 
-      {/* ── Single unified scroll area ── */}
-      <div className="flex-1 overflow-y-auto">
-
-        {/* ── Identity / Edit ── */}
-        <div className="px-5 py-4 border-b border-[var(--space-border-hard)]">
-          <div className="flex items-start justify-between mb-3">
-            <div className="relative">
-              <div className="size-10 rounded-xl bg-[rgba(139,156,182,0.06)] border border-[rgba(139,156,182,0.10)] flex items-center justify-center">
-                <span className="text-sm font-bold tracking-tight" style={{ color: 'var(--space-accent)' }}>{initials}</span>
-              </div>
-              {stripeCustomerId && (
-                <div className="absolute -bottom-1 -right-1 size-4 rounded-full bg-emerald-500 border-2 border-[var(--space-bg-card)] flex items-center justify-center">
-                  <Check className="size-2.5 text-white" strokeWidth={3} />
-                </div>
-              )}
-            </div>
-
-            {!editing && (
-              <button
-                onClick={() => setEditing(true)}
-                className="text-[0.6875rem] text-[var(--space-text-muted)] hover:text-[var(--space-text-tertiary)] transition-colors px-2.5 py-1 rounded-md border border-transparent hover:border-[var(--space-border-hard)] hover:bg-[var(--space-bg-card-hover)]"
-              >
-                Edit
-              </button>
-            )}
-          </div>
-
+      {/* ── Identity ─────────────────────────────────────────────────────── */}
+      <motion.div variants={reduce ? undefined : fadeUp} className="border-b border-[var(--space-divider)] px-5 py-5">
+        <AnimatePresence mode="wait" initial={false}>
           {editing ? (
-            <div className="space-y-3">
+            <motion.div
+              key="edit"
+              initial={reduce ? false : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={reduce ? undefined : { opacity: 0 }}
+              transition={{ duration: 0.14 }}
+              className="space-y-3"
+            >
               <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1">
-                  <Label className="text-[var(--space-text-muted)] text-[0.625rem] uppercase tracking-wider font-semibold">First</Label>
-                  <Input
-                    value={form.firstName}
-                    onChange={(e) => {
-                      const val = e.target.value
-                      setForm((f) => ({ ...f, firstName: val, name: `${val} ${f.lastName}`.trim() }))
-                    }}
-                    className="h-8 text-sm bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] focus-visible:ring-[rgba(139,156,182,0.20)] focus-visible:ring-1"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-[var(--space-text-muted)] text-[0.625rem] uppercase tracking-wider font-semibold">Last</Label>
-                  <Input
-                    value={form.lastName}
-                    onChange={(e) => {
-                      const val = e.target.value
-                      setForm((f) => ({ ...f, lastName: val, name: `${f.firstName} ${val}`.trim() }))
-                    }}
-                    className="h-8 text-sm bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] focus-visible:ring-[rgba(139,156,182,0.20)] focus-visible:ring-1"
-                  />
-                </div>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-[var(--space-text-muted)] text-[0.625rem] uppercase tracking-wider font-semibold">Display Name</Label>
-                <Input
-                  value={form.name}
-                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                  className="h-8 text-sm bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] focus-visible:ring-[rgba(139,156,182,0.20)] focus-visible:ring-1"
+                <Field
+                  label="First"
+                  autoFocus
+                  value={form.firstName}
+                  onChange={(v) => setForm((f) => ({ ...f, firstName: v, name: `${v} ${f.lastName}`.trim() }))}
+                />
+                <Field
+                  label="Last"
+                  value={form.lastName}
+                  onChange={(v) => setForm((f) => ({ ...f, lastName: v, name: `${f.firstName} ${v}`.trim() }))}
                 />
               </div>
-              <div className="space-y-1">
-                <Label className="text-[var(--space-text-muted)] text-[0.625rem] uppercase tracking-wider font-semibold">Email</Label>
-                <Input
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                  placeholder="client@example.com"
-                  className="h-8 text-sm bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)] focus-visible:ring-[rgba(139,156,182,0.20)] focus-visible:ring-1"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-[var(--space-text-muted)] text-[0.625rem] uppercase tracking-wider font-semibold">Company</Label>
-                <Input
-                  value={form.company}
-                  onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))}
-                  placeholder="Optional"
-                  className="h-8 text-sm bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)] focus-visible:ring-[rgba(139,156,182,0.20)] focus-visible:ring-1"
-                />
-              </div>
-              {error && <p className="text-xs text-red-400">{error}</p>}
-              <div className="flex gap-2 pt-1">
-                <Button
-                  size="sm"
+              <Field label="Display name" value={form.name} onChange={(v) => setForm((f) => ({ ...f, name: v }))} />
+              <Field
+                label="Email"
+                type="email"
+                placeholder="client@example.com"
+                value={form.email}
+                onChange={(v) => setForm((f) => ({ ...f, email: v }))}
+              />
+              <Field
+                label="Company"
+                placeholder="Optional"
+                value={form.company}
+                onChange={(v) => setForm((f) => ({ ...f, company: v }))}
+              />
+              {error && (
+                <p className="text-[12px]" style={{ color: toneColor('danger') }}>{error}</p>
+              )}
+              <div className="flex items-center gap-1 pt-1">
+                <button
+                  type="button"
                   onClick={handleSave}
                   disabled={loading}
-                  className="flex-1 bg-[var(--space-accent)] hover:bg-[var(--space-accent)]/90 text-white font-semibold text-xs h-8"
+                  className="flex h-[32px] flex-1 items-center justify-center gap-2 rounded-md text-[13px] font-medium transition-opacity duration-150 hover:opacity-90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--space-accent)] disabled:opacity-50"
+                  style={{ background: 'var(--space-text-primary)', color: 'var(--space-bg-base)' }}
                 >
-                  {loading ? <Loader2 className="size-3 animate-spin" /> : 'Save'}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={handleCancel}
-                  disabled={loading}
-                  className="flex-1 text-[var(--space-text-muted)] hover:text-[var(--space-text-primary)] hover:bg-[var(--space-bg-card-hover)] text-xs h-8"
-                >
-                  Cancel
-                </Button>
+                  {loading ? <Loader2 className="size-[13px] animate-spin" /> : 'Save'}
+                </button>
+                <QuietButton onClick={handleCancel} disabled={loading}>Cancel</QuietButton>
               </div>
-            </div>
+            </motion.div>
           ) : (
-            <div>
-              <h2 className="text-base font-bold text-[var(--space-text-primary)] leading-tight">{name}</h2>
-              {company && <p className="text-xs text-[var(--space-text-muted)] mt-0.5">{company}</p>}
-              {email && <p className="text-xs text-[var(--space-text-muted)] mt-1 truncate">{email}</p>}
-            </div>
+            <motion.div
+              key="read"
+              initial={reduce ? false : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={reduce ? undefined : { opacity: 0 }}
+              transition={{ duration: 0.14 }}
+            >
+              <div className="flex items-start gap-3">
+                <h2 className="min-w-0 flex-1 text-[20px] font-semibold leading-tight tracking-[-0.01em] text-[var(--space-text-primary)]">
+                  {name}
+                </h2>
+                <QuietButton onClick={() => setEditing(true)}>Edit</QuietButton>
+              </div>
+
+              <div className="mt-2 space-y-1">
+                {company && <p className="truncate text-[13px] text-[var(--space-text-tertiary)]">{company}</p>}
+                {email && <p className="truncate text-[13px] text-[var(--space-text-tertiary)]">{email}</p>}
+              </div>
+
+              {/* Billing linkage, stated rather than badged. */}
+              <p className="mt-3 flex items-center gap-2 text-[12px] text-[var(--space-text-tertiary)]">
+                <span
+                  aria-hidden="true"
+                  className="size-[5px] shrink-0 rounded-full"
+                  style={{ background: toneColor(stripeCustomerId ? 'ok' : 'idle') }}
+                />
+                {stripeCustomerId ? 'Stripe customer linked' : 'No Stripe customer'}
+              </p>
+            </motion.div>
           )}
+        </AnimatePresence>
+      </motion.div>
+
+      {/* ── The standing ─────────────────────────────────────────────────── */}
+      <motion.div variants={reduce ? undefined : fadeUp} className="border-b border-[var(--space-divider)] px-5 py-4">
+        <div className="grid grid-cols-2">
+          <Figure index={0} label="Collected" value={usd.format(totalRevenue)} />
+          <Figure
+            index={1}
+            label="Outstanding"
+            value={usd.format(accountBalance)}
+            tone={hasOutstanding ? 'warn' : undefined}
+          />
+          <Figure index={2} label={ordersCount === 1 ? 'Order' : 'Orders'} value={String(ordersCount)} />
+          <Figure index={3} label={projectsCount === 1 ? 'Project' : 'Projects'} value={String(projectsCount)} />
         </div>
 
-        {/* ── Overview ── */}
-        <div className="px-5 py-4 space-y-5 border-b border-[var(--space-border-hard)]">
+        {/* The section's own rule doubles as the pipeline: collected vs owed. */}
+        {booked > 0 && (
+          <div
+            className="mt-4 flex h-[2px] w-full overflow-hidden bg-[var(--space-divider)]"
+            role="img"
+            aria-label={`${Math.round(paidShare)}% of ${usd.format(booked)} booked has been collected`}
+          >
+            <motion.span
+              className="flex h-full w-full origin-left"
+              initial={reduce ? false : { scaleX: 0 }}
+              animate={{ scaleX: 1 }}
+              transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <span style={{ width: `${paidShare}%`, background: toneColor('ok') }} />
+              <span style={{ width: `${100 - paidShare}%`, background: toneColor('warn') }} />
+            </motion.span>
+          </div>
+        )}
+      </motion.div>
 
-          {/* Outstanding alert */}
-          {hasOutstanding && (
-            <div className="flex items-center gap-2.5 rounded-lg border border-amber-400/[0.18] bg-amber-400/[0.04] px-3 py-2.5">
-              <AlertCircle className="size-4 text-amber-400 shrink-0" />
-              <div>
-                <p className="text-xs font-semibold text-amber-400">{fmt(accountBalance)} due</p>
-                <p className="text-[0.625rem] text-amber-700">Outstanding balance</p>
-              </div>
-            </div>
-          )}
+      {/* ── Team ─────────────────────────────────────────────────────────── */}
+      <motion.div variants={reduce ? undefined : fadeUp} className="px-5 py-4">
+        <SectionLabel
+          aside={<QuietButton onClick={() => setTeamModalOpen(true)}>Modify</QuietButton>}
+        >
+          Team {people.length > 0 && <span className="tabular-nums">{people.length}</span>}
+        </SectionLabel>
 
-          {/* Metrics — flat 2×2, divided rather than boxed */}
-          <div className="grid grid-cols-2 gap-x-4 gap-y-4">
-            {[
-              { label: 'Revenue',  value: fmt(totalRevenue),    Icon: TrendingUp,   amber: false          },
-              { label: 'Balance',  value: fmt(accountBalance),  Icon: DollarSign,   amber: hasOutstanding },
-              { label: 'Orders',   value: String(ordersCount),  Icon: ShoppingCart, amber: false          },
-              { label: 'Projects', value: String(projectsCount),Icon: FolderKanban, amber: false          },
-            ].map(({ label, value, Icon, amber }) => (
-              <div key={label}>
-                <div className="flex items-center gap-1.5 mb-1">
-                  <Icon className="size-3 text-[var(--space-text-muted)]" />
-                  <span className="text-[0.625rem] uppercase tracking-widest text-[var(--space-text-muted)] font-semibold">{label}</span>
-                </div>
-                <p className={`text-base font-bold font-mono tabular-nums truncate ${amber ? 'text-amber-400' : 'text-[var(--space-text-primary)]'}`}>
-                  {value}
-                </p>
+        {people.length === 0 ? (
+          <p className="py-2 text-[13px] text-[var(--space-text-tertiary)]">No one is on this account yet.</p>
+        ) : (
+          <div>
+            {people.map((p) => (
+              <div
+                key={p.id}
+                className="flex items-baseline gap-3 border-t border-[var(--space-divider)] py-2.5 first:border-t-0"
+              >
+                <span
+                  className={cn(
+                    'min-w-0 flex-1 truncate text-[14px]',
+                    p.staff ? 'text-[var(--space-text-tertiary)]' : 'text-[var(--space-text-primary)]',
+                  )}
+                >
+                  {p.name}
+                </span>
+                <span className="shrink-0 text-[12px] text-[var(--space-text-tertiary)]">{p.role}</span>
               </div>
             ))}
           </div>
+        )}
+      </motion.div>
 
-          {/* Contact */}
-          <div className="space-y-2.5">
-            <p className="text-[0.625rem] uppercase tracking-widest text-[var(--space-text-muted)] font-semibold">Contact</p>
-            <div className="space-y-2">
-              {email && (
-                <div className="flex items-center gap-2 text-[var(--space-text-muted)] text-xs">
-                  <Mail className="size-3 shrink-0" />
-                  <span className="truncate">{email}</span>
-                </div>
-              )}
-              {company && (
-                <div className="flex items-center gap-2 text-[var(--space-text-muted)] text-xs">
-                  <Building2 className="size-3 shrink-0" />
-                  <span className="truncate">{company}</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Team */}
-          <div className="space-y-2.5">
-            <div className="flex items-center justify-between">
-              <p className="text-[0.625rem] uppercase tracking-widest text-[var(--space-text-muted)] font-semibold">
-                Team
-                {allUsers.length > 0 && (
-                  <span className="ml-1.5 text-[var(--space-text-muted)] font-normal">{allUsers.length}</span>
-                )}
-              </p>
-              <button
-                onClick={() => setTeamModalOpen(true)}
-                className="text-[0.625rem] text-[var(--space-text-muted)] hover:text-[var(--space-accent)] transition-colors flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-[rgba(139,156,182,0.04)]"
-              >
-                <Users className="size-3" />
-                Modify
-              </button>
-            </div>
-
-            {allUsers.length === 0 ? (
-              <p className="text-[0.6875rem] text-[var(--space-text-muted)]">No users associated.</p>
-            ) : (
-              <div className="space-y-1.5">
-                {allUsers.map((u) => (
-                  <div key={u.id} className="flex items-center gap-2 text-xs">
-                    {u.type === 'developer' ? (
-                      <Shield className="size-3 shrink-0 text-[var(--space-text-muted)]" />
-                    ) : (
-                      <User className="size-3 shrink-0" style={{ color: 'var(--space-accent)', opacity: 0.5 }} />
-                    )}
-                    <span className={`truncate ${u.type === 'developer' ? 'text-[var(--space-text-muted)]' : 'text-[var(--space-text-secondary)]'}`}>
-                      {u.name}
-                    </span>
-                    <span className={`ml-auto text-[0.5625rem] uppercase tracking-wider font-semibold shrink-0 ${
-                      u.type === 'developer' ? 'text-[var(--space-text-muted)]' : 'text-[var(--space-text-secondary)]'
-                    }`}>
-                      {u.type === 'developer' ? (u.title ?? 'developer') : 'client'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-
-      </div>
-
-      {/* Team Modify Modal */}
       <TeamModal
         open={teamModalOpen}
         onClose={() => setTeamModalOpen(false)}
@@ -776,71 +492,85 @@ export function ClientSidebarContent(props: ClientSidebarProps) {
         teamMembers={teamMembers}
         clientUsers={clientUsers}
       />
-    </div>
+    </motion.div>
   )
 }
 
-// ── Mobile side-tab + bottom sheet ────────────────────────────────────────────
+// ─── Mobile: edge tab + bottom sheet ─────────────────────────────────────────
 
 export function ClientSidebar(props: ClientSidebarProps) {
   const [open, setOpen] = useState(false)
 
   return (
-    <>
-      {/* Fixed right-edge vertical tab (mobile only) */}
+    <div className="space-true-scale lg:hidden">
+      {/* Right-edge tab — the phone's stand-in for the rail. */}
       <button
+        type="button"
         onClick={() => setOpen(true)}
-        className="lg:hidden fixed right-0 top-1/2 -translate-y-1/2 z-40
-                   flex flex-col items-center gap-2
-                   pl-2.5 pr-2 py-4
-                   bg-[var(--space-bg-base)]/90 border border-r-0 border-[var(--space-border-hard)]
-                   rounded-l-xl
-                   hover:border-[rgba(139,156,182,0.20)] hover:bg-[var(--space-bg-base)]
-                   transition-all duration-300 active:scale-95"
         aria-label="Open client details"
+        className="fixed right-0 top-1/2 z-40 flex -translate-y-1/2 flex-col items-center gap-2.5 rounded-l-lg border border-r-0 border-[var(--space-border-hard)] bg-[var(--space-bg-base)] py-4 pl-2.5 pr-2 transition-colors duration-150 hover:bg-[var(--space-bg-card)] active:scale-[0.97]"
       >
-        <SlidersHorizontal className="size-3.5" style={{ color: 'var(--space-accent)' }} />
-        <span className="text-[0.5rem] font-semibold text-[var(--space-text-muted)] uppercase tracking-[0.15em] [writing-mode:vertical-rl] rotate-180">
-          Details
+        <span className="text-[12px] font-semibold text-[var(--space-text-primary)]">
+          {getInitials(props.name)}
+        </span>
+        {props.accountBalance > 0 && (
+          <span
+            className="size-[5px] rounded-full"
+            style={{ background: toneColor('warn') }}
+            aria-hidden="true"
+          />
+        )}
+        <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--space-text-tertiary)] [writing-mode:vertical-rl]">
+          Client
         </span>
       </button>
 
-      {/* Backdrop */}
-      <div
-        className={`lg:hidden fixed inset-0 z-[45] bg-[#000000]/50 transition-opacity duration-300 ${
-          open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-        }`}
-        onClick={() => setOpen(false)}
-        aria-hidden="true"
-      />
+      <AnimatePresence>
+        {open && (
+          <>
+            <motion.div
+              key="scrim"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={() => setOpen(false)}
+              aria-hidden="true"
+              className="fixed inset-0 z-[45] bg-[var(--space-bg-base)]/70 backdrop-blur-[2px]"
+            />
 
-      {/* Slide-up bottom sheet */}
-      <div
-        className={`lg:hidden fixed bottom-0 left-0 right-0 z-[55] flex flex-col
-                    bg-[var(--space-bg-base)] border-t border-[var(--space-border-hard)] rounded-t-2xl
-                    transition-transform duration-300 ease-in-out
-                    ${open ? 'translate-y-0' : 'translate-y-full'}`}
-        style={{ maxHeight: '82vh' }}
-      >
-        {/* Drag handle */}
-        <div className="flex justify-center pt-3 pb-1 shrink-0">
-          <div className="w-9 h-1 rounded-full bg-[var(--space-divider)]" />
-        </div>
-        {/* Sheet header */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--space-border-hard)] shrink-0">
-          <h3 className="text-sm font-semibold text-[var(--space-text-primary)]">{props.name}</h3>
-          <button
-            onClick={() => setOpen(false)}
-            className="p-1.5 rounded-lg hover:bg-[var(--space-bg-card-hover)] text-[var(--space-text-muted)] hover:text-[var(--space-text-tertiary)] transition-all"
-            aria-label="Close"
-          >
-            <X className="size-4" />
-          </button>
-        </div>
-        <div className="overflow-y-auto flex-1" style={{ overscrollBehavior: 'contain' }}>
-          <ClientSidebarContent {...props} />
-        </div>
-      </div>
-    </>
+            <motion.div
+              key="sheet"
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+              className="fixed inset-x-0 bottom-0 z-[55] flex flex-col rounded-t-2xl border-t border-[var(--space-border-hard)] bg-[var(--space-bg-base)]"
+              style={{ maxHeight: '82vh' }}
+            >
+              <div className="flex shrink-0 justify-center pb-1 pt-3">
+                <span className="h-1 w-9 rounded-full bg-[var(--space-divider)]" />
+              </div>
+              <div className="flex shrink-0 items-center gap-3 border-b border-[var(--space-border-hard)] py-3 pl-5 pr-3">
+                <span className="flex-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--space-text-tertiary)]">
+                  Client
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  aria-label="Close"
+                  className="rounded-md p-1.5 text-[var(--space-text-tertiary)] transition-colors duration-150 hover:bg-[var(--space-bg-card)] hover:text-[var(--space-text-primary)]"
+                >
+                  <X className="size-[15px]" aria-hidden="true" />
+                </button>
+              </div>
+              <div className="scrollbar-none flex-1 overflow-y-auto" style={{ overscrollBehavior: 'contain' }}>
+                <ClientSidebarContent {...props} />
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </div>
   )
 }
