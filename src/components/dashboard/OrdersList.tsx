@@ -8,6 +8,7 @@ import {
   Package,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { orderDate } from '@/lib/dashboard/utils'
 
 export async function OrdersList({ accountId }: { accountId: string }) {
   const payload = await getPayload({ config })
@@ -158,7 +159,7 @@ export async function OrdersList({ accountId }: { accountId: string }) {
                         Date
                       </p>
                       <p className="text-[var(--space-text-tertiary)] font-medium text-sm">
-                        {formatDate(order.createdAt)}
+                        {formatDate(orderDate(order))}
                       </p>
                     </div>
                   </div>
@@ -218,7 +219,7 @@ export async function OrdersList({ accountId }: { accountId: string }) {
                         </Badge>
                       </td>
                       <td className="py-4 px-6 text-[var(--space-text-tertiary)] font-medium text-sm">
-                        {formatDate(order.createdAt)}
+                        {formatDate(orderDate(order))}
                       </td>
                     </tr>
                   )

@@ -5,6 +5,8 @@ import { experienceFor } from '@/app/(spaces)/experience'
 import { effectiveExperience } from '@/app/(spaces)/preview'
 import { CommandConsoleLoader } from '@/components/dashboard/CommandConsoleLoader'
 import { PasskeySetupPrompt } from '@/components/dashboard/PasskeySetupPrompt'
+import { LiveOrders } from '@/components/dashboard/LiveOrders'
+import { DoubleSpaceHome } from '@/components/dashboard/DoubleSpaceHome'
 
 export async function generateMetadata({
   params,
@@ -55,6 +57,12 @@ export default async function DashboardLayout({
   return (
     <>
       {!hasPasskey && !previewing && <PasskeySetupPrompt />}
+      {/* Keeps order views current when an order moves outside this browser —
+          a Stripe webhook, an admin edit, another staff member. Inert on the
+          tabs that don't render orders. */}
+      <LiveOrders />
+      {/* Space, twice → back to the home tab. Inert while typing or in a dialog. */}
+      <DoubleSpaceHome homeHref={`/u/${username}`} />
       {children}
       {/* The powerhouse: search + package builder + retainer, one console.
           Staff-only, and hidden while a staff member previews a client's portal. */}

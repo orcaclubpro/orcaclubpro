@@ -343,7 +343,7 @@ export function CommandConsole({ username }: CommandConsoleProps) {
   )
 
   const overlay = isOpen && (
-    <div className="fixed inset-0 z-[70] print:hidden">
+    <div className="fixed inset-0 z-[70] print:hidden" role="dialog" aria-modal="true">
       {/* Backdrop — click collapses a workspace to search, or dismisses the bar */}
       <div
         className="absolute inset-0 animate-in fade-in duration-150"

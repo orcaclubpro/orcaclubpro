@@ -102,7 +102,7 @@ export function PackagePickerModal({ excludeId, onPick, onClose }: PackagePicker
   })
 
   return (
-    <div className="fixed inset-0 z-[90] print:hidden">
+    <div className="fixed inset-0 z-[90] print:hidden" role="dialog" aria-modal="true">
       <div
         className="absolute inset-0 animate-in fade-in duration-150"
         style={{ background: 'rgba(0,0,0,0.62)', backdropFilter: 'blur(3px)' }}

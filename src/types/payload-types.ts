@@ -90,6 +90,7 @@ export interface Config {
     files: File;
     credentials: Credential;
     timelines: Timeline;
+    activity: Activity;
     'payload-jobs': PayloadJob;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -125,6 +126,7 @@ export interface Config {
     files: FilesSelect<false> | FilesSelect<true>;
     credentials: CredentialsSelect<false> | CredentialsSelect<true>;
     timelines: TimelinesSelect<false> | TimelinesSelect<true>;
+    activity: ActivitySelect<false> | ActivitySelect<true>;
     'payload-jobs': PayloadJobsSelect<false> | PayloadJobsSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -737,6 +739,22 @@ export interface Order {
    * Label shown on the Stripe invoice line item (e.g. "50% Deposit")
    */
   invoiceNote?: string | null;
+  /**
+   * The order's effective date. Overrides createdAt everywhere this order is shown, sorted, or counted toward a period. Leave empty to use createdAt.
+   */
+  issuedAt?: string | null;
+  /**
+   * Why this order was fulfilled without a Stripe invoice (e.g. "Covered by Nov retainer"). Internal — never emailed.
+   */
+  fulfillmentNote?: string | null;
+  /**
+   * When this order was fulfilled off-Stripe. Set by the Fulfill flow, not by hand.
+   */
+  fulfilledAt?: string | null;
+  /**
+   * When the payment receipt + admin notification were emailed. Set automatically — its presence is what stops a duplicate send.
+   */
+  paymentReceiptSentAt?: string | null;
   /**
    * Payment due date (from Stripe invoice or manually set)
    */
@@ -1964,6 +1982,69 @@ export interface Timeline {
   createdAt: string;
 }
 /**
+ * Append-only feed of portal events. Written by hooks — never edit by hand.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "activity".
+ */
+export interface Activity {
+  id: string;
+  kind: 'order-created' | 'project-created' | 'project-updated' | 'retainer-log' | 'email-sent';
+  /**
+   * When the event happened. The feed sorts on this, not createdAt.
+   */
+  occurredAt: string;
+  /**
+   * Headline — the first line of the feed row.
+   */
+  title: string;
+  /**
+   * Second line — qualifies the event (status, client, hours).
+   */
+  summary?: string | null;
+  /**
+   * Portal-relative path WITHOUT the /u/<username> prefix (e.g. /projects/<id>). The view prefixes it.
+   */
+  href?: string | null;
+  /**
+   * Raw status of the subject at event time (order/project status). The view maps it to a tone.
+   */
+  status?: string | null;
+  /**
+   * Money for orders, hours for retainer logs — unit implied by kind.
+   */
+  amount?: number | null;
+  /**
+   * Recipient address for email-sent events.
+   */
+  recipient?: string | null;
+  /**
+   * The signed-in user who caused the event, if any.
+   */
+  actor?: (string | null) | User;
+  /**
+   * Name snapshot — survives the user being renamed or deleted.
+   */
+  actorName?: string | null;
+  clientAccount?: (string | null) | ClientAccount;
+  project?: (string | null) | Project;
+  order?: (string | null) | Order;
+  retainer?: (string | null) | Retainer;
+  /**
+   * Meaningful field changes only — status, dates, budget, milestones.
+   */
+  changes?:
+    | {
+        field: string;
+        from?: string | null;
+        to?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-jobs".
  */
@@ -2153,6 +2234,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'timelines';
         value: string | Timeline;
+      } | null)
+    | ({
+        relationTo: 'activity';
+        value: string | Activity;
       } | null)
     | ({
         relationTo: 'payload-jobs';
@@ -2610,6 +2695,10 @@ export interface OrdersSelect<T extends boolean = true> {
   retainerCycleStart?: T;
   invoiceType?: T;
   invoiceNote?: T;
+  issuedAt?: T;
+  fulfillmentNote?: T;
+  fulfilledAt?: T;
+  paymentReceiptSentAt?: T;
   dueDate?: T;
   lineItems?:
     | T
@@ -2980,6 +3069,36 @@ export interface TimelinesSelect<T extends boolean = true> {
               id?: T;
               blockName?: T;
             };
+      };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "activity_select".
+ */
+export interface ActivitySelect<T extends boolean = true> {
+  kind?: T;
+  occurredAt?: T;
+  title?: T;
+  summary?: T;
+  href?: T;
+  status?: T;
+  amount?: T;
+  recipient?: T;
+  actor?: T;
+  actorName?: T;
+  clientAccount?: T;
+  project?: T;
+  order?: T;
+  retainer?: T;
+  changes?:
+    | T
+    | {
+        field?: T;
+        from?: T;
+        to?: T;
+        id?: T;
       };
   updatedAt?: T;
   createdAt?: T;

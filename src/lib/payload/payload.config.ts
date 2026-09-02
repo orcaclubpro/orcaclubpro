@@ -37,6 +37,8 @@ import Credentials from './collections/Credentials'
 import { Timelines } from './collections/Timelines'
 import Solutions from './collections/Solutions'
 import { Pages } from './collections/Pages'
+import { Activity } from './collections/Activity'
+import { withActivityLogging } from './utils/emailActivityAdapter'
 import { anyone, authenticated, authenticatedOrPublished, adminOnly, adminOrSelf, canAccessAdmin } from './access'
 import { themeSelectOptions, DEFAULT_THEME, isThemeId } from '@/app/(spaces)/themes'
 
@@ -1021,7 +1023,7 @@ export default buildConfig({
   editor: lexicalEditor(),
 
   // Define and configure your collections in this array
-  collections: [Media, Clients, Leads, Categories, Tags, Posts, Solutions, Pages, Users, ClientAccounts, Orders, Packages, PackageWorkEntries, ServiceItems, Retainers, RetainerTimeEntries, WebhookEvents, Projects, Tasks, Sprints, Files, Credentials, Timelines],
+  collections: [Media, Clients, Leads, Categories, Tags, Posts, Solutions, Pages, Users, ClientAccounts, Orders, Packages, PackageWorkEntries, ServiceItems, Retainers, RetainerTimeEntries, WebhookEvents, Projects, Tasks, Sprints, Files, Credentials, Timelines, Activity],
 
   // Your Payload secret - should be a complex and secure string, unguessable
   secret: (() => {
@@ -1042,7 +1044,11 @@ export default buildConfig({
   // Gmail rewrites the From header to the authenticated user, so we authenticate
   // directly as carbon@orcaclub.pro (the desired sender). Set the app password
   // in SMTP_PASS — see .env.example for setup steps.
-  email: nodemailerAdapter({
+  //
+  // withActivityLogging wraps the adapter so every payload.sendEmail() lands in
+  // the `activity` feed — one choke point instead of ~30 instrumented call
+  // sites. It is transparent: it awaits the real send and returns its result.
+  email: withActivityLogging(nodemailerAdapter({
     defaultFromAddress: process.env.EMAIL_FROM || 'carbon@orcaclub.pro',
     defaultFromName: process.env.EMAIL_FROM_NAME || 'ORCACLUB',
     transportOptions: {
@@ -1054,7 +1060,7 @@ export default buildConfig({
         pass: process.env.SMTP_PASS,
       },
     },
-  }),
+  })),
   // TypeScript configuration
   typescript: {
     outputFile: './src/types/payload-types.ts',

@@ -14,6 +14,7 @@ import {
   fmtCurrencyFull,
   fmtDate,
   fmtMonthYear,
+  orderDate,
   ORDER_STATUS_CFG,
   type OrderStatusKey,
   type ScheduledPackage,
@@ -116,7 +117,7 @@ function InvoiceRow({ order, isLast }: { order: Order; isLast: boolean }) {
                 #{order.orderNumber ?? `INV-${order.id.slice(-6).toUpperCase()}`}
               </span>
               <span className="text-[var(--space-text-muted)] text-[0.5rem]">·</span>
-              <span className="text-[0.625rem] text-[var(--space-text-muted)]">{fmtDate(order.createdAt)}</span>
+              <span className="text-[0.625rem] text-[var(--space-text-muted)]">{fmtDate(orderDate(order))}</span>
             </div>
           </div>
           <div className="flex items-start gap-2 shrink-0">
@@ -244,8 +245,11 @@ export function OrdersView({ allOrders, clientAccount, clientPackages = [], user
   // Group by month for timeline
   const monthGroups: { monthKey: string; monthLabel: string; orders: Order[] }[] = []
   for (const order of displayedOrders) {
-    const monthKey = order.createdAt.slice(0, 7)
-    const monthLabel = fmtMonthYear(order.createdAt)
+    // Group on the effective date, so a backdated invoice files under the month
+    // it belongs to rather than the month the row happened to be written.
+    const effective = orderDate(order)
+    const monthKey = effective.slice(0, 7)
+    const monthLabel = fmtMonthYear(effective)
     const existing = monthGroups.find(g => g.monthKey === monthKey)
     if (existing) {
       existing.orders.push(order)

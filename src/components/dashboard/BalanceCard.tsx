@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { ExternalLink } from 'lucide-react'
+import { orderDate } from '@/lib/dashboard/utils'
 
 export interface OrderSummary {
   id: string
@@ -16,6 +17,8 @@ export interface OrderSummary {
   status: 'pending' | 'paid' | 'cancelled'
   stripeInvoiceUrl?: string | null
   createdAt: string
+  /** Staff-set effective date. Overrides createdAt wherever the order is dated. */
+  issuedAt?: string | null
 }
 
 interface BalanceCardProps {
@@ -234,7 +237,7 @@ export function BalanceCard({ orders, activeProjectCount, mostRecentOrder }: Bal
                     {order.orderNumber ?? `INV-${order.id.slice(-6).toUpperCase()}`}
                   </p>
                   <p className="text-[0.625rem] text-[var(--space-text-secondary)] mt-0.5">
-                    {new Date(order.createdAt).toLocaleDateString('en-US', {
+                    {new Date(orderDate(order)).toLocaleDateString('en-US', {
                       month: 'short',
                       day: 'numeric',
                       year: 'numeric',

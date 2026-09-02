@@ -7,6 +7,12 @@ const gothic = Cinzel_Decorative({ weight: "700", subsets: ["latin"] })
 
 interface DynamicGreetingProps {
   className?: string
+  /**
+   * CSS font-size for the greeting. Shared by the marketing hero, the login
+   * screen and the staff dashboard, which each want a different weight of
+   * presence — so the size is passed in rather than baked in.
+   */
+  fontSize?: string
 }
 
 interface GreetingContent {
@@ -61,7 +67,9 @@ const greetings = {
   ]
 }
 
-export default function DynamicGreeting({ className = "" }: DynamicGreetingProps) {
+const DEFAULT_FONT_SIZE = 'clamp(1.5rem, 3.5vw, 3rem)'
+
+export default function DynamicGreeting({ className = "", fontSize }: DynamicGreetingProps) {
   const [greetingContent, setGreetingContent] = useState<GreetingContent>(greetings.morning[0])
   const [mounted, setMounted] = useState(false)
   const [isVisible, setIsVisible] = useState(false)
@@ -177,7 +185,7 @@ export default function DynamicGreeting({ className = "" }: DynamicGreetingProps
             }`}
             style={{
               transitionDelay: isTransitioning ? '0ms' : '300ms',
-              fontSize: 'clamp(1.5rem, 3.5vw, 3rem)',
+              fontSize: fontSize ?? DEFAULT_FONT_SIZE,
             }}
           >
             <span className="text-[var(--space-nav-fg,#ffffff)]">

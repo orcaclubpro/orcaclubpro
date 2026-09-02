@@ -34,7 +34,15 @@ export interface CreateClientOrderInput {
   /** Defaults to 'full'. */
   invoiceType?: 'full' | 'deposit' | 'installment' | 'balance'
   projectId?: string
-  /** Create the order + Stripe invoice but send no email. */
+  /**
+   * 'invoice' (default) bills the order — Stripe invoice and/or email, per the flags below.
+   * 'fulfill' records it as already settled: no Stripe call, no email, status `paid`, with a
+   * fulfillmentNote for the audit trail. Overrides `createStripeInvoice` and `skipEmail`.
+   */
+  mode?: 'invoice' | 'fulfill'
+  /** Why this order was fulfilled off-Stripe. Internal only — never emailed. */
+  fulfillmentNote?: string
+  /** Create the order + Stripe invoice but send no email. Ignored when fulfilling. */
   skipEmail?: boolean
   /**
    * Create and finalize a Stripe invoice for this order. Defaults to TRUE.
@@ -59,6 +67,8 @@ export interface CreateClientOrderResult {
   invoiceUrl?: string | null
   /** True when a Stripe invoice was created and finalized for this order. */
   stripeInvoiceCreated?: boolean
+  /** True when the order was recorded as already settled (no Stripe, no email). */
+  fulfilled?: boolean
   /** Whether an invoice email was dispatched to the client. */
   emailed?: boolean
   /** Non-fatal explanation — e.g. why no email was sent. */
@@ -78,6 +88,10 @@ const DAY_MS = 24 * 60 * 60 * 1000
  * (non-blocking). The order number comes from the finalized Stripe invoice;
  * if the Payload write fails afterwards the invoice is voided so no orphaned
  * Stripe invoice is left behind.
+ *
+ * With `mode: 'fulfill'` the order is recorded as already settled: no Stripe leg,
+ * no email, `status: 'paid'` (so it stays off the client's outstanding balance),
+ * and a `fulfillmentNote` explaining why it was never billed here.
  *
  * With `createStripeInvoice: false` the whole Stripe leg is skipped — no
  * customer resolution, no invoice, no Stripe call of any kind. The order is
@@ -132,8 +146,10 @@ export async function createClientOrder(
 
     const daysUntilDue = Math.max(1, Math.round(input.daysUntilDue ?? 30))
     const invoiceType = input.invoiceType ?? 'full'
+    // Fulfilling means the money is already settled: nothing to bill, nobody to notify.
+    const fulfill = input.mode === 'fulfill'
     // Default TRUE — omitting the flag preserves the original Stripe-backed flow.
-    const withStripeInvoice = input.createStripeInvoice !== false
+    const withStripeInvoice = !fulfill && input.createStripeInvoice !== false
 
     // ── Validate the optional link before anything is created ────────────────
     // This value is rendered as a clickable link in the portal and the invoice
@@ -247,8 +263,9 @@ export async function createClientOrder(
       // reconciliation, which matches orders by `stripeInvoiceId`.
       stripeCustomerId = accountStripeCustomerId
       orderInvoiceUrl = manualInvoiceUrl
-      // No Stripe `due_date` to read back, so derive the same terms locally.
-      dueDate = new Date(Date.now() + daysUntilDue * DAY_MS).toISOString()
+      // No Stripe `due_date` to read back, so derive the same terms locally. A fulfilled
+      // order is settled on arrival, so it has no due date to carry.
+      if (!fulfill) dueDate = new Date(Date.now() + daysUntilDue * DAY_MS).toISOString()
     }
 
     const order = await payload.create({
@@ -260,11 +277,19 @@ export async function createClientOrder(
         invoiceType,
         ...(invoiceNote ? { invoiceNote } : {}),
         amount: total,
-        status: 'pending',
+        // A fulfilled order is settled the moment it is recorded — it never sits pending,
+        // so it never lands on the client's outstanding balance.
+        status: fulfill ? 'paid' : 'pending',
         ...(stripeCustomerId ? { stripeCustomerId } : {}),
         ...(stripeInvoiceId ? { stripeInvoiceId } : {}),
         ...(orderInvoiceUrl ? { stripeInvoiceUrl: orderInvoiceUrl } : {}),
         ...(dueDate ? { dueDate } : {}),
+        ...(fulfill
+          ? {
+              fulfilledAt: new Date().toISOString(),
+              ...(input.fulfillmentNote?.trim() ? { fulfillmentNote: input.fulfillmentNote.trim() } : {}),
+            }
+          : {}),
         lineItems: lines.map((l) => ({
           title: l.title,
           description: l.description,
@@ -301,7 +326,7 @@ export async function createClientOrder(
     // point the client at, so don't mail a dead invoice — report it instead.
     let notice: string | undefined
     let emailed = false
-    if (input.skipEmail) {
+    if (fulfill || input.skipEmail) {
       // Caller opted out — nothing to explain.
     } else if (!clientEmail) {
       notice = 'No email sent — this client account has no email address.'
@@ -325,6 +350,7 @@ export async function createClientOrder(
       orderNumber,
       invoiceUrl: orderInvoiceUrl || null,
       stripeInvoiceCreated: Boolean(stripeInvoiceId),
+      fulfilled: fulfill,
       emailed,
       notice,
       total,
@@ -388,6 +414,51 @@ export async function updateOrderDueDate(
   } catch (error) {
     console.error('[updateOrderDueDate]', error)
     return { success: false, error: error instanceof Error ? error.message : 'Failed to update due date' }
+  }
+}
+
+// ── Update issued (effective) date ─────────────────────────────────────────────
+
+/**
+ * Set or clear an order's effective date.
+ *
+ * `issuedAt` overrides `createdAt` everywhere the order is shown, sorted, grouped by
+ * month, or counted toward a period — so backdating an invoice into the month its work
+ * belongs to moves it everywhere at once. Passing null clears the override and the
+ * order falls back to `createdAt`.
+ *
+ * Payload-only by design: Stripe's invoice creation date is not writable, so there is
+ * nothing to sync and nothing to warn about.
+ */
+export async function updateOrderIssuedAt(
+  orderId: string,
+  issuedAtIso: string | null,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const user = await getCurrentUser()
+    if (!user || user.role === 'client') return { success: false, error: 'Unauthorized' }
+
+    const payload = await getPayload({ config })
+
+    const order = await payload.findByID({ collection: 'orders', id: orderId, depth: 0 })
+    if (!order) return { success: false, error: 'Order not found' }
+
+    if (issuedAtIso && !isFinite(new Date(issuedAtIso).getTime())) {
+      return { success: false, error: 'That is not a valid date' }
+    }
+
+    await payload.update({
+      collection: 'orders',
+      id: orderId,
+      data: { issuedAt: issuedAtIso as any },
+    })
+
+    if (user.username) revalidatePath(`/u/${user.username}/clients`)
+
+    return { success: true }
+  } catch (error) {
+    console.error('[updateOrderIssuedAt]', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to update the date' }
   }
 }
 
@@ -511,7 +582,7 @@ export async function updateOrderLineItems(
  */
 export async function markOrderAsPaid(
   orderId: string,
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; warning?: string }> {
   try {
     const user = await getCurrentUser()
     if (!user || user.role === 'client') return { success: false, error: 'Unauthorized' }
@@ -522,12 +593,15 @@ export async function markOrderAsPaid(
     if (!order) return { success: false, error: 'Order not found' }
     if (order.status === 'paid') return { success: false, error: 'Order is already paid' }
 
-    await fulfillOrderPaidOutOfBand(payload, {
+    const result = await fulfillOrderPaidOutOfBand(payload, {
       id: orderId,
       stripeInvoiceId: order.stripeInvoiceId as string | undefined,
     })
 
-    return { success: true }
+    // Stripe is still collecting on this invoice — nothing was written.
+    if (!result.ok) return { success: false, error: result.message }
+
+    return { success: true, ...(result.warning ? { warning: result.warning } : {}) }
   } catch (error) {
     console.error('[markOrderAsPaid]', error)
     return { success: false, error: error instanceof Error ? error.message : 'Failed to mark as paid' }

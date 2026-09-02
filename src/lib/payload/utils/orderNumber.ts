@@ -9,10 +9,14 @@ import type { getPayload } from 'payload'
 export async function nextOrderNumber(
   payload: Awaited<ReturnType<typeof getPayload>>,
 ): Promise<string> {
+  // Filter to INV- numbers first. Stripe-numbered orders share this column and sort
+  // above/below INV- arbitrarily, so an unfiltered top-N can miss every INV- row and
+  // hand back INV-0001 again — which the unique index then rejects.
   const { docs } = await payload.find({
     collection: 'orders',
+    where: { orderNumber: { like: 'INV-' } },
     sort: '-orderNumber',
-    limit: 10,
+    limit: 50,
     depth: 0,
   })
   let max = 0

@@ -8,7 +8,9 @@ import {
   type SerializedProject,
 } from '@/lib/serialization'
 import type { ClientOption } from '@/components/dashboard/CreateProjectModal'
+import type { ActivityEvent } from '@/components/dashboard/ActivityFeed'
 import { getPreviewClientId } from '@/app/(spaces)/preview'
+import { sortByOrderDate } from '@/lib/dashboard/order-date'
 
 // The authenticated user, exactly as the layout resolves it (non-null).
 type CurrentUser = NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>
@@ -67,13 +69,51 @@ const findStaffOrders = (payload: Payload, user: CurrentUser, accountIds: any[])
           status: true,
           amount: true,
           createdAt: true,
+          updatedAt: true,
+          // The staff-set effective date — every order surface dates rows by
+          // `issuedAt ?? createdAt`, so the override has to travel with the summary.
+          issuedAt: true,
           dueDate: true,
+          clientAccount: true,
+          // The home view links each invoice straight out to its hosted Stripe
+          // invoice, so the URL travels with the summary.
+          stripeInvoiceUrl: true,
+        },
+        populate: {
+          'client-accounts': { name: true, firstName: true, company: true },
+        },
+        // The query sorts by createdAt because Mongo can't fall back to it when
+        // issuedAt is unset — it would bunch every un-overridden order at one end.
+        // So the fetch stays coarse and the real ordering happens here, once.
+      }).then((r) => ({ ...r, docs: sortByOrderDate(r.docs as any[]) }))
+
+// Retainers are ongoing work the same way a project is, so the home view counts
+// them alongside projects. Only `active` qualifies — `scoping` has no plan yet
+// and `inactive` is off the board.
+const findActiveRetainers = (payload: Payload, user: CurrentUser, accountIds: any[]) =>
+  user.role !== 'admin' && accountIds.length === 0
+    ? Promise.resolve({ docs: [] as any[] })
+    : payload.find({
+        collection: 'retainers',
+        where: user.role === 'admin'
+          ? { status: { equals: 'active' } }
+          : { and: [{ status: { equals: 'active' } }, { clientAccount: { in: accountIds } }] },
+        depth: 1,
+        sort: '-activatedAt',
+        limit: 100,
+        select: {
+          status: true,
+          tier: true,
+          monthlyFee: true,
+          hoursPerMonth: true,
+          startDate: true,
+          activatedAt: true,
           clientAccount: true,
         },
         populate: {
           'client-accounts': { name: true, firstName: true, company: true },
         },
-      })
+      }).catch(() => ({ docs: [] as any[] }))
 
 const findAllPackages = (payload: Payload) =>
   payload.find({
@@ -129,6 +169,7 @@ export interface StaffHomeData {
   completedTasksCount: number
   completedSprintsCount: number
   serializedProjects: SerializedProject[]
+  activeRetainers: any[]
 }
 
 export async function loadStaffHome(payload: Payload, user: CurrentUser): Promise<StaffHomeData> {
@@ -152,7 +193,7 @@ export async function loadStaffHome(payload: Payload, user: CurrentUser): Promis
 
   // Orders join the second batch (it exists anyway for sprints) since the
   // non-admin query needs accountIds from batch one.
-  const [{ docs: allOrders }, { totalDocs: completedSprintsCount }, sprintsResult] = await Promise.all([
+  const [{ docs: allOrders }, { totalDocs: completedSprintsCount }, sprintsResult, { docs: activeRetainers }] = await Promise.all([
     findStaffOrders(payload, user, accountIds),
     payload.find({
       collection: 'sprints',
@@ -162,6 +203,7 @@ export async function loadStaffHome(payload: Payload, user: CurrentUser): Promis
       limit: 1,
     }),
     findProjectSprints(payload, projectIds, 500),
+    findActiveRetainers(payload, user, accountIds),
   ])
 
   return {
@@ -174,6 +216,7 @@ export async function loadStaffHome(payload: Payload, user: CurrentUser): Promis
     completedTasksCount,
     completedSprintsCount,
     serializedProjects: buildSerializedProjects(allProjects, (sprintsResult as any).docs ?? [], allTasks),
+    activeRetainers,
   }
 }
 
@@ -288,6 +331,86 @@ export async function loadStaffFilesTab(payload: Payload, user: CurrentUser): Pr
   }
 }
 
+// ── Staff: recent activity ────────────────────────────────────────────────────
+// The `activity` collection is an append-only feed written by hooks (see
+// src/lib/payload/hooks/recordActivity.ts): orders created, projects created
+// and meaningfully changed, retainer hours logged, emails sent.
+//
+// Scoping follows the other staff loaders — role is DATA SCOPING here, not
+// presentation. Admins see every event; a `user` sees only events attached to a
+// client account or project they are assigned to, which is resolved from the
+// same two queries the rest of the staff tabs already run. Events with neither
+// (an email to an address that matched no account) are admin-only by
+// construction, since a non-admin's filter can only match on those two fields.
+//
+// select trims the row to exactly what <ActivityFeed> renders; depth 0 keeps
+// the relationships as ids, since every label the feed shows was denormalized
+// onto the row at write time.
+
+export async function loadStaffActivity(
+  payload: Payload,
+  user: CurrentUser,
+  limit = 40,
+): Promise<{ activity: ActivityEvent[] }> {
+  let where: Record<string, any> = {}
+
+  if (user.role !== 'admin') {
+    const [{ docs: clientAccounts }, { docs: projects }] = await Promise.all([
+      findStaffClientAccounts(payload, user),
+      findStaffProjects(payload, user),
+    ])
+    const accountIds = clientAccounts.map((ca: any) => ca.id)
+    const projectIds = projects.map((p: any) => p.id)
+    if (accountIds.length === 0 && projectIds.length === 0) return { activity: [] }
+
+    where = {
+      or: [
+        ...(accountIds.length > 0 ? [{ clientAccount: { in: accountIds } }] : []),
+        ...(projectIds.length > 0 ? [{ project: { in: projectIds } }] : []),
+      ],
+    }
+  }
+
+  const { docs } = await payload
+    .find({
+      collection: 'activity',
+      where,
+      depth: 0,
+      sort: '-occurredAt',
+      limit,
+      select: {
+        kind: true,
+        occurredAt: true,
+        title: true,
+        summary: true,
+        status: true,
+        amount: true,
+        href: true,
+        actorName: true,
+        changes: true,
+      },
+    })
+    // A feed is advisory — a query failure must not take the whole tab down.
+    .catch(() => ({ docs: [] as any[] }))
+
+  return {
+    activity: docs.map((d: any) => ({
+      id: String(d.id),
+      kind: d.kind,
+      occurredAt: d.occurredAt,
+      title: d.title ?? '',
+      meta: d.summary ?? null,
+      status: d.status ?? null,
+      amount: typeof d.amount === 'number' ? d.amount : null,
+      href: d.href ?? null,
+      actorName: d.actorName ?? null,
+      changes: Array.isArray(d.changes)
+        ? d.changes.map((c: any) => ({ field: c.field, from: c.from ?? null, to: c.to ?? null }))
+        : undefined,
+    })),
+  }
+}
+
 // ── Client: shared account resolution ─────────────────────────────────────────
 // Returns null when the user has no (or a stale) client account — the caller
 // renders the AccountNotFound state.
@@ -348,7 +471,7 @@ const findClientOrders = (payload: Payload, clientAccountId: any) =>
     depth: 1,
     sort: '-createdAt',
     limit: 100,
-  })
+  }).then((r) => ({ ...r, docs: sortByOrderDate(r.docs as any[]) }))
 
 const findClientProposalPackages = (payload: Payload, clientAccountId: any) =>
   payload.find({

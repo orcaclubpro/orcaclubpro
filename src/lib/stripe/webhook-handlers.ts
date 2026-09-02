@@ -14,7 +14,7 @@
 import type { Payload, PayloadRequest } from 'payload'
 import type Stripe from 'stripe'
 import { retryOnTransientError } from '@/lib/stripe/retry'
-import { sendPaymentConfirmationEmails } from '@/lib/payload/utils/paymentConfirmationEmail'
+import { sendPaymentReceiptOnce } from '@/lib/payload/utils/paymentConfirmationEmail'
 import { releaseWorkEntriesForOrder } from '@/actions/packages'
 
 // ─── Type matching @payloadcms/plugin-stripe handler signature ────────────────
@@ -179,8 +179,10 @@ export async function handleInvoicePaid({ event, payload }: StripeHandlerArgs): 
 
     console.log('[Stripe Webhook] Order marked as paid:', resolvedOrderId)
 
-    // Non-blocking — errors caught inside sendPaymentConfirmationEmails
-    void sendPaymentConfirmationEmails(payload, resolvedOrderId)
+    // Awaited, not fire-and-forget: a floating promise here can be killed when
+    // the serverless function freezes after the 200, silently eating the receipt.
+    // Never throws, and no-ops if a manual Mark as Paid already sent it.
+    await sendPaymentReceiptOnce(payload, resolvedOrderId)
 
     await markProcessed(payload, webhookEventId, {
       orderId: resolvedOrderId,
@@ -220,6 +222,44 @@ export async function handleInvoicePaymentFailed({
       console.warn('[Stripe Webhook] No order found for failed invoice:', invoice.id)
       await markProcessed(payload, webhookEventId, {
         errorMessage: 'No order found for invoice',
+      })
+      return
+    }
+
+    // A failure on an order we already call 'paid' is the expensive case: someone
+    // marked it paid before the money landed, the balance hook has already been
+    // credited, and now the payment has bounced. Flag it rather than reverting —
+    // an automatic write-down of a client balance needs a human to confirm it.
+    const order = await payload.findByID({
+      collection: 'orders',
+      id: resolvedOrderId,
+      depth: 0,
+    })
+
+    if (order?.status === 'paid') {
+      const note =
+        `[${new Date().toISOString()}] Stripe reported payment FAILED on invoice ${invoice.id}, ` +
+        `but this order is already marked paid. The client balance has been credited for money ` +
+        `that never arrived — confirm the payment before treating this order as settled.`
+
+      console.error(
+        `[Stripe Webhook] PAYMENT DISCREPANCY — order ${resolvedOrderId} is 'paid' but its Stripe payment failed`,
+      )
+
+      await retryOnTransientError(() =>
+        payload.update({
+          collection: 'orders',
+          id: resolvedOrderId,
+          data: {
+            fulfillmentNote: [order.fulfillmentNote, note].filter(Boolean).join('\n\n'),
+          },
+        }),
+      )
+
+      await markProcessed(payload, webhookEventId, {
+        orderId: resolvedOrderId,
+        stripeInvoiceId: invoice.id,
+        errorMessage: 'Payment failed on an order already marked paid — needs review',
       })
       return
     }

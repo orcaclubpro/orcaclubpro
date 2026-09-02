@@ -1,5 +1,6 @@
 import type { CollectionConfig } from 'payload'
 import { adminOnly, adminOrAssigned, adminOrUser } from '../access'
+import { trackProjectActivity } from '../hooks/recordActivity'
 
 /**
  * Projects Collection
@@ -26,6 +27,10 @@ export const Projects: CollectionConfig = {
     read: adminOrAssigned, // Admins see all, users see assigned projects
     update: adminOrAssigned, // Admins can update all, users can update assigned projects
     delete: adminOnly, // Only admins can delete projects
+  },
+  hooks: {
+    // Records creates, and updates that moved a meaningful field.
+    afterChange: [trackProjectActivity],
   },
   fields: [
     // ============================================================================

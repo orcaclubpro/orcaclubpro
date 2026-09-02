@@ -1,5 +1,6 @@
 import type { CollectionConfig } from 'payload'
 import { adminOrUser, adminOnly } from '../access/index'
+import { trackRetainerLogActivity } from '../hooks/recordActivity'
 
 /**
  * RetainerTimeEntries Collection
@@ -24,6 +25,10 @@ const RetainerTimeEntries: CollectionConfig = {
     read: adminOrUser,
     update: adminOrUser,
     delete: adminOnly,
+  },
+  hooks: {
+    // A "log added" is a new entry — draft entries are planned work, not time spent.
+    afterChange: [trackRetainerLogActivity],
   },
   fields: [
     {

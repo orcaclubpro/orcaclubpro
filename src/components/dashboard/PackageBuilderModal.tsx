@@ -61,7 +61,7 @@ export function PackageBuilderModal({ mode, username, clientId, existing, onClos
   const overlay = (
     // Above the command console (z-70), which can open this modal from its Milestones
     // station; below the builder's own pickers (z-90) so those still stack on top.
-    <div className="fixed inset-0 z-[80] flex p-3 sm:p-5">
+    <div className="fixed inset-0 z-[80] flex p-3 sm:p-5" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-[#000000]/75 backdrop-blur-sm" onClick={() => onClose()} />
       <div
         className="relative z-10 w-full h-full flex flex-col overflow-hidden rounded-2xl border border-[var(--space-border-hard)] shadow-2xl shadow-[#000000]/50"

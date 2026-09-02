@@ -713,3 +713,20 @@ html:has(#spaces-root) {
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }
+
+/* Portal date fields draw their own calendar glyph beside the value, so Chrome's
+   native picker button would be a second identical icon. Hide it, but keep it
+   full-height and clickable at the right edge — parked under our icon — so the
+   picker still opens on click. Plain CSS rather than an arbitrary variant: this
+   has to beat Preflight's own ::-webkit-calendar-picker-indicator rule outright. */
+.date-field::-webkit-calendar-picker-indicator {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 2rem;
+  margin: 0;
+  padding: 0;
+  opacity: 0 !important;
+  cursor: pointer;
+}

@@ -15,6 +15,10 @@ export const fmtCurrencyFull = (n: number) =>
 export const fmtDate = (iso: string) =>
   new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(iso))
 
+// The order-date rules live in ./order-date (UI-free, so server loaders share them).
+// Re-exported here because the dashboard components already import from this module.
+export { orderDate, orderTime, byOrderDateDesc, byOrderDateAsc, sortByOrderDate } from './order-date'
+
 /** Month + year — e.g. "January 2025" */
 export const fmtMonthYear = (iso: string) =>
   new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(new Date(iso))
@@ -60,6 +64,8 @@ export type ClientOrderSummary = {
   amount: number
   status: OrderStatusKey
   createdAt: string
+  /** Staff-set effective date. Overrides createdAt wherever the order is dated. */
+  issuedAt?: string | null
   stripeInvoiceUrl?: string | null
 }
 

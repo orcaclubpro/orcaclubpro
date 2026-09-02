@@ -7,6 +7,7 @@
 import type { SpineEvent } from '@/components/dashboard/Spine'
 import type { SerializedProject } from '@/lib/serialization'
 import { projectStatus, sprintStatus, orderStatus } from './status'
+import { orderDate } from './utils'
 import { RANGE_CFG, type Range } from './range'
 
 function usable(d: unknown): d is string {
@@ -117,7 +118,7 @@ export function clientSpineEvents(
 
   for (const order of orders) {
     const paidAt = order?.paidAt ?? order?.paymentDate
-    const issuedAt = order?.createdAt
+    const issuedAt = orderDate(order)
     const amount = typeof order?.amount === 'number' ? order.amount : null
     const label = order?.orderNumber ? `Invoice ${order.orderNumber}` : 'Invoice'
 
@@ -158,14 +159,15 @@ export function invoiceSpineEvents(
     amount: number
     status: string
     createdAt: string
+    issuedAt?: string | null
     stripeInvoiceUrl?: string | null
   }>,
 ): SpineEvent[] {
-  return orders.filter((o) => usable(o.createdAt)).map((o) => {
+  return orders.filter((o) => usable(orderDate(o))).map((o) => {
     const status = orderStatus(o.status)
     return {
       id: o.id,
-      date: o.createdAt,
+      date: orderDate(o),
       kind: o.status === 'paid' ? 'payment' : 'invoice',
       title: o.orderNumber ? `Invoice ${o.orderNumber}` : 'Invoice',
       meta: [status.label, o.title].filter(Boolean).join(' · '),

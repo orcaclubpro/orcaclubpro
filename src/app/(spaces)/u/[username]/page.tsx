@@ -4,7 +4,7 @@ import config from '@payload-config'
 import { getSessionUser } from '@/app/(spaces)/session'
 import { effectiveExperience } from '@/app/(spaces)/preview'
 import { tabsFor } from './tabs'
-import { loadStaffHome, loadClientHome, resolveActiveClientAccount } from './dashboard-data'
+import { loadStaffHome, loadStaffActivity, loadClientHome, resolveActiveClientAccount } from './dashboard-data'
 import { AdminHomeView } from './_views/AdminHomeView'
 import { ClientHomeView } from './_views/ClientHomeView'
 import { AccountNotFound } from './_views/AccountNotFound'
@@ -51,7 +51,12 @@ export default async function DashboardPage({
   // ── Staff (admin / user) ───────────────────────────────────────────────────
 
   if (experience === 'staff') {
-    const data = await loadStaffHome(payload, user)
+    // The activity feed is the tab the page opens on, so it loads alongside
+    // the ledger rather than after it.
+    const [data, { activity }] = await Promise.all([
+      loadStaffHome(payload, user),
+      loadStaffActivity(payload, user),
+    ])
     return (
       <AdminHomeView
         user={{ firstName: data.firstName, role: user.role }}
@@ -65,6 +70,8 @@ export default async function DashboardPage({
         completedSprintsCount={data.completedSprintsCount}
         timeframe={timeframe}
         serializedProjects={data.serializedProjects}
+        activeRetainers={data.activeRetainers}
+        activity={activity}
       />
     )
   }

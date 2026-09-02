@@ -7,6 +7,7 @@ export default function MarkAsPaidButton() {
   const { id } = useDocumentInfo()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [blocked, setBlocked] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [confirming, setConfirming] = useState(false)
   const [docData, setDocData] = useState<any>(null)
@@ -26,6 +27,7 @@ export default function MarkAsPaidButton() {
     try {
       setLoading(true)
       setError(null)
+      setBlocked(null)
       setConfirming(false)
 
       const response = await fetch(`/api/orders/${id}/fulfill`, {
@@ -35,11 +37,21 @@ export default function MarkAsPaidButton() {
 
       const data = await response.json()
 
+      // 409 — Stripe is still collecting on this invoice. Nothing was written,
+      // so this is a "come back later", not a failure. Don't reload.
+      if (response.status === 409) {
+        setBlocked(data.error || 'A payment is already processing on this invoice.')
+        return
+      }
+
       if (!response.ok) {
         throw new Error(data.error || 'Failed to mark order as paid')
       }
 
-      setSuccess(data.stripeUpdated ? 'Order marked as paid and Stripe invoice closed.' : 'Order marked as paid.')
+      const base = data.stripeUpdated
+        ? 'Order marked as paid and Stripe invoice closed.'
+        : 'Order marked as paid.'
+      setSuccess(data.warning ? `${base} ${data.warning}` : base)
 
       setTimeout(() => {
         window.location.reload()
@@ -179,6 +191,22 @@ export default function MarkAsPaidButton() {
         >
           {loading ? 'Processing...' : success ? 'Marked as Paid!' : alreadyPaid ? 'Already Paid' : cancelled ? 'Order Cancelled' : 'Mark as Paid'}
         </button>
+      )}
+
+      {blocked && (
+        <div
+          style={{
+            marginTop: '12px',
+            padding: '12px',
+            background: '#451a03',
+            borderRadius: '6px',
+            border: '1px solid #92400e',
+          }}
+        >
+          <p style={{ margin: 0, color: '#fcd34d', fontSize: '13px', lineHeight: '1.6' }}>
+            ⏳ {blocked}
+          </p>
+        </div>
       )}
 
       {error && (

@@ -1,5 +1,6 @@
 import type { CollectionConfig } from 'payload'
 import { updateClientBalance, revertClientBalance } from '../hooks/updateClientBalance'
+import { trackOrderActivity } from '../hooks/recordActivity'
 import { adminOnly, adminOrUser, adminOrUserOrOwnOrder } from '../access'
 
 const Orders: CollectionConfig = {
@@ -43,7 +44,7 @@ const Orders: CollectionConfig = {
         return data
       },
     ],
-    afterChange: [updateClientBalance],
+    afterChange: [updateClientBalance, trackOrderActivity],
     afterDelete: [revertClientBalance],
   },
   access: {
@@ -244,6 +245,56 @@ const Orders: CollectionConfig = {
       admin: {
         description: 'Label shown on the Stripe invoice line item (e.g. "50% Deposit")',
         position: 'sidebar',
+      },
+    },
+    {
+      name: 'issuedAt',
+      type: 'date',
+      index: true,
+      admin: {
+        description:
+          'The order\'s effective date. Overrides createdAt everywhere this order is shown, sorted, ' +
+          'or counted toward a period. Leave empty to use createdAt.',
+        position: 'sidebar',
+        date: { pickerAppearance: 'dayOnly' },
+      },
+    },
+
+    // FULFILLMENT (orders settled without a Stripe invoice)
+    {
+      name: 'fulfillmentNote',
+      type: 'textarea',
+      admin: {
+        description:
+          'Why this order was fulfilled without a Stripe invoice (e.g. "Covered by Nov retainer"). Internal — never emailed.',
+        position: 'sidebar',
+      },
+    },
+    {
+      name: 'fulfilledAt',
+      type: 'date',
+      index: true,
+      admin: {
+        description: 'When this order was fulfilled off-Stripe. Set by the Fulfill flow, not by hand.',
+        position: 'sidebar',
+        readOnly: true,
+        date: { pickerAppearance: 'dayAndTime' },
+      },
+    },
+    {
+      name: 'paymentReceiptSentAt',
+      type: 'date',
+      access: {
+        // Claimed atomically by sendPaymentReceiptOnce so the invoice.paid webhook
+        // and a manual Mark as Paid can never both email the same order.
+        update: () => false,
+      },
+      admin: {
+        description:
+          'When the payment receipt + admin notification were emailed. Set automatically — its presence is what stops a duplicate send.',
+        position: 'sidebar',
+        readOnly: true,
+        date: { pickerAppearance: 'dayAndTime' },
       },
     },
     {

@@ -5,6 +5,7 @@ import { ChevronDown, Calendar, Package, Receipt } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { PayNowButton } from './PayNowButton'
 import type { Order } from '@/types/payload-types'
+import { orderDate } from '@/lib/dashboard/utils'
 
 interface EnhancedOrderCardProps {
   order: Order
@@ -133,7 +134,7 @@ export function EnhancedOrderCard({ order, isPending = false }: EnhancedOrderCar
               Order Date
             </p>
             <p className="text-[var(--space-text-tertiary)] font-medium text-sm">
-              {formatDate(order.createdAt)}
+              {formatDate(orderDate(order))}
             </p>
           </div>
         </div>

@@ -12,6 +12,7 @@ import {
   type SerializedTask,
 } from '@/lib/serialization'
 import { ClientDetailTabView } from './ClientDetailTabView'
+import { sortByOrderDate } from '@/lib/dashboard/order-date'
 
 export async function generateMetadata({
   params,
@@ -50,7 +51,7 @@ export default async function ClientDetailPage({
   const clientAccount: ClientAccount | null = await getClientAccountDetail(clientId)
   if (!clientAccount) notFound()
 
-  const [{ docs: orders }, { docs: projects }, { docs: clientUsers }, packagesResult, credentialsResult] =
+  const [{ docs: orderDocs }, { docs: projects }, { docs: clientUsers }, packagesResult, credentialsResult] =
     await Promise.all([
       payload.find({
         collection: 'orders',
@@ -93,6 +94,9 @@ export default async function ClientDetailPage({
         limit: 500,
       }).catch(() => ({ docs: [] })),
     ])
+  // Ordered on the effective date (issuedAt ?? createdAt), not the fetch order —
+  // a backdated invoice belongs where its date puts it, not where it was written.
+  const orders = sortByOrderDate(orderDocs as any[])
   const packages = packagesResult.docs
   const credentials = credentialsResult.docs
 

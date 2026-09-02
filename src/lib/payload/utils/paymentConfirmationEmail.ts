@@ -441,12 +441,18 @@ orcaclub.pro`.trim()
 
 /**
  * Send payment confirmation emails to both the client and the admin.
- * Non-blocking: errors are caught and logged — the webhook must still return 200.
+ *
+ * Never throws — errors are caught and logged, because the webhook must still
+ * return 200. Returns true only if both emails actually went out, so the caller
+ * can release its "already sent" claim and let a later attempt retry.
+ *
+ * Prefer `sendPaymentReceiptOnce` over calling this directly: it is the guarded
+ * entry point that stops the same order being emailed twice.
  */
 export async function sendPaymentConfirmationEmails(
   payload: Payload,
   orderId: string,
-): Promise<void> {
+): Promise<boolean> {
   try {
     const order = await payload.findByID({
       collection: 'orders',
@@ -456,13 +462,13 @@ export async function sendPaymentConfirmationEmails(
 
     if (!order) {
       payload.logger.warn(`[PaymentConfirmation] Order not found: ${orderId}`)
-      return
+      return false
     }
 
     const clientAccount = order.clientAccount as any
     if (!clientAccount?.email) {
       payload.logger.warn(`[PaymentConfirmation] No client email for order: ${orderId}`)
-      return
+      return false
     }
 
     const baseUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'https://orcaclub.pro'
@@ -483,7 +489,8 @@ export async function sendPaymentConfirmationEmails(
     }
 
     const from = process.env.EMAIL_FROM || 'carbon@orcaclub.pro'
-    const adminEmail = 'chance@orcaclub.pro'
+    // Override with ADMIN_NOTIFICATION_EMAIL to route the internal copy elsewhere.
+    const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL || 'chance@orcaclub.pro'
 
     // Client receipt
     await payload.sendEmail({
@@ -508,11 +515,80 @@ export async function sendPaymentConfirmationEmails(
     payload.logger.info(
       `[PaymentConfirmation] Admin notification sent to ${adminEmail} for order ${order.orderNumber}`,
     )
+
+    return true
   } catch (error) {
     // Non-blocking — log but don't rethrow so the webhook still returns 200
     payload.logger.error(
       `[PaymentConfirmation] Failed to send emails for order ${orderId}:`,
       error,
     )
+    return false
   }
+}
+
+// ─── Guarded entry point ───────────────────────────────────────────────────────
+
+/**
+ * Send the payment receipt + admin notification for an order exactly once.
+ *
+ * Two independent paths can conclude that an order is paid: the `invoice.paid`
+ * webhook, and a human pressing Mark as Paid. Stripe fires `invoice.paid` for
+ * out-of-band payments too, so for a Stripe-invoiced order BOTH paths fire —
+ * and an order with no Stripe invoice gets neither unless the manual path sends
+ * it. Both therefore call this, and the claim below decides who actually sends.
+ *
+ * The claim is a single atomic findOneAndUpdate on `paymentReceiptSentAt` rather
+ * than a read-then-write, because the two paths run in different processes and
+ * a check-then-send would race straight into a duplicate email. Stamping first
+ * and releasing on failure means a transient SMTP error retries next time
+ * instead of permanently suppressing the receipt.
+ */
+export async function sendPaymentReceiptOnce(
+  payload: Payload,
+  orderId: string,
+): Promise<boolean> {
+  const model = payload.db.collections['orders'] as any
+
+  let claimed = false
+  try {
+    const prior = await model.findOneAndUpdate(
+      {
+        _id: orderId,
+        $or: [{ paymentReceiptSentAt: null }, { paymentReceiptSentAt: { $exists: false } }],
+      },
+      { $set: { paymentReceiptSentAt: new Date() } },
+      { returnDocument: 'before' },
+    )
+    claimed = Boolean(prior)
+  } catch (error) {
+    payload.logger.error(
+      `[PaymentConfirmation] Could not claim receipt send for order ${orderId}:`,
+      error,
+    )
+    return false
+  }
+
+  if (!claimed) {
+    payload.logger.info(
+      `[PaymentConfirmation] Receipt already sent for order ${orderId} — skipping duplicate`,
+    )
+    return false
+  }
+
+  const sent = await sendPaymentConfirmationEmails(payload, orderId)
+
+  if (!sent) {
+    // Release the claim so the next trigger can try again.
+    try {
+      await model.updateOne({ _id: orderId }, { $unset: { paymentReceiptSentAt: '' } })
+    } catch (error) {
+      payload.logger.error(
+        `[PaymentConfirmation] Could not release receipt claim for order ${orderId}:`,
+        error,
+      )
+    }
+  }
+
+  return sent
 }

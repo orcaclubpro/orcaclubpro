@@ -95,7 +95,7 @@ export function EmailPackageModal({
   // Portaled to <body> so the overlay is never trapped by an ancestor's
   // transform/overflow context and always centers against the viewport.
   return createPortal(
-    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4" role="dialog" aria-modal="true">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-[#000000]/60" onClick={onClose} />
 

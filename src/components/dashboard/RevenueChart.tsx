@@ -3,6 +3,7 @@
 import { useMemo } from 'react'
 import { TrendingUp, TrendingDown, Minus, Info } from 'lucide-react'
 import type { Range } from '@/lib/dashboard/range'
+import { orderDate } from '@/lib/dashboard/utils'
 
 // ── Range → lookback window ────────────────────────────────────────────────────
 const RANGE_DAYS: Record<Range, number> = { week: 7, month: 30, year: 365 }
@@ -144,9 +145,9 @@ export function RevenueChart({
       }
     }
 
-    const cur  = calc(allOrders.filter((o: any) => new Date(o.createdAt ?? 0).getTime() > since))
+    const cur  = calc(allOrders.filter((o: any) => new Date(orderDate(o) || 0).getTime() > since))
     const prev = calc(allOrders.filter((o: any) => {
-      const t = new Date(o.createdAt ?? 0).getTime()
+      const t = new Date(orderDate(o) || 0).getTime()
       return t > prevSince && t <= since
     }))
 

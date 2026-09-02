@@ -200,7 +200,7 @@ export function RetainerInvoiceModal({
   const anyOk = outcome && (outcome.invoice?.ok || outcome.recap?.ok)
 
   return (
-    <div className="fixed inset-0 z-[80] print:hidden">
+    <div className="fixed inset-0 z-[80] print:hidden" role="dialog" aria-modal="true">
       <div className="absolute inset-0 animate-in fade-in duration-150" style={{ background: 'rgba(0,0,0,0.62)', backdropFilter: 'blur(3px)' }} onClick={onClose} />
       <div className="absolute left-1/2 top-3 bottom-3 -translate-x-1/2 w-full px-3 max-w-[37.5rem]">
         <div

@@ -58,10 +58,17 @@ export async function POST(
 
     // Sync the Stripe invoice to paid-out-of-band (if linked), then mark the
     // Payload order paid — shared with the dashboard markOrderAsPaid action.
-    const { stripeUpdated } = await fulfillOrderPaidOutOfBand(payload, {
+    const result = await fulfillOrderPaidOutOfBand(payload, {
       id,
       stripeInvoiceId: order.stripeInvoiceId as string | undefined,
     })
+
+    // 409 — the request is well-formed, but the invoice's current state forbids
+    // it. Nothing was written, so the client can safely retry once it settles.
+    if (!result.ok) {
+      console.warn(`[Fulfill] Order ${order.orderNumber} not fulfilled (${result.reason})`)
+      return NextResponse.json({ error: result.message, reason: result.reason }, { status: 409 })
+    }
 
     console.log(`[Fulfill] Order ${order.orderNumber} marked as paid by ${user.email}`)
 
@@ -69,7 +76,8 @@ export async function POST(
       success: true,
       orderId: id,
       orderNumber: order.orderNumber,
-      stripeUpdated,
+      stripeUpdated: result.stripeUpdated,
+      ...(result.warning ? { warning: result.warning } : {}),
     })
   } catch (error) {
     console.error('[Fulfill] Error:', error)

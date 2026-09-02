@@ -6,11 +6,12 @@ import {
   ChevronDown, ChevronUp, Clock, CheckCircle, XCircle,
   Copy, CheckCheck, ExternalLink, CreditCard, Calendar,
   Receipt, Loader2, AlertTriangle, CalendarDays, Zap,
-  Pencil, Plus, Trash2, X, Check, Sparkles,
+  Pencil, Plus, Trash2, X, Check, Sparkles, PackageCheck,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
-import { updateOrderDueDate, updateOrderLineItems, deleteOrder, markOrderAsPaid, type LineItemInput } from '@/actions/orders'
+import { updateOrderDueDate, updateOrderIssuedAt, updateOrderLineItems, deleteOrder, markOrderAsPaid, type LineItemInput } from '@/actions/orders'
+import { orderDate } from '@/lib/dashboard/utils'
 
 interface LineItem {
   title: string
@@ -27,9 +28,15 @@ export interface OrderDoc {
   status: 'pending' | 'paid' | 'cancelled'
   amount: number
   createdAt: string
+  /** Staff-set effective date. Overrides createdAt wherever this order is dated. */
+  issuedAt?: string | null
   dueDate?: string | null
   stripeInvoiceId?: string | null
   stripeInvoiceUrl?: string | null
+  /** Set only by the Fulfill flow — this order was settled without a Stripe invoice. */
+  fulfilledAt?: string | null
+  /** Internal reason for the fulfillment. Staff only — never shown to clients. */
+  fulfillmentNote?: string | null
   lineItems?: LineItem[]
   projectRef?: { id: string; name: string } | string | null
 }
@@ -43,6 +50,20 @@ function fmtDate(d: string | Date) {
     month: 'short', day: 'numeric', year: 'numeric',
   }).format(new Date(d))
 }
+
+/**
+ * Sort key for an order: its due date, falling back to when it was created.
+ * Fulfilled orders carry no due date (they are settled on arrival), and older
+ * orders predate the field — neither should sink to the bottom of the list.
+ */
+function dueKey(o: OrderDoc): number {
+  const t = new Date(o.dueDate || orderDate(o)).getTime()
+  return isFinite(t) ? t : 0
+}
+/** Soonest due first — overdue and next-up rise to the top. */
+const bySoonestDue = (a: OrderDoc, b: OrderDoc) => dueKey(a) - dueKey(b)
+/** Most recent first — history reads newest-down. */
+const byLatestDue = (a: OrderDoc, b: OrderDoc) => dueKey(b) - dueKey(a)
 
 function toDateInputValue(iso: string | null | undefined): string {
   if (!iso) return ''
@@ -66,6 +87,85 @@ const STATUS_CFG = {
 
 // ── Due date editor ────────────────────────────────────────────────────────────
 
+/**
+ * Sets the order's effective date. Empty means "use createdAt" — the field is an
+ * override, not a second source of truth, so clearing it is a first-class action.
+ * Payload-only: Stripe's invoice creation date can't be rewritten.
+ */
+function IssuedDateEditor({
+  orderId, issuedAt, createdAt,
+}: {
+  orderId: string
+  issuedAt: string | null | undefined
+  createdAt: string
+}) {
+  const router = useRouter()
+  const [value, setValue] = useState(toDateInputValue(issuedAt))
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved]   = useState(false)
+  const [error, setError]   = useState<string | null>(null)
+
+  const isDirty = value !== toDateInputValue(issuedAt)
+
+  async function handleSave() {
+    setSaving(true); setError(null); setSaved(false)
+    const isoValue = value ? new Date(`${value}T00:00:00.000Z`).toISOString() : null
+    const result = await updateOrderIssuedAt(orderId, isoValue)
+    setSaving(false)
+    if (result.success) {
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+      router.refresh()
+    } else {
+      setError(result.error ?? 'Failed to save')
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="relative">
+          <input
+            type="date"
+            value={value}
+            onChange={(e) => { setValue(e.target.value); setSaved(false); setError(null) }}
+            className={cn(
+              'h-8 px-3 pr-8 text-xs rounded-lg border bg-transparent text-[var(--space-text-primary)]',
+              'focus:outline-none focus:ring-1 focus:ring-[var(--space-accent)]/40 [color-scheme:light]',
+              // `date-field` (globals.css) hides Chrome's native picker button so the
+              // lucide icon beside it is the only calendar glyph on the control.
+              'date-field',
+              isDirty ? 'border-[var(--space-accent)]/30 bg-[rgba(139,156,182,0.06)]' : 'border-[var(--space-border-hard)]',
+            )}
+          />
+          <Calendar className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 size-3 text-[var(--space-text-muted)]" />
+        </div>
+        {isDirty && (
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="flex items-center gap-1.5 h-8 px-3 text-xs font-medium border border-[rgba(139,156,182,0.15)] bg-[rgba(139,156,182,0.06)] rounded-lg hover:bg-[rgba(139,156,182,0.10)] disabled:opacity-50 transition-all"
+            style={{ color: 'var(--space-accent)' }}
+          >
+            {saving ? <><Loader2 className="size-3 animate-spin" /> Saving…</> : 'Save'}
+          </button>
+        )}
+        {saved && !isDirty && (
+          <span className="flex items-center gap-1 text-xs text-emerald-400">
+            <Check className="size-3" />Saved
+          </span>
+        )}
+      </div>
+      <p className="text-[0.625rem] text-[var(--space-text-muted)]">
+        {value
+          ? 'Dates this order everywhere — lists, month groups, and period revenue.'
+          : `Empty — using the created date, ${fmtDate(createdAt)}.`}
+      </p>
+      {error && <p className="text-xs text-red-400">{error}</p>}
+    </div>
+  )
+}
+
 function DueDateEditor({
   orderId, dueDate, hasStripe,
 }: {
@@ -73,6 +173,7 @@ function DueDateEditor({
   dueDate: string | null | undefined
   hasStripe: boolean
 }) {
+  const router = useRouter()
   const [value, setValue]   = useState(toDateInputValue(dueDate))
   const [saving, setSaving] = useState(false)
   const [warning, setWarning] = useState<string | null>(null)
@@ -90,6 +191,7 @@ function DueDateEditor({
       setSaved(true)
       if (result.warning) setWarning(result.warning)
       setTimeout(() => setSaved(false), 3000)
+      router.refresh()
     } else {
       setError(result.error ?? 'Failed to save')
     }
@@ -106,6 +208,9 @@ function DueDateEditor({
             className={cn(
               'h-8 px-3 pr-8 text-xs rounded-lg border bg-transparent text-[var(--space-text-primary)]',
               'focus:outline-none focus:ring-1 focus:ring-[var(--space-accent)]/40 [color-scheme:light]',
+              // `date-field` (globals.css) hides Chrome's native picker button so the
+              // lucide icon beside it is the only calendar glyph on the control.
+              'date-field',
               isDirty ? 'border-[var(--space-accent)]/30 bg-[rgba(139,156,182,0.06)]' : 'border-[var(--space-border-hard)]',
             )}
           />
@@ -484,7 +589,7 @@ function MarkAsPaidButton({ orderId, onPaid }: { orderId: string; onPaid: () => 
         {saving ? <Loader2 className="size-3 animate-spin" /> : <CheckCircle className="size-3.5" />}
         {confirm ? 'Confirm payment' : 'Mark as Paid'}
       </button>
-      {error && <p className="text-[0.625rem] text-red-400">{error}</p>}
+      {error && <p className="max-w-[18rem] text-[0.625rem] leading-relaxed text-amber-400">{error}</p>}
     </div>
   )
 }
@@ -556,10 +661,13 @@ function OrderCard({
   const cfg = STATUS_CFG[order.status as keyof typeof STATUS_CFG] ?? STATUS_CFG.pending
   const StatusIcon = cfg.icon
   const lineItems = order.lineItems ?? []
-  const canEditDueDate   = role !== 'client' && order.status === 'pending'
+  // Staff can retime any order — paid and fulfilled ones included. The server action
+  // already accepts every status and only warns when Stripe can't follow along.
+  const canEditDueDate   = role !== 'client'
   const canEditLineItems = role !== 'client'
   const canMarkPaid      = role !== 'client' && order.status === 'pending'
   const canDelete        = role === 'admin'
+  const isFulfilled      = Boolean(order.fulfilledAt) && role !== 'client'
 
   const handleCopyLink = () => {
     if (!order.stripeInvoiceUrl) return
@@ -602,6 +710,15 @@ function OrderCard({
               >
                 <StatusIcon className="size-2.5" />{cfg.label}
               </Badge>
+              {isFulfilled && (
+                <Badge
+                  variant="outline"
+                  className="text-[var(--space-text-secondary)] bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] text-[0.625rem] px-1.5 py-0 inline-flex items-center gap-1 shrink-0"
+                  title="Settled without a Stripe invoice"
+                >
+                  <PackageCheck className="size-2.5" />Fulfilled
+                </Badge>
+              )}
             </div>
 
             {/* Project reference */}
@@ -615,7 +732,7 @@ function OrderCard({
             {/* Dates */}
             <div className="flex items-center gap-4 flex-wrap">
               <span className="flex items-center gap-1 text-xs text-[var(--space-text-muted)]">
-                <Calendar className="size-3" />{fmtDate(order.createdAt)}
+                <Calendar className="size-3" />Issued {fmtDate(orderDate(order))}
               </span>
               {order.dueDate && (
                 <span className={cn('flex items-center gap-1 text-xs', order.status === 'pending' ? 'text-amber-600/80' : 'text-[var(--space-text-muted)]')}>
@@ -666,6 +783,35 @@ function OrderCard({
               ) : order.status === 'pending' ? (
                 <p className="text-xs text-[var(--space-text-muted)] italic">No payment link yet — contact your project manager.</p>
               ) : null}
+            </div>
+
+            {/* Fulfillment — why this order never went through Stripe */}
+            {isFulfilled && (
+              <div className="space-y-2">
+                <p className="text-[0.625rem] text-[var(--space-text-secondary)] uppercase tracking-widest font-semibold">
+                  Fulfilled {order.fulfilledAt ? `· ${fmtDate(order.fulfilledAt)}` : ''}
+                </p>
+                <p className={cn('text-sm', order.fulfillmentNote ? 'text-[var(--space-text-primary)]' : 'text-[var(--space-text-muted)] italic')}>
+                  {order.fulfillmentNote || 'No fulfillment note.'}
+                </p>
+                <p className="text-[0.625rem] text-[var(--space-text-muted)]">
+                  Recorded as paid without a Stripe invoice. Internal — not shown to the client.
+                </p>
+              </div>
+            )}
+
+            {/* Issued date — the effective date, overriding when the row was written */}
+            <div className="space-y-2">
+              <p className="text-[0.625rem] text-[var(--space-text-secondary)] uppercase tracking-widest font-semibold">Issued Date</p>
+              {canEditDueDate ? (
+                <IssuedDateEditor
+                  orderId={order.id}
+                  issuedAt={order.issuedAt}
+                  createdAt={order.createdAt}
+                />
+              ) : (
+                <p className="text-sm text-[var(--space-text-primary)]">{fmtDate(orderDate(order))}</p>
+              )}
             </div>
 
             {/* Due date */}
@@ -765,9 +911,10 @@ export function ClientOrdersTab({
     router.refresh()
   }
 
-  const pendingOrders   = orders.filter((o) => o.status === 'pending')
-  const paidOrders      = orders.filter((o) => o.status === 'paid')
-  const cancelledOrders = orders.filter((o) => o.status === 'cancelled')
+  // Everything orders by due date: what's owed soonest on top, history newest-down.
+  const pendingOrders   = orders.filter((o) => o.status === 'pending').sort(bySoonestDue)
+  const paidOrders      = orders.filter((o) => o.status === 'paid').sort(byLatestDue)
+  const cancelledOrders = orders.filter((o) => o.status === 'cancelled').sort(byLatestDue)
 
   if (orders.length === 0) {
     return (

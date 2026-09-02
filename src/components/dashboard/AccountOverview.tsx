@@ -6,6 +6,7 @@ import {
   TrendingUp,
   AlertCircle,
 } from 'lucide-react'
+import { orderDate } from '@/lib/dashboard/utils'
 import { Sparkline } from './visualizations/Sparkline'
 import { MiniBar } from './visualizations/MiniBar'
 
@@ -59,7 +60,7 @@ export function AccountOverview({
   const generateBalanceTrend = () => {
     const sortedOrders = [...orders].sort(
       (a: any, b: any) =>
-        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        new Date(orderDate(a)).getTime() - new Date(orderDate(b)).getTime()
     )
     const now = Date.now()
     const sixMonthsAgo = now - 6 * 30 * 24 * 60 * 60 * 1000
@@ -69,7 +70,7 @@ export function AccountOverview({
     for (let i = 5; i >= 0; i--) {
       const monthEnd = now - i * 30 * 24 * 60 * 60 * 1000
       const ordersUntilMonth = sortedOrders.filter(
-        (o: any) => new Date(o.createdAt).getTime() <= monthEnd
+        (o: any) => new Date(orderDate(o)).getTime() <= monthEnd
       )
       const pendingBalance = ordersUntilMonth
         .filter((o: any) => o.status === 'pending')

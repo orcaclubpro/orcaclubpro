@@ -91,6 +91,7 @@ export function ClientHomeView({
     amount: o.amount ?? 0,
     status: o.status ?? 'pending',
     createdAt: o.createdAt,
+    issuedAt: o.issuedAt ?? null,
     stripeInvoiceUrl: o.stripeInvoiceUrl ?? null,
   }))
 
@@ -101,6 +102,7 @@ export function ClientHomeView({
     status: o.status ?? 'pending',
     stripeInvoiceUrl: o.stripeInvoiceUrl ?? null,
     createdAt: o.createdAt,
+    issuedAt: o.issuedAt ?? null,
   }))
   const mostRecentOrder = ordersForCard[0] ?? null
 

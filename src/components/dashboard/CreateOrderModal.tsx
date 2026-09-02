@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Loader2, X, Send, CircleCheck, Circle, ArrowRight, Check, Plus, Trash2,
-  MailX, Receipt, CreditCard,
+  MailX, Receipt, CreditCard, PackageCheck,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClientOrder } from '@/actions/orders'
@@ -59,6 +59,8 @@ interface Outcome {
   total: number
   emailed: boolean
   stripeCreated: boolean
+  /** Recorded as already settled — no Stripe invoice, no email, straight to paid. */
+  fulfilled: boolean
   /** The link on the order came from the form, not from Stripe's hosted page. */
   customLink: boolean
   notice?: string
@@ -102,6 +104,11 @@ export function CreateOrderModal({ clientId, clientName, projectId, onClose }: C
   const [createStripe, setCreateStripe] = useState(true)
   const [invoiceLink, setInvoiceLink] = useState('')
   const [linkTouched, setLinkTouched] = useState(false)
+  /** 'invoice' bills the order; 'fulfill' records it already settled, off-Stripe. */
+  const [mode, setMode] = useState<'invoice' | 'fulfill'>('invoice')
+  const [fulfillmentNote, setFulfillmentNote] = useState('')
+
+  const fulfilling = mode === 'fulfill'
 
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -129,14 +136,16 @@ export function CreateOrderModal({ clientId, clientName, projectId, onClose }: C
 
   const titledRows = rows.filter((r) => r.title.trim().length > 0)
   const dueDays = Math.max(1, Math.round(Number(dueDaysStr) || 0))
-  const linkError = urlProblem(invoiceLink)
-  const hasLink = invoiceLink.trim().length > 0 && !linkError
+  const linkError = fulfilling ? null : urlProblem(invoiceLink)
+  const hasLink = !fulfilling && invoiceLink.trim().length > 0 && !linkError
   const valid =
     titledRows.length > 0 && titledRows.length === rows.length && total > 0 && !linkError
 
   // With no Stripe invoice and no link there is nothing payable to email about —
   // the server skips the send in that case, so the UI says so up front.
-  const willEmail = !skipEmail && (createStripe || hasLink)
+  const willEmail = !fulfilling && !skipEmail && (createStripe || hasLink)
+  // Fulfilling never touches Stripe, whatever the billing toggle happens to be set to.
+  const willCreateStripe = !fulfilling && createStripe
 
   async function handleSubmit() {
     if (linkError) {
@@ -157,9 +166,11 @@ export function CreateOrderModal({ clientId, clientName, projectId, onClose }: C
       daysUntilDue: dueDays,
       invoiceType,
       projectId,
+      mode,
+      fulfillmentNote: fulfilling ? fulfillmentNote : undefined,
       skipEmail,
-      createStripeInvoice: createStripe,
-      invoiceUrl: invoiceLink.trim() || undefined,
+      createStripeInvoice: willCreateStripe,
+      invoiceUrl: fulfilling ? undefined : invoiceLink.trim() || undefined,
     })
     setSubmitting(false)
 
@@ -170,18 +181,19 @@ export function CreateOrderModal({ clientId, clientName, projectId, onClose }: C
         total: result.total ?? total,
         emailed: result.emailed ?? false,
         stripeCreated: result.stripeInvoiceCreated ?? false,
+        fulfilled: result.fulfilled ?? false,
         customLink: hasLink,
         notice: result.notice,
       })
       router.refresh()
     } else {
       // Keep the modal open on failure so nothing typed is lost.
-      setError(result.error ?? 'Failed to create this order')
+      setError(result.error ?? (fulfilling ? 'Failed to fulfill this order' : 'Failed to create this order'))
     }
   }
 
   return (
-    <div className="fixed inset-0 z-[80] print:hidden">
+    <div className="fixed inset-0 z-[80] print:hidden" role="dialog" aria-modal="true">
       <div
         className="absolute inset-0 animate-in fade-in duration-150"
         style={{ background: 'rgba(0,0,0,0.62)', backdropFilter: 'blur(3px)' }}
@@ -194,7 +206,9 @@ export function CreateOrderModal({ clientId, clientName, projectId, onClose }: C
         >
           {/* ── Header ── */}
           <div className="flex items-center gap-3 px-5 py-3 border-b border-[var(--space-border-hard)] shrink-0">
-            <span className="text-sm font-semibold text-[var(--space-text-primary)]">New order</span>
+            <span className="text-sm font-semibold text-[var(--space-text-primary)]">
+              {fulfilling ? 'New fulfilled order' : 'New order'}
+            </span>
             <span className="text-xs text-[var(--space-text-muted)] truncate">{clientName}</span>
             <button
               onClick={onClose}
@@ -223,8 +237,11 @@ export function CreateOrderModal({ clientId, clientName, projectId, onClose }: C
                     <p className="text-xs text-[var(--space-text-secondary)] mt-0.5">
                       {outcome.stripeCreated ? 'Invoice' : 'Order'}{' '}
                       {outcome.orderNumber ? `#${outcome.orderNumber} ` : ''}— {fmt(outcome.total)}
-                      {outcome.stripeCreated ? ' created' : ' recorded'}
-                      {outcome.emailed ? ' and emailed' : ', no email sent'}
+                      {outcome.fulfilled
+                        ? ' fulfilled · recorded as paid, no invoice or email'
+                        : `${outcome.stripeCreated ? ' created' : ' recorded'}${
+                            outcome.emailed ? ' and emailed' : ', no email sent'
+                          }`}
                     </p>
                     {outcome.notice && (
                       <p className="text-[0.6875rem] text-[var(--space-text-muted)] mt-1">{outcome.notice}</p>
@@ -255,7 +272,7 @@ export function CreateOrderModal({ clientId, clientName, projectId, onClose }: C
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold text-[var(--space-text-primary)]">Line items</p>
                       <p className="text-[0.625rem] text-[var(--space-text-muted)] mt-0.5">
-                        {createStripe
+                        {willCreateStripe
                           ? 'Each line appears on the Stripe invoice at price × quantity.'
                           : 'Each line is recorded on the order at price × quantity.'}
                       </p>
@@ -376,7 +393,49 @@ export function CreateOrderModal({ clientId, clientName, projectId, onClose }: C
                 </div>
 
                 {/* ── ③ Billing ── */}
-                <div className="rounded-xl border border-[var(--space-border-hard)] divide-y divide-[var(--space-border-hard)]">
+                <div className="rounded-xl border border-[var(--space-border-hard)] overflow-hidden">
+                  {/* Bill this order, or record one that is already settled. */}
+                  <div className="flex items-center gap-1 m-3 p-1 rounded-lg bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)]">
+                    <ModeTab
+                      icon={Send}
+                      active={!fulfilling}
+                      onClick={() => setMode('invoice')}
+                      label="Bill it"
+                      hint="Stripe invoice + email"
+                    />
+                    <ModeTab
+                      icon={PackageCheck}
+                      active={fulfilling}
+                      onClick={() => setMode('fulfill')}
+                      label="Fulfill"
+                      hint="No invoice, no email"
+                    />
+                  </div>
+
+                  {fulfilling ? (
+                  <div className="px-4 pb-4 space-y-3">
+                    <p className="text-[0.625rem] leading-relaxed text-[var(--space-text-muted)]">
+                      Records this order as already settled. No Stripe invoice is created and the client
+                      is not emailed — it is saved{' '}
+                      <span className="text-[var(--space-text-secondary)]">paid</span>, so it never lands
+                      on their outstanding balance. The line items above are still recorded in full.
+                    </p>
+                    <label className="block">
+                      <span className={labelCls}>Fulfillment note</span>
+                      <textarea
+                        value={fulfillmentNote}
+                        onChange={(e) => setFulfillmentNote(e.target.value)}
+                        rows={3}
+                        placeholder="Why this order was fulfilled off-Stripe — covered by the November retainer, paid by check #1041, comped…"
+                        className={cn(areaCls, 'mt-1 text-xs')}
+                      />
+                      <span className="block text-[0.625rem] text-[var(--space-text-muted)] mt-1">
+                        Internal only — stored on the order, never shown to the client.
+                      </span>
+                    </label>
+                  </div>
+                  ) : (
+                  <div className="border-t border-[var(--space-border-hard)] divide-y divide-[var(--space-border-hard)]">
                   <ToggleRow
                     icon={CreditCard}
                     checked={createStripe}
@@ -428,6 +487,8 @@ export function CreateOrderModal({ clientId, clientName, projectId, onClose }: C
                           : 'Records the order without notifying the client.'
                     }
                   />
+                  </div>
+                  )}
                 </div>
 
                 {error && <p className="text-xs text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2">{error}</p>}
@@ -441,24 +502,60 @@ export function CreateOrderModal({ clientId, clientName, projectId, onClose }: C
               <p className="text-[0.6875rem] text-[var(--space-text-muted)]">
                 {[
                   `${rows.length} line${rows.length === 1 ? '' : 's'} · ${fmt(total)}`,
-                  `net ${dueDays} day${dueDays === 1 ? '' : 's'}`,
-                  createStripe ? null : 'no Stripe invoice',
-                  willEmail ? null : 'no email',
+                  fulfilling ? null : `net ${dueDays} day${dueDays === 1 ? '' : 's'}`,
+                  fulfilling ? 'fulfilled · no invoice · no email' : createStripe ? null : 'no Stripe invoice',
+                  fulfilling || willEmail ? null : 'no email',
                 ].filter(Boolean).join(' · ')}
               </p>
               <button onClick={handleSubmit} disabled={submitting || !valid} className={accentBtn}>
-                {submitting ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
                 {submitting
-                  ? createStripe ? 'Creating…' : 'Recording…'
-                  : createStripe
-                    ? willEmail ? 'Create & send' : 'Create invoice'
-                    : willEmail ? 'Record & send' : 'Record order'}
+                  ? <Loader2 className="size-3.5 animate-spin" />
+                  : fulfilling
+                  ? <PackageCheck className="size-3.5" />
+                  : <Send className="size-3.5" />}
+                {submitting
+                  ? fulfilling ? 'Fulfilling…' : createStripe ? 'Creating…' : 'Recording…'
+                  : fulfilling
+                    ? 'Fulfill order'
+                    : createStripe
+                      ? willEmail ? 'Create & send' : 'Create invoice'
+                      : willEmail ? 'Record & send' : 'Record order'}
               </button>
             </div>
           )}
         </div>
       </div>
     </div>
+  )
+}
+
+/** One half of the billing mode switch — bill it vs fulfill. */
+function ModeTab({
+  icon: Icon, active, onClick, label, hint,
+}: {
+  icon: typeof Send
+  active: boolean
+  onClick: () => void
+  label: string
+  hint: string
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'flex-1 flex items-center gap-2 px-3 py-2 rounded-md text-left transition-all',
+        active
+          ? 'bg-[var(--space-bg-base)] text-[var(--space-text-primary)]'
+          : 'text-[var(--space-text-muted)] hover:text-[var(--space-text-tertiary)]',
+      )}
+    >
+      <Icon className="size-3.5 shrink-0" style={active ? { color: 'var(--space-accent)' } : undefined} />
+      <span className="min-w-0">
+        <span className="block text-xs font-semibold truncate">{label}</span>
+        <span className="block text-[0.625rem] text-[var(--space-text-muted)] truncate">{hint}</span>
+      </span>
+    </button>
   )
 }
 

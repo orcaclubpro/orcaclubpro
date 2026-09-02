@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   Loader2, X, Send, CircleCheck, Circle, ArrowRight, AlertTriangle, Check,
-  CalendarDays, FileText, ListChecks, MailX,
+  CalendarDays, FileText, ListChecks, MailX, PackageCheck,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getPackageRecapModel } from '@/actions/packageWork'
@@ -79,9 +79,15 @@ export function SchedulePaymentInvoiceModal({
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [recap, setRecap] = useState<PackageRecapData | null>(null)
 
+  /** 'invoice' bills through Stripe and emails; 'fulfill' records it settled, off-Stripe. */
+  const [mode, setMode] = useState<'invoice' | 'fulfill'>('invoice')
+  const [fulfillmentNote, setFulfillmentNote] = useState('')
+
   const [attachRecapPdf, setAttachRecapPdf] = useState(true)
   const [includeWorkInEmail, setIncludeWorkInEmail] = useState(true)
   const [skipEmail, setSkipEmail] = useState(false)
+
+  const fulfilling = mode === 'fulfill'
 
   const [sending, setSending] = useState(false)
   const [outcome, setOutcome] = useState<SendOutcome | null>(null)
@@ -145,26 +151,30 @@ export function SchedulePaymentInvoiceModal({
     setError(null)
     setSending(true)
     const result = await sendScheduledPayment(packageId, entry.id, undefined, {
+      mode,
+      fulfillmentNote: fulfilling ? fulfillmentNote : undefined,
       skipEmail,
       workLineIds: [...selected],
-      recap: recap ?? undefined,
-      attachRecapPdf: !skipEmail && attachRecapPdf,
-      includeWorkInEmail: !skipEmail && includeWorkInEmail,
+      recap: fulfilling ? undefined : recap ?? undefined,
+      attachRecapPdf: !fulfilling && !skipEmail && attachRecapPdf,
+      includeWorkInEmail: !fulfilling && !skipEmail && includeWorkInEmail,
     })
     setSending(false)
 
     if (result.success) {
       const count = selected.size
+      const work = count > 0 ? ` · ${count} work line${count === 1 ? '' : 's'}` : ''
+      const ref = result.orderNumber ? `#${result.orderNumber} ` : ''
       setOutcome({
         ok: true,
         url: result.invoiceUrl ?? null,
-        msg: `Invoice ${result.orderNumber ? `#${result.orderNumber} ` : ''}— ${fmt(entry.amount)}${
-          count > 0 ? ` · ${count} work line${count === 1 ? '' : 's'}` : ''
-        }${skipEmail ? ' created, no email sent' : ' created and emailed'}`,
+        msg: fulfilling
+          ? `Fulfilled ${ref}— ${fmt(entry.amount)}${work} · recorded as paid, no invoice or email`
+          : `Invoice ${ref}— ${fmt(entry.amount)}${work}${skipEmail ? ' created, no email sent' : ' created and emailed'}`,
       })
       onSent()
     } else {
-      setError(result.error ?? 'Failed to send this payment')
+      setError(result.error ?? (fulfilling ? 'Failed to fulfill this payment' : 'Failed to send this payment'))
     }
   }
 
@@ -172,7 +182,7 @@ export function SchedulePaymentInvoiceModal({
   const dueDays = daysUntilDue(entry.dueDate)
 
   return (
-    <div className="fixed inset-0 z-[80] print:hidden">
+    <div className="fixed inset-0 z-[80] print:hidden" role="dialog" aria-modal="true">
       <div
         className="absolute inset-0 animate-in fade-in duration-150"
         style={{ background: 'rgba(0,0,0,0.62)', backdropFilter: 'blur(3px)' }}
@@ -185,7 +195,9 @@ export function SchedulePaymentInvoiceModal({
         >
           {/* ── Header ── */}
           <div className="flex items-center gap-3 px-5 py-3 border-b border-[var(--space-border-hard)] shrink-0">
-            <span className="text-sm font-semibold text-[var(--space-text-primary)]">Send scheduled payment</span>
+            <span className="text-sm font-semibold text-[var(--space-text-primary)]">
+              {fulfilling ? 'Fulfill scheduled payment' : 'Send scheduled payment'}
+            </span>
             <span className="text-xs text-[var(--space-text-muted)] truncate">
               {packageName} · {entry.label}
             </span>
@@ -268,7 +280,9 @@ export function SchedulePaymentInvoiceModal({
                   <div className="flex items-center gap-3 px-4 py-3 border-b border-[var(--space-border-hard)]">
                     <ListChecks className="size-3.5 shrink-0 text-[var(--space-text-muted)]" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-[var(--space-text-primary)]">Work on this invoice</p>
+                      <p className="text-xs font-semibold text-[var(--space-text-primary)]">
+                        Work on this {fulfilling ? 'payment' : 'invoice'}
+                      </p>
                       <p className="text-[0.625rem] text-[var(--space-text-muted)] mt-0.5">
                         Attached as $0 lines — the payment above carries the price.
                       </p>
@@ -313,7 +327,8 @@ export function SchedulePaymentInvoiceModal({
                   )}
                 </div>
 
-                {/* ── ③ Recap narrative ── */}
+                {/* ── ③ Recap narrative ── (invoice only: the recap exists to ride the email) ── */}
+                {!fulfilling && (
                 <div className="rounded-xl border border-[var(--space-border-hard)] px-4 py-3 space-y-3">
                   <div className="flex items-center gap-3">
                     <FileText className="size-3.5 shrink-0 text-[var(--space-text-muted)]" />
@@ -374,32 +389,77 @@ export function SchedulePaymentInvoiceModal({
                     </label>
                   ))}
                 </div>
+                )}
 
                 {/* ── ④ Delivery ── */}
-                <div className="rounded-xl border border-[var(--space-border-hard)] divide-y divide-[var(--space-border-hard)]">
-                  <ToggleRow
-                    icon={FileText}
-                    checked={attachRecapPdf}
-                    disabled={skipEmail}
-                    onToggle={() => setAttachRecapPdf((v) => !v)}
-                    title="Attach recap PDF"
-                    hint="A one-page summary of the work this payment covers."
-                  />
-                  <ToggleRow
-                    icon={ListChecks}
-                    checked={includeWorkInEmail}
-                    disabled={skipEmail}
-                    onToggle={() => setIncludeWorkInEmail((v) => !v)}
-                    title="Include work log in email"
-                    hint="Itemizes the selected work inside the invoice email."
-                  />
-                  <ToggleRow
-                    icon={MailX}
-                    checked={skipEmail}
-                    onToggle={() => setSkipEmail((v) => !v)}
-                    title="Skip email"
-                    hint="Creates the order and Stripe invoice without notifying the client."
-                  />
+                <div className="rounded-xl border border-[var(--space-border-hard)] overflow-hidden">
+                  {/* How this payment reaches the client — or doesn't. */}
+                  <div className="flex items-center gap-1 m-3 p-1 rounded-lg bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)]">
+                    <ModeTab
+                      icon={Send}
+                      active={!fulfilling}
+                      onClick={() => setMode('invoice')}
+                      label="Send invoice"
+                      hint="Stripe invoice + email"
+                    />
+                    <ModeTab
+                      icon={PackageCheck}
+                      active={fulfilling}
+                      onClick={() => setMode('fulfill')}
+                      label="Fulfill"
+                      hint="No invoice, no email"
+                    />
+                  </div>
+
+                  {fulfilling ? (
+                    <div className="px-4 pb-4 space-y-3">
+                      <p className="text-[0.625rem] leading-relaxed text-[var(--space-text-muted)]">
+                        Records this payment as already settled. No Stripe invoice is created and the client
+                        is not emailed — the order is saved{' '}
+                        <span className="text-[var(--space-text-secondary)]">paid</span>, so it never lands on
+                        their outstanding balance. Work selected above is still attached and marked billed.
+                      </p>
+                      <label className="block">
+                        <span className={labelCls}>Fulfillment note</span>
+                        <textarea
+                          value={fulfillmentNote}
+                          onChange={(e) => setFulfillmentNote(e.target.value)}
+                          rows={3}
+                          placeholder="Why this payment was fulfilled off-Stripe — covered by the November retainer, paid by check #1041, comped…"
+                          className={cn(areaCls, 'mt-1 text-xs')}
+                        />
+                        <span className="block text-[0.625rem] text-[var(--space-text-muted)] mt-1">
+                          Internal only — stored on the order, never shown to the client.
+                        </span>
+                      </label>
+                    </div>
+                  ) : (
+                    <div className="border-t border-[var(--space-border-hard)] divide-y divide-[var(--space-border-hard)]">
+                      <ToggleRow
+                        icon={FileText}
+                        checked={attachRecapPdf}
+                        disabled={skipEmail}
+                        onToggle={() => setAttachRecapPdf((v) => !v)}
+                        title="Attach recap PDF"
+                        hint="A one-page summary of the work this payment covers."
+                      />
+                      <ToggleRow
+                        icon={ListChecks}
+                        checked={includeWorkInEmail}
+                        disabled={skipEmail}
+                        onToggle={() => setIncludeWorkInEmail((v) => !v)}
+                        title="Include work log in email"
+                        hint="Itemizes the selected work inside the invoice email."
+                      />
+                      <ToggleRow
+                        icon={MailX}
+                        checked={skipEmail}
+                        onToggle={() => setSkipEmail((v) => !v)}
+                        title="Skip email"
+                        hint="Creates the order and Stripe invoice without notifying the client."
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {error && <p className="text-xs text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2">{error}</p>}
@@ -412,20 +472,56 @@ export function SchedulePaymentInvoiceModal({
             <div className="shrink-0 border-t border-[var(--space-border-hard)] px-5 py-3 flex items-center justify-between gap-3">
               <p className="text-[0.6875rem] text-[var(--space-text-muted)]">
                 {[
-                  `1 invoice · ${fmt(entry.amount)}`,
+                  `1 ${fulfilling ? 'fulfillment' : 'invoice'} · ${fmt(entry.amount)}`,
                   selected.size > 0 ? `${selected.size} work line${selected.size === 1 ? '' : 's'}` : null,
-                  skipEmail ? 'no email' : null,
+                  fulfilling ? 'no invoice · no email' : skipEmail ? 'no email' : null,
                 ].filter(Boolean).join(' · ')}
               </p>
               <button onClick={handleSend} disabled={sending} className={accentBtn}>
-                {sending ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
-                {sending ? 'Sending…' : skipEmail ? 'Create invoice' : 'Send invoice'}
+                {sending
+                  ? <Loader2 className="size-3.5 animate-spin" />
+                  : fulfilling
+                  ? <PackageCheck className="size-3.5" />
+                  : <Send className="size-3.5" />}
+                {sending
+                  ? fulfilling ? 'Fulfilling…' : 'Sending…'
+                  : fulfilling ? 'Fulfill payment' : skipEmail ? 'Create invoice' : 'Send invoice'}
               </button>
             </div>
           )}
         </div>
       </div>
     </div>
+  )
+}
+
+/** One half of the delivery mode switch — invoice vs fulfill. */
+function ModeTab({
+  icon: Icon, active, onClick, label, hint,
+}: {
+  icon: typeof Send
+  active: boolean
+  onClick: () => void
+  label: string
+  hint: string
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'flex-1 flex items-center gap-2 px-3 py-2 rounded-md text-left transition-all',
+        active
+          ? 'bg-[var(--space-bg-base)] text-[var(--space-text-primary)]'
+          : 'text-[var(--space-text-muted)] hover:text-[var(--space-text-tertiary)]',
+      )}
+    >
+      <Icon className="size-3.5 shrink-0" style={active ? { color: 'var(--space-accent)' } : undefined} />
+      <span className="min-w-0">
+        <span className="block text-xs font-semibold truncate">{label}</span>
+        <span className="block text-[0.625rem] text-[var(--space-text-muted)] truncate">{hint}</span>
+      </span>
+    </button>
   )
 }
 

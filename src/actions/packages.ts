@@ -1067,7 +1067,16 @@ export async function resetScheduleEntry(packageId: string, entryId: string) {
 }
 
 export interface SendScheduledPaymentOpts {
-  /** Create the order + Stripe invoice but send no email. */
+  /**
+   * 'invoice' (default) bills the entry through Stripe and emails the client.
+   * 'fulfill' records it as already settled: no Stripe invoice, no email, the order
+   * created straight to `paid` with a fulfillmentNote for the audit trail. Work lines
+   * and the schedule entry are consumed exactly as they are on the invoice path.
+   */
+  mode?: 'invoice' | 'fulfill'
+  /** Why this payment was fulfilled off-Stripe. Internal only — never emailed. */
+  fulfillmentNote?: string
+  /** Create the order + Stripe invoice but send no email. Ignored when fulfilling. */
   skipEmail?: boolean
   /**
    * Work entries to attach as $0 lines. Omit to attach every pending logged entry;
@@ -1092,6 +1101,10 @@ export async function sendScheduledPayment(
   let stripe: ReturnType<typeof getStripe> | null = null
   /** Entries stamped in this run — unstamped if anything downstream throws. */
   const stampedEntryIds: string[] = []
+
+  /** Fulfilled payments never touch Stripe and never email — see SendScheduledPaymentOpts. */
+  const fulfill = opts?.mode === 'fulfill'
+  const sendEmail = !fulfill && !opts?.skipEmail
 
   try {
     const user = await getCurrentUser()
@@ -1124,7 +1137,8 @@ export async function sendScheduledPayment(
     const clientAccountId = typeof clientAccount === 'string' ? clientAccount : clientAccount.id
     const stripeCustomerId = typeof clientAccount === 'object' ? clientAccount.stripeCustomerId : null
 
-    if (!stripeCustomerId) {
+    // Only the invoice path needs a Stripe customer — fulfilling bills nothing.
+    if (!stripeCustomerId && !fulfill) {
       return { success: false, error: 'Client account has no Stripe customer ID — set it in the admin panel first' }
     }
 
@@ -1164,27 +1178,35 @@ export async function sendScheduledPayment(
 
     const invoiceType = resolveInvoiceType(entry)
 
-    stripe = getStripe()
+    let orderNumber: string
 
-    // The payment line carries the price; work lines ride along at $0 so the invoice
-    // documents what the payment bought without changing the total.
-    const { invoice: finalized } = await createStripeInvoiceForOrder({
-      stripe,
-      stripeCustomerId,
-      daysUntilDue,
-      description: pkg.name,
-      invoiceMetadata: {
-        orcaclub_package_id: packageId,
-        orcaclub_invoice_type: invoiceType,
-        orcaclub_schedule_entry_id: entryId,
-      },
-      lines: [
-        { description: `${entry.label} — ${pkg.name}`, amount: entry.amount },
-        ...workLines.map((l) => ({ description: l.title, amount: 0 })),
-      ],
-    })
-    finalizedInvoice = finalized
-    const orderNumber = finalized.number ?? finalized.id
+    if (fulfill) {
+      // Nothing is billed, so there is no Stripe invoice to take a number from.
+      // nextOrderNumber() is the legacy INV- sequence kept for exactly this case.
+      orderNumber = await nextOrderNumber(payload)
+    } else {
+      stripe = getStripe()
+
+      // The payment line carries the price; work lines ride along at $0 so the invoice
+      // documents what the payment bought without changing the total.
+      const { invoice: finalized } = await createStripeInvoiceForOrder({
+        stripe,
+        stripeCustomerId,
+        daysUntilDue,
+        description: pkg.name,
+        invoiceMetadata: {
+          orcaclub_package_id: packageId,
+          orcaclub_invoice_type: invoiceType,
+          orcaclub_schedule_entry_id: entryId,
+        },
+        lines: [
+          { description: `${entry.label} — ${pkg.name}`, amount: entry.amount },
+          ...workLines.map((l) => ({ description: l.title, amount: 0 })),
+        ],
+      })
+      finalizedInvoice = finalized
+      orderNumber = finalized.number ?? finalized.id
+    }
 
     const order = await payload.create({
       collection: 'orders',
@@ -1196,10 +1218,24 @@ export async function sendScheduledPayment(
         invoiceType,
         invoiceNote: entry.label,
         amount: entry.amount,
-        status: 'pending',
-        stripeCustomerId,
-        stripeInvoiceId: finalizedInvoice.id,
-        stripeInvoiceUrl: finalizedInvoice.hosted_invoice_url || '',
+        // A fulfilled payment is settled the moment it is recorded — it never sits
+        // pending, so it never lands on the client's outstanding balance.
+        status: fulfill ? 'paid' : 'pending',
+        ...(stripeCustomerId ? { stripeCustomerId } : {}),
+        // Omit the Stripe fields entirely when fulfilling: stripeInvoiceId is `unique`,
+        // so writing '' would collide across every fulfilled order.
+        ...(finalizedInvoice
+          ? {
+              stripeInvoiceId: finalizedInvoice.id,
+              stripeInvoiceUrl: finalizedInvoice.hosted_invoice_url || '',
+            }
+          : {}),
+        ...(fulfill
+          ? {
+              fulfilledAt: new Date().toISOString(),
+              ...(opts?.fulfillmentNote?.trim() ? { fulfillmentNote: opts.fulfillmentNote.trim() } : {}),
+            }
+          : {}),
         lineItems: [
           { title: entry.label, price: entry.amount, quantity: 1 },
           // Itemized work at $0 — covered by the payment line; the amount still balances.
@@ -1221,8 +1257,10 @@ export async function sendScheduledPayment(
       // Keep the diagnostic detail in the server log; surface something legible upstream.
       console.error('[sendScheduledPayment] Order did not persist:', e)
       throw new Error(
-        'The invoice could not be saved, so this payment was not recorded. ' +
-          'The Stripe invoice has been voided and nothing was billed — please try again.',
+        fulfill
+          ? 'This payment could not be saved, so nothing was recorded — please try again.'
+          : 'The invoice could not be saved, so this payment was not recorded. ' +
+            'The Stripe invoice has been voided and nothing was billed — please try again.',
       )
     }
 
@@ -1233,7 +1271,7 @@ export async function sendScheduledPayment(
     // here and let the email IIFE below close over the result. Non-blocking: a failure
     // means "send without a recap PDF", never a failed invoice.
     let recapModelForEmail: PackageRecapData | null = null
-    if (!opts?.skipEmail && opts?.attachRecapPdf) {
+    if (sendEmail && opts?.attachRecapPdf) {
       try {
         const recapResult = await getPackageRecapModel(packageId, entryId)
         if (recapResult.success) recapModelForEmail = recapResult.model
@@ -1271,10 +1309,10 @@ export async function sendScheduledPayment(
 
     revalidatePath(`/u/${user.username}/clients`)
 
-    // Non-blocking: send "New Invoice" email to client (skipped if skipEmail is true).
-    // The work section and the recap PDF are independently toggleable; either failing
-    // must not stop the email, and the email failing must not stop the invoice.
-    if (!opts?.skipEmail) {
+    // Non-blocking: send "New Invoice" email to client (skipped when fulfilling, and when
+    // skipEmail is set). The work section and the recap PDF are independently toggleable;
+    // either failing must not stop the email, and the email failing must not stop the invoice.
+    if (sendEmail) {
       ;(async () => {
         try {
           const clientUsername = await getClientUsername(payload, clientAccountId)
@@ -1312,10 +1350,11 @@ export async function sendScheduledPayment(
 
     return {
       success: true,
-      invoiceUrl: finalizedInvoice.hosted_invoice_url,
+      invoiceUrl: finalizedInvoice?.hosted_invoice_url ?? null,
       orderNumber,
       orderId: order.id,
       workLineCount: workLines.length,
+      fulfilled: fulfill,
     }
   } catch (error) {
     // Release anything stamped before the failure, then void the orphaned invoice.
