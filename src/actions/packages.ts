@@ -18,11 +18,20 @@ import {
   generateProposalEmailText,
   type EmailAttachment,
 } from '@/lib/payload/utils/genericInvoiceEmailTemplate'
-import { buildPackagePdf, buildOrcaclubSowPdf, buildPackageRecapPdf } from '@/lib/pdf-generators'
+import { buildPackageRecapPdf } from '@/lib/pdf-generators'
+import {
+  buildPackageDocumentPdf,
+  mergePackageSowData,
+  packageRef,
+  packageToSowData,
+  resolvePackageBillTo,
+  type BillToOverride,
+} from '@/lib/packages/documents'
 import { buildWorkLines, type WorkCategory } from '@/lib/packages/workLines'
 import { mergePackageRecap, type PackageRecapData } from '@/lib/packages/recap'
 import { getPackageRecapModel } from '@/actions/packageWork'
 import { nextOrderNumber } from '@/lib/payload/utils/orderNumber'
+import { normalizeSowItems } from '@/lib/sow/clauses'
 
 const APP_BASE = process.env.NEXT_PUBLIC_SERVER_URL ?? 'https://app.orcaclub.pro'
 
@@ -123,8 +132,10 @@ export async function createPackageFromSow(
     const name = sowData.projectName.trim() || sowData.clientName.trim() || 'New Package'
     const description = sowData.projectOverview || undefined
 
-    // Scope items → coverMessage
-    const scopeLines = sowData.scopeItems.filter(s => s.trim())
+    // Scope items → coverMessage. Descriptions fold into the line, matching how
+    // packageToSowData reads them back out.
+    const scopeLines = normalizeSowItems(sowData.scopeItems)
+      .map(i => (i.description?.trim() ? `${i.title} — ${i.description.trim()}` : i.title))
     const coverMessage = scopeLines.length > 0
       ? scopeLines.map((s, i) => `${i + 1}. ${s}`).join('\n')
       : undefined
@@ -202,125 +213,6 @@ export async function createPackageFromSow(
 }
 
 /**
- * Best-effort parse of a package's `notes` field back into SOW milestones + terms.
- * Packages created via createPackageFromSow store notes in a known shape
- * ("Milestones:\n…\n\nTerms:\n…"); freeform notes fall back to defaults.
- */
-function parseSowExtrasFromNotes(notes?: string | null) {
-  const extras = {
-    milestones: [] as Array<{ name: string; date: string; notes: string }>,
-    netDays: '30',
-    lateFee: '1.5',
-    revisionRounds: '2',
-    revisionRate: '',
-    contractTerm: '3 months',
-    billingCycle: 'Monthly',
-  }
-  if (!notes) return extras
-
-  const msBlock = notes.match(/Milestones:\n([\s\S]*?)(?:\n\n|$)/)
-  if (msBlock) {
-    for (const line of msBlock[1].split('\n').map(l => l.trim()).filter(Boolean)) {
-      const date = line.match(/\(([^)]+)\)/)?.[1] ?? ''
-      const note = line.match(/—\s*(.+)$/)?.[1] ?? ''
-      const name = line.replace(/\s*\([^)]*\)/, '').replace(/\s*—.*$/, '').trim()
-      if (name) extras.milestones.push({ name, date, notes: note })
-    }
-  }
-
-  const termsBlock = notes.match(/Terms:\n([\s\S]*)$/)
-  if (termsBlock) {
-    const t = termsBlock[1]
-    extras.netDays = t.match(/Net Days:\s*(\d+)/)?.[1] ?? extras.netDays
-    extras.lateFee = t.match(/Late Fee:\s*([\d.]+)/)?.[1] ?? extras.lateFee
-    const rev = t.match(/Revisions:\s*(\d+)\s*rounds(?:\s*@\s*\$([\d.]+))?/)
-    if (rev) { extras.revisionRounds = rev[1]; if (rev[2]) extras.revisionRate = rev[2] }
-    extras.contractTerm = t.match(/Term:\s*(.+)/)?.[1]?.trim() ?? extras.contractTerm
-    extras.billingCycle = t.match(/Billing:\s*(.+)/)?.[1]?.trim() ?? extras.billingCycle
-  }
-
-  return extras
-}
-
-/** Map a package/proposal document to a SOW form payload (inverse of createPackageFromSow). */
-function packageToSowData(pkg: any): SowFormData {
-  // A SOW is a contract, so add-ons are excluded outright — an option the client has
-  // not taken must never appear as agreed, priced scope.
-  const lineItems = ((pkg.lineItems ?? []) as any[]).filter((i: any) => !i.isAddOn)
-  const amountOf = (item: any) => (item.adjustedPrice ?? item.price ?? 0) * (item.quantity ?? 1)
-
-  // Fold the optional line description into the SOW's Description cell so it
-  // carries through to the contract PDF (SowLineItem is just desc + amount).
-  const descOf = (i: any) =>
-    i.description?.trim() ? `${i.name} — ${i.description.trim()}` : (i.name as string)
-  const projectItems = lineItems
-    .filter(i => !i.isRecurring)
-    .map(i => ({ desc: descOf(i), amount: String(amountOf(i)) }))
-  const retainerItems = lineItems
-    .filter(i => i.isRecurring)
-    .map(i => ({ desc: descOf(i), amount: String(amountOf(i)) }))
-
-  const pricingType: SowFormData['pricingType'] =
-    projectItems.length && retainerItems.length ? 'both'
-    : retainerItems.length ? 'retainer'
-    : 'project'
-
-  // Scope items: prefer the cover message (numbered list), else fall back to
-  // the line-item names so the scope section isn't empty.
-  const coverLines = (pkg.coverMessage ?? '')
-    .split('\n')
-    .map((l: string) => l.replace(/^\s*\d+\.\s*/, '').trim())
-    .filter(Boolean)
-  const scopeItems: string[] = coverLines.length
-    ? coverLines
-    : lineItems.map(i => i.name as string).filter(Boolean)
-
-  // Payment schedule: convert stored dollar amounts back to percentages.
-  // The SOW PDF computes each installment's dollar amount off the project-items
-  // subtotal (or retainer subtotal when retainer-only), so use that same base
-  // here for an exact round-trip.
-  const projectTotal = projectItems.reduce((s, i) => s + (parseFloat(i.amount) || 0), 0)
-  const retainerTotal = retainerItems.reduce((s, i) => s + (parseFloat(i.amount) || 0), 0)
-  const scheduleBase = pricingType === 'retainer' ? retainerTotal : projectTotal
-  const schedule = (pkg.paymentSchedule ?? []) as any[]
-  const paymentSchedule = schedule.length
-    ? schedule.map(e => ({
-        label: e.label ?? '',
-        pct: scheduleBase > 0 ? String(Math.round((e.amount ?? 0) / scheduleBase * 100)) : '',
-        note: '',
-      }))
-    : [
-        { label: 'Deposit', pct: '50', note: 'Due before work begins' },
-        { label: 'Final Payment', pct: '50', note: 'Due upon project completion' },
-      ]
-
-  const extras = parseSowExtrasFromNotes(pkg.notes)
-  const client = pkg.clientAccount && typeof pkg.clientAccount === 'object' ? pkg.clientAccount : null
-
-  return {
-    providerName: 'ORCACLUB',
-    providerContact: 'team@orcaclub.pro',
-    clientName: client?.name ?? client?.company ?? '',
-    clientContact: client?.email ?? client?.phone ?? '',
-    effectiveDate: new Date().toISOString().split('T')[0],
-    projectName: pkg.name ?? '',
-    projectOverview: pkg.description ?? '',
-    scopeItems: scopeItems.length ? scopeItems : [''],
-    milestones: extras.milestones.length ? extras.milestones : [{ name: '', date: '', notes: '' }],
-    pricingType,
-    projectItems: projectItems.length ? projectItems : [{ desc: '', amount: '' }],
-    retainerItems: retainerItems.length ? retainerItems : [{ desc: '', amount: '' }],
-    billingCycle: extras.billingCycle,
-    contractTerm: extras.contractTerm,
-    netDays: extras.netDays,
-    paymentSchedule,
-    lateFee: extras.lateFee,
-    revisionRounds: extras.revisionRounds,
-    revisionRate: extras.revisionRate,
-  }
-}
-
-/**
  * Create a Scope of Work document (files collection) prefilled from a package's
  * line items, client, and terms. The document opens editable in the Files tab's
  * SOW builder for final review before generating the contract PDF.
@@ -363,6 +255,136 @@ export async function createSowFromPackage(packageId: string, projectId?: string
   } catch (error) {
     console.error('[createSowFromPackage]', error)
     return { success: false, error: error instanceof Error ? error.message : 'Failed to create SOW' }
+  }
+}
+
+/**
+ * A package's authoritative Scope of Work data: the linked SOW document's saved
+ * form data when one exists, otherwise the standard derivation. Everything that
+ * renders or sends a package SOW goes through this, so an edited contract is
+ * never sent as the un-edited standard text.
+ */
+async function resolvePackageSowData(payload: any, pkg: any): Promise<SowFormData> {
+  const linked = pkg?.sowDocument
+  const linkedId = typeof linked === 'string' ? linked : linked?.id
+  if (!linkedId) return packageToSowData(pkg)
+
+  const file = typeof linked === 'object' && linked?.documentData
+    ? linked
+    : await payload.findByID({ collection: 'files', id: linkedId, depth: 0 }).catch(() => null)
+
+  if (!file?.documentData) return packageToSowData(pkg)
+  return mergePackageSowData(packageToSowData(pkg), file.documentData as Partial<SowFormData>)
+}
+
+/**
+ * The SOW form data for a package: the linked Scope of Work document's saved
+ * data when one exists, otherwise a fresh draft derived from the package.
+ *
+ * Staff edit terms and clause wording against this, so a package that already
+ * has a SOW document reopens with those edits rather than resetting to standard.
+ */
+export async function getPackageSowDraft(packageId: string) {
+  try {
+    const user = await getCurrentUser()
+    if (!user || user.role === 'client') return { success: false as const, error: 'Unauthorized' }
+
+    const payload = await getPayload({ config })
+    const pkg = await payload.findByID({ collection: 'packages', id: packageId, depth: 1 })
+    if (!pkg) return { success: false as const, error: 'Package not found' }
+
+    const linked = (pkg as any).sowDocument
+    const linkedId = typeof linked === 'string' ? linked : linked?.id
+
+    if (linkedId) {
+      const file = typeof linked === 'object' && linked?.documentData
+        ? linked
+        : await payload.findByID({ collection: 'files', id: linkedId, depth: 0 }).catch(() => null)
+
+      if (file?.documentData) {
+        // Staff-written wording persists; scope and pricing follow the package.
+        return {
+          success: true as const,
+          documentId: String(file.id),
+          documentName: file.name ?? null,
+          sowData: mergePackageSowData(packageToSowData(pkg), file.documentData as Partial<SowFormData>),
+        }
+      }
+    }
+
+    // No document yet — seed the Service Provider contact from whoever is
+    // signed in, so notices and the parties block name a real person rather
+    // than the generic studio address. Editable either way.
+    const derived = packageToSowData(pkg)
+    return {
+      success: true as const,
+      documentId: null,
+      documentName: null,
+      sowData: { ...derived, providerContact: user.email || derived.providerContact },
+    }
+  } catch (error) {
+    console.error('[getPackageSowDraft]', error)
+    return { success: false as const, error: 'Failed to load the SOW draft' }
+  }
+}
+
+/**
+ * Save a package's Scope of Work as a document in the Files collection, so it
+ * shows up alongside every other contract and reopens in the SOW builder.
+ * Creates the document and links it to the package on first save; updates it
+ * after that.
+ */
+export async function savePackageSowDocument(packageId: string, sowData: SowFormData) {
+  try {
+    const user = await getCurrentUser()
+    if (!user || user.role === 'client') return { success: false as const, error: 'Unauthorized' }
+
+    const payload = await getPayload({ config })
+    const pkg = await payload.findByID({ collection: 'packages', id: packageId, depth: 0 })
+    if (!pkg) return { success: false as const, error: 'Package not found' }
+
+    const linked = (pkg as any).sowDocument
+    const linkedId = typeof linked === 'string' ? linked : linked?.id
+
+    const linkedProjectId =
+      (typeof (pkg as any).projectRef === 'string'
+        ? (pkg as any).projectRef
+        : (pkg as any).projectRef?.id) ?? undefined
+
+    if (linkedId) {
+      const updated = await payload.update({
+        collection: 'files',
+        id: linkedId,
+        data: { documentData: sowData } as any,
+      })
+      revalidatePath(`/u/${user.username}/files`)
+      return { success: true as const, id: String(updated.id), created: false }
+    }
+
+    const doc = await payload.create({
+      collection: 'files',
+      data: {
+        name: `SOW — ${pkg.name}`,
+        description: `Scope of Work generated from package "${pkg.name}"`,
+        fileType: 'document',
+        documentTemplate: 'sow',
+        documentBrand: 'orcaclub',
+        documentData: sowData,
+        ...(linkedProjectId ? { project: linkedProjectId } : {}),
+      } as any,
+    })
+
+    await payload.update({
+      collection: 'packages',
+      id: packageId,
+      data: { sowDocument: doc.id } as any,
+    })
+
+    revalidatePath(`/u/${user.username}/files`)
+    return { success: true as const, id: String(doc.id), created: true }
+  } catch (error) {
+    console.error('[savePackageSowDocument]', error)
+    return { success: false as const, error: 'Failed to save the SOW document' }
   }
 }
 
@@ -1922,27 +1944,6 @@ export async function emailPackageToSelf(packageId: string) {
 }
 
 
-export interface BillToOverride {
-  name: string
-  company?: string
-  email: string
-  phone?: string
-  address: { line1: string; line2?: string; city: string; state: string; zip: string }
-}
-
-/** A bill-to override is only applied when every required field is filled in. */
-function isBillToComplete(b?: BillToOverride | null): b is BillToOverride {
-  return !!(
-    b &&
-    b.name?.trim() &&
-    b.email?.trim() &&
-    b.address?.line1?.trim() &&
-    b.address?.city?.trim() &&
-    b.address?.state?.trim() &&
-    b.address?.zip?.trim()
-  )
-}
-
 /**
  * Return a package's client account bill-to details, flattened for the email
  * sender's override form (empty strings when a field is unset). Staff only.
@@ -1983,6 +1984,12 @@ export async function sendProposalEmail(
   emails: string[],
   sendAs: 'proposal' | 'invoice' | 'sow' = 'proposal',
   billTo?: BillToOverride | null,
+  /**
+   * The Scope of Work as the editor currently holds it. Passed so the PDF that
+   * goes out is the one staff previewed, including edits they have not saved to
+   * the document yet. Omitted, the linked document (or the package) is used.
+   */
+  sowData?: Partial<SowFormData> | null,
 ) {
   try {
     const user = await getCurrentUser()
@@ -2025,80 +2032,22 @@ export async function sendProposalEmail(
       }
     }
 
-    const clientObj = clientAccount && typeof clientAccount === 'object' ? clientAccount : null
-
     // Resolve the effective bill-to: the manual override wins only when it is
-    // fully filled in (isBillToComplete); otherwise fall back to the client's
-    // saved account details. Overriding replaces the block wholesale.
-    const override = isBillToComplete(billTo) ? billTo : null
-    const bt = override
-      ? {
-          name: override.name,
-          company: override.company?.trim() || undefined,
-          email: override.email,
-          phone: override.phone?.trim() || undefined,
-          address: override.address,
-        }
-      : {
-          name: clientObj?.name ?? undefined,
-          company: clientObj?.company ?? undefined,
-          email: clientObj?.email ?? undefined,
-          phone: clientObj?.phone ?? undefined,
-          address: clientObj?.address ?? undefined,
-        }
+    // fully filled in; otherwise fall back to the client's saved account details.
+    const bt = resolvePackageBillTo(pkg, billTo)
+    const ref = packageRef(packageId)
 
-    // Same reference format as the print page (PKG-XXXXXX)
-    const ref = `PKG-${packageId.slice(-6).toUpperCase()}`
-
-    // Build the PDF attachment — non-blocking, the email still sends without it
+    // Build the PDF attachment — non-blocking, the email still sends without it.
+    // Same builder the Documents modal previews through, so what staff see is
+    // byte-for-byte what the client receives.
     let attachments: EmailAttachment[] | undefined
     try {
-      const fmtPdfDate = (iso: string) => {
-        const parts = iso.split('T')[0].split('-').map(Number)
-        if (parts.length !== 3 || parts.some(isNaN)) return iso
-        return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-          .format(new Date(parts[0], parts[1] - 1, parts[2]))
-      }
-      let bytes: Uint8Array
-      let filename: string
-      if (sendAs === 'sow') {
-        bytes = await buildOrcaclubSowPdf(packageToSowData(pkg))
-        filename = `SOW_${pkg.name.replace(/\s+/g, '_')}.pdf`
-      } else {
-        bytes = await buildPackagePdf({
-          sendAs,
-          ref,
-          packageName: pkg.name,
-          dateLabel: new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).format(new Date()),
-          clientLines: [
-            bt.name,
-            bt.company,
-            bt.address?.line1,
-            bt.address?.line2,
-            [bt.address?.city, bt.address?.state, bt.address?.zip].filter(Boolean).join(', ') || null,
-            bt.email,
-          ].filter(Boolean) as string[],
-          description: pkg.description ?? null,
-          coverMessage: (pkg as any).coverMessage ?? null,
-          // The PDF gets BOTH — it renders add-ons in their own section under the
-          // total, so it needs the unfiltered list.
-          lineItems: allLineItems.map((item: any) => ({
-            name: item.name,
-            description: item.description ?? null,
-            quantity: item.quantity ?? 1,
-            rate: item.adjustedPrice ?? item.price ?? 0,
-            isAddOn: Boolean(item.isAddOn),
-            isRecurring: item.isRecurring ?? false,
-            recurringInterval: item.recurringInterval ?? undefined,
-          })),
-          paymentSchedule: ((pkg as any).paymentSchedule ?? []).map((e: any) => ({
-            label: e.label,
-            amount: e.amount,
-            dueDateLabel: e.dueDate ? fmtPdfDate(e.dueDate) : null,
-          })),
-        })
-        filename = sendAs === 'invoice' ? `Invoice_${ref}.pdf` : `Proposal_${pkg.name.replace(/\s+/g, '_')}.pdf`
-      }
+      const sow = sendAs === 'sow'
+        ? (sowData
+            ? mergePackageSowData(packageToSowData(pkg), sowData)
+            : await resolvePackageSowData(payload, pkg))
+        : null
+      const { bytes, filename } = await buildPackageDocumentPdf(pkg, sendAs, billTo, sow)
       attachments = [{
         filename,
         content: Buffer.from(bytes).toString('base64'),

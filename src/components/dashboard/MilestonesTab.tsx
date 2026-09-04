@@ -12,7 +12,7 @@ import { PackageBuilderModal, type ExistingProposal } from './PackageBuilderModa
 import { getPackageForBuilder } from '@/actions/package-builder'
 import { SchedulePaymentInvoiceModal } from './SchedulePaymentInvoiceModal'
 import { PackageRecapModal } from './PackageRecapModal'
-import { EmailPackageModal } from './EmailPackageModal'
+import { PackageDocumentsModal } from './PackageDocumentsModal'
 import { WORK_CATEGORY_LABEL, type WorkCategory } from '@/lib/packages/workLines'
 import type { PackageRecapData } from '@/lib/packages/recap'
 import {
@@ -163,7 +163,7 @@ export function MilestonesTab({ clientId, username, initialTarget }: MilestonesT
   const [docEntryId, setDocEntryId] = useState<string | null>(initialTarget?.entryId ?? null)
   const [sendEntryId, setSendEntryId] = useState<string | null>(initialTarget?.entryId ?? null)
   const [recapOpen, setRecapOpen] = useState(false)
-  const [emailOpen, setEmailOpen] = useState(false)
+  const [docsOpen, setDocsOpen] = useState(false)
   const [recapDrafts, setRecapDrafts] = useState<Record<string, PackageRecapData>>({})
 
   // ── Editing the package itself ─────────────────────────────────────────────
@@ -1024,9 +1024,9 @@ export function MilestonesTab({ clientId, username, initialTarget }: MilestonesT
                     <DocCard
                       icon={Send}
                       title="Send the proposal"
-                      desc="Email the whole package as a proposal, invoice copy, or SOW — line items, schedule, and a PDF. Creates no orders."
-                      actionLabel="Compose email"
-                      onClick={() => setEmailOpen(true)}
+                      desc="View or email the whole package as a proposal, invoice copy, or SOW — line items, schedule, and a PDF. Creates no orders."
+                      actionLabel="Open documents"
+                      onClick={() => setDocsOpen(true)}
                     />
                   </div>
                   <p className="text-[0.6875rem] text-[var(--space-text-muted)]">
@@ -1084,10 +1084,11 @@ export function MilestonesTab({ clientId, username, initialTarget }: MilestonesT
 
       {/* The proposal send — the whole package as a document. Reloads on close so a
           status flip to 'sent' drops the draft marker off the board. */}
-      {summary && emailOpen && (
-        <EmailPackageModal
+      {summary && docsOpen && (
+        <PackageDocumentsModal
           packageId={summary.package.id}
-          onClose={() => { setEmailOpen(false); void load() }}
+          username={username}
+          onClose={() => { setDocsOpen(false); void load() }}
         />
       )}
     </div>

@@ -1,6 +1,15 @@
 import { PDFDocument, StandardFonts, rgb, PDFFont, PDFPage, PDFImage } from 'pdf-lib'
 import fontkit from '@pdf-lib/fontkit'
 import type { NdaFormData, SowFormData } from './document-generators'
+import {
+  clauseBlocks,
+  deliverablesFor,
+  exclusionsFor,
+  paymentTriggerText,
+  scopeItemsFor,
+  resolveSowClauses,
+  type SowRenderKey,
+} from './sow/clauses'
 import type { RecapData } from './retainers/recap'
 import type { PackageRecapData } from './packages/recap'
 import type { ScopeRecapData } from './retainers/scopeRecap'
@@ -69,6 +78,27 @@ function blank(val: string, fallback = '___________________________'): string {
   return val?.trim() || fallback
 }
 
+/**
+ * Break a single token that is wider than the column. Without this a URL, a
+ * hash, or a long identifier pasted into a scope line runs straight off the
+ * page — the text is measured, never clipped, so it simply prints past the
+ * margin.
+ */
+function breakToken(word: string, font: PDFFont, size: number, maxW: number): string[] {
+  const out: string[] = []
+  let cur = ''
+  for (const ch of word) {
+    if (cur && font.widthOfTextAtSize(cur + ch, size) > maxW) {
+      out.push(cur)
+      cur = ch
+    } else {
+      cur += ch
+    }
+  }
+  if (cur) out.push(cur)
+  return out.length ? out : ['']
+}
+
 function wrap(text: string, font: PDFFont, size: number, maxW: number): string[] {
   const words = text.split(' ')
   const lines: string[] = []
@@ -77,8 +107,14 @@ function wrap(text: string, font: PDFFont, size: number, maxW: number): string[]
     const test = cur ? cur + ' ' + w : w
     if (font.widthOfTextAtSize(test, size) <= maxW) {
       cur = test
+      continue
+    }
+    if (cur) { lines.push(cur); cur = '' }
+    if (font.widthOfTextAtSize(w, size) > maxW) {
+      const pieces = breakToken(w, font, size, maxW)
+      lines.push(...pieces.slice(0, -1))
+      cur = pieces[pieces.length - 1]
     } else {
-      if (cur) lines.push(cur)
       cur = w
     }
   }
@@ -260,47 +296,75 @@ class DocWriter {
 
   // ── Section heading ──────────────────────────────────────────────────────────
 
-  section(text: string) {
-    this.need(26)
-    this.sp(10)
+  /**
+   * A section heading, kept with the start of its content — a heading stranded
+   * at the foot of a page with its clause overleaf is the classic contract
+   * typesetting failure.
+   */
+  section(text: string, keepWithNext = 46) {
     const size = 8.5
+    this.need(26 + keepWithNext)
+    this.sp(16)
+    this.y -= size
     this.page.drawRectangle({
-      x: this.ml - 9, y: this.y - (size - 1),
-      width: 3, height: size + 1,
+      x: this.ml - 9, y: this.y - 1,
+      width: 2.5, height: size + 1,
       color: this.cNavy,
     })
-    this.page.drawText(text.toUpperCase(), {
-      x: this.x, y: this.y, size, font: this.bold, color: this.cNavy,
-    })
-    this.y -= size + 5
+    drawTracked(this.page, text.toUpperCase(), this.x, this.y, size, this.bold, this.cNavy, 0.9)
+    this.y -= 9
     this.page.drawLine({
       start: { x: this.ml, y: this.y },
       end:   { x: this.pw - this.mr, y: this.y },
-      thickness: 0.3, color: this.cRule,
+      thickness: 0.5, color: this.cRule,
     })
-    this.y -= 7
+    this.y -= 6
   }
 
   // ── Subsection ───────────────────────────────────────────────────────────────
 
   sub(text: string) {
-    this.need(20)
-    this.sp(4)
+    this.need(20 + 34)
+    this.sp(6)
+    this.y -= 9
     this.page.drawText(text, {
-      x: this.x, y: this.y, size: 9, font: this.bold, color: C.dark,
+      x: this.x, y: this.y, size: 9, font: this.bold, color: this.branded ? BRAND.ink : C.dark,
     })
-    this.y -= 15
+    this.y -= 5
   }
 
   // ── Body text ────────────────────────────────────────────────────────────────
 
+  /**
+   * `this.y` marks the TOP of the next block everywhere else in this writer, so
+   * text has to drop by its ascent before the first baseline. Drawing the
+   * baseline at `y` let glyphs ride up into whatever sat above — which is how a
+   * paragraph came to overlap the table it followed.
+   */
   body(text: string, size = 9.5, color = C.black) {
-    const lines = wrap(text, this.normal, size, this.innerW)
+    const lines = wrapBlock(text, this.normal, size, this.innerW)
+    this.y -= size
     for (const line of lines) {
       this.need(size + 5)
-      this.page.drawText(line, { x: this.x, y: this.y, size, font: this.normal, color })
+      if (line) this.page.drawText(line, { x: this.x, y: this.y, size, font: this.normal, color })
       this.y -= size + 4.5
     }
+    this.y += 4.5
+  }
+
+  /**
+   * Conspicuous text — bold and set apart, for the disclaimer of implied
+   * warranties. "Conspicuous" is a legal requirement there, not a style choice.
+   */
+  capsBody(text: string, size = 8.5) {
+    this.sp(2)
+    const lines = wrap(text, this.bold, size, this.innerW)
+    for (const line of lines) {
+      this.need(size + 5)
+      this.page.drawText(line, { x: this.x, y: this.y, size, font: this.bold, color: C.black })
+      this.y -= size + 4.5
+    }
+    this.sp(2)
   }
 
   // ── Bullet ───────────────────────────────────────────────────────────────────
@@ -308,13 +372,17 @@ class DocWriter {
   bullet(text: string, size = 9.5, indent = 14) {
     const maxW = this.innerW - indent
     const lines = wrap(text, this.normal, size, maxW)
-    this.need(size + 5)
+    // A bullet is never worth splitting off its first line.
+    this.need(size * 2 + 10)
+    this.y -= size
     this.page.drawText('•', { x: this.x + 3, y: this.y, size: size - 1, font: this.normal, color: C.mid })
     for (let i = 0; i < lines.length; i++) {
       this.need(size + 5)
       this.page.drawText(lines[i], { x: this.x + indent, y: this.y, size, font: this.normal, color: C.black })
       this.y -= size + 4.5
     }
+    this.y += 4.5
+    this.y -= 5
   }
 
   // ── Divider ──────────────────────────────────────────────────────────────────
@@ -390,56 +458,61 @@ class DocWriter {
 
   // ── Table ────────────────────────────────────────────────────────────────────
 
+  /** Draws a table's header bar at the current y. Reused when a table spans pages. */
+  private _tableHead(headers: string[], widths: number[], size: number) {
+    const hRowH = size + 13
+    if (this.branded) {
+      const totalW = widths.reduce((a, b) => a + b, 0)
+      this.page.drawRectangle({ x: this.ml, y: this.y - hRowH, width: totalW, height: hRowH, color: BRAND.headBg })
+      let cx = this.ml
+      for (let ci = 0; ci < headers.length; ci++) {
+        if (headers[ci]) drawTracked(this.page, headers[ci].toUpperCase(), cx + 8, this.y - size - 4, size - 2, this.bold, BRAND.gray6, 0.9)
+        cx += widths[ci]
+      }
+    } else {
+      let cx = this.ml
+      for (let ci = 0; ci < headers.length; ci++) {
+        this.page.drawRectangle({ x: cx, y: this.y - hRowH, width: widths[ci], height: hRowH, color: C.navy })
+        if (headers[ci]) this.page.drawText(headers[ci], { x: cx + 8, y: this.y - size - 4, size: size - 0.5, font: this.bold, color: C.white })
+        cx += widths[ci]
+      }
+    }
+    this.y -= hRowH
+  }
+
+  /**
+   * A data table. Rows are atomic — one never splits across a page — and the
+   * header repeats on every page the table continues onto, so a row is never
+   * left stranded without the columns that name it.
+   */
   table(headers: string[], widths: number[], rows: string[][], size = 9) {
     const rowText = this.branded ? BRAND.ink : C.dark
     if (headers.length > 0) {
-      const hRowH = size + 12
-      this.need(hRowH + 2)
-      if (this.branded) {
-        // Light-gray header bar with tracked uppercase labels (matches invoice/proposal)
-        const totalW = widths.reduce((a, b) => a + b, 0)
-        this.page.drawRectangle({ x: this.ml, y: this.y - hRowH, width: totalW, height: hRowH, color: BRAND.headBg })
-        let cx = this.ml
-        for (let ci = 0; ci < headers.length; ci++) {
-          drawTracked(this.page, headers[ci].toUpperCase(), cx + 6, this.y - size - 4, size - 2, this.bold, BRAND.gray6, 0.8)
-          cx += widths[ci]
-        }
-      } else {
-        let cx = this.ml
-        for (let ci = 0; ci < headers.length; ci++) {
-          this.page.drawRectangle({
-            x: cx, y: this.y - hRowH, width: widths[ci], height: hRowH, color: C.navy,
-          })
-          this.page.drawText(headers[ci], {
-            x: cx + 6, y: this.y - size - 4,
-            size: size - 0.5, font: this.bold, color: C.white,
-          })
-          cx += widths[ci]
-        }
-      }
-      this.y -= hRowH + 1
+      this.need(size + 13 + 26)
+      this._tableHead(headers, widths, size)
     }
 
     for (let ri = 0; ri < rows.length; ri++) {
-      const bg = ri % 2 === 1 ? this.cAlt : C.white
       let maxLines = 1
       for (let ci = 0; ci < rows[ri].length; ci++) {
-        const lns = wrap(rows[ri][ci], this.normal, size, widths[ci] - 12)
-        maxLines = Math.max(maxLines, lns.length)
+        maxLines = Math.max(maxLines, wrap(rows[ri][ci], this.normal, size, widths[ci] - 16).length)
       }
-      const rowH = maxLines * (size + 3) + 10
-      this.need(rowH + 1)
+      const rowH = maxLines * (size + 3.5) + 12
+
+      // Break before the row, not through it, and carry the header over.
+      if (this.y - rowH < this.mb + 24) {
+        this._drawFooter()
+        this._np()
+        if (headers.length > 0) this._tableHead(headers, widths, size)
+      }
 
       let cx = this.ml
       for (let ci = 0; ci < rows[ri].length; ci++) {
-        this.page.drawRectangle({
-          x: cx, y: this.y - rowH, width: widths[ci], height: rowH, color: bg,
-        })
-        const lns = wrap(rows[ri][ci], this.normal, size, widths[ci] - 12)
-        let ty = this.y - size - 5
+        const lns = wrap(rows[ri][ci], this.normal, size, widths[ci] - 16)
+        let ty = this.y - size - 6
         for (const l of lns) {
-          this.page.drawText(l, { x: cx + 6, y: ty, size, font: this.normal, color: rowText })
-          ty -= size + 3
+          this.page.drawText(l, { x: cx + 8, y: ty, size, font: this.normal, color: rowText })
+          ty -= size + 3.5
         }
         cx += widths[ci]
       }
@@ -448,9 +521,73 @@ class DocWriter {
         end:   { x: this.pw - this.mr, y: this.y - rowH },
         thickness: 0.3, color: this.cRule,
       })
-      this.y -= rowH + 1
+      this.y -= rowH
     }
-    this.sp(4)
+    this.sp(10)
+  }
+
+  /**
+   * A numbered list of scope / deliverable / exclusion lines: the title in bold
+   * with its optional description wrapped underneath. Plain `table` cells use a
+   * single font, and a contract's scope reads better when the thing being
+   * promised is visually separate from the sentence qualifying it.
+   *
+   * Like `table`, an entry is atomic and the header repeats across pages — a
+   * deliverable split over a page break reads as two different promises.
+   */
+  itemTable(header: string, items: Array<{ title: string; description?: string }>, opts?: { numbered?: boolean }) {
+    const size = 9
+    const numbered = opts?.numbered !== false
+    const numW = numbered ? 26 : 0
+    const textW = this.innerW - numW - 16
+
+    if (items.length === 0) {
+      this.body('(To be defined by written amendment.)')
+      return
+    }
+
+    const drawHead = () => this._tableHead(numbered ? ['', header] : [header], numbered ? [numW, this.innerW - numW] : [this.innerW], size)
+
+    this.need(size + 13 + 30)
+    drawHead()
+
+    const rowText = this.branded ? BRAND.ink : C.dark
+    for (let i = 0; i < items.length; i++) {
+      const titleLines = wrap(items[i].title, this.bold, size, textW)
+      const desc = items[i].description?.trim()
+      const descLines = desc ? wrapBlock(desc, this.normal, size - 0.5, textW) : []
+      const rowH = titleLines.length * (size + 3.5) + descLines.length * (size + 2) + (descLines.length ? 3 : 0) + 12
+
+      if (this.y - rowH < this.mb + 24) {
+        this._drawFooter()
+        this._np()
+        drawHead()
+      }
+
+      let ty = this.y - size - 6
+      if (numbered) {
+        this.page.drawText(`${i + 1}`, { x: this.ml + 8, y: ty, size: size - 0.5, font: this.normal, color: this.cLabel })
+      }
+      for (const line of titleLines) {
+        this.page.drawText(line, { x: this.ml + numW + 8, y: ty, size, font: this.bold, color: rowText })
+        ty -= size + 3.5
+      }
+      if (descLines.length) {
+        ty -= 1
+        for (const line of descLines) {
+          this.page.drawText(line, { x: this.ml + numW + 8, y: ty, size: size - 0.5, font: this.normal, color: this.branded ? BRAND.gray6 : C.mid })
+          ty -= size + 2
+        }
+      }
+
+      this.page.drawLine({
+        start: { x: this.ml, y: this.y - rowH },
+        end:   { x: this.pw - this.mr, y: this.y - rowH },
+        thickness: 0.3, color: this.cRule,
+      })
+      this.y -= rowH
+    }
+    this.sp(10)
   }
 
   totalRow(label: string, amount: string, widths: number[]) {
@@ -654,6 +791,65 @@ function writeSowPricingSection(w: DocWriter, d: SowFormData) {
   }
 }
 
+// ── SOW helper — the computed sections a clause can reference ─────────────────
+
+/**
+ * Tables and totals are derived from the form, not written, so a clause names
+ * one with a `render` block and the drawing happens here. These survive a
+ * clause override — overriding replaces prose, never the numbers.
+ */
+function writeSowRender(w: DocWriter, d: SowFormData, key: SowRenderKey) {
+  switch (key) {
+    case 'partiesTable': {
+      const colW = [w.innerW * 0.30, w.innerW * 0.70]
+      const spFull = d.providerName?.trim() || 'ORCACLUB Technical Operations Development Studio'
+      w.table([], colW, [
+        ['Service Provider', `${spFull}${d.providerContact ? '  ·  ' + d.providerContact : ''}`],
+        ['Client',           `${blank(d.clientName)}${d.clientContact ? '  ·  ' + d.clientContact : ''}`],
+        ['Effective Date',   fmtDate(d.effectiveDate)],
+        ['Project Name',     blank(d.projectName)],
+      ])
+      break
+    }
+
+    case 'scopeTable':
+      w.itemTable('Service', scopeItemsFor(d))
+      break
+
+    case 'deliverablesTable':
+      w.itemTable('Deliverable', deliverablesFor(d))
+      break
+
+    case 'exclusionList':
+      w.itemTable("Excluded — Client's responsibility", exclusionsFor(d), { numbered: false })
+      break
+
+    case 'milestoneTable': {
+      const miles = d.milestones.filter(m => m.name.trim())
+      if (miles.length > 0) {
+        const colW = [w.innerW * 0.38, w.innerW * 0.20, w.innerW * 0.42]
+        w.table(['Milestone / Phase', 'Target Date', 'Notes'], colW, miles.map(m => {
+          const dt = m.date
+            ? new Date(m.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+            : 'TBD'
+          return [m.name, dt, m.notes || '—']
+        }))
+      } else {
+        w.body('Milestone schedule to be agreed upon in writing following execution of this Agreement. The Client Inactivity provision below applies regardless of whether milestone dates are set.')
+      }
+      break
+    }
+
+    case 'pricing':
+      writeSowPricingSection(w, d)
+      break
+
+    case 'paymentTable':
+      writeSowPaymentSchedule(w, d)
+      break
+  }
+}
+
 // ── SOW helper — payment schedule ─────────────────────────────────────────────
 
 function writeSowPaymentSchedule(w: DocWriter, d: SowFormData) {
@@ -665,10 +861,26 @@ function writeSowPaymentSchedule(w: DocWriter, d: SowFormData) {
     : d.projectItems.reduce((s, i) => s + (parseFloat(i.amount) || 0), 0)
 
   const colW = [w.innerW * 0.30, w.innerW * 0.10, w.innerW * 0.18, w.innerW * 0.42]
-  const rows = entries.map(e => {
-    const pct = parseFloat(e.pct) || 0
-    const amt = (baseTotal * pct / 100).toFixed(2)
-    return [e.label || '—', `${pct}%`, `$${amt}`, e.note || '—']
+  // Every row states when the money is due. A blank trigger lets the Client
+  // argue the balance falls due whenever they decide the work is "finished",
+  // so an unwritten one is derived from the entry's position instead.
+  //
+  // Amounts: a schedule that came from a package carries the exact figure the
+  // client was quoted, and that is what prints. Only a hand-built schedule
+  // computes its amount from the percentage.
+  const rows = entries.map((e, i) => {
+    const exact = e.amount != null && e.amount !== '' ? parseFloat(e.amount) : NaN
+    const hasExact = isFinite(exact)
+    const amt = hasExact ? exact : baseTotal * (parseFloat(e.pct) || 0) / 100
+    const pct = hasExact
+      ? (baseTotal > 0 ? Math.round((exact / baseTotal) * 100) : 0)
+      : (parseFloat(e.pct) || 0)
+    return [
+      e.label || `Payment ${i + 1}`,
+      `${pct}%`,
+      `$${amt.toFixed(2)}`,
+      paymentTriggerText(e, i, entries.length),
+    ]
   })
   w.table(['Payment', '%', 'Amount', 'Trigger / Condition'], colW, rows)
   w.sp(4)
@@ -956,9 +1168,11 @@ async function buildSowCore(d: SowFormData, brand: 'personal' | 'orcaclub'): Pro
   const spFull  = d.providerName?.trim() || (isOrcaclub ? 'ORCACLUB Technical Operations Development Studio' : 'Chance Noonan, Independent Freelance Consultant')
   const spTitle = isOrcaclub ? 'Authorized Representative' : 'Independent Freelance Consultant'
   const subtitle = isOrcaclub ? 'Technical Services Agreement' : 'Independent Contractor Agreement'
+  // No "does not constitute legal advice" line — this is an executed agreement,
+  // not an informational document, and the disclaimer reads oddly on one.
   const footNote = isOrcaclub
-    ? 'ORCACLUB · Web Design and Marketing Automation · orcaclub.pro · Does not constitute legal advice.'
-    : `Prepared by ${spName} · Independent Freelance Consultant · Does not constitute legal advice.`
+    ? 'ORCACLUB · Web Design and Marketing Automation · orcaclub.pro'
+    : `Prepared by ${spName} · Independent Freelance Consultant`
 
   const w = new DocWriter(
     doc, bold, normal,
@@ -982,146 +1196,47 @@ async function buildSowCore(d: SowFormData, brand: 'personal' | 'orcaclub'): Pro
   )
   w.sp(8)
 
-  // ── Section 1: Parties ───────────────────────────────────────────────────────
-  w.section('1. Parties and Project Identification')
-  const pColW = [w.innerW * 0.30, w.innerW * 0.70]
-  const pRows: string[][] = [
-    ['Service Provider', `${spFull}${d.providerContact ? '  ·  ' + d.providerContact : ''}`],
-    ['Client',           `${blank(d.clientName)}${d.clientContact ? '  ·  ' + d.clientContact : ''}`],
-    ['Effective Date',   fmtDate(d.effectiveDate)],
-    ['Project Name',     blank(d.projectName)],
-  ]
-  w.table([], pColW, pRows)
-  w.hr()
+  // ── Body ─────────────────────────────────────────────────────────────────────
+  // Sections come from the clause registry rather than being written out here,
+  // so staff can override any clause's wording or switch a clause off and the
+  // numbering still comes out right.
+  const clauses = resolveSowClauses(d)
 
-  // ── Section 2: Scope of Work ─────────────────────────────────────────────────
-  w.section('2. Project Overview')
-  w.body(d.projectOverview || '(Not provided.)')
-  w.hr()
+  for (const { n, clause } of clauses) {
+    const blocks = clauseBlocks(clause, d)
+    // A section that opens with a table needs room for the table's head and a
+    // first row too, or the heading and its lead-in strand at the page foot.
+    const keep = blocks.some(b => b.t === 'render') ? 132 : 46
+    w.section(`${n}. ${clause.heading}`, keep)
 
-  // ── Section 3: Scope ─────────────────────────────────────────────────────────
-  w.section('3. Scope of Work and Deliverables')
-  w.body('Service Provider shall perform the following services and deliver the following items (collectively, the "Deliverables"):')
-  w.sp(4)
-  const scope = d.scopeItems.filter(i => i.trim())
-  if (scope.length > 0) {
-    const sColW = [w.innerW * 0.08, w.innerW * 0.92]
-    const sRows = scope.map((item, i) => [`${i + 1}.`, item])
-    w.table(['#', 'Deliverable / Service'], sColW, sRows)
-  } else {
-    w.body('(Scope items to be defined by written amendment.)')
+    let subIndex = 0
+    for (const block of blocks) {
+      switch (block.t) {
+        case 'body':
+          w.body(block.text)
+          break
+        case 'bullet':
+          w.bullet(block.text)
+          break
+        case 'sub':
+          subIndex += 1
+          w.sub(`${n}.${subIndex}  ${block.text}`)
+          break
+        case 'caps':
+          w.capsBody(block.text)
+          break
+        case 'space':
+          w.sp(block.h ?? 4)
+          break
+        case 'render':
+          writeSowRender(w, d, block.key)
+          break
+      }
+    }
+
+    // No divider between clauses — each section heading already carries its own
+    // rule, and a second one turns the page into a grid of boxes.
   }
-  w.sp(4)
-  w.sub('3.1  Out of Scope')
-  w.body('Work not explicitly listed above is outside the scope of this Agreement. Any additional requests will be addressed through a written Change Order — outlining the work, timeline impact, and cost — agreed upon by both Parties before work begins.')
-  w.hr()
-
-  // ── Section 4: Timeline ───────────────────────────────────────────────────────
-  w.section('4. Timeline and Milestones')
-  const miles = d.milestones.filter(m => m.name.trim())
-  if (miles.length > 0) {
-    const mColW = [w.innerW * 0.38, w.innerW * 0.20, w.innerW * 0.42]
-    const mRows = miles.map(m => {
-      const dt = m.date ? new Date(m.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'TBD'
-      return [m.name, dt, m.notes || '—']
-    })
-    w.table(['Milestone / Phase', 'Target Date', 'Notes'], mColW, mRows)
-  } else {
-    w.body('Milestone schedule to be agreed upon in writing following execution of this Agreement.')
-  }
-  w.sp(4)
-  w.body('Timelines are contingent on both Parties\' timely participation. When materials, access, or feedback are requested, a response within 48 hours keeps the project on track. If delays occur on either side, target dates adjust accordingly to protect the quality of the work.')
-  w.hr()
-
-  // ── Section 5: Pricing ───────────────────────────────────────────────────────
-  w.section('5. Fees and Pricing')
-  writeSowPricingSection(w, d)
-  w.hr()
-
-  // ── Section 6: Payment Terms ─────────────────────────────────────────────────
-  w.section('6. Payment Terms and Schedule')
-  writeSowPaymentSchedule(w, d)
-  w.bullet(`Invoices are due within ${d.netDays || '30'} days of the invoice date. Each invoice will be itemized and sent promptly upon the applicable milestone or billing period.`)
-  w.bullet(`Balances not settled by the due date may accrue a late fee of ${d.lateFee || '1.5'}% per month on the outstanding amount. Service Provider will notify Client before any fees are applied.`)
-  w.bullet('If an invoice remains materially past due, Service Provider may pause active work until the outstanding balance is resolved. Service Provider will communicate before taking this step.')
-  w.bullet('Deposits and advance payments are non-refundable once work has commenced, as they represent resources and time already committed to the project.')
-  w.hr()
-
-  // ── Section 7: Client Responsibilities ───────────────────────────────────────
-  w.section('7. Client Responsibilities')
-  w.body('Successful delivery depends on both Parties\' active participation. Client agrees to:')
-  w.bullet('Provide access to relevant platforms, accounts, tools, and credentials as reasonably required')
-  w.bullet('Supply brand assets, copy, content, and supporting materials in a timely manner')
-  w.bullet('Review deliverables and provide consolidated written feedback within 48–72 hours of delivery')
-  w.bullet('Maintain a consistent point of contact with authority to approve decisions and communications')
-  w.bullet('Communicate changes to project requirements, stakeholders, or direction as early as possible')
-  w.body('If any of the above is delayed, both Parties will communicate promptly to assess the impact on timeline and scope.')
-  w.hr()
-
-  // ── Section 8: Revisions and Change Orders ────────────────────────────────────
-  w.section('8. Revisions and Change Orders')
-  w.sub('8.1  Included Revisions')
-  w.body(`This Agreement includes up to ${d.revisionRounds || '2'} round(s) of revisions per deliverable. A revision round consists of one consolidated set of feedback submitted after delivery. Batching feedback into a single round keeps the process efficient and well-documented for both Parties.`)
-  w.sp(4)
-  w.sub('8.2  Additional Revisions')
-  w.body(`Revisions beyond the included rounds, or requests that materially alter the original direction, are billed at ${d.revisionRate ? '$' + d.revisionRate + '/hr' : 'Service Provider\'s standard hourly rate'}. Service Provider will confirm the estimated cost before proceeding.`)
-  w.sp(4)
-  w.sub('8.3  Change Orders')
-  w.body('Requests for work outside the defined scope are handled through a written Change Order that details the additional work, timeline impact, and associated cost. Work on any change begins only after both Parties have signed the Change Order.')
-  w.hr()
-
-  // ── Section 9: Intellectual Property ─────────────────────────────────────────
-  w.section('9. Intellectual Property and Ownership')
-  w.sub('9.1  Assignment of Deliverables')
-  w.body('Upon receipt of full payment for all amounts due under this Agreement, Service Provider hereby assigns to Client all right, title, and interest in and to the Deliverables, including all applicable intellectual property rights therein. No assignment shall be deemed made until full payment is received.')
-  w.sp(4)
-  w.sub('9.2  Background IP')
-  w.body(`Service Provider retains all right, title, and interest in and to any pre-existing tools, methodologies, code libraries, frameworks, processes, or know-how ("Background IP") used in performing the services. To the extent any Background IP is incorporated into the Deliverables, Service Provider grants Client a non-exclusive, royalty-free, perpetual license to use such Background IP solely as part of the Deliverables.`)
-  w.sp(4)
-  w.sub('9.3  Portfolio Rights')
-  w.body(`${spName} may identify Client by name and reference publicly visible Deliverables in ${spName}'s portfolio, case studies, and promotional materials. This right applies only to publicly accessible work; non-public Deliverables remain confidential. Client may request in writing that ${spName} cease future references to Client's name; such request is not retroactive.`)
-  w.hr()
-
-  // ── Section 10: Confidentiality ───────────────────────────────────────────────
-  w.section('10. Confidentiality')
-  w.body('Each Party agrees to hold in confidence all non-public information disclosed by the other Party in connection with this Agreement ("Confidential Information"), using at least the same degree of care as it uses to protect its own confidential information. Neither Party shall disclose the other\'s Confidential Information to any third party without prior written consent, except as required by law. This obligation shall survive termination of this Agreement for a period of three (3) years. If the Parties have executed a separate Non-Disclosure Agreement, its terms shall govern and supplement this Section.')
-  w.hr()
-
-  // ── Section 11: Limited Warranty ─────────────────────────────────────────────
-  w.section('11. Quality and Warranty')
-  w.body(`Service Provider warrants that Deliverables will perform materially as specified for 30 days following final delivery. Any defects originating from Service Provider's work will be corrected at no additional charge within this period. This warranty does not extend to issues resulting from Client modifications, third-party platform behavior, or changes made after final sign-off. Beyond the warranty period, additional support is scoped and billed as new work.`)
-  w.hr()
-
-  // ── Section 12: Termination ───────────────────────────────────────────────────
-  w.section('12. Termination')
-  w.body('Either Party may terminate this Agreement with 14 days\' written notice. Upon termination:')
-  w.bullet('Client is responsible for payment of all work completed and expenses incurred through the termination date, billed on a pro-rata basis')
-  w.bullet('Deposits and payments applied to work already underway are non-refundable')
-  w.bullet('Service Provider will deliver all completed Deliverables and meaningful work-in-progress upon receipt of final payment')
-  w.bullet('Both Parties are encouraged to raise concerns in writing early, so that issues can be addressed before termination becomes necessary')
-  w.hr()
-
-  // ── Section 13: Limitation of Liability ──────────────────────────────────────
-  w.section('13. Limitation of Liability')
-  w.body(`Neither Party shall be liable to the other for indirect, incidental, or consequential damages — including lost revenue, lost data, or loss of business opportunity — arising from or related to this Agreement. Service Provider's total liability shall not exceed the total fees paid by Client in the three months preceding the event giving rise to the claim. These limitations reflect a reasonable and standard allocation of risk between professional service providers and their clients.`)
-  w.hr()
-
-  // ── Section 14: Independent Contractor ────────────────────────────────────────
-  w.section('14. Independent Contractor')
-  w.body(`${spName} performs services under this Agreement as an independent contractor, not as an employee or agent of Client. Service Provider is solely responsible for its own taxes, benefits, and business obligations. Service Provider may engage with other clients during this Agreement, provided those engagements do not interfere with the commitments made herein.`)
-  w.hr()
-
-  // ── Section 15: General Provisions ───────────────────────────────────────────
-  w.section('15. General Provisions')
-  w.body('Governing Law. This Agreement is governed by the laws of the State of California. Any disputes not resolved through direct negotiation will be addressed through the appropriate courts in California.')
-  w.sp(4)
-  w.body('Entire Agreement. This document, together with any executed Change Orders, constitutes the complete agreement between the Parties for this engagement and supersedes any prior discussions or informal understandings on the same subject.')
-  w.sp(4)
-  w.body('Severability and Amendments. If any provision of this Agreement is found unenforceable, the remaining terms continue in full effect. Either provision may be amended by written agreement signed by both Parties.')
-  w.sp(4)
-  w.body('Force Majeure. Neither Party is liable for delays caused by circumstances outside their reasonable control. In such cases, both Parties will communicate promptly and agree on a reasonable path forward.')
-  w.sp(4)
-  w.body('Electronic Signatures. Signatures obtained electronically are valid and enforceable under the ESIGN Act and applicable state law, with the same legal effect as original ink signatures.')
 
   // ── Signature page ────────────────────────────────────────────────────────────
   w.sigPage(

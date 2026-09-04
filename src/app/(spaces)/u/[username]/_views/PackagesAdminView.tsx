@@ -6,11 +6,11 @@ import { useRouter } from 'next/navigation'
 import {
   Search, Package, FileText, X, ExternalLink,
   Layers, Loader2, CheckCircle2, ChevronRight,
-  Check, Mail, Plus, Pencil, FileSignature, Clock,
+  Check, Files, Plus, Pencil, FileSignature, Clock,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { AssignPackageModal } from '@/components/dashboard/AssignPackageModal'
-import { EmailPackageModal } from '@/components/dashboard/EmailPackageModal'
+import { PackageDocumentsModal } from '@/components/dashboard/PackageDocumentsModal'
 import { PackageBuilderModal, type ExistingProposal } from '@/components/dashboard/PackageBuilderModal'
 import { createOrderFromPackage, createSowFromPackage } from '@/actions/packages'
 
@@ -114,7 +114,7 @@ function ProposalModal({
   const [invoiceState, setInvoiceState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
   const [invoiceUrl, setInvoiceUrl] = useState<string | null>(null)
   const [invoiceError, setInvoiceError] = useState<string | null>(null)
-  const [emailOpen, setEmailOpen] = useState(false)
+  const [docsOpen, setDocsOpen] = useState(false)
   const [sowState, setSowState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
   const [sowError, setSowError] = useState<string | null>(null)
 
@@ -397,11 +397,11 @@ function ProposalModal({
             </button>
           )}
           <button
-            onClick={() => setEmailOpen(true)}
+            onClick={() => setDocsOpen(true)}
             className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] text-[var(--space-text-tertiary)] hover:text-[var(--space-text-primary)] transition-all"
           >
-            <Mail className="size-3.5" />
-            Email
+            <Files className="size-3.5" />
+            Documents
           </button>
           <Link
             href={`/u/${username}/packages/${pkg.id}/print`}
@@ -416,8 +416,8 @@ function ProposalModal({
         </div>
       </div>
 
-      {emailOpen && (
-        <EmailPackageModal packageId={pkg.id} onClose={() => setEmailOpen(false)} />
+      {docsOpen && (
+        <PackageDocumentsModal packageId={pkg.id} username={username} onClose={() => setDocsOpen(false)} />
       )}
     </div>
   )

@@ -22,6 +22,24 @@ export interface SowPaymentEntry {
   label: string
   pct: string
   note: string
+  /**
+   * Exact dollar amount for this installment. Set when the schedule comes from
+   * a package, where the amounts are authoritative — the document then prints
+   * these rather than recomputing them from `pct`, which rounds.
+   */
+  amount?: string
+}
+
+/**
+ * One line of the scope, the deliverables, or the exclusions: a short title with
+ * an optional sentence expanding it. Both print on the contract.
+ *
+ * Documents saved before this existed hold plain strings in these fields; read
+ * them through `normalizeSowItems` rather than trusting the type.
+ */
+export interface SowScopeItem {
+  title: string
+  description?: string
 }
 
 export interface SowFormData {
@@ -32,7 +50,10 @@ export interface SowFormData {
   effectiveDate: string
   projectName: string
   projectOverview: string
-  scopeItems: string[]
+  /** The services performed. */
+  scopeItems: SowScopeItem[]
+  /** The artifacts handed over. Absent on documents saved before the split. */
+  deliverables?: SowScopeItem[]
   milestones: SowMilestone[]
   pricingType: 'project' | 'retainer' | 'both'
   projectItems: SowLineItem[]
@@ -44,6 +65,36 @@ export interface SowFormData {
   lateFee: string
   revisionRounds: string
   revisionRate: string
+
+  // ── Terms with a stated number ────────────────────────────────────────────
+  // All optional so documents saved before these existed still render — the
+  // clause registry substitutes the default wording when they are absent.
+
+  /** Stated hourly rate for extra revisions and post-warranty work. */
+  hourlyRate?: string
+  /** Length of the express warranty, in days. Default 30. */
+  warrantyDays?: string
+  /** Optional cap on free bug-support hours. Blank = no separate allowance. */
+  bugSupportHours?: string
+  /** Review window before a Deliverable is deemed accepted. Default 7. */
+  acceptanceDays?: string
+  /** Days of Client silence before the project is deemed complete. Default 30. */
+  stallDays?: string
+  /** Fee to restart a project deemed complete for inactivity. Default 500. */
+  reactivationFee?: string
+  /** Floor on the liability cap, so it never resolves to $0. Default 1000. */
+  liabilityFloor?: string
+  /** County named for venue in General Provisions. Default Orange County. */
+  venueCounty?: string
+  /** Explicit out-of-scope list. Empty = the standard exclusions. */
+  exclusions?: SowScopeItem[]
+
+  // ── Standard-text control ─────────────────────────────────────────────────
+
+  /** clause id → replacement wording for that clause. */
+  clauseOverrides?: Record<string, string>
+  /** clause ids switched off for this document (required clauses ignore this). */
+  clauseDisabled?: string[]
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────

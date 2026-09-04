@@ -29,6 +29,7 @@ export default async function FilesPage({ params }: { params: Promise<{ username
       allProjects={allProjects}
       allSprints={allSprints}
       clientAccounts={clientAccounts}
+      currentUserEmail={user.email ?? ''}
     />
   )
 }

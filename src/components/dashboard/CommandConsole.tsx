@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import {
@@ -10,7 +10,12 @@ import {
 import { cn } from '@/lib/utils'
 import { isTypingTarget } from '@/lib/keyboard'
 import { fetchSearchData } from '@/actions/search'
-import type { SearchClient, SearchProject, SearchSprint } from '@/actions/search'
+import type {
+  SearchClient, SearchProject, SearchSprint, SearchPackage, SearchData,
+} from '@/actions/search'
+import {
+  tokenize, scoreFields, highlightSegments, type SearchField,
+} from '@/lib/dashboard/search-ranking'
 import { PackageBuilderTab } from './PackageBuilderTab'
 import { RetainerTab } from './RetainerTab'
 import { MilestonesTab } from './MilestonesTab'
@@ -36,10 +41,26 @@ const STATIONS: { id: Station; label: string; icon: typeof Search }[] = [
 
 // ─── Search types + helpers (ported from GlobalSearchPalette) ───────────────────
 
+type ResultKind = 'client' | 'project' | 'package' | 'sprint'
+
 type ResultItem =
   | { type: 'client';  data: SearchClient  }
   | { type: 'project'; data: SearchProject }
+  | { type: 'package'; data: SearchPackage }
   | { type: 'sprint';  data: SearchSprint  }
+
+/** A scored result plus the field keys that carried the query. */
+type RankedItem = ResultItem & { score: number; matchedKeys: string[] }
+
+interface ResultGroupData {
+  kind: ResultKind
+  label: string
+  icon: typeof Search
+  items: RankedItem[]
+  /** Matches before the per-group cap, so the row can say "+N more". */
+  total: number
+  best: number
+}
 
 const PROJECT_STATUS_LABEL: Record<string, string> = {
   pending:       'Pending',
@@ -50,31 +71,143 @@ const PROJECT_STATUS_LABEL: Record<string, string> = {
   active:        'Active',
 }
 
-function matches(text: string | null | undefined, query: string): boolean {
-  if (!text) return false
-  return text.toLowerCase().includes(query.toLowerCase())
+// Enough to answer the query without turning arrow-key nav into a marathon.
+// Before this, a one-character query rendered every one of up to 1500 records.
+const GROUP_LIMIT = 6
+
+const GROUP_META: Record<ResultKind, { label: string; icon: typeof Search }> = {
+  client:  { label: 'Clients',  icon: Building2    },
+  project: { label: 'Projects', icon: FolderKanban },
+  package: { label: 'Packages', icon: Package      },
+  sprint:  { label: 'Sprints',  icon: Zap          },
 }
 
-function buildResults(
-  data: { clients: SearchClient[]; projects: SearchProject[]; sprints: SearchSprint[] } | null,
-  query: string,
-): ResultItem[] {
-  if (!data || !query.trim()) return []
-  const q = query.trim()
-  const out: ResultItem[] = []
-  for (const client of data.clients) {
-    if (matches(client.name, q) || matches(client.email, q) || matches(client.company, q))
-      out.push({ type: 'client', data: client })
+function money(n: number) {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency', currency: 'USD', maximumFractionDigits: 0,
+  }).format(n)
+}
+
+/** The headline price for a proposal — one-time if there is one, else the recurring rate. */
+function packagePrice(p: SearchPackage): string | null {
+  if (p.oneTime > 0) return money(p.oneTime)
+  if (p.monthly > 0) return `${money(p.monthly)}/mo`
+  if (p.annual > 0)  return `${money(p.annual)}/yr`
+  return null
+}
+
+/**
+ * Score every record, drop the misses, cap each group, then order the groups by
+ * their strongest hit — so whichever type actually answers the query leads,
+ * rather than clients always winning by virtue of being fetched first.
+ */
+function buildGroups(data: SearchData | null, query: string): ResultGroupData[] {
+  const tokens = tokenize(query)
+  if (!data || tokens.length === 0) return []
+
+  const collect = <T,>(
+    kind: ResultKind,
+    rows: T[],
+    fields: (row: T) => SearchField[],
+    wrap: (row: T) => ResultItem,
+  ): ResultGroupData | null => {
+    const scored: RankedItem[] = []
+    for (const row of rows) {
+      const match = scoreFields(fields(row), tokens)
+      if (!match) continue
+      scored.push({ ...wrap(row), score: match.score, matchedKeys: match.matchedKeys })
+    }
+    if (scored.length === 0) return null
+    scored.sort((a, b) => b.score - a.score)
+    return {
+      kind,
+      label: GROUP_META[kind].label,
+      icon: GROUP_META[kind].icon,
+      items: scored.slice(0, GROUP_LIMIT),
+      total: scored.length,
+      best: scored[0].score,
+    }
   }
-  for (const project of data.projects) {
-    if (matches(project.name, q) || matches(project.clientName, q) || matches(project.description, q))
-      out.push({ type: 'project', data: project })
+
+  const groups = [
+    collect<SearchClient>('client', data.clients, (c) => [
+      { key: 'name',    label: 'name',    value: c.name,    weight: 10 },
+      { key: 'company', label: 'company', value: c.company, weight: 6  },
+      { key: 'email',   label: 'email',   value: c.email,   weight: 4  },
+    ], (c) => ({ type: 'client', data: c })),
+
+    collect<SearchProject>('project', data.projects, (p) => [
+      { key: 'name',        label: 'name',        value: p.name,        weight: 10 },
+      { key: 'clientName',  label: 'client',      value: p.clientName,  weight: 6  },
+      { key: 'description', label: 'description', value: p.description, weight: 2  },
+    ], (p) => ({ type: 'project', data: p })),
+
+    collect<SearchPackage>('package', data.packages ?? [], (p) => [
+      { key: 'name',        label: 'name',        value: p.name,        weight: 10 },
+      { key: 'clientName',  label: 'client',      value: p.clientName,  weight: 6  },
+      { key: 'status',      label: 'status',      value: p.status,      weight: 3  },
+      { key: 'description', label: 'description', value: p.description, weight: 2  },
+    ], (p) => ({ type: 'package', data: p })),
+
+    collect<SearchSprint>('sprint', data.sprints, (s) => [
+      { key: 'name',        label: 'name',        value: s.name,        weight: 10 },
+      { key: 'projectName', label: 'project',     value: s.projectName, weight: 6  },
+      { key: 'clientName',  label: 'client',      value: s.clientName,  weight: 5  },
+      { key: 'description', label: 'description', value: s.description, weight: 2  },
+    ], (s) => ({ type: 'sprint', data: s })),
+  ].filter((g): g is ResultGroupData => g !== null)
+
+  groups.sort((a, b) => b.best - a.best)
+  return groups
+}
+
+/**
+ * When the query landed somewhere the row doesn't already show — a description,
+ * an email — name that field, so a result never looks like it matched nothing.
+ */
+function matchNote(matchedKeys: string[], shownKeys: string[]): string | null {
+  const hidden = matchedKeys.filter((k) => !shownKeys.includes(k))
+  if (hidden.length === 0) return null
+  return `matched ${hidden.join(' · ')}`
+}
+
+/** The text a result row shows, plus a note when the hit was somewhere unseen. */
+function rowContent(item: RankedItem): {
+  primary: string
+  secondary: string
+  meta?: string
+  note?: string | null
+} {
+  switch (item.type) {
+    case 'client':
+      return {
+        primary: item.data.name,
+        secondary: [item.data.company, item.data.email].filter(Boolean).join(' · '),
+        note: matchNote(item.matchedKeys, ['name', 'company', 'email']),
+      }
+    case 'project':
+      return {
+        primary: item.data.name,
+        secondary: [
+          item.data.clientName,
+          PROJECT_STATUS_LABEL[item.data.status] ?? item.data.status,
+        ].filter(Boolean).join(' · '),
+        note: matchNote(item.matchedKeys, ['name', 'clientName', 'status']),
+      }
+    case 'package':
+      return {
+        primary: item.data.name,
+        secondary: [item.data.clientName, item.data.status].filter(Boolean).join(' · '),
+        meta: packagePrice(item.data) ?? undefined,
+        note: matchNote(item.matchedKeys, ['name', 'clientName', 'status']),
+      }
+    case 'sprint':
+      return {
+        primary: item.data.name,
+        secondary: [item.data.projectName, item.data.clientName].filter(Boolean).join(' · '),
+        note: matchNote(item.matchedKeys, ['name', 'projectName', 'clientName']),
+      }
   }
-  for (const sprint of data.sprints) {
-    if (matches(sprint.name, q) || matches(sprint.projectName, q) || matches(sprint.clientName, q) || matches(sprint.description, q))
-      out.push({ type: 'sprint', data: sprint })
-  }
-  return out
 }
 
 // ─── Component ──────────────────────────────────────────────────────────────────
@@ -104,7 +237,7 @@ export function CommandConsole({ username }: CommandConsoleProps) {
 
   // Search state
   const [query,       setQuery]       = useState('')
-  const [data,        setData]        = useState<{ clients: SearchClient[]; projects: SearchProject[]; sprints: SearchSprint[] } | null>(null)
+  const [data,        setData]        = useState<SearchData | null>(null)
   const [isLoading,   setIsLoading]   = useState(false)
   const [fetchError,  setFetchError]  = useState<string | null>(null)
   const [selectedIdx, setSelectedIdx] = useState(0)
@@ -136,19 +269,28 @@ export function CommandConsole({ username }: CommandConsoleProps) {
 
   // ── Data loading ──────────────────────────────────────────────────────────────
 
+  // Serve whatever is cached immediately, then refresh in the background on every
+  // open. The console is mounted by the dashboard layout and lives for the whole
+  // session, so a load-once cache meant a package built in the Build station was
+  // unfindable until a full reload. Only the first, empty load shows a spinner.
+  const inFlightRef = useRef(false)
+
   const loadData = async () => {
-    if (dataLoadedRef.current) return
-    dataLoadedRef.current = true
-    setIsLoading(true)
+    if (inFlightRef.current) return
+    inFlightRef.current = true
+    const isFirstLoad = !dataLoadedRef.current
+    if (isFirstLoad) setIsLoading(true)
     setFetchError(null)
     const result = await fetchSearchData()
-    setIsLoading(false)
+    inFlightRef.current = false
+    if (isFirstLoad) setIsLoading(false)
     if (result.success && result.data) {
+      dataLoadedRef.current = true
       setData(result.data)
-    } else {
+    } else if (isFirstLoad) {
       setFetchError(result.error ?? 'Failed to load')
-      dataLoadedRef.current = false
     }
+    // A failed *refresh* keeps the cached list on screen rather than blanking it.
   }
 
   // ── Open / close / navigate ─────────────────────────────────────────────────────
@@ -289,25 +431,39 @@ export function CommandConsole({ username }: CommandConsoleProps) {
 
   // ── Results ─────────────────────────────────────────────────────────────────────
 
-  const results = buildResults(data, query)
+  const tokens = useMemo(() => tokenize(query), [query])
+  const groups = useMemo(() => buildGroups(data, query), [data, query])
+  // Flat, in render order — this is what the arrow keys walk.
+  const results = useMemo(() => groups.flatMap((g) => g.items), [groups])
   resultsRef.current = results
 
   const navigateToResult = (item: ResultItem) => {
     closeConsole()
-    if (item.type === 'client')        router.push(`/u/${username}/clients/${item.data.id}`)
-    else if (item.type === 'project')  router.push(`/u/${username}/projects/${item.data.id}`)
-    else                               router.push(`/u/${username}/projects/${item.data.projectId}?tab=sprints`)
+    if (item.type === 'client') {
+      router.push(`/u/${username}/clients/${item.data.id}`)
+    } else if (item.type === 'project') {
+      router.push(`/u/${username}/projects/${item.data.id}`)
+    } else if (item.type === 'package') {
+      // The detail page lives under the owning client; a proposal with no client
+      // has nowhere to land there, so fall back to the printable document.
+      router.push(
+        item.data.clientId
+          ? `/u/${username}/clients/${item.data.clientId}/packages/${item.data.id}`
+          : `/u/${username}/packages/${item.data.id}/print`,
+      )
+    } else {
+      router.push(`/u/${username}/projects/${item.data.projectId}?tab=sprints`)
+    }
   }
-
-  const clientResults  = results.filter((r): r is { type: 'client';  data: SearchClient  } => r.type === 'client')
-  const projectResults = results.filter((r): r is { type: 'project'; data: SearchProject } => r.type === 'project')
-  const sprintResults  = results.filter((r): r is { type: 'sprint';  data: SearchSprint  } => r.type === 'sprint')
 
   const totalClients  = data?.clients.length  ?? 0
   const totalProjects = data?.projects.length ?? 0
   const totalSprints  = data?.sprints.length  ?? 0
+  const totalPackages = data?.packages?.length ?? 0
 
-  let globalIdx = 0
+  // Walks the flattened render order so arrow-key selection and the rendered
+  // rows agree on an index. Reset every render.
+  let flatIdx = 0
 
   // Build station hands the saved proposal to Milestones (id present), or drops back
   // to search on cancel — never a dead end, and never a lost draft on a stray click.
@@ -395,21 +551,23 @@ export function CommandConsole({ username }: CommandConsoleProps) {
             {!expanded && (
               <>
                 {/* Input row */}
-                <div className="flex items-center gap-3 px-4 py-3.5 border-b border-[var(--space-border-hard)]">
-                  <div
-                    className="size-7 rounded-lg flex items-center justify-center shrink-0"
-                    style={{ background: 'var(--space-accent-soft)', border: '1px solid var(--space-accent-glow)' }}
-                  >
-                    {isLoading
-                      ? <Loader2 className="size-3.5 animate-spin" style={{ color: 'var(--space-accent)' }} />
-                      : <Search className="size-3.5" style={{ color: 'var(--space-accent)' }} />}
-                  </div>
+                <div className="flex items-center gap-3 px-5 py-4">
+                  {isLoading
+                    ? <Loader2 className="size-4 shrink-0 animate-spin text-[var(--space-text-muted)]" />
+                    : <Search className="size-4 shrink-0 text-[var(--space-text-muted)]" />}
                   <input
                     ref={inputRef}
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Search clients, projects, sprints…"
-                    className="flex-1 bg-transparent text-[var(--space-text-primary)] text-sm placeholder:text-[var(--space-text-muted)] outline-none"
+                    placeholder="Search clients, projects, packages, sprints…"
+                    role="combobox"
+                    aria-expanded={results.length > 0}
+                    aria-controls="command-console-results"
+                    aria-activedescendant={results.length > 0 ? `command-result-${selectedIdx}` : undefined}
+                    aria-autocomplete="list"
+                    autoComplete="off"
+                    spellCheck={false}
+                    className="flex-1 bg-transparent text-[var(--space-text-primary)] text-[0.9375rem] placeholder:text-[var(--space-text-muted)] outline-none"
                   />
                   {query ? (
                     <button
@@ -426,7 +584,7 @@ export function CommandConsole({ username }: CommandConsoleProps) {
                 </div>
 
                 {/* Horizontal station strip */}
-                <div className="flex items-center gap-1 px-2.5 py-2 border-b border-[var(--space-border-hard)]">
+                <div className="flex items-center gap-1 px-3.5 pb-2.5 border-b border-[var(--space-border-hard)]">
                   {STATIONS.map((s) => {
                     const Icon = s.icon
                     const active = station === s.id
@@ -471,50 +629,38 @@ export function CommandConsole({ username }: CommandConsoleProps) {
                     </div>
                   )}
 
-                  {/* Empty query — workspace overview + launchpad */}
+                  {/* Empty query — the workspace at a glance.
+                      Borderless numbers in the dashboard-home stat idiom, and
+                      nothing else: the station strip directly above already
+                      offers Retainer / Milestones / Build, so the launch cards
+                      that used to sit here were a second copy of the same three
+                      destinations — and the hint below them just restated the
+                      placeholder. Both are gone; the panel now sizes to its
+                      content instead of scrolling. */}
                   {!fetchError && !isLoading && !query.trim() && (
-                    <div className="px-4 py-4 space-y-4">
-                      <div className="grid grid-cols-3 gap-2">
+                    <div className="px-5 py-7">
+                      <div className="flex items-start gap-8 sm:gap-10 flex-wrap">
                         {[
-                          { icon: Building2,    count: totalClients,  label: 'client' },
-                          { icon: FolderKanban, count: totalProjects, label: 'project' },
-                          { icon: Zap,          count: totalSprints,  label: 'sprint' },
-                        ].map(({ icon: Icon, count, label }) => (
-                          <div
-                            key={label}
-                            className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl"
-                            style={{ background: 'var(--space-bg-base)', border: '1px solid var(--space-border-hard)' }}
-                          >
-                            <Icon className="size-3.5 shrink-0" style={{ color: 'var(--space-accent-dim)' }} />
-                            <div>
-                              <p className="text-sm font-semibold text-[var(--space-text-primary)] tabular-nums leading-none">
-                                {data ? count : '—'}
-                              </p>
-                              <p className="text-[0.5625rem] text-[var(--space-text-muted)] mt-0.5">
-                                {label}{count !== 1 ? 's' : ''}
-                              </p>
-                            </div>
+                          { count: totalClients,  label: 'clients'  },
+                          { count: totalProjects, label: 'projects' },
+                          { count: totalPackages, label: 'packages' },
+                          { count: totalSprints,  label: 'sprints'  },
+                        ].map(({ count, label }) => (
+                          <div key={label}>
+                            <p className="text-2xl font-bold text-[var(--space-text-primary)] tabular-nums tracking-tight leading-none">
+                              {data ? count : '—'}
+                            </p>
+                            <p className="text-[0.5625rem] text-[var(--space-text-muted)] mt-1.5 uppercase tracking-[0.2em]">
+                              {label}
+                            </p>
                           </div>
                         ))}
                       </div>
-                      <div className="space-y-1.5">
-                        <p className="text-[0.5625rem] tracking-[0.4em] uppercase text-[var(--space-text-muted)] font-semibold px-1">
-                          Jump to a tool
-                        </p>
-                        <div className="grid grid-cols-2 gap-2">
-                          <LaunchCard icon={Clock}     title="Retainer"        hint="Log hours"         onClick={() => goStation('retainer', undefined)} />
-                          <LaunchCard icon={Milestone} title="Milestones"      hint="Log package work"  onClick={() => goStation('milestones', undefined)} />
-                          <LaunchCard icon={Package}   title="Package Builder" hint="Draft a proposal"  onClick={() => goStation('builder', undefined)} />
-                        </div>
-                      </div>
-                      <p className="text-[0.6875rem] text-[var(--space-text-muted)] px-1 leading-relaxed">
-                        Start typing to search — then build or open a retainer for any client.
-                      </p>
                     </div>
                   )}
 
                   {!fetchError && !isLoading && query.trim() && results.length === 0 && (
-                    <div className="px-5 py-12 text-center">
+                    <div className="px-5 py-14 text-center">
                       <p className="text-sm text-[var(--space-text-muted)]">
                         No results for{' '}
                         <span className="font-mono text-[var(--space-text-secondary)]">&ldquo;{query}&rdquo;</span>
@@ -522,80 +668,65 @@ export function CommandConsole({ username }: CommandConsoleProps) {
                     </div>
                   )}
 
-                  {!fetchError && !isLoading && results.length > 0 && (
-                    <div className="py-1.5">
-                      {clientResults.length > 0 && (
-                        <ResultGroup icon={Building2} label="Clients" count={clientResults.length}>
-                          {clientResults.map((item) => {
-                            const idx = globalIdx++
-                            return (
-                              <ResultRow
-                                key={item.data.id}
-                                idx={idx}
-                                isSelected={idx === selectedIdx}
-                                icon={Building2}
-                                primary={item.data.name}
-                                secondary={[item.data.company, item.data.email].filter(Boolean).join(' · ')}
-                                onClick={() => navigateToResult(item)}
-                                actions={[
-                                  { icon: Clock,     title: 'Retainer', onClick: () => goStation('retainer', item.data.id) },
-                                  { icon: Milestone, title: 'Milestones', onClick: () => goStation('milestones', item.data.id) },
-                                  { icon: Package,   title: 'Build', onClick: () => goStation('builder', item.data.id) },
-                                ]}
-                              />
-                            )
-                          })}
-                        </ResultGroup>
-                      )}
+                  {!fetchError && !isLoading && groups.length > 0 && (
+                    <div
+                      id="command-console-results"
+                      role="listbox"
+                      aria-label="Search results"
+                      className="py-2 space-y-4"
+                    >
+                      {groups.map((group) => (
+                        <div key={group.kind}>
+                          <div className="flex items-center gap-3 px-5 pb-2">
+                            <div className="w-px h-3.5 rounded-full shrink-0" style={{ background: 'var(--space-accent)', opacity: 0.4 }} />
+                            <h3 className="text-xs font-semibold text-[var(--space-text-primary)]">{group.label}</h3>
+                            <span className="ml-auto text-[0.625rem] text-[var(--space-text-muted)] tabular-nums">
+                              {group.total}
+                            </span>
+                          </div>
 
-                      {projectResults.length > 0 && (
-                        <ResultGroup icon={FolderKanban} label="Projects" count={projectResults.length} divided={clientResults.length > 0}>
-                          {projectResults.map((item) => {
-                            const idx = globalIdx++
+                          {group.items.map((item) => {
+                            const idx = flatIdx++
                             return (
                               <ResultRow
-                                key={item.data.id}
+                                key={`${group.kind}-${item.data.id}`}
                                 idx={idx}
                                 isSelected={idx === selectedIdx}
-                                icon={FolderKanban}
-                                primary={item.data.name}
-                                secondary={[item.data.clientName, PROJECT_STATUS_LABEL[item.data.status] ?? item.data.status].filter(Boolean).join(' · ')}
+                                icon={group.icon}
+                                tokens={tokens}
+                                {...rowContent(item)}
                                 onClick={() => navigateToResult(item)}
+                                actions={
+                                  item.type === 'client'
+                                    ? [
+                                        { icon: Clock,     title: 'Retainer',   onClick: () => goStation('retainer', item.data.id) },
+                                        { icon: Milestone, title: 'Milestones', onClick: () => goStation('milestones', item.data.id) },
+                                        { icon: Package,   title: 'Build',      onClick: () => goStation('builder', item.data.id) },
+                                      ]
+                                    : undefined
+                                }
                               />
                             )
                           })}
-                        </ResultGroup>
-                      )}
 
-                      {sprintResults.length > 0 && (
-                        <ResultGroup icon={Zap} label="Sprints" count={sprintResults.length} divided={clientResults.length > 0 || projectResults.length > 0}>
-                          {sprintResults.map((item) => {
-                            const idx = globalIdx++
-                            return (
-                              <ResultRow
-                                key={item.data.id}
-                                idx={idx}
-                                isSelected={idx === selectedIdx}
-                                icon={Zap}
-                                primary={item.data.name}
-                                secondary={[item.data.projectName, item.data.clientName].filter(Boolean).join(' · ')}
-                                onClick={() => navigateToResult(item)}
-                              />
-                            )
-                          })}
-                        </ResultGroup>
-                      )}
+                          {group.total > group.items.length && (
+                            <p className="px-5 pt-2 text-[0.625rem] text-[var(--space-text-muted)]">
+                              +{group.total - group.items.length} more {group.label.toLowerCase()} — keep typing to narrow
+                            </p>
+                          )}
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
 
                 {/* Footer — keyboard hints */}
-                <div className="px-4 py-2.5 border-t border-[var(--space-border-hard)] flex items-center gap-4">
+                <div className="px-5 py-3 border-t border-[var(--space-border-hard)] flex items-center gap-4">
                   {[
-                    { key: '↑↓', label: 'navigate' },
-                    { key: '↵',  label: 'open'     },
-                    { key: 'K',  label: 'retainer' },
-                    { key: 'esc', label: 'close'   },
+                    { key: '↑↓',  label: 'navigate' },
+                    { key: '↵',   label: 'open'     },
+                    { key: '`',   label: 'stations' },
+                    { key: 'esc', label: 'close'    },
                   ].map(({ key, label }) => (
                     <span key={key} className="flex items-center gap-1.5 text-[0.625rem] text-[var(--space-text-muted)]">
                       <kbd className="font-mono text-[var(--space-text-tertiary)] bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] rounded px-1.5 py-0.5">
@@ -697,59 +828,50 @@ function RailButton({
   )
 }
 
-function LaunchCard({
-  icon: Icon, title, hint, onClick,
-}: { icon: typeof Search; title: string; hint: string; onClick: () => void }) {
+/** Bolds the run of text the query matched, so a hit is visible at a glance. */
+function Highlighted({ text, tokens }: { text: string; tokens: string[] }) {
+  if (!text) return null
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="group flex items-center gap-3 px-3 py-3 rounded-xl text-left transition-colors hover:border-[var(--space-accent-glow)]"
-      style={{ background: 'var(--space-bg-base)', border: '1px solid var(--space-border-hard)' }}
-    >
-      <div className="size-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'var(--space-accent-soft)' }}>
-        <Icon className="size-4" style={{ color: 'var(--space-accent)' }} />
-      </div>
-      <div className="min-w-0">
-        <p className="text-xs font-semibold text-[var(--space-text-primary)] leading-tight">{title}</p>
-        <p className="text-[0.625rem] text-[var(--space-text-muted)] mt-0.5">{hint}</p>
-      </div>
-      <ArrowRight className="ml-auto size-3.5 shrink-0 text-[var(--space-text-muted)] opacity-0 -translate-x-1 group-hover:opacity-60 group-hover:translate-x-0 transition-all" />
-    </button>
-  )
-}
-
-function ResultGroup({
-  icon: Icon, label, count, divided, children,
-}: { icon: typeof Search; label: string; count: number; divided?: boolean; children: React.ReactNode }) {
-  return (
-    <div className={divided ? 'mt-1 border-t border-[var(--space-border-hard)]' : ''}>
-      <div className="flex items-center gap-2 px-4 py-2 mt-1">
-        <Icon className="size-2.5 text-[var(--space-text-muted)]" />
-        <span className="text-[0.5625rem] font-semibold uppercase tracking-[0.4em] text-[var(--space-text-muted)]">{label}</span>
-        <span className="ml-auto text-[0.5625rem] text-[var(--space-text-muted)] tabular-nums">{count}</span>
-      </div>
-      {children}
-    </div>
+    <>
+      {highlightSegments(text, tokens).map((seg, i) =>
+        seg.hit ? (
+          <mark
+            key={i}
+            className="bg-transparent font-semibold"
+            style={{ color: 'var(--space-accent)' }}
+          >
+            {seg.text}
+          </mark>
+        ) : (
+          <span key={i}>{seg.text}</span>
+        ),
+      )}
+    </>
   )
 }
 
 function ResultRow({
-  idx, isSelected, icon: Icon, primary, secondary, onClick, actions,
+  idx, isSelected, icon: Icon, primary, secondary, meta, note, tokens, onClick, actions,
 }: {
   idx: number
   isSelected: boolean
   icon: React.ComponentType<{ className?: string }>
   primary: string
   secondary: string
+  meta?: string
+  note?: string | null
+  tokens: string[]
   onClick: () => void
   actions?: { icon: typeof Search; title: string; onClick: () => void }[]
 }) {
   return (
     <div
+      id={`command-result-${idx}`}
       data-idx={idx}
+      role="option"
+      aria-selected={isSelected}
       className={cn(
-        'w-full flex items-center gap-3 px-4 py-2.5 transition-colors duration-100 group relative',
+        'w-full flex items-center gap-3 px-5 py-2.5 transition-colors duration-100 group relative',
         isSelected ? 'bg-[var(--space-bg-card-hover)]' : 'hover:bg-[var(--space-bg-base)]',
       )}
     >
@@ -760,13 +882,24 @@ function ResultRow({
         <Icon className={cn('size-3.5 shrink-0 transition-colors', isSelected ? 'text-[var(--space-accent)]' : 'text-[var(--space-text-muted)]')} />
         <div className="flex-1 min-w-0">
           <p className={cn('text-sm truncate transition-colors', isSelected ? 'text-[var(--space-text-primary)] font-medium' : 'text-[var(--space-text-secondary)] group-hover:text-[var(--space-text-primary)]')}>
-            {primary}
+            <Highlighted text={primary} tokens={tokens} />
           </p>
           {secondary && (
-            <p className="text-[0.6875rem] truncate text-[var(--space-text-muted)]">{secondary}</p>
+            <p className="text-[0.6875rem] truncate text-[var(--space-text-muted)]">
+              <Highlighted text={secondary} tokens={tokens} />
+            </p>
+          )}
+          {note && (
+            <p className="text-[0.625rem] truncate text-[var(--space-text-muted)] italic mt-0.5">{note}</p>
           )}
         </div>
       </button>
+
+      {meta && (
+        <span className="shrink-0 text-[0.6875rem] font-mono tabular-nums text-[var(--space-text-tertiary)]">
+          {meta}
+        </span>
+      )}
 
       {/* Quick actions — the launchpad: act on this client without leaving */}
       {actions && actions.length > 0 && (
@@ -791,7 +924,7 @@ function ResultRow({
         </div>
       )}
 
-      {!actions && (
+      {!actions && !meta && (
         <ArrowRight
           className={cn(
             'size-3 shrink-0 transition-all',

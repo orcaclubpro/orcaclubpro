@@ -486,7 +486,6 @@ export function ClientDetailTabView({
             packages={packages as any}
             clientId={clientId}
             username={username}
-            projects={projects.map((p: any) => ({ id: p.id, name: p.name, status: p.status }))}
             packageOrders={packageOrderMap}
           />
         )}

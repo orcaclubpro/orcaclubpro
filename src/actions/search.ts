@@ -31,10 +31,24 @@ export interface SearchSprint {
   description?: string | null
 }
 
+export interface SearchPackage {
+  id: string
+  name: string
+  status: string
+  clientId: string | null
+  clientName?: string | null
+  description?: string | null
+  /** Totals over included items only — add-ons are an offer, never a charge. */
+  oneTime: number
+  monthly: number
+  annual: number
+}
+
 export interface SearchData {
   clients: SearchClient[]
   projects: SearchProject[]
   sprints: SearchSprint[]
+  packages: SearchPackage[]
 }
 
 export async function fetchSearchData(): Promise<{
@@ -113,7 +127,57 @@ export async function fetchSearchData(): Promise<{
       }
     })
 
-    return { success: true, data: { clients, projects, sprints } }
+    // Proposals, scoped the same way the rest of this action scopes: admins see
+    // everything, other staff see only the clients assigned to them. Runs after
+    // the batch because the non-admin filter needs the resolved client ids.
+    const canSeeAnyPackages = user.role === 'admin' || clients.length > 0
+    const packagesResult = canSeeAnyPackages
+      ? await payload
+          .find({
+            collection: 'packages',
+            depth: 1,
+            limit: 500,
+            sort: '-createdAt',
+            where:
+              user.role === 'admin'
+                ? ({ type: { equals: 'proposal' } } as any)
+                : ({
+                    and: [
+                      { type: { equals: 'proposal' } },
+                      { clientAccount: { in: clients.map((c) => c.id) } },
+                    ],
+                  } as any),
+          })
+          .catch(() => ({ docs: [] as any[] }))
+      : { docs: [] as any[] }
+
+    const packages: SearchPackage[] = packagesResult.docs.map((p: any) => {
+      const account = p.clientAccount && typeof p.clientAccount === 'object' ? p.clientAccount : null
+      let oneTime = 0, monthly = 0, annual = 0
+      for (const item of (p.lineItems ?? []) as any[]) {
+        if (item.isAddOn) continue
+        const total = (item.adjustedPrice ?? item.price ?? 0) * (item.quantity ?? 1)
+        if (item.isRecurring) {
+          if (item.recurringInterval === 'year') annual += total
+          else monthly += total
+        } else {
+          oneTime += total
+        }
+      }
+      return {
+        id: p.id,
+        name: p.name ?? '',
+        status: p.status ?? 'draft',
+        clientId: account?.id ?? (typeof p.clientAccount === 'string' ? p.clientAccount : null),
+        clientName: account?.name ?? null,
+        description: p.description ?? null,
+        oneTime,
+        monthly,
+        annual,
+      }
+    })
+
+    return { success: true, data: { clients, projects, sprints, packages } }
   } catch (error) {
     console.error('[fetchSearchData]', error)
     return { success: false, error: 'Failed to fetch search data' }

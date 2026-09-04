@@ -10,6 +10,7 @@ import {
 import { cn } from '@/lib/utils'
 import { createDocument, updateDocument, deleteFileRecord, sendDocumentEmail } from '@/actions/files'
 import { createPackageFromSow } from '@/actions/packages'
+import { SowTermsEditor } from '@/components/dashboard/SowTermsEditor'
 import type { NdaFormData, SowFormData } from '@/lib/document-generators'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -39,6 +40,8 @@ interface FilesViewProps {
   allProjects: ProjectOption[]
   allSprints: SprintOption[]
   clientAccounts?: ClientOption[]
+  /** Signed-in staff member — becomes the Service Provider contact on a new SOW. */
+  currentUserEmail?: string
 }
 
 // ── Default form states ─────────────────────────────────────────────────────────
@@ -50,15 +53,16 @@ const defaultNda = (): NdaFormData => ({
   clientAddress: '',
 })
 
-const defaultSow = (): SowFormData => ({
+const defaultSow = (providerContact = ''): SowFormData => ({
   providerName: '',
-  providerContact: '',
+  providerContact,
   clientName: '',
   clientContact: '',
   effectiveDate: new Date().toISOString().split('T')[0],
   projectName: '',
   projectOverview: '',
-  scopeItems: ['', ''],
+  scopeItems: [],
+  deliverables: [],
   milestones: [{ name: '', date: '', notes: '' }],
   pricingType: 'project',
   projectItems: [{ desc: '', amount: '' }, { desc: '', amount: '' }],
@@ -73,6 +77,17 @@ const defaultSow = (): SowFormData => ({
   lateFee: '1.5',
   revisionRounds: '2',
   revisionRate: '',
+  hourlyRate: '',
+  warrantyDays: '30',
+  bugSupportHours: '',
+  acceptanceDays: '7',
+  stallDays: '30',
+  reactivationFee: '500',
+  liabilityFloor: '1000',
+  venueCounty: 'Orange County',
+  exclusions: undefined,
+  clauseOverrides: {},
+  clauseDisabled: [],
 })
 
 // ── Helpers ─────────────────────────────────────────────────────────────────────
@@ -183,7 +198,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 
 // ── Main Component ─────────────────────────────────────────────────────────────
 
-export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = [] }: FilesViewProps) {
+export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = [], currentUserEmail = '' }: FilesViewProps) {
   const [files, setFiles] = useState<FileRecord[]>(allFiles)
   const [search, setSearch] = useState('')
   const [filterProject, setFilterProject] = useState('')
@@ -194,7 +209,7 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
   const [docType, setDocType] = useState<'nda' | 'sow'>('nda')
   const [brand, setBrand] = useState<'personal' | 'orcaclub'>('orcaclub')
   const [ndaForm, setNdaForm] = useState<NdaFormData>(defaultNda())
-  const [sowForm, setSowForm] = useState<SowFormData>(defaultSow())
+  const [sowForm, setSowForm] = useState<SowFormData>(() => defaultSow(currentUserEmail))
   const [assignProject, setAssignProject] = useState('')
   const [assignSprint, setAssignSprint] = useState('')
   const [saveSuccess, setSaveSuccess] = useState(false)
@@ -329,7 +344,7 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
     setDocType('nda')
     setBrand('orcaclub')
     setNdaForm(defaultNda())
-    setSowForm(defaultSow())
+    setSowForm(defaultSow(currentUserEmail))
     setSaveSuccess(false)
     setPackageCreated(false)
     setCreatePackageAlso(false)
@@ -463,7 +478,7 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
     if (rec.documentTemplate === 'nda') {
       setNdaForm({ ...defaultNda(), ...rec.documentData })
     } else {
-      setSowForm({ ...defaultSow(), ...rec.documentData })
+      setSowForm({ ...defaultSow(currentUserEmail), ...rec.documentData })
     }
     setAssignProject(getProjectId(rec))
     setAssignSprint(rec.documentTemplate === 'nda'
@@ -762,32 +777,6 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
 
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <SectionLabel>Scope of Work</SectionLabel>
-                      <button
-                        onClick={() => setSowForm(f => ({ ...f, scopeItems: [...f.scopeItems, ''] }))}
-                        className="text-[0.625rem] text-[var(--space-accent)] hover:underline"
-                      >+ Add Item</button>
-                    </div>
-                    {sowForm.scopeItems.map((item, i) => (
-                      <div key={i} className="flex gap-2 items-center">
-                        <span className="text-[0.625rem] text-[var(--space-text-muted)] w-4 shrink-0">{i + 1}.</span>
-                        <FormInput
-                          value={item}
-                          onChange={v => setSowForm(f => ({ ...f, scopeItems: f.scopeItems.map((x, j) => j === i ? v : x) }))}
-                          placeholder={`Deliverable or task ${i + 1}`}
-                        />
-                        {sowForm.scopeItems.length > 1 && (
-                          <button
-                            onClick={() => setSowForm(f => ({ ...f, scopeItems: f.scopeItems.filter((_, j) => j !== i) }))}
-                            className="shrink-0 text-[var(--space-text-secondary)] hover:text-red-400 transition-colors"
-                          ><X className="size-3.5" /></button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
                       <SectionLabel>Milestones</SectionLabel>
                       <button
                         onClick={() => setSowForm(f => ({ ...f, milestones: [...f.milestones, { name: '', date: '', notes: '' }] }))}
@@ -930,15 +919,14 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
                         )
                       })()}
                     </div>
-                    <SectionLabel>Terms</SectionLabel>
+                    <SectionLabel>Payment Terms</SectionLabel>
                     <div className="grid grid-cols-3 gap-3">
                       <FieldGroup label="Net Days"><FormInput value={sowForm.netDays} onChange={v => setSowForm(f => ({ ...f, netDays: v }))} placeholder="30" /></FieldGroup>
                       <FieldGroup label="Late Fee %/mo"><FormInput value={sowForm.lateFee} onChange={v => setSowForm(f => ({ ...f, lateFee: v }))} placeholder="1.5" /></FieldGroup>
                       <FieldGroup label="Revision Rounds"><FormInput value={sowForm.revisionRounds} onChange={v => setSowForm(f => ({ ...f, revisionRounds: v }))} placeholder="2" /></FieldGroup>
                     </div>
-                    <FieldGroup label="Extra Revision Rate ($/hr) — optional">
-                      <FormInput value={sowForm.revisionRate} onChange={v => setSowForm(f => ({ ...f, revisionRate: v }))} placeholder="e.g. 95" />
-                    </FieldGroup>
+
+                    <SowTermsEditor form={sowForm} onChange={setSowForm} />
                   </div>
                 </div>
               )}

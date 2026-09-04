@@ -124,6 +124,18 @@ const Packages: CollectionConfig = {
       },
     },
     {
+      name: 'sowDocument',
+      type: 'relationship',
+      relationTo: 'files',
+      index: true,
+      admin: {
+        position: 'sidebar',
+        description:
+          'Scope of Work document built from this package. Created the first time the SOW is edited or saved from the package Documents panel; edits and clause overrides live on that document.',
+        condition: (data) => data.type === 'proposal',
+      },
+    },
+    {
       name: 'requestedItems',
       type: 'array',
       admin: {
