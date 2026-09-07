@@ -22,7 +22,7 @@ export function ProjectRowActions({ project, username }: ProjectRowActionsProps)
       <button
         type="button"
         onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(true) }}
-        className="p-1.5 rounded-md text-gray-600 hover:text-gray-300 hover:bg-white/[0.06] transition-colors shrink-0"
+        className="shrink-0 rounded-md p-1.5 text-[var(--space-text-tertiary)] transition-colors duration-150 hover:bg-[var(--space-bg-card)] hover:text-[var(--space-text-primary)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--space-accent)]"
         title="Project settings"
       >
         <Settings className="size-3.5" />

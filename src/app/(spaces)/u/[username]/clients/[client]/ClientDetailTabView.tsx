@@ -1,211 +1,217 @@
 'use client'
 
-import { useState, useCallback } from 'react'
-import {
-  AlertCircle,
-  CheckCircle,
-  Clock,
-  XCircle,
-  Calendar,
-  Package,
-  ChevronRight,
-  TrendingUp,
-  DollarSign,
-  ShoppingCart,
-  FolderKanban,
-  Plus,
-} from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
+import {
+  ArrowUpRight, FolderKanban, KeyRound, Package, Plus, ReceiptText, ScrollText,
+} from 'lucide-react'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import type { ClientAccount, Project } from '@/types/payload-types'
-import { ClientTabNav } from '@/components/dashboard/ClientTabNav'
+import {
+  Figure, figureEdges, SectionNav, SectionTitle, Empty, ToneRule, Meter,
+  useSectionCycle, useScrollCollapse, type FigureSpec, type LedgerSection,
+} from '@/components/dashboard/ledger'
+import { Spine } from '@/components/dashboard/Spine'
 import { ClientCredentialsTab } from '@/components/dashboard/ClientCredentialsTab'
 import { ClientOrdersTab } from '@/components/dashboard/ClientOrdersTab'
 import { ScheduledPaymentsSection } from '@/components/dashboard/ScheduledPaymentsSection'
 import { ClientSettingsCard } from '@/components/dashboard/ClientSettingsCard'
-import { Spine } from '@/components/dashboard/Spine'
-import { clientSpineEvents } from '@/lib/dashboard/spine-events'
-import type { SerializedProject } from '@/lib/serialization'
 import { ProjectRowActions } from '@/components/dashboard/ProjectRowActions'
 import { CreateProjectModal } from '@/components/dashboard/CreateProjectModal'
+import { GenerateNdaModal } from '@/components/dashboard/GenerateNdaModal'
 import { CreateOrderModal } from '@/components/dashboard/CreateOrderModal'
+import { clientSpineEvents } from '@/lib/dashboard/spine-events'
+import { projectStatus, toneColor } from '@/lib/dashboard/status'
+import type { SerializedProject } from '@/lib/serialization'
+import { tabVariants } from '@/lib/animations'
 
 const ClientPackagesTab = dynamic(
   () => import('@/components/dashboard/ClientPackagesTab').then(m => ({ default: m.ClientPackagesTab }))
 )
 
-// ── Formatting helpers ────────────────────────────────────────────────────────
-
-function fmt(n: number) {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n)
-}
-
-function fmtDate(d: string | Date) {
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  }).format(new Date(d))
-}
-
-// ── Status config ─────────────────────────────────────────────────────────────
-
-const STATUS_CFG: Record<
-  string,
-  {
-    color: string
-    bg: string
-    border: string
-    icon: React.ComponentType<{ className?: string }>
-    label: string
-  }
-> = {
-  pending: {
-    color: 'text-amber-400',
-    bg: 'bg-amber-400/10',
-    border: 'border-amber-400/20',
-    icon: Clock,
-    label: 'Pending',
-  },
-  'in-progress': {
-    color: 'text-blue-400',
-    bg: 'bg-blue-400/10',
-    border: 'border-blue-400/20',
-    icon: Clock,
-    label: 'In Progress',
-  },
-  completed: {
-    color: 'text-emerald-400',
-    bg: 'bg-emerald-400/10',
-    border: 'border-emerald-400/20',
-    icon: CheckCircle,
-    label: 'Completed',
-  },
-  'on-hold': {
-    color: 'text-orange-400',
-    bg: 'bg-orange-400/10',
-    border: 'border-orange-400/20',
-    icon: AlertCircle,
-    label: 'On Hold',
-  },
-  cancelled: {
-    color: 'text-red-400',
-    bg: 'bg-red-400/10',
-    border: 'border-red-400/20',
-    icon: XCircle,
-    label: 'Cancelled',
-  },
-}
-
-// ── Project row ───────────────────────────────────────────────────────────────
-
-function ProjectRow({
-  project,
-  username,
-}: {
-  project: Project
-  username: string
-}) {
-  const cfg = STATUS_CFG[project.status] ?? {
-    color: 'text-[var(--space-text-secondary)]',
-    bg: 'bg-[var(--space-bg-card-hover)]',
-    border: 'border-[var(--space-border-hard)]',
-    icon: Package,
-    label: project.status,
-  }
-  const StatusIcon = cfg.icon
-  const completedMilestones = project.milestones?.filter((m) => m.completed).length ?? 0
-  const totalMilestones = project.milestones?.length ?? 0
-
-  return (
-    <div className="relative flex items-center group hover:bg-[var(--space-bg-card-hover)] transition-colors">
-      <Link
-        href={`/u/${username}/projects/${project.id}`}
-        className="flex-1 flex items-center gap-4 px-5 py-4 min-w-0"
-      >
-        <div className="absolute left-0 top-0 h-full w-[0.125rem] opacity-0 group-hover:opacity-100 transition-opacity duration-200" style={{ background: 'var(--space-accent)' }} />
-
-        <div
-          className={`size-8 rounded-lg ${cfg.bg} border ${cfg.border} flex items-center justify-center shrink-0`}
-        >
-          <StatusIcon className={`size-4 ${cfg.color}`} />
-        </div>
-
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-            <span className="text-sm font-semibold text-[var(--space-text-primary)] transition-colors duration-150">
-              {project.name}
-            </span>
-            <Badge
-              variant="outline"
-              className={`${cfg.color} ${cfg.bg} border ${cfg.border} text-[0.625rem] px-1.5 py-0`}
-            >
-              {cfg.label}
-            </Badge>
-          </div>
-          {project.description && (
-            <p className="text-xs text-[var(--space-text-muted)] truncate">{project.description}</p>
-          )}
-        </div>
-
-        <div className="hidden sm:flex items-center gap-5 shrink-0 text-xs text-[var(--space-text-muted)]">
-          {project.projectedEndDate && (
-            <span className="flex items-center gap-1">
-              <Calendar className="size-3" />
-              {fmtDate(project.projectedEndDate)}
-            </span>
-          )}
-          {totalMilestones > 0 && (
-            <span className="font-mono tabular-nums">
-              {completedMilestones}/{totalMilestones}
-            </span>
-          )}
-          {project.budgetAmount && (
-            <span className="font-mono tabular-nums text-[var(--space-text-secondary)]">
-              {fmt(project.budgetAmount)}
-            </span>
-          )}
-        </div>
-
-        <ChevronRight className="size-4 text-[var(--space-text-muted)] group-hover:translate-x-0.5 transition-all duration-150 shrink-0" />
-      </Link>
-      <div className="pr-3 shrink-0">
-        <ProjectRowActions project={project} username={username} />
-      </div>
-    </div>
-  )
-}
-
-// ── Empty state ───────────────────────────────────────────────────────────────
-
-function EmptyState({
-  title,
-  description,
-  action,
-}: {
-  title: string
-  description: string
-  action?: React.ReactNode
-}) {
-  return (
-    <div className="relative overflow-hidden rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card)]">
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div className="size-48 rounded-full bg-[rgba(255,255,255,0.01)] blur-3xl" />
-      </div>
-      <div className="relative z-10 flex flex-col items-center text-center py-12 px-6">
-        <h3 className="text-sm font-semibold text-[var(--space-text-primary)] mb-1">{title}</h3>
-        <p className="text-[var(--space-text-muted)] text-xs max-w-xs mb-5">{description}</p>
-        {action}
-      </div>
-    </div>
-  )
-}
-
-// ── Types ─────────────────────────────────────────────────────────────────────
+// ─── The client record ───────────────────────────────────────────────────────
+// One client's books, opened to the same shape as the studio's own (see
+// `_views/AdminHomeView`). Two bands:
+//
+//   • The standing — four figures always on screen, whichever section is open.
+//     Collected, owed, work, proposals. Pressing one opens its workings.
+//   • The workspace — a panel of sections, one at a time, so the record stays
+//     one screen deep instead of a scroll.
+//
+// It follows the ledger's two rules, both of which the old five-tab version
+// broke — it shipped `#2A2A2A` borders and `amber-400` chips that rendered as
+// dark-on-light under `sonar`, the default theme:
+//   1. Every colour is a --space-* token or a status-ramp tone. No raw hex, no
+//      Tailwind palette classes.
+//   2. Type is authored in real px inside .space-true-scale, not in rem against
+//      the portal's 1.5 root scale.
+//
+// Section ids are the public `?tab=` contract — the page redirects legacy query
+// URLs onto them and writes them back as sections change. Never rename one.
 
 const TABS = ['overview', 'projects', 'orders', 'packages', 'accounts'] as const
 type Tab = typeof TABS[number]
+
+const SECTIONS: LedgerSection<Tab>[] = [
+  { id: 'overview', label: 'Overview', icon: ScrollText },
+  { id: 'projects', label: 'Projects', icon: FolderKanban },
+  { id: 'orders', label: 'Invoices', icon: ReceiptText },
+  { id: 'packages', label: 'Packages', icon: Package },
+  { id: 'accounts', label: 'Accounts', icon: KeyRound },
+]
+
+const ACTIVE_PROJECT_STATUSES = new Set(['in-progress', 'pending', 'active'])
+
+// ─── Formatting ───────────────────────────────────────────────────────────────
+
+const usd = new Intl.NumberFormat('en-US', {
+  style: 'currency', currency: 'USD', maximumFractionDigits: 0,
+})
+
+const shortDate = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+
+const plural = (n: number, word: string) => `${word}${n === 1 ? '' : 's'}`
+
+// ─── A project line ───────────────────────────────────────────────────────────
+// Not a link itself: the name opens the project and the trailing control opens
+// its settings, so both anchors stay valid. Milestone progress rides the
+// hairline under the row rather than a badge.
+
+function ProjectLine({ project, username }: { project: Project; username: string }) {
+  const meta = projectStatus(project.status)
+  const milestones = project.milestones ?? []
+  const done = milestones.filter((m) => m.completed).length
+  const pct = milestones.length > 0 ? (done / milestones.length) * 100 : undefined
+
+  return (
+    <div className="group relative border-b border-[var(--space-divider)] py-4 pl-5 pr-1 transition-colors duration-150 hover:bg-[var(--space-bg-card)] focus-within:bg-[var(--space-bg-card)]">
+      <ToneRule tone={meta.tone} />
+
+      <div className="flex items-baseline gap-4">
+        <Link
+          href={`/u/${username}/projects/${project.id}`}
+          className="min-w-0 flex-1 truncate text-[15px] text-[var(--space-text-primary)] underline decoration-transparent underline-offset-4 transition-colors hover:decoration-[var(--space-accent)] focus-visible:decoration-[var(--space-accent)] focus-visible:outline-none"
+        >
+          {project.name}
+        </Link>
+
+        <span className="shrink-0 text-[15px] font-medium tabular-nums text-[var(--space-text-primary)]">
+          {project.budgetAmount ? usd.format(project.budgetAmount) : ''}
+        </span>
+
+        <span className="shrink-0 self-center">
+          <ProjectRowActions project={project} username={username} />
+        </span>
+      </div>
+
+      <div className="mt-1 flex items-baseline gap-4">
+        <span className="min-w-0 flex-1 truncate text-[13px] text-[var(--space-text-tertiary)]">
+          {project.description || meta.label}
+        </span>
+        <span className="shrink-0 text-[13px] tabular-nums" style={{ color: toneColor(meta.tone) }}>
+          {milestones.length > 0
+            ? `${done}/${milestones.length} ${plural(milestones.length, 'milestone')}`
+            : meta.label}
+        </span>
+      </div>
+
+      {/* The end date is the first thing to go on a phone — the status is
+          already carried by the left rule. */}
+      {project.projectedEndDate && (
+        <span className="mt-1 hidden text-[13px] tabular-nums text-[var(--space-text-tertiary)] sm:block">
+          due {shortDate.format(new Date(project.projectedEndDate))}
+        </span>
+      )}
+
+      {pct !== undefined && <Meter pct={pct} tone={meta.tone} />}
+    </div>
+  )
+}
+
+// ─── The outstanding notice ───────────────────────────────────────────────────
+
+function OutstandingNotice({
+  amount, pendingCount, onOpen,
+}: {
+  amount: number
+  pendingCount: number
+  onOpen: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="group relative block w-full border-y border-[var(--space-divider)] py-4 pl-5 pr-4 text-left transition-colors duration-150 hover:bg-[var(--space-bg-card)] focus-visible:bg-[var(--space-bg-card)] focus-visible:outline-none"
+    >
+      <ToneRule tone="warn" />
+      <div className="flex items-baseline gap-4">
+        <span className="min-w-0 flex-1 truncate text-[15px] text-[var(--space-text-primary)]">
+          {usd.format(amount)} outstanding
+        </span>
+        <span className="flex shrink-0 items-center gap-1 text-[13px] text-[var(--space-text-tertiary)] transition-colors group-hover:text-[var(--space-text-primary)]">
+          Invoices
+          <ArrowUpRight className="size-[13px]" aria-hidden="true" />
+        </span>
+      </div>
+      <span className="mt-1 block text-[13px] tabular-nums" style={{ color: toneColor('warn') }}>
+        {pendingCount} pending {plural(pendingCount, 'invoice')}
+      </span>
+    </button>
+  )
+}
+
+/**
+ * Where this client's NDA stands.
+ *
+ * It reads next to the Generate NDA control because that is the moment the
+ * answer matters: before credentials are accepted, "sent" and "signed" are not
+ * the same fact. No NDA on file says so plainly rather than staying silent —
+ * an absent agreement is the case worth seeing.
+ */
+function NdaStanding({
+  nda,
+}: {
+  nda?: { status: 'draft' | 'sent' | 'executed'; sentAt: string | null; executedDate: string | null } | null
+}) {
+  if (!nda) {
+    return <span style={{ color: toneColor('warn') }}>no NDA on file</span>
+  }
+  if (nda.status === 'executed') {
+    return (
+      <span style={{ color: toneColor('ok') }}>
+        NDA signed
+        {nda.executedDate ? ` ${shortDate.format(new Date(nda.executedDate))}` : ''}
+      </span>
+    )
+  }
+  if (nda.status === 'sent') {
+    return (
+      <span style={{ color: toneColor('warn') }}>
+        NDA sent{nda.sentAt ? ` ${shortDate.format(new Date(nda.sentAt))}` : ''}, unsigned
+      </span>
+    )
+  }
+  return <span style={{ color: toneColor('warn') }}>NDA drafted, not sent</span>
+}
+
+/** The ledger's quiet control shape — the only button style outside the nav. */
+function QuietAction({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      // Inline size: `.space-true-scale :is(button)` is unlayered CSS and so
+      // outranks any Tailwind text-* utility on a button inside the subtree.
+      style={{ fontSize: 13 }}
+      className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--space-border-hard)] px-3 py-1.5 text-[var(--space-text-tertiary)] transition-colors duration-150 hover:bg-[var(--space-bg-card)] hover:text-[var(--space-text-primary)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--space-accent)]"
+    >
+      {children}
+    </button>
+  )
+}
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface ClientDetailTabViewProps {
   initialTab: Tab
@@ -215,6 +221,12 @@ export interface ClientDetailTabViewProps {
   orders: any[]
   projects: Project[]
   clientUsers: Array<{ id: string; name: string; email: string }>
+  /** The standing NDA on this client, newest first. Null when none exists. */
+  nda?: {
+    status: 'draft' | 'sent' | 'executed'
+    sentAt: string | null
+    executedDate: string | null
+  } | null
   packages: any[]
   /** Per-package work-log counts, keyed by package id — surfaced on scheduled-payment rows. */
   workCounts?: Record<string, { pending: number; plannedOpen: number }>
@@ -228,7 +240,7 @@ export interface ClientDetailTabViewProps {
   userRole: string
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export function ClientDetailTabView({
   initialTab,
@@ -238,6 +250,7 @@ export function ClientDetailTabView({
   orders,
   projects,
   clientUsers,
+  nda,
   packages,
   workCounts,
   credentials,
@@ -249,252 +262,408 @@ export function ClientDetailTabView({
   teamMembers,
   userRole,
 }: ClientDetailTabViewProps) {
-  const [activeTab, setActiveTab] = useState<Tab>(initialTab)
-  const [tabKey, setTabKey] = useState(0)
-  const [enterFrom, setEnterFrom] = useState<'left' | 'right'>('right')
+  const [section, setSection] = useState<Tab>(initialTab)
   const [creatingOrder, setCreatingOrder] = useState(false)
+  const navRef = useRef<HTMLElement>(null)
+  const standingRef = useRef<HTMLDivElement>(null)
+  const reduce = useReducedMotion()
 
-  const navigate = useCallback(
-    (tab: Tab) => {
-      if (tab === activeTab) return
-      const currIdx = TABS.indexOf(activeTab)
-      const nextIdx = TABS.indexOf(tab)
-      setEnterFrom(nextIdx > currIdx ? 'right' : 'left')
-      setTabKey((k) => k + 1)
-      setActiveTab(tab)
-      const url =
-        tab === 'overview'
-          ? `/u/${username}/clients/${clientId}`
-          : `/u/${username}/clients/${clientId}?tab=${tab}`
-      window.history.replaceState(null, '', url)
-    },
-    [activeTab, username, clientId]
+  const standingCollapsed = useScrollCollapse(standingRef)
+
+  // Sections are real state, not routes — but the `?tab=` URL stays truthful so
+  // a link into a section still lands there. The URL *follows* the open section
+  // rather than driving it, and it follows on a delay: holding Tab down cycles
+  // faster than browsers allow history writes (Safari throttles replaceState to
+  // ~100 calls per 30s), so the write waits for the cycling to settle.
+  // replaceState, not push — cycling sections must not bury the back button
+  // under a history entry per keystroke.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const url = section === 'overview'
+        ? `/u/${username}/clients/${clientId}`
+        : `/u/${username}/clients/${clientId}?tab=${section}`
+      if (window.location.pathname + window.location.search !== url) {
+        window.history.replaceState(null, '', url)
+      }
+    }, 150)
+    return () => clearTimeout(timer)
+  }, [section, username, clientId])
+
+  useSectionCycle(TABS, section, setSection, navRef)
+
+  const balance = clientAccount.accountBalance ?? 0
+
+  // The strip's own rule doubles as the pipeline: collected, owed, written off.
+  const shares = useMemo(() => {
+    let paid = 0, pending = 0, cancelled = 0
+    for (const o of orders) {
+      const amount = o.amount || 0
+      if (o.status === 'paid') paid += amount
+      else if (o.status === 'pending') pending += amount
+      else if (o.status === 'cancelled') cancelled += amount
+    }
+    const total = paid + pending + cancelled || 1
+    return {
+      paid: (paid / total) * 100,
+      pending: (pending / total) * 100,
+      cancelled: (cancelled / total) * 100,
+    }
+  }, [orders])
+
+  const activeProjects = useMemo(
+    () => projects.filter((p) => ACTIVE_PROJECT_STATUSES.has(p.status ?? '')),
+    [projects],
   )
 
-  // ── Render ────────────────────────────────────────────────────────────────
+  const spineEvents = useMemo(
+    () => clientSpineEvents(serializedProjects, orders, username),
+    [serializedProjects, orders, username],
+  )
+
+  // Both money figures open the invoices section, and both light up when it is
+  // open — the shared highlight is the point: these two numbers are the same
+  // ledger read from either end.
+  const figures: FigureSpec<Tab>[] = [
+    {
+      key: 'orders',
+      value: totalRevenue,
+      format: (n) => usd.format(n),
+      label: 'Collected',
+      note: `${paidOrders.length} paid ${plural(paidOrders.length, 'invoice')}`,
+    },
+    {
+      key: 'orders',
+      value: balance,
+      format: (n) => usd.format(n),
+      label: 'Outstanding',
+      note: balance === 0
+        ? 'nothing owed'
+        : `${pendingOrders.length} pending ${plural(pendingOrders.length, 'invoice')}`,
+    },
+    {
+      key: 'projects',
+      value: projects.length,
+      format: String,
+      label: plural(projects.length, 'Project'),
+      note: `${activeProjects.length} active`,
+    },
+    {
+      key: 'packages',
+      value: packages.length,
+      format: String,
+      label: plural(packages.length, 'Proposal'),
+      note: packages.length === 0 ? 'none assigned' : 'all time',
+    },
+  ]
+
+  const counts: Partial<Record<Tab, number>> = {
+    projects: projects.length,
+    orders: orders.length,
+    packages: packages.length,
+    accounts: credentials.length,
+  }
 
   return (
-    <>
-      <div className="sticky top-[3.0625rem] z-10 bg-[var(--space-bg-card)] border-b border-[var(--space-border-hard)]">
-        <ClientTabNav activeTab={activeTab} onTabChange={(tab) => navigate(tab as Tab)} />
-      </div>
+    <div className="space-true-scale mx-auto w-full px-6 pb-24 pt-10 sm:px-10" style={{ maxWidth: '1180px' }}>
 
-      <div
-        key={tabKey}
-        style={{
-          animation:
-            tabKey === 0
-              ? 'pageSlideUp 260ms cubic-bezier(0.36, 0.66, 0.04, 1) forwards'
-              : `${enterFrom === 'right' ? 'tabContentEnterFromRight' : 'tabContentEnterFromLeft'} 200ms cubic-bezier(0.36, 0.66, 0.04, 1) forwards`,
-        }}
-        className="flex-1 px-6 lg:px-10 py-8 space-y-8"
+      {/* ── The title card ───────────────────────────────────────────────── */}
+      {/* Masthead and figures together: the page's opening statement, shut away
+          on the way down so a section gets the full screen, and opened again at
+          the top. Nothing is lost while it is shut — the portal's fixed header
+          carries the client's name the whole time (`SetHeaderTitle` in the
+          route layout), and the section nav is sticky from `lg` up.
+
+          The measured child is inside the animating wrapper, so it keeps its
+          natural height for `useScrollCollapse` to read while the wrapper's own
+          height is mid-flight. `inert` keeps the shut band's figures out of the
+          tab order and the accessibility tree. */}
+      <motion.div
+        initial={false}
+        animate={{ height: standingCollapsed ? 0 : 'auto', opacity: standingCollapsed ? 0 : 1 }}
+        transition={reduce ? { duration: 0 } : { duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+        inert={standingCollapsed}
+        className="overflow-hidden"
       >
-        {/* ─── Overview tab ───────────────────────────────────────────────── */}
-        {activeTab === 'overview' && (
-          <>
-            <ClientSettingsCard
-              id={clientId}
-              name={clientAccount.name}
-              firstName={clientAccount.firstName ?? ''}
-              lastName={clientAccount.lastName ?? ''}
-              email={clientAccount.email}
-              company={clientAccount.company}
-              phone={(clientAccount as any).phone ?? null}
-              address={(clientAccount as any).address ?? null}
-              stripeCustomerId={clientAccount.stripeCustomerId}
-              teamMembers={teamMembers}
-              clientUsers={clientUsers}
-            />
+        <div ref={standingRef}>
 
-            {(clientAccount.accountBalance ?? 0) > 0 && (
-              <div className="flex items-center gap-3 rounded-lg border border-amber-400/[0.18] bg-amber-400/[0.04] px-4 py-3">
-                <AlertCircle className="size-3.5 text-amber-400 shrink-0" />
-                <p className="text-sm text-amber-400 font-medium">
-                  {fmt(clientAccount.accountBalance ?? 0)} outstanding
-                </p>
-                <span className="text-[var(--space-text-muted)] text-xs">
-                  · {pendingOrders.length} pending{' '}
-                  {pendingOrders.length === 1 ? 'order' : 'orders'}
-                </span>
-                <Link
-                  href={`/u/${username}/clients/${clientId}?tab=orders`}
-                  className="ml-auto text-xs text-amber-600 hover:text-amber-400 transition-colors"
-                >
-                  View orders →
-                </Link>
-              </div>
-            )}
+          {/* ── Masthead ─────────────────────────────────────────────────────── */}
+          <header className="pb-10 pt-2">
+            <h1
+              className="font-semibold leading-[0.95] tracking-[-0.03em] text-[var(--space-text-primary)]"
+              style={{ fontSize: 'clamp(30px, 5vw, 68px)' }}
+            >
+              {clientAccount.name}
+            </h1>
+            <p className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-[14px] text-[var(--space-text-tertiary)]">
+              {clientAccount.company && <span>{clientAccount.company}</span>}
+              {clientAccount.company && clientAccount.email && <span aria-hidden="true">·</span>}
+              {clientAccount.email && <span className="truncate">{clientAccount.email}</span>}
+              {clientAccount.stripeCustomerId && (
+                <>
+                  <span aria-hidden="true">·</span>
+                  <a
+                    href={`https://dashboard.stripe.com/customers/${clientAccount.stripeCustomerId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 transition-colors hover:text-[var(--space-accent)] focus-visible:text-[var(--space-accent)] focus-visible:outline-none"
+                  >
+                    Stripe
+                    <ArrowUpRight className="size-[13px]" aria-hidden="true" />
+                  </a>
+                </>
+              )}
+            </p>
+          </header>
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              {[
-                {
-                  label: 'Revenue',
-                  value: fmt(totalRevenue),
-                  sub: `${paidOrders.length} paid order${paidOrders.length !== 1 ? 's' : ''}`,
-                  icon: TrendingUp,
-                  accent: '#34d399',
-                  accentBg: 'rgba(52,211,153,0.06)',
-                  accentBorder: 'rgba(52,211,153,0.12)',
-                },
-                {
-                  label: 'Outstanding',
-                  value: fmt(clientAccount.accountBalance ?? 0),
-                  sub: `${pendingOrders.length} pending`,
-                  icon: DollarSign,
-                  accent: (clientAccount.accountBalance ?? 0) > 0 ? '#fbbf24' : '#3A3A3A',
-                  accentBg: (clientAccount.accountBalance ?? 0) > 0 ? 'rgba(251,191,36,0.06)' : 'transparent',
-                  accentBorder: (clientAccount.accountBalance ?? 0) > 0 ? 'rgba(251,191,36,0.12)' : 'transparent',
-                },
-                {
-                  label: 'Projects',
-                  value: String(projects.length),
-                  sub: 'all time',
-                  icon: FolderKanban,
-                  accent: '#60a5fa',
-                  accentBg: 'rgba(96,165,250,0.06)',
-                  accentBorder: 'rgba(96,165,250,0.12)',
-                },
-                {
-                  label: 'Orders',
-                  value: String(orders.length),
-                  sub: 'all time',
-                  icon: ShoppingCart,
-                  accent: 'var(--space-accent)',
-                  accentBg: 'rgba(103,232,249,0.06)',
-                  accentBorder: 'rgba(103,232,249,0.12)',
-                },
-              ].map((stat) => (
-                <div
-                  key={stat.label}
-                  className="group relative rounded-xl border bg-[var(--space-bg-base)] px-4 py-4 overflow-hidden
-                    transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
-                  style={{
-                    borderColor: '#2A2A2A',
-                  }}
-                >
-                  {/* Subtle top accent line on hover */}
-                  <div
-                    className="absolute top-0 left-0 right-0 h-px opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                    style={{ background: `linear-gradient(90deg, transparent, ${stat.accent}, transparent)` }}
-                  />
-                  <div className="flex items-start justify-between gap-2 mb-3">
-                    <p className="text-[0.625rem] text-[var(--space-text-tertiary)] uppercase tracking-widest font-semibold">
-                      {stat.label}
-                    </p>
-                    <div
-                      className="size-6 rounded-md flex items-center justify-center shrink-0 transition-all duration-300"
-                      style={{ background: stat.accentBg, border: `1px solid ${stat.accentBorder}` }}
-                    >
-                      <stat.icon className="size-3" style={{ color: stat.accent }} />
-                    </div>
-                  </div>
-                  <p className="text-2xl font-bold tabular-nums leading-none" style={{ color: '#F0F0F0' }}>
-                    {stat.value}
-                  </p>
-                  <p className="text-[0.6875rem] text-[var(--space-text-tertiary)] mt-1.5">{stat.sub}</p>
-                </div>
+          {/* ── The standing ─────────────────────────────────────────────────── */}
+          <section aria-label="Standing">
+            <div className="grid grid-cols-2 border-t border-[var(--space-border-hard)] md:grid-cols-4">
+              {figures.map(({ key, ...figure }, i) => (
+                <Figure
+                  key={figure.label}
+                  {...figure}
+                  active={section === key}
+                  onSelect={() => setSection(key)}
+                  className={figureEdges(i)}
+                />
               ))}
             </div>
 
-            <Spine
-              events={clientSpineEvents(serializedProjects, orders as any[], username)}
-              emptyMessage="No projects or invoices for this client yet."
-            />
-          </>
-        )}
-
-        {/* ─── Projects tab ───────────────────────────────────────────────── */}
-        {activeTab === 'projects' && (
-          <section className="space-y-4">
-            <div className="flex items-baseline justify-between gap-4">
-              <div className="flex items-baseline gap-3">
-                <h2 className="text-base font-semibold text-[var(--space-text-primary)]">Projects</h2>
-                <span className="text-xs text-[var(--space-text-muted)] tabular-nums">{projects.length}</span>
-              </div>
-              <CreateProjectModal clientId={clientId} clientName={clientAccount.name} />
+            <div
+              className="flex h-[3px] w-full overflow-hidden bg-[var(--space-divider)]"
+              role="img"
+              aria-label={`Invoiced to date: ${Math.round(shares.paid)}% collected, ${Math.round(shares.pending)}% outstanding, ${Math.round(shares.cancelled)}% cancelled`}
+            >
+              <motion.span
+                className="flex h-full w-full origin-left"
+                initial={reduce ? false : { scaleX: 0 }}
+                animate={{ scaleX: 1 }}
+                transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+              >
+                <span style={{ width: `${shares.paid}%`, background: toneColor('ok') }} />
+                <span style={{ width: `${shares.pending}%`, background: toneColor('warn') }} />
+                <span style={{ width: `${shares.cancelled}%`, background: toneColor('danger'), opacity: 0.5 }} />
+              </motion.span>
             </div>
 
-            {projects.length > 0 ? (
-              <div className="rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-card)] overflow-hidden divide-y divide-[var(--space-divider)]">
-                {projects.map((project) => (
-                  <ProjectRow
-                    key={project.id}
-                    project={project}
-                    username={username}
-                  />
-                ))}
-              </div>
-            ) : (
-              <EmptyState
-                title="No projects yet"
-                description="Create your first project to start tracking work."
-                action={<CreateProjectModal clientId={clientId} clientName={clientAccount.name} />}
-              />
-            )}
+            <p className="pt-3 text-right text-[13px] tabular-nums text-[var(--space-text-tertiary)]">
+              {orders.length} {plural(orders.length, 'invoice')} on record
+            </p>
           </section>
-        )}
 
-        {/* ─── Orders tab ─────────────────────────────────────────────────── */}
-        {activeTab === 'orders' && (
-          <section className="space-y-6">
-            <div className="flex items-baseline justify-between gap-4">
-              <div className="flex items-baseline gap-3">
-                <h2 className="text-base font-semibold text-[var(--space-text-primary)]">Orders</h2>
-                <span className="text-xs text-[var(--space-text-muted)] tabular-nums">{orders.length}</span>
-              </div>
-              <div className="flex items-center gap-4 text-xs">
-                {orders.length > 0 && (
-                  <>
-                    <span className="text-emerald-400 font-mono">{fmt(totalRevenue)} paid</span>
-                    {(clientAccount.accountBalance ?? 0) > 0 && (
-                      <span className="text-amber-400 font-mono">
-                        {fmt(clientAccount.accountBalance ?? 0)} due
-                      </span>
-                    )}
-                  </>
-                )}
-                {userRole !== 'client' && (
-                  <button
-                    type="button"
-                    onClick={() => setCreatingOrder(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-[var(--space-border-hard)] text-[var(--space-text-tertiary)] hover:text-[var(--space-text-primary)] hover:bg-[var(--space-bg-card-hover)] transition-all"
-                  >
-                    <Plus className="size-3.5" /> New order
-                  </button>
-                )}
-              </div>
-            </div>
+        </div>
+      </motion.div>
 
-            {creatingOrder && userRole !== 'client' && (
-              <CreateOrderModal
-                clientId={clientId}
-                clientName={clientAccount.name}
-                onClose={() => setCreatingOrder(false)}
-              />
-            )}
-            <ScheduledPaymentsSection packages={packages as any} username={username} workCounts={workCounts} />
-            <ClientOrdersTab
-              orders={orders as any}
-              role={userRole as 'admin' | 'user' | 'client'}
-            />
-          </section>
-        )}
-
-        {/* ─── Packages tab ───────────────────────────────────────────────── */}
-        {activeTab === 'packages' && (
-          <ClientPackagesTab
-            packages={packages as any}
-            clientId={clientId}
-            username={username}
-            packageOrders={packageOrderMap}
+      {/* ── The workspace ────────────────────────────────────────────────── */}
+      {/* The top margin closes with the band, so the workspace rises to meet
+          the header instead of leaving a gap where the figures were. 54px is
+          `mt-12` spelled out: --spacing is 4.5px inside .space-true-scale, so
+          the class this replaced was never the 48px its name suggests. */}
+      <motion.div
+        initial={false}
+        animate={{ marginTop: standingCollapsed ? 0 : 54 }}
+        transition={reduce ? { duration: 0 } : { duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+        className="flex flex-col gap-8 lg:flex-row lg:gap-12"
+      >
+        {/* Nav is first in the DOM so phones meet it before the content, and
+            ordered last on desktop so it sits down the right-hand side. */}
+        <div className="lg:order-2">
+          <SectionNav
+            sections={SECTIONS}
+            value={section}
+            onChange={setSection}
+            counts={counts}
+            navRef={navRef}
+            layoutId="client-section-chip"
+            ariaLabel="Client sections"
           />
-        )}
+        </div>
 
-        {/* ─── Accounts tab ───────────────────────────────────────────────── */}
-        {activeTab === 'accounts' && (
-          <ClientCredentialsTab credentials={credentials as any[]} />
-        )}
-      </div>
-    </>
+        <div className="min-w-0 flex-1 lg:order-1">
+          <AnimatePresence mode="wait">
+
+            {/* ─── Overview ───────────────────────────────────────────── */}
+            {section === 'overview' && (
+              <motion.section
+                key="overview"
+                variants={tabVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                className="space-y-12"
+              >
+                {balance > 0 && (
+                  <OutstandingNotice
+                    amount={balance}
+                    pendingCount={pendingOrders.length}
+                    onOpen={() => setSection('orders')}
+                  />
+                )}
+
+                <div>
+                  <SectionTitle title="Timeline" aside="newest first" />
+                  <div className="pt-2">
+                    <Spine
+                      events={spineEvents}
+                      emptyMessage="No projects or invoices for this client yet."
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <SectionTitle
+                    title="Account details"
+                    aside={
+                      <span className="flex items-center justify-end gap-4">
+                        <NdaStanding nda={nda} />
+                        <span>
+                          {teamMembers.length > 0
+                            ? `${teamMembers.length} assigned`
+                            : 'nobody assigned'}
+                        </span>
+                        {userRole !== 'client' && (
+                          <GenerateNdaModal
+                            clientId={clientId}
+                            clientName={clientAccount.name}
+                            clientCompany={clientAccount.company}
+                            clientEmail={clientAccount.email}
+                            clientAddress={(clientAccount as any).address ?? null}
+                            recipients={clientUsers}
+                          />
+                        )}
+                      </span>
+                    }
+                  />
+                  <div className="pt-5">
+                    <ClientSettingsCard
+                      id={clientId}
+                      name={clientAccount.name}
+                      firstName={clientAccount.firstName ?? ''}
+                      lastName={clientAccount.lastName ?? ''}
+                      email={clientAccount.email}
+                      company={clientAccount.company}
+                      phone={(clientAccount as any).phone ?? null}
+                      address={(clientAccount as any).address ?? null}
+                      stripeCustomerId={clientAccount.stripeCustomerId}
+                      teamMembers={teamMembers}
+                      clientUsers={clientUsers}
+                    />
+                  </div>
+                </div>
+              </motion.section>
+            )}
+
+            {/* ─── Projects ───────────────────────────────────────────── */}
+            {section === 'projects' && (
+              <motion.section key="projects" variants={tabVariants} initial="initial" animate="animate" exit="exit">
+                <SectionTitle
+                  title="Projects"
+                  aside={
+                    <span className="flex items-center justify-end gap-4">
+                      {projects.length > 0 && (
+                        <span className="tabular-nums">{activeProjects.length} active</span>
+                      )}
+                      <CreateProjectModal
+                        clientId={clientId}
+                        clientName={clientAccount.name}
+                        variant="quiet"
+                      />
+                    </span>
+                  }
+                />
+                {projects.length > 0 ? (
+                  <div className="pt-1">
+                    {projects.map((project) => (
+                      <ProjectLine key={project.id} project={project} username={username} />
+                    ))}
+                  </div>
+                ) : (
+                  <Empty>
+                    No projects yet. Create one to start tracking work for {clientAccount.name}.
+                  </Empty>
+                )}
+              </motion.section>
+            )}
+
+            {/* ─── Invoices ───────────────────────────────────────────── */}
+            {section === 'orders' && (
+              <motion.section
+                key="orders"
+                variants={tabVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                className="space-y-8"
+              >
+                <SectionTitle
+                  title="Invoices"
+                  aside={
+                    <span className="flex items-center justify-end gap-4">
+                      {orders.length > 0 && (
+                        <span className="tabular-nums" style={{ color: toneColor('ok') }}>
+                          {usd.format(totalRevenue)} collected
+                        </span>
+                      )}
+                      {balance > 0 && (
+                        <span className="tabular-nums" style={{ color: toneColor('warn') }}>
+                          {usd.format(balance)} due
+                        </span>
+                      )}
+                      {userRole !== 'client' && (
+                        <QuietAction onClick={() => setCreatingOrder(true)}>
+                          <Plus className="size-[13px]" aria-hidden="true" />
+                          New invoice
+                        </QuietAction>
+                      )}
+                    </span>
+                  }
+                />
+
+                {creatingOrder && userRole !== 'client' && (
+                  <CreateOrderModal
+                    clientId={clientId}
+                    clientName={clientAccount.name}
+                    onClose={() => setCreatingOrder(false)}
+                  />
+                )}
+
+                <ScheduledPaymentsSection
+                  packages={packages as any}
+                  username={username}
+                  workCounts={workCounts}
+                />
+
+                <ClientOrdersTab
+                  orders={orders as any}
+                  role={userRole as 'admin' | 'user' | 'client'}
+                />
+              </motion.section>
+            )}
+
+            {/* ─── Packages ───────────────────────────────────────────── */}
+            {/* ClientPackagesTab and ClientCredentialsTab carry their own
+                headings, so neither gets a SectionTitle above it. */}
+            {section === 'packages' && (
+              <motion.section key="packages" variants={tabVariants} initial="initial" animate="animate" exit="exit">
+                <ClientPackagesTab
+                  packages={packages as any}
+                  clientId={clientId}
+                  username={username}
+                  packageOrders={packageOrderMap}
+                />
+              </motion.section>
+            )}
+
+            {/* ─── Accounts ───────────────────────────────────────────── */}
+            {section === 'accounts' && (
+              <motion.section key="accounts" variants={tabVariants} initial="initial" animate="animate" exit="exit">
+                <ClientCredentialsTab credentials={credentials as any[]} />
+              </motion.section>
+            )}
+
+          </AnimatePresence>
+        </div>
+      </motion.div>
+    </div>
   )
 }

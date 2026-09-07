@@ -1,10 +1,12 @@
 'use client'
 
-import { Fragment, useMemo } from 'react'
+import { Fragment, useCallback, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import { ReceiptText, FolderPlus, SquarePen, Clock3, Mail } from 'lucide-react'
+import { ReceiptText, FolderPlus, SquarePen, Clock3, Mail, Layers } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
+import { motion } from 'motion/react'
 import { projectStatus, orderStatus, toneColor, type StatusTone } from '@/lib/dashboard/status'
+import { cn } from '@/lib/utils'
 
 // ─── Recent activity ─────────────────────────────────────────────────────────
 // The studio's day, in one column. Where <Spine> is a *time axis* — every fact
@@ -48,6 +50,26 @@ const KIND_ICON: Record<ActivityEvent['kind'], LucideIcon> = {
   'retainer-log': Clock3,
   'email-sent': Mail,
 }
+
+/** Lane order in the filter bar — money, then work, then correspondence. */
+const KIND_ORDER: readonly ActivityEvent['kind'][] = [
+  'order-created',
+  'project-created',
+  'project-updated',
+  'retainer-log',
+  'email-sent',
+]
+
+/** Filter-bar labels. Plural, because a lane is a set, not one row. */
+const KIND_LANE: Record<ActivityEvent['kind'], string> = {
+  'order-created': 'Invoices',
+  'project-created': 'New projects',
+  'project-updated': 'Updates',
+  'retainer-log': 'Retainer',
+  'email-sent': 'Emails',
+}
+
+type KindFilter = 'all' | ActivityEvent['kind']
 
 // Every colour a row can take comes back through the status ramp, so the feed
 // reads in the same vocabulary as the rest of the portal in every theme.
@@ -98,23 +120,64 @@ export function ActivityFeed({
   username,
   limit = 40,
   emptyMessage = 'Nothing has happened yet.',
+  filterable = true,
 }: {
   events: ActivityEvent[]
   username: string
   limit?: number
   emptyMessage?: string
+  /** Set false where the feed is a fixed excerpt rather than a browsable log. */
+  filterable?: boolean
 }) {
+  const [kind, setKind] = useState<KindFilter>('all')
+
+  // Parse and sort once. Rows with an unreadable date are dropped here rather
+  // than in the grouping pass, so the lane counts below match what a lane can
+  // actually show.
+  const sorted = useMemo(
+    () =>
+      [...events]
+        .filter((e) => !Number.isNaN(new Date(e.occurredAt).getTime()))
+        .sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime()),
+    [events],
+  )
+
+  // Counts come from the whole loaded set, not the visible slice — a lane
+  // showing "3" and then rendering three rows is the honest reading. Lanes with
+  // nothing in them never appear, so the bar only ever offers a real choice.
+  const lanes = useMemo(() => {
+    const counts = new Map<ActivityEvent['kind'], number>()
+    for (const e of sorted) counts.set(e.kind, (counts.get(e.kind) ?? 0) + 1)
+    return KIND_ORDER.filter((k) => (counts.get(k) ?? 0) > 0).map((k) => ({
+      id: k as KindFilter,
+      label: KIND_LANE[k],
+      icon: KIND_ICON[k],
+      count: counts.get(k) ?? 0,
+    }))
+  }, [sorted])
+
+  // A bar with one lane in it is a label, not a control.
+  const showFilter = filterable && lanes.length > 1
+
+  // The chosen lane can vanish between renders — a new load, or a period change
+  // upstream that leaves the feed without that kind. Fall back to everything
+  // rather than rendering an empty list under a chip that is no longer there.
+  const active: KindFilter =
+    kind === 'all' || lanes.some((l) => l.id === kind) ? kind : 'all'
+
   // Newest first, then grouped by day so the column carries a scale without
-  // repeating the date on every row.
+  // repeating the date on every row. The limit applies *after* the lane filter,
+  // so narrowing to one kind reaches further back rather than showing whatever
+  // survived a slice of the mixed feed.
   const days = useMemo(() => {
-    const sorted = [...events]
-      .filter((e) => !Number.isNaN(new Date(e.occurredAt).getTime()))
-      .sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime())
-      .slice(0, limit)
+    const visible = (active === 'all' ? sorted : sorted.filter((e) => e.kind === active)).slice(
+      0,
+      limit,
+    )
 
     const now = new Date()
     const out: Array<{ key: string; label: string; events: ActivityEvent[] }> = []
-    for (const e of sorted) {
+    for (const e of visible) {
       const d = new Date(e.occurredAt)
       const key = dayKey(d)
       const last = out[out.length - 1]
@@ -122,29 +185,148 @@ export function ActivityFeed({
       else out.push({ key, label: dayHeading(d, now), events: [e] })
     }
     return out
-  }, [events, limit])
+  }, [sorted, active, limit])
 
+  // Nothing at all versus nothing in this lane are different facts, and only the
+  // second one is the user's own doing — so only the second offers a way back.
   if (days.length === 0) {
     return (
-      <p className="border-t border-[var(--space-divider)] px-1 py-8 text-center text-[15px] text-[var(--space-text-muted)]">
-        {emptyMessage}
-      </p>
+      <>
+        {showFilter && (
+          <KindFilterBar
+            lanes={lanes}
+            total={sorted.length}
+            value={active}
+            onChange={setKind}
+          />
+        )}
+        <p className="border-t border-[var(--space-divider)] px-1 py-8 text-center text-[15px] text-[var(--space-text-muted)]">
+          {active === 'all' ? emptyMessage : 'Nothing in this lane.'}
+        </p>
+      </>
     )
   }
 
   return (
-    <ol className="divide-y divide-[var(--space-divider)] border-t border-[var(--space-divider)]">
-      {days.map((day) => (
-        <Fragment key={day.key}>
-          <li className="px-1 pb-1.5 pt-3 text-[13px] font-medium uppercase tracking-[0.18em] text-[var(--space-text-muted)]">
-            {day.label}
-          </li>
-          {day.events.map((event) => (
-            <ActivityRow key={event.id} event={event} username={username} />
-          ))}
-        </Fragment>
-      ))}
-    </ol>
+    <>
+      {showFilter && (
+        <KindFilterBar lanes={lanes} total={sorted.length} value={active} onChange={setKind} />
+      )}
+      <ol className="divide-y divide-[var(--space-divider)] border-t border-[var(--space-divider)]">
+        {days.map((day) => (
+          <Fragment key={day.key}>
+            <li className="px-1 pb-1.5 pt-3 text-[13px] font-medium uppercase tracking-[0.18em] text-[var(--space-text-muted)]">
+              {day.label}
+            </li>
+            {day.events.map((event) => (
+              <ActivityRow key={event.id} event={event} username={username} />
+            ))}
+          </Fragment>
+        ))}
+      </ol>
+    </>
+  )
+}
+
+// ─── Lane filter ─────────────────────────────────────────────────────────────
+// One row of the feed's kinds, each carrying how many of it are loaded. It is a
+// radio group, not a set of toggles — the feed shows everything or one lane, so
+// there is no state where two chips are on and the reader has to work out what
+// the column is.
+//
+// Keyboard follows the section nav next door: one tab stop for the group, then
+// arrows to move between chips (which selects, so the feed always matches the
+// focused chip). `data-tab-cycle="off"` opts the group out of the ledger's
+// Tab-cycles-sections binding, so once focus is inside, Tab leaves the group
+// normally instead of jumping to another section.
+
+function KindFilterBar({
+  lanes,
+  total,
+  value,
+  onChange,
+}: {
+  lanes: Array<{ id: KindFilter; label: string; icon: LucideIcon; count: number }>
+  total: number
+  value: KindFilter
+  onChange: (id: KindFilter) => void
+}) {
+  const chips = useMemo(
+    () => [{ id: 'all' as KindFilter, label: 'All', icon: Layers, count: total }, ...lanes],
+    [lanes, total],
+  )
+  const refs = useRef<(HTMLButtonElement | null)[]>([])
+
+  const onKeyDown = useCallback(
+    (e: React.KeyboardEvent, i: number) => {
+      const last = chips.length - 1
+      let next = i
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = i === last ? 0 : i + 1
+      else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = i === 0 ? last : i - 1
+      else if (e.key === 'Home') next = 0
+      else if (e.key === 'End') next = last
+      else return
+      e.preventDefault()
+      onChange(chips[next].id)
+      refs.current[next]?.focus()
+    },
+    [chips, onChange],
+  )
+
+  return (
+    <div
+      role="radiogroup"
+      aria-label="Filter activity by type"
+      data-tab-cycle="off"
+      className="scrollbar-none -mx-1 flex gap-1 overflow-x-auto px-1 pb-3"
+    >
+      {chips.map(({ id, label, icon: Icon, count }, i) => {
+        const active = value === id
+        return (
+          <button
+            key={id}
+            ref={(el) => {
+              refs.current[i] = el
+            }}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            tabIndex={active ? 0 : -1}
+            onClick={() => onChange(id)}
+            onKeyDown={(e) => onKeyDown(e, i)}
+            className={cn(
+              'relative shrink-0 rounded-lg px-2.5 py-1.5 text-[13px] transition-colors duration-150',
+              'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[var(--space-accent)]',
+              !active &&
+                'text-[var(--space-text-tertiary)] hover:bg-[var(--space-bg-card)] hover:text-[var(--space-text-primary)]',
+            )}
+          >
+            {active && (
+              <motion.span
+                layoutId="activity-lane-chip"
+                aria-hidden="true"
+                className="absolute inset-0 rounded-lg"
+                style={{ background: 'var(--space-text-primary)' }}
+                transition={{ type: 'spring', stiffness: 520, damping: 42 }}
+              />
+            )}
+            <span
+              className="relative z-10 flex items-center gap-1.5 whitespace-nowrap"
+              style={active ? { color: 'var(--space-bg-base)' } : undefined}
+            >
+              <Icon className="size-3.5 shrink-0 opacity-70" aria-hidden="true" />
+              {label}
+              <span
+                className={cn('tabular-nums', !active && 'text-[var(--space-text-muted)]')}
+                style={active ? { opacity: 0.7 } : undefined}
+              >
+                {count}
+              </span>
+            </span>
+          </button>
+        )
+      })}
+    </div>
   )
 }
 

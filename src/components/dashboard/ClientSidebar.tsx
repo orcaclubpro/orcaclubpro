@@ -545,6 +545,9 @@ export function ClientSidebar(props: ClientSidebarProps) {
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+              // Same reasoning as the desktop drawer: the sheet owns its own
+              // tab order. See `useSectionCycle` in `dashboard/ledger`.
+              data-tab-cycle="off"
               className="fixed inset-x-0 bottom-0 z-[55] flex flex-col rounded-t-2xl border-t border-[var(--space-border-hard)] bg-[var(--space-bg-base)]"
               style={{ maxHeight: '82vh' }}
             >

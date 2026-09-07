@@ -2,6 +2,10 @@ import { PDFDocument, StandardFonts, rgb, PDFFont, PDFPage, PDFImage } from 'pdf
 import fontkit from '@pdf-lib/fontkit'
 import type { NdaFormData, SowFormData } from './document-generators'
 import {
+  BRAND_CONTRACT_PARTY, BRAND_FOOTER, BRAND_FULL_NAME, BRAND_LEGAL_DESCRIPTION,
+  BRAND_STRAPLINE,
+} from './brand'
+import {
   clauseBlocks,
   deliverablesFor,
   exclusionsFor,
@@ -187,7 +191,7 @@ class DocWriter {
     const dw = this.normal.widthOfTextAtSize(dateLabel, 8.5)
     this.page.drawText(dateLabel, { x: this.pw - this.mr - dw, y: this.y - 8, size: 8.5, font: this.normal, color: BRAND.gray4 })
     this.y -= 14
-    drawTracked(this.page, 'WEB DESIGN AND MARKETING AUTOMATION', this.ml, this.y, 6.5, this.normal, BRAND.gray4, 1.4)
+    drawTracked(this.page, BRAND_STRAPLINE, this.ml, this.y, 6.5, this.normal, BRAND.gray4, 1.4)
     this.y -= 22
     this.page.drawLine({ start: { x: this.ml, y: this.y }, end: { x: this.pw - this.mr, y: this.y }, thickness: 0.6, color: BRAND.rule })
     this.y -= 24
@@ -535,6 +539,103 @@ class DocWriter {
    * Like `table`, an entry is atomic and the header repeats across pages — a
    * deliverable split over a page break reads as two different promises.
    */
+  /**
+   * The Deliverables table — an `itemTable` that the Parties can work against
+   * after signing.
+   *
+   * Every row carries a real PDF checkbox and a date field, so acceptance is
+   * recorded on the agreement itself rather than in a thread somewhere. The
+   * Delivery and Acceptance clause points at these boxes, which is what makes a
+   * ticked row evidence of anything.
+   */
+  deliverableTable(items: Array<{ title: string; description?: string }>) {
+    const size = 9
+    const numW  = 26
+    const chkW  = 62
+    const dateW = 96
+    const textW = this.innerW - numW - chkW - dateW - 16
+
+    if (items.length === 0) {
+      this.body('(To be defined by written amendment.)')
+      return
+    }
+
+    const widths = [numW, this.innerW - numW - chkW - dateW, chkW, dateW]
+    const drawHead = () => this._tableHead(['', 'Deliverable', 'Accepted', 'Date Completed'], widths, size)
+
+    const form = this.doc.getForm()
+    const chkX  = this.ml + numW + widths[1]
+    const dateX = chkX + chkW
+
+    this.need(size + 13 + 34)
+    drawHead()
+
+    const rowText = this.branded ? BRAND.ink : C.dark
+    for (let i = 0; i < items.length; i++) {
+      const titleLines = wrap(items[i].title, this.bold, size, textW)
+      const desc = items[i].description?.trim()
+      const descLines = desc ? wrapBlock(desc, this.normal, size - 0.5, textW) : []
+      const rowH = Math.max(
+        titleLines.length * (size + 3.5) + descLines.length * (size + 2) + (descLines.length ? 3 : 0) + 12,
+        30,
+      )
+
+      if (this.y - rowH < this.mb + 24) {
+        this._drawFooter()
+        this._np()
+        drawHead()
+      }
+
+      let ty = this.y - size - 6
+      this.page.drawText(`${i + 1}`, { x: this.ml + 8, y: ty, size: size - 0.5, font: this.normal, color: this.cLabel })
+      for (const line of titleLines) {
+        this.page.drawText(line, { x: this.ml + numW + 8, y: ty, size, font: this.bold, color: rowText })
+        ty -= size + 3.5
+      }
+      if (descLines.length) {
+        ty -= 1
+        for (const line of descLines) {
+          this.page.drawText(line, { x: this.ml + numW + 8, y: ty, size: size - 0.5, font: this.normal, color: this.branded ? BRAND.gray6 : C.mid })
+          ty -= size + 2
+        }
+      }
+
+      // Controls sit against the top of the row, level with the title, so a
+      // long description does not drag the checkbox away from what it ticks.
+      const ctrlY = this.y - size - 6
+      try {
+        const cb = form.createCheckBox(`${this.prefix}dlv_ok_${i}`)
+        cb.addToPage(this.page, {
+          x: chkX + chkW / 2 - 6, y: ctrlY - 4, width: 12, height: 12,
+          borderWidth: 0.8, borderColor: C.mid, backgroundColor: rgb(0.97, 0.97, 1.00),
+        })
+      } catch { /* name collision — skip */ }
+
+      try {
+        const f = form.createTextField(`${this.prefix}dlv_date_${i}`)
+        f.addToPage(this.page, {
+          x: dateX + 8, y: ctrlY - 5, width: dateW - 16, height: 14,
+          borderWidth: 0, backgroundColor: rgb(0.97, 0.97, 1.00),
+        })
+        f.setFontSize(8.5)
+      } catch { /* name collision — skip */ }
+      this.page.drawLine({
+        start: { x: dateX + 8, y: ctrlY - 6 }, end: { x: dateX + dateW - 8, y: ctrlY - 6 },
+        thickness: 0.5, color: C.rule,
+      })
+
+      this.page.drawLine({
+        start: { x: this.ml, y: this.y - rowH },
+        end:   { x: this.pw - this.mr, y: this.y - rowH },
+        thickness: 0.3, color: this.cRule,
+      })
+      this.y -= rowH
+    }
+    this.sp(6)
+    this.body('Client ticks the box and enters the date as each Deliverable is approved. A ticked, dated row is the Parties\' record of Acceptance for that Deliverable.', 8.5, C.mid)
+    this.sp(6)
+  }
+
   itemTable(header: string, items: Array<{ title: string; description?: string }>, opts?: { numbered?: boolean }) {
     const size = 9
     const numbered = opts?.numbered !== false
@@ -615,6 +716,144 @@ class DocWriter {
   }
 
   // ── Signature page ───────────────────────────────────────────────────────────
+
+  /**
+   * The completion sign-off — a second, later signature block on its own page.
+   *
+   * The signature page at execution says the Parties agreed to start. This one
+   * says they agree it is finished, which is a different fact and needs its own
+   * date. It sits unsigned in the file until the work is actually done, and the
+   * notes box is where anything carried, waived, or still open gets written
+   * down rather than remembered.
+   */
+  completionSignOff(spName: string, spTitle: string) {
+    this._drawFooter()
+    this._np()
+    this._drawFooter()
+
+    this.page.drawLine({
+      start: { x: this.ml, y: this.y }, end: { x: this.pw - this.mr, y: this.y },
+      thickness: 2, color: this.cNavy,
+    })
+    this.y -= 18
+
+    const htxt = 'PROJECT COMPLETION SIGN-OFF'
+    const htw  = this.bold.widthOfTextAtSize(htxt, 11)
+    this.page.drawText(htxt, { x: (this.pw - htw) / 2, y: this.y, size: 11, font: this.bold, color: this.cNavy })
+    this.y -= 16
+
+    this.page.drawLine({
+      start: { x: this.ml, y: this.y }, end: { x: this.pw - this.mr, y: this.y },
+      thickness: 0.5, color: this.cRule,
+    })
+    this.y -= 16
+
+    const intro = 'This section is completed when the engagement ends. By signing below, both Parties confirm that all Deliverables listed in this Agreement have been delivered and accepted, that any outstanding items are recorded in the notes below, and that the engagement described in this Agreement is complete as of the date signed.'
+    for (const l of wrap(intro, this.normal, 9.5, this.innerW)) {
+      this.page.drawText(l, { x: this.ml, y: this.y, size: 9.5, font: this.normal, color: C.dark })
+      this.y -= 14
+    }
+    this.y -= 10
+
+    const form = this.doc.getForm()
+
+    // ── Notes ──────────────────────────────────────────────────────────────────
+    this.page.drawText('COMPLETION NOTES — outstanding items, waivers, follow-on work', {
+      x: this.ml, y: this.y, size: 7, font: this.bold, color: this.cLabel,
+    })
+    this.y -= 8
+    const notesH = 86
+    this.page.drawRectangle({
+      x: this.ml, y: this.y - notesH, width: this.innerW, height: notesH,
+      borderWidth: 0.6, borderColor: C.rule, color: rgb(0.985, 0.985, 1.0),
+    })
+    try {
+      const f = form.createTextField(`${this.prefix}completion_notes`)
+      f.enableMultiline()
+      f.addToPage(this.page, {
+        x: this.ml + 2, y: this.y - notesH + 2, width: this.innerW - 4, height: notesH - 4,
+        borderWidth: 0, backgroundColor: rgb(0.985, 0.985, 1.0),
+      })
+      f.setFontSize(9)
+    } catch { /* name collision — skip */ }
+    this.y -= notesH + 24
+
+    // ── Two-column sign-off ────────────────────────────────────────────────────
+    const gap  = 28
+    const colW = (this.innerW - gap) / 2
+    const L = this.ml
+    const R = this.ml + colW + gap
+
+    const mkField = (name: string, x: number, yy: number, w: number, h: number) => {
+      try {
+        const f = form.createTextField(`${this.prefix}${name}`)
+        f.addToPage(this.page, {
+          x, y: yy - h + 2, width: w, height: h,
+          borderWidth: 0, backgroundColor: rgb(0.97, 0.97, 1.00),
+        })
+        f.setFontSize(10)
+      } catch { /* name collision — skip */ }
+    }
+    const sigLine = (x: number, yy: number, w: number) =>
+      this.page.drawLine({ start: { x, y: yy }, end: { x: x + w, y: yy }, thickness: 0.8, color: C.dark })
+    const lbl = (text: string, x: number, yy: number) =>
+      this.page.drawText(text, { x, y: yy, size: 7, font: this.bold, color: this.cLabel })
+
+    const startY = this.y
+    const heads: Array<[string, number]> = [['SERVICE PROVIDER', L], ['CLIENT', R]]
+    for (const [text, x] of heads) {
+      if (this.branded) {
+        this.page.drawRectangle({ x, y: startY - 14, width: colW, height: 14, color: BRAND.headBg })
+        drawTracked(this.page, text, x + 6, startY - 10.5, 7, this.bold, BRAND.gray6, 0.8)
+      } else {
+        this.page.drawRectangle({ x, y: startY - 14, width: colW, height: 14, color: C.navy })
+        this.page.drawText(text, { x: x + 6, y: startY - 10.5, size: 7.5, font: this.bold, color: C.white })
+      }
+    }
+
+    let y = startY - 26
+
+    lbl('SIGNATURE', L, y); lbl('SIGNATURE', R, y)
+    y -= 9
+    sigLine(L, y, colW); sigLine(R, y, colW)
+    mkField('done_sp_sig', L, y, colW, 22)
+    mkField('done_cl_sig', R, y, colW, 22)
+    y -= 32
+
+    lbl('NAME', L, y); lbl('NAME', R, y)
+    y -= 9
+    this.page.drawText(spName, { x: L, y, size: 10, font: this.bold, color: C.black })
+    sigLine(R, y, colW)
+    mkField('done_cl_name', R, y, colW, 18)
+    y -= 24
+
+    lbl('TITLE / POSITION', L, y); lbl('TITLE / POSITION', R, y)
+    y -= 9
+    this.page.drawText(spTitle, { x: L, y, size: 9.5, font: this.normal, color: C.dark })
+    sigLine(R, y, colW)
+    mkField('done_cl_title', R, y, colW, 18)
+    y -= 24
+
+    lbl('DATE OF COMPLETION', L, y); lbl('DATE OF COMPLETION', R, y)
+    y -= 9
+    sigLine(L, y, colW); sigLine(R, y, colW)
+    mkField('done_sp_date', L, y, colW, 18)
+    mkField('done_cl_date', R, y, colW, 18)
+    y -= 28
+
+    this.page.drawLine({
+      start: { x: this.ml, y }, end: { x: this.pw - this.mr, y },
+      thickness: 0.4, color: C.rule,
+    })
+    y -= 14
+    const notice = 'Signing this section does not waive any payment still outstanding, any warranty still running, or any obligation stated elsewhere in this Agreement to survive completion.'
+    for (const l of wrap(notice, this.normal, 8, this.innerW)) {
+      this.page.drawText(l, { x: this.ml, y, size: 8, font: this.normal, color: C.light })
+      y -= 11
+    }
+
+    this.y = y
+  }
 
   sigPage(
     sp_label: string, sp_name: string, sp_title: string,
@@ -802,7 +1041,7 @@ function writeSowRender(w: DocWriter, d: SowFormData, key: SowRenderKey) {
   switch (key) {
     case 'partiesTable': {
       const colW = [w.innerW * 0.30, w.innerW * 0.70]
-      const spFull = d.providerName?.trim() || 'ORCACLUB Technical Operations Development Studio'
+      const spFull = d.providerName?.trim() || BRAND_FULL_NAME
       w.table([], colW, [
         ['Service Provider', `${spFull}${d.providerContact ? '  ·  ' + d.providerContact : ''}`],
         ['Client',           `${blank(d.clientName)}${d.clientContact ? '  ·  ' + d.clientContact : ''}`],
@@ -817,7 +1056,7 @@ function writeSowRender(w: DocWriter, d: SowFormData, key: SowRenderKey) {
       break
 
     case 'deliverablesTable':
-      w.itemTable('Deliverable', deliverablesFor(d))
+      w.deliverableTable(deliverablesFor(d))
       break
 
     case 'exclusionList':
@@ -886,264 +1125,311 @@ function writeSowPaymentSchedule(w: DocWriter, d: SowFormData) {
   w.sp(4)
 }
 
-// ── Personal NDA ───────────────────────────────────────────────────────────────
+// ── NDA ────────────────────────────────────────────────────────────────────────
+// One body, two mastheads. The personal and ORCACLUB NDAs used to be two
+// hand-maintained copies of the same contract, which is how the personal one
+// ended up with a materially weaker Remedies clause than the studio one. They
+// now share `buildNdaCore` and differ only in who signs and whether the Kawai
+// firewall prints.
 
-export async function buildPersonalNdaPdf(d: NdaFormData): Promise<Uint8Array> {
+type NdaBrand = 'personal' | 'orcaclub'
+
+/** Standing terms. A blank field on a saved document falls back to these. */
+const NDA_DEFAULTS = {
+  termYears: '3',
+  breachHours: '72',
+  offboardDays: '10',
+  state: 'California',
+  county: 'Orange',
+  providerEmail: 'carbon@orcaclub.pro',
+}
+
+const NUM_WORDS: Record<string, string> = {
+  '1': 'one', '2': 'two', '3': 'three', '4': 'four', '5': 'five',
+  '6': 'six', '7': 'seven', '8': 'eight', '9': 'nine', '10': 'ten',
+}
+
+/** "three (3)" — contracts state a number both ways so a typo is self-catching. */
+function spelled(n: string): string {
+  const word = NUM_WORDS[n.trim()]
+  return word ? `${word} (${n.trim()})` : n.trim()
+}
+
+/** Section toggles default to on; only non-solicitation defaults to off. */
+const on = (v: boolean | undefined) => v !== false
+
+function ndaField(v: string | undefined, fallback: string): string {
+  return v?.trim() || fallback
+}
+
+async function buildNdaCore(d: NdaFormData, brand: NdaBrand): Promise<Uint8Array> {
   const doc    = await PDFDocument.create()
   const bold   = await doc.embedFont(StandardFonts.HelveticaBold)
   const normal = await doc.embedFont(StandardFonts.Helvetica)
 
-  const client = blank(d.clientName)
-  const ctype  = d.clientType === 'company' ? 'a company' : 'an individual'
+  const isPersonal = brand === 'personal'
+
+  const client     = blank(d.clientName)
+  const clientDesc = ndaField(d.clientEntity, d.clientType === 'company' ? 'a company' : 'an individual')
+
+  const spName  = isPersonal ? 'Chance Noonan' : 'ORCACLUB'
+  const spDesc  = ndaField(
+    d.providerEntity,
+    isPersonal
+      ? 'an individual doing business as an independent freelance consultant'
+      : BRAND_LEGAL_DESCRIPTION,
+  )
+  const spTitle = isPersonal ? 'Independent Freelance Consultant' : 'Authorized Representative'
+
+  const termYears   = ndaField(d.termYears, NDA_DEFAULTS.termYears)
+  const breachHours = ndaField(d.breachNoticeHours, NDA_DEFAULTS.breachHours)
+  const offboard    = ndaField(d.offboardDays, NDA_DEFAULTS.offboardDays)
+  const state       = ndaField(d.governingState, NDA_DEFAULTS.state)
+  const county      = ndaField(d.venueCounty, NDA_DEFAULTS.county)
+  const spEmail     = ndaField(d.providerEmail, NDA_DEFAULTS.providerEmail)
+  const clEmail     = ndaField(d.clientEmail, '______________________________')
 
   const w = new DocWriter(
     doc, bold, normal,
-    'nda_p_',
+    isPersonal ? 'nda_p_' : 'nda_o_',
     'MUTUAL NON-DISCLOSURE AGREEMENT — CONFIDENTIAL',
-    'Prepared by Chance Noonan · Independent Freelance Consultant · Does not constitute legal advice.',
+    isPersonal
+      ? 'Prepared by Chance Noonan · Independent Freelance Consultant · Does not constitute legal advice.'
+      : `${BRAND_FOOTER} · Does not constitute legal advice.`,
   )
+
+  // Sections are numbered by a counter, not by hand — the optional ones can be
+  // switched off per document and the numbering has to close up behind them.
+  let n = 0
+  const sec = (title: string) => { w.section(`${++n}. ${title}`); return n }
 
   // ── Title block ──────────────────────────────────────────────────────────────
   w.titleBlock(
     'Mutual Non-Disclosure Agreement',
-    'with Independent Contractor Acknowledgment and Employer Information Firewall',
+    isPersonal
+      ? 'with Independent Contractor Acknowledgment and Employer Information Firewall'
+      : 'Mutual Confidentiality, Systems Access, and Data Handling',
   )
 
   // ── Recitals ─────────────────────────────────────────────────────────────────
   w.body(
-    `This Mutual Non-Disclosure Agreement (this "Agreement") is entered into as of ${fmtDate(d.effectiveDate)} (the "Effective Date"), by and between Chance Noonan, an independent freelance consultant ("Service Provider"), and ${client}, ${ctype} ("Client"). Service Provider and Client are each referred to herein individually as a "Party" and collectively as the "Parties."`,
+    `This Mutual Non-Disclosure Agreement (this "Agreement") is entered into as of ${fmtDate(d.effectiveDate)} (the "Effective Date"), by and between ${spName}, ${spDesc} ("Service Provider"), and ${client}, ${clientDesc} ("Client"). Service Provider and Client are each referred to herein individually as a "Party" and collectively as the "Parties."`,
   )
   w.sp(10)
-  w.body('The Parties intend to explore and/or engage in a business relationship in which Service Provider provides digital marketing, web development, and/or consulting services to Client in Service Provider\'s independent freelance capacity (the "Business Purpose"). In connection with this Business Purpose, each Party may disclose certain Confidential Information to the other. This Agreement sets forth the terms and conditions governing such disclosures.')
+  w.body(
+    isPersonal
+      ? 'The Parties intend to explore and/or engage in a business relationship in which Service Provider provides digital marketing, web development, and/or consulting services to Client in Service Provider\'s independent freelance capacity (the "Business Purpose"). In connection with this Business Purpose, each Party may disclose Confidential Information to, and grant access to systems and accounts of, the other. This Agreement sets forth the terms and conditions governing those disclosures and that access.'
+      : 'The Parties intend to explore and/or engage in a business relationship in which Service Provider provides marketing, web development, SEO, AEO, and/or related consulting services to Client (the "Business Purpose"). In connection with this Business Purpose, each Party may disclose Confidential Information to, and grant access to systems and accounts of, the other. This Agreement sets forth the terms and conditions governing those disclosures and that access.',
+  )
   w.sp(8)
 
-  // ── Employer notice ───────────────────────────────────────────────────────────
-  w.noteBox([
-    'IMPORTANT: Service Provider is currently employed full-time by Kawai America Corporation ("Kawai") in a separate',
-    'capacity. All services rendered under this Agreement are performed exclusively in Service Provider\'s independent',
-    'freelance capacity and are in no way affiliated with, authorized by, or performed on behalf of Kawai.',
-    'Client agrees that this engagement creates no connection to Kawai.',
-  ])
+  if (isPersonal) {
+    w.noteBox([
+      'IMPORTANT: Service Provider is currently employed full-time by Kawai America Corporation ("Kawai") in a separate',
+      'capacity. All services rendered under this Agreement are performed exclusively in Service Provider\'s independent',
+      'freelance capacity and are in no way affiliated with, authorized by, or performed on behalf of Kawai.',
+      'Client agrees that this engagement creates no connection to Kawai.',
+    ])
+  }
 
   // ── Parties ───────────────────────────────────────────────────────────────────
-  w.partyBox('Party 1 — Service Provider', [
-    'Chance Noonan, independent freelance consultant',
-    'Operating in independent capacity, State of California',
-  ])
-  w.partyBox('Party 2 — Client', [
-    `${client}, ${ctype}`,
-    `Address: ${blank(d.clientAddress)}`,
-  ])
+  w.partyBox('Party 1 — Service Provider', isPersonal
+    ? [`Chance Noonan, ${spDesc}`, `Notice address: ${spEmail}`]
+    : [`ORCACLUB, ${spDesc}`, 'Website: orcaclub.pro', `Notice address: ${spEmail}`])
+
+  const clientLines = [`${client}, ${clientDesc}`, `Address: ${blank(d.clientAddress)}`]
+  if (d.clientSignerName?.trim()) {
+    clientLines.push(`Attention: ${d.clientSignerName.trim()}${d.clientSignerTitle?.trim() ? `, ${d.clientSignerTitle.trim()}` : ''}`)
+  }
+  clientLines.push(`Notice address: ${clEmail}`)
+  w.partyBox('Party 2 — Client', clientLines)
   w.hr()
 
-  // ── Section 1: Definitions ───────────────────────────────────────────────────
-  w.section('1. Definitions')
-  w.sub('1.1  Confidential Information')
+  // ── Definitions ──────────────────────────────────────────────────────────────
+  const nDef = sec('Definitions')
+  w.sub(`${nDef}.1  Confidential Information`)
   w.body('"Confidential Information" means any non-public information disclosed by one Party (the "Disclosing Party") to the other Party (the "Receiving Party"), whether orally, in writing, electronically, or by any other means, that is designated as confidential or that reasonably should be understood to be confidential given the nature of the information and circumstances of disclosure. Confidential Information includes, without limitation:')
   w.bullet('Business strategies, marketing plans, pricing structures, and financial data')
-  w.bullet('Client lists, vendor relationships, and partnership details')
-  w.bullet('Website code, proprietary tools, workflows, technical systems, and processes')
+  w.bullet('Client lists, customer records, vendor relationships, and partnership details')
+  w.bullet('Source code, website code, proprietary tools, systems architecture, and technical workflows')
+  w.bullet('Credentials, access tokens, API keys, and security configurations (together, "Credentials")')
   w.bullet('Campaign data, creative assets, ad performance data, and analytics')
   w.bullet('Proposals, contracts, scopes of work, and project deliverables')
   w.bullet('Any other information a reasonable person in the industry would consider proprietary or sensitive')
   w.sp(6)
-  w.sub('1.2  Exclusions')
+  w.sub(`${nDef}.2  Exclusions`)
   w.body('Confidential Information does not include information that: (a) is or becomes publicly known through no breach of this Agreement; (b) was rightfully known to the Receiving Party before disclosure; (c) is independently developed by the Receiving Party without reference to the Disclosing Party\'s information; (d) is received from a third party without breach of any obligation of confidentiality; or (e) is required to be disclosed by applicable law or court order, provided the Receiving Party gives prompt written notice to the Disclosing Party and cooperates in seeking a protective order.')
   w.hr()
 
-  // ── Section 2: Employer Information Firewall ─────────────────────────────────
-  w.section('2. Employer Information Firewall — Kawai America Corporation')
-  w.sub('2.1  Scope of Firewall')
-  w.body('Service Provider\'s employment with Kawai America Corporation ("Kawai") is entirely separate from this engagement. Service Provider shall not disclose to Client any Confidential Information belonging to or concerning Kawai, including: proprietary product data; internal pricing or dealer agreements; marketing budgets, campaign strategies, or performance data; customer or dealer lists; trade secrets or proprietary systems; or any information accessed in Service Provider\'s capacity as a Kawai employee.')
-  w.sp(4)
-  w.sub('2.2  Client Obligations')
-  w.body('Client acknowledges Service Provider\'s confidentiality obligations to Kawai and agrees not to solicit, request, or encourage Service Provider to disclose any Kawai-protected information. Client shall not use this engagement to obtain competitive intelligence concerning Kawai.')
-  w.sp(4)
-  w.sub('2.3  Permitted Scope of Services')
-  w.body('Service Provider may apply the following in performing services for Client: general professional knowledge and industry expertise; independently developed skills, tools, and frameworks; publicly available industry data and platform documentation; and all creative work, code, and deliverables specifically developed for Client under this engagement.')
-  w.sp(4)
-  w.sub('2.4  No Agency or Affiliation')
-  w.body('Nothing in this Agreement creates any agency, partnership, or affiliation between Client and Kawai. Client agrees not to represent to any third party that services rendered hereunder are authorized by, connected to, or performed on behalf of Kawai.')
-  w.hr()
+  // ── Employer firewall (personal only) ────────────────────────────────────────
+  if (isPersonal) {
+    const nFw = sec('Employer Information Firewall — Kawai America Corporation')
+    w.sub(`${nFw}.1  Scope of Firewall`)
+    w.body('Service Provider\'s employment with Kawai America Corporation ("Kawai") is entirely separate from this engagement. Service Provider shall not disclose to Client any Confidential Information belonging to or concerning Kawai, including: proprietary product data; internal pricing or dealer agreements; marketing budgets, campaign strategies, or performance data; customer or dealer lists; trade secrets or proprietary systems; or any information accessed in Service Provider\'s capacity as a Kawai employee.')
+    w.sp(4)
+    w.sub(`${nFw}.2  Client Obligations`)
+    w.body('Client acknowledges Service Provider\'s confidentiality obligations to Kawai and agrees not to solicit, request, or encourage Service Provider to disclose any Kawai-protected information. Client shall not use this engagement to obtain competitive intelligence concerning Kawai.')
+    w.sp(4)
+    w.sub(`${nFw}.3  Permitted Scope of Services`)
+    w.body('Service Provider may apply the following in performing services for Client: general professional knowledge and industry expertise; independently developed skills, tools, and frameworks; publicly available industry data and platform documentation; and all creative work, code, and deliverables specifically developed for Client under this engagement.')
+    w.sp(4)
+    w.sub(`${nFw}.4  No Agency or Affiliation`)
+    w.body('Nothing in this Agreement creates any agency, partnership, or affiliation between Client and Kawai. Client agrees not to represent to any third party that services rendered hereunder are authorized by, connected to, or performed on behalf of Kawai.')
+    w.hr()
+  }
 
-  // ── Section 3: Confidentiality Obligations ───────────────────────────────────
-  w.section('3. Mutual Confidentiality Obligations')
+  // ── Mutual obligations ───────────────────────────────────────────────────────
+  sec('Mutual Confidentiality Obligations')
   w.body('Each Party, as a Receiving Party, agrees to:')
   w.bullet('Hold the Disclosing Party\'s Confidential Information in strict confidence, using no less than reasonable care — and in no event less than the same degree of care used to protect its own confidential information of similar nature')
   w.bullet('Not use Confidential Information for any purpose other than evaluating or pursuing the Business Purpose')
   w.bullet('Not disclose Confidential Information to any third party without the Disclosing Party\'s prior written consent')
-  w.bullet('Limit access to those employees, contractors, or agents who have a legitimate need to know and who are bound by equivalent confidentiality obligations')
+  w.bullet('Limit access to those employees, contractors, or agents who have a legitimate need to know and who are bound by written confidentiality obligations no less protective than this Agreement, and remain responsible for their compliance')
   w.bullet('Promptly notify the Disclosing Party in writing upon discovering any unauthorized use, disclosure, or access to Confidential Information')
+  if (isPersonal) {
+    w.sp(4)
+    w.body('In addition, all Confidential Information received from Client shall: be kept strictly confidential and not disclosed to Kawai or its agents; not be used in any work performed for Kawai; and be stored separately from any systems used in Service Provider\'s Kawai employment.')
+  }
+  w.hr()
+
+  // ── Access to systems, accounts, and assets ──────────────────────────────────
+  if (on(d.includeAccessSection)) {
+    const nAcc = sec('Access to Systems, Accounts, and Assets')
+    w.body('Client may grant Service Provider access to Client systems, hosting and domain registrars, advertising and analytics platforms, code repositories, content management systems, payment processors, email and social accounts, and Client-owned creative assets and data (together, the "Client Systems"). The following terms govern that access. They apply in addition to, and do not limit, the confidentiality obligations above.')
+    w.sp(4)
+    w.sub(`${nAcc}.1  Access Is Granted, Not Transferred`)
+    w.body('Client retains sole ownership of and ultimate administrative control over all Client Systems and all data within them. Access granted under this Agreement is a limited, revocable, non-exclusive permission to act on Client\'s behalf for the Business Purpose. Nothing in this Agreement transfers ownership of any account, domain, data set, or asset to Service Provider.')
+    w.sp(4)
+    w.sub(`${nAcc}.2  Permitted Use of Access`)
+    w.body('Service Provider shall use access to Client Systems solely to perform the Business Purpose. Without limiting that restriction, Service Provider shall not: use Client Systems or Client data for Service Provider\'s own commercial benefit or for any other client; export, copy, or retain Client data beyond what is reasonably required for the Business Purpose; market, sell, license, or otherwise monetize Client data; enrich or combine Client data with data obtained from or on behalf of any other party; or access any area of Client Systems outside the scope of the work.')
+    w.sp(4)
+    w.sub(`${nAcc}.3  Least Privilege and Named Users`)
+    w.body('Service Provider shall request only the minimum level of access required for the work at hand, and shall request read-only access where read-only access is sufficient. Where a platform supports individually named users, Service Provider shall work under its own named account rather than a shared login, so that every action taken on Client Systems remains attributable in Client\'s own audit logs. Access shall be limited to the individuals named in writing by Service Provider, each of whom is bound by confidentiality obligations no less protective than this Agreement.')
+    w.sp(4)
+    w.sub(`${nAcc}.4  Credential Handling`)
+    w.body('Credentials shall be stored only in an access-controlled, encrypted credential manager; never in plain text, email, chat, spreadsheets, source code, or notes; never transmitted over an unsecured channel; never reused across clients; and never shared with any person outside the named individuals under this Agreement. Service Provider shall enable multi-factor authentication wherever the platform offers it, and shall not disable, weaken, or circumvent any security control on Client Systems.')
+    w.sp(4)
+    w.sub(`${nAcc}.5  No Interference with Client Control`)
+    w.body('Service Provider shall not remove or downgrade Client\'s own administrative access, transfer ownership of any Client account or domain away from Client, register any domain, account, or service in Service Provider\'s own name where it is intended for Client\'s use (absent Client\'s written request), or withhold access or Credentials for any reason, including a fee dispute. Client may revoke any access at any time, for any reason, without notice and without penalty.')
+    w.sp(4)
+    w.sub(`${nAcc}.6  Change Control`)
+    w.body('Service Provider shall not make material or destructive changes to Client Systems — including deleting data, altering billing or payment configuration, changing DNS or domain settings, or publishing to production — outside the agreed scope of work without Client\'s prior approval. Where a change is reasonably reversible, Service Provider shall take or verify a backup before making it.')
+    w.sp(4)
+    w.sub(`${nAcc}.7  Revocation and Off-Boarding`)
+    w.body(`Upon completion of the work, termination of the engagement, or Client's written request, Service Provider shall within ${spelled(offboard)} business days: cease all use of Client Systems; remove its own accounts and integrations from Client Systems; delete all Credentials from its credential manager and all local copies; and, upon request, certify in writing that it has done so. Service Provider shall promptly return any Client-owned account, domain, or asset held in Service Provider's name.`)
+    w.hr()
+  }
+
+  // ── Personal data ────────────────────────────────────────────────────────────
+  if (on(d.includePersonalData)) {
+    sec('Protection of Personal Data')
+    w.body('Where Confidential Information or Client Systems include personal information relating to identified or identifiable individuals ("Personal Data"), Service Provider acts solely as a service provider and processor on Client\'s behalf, and agrees that it shall:')
+    w.bullet('Process Personal Data only on Client\'s documented instructions and only for the Business Purpose — and not retain, use, or disclose it for any other purpose, including any commercial purpose of its own')
+    w.bullet('Not sell or share Personal Data, as those terms are defined under applicable privacy law, and not use it for cross-context behavioral advertising')
+    w.bullet('Not combine Personal Data received from Client with personal information received from or on behalf of any other person, or collected from Service Provider\'s own interactions with individuals')
+    w.bullet('Maintain reasonable technical, physical, and administrative security measures appropriate to the nature of the Personal Data')
+    w.bullet('Engage no subprocessor with access to Personal Data without notifying Client, and bind every such subprocessor in writing to obligations no less protective than these')
+    w.bullet('Assist Client, at Client\'s reasonable request, in responding to requests from individuals exercising rights under applicable privacy law')
+    w.bullet('Notify Client promptly if Service Provider determines it can no longer meet these obligations, and cease processing or remediate upon Client\'s direction')
+    w.bullet('Delete or return Personal Data when it is no longer needed for the Business Purpose, subject to the archival copy permitted below')
+    w.sp(4)
+    w.body('Service Provider certifies that it understands the restrictions in this Section and will comply with them. Client may take reasonable and appropriate steps to confirm that Service Provider is using Personal Data consistently with Client\'s obligations under applicable privacy law.')
+    w.hr()
+  }
+
+  // ── AI tools ─────────────────────────────────────────────────────────────────
+  if (on(d.includeAiClause)) {
+    sec('Artificial Intelligence and Machine Learning Tools')
+    w.body('Neither Party shall input, upload, or otherwise submit the other Party\'s Confidential Information into any publicly available or consumer-grade generative artificial intelligence service, large language model, or similar machine learning system whose terms permit the provider to retain the input or use it to train, fine-tune, or improve a model. A Party may use an AI or machine learning tool in performing the Business Purpose only where that tool is operated under terms that prohibit training on submitted content and provide for its deletion within a defined retention period, or where the other Party has given prior written consent. Neither Party shall use the other\'s Confidential Information to train, fine-tune, or evaluate any model for its own or a third party\'s benefit. Each Party remains fully responsible under this Agreement for any Confidential Information it submits to any such tool.')
+    w.hr()
+  }
+
+  // ── Security incidents ───────────────────────────────────────────────────────
+  sec('Security Incidents')
+  w.body(`Each Party shall notify the other in writing without undue delay, and in any event within ${breachHours} hours, after becoming aware of any actual or reasonably suspected unauthorized access to, acquisition of, or disclosure of the other Party's Confidential Information, Credentials, or Personal Data (a "Security Incident"). The notifying Party shall describe what is known about the Security Incident, take reasonable steps to contain and remediate it, preserve relevant logs and evidence, and cooperate in good faith with any investigation or legally required notification. Where a Security Incident arises from a Party's failure to meet its obligations under this Agreement, that Party shall bear the reasonable costs of investigation, remediation, and required notices attributable to that failure.`)
+  w.hr()
+
+  // ── Term ─────────────────────────────────────────────────────────────────────
+  sec('Term and Duration')
+  w.body(`This Agreement shall remain in effect for ${spelled(termYears)} years from the Effective Date, unless earlier terminated by mutual written consent of both Parties. Confidentiality obligations shall survive termination or expiration with respect to any Confidential Information disclosed during the term, and shall remain in effect until such information no longer qualifies as Confidential Information under Section ${nDef}.2. With respect to any Confidential Information that constitutes a trade secret under applicable law, the obligations of this Agreement shall continue for as long as that information remains a trade secret. The obligations governing Credentials, Client Systems, and Personal Data survive for as long as the Receiving Party retains access or holds the information.`)
+  w.hr()
+
+  // ── Return / destruction ─────────────────────────────────────────────────────
+  sec('Return or Destruction of Confidential Information')
+  w.body('Upon written request by the Disclosing Party, or upon termination or expiration of this Agreement, the Receiving Party shall promptly: (a) return all tangible materials containing or embodying Confidential Information; or (b) certify in writing that all such materials have been destroyed. The Receiving Party may retain one archival copy solely to demonstrate compliance with this Agreement, and may retain copies held in routine automated backups until those backups expire in the ordinary course; any retained copy remains subject to this Agreement for as long as it is retained.')
+  w.hr()
+
+  // ── No license / warranty ────────────────────────────────────────────────────
+  sec('No License or Warranty')
+  w.body('Nothing in this Agreement grants either Party any right, license, or interest in any patent, trademark, copyright, trade secret, or other intellectual property of the other Party. All Confidential Information is provided "AS IS," without warranty of any kind, express or implied, including as to accuracy, completeness, or fitness for any particular purpose. Nothing in this Agreement obligates either Party to disclose any particular information, to proceed with any transaction, or to enter into any further agreement; ownership of work product is governed by the Parties\' separate scope of work or services agreement, not by this Agreement.')
+  w.hr()
+
+  // ── Portfolio ────────────────────────────────────────────────────────────────
+  sec('Portfolio and Public Work Rights')
+  w.bullet(`${spName} may identify Client by name and display or reference any publicly published work product (including live websites, published advertisements, social media content, and marketing materials) in ${spName}'s portfolio, case studies, or promotional materials, without prior written consent from Client.`)
+  w.bullet('This portfolio right applies only to work that is publicly visible and accessible. Any non-public or confidential work, and any Client data, remains subject to the confidentiality obligations of this Agreement.')
+  w.bullet(`Client may, at any time, submit a written request that ${spName} refrain from referencing Client's name or non-public project details in future promotional materials. Such a request is not retroactive and does not apply to publicly accessible work already displayed.`)
+  w.hr()
+
+  // ── Protected disclosures ────────────────────────────────────────────────────
+  sec('Permitted and Protected Disclosures')
+  w.body('Nothing in this Agreement prohibits or restricts either Party, or any individual, from: reporting a suspected violation of law to, or otherwise communicating or cooperating with, any federal, state, or local government agency or regulator, including without prior notice to the other Party; making disclosures protected under applicable whistleblower law; disclosing information about unlawful acts in the workplace, including harassment or discrimination; discussing wages, hours, or working conditions; or responding to a lawful subpoena, court order, or other legal process. This Agreement shall not be construed to waive any such right.')
+  if (on(d.includeDtsaNotice)) {
+    w.sp(4)
+    w.body('Notice of Immunity — 18 U.S.C. § 1833(b). Federal law provides the following immunity, notice of which is given here:')
+    w.noteBox([
+      'An individual shall not be held criminally or civilly liable under any federal or state trade secret law for the',
+      'disclosure of a trade secret that (A) is made (i) in confidence to a federal, state, or local government official,',
+      'either directly or indirectly, or to an attorney; and (ii) solely for the purpose of reporting or investigating a',
+      'suspected violation of law; or (B) is made in a complaint or other document filed in a lawsuit or other proceeding,',
+      'if such filing is made under seal. An individual who files a lawsuit for retaliation for reporting a suspected',
+      'violation of law may disclose the trade secret to the attorney of the individual and use the trade secret information',
+      'in the court proceeding, if the individual (A) files any document containing the trade secret under seal; and',
+      '(B) does not disclose the trade secret, except pursuant to court order.',
+    ])
+  }
+  w.hr()
+
+  // ── Non-solicitation (opt-in) ────────────────────────────────────────────────
+  if (d.includeNonSolicit) {
+    sec('Non-Solicitation of Personnel')
+    w.body(`During the term of this Agreement and for ${spelled('1')} year afterward, neither Party shall knowingly solicit for employment or engagement any employee or contractor of the other Party who was directly involved in the Business Purpose, without the other Party's prior written consent. This Section does not restrict general advertising or public job postings not targeted at such individuals, nor does it restrict any individual's own right to seek or accept employment. This Section shall be enforced only to the extent permitted by applicable law and creates no restraint on any individual's ability to engage in a lawful profession, trade, or business.`)
+    w.hr()
+  }
+
+  // ── Remedies ─────────────────────────────────────────────────────────────────
+  sec('Remedies')
+  w.body('Each Party acknowledges that unauthorized disclosure or use of Confidential Information may cause irreparable harm for which monetary damages would be an inadequate remedy. Accordingly, the Disclosing Party shall be entitled to seek equitable relief, including injunction and specific performance, without the requirement to post bond or prove actual damages, in addition to all other remedies available at law or in equity. In any action to enforce this Agreement, the prevailing Party shall be entitled to recover its reasonable attorneys\' fees and costs.')
+  w.hr()
+
+  // ── Notices ──────────────────────────────────────────────────────────────────
+  sec('Notices')
+  w.body(`All notices under this Agreement shall be in writing and are effective upon delivery when sent by email to the notice address recorded for each Party above — ${spEmail} for Service Provider and ${clEmail} for Client — or upon receipt when sent by a recognized overnight courier to the address recorded above. Either Party may change its notice address by written notice to the other.`)
+  w.hr()
+
+  // ── General ──────────────────────────────────────────────────────────────────
+  sec('General Provisions')
+  w.body(`Governing Law and Jurisdiction. This Agreement is governed by the laws of the State of ${state}, without regard to conflict-of-law principles. The Parties consent to exclusive jurisdiction and venue in the state and federal courts located in ${county} County, ${state}.`)
   w.sp(4)
-  w.body('In addition, all Confidential Information received from Client shall: be kept strictly confidential and not disclosed to Kawai or its agents; not be used in any work performed for Kawai; and be stored separately from any systems used in Service Provider\'s Kawai employment.')
-  w.hr()
-
-  // ── Section 4: Term ───────────────────────────────────────────────────────────
-  w.section('4. Term and Duration')
-  w.body('This Agreement shall remain in effect for three (3) years from the Effective Date, unless earlier terminated by mutual written consent of both Parties. Confidentiality obligations under this Agreement shall survive termination or expiration with respect to any Confidential Information disclosed during the term, and shall remain in effect until such information no longer qualifies as Confidential Information under Section 1.2.')
-  w.hr()
-
-  // ── Section 5: Return / Destruction ──────────────────────────────────────────
-  w.section('5. Return or Destruction of Confidential Information')
-  w.body('Upon written request by the Disclosing Party, or upon termination or expiration of this Agreement, the Receiving Party shall promptly: (a) return all tangible materials containing or embodying Confidential Information; or (b) certify in writing that all such materials have been destroyed. The Receiving Party may retain one archival copy solely to demonstrate compliance with this Agreement.')
-  w.hr()
-
-  // ── Section 6: No License; No Warranty ───────────────────────────────────────
-  w.section('6. No License or Warranty')
-  w.body('Nothing in this Agreement grants either Party any right, license, or interest in any patent, trademark, copyright, trade secret, or other intellectual property of the other Party. All Confidential Information is provided "AS IS," without warranty of any kind, express or implied, including as to accuracy, completeness, or fitness for any particular purpose.')
-  w.hr()
-
-  // ── Section 7: Portfolio Rights ───────────────────────────────────────────────
-  w.section('7. Portfolio and Public Work Rights')
-  w.bullet('Service Provider may identify Client by name and display or reference any publicly published work product (including live websites, published advertisements, social media content, and marketing materials) in Service Provider\'s portfolio, case studies, or promotional materials, without prior written consent from Client.')
-  w.bullet('This portfolio right applies only to work that is publicly visible and accessible. Any non-public or confidential work remains subject to the confidentiality obligations of this Agreement.')
-  w.bullet('Client may, at any time, submit a written request that Service Provider refrain from referencing Client\'s name or non-public project details in future promotional materials. Such a request is not retroactive and does not apply to publicly accessible work already displayed.')
-  w.hr()
-
-  // ── Section 8: Remedies ───────────────────────────────────────────────────────
-  w.section('8. Remedies')
-  w.body('Both Parties agree to treat each other\'s Confidential Information with the same care they would apply to their own. In the event of a breach that causes harm, the affected Party may seek appropriate remedies, including equitable relief where necessary. Nothing in this Agreement limits the right to pursue available legal remedies.')
-  w.hr()
-
-  // ── Section 9: General Provisions ────────────────────────────────────────────
-  w.section('9. General Provisions')
-  w.body('Governing Law. This Agreement is governed by the laws of the State of California. Disputes not resolved through direct discussion will be addressed through the appropriate California courts.')
+  w.body('Entire Agreement. This Agreement is the entire agreement between the Parties regarding its subject matter and supersedes all prior negotiations, representations, and agreements, whether oral or written. Where the Parties have also executed a scope of work or services agreement, that agreement governs the services, fees, and ownership of work product, and this Agreement governs confidentiality, access, and data handling; in the event of a conflict on those subjects, this Agreement controls.')
   w.sp(4)
-  w.body('Entire Agreement. This Agreement represents the full understanding between the Parties on the subject of confidentiality and supersedes any prior discussions or informal understandings. Any amendments require written agreement from both Parties.')
-  w.sp(4)
-  w.body('Severability. If any provision is found unenforceable, the remaining provisions continue in full effect.')
-  w.sp(4)
-  w.body('Electronic Signatures. Electronic signatures are valid and legally binding under the ESIGN Act and applicable state law.')
-  w.sp(4)
-  w.body('Independent Contractor. This Agreement does not create an employment, partnership, or agency relationship between the Parties.')
-
-  // ── Signature page ────────────────────────────────────────────────────────────
-  w.sigPage(
-    'Service Provider',
-    'Chance Noonan',
-    'Independent Freelance Consultant',
-    'Client',
-    'By signing below, both Parties confirm they have read and understood this Agreement and agree to its terms, effective as of the date noted above.',
-  )
-
-  w._drawFooter()
-  return doc.save()
-}
-
-// ── ORCACLUB NDA ───────────────────────────────────────────────────────────────
-
-export async function buildOrcaclubNdaPdf(d: NdaFormData): Promise<Uint8Array> {
-  const doc    = await PDFDocument.create()
-  const bold   = await doc.embedFont(StandardFonts.HelveticaBold)
-  const normal = await doc.embedFont(StandardFonts.Helvetica)
-
-  const client = blank(d.clientName)
-  const ctype  = d.clientType === 'company' ? 'a company' : 'an individual'
-
-  const w = new DocWriter(
-    doc, bold, normal,
-    'nda_o_',
-    'MUTUAL NON-DISCLOSURE AGREEMENT — CONFIDENTIAL',
-    'Prepared by ORCACLUB Technical Operations Development Studio · orcaclub.pro · Does not constitute legal advice.',
-  )
-
-  // ── Title block ──────────────────────────────────────────────────────────────
-  w.titleBlock(
-    'Mutual Non-Disclosure Agreement',
-    'Mutual Confidentiality and Non-Disclosure',
-  )
-
-  // ── Recitals ─────────────────────────────────────────────────────────────────
-  w.body(
-    `This Mutual Non-Disclosure Agreement (this "Agreement") is entered into as of ${fmtDate(d.effectiveDate)} (the "Effective Date"), by and between ORCACLUB, a Technical Operations Development Studio ("Service Provider"), and ${client}, ${ctype} ("Client"). Service Provider and Client are each referred to herein individually as a "Party" and collectively as the "Parties."`,
-  )
-  w.sp(10)
-  w.body('The Parties intend to explore and/or engage in a business relationship in which Service Provider provides technical operations, development, and/or consulting services to Client (the "Business Purpose"). In connection with this Business Purpose, each Party may disclose certain Confidential Information to the other. This Agreement sets forth the terms and conditions governing such disclosures.')
-  w.sp(8)
-
-  w.partyBox('Party 1 — Service Provider', [
-    'ORCACLUB, a Technical Operations Development Studio',
-    'Website: orcaclub.pro',
-  ])
-  w.partyBox('Party 2 — Client', [
-    `${client}, ${ctype}`,
-    `Address: ${blank(d.clientAddress)}`,
-  ])
-  w.hr()
-
-  // ── Section 1: Definitions ───────────────────────────────────────────────────
-  w.section('1. Definitions')
-  w.sub('1.1  Confidential Information')
-  w.body('"Confidential Information" means any non-public information disclosed by one Party (the "Disclosing Party") to the other Party (the "Receiving Party"), whether orally, in writing, electronically, or by any other means, that is designated as confidential or that reasonably should be understood to be confidential given the nature of the information and the circumstances of disclosure. Confidential Information includes, without limitation:')
-  w.bullet('Business strategies, marketing plans, pricing structures, and financial data')
-  w.bullet('Client lists, vendor relationships, and partnership details')
-  w.bullet('Source code, proprietary tools, systems architecture, and technical workflows')
-  w.bullet('Performance data, analytics, creative assets, and campaign information')
-  w.bullet('Proposals, contracts, scopes of work, and project deliverables')
-  w.bullet('Any other information a reasonable person in the industry would consider proprietary or sensitive')
-  w.sp(6)
-  w.sub('1.2  Exclusions')
-  w.body('Confidential Information does not include information that: (a) is or becomes publicly known through no breach of this Agreement; (b) was rightfully known to the Receiving Party before disclosure; (c) is independently developed by the Receiving Party without reference to the Disclosing Party\'s information; (d) is received from a third party without breach of any obligation of confidentiality; or (e) is required to be disclosed by applicable law or court order, provided the Receiving Party gives prompt written notice to the Disclosing Party and cooperates in seeking a protective order.')
-  w.hr()
-
-  // ── Section 2: Mutual Obligations ───────────────────────────────────────────
-  w.section('2. Mutual Confidentiality Obligations')
-  w.body('Each Party, as a Receiving Party, agrees to:')
-  w.bullet('Hold the Disclosing Party\'s Confidential Information in strict confidence, using no less than reasonable care — and in no event less than the same degree of care used to protect its own confidential information of similar nature')
-  w.bullet('Not use Confidential Information for any purpose other than evaluating or pursuing the Business Purpose')
-  w.bullet('Not disclose Confidential Information to any third party without the Disclosing Party\'s prior written consent')
-  w.bullet('Limit access to those employees, contractors, or agents who have a legitimate need to know and who are bound by equivalent confidentiality obligations')
-  w.bullet('Promptly notify the Disclosing Party in writing upon discovering any unauthorized use, disclosure, or access to Confidential Information')
-  w.hr()
-
-  // ── Section 3: Term ───────────────────────────────────────────────────────────
-  w.section('3. Term and Duration')
-  w.body('This Agreement shall remain in effect for three (3) years from the Effective Date, unless earlier terminated by mutual written consent of both Parties. Confidentiality obligations shall survive termination or expiration with respect to any Confidential Information disclosed during the term, and shall remain in effect until such information no longer qualifies as Confidential Information under Section 1.2.')
-  w.hr()
-
-  // ── Section 4: Return / Destruction ──────────────────────────────────────────
-  w.section('4. Return or Destruction of Confidential Information')
-  w.body('Upon written request by the Disclosing Party, or upon termination or expiration of this Agreement, the Receiving Party shall promptly: (a) return all tangible materials containing or embodying Confidential Information; or (b) certify in writing that all such materials have been destroyed. The Receiving Party may retain one archival copy solely to demonstrate compliance with this Agreement.')
-  w.hr()
-
-  // ── Section 5: No License; No Warranty ───────────────────────────────────────
-  w.section('5. No License or Warranty')
-  w.body('Nothing in this Agreement grants either Party any right, license, or interest in any patent, trademark, copyright, trade secret, or other intellectual property of the other Party. All Confidential Information is provided "AS IS," without warranty of any kind, express or implied, including as to accuracy, completeness, or fitness for any particular purpose.')
-  w.hr()
-
-  // ── Section 6: Portfolio Rights ───────────────────────────────────────────────
-  w.section('6. Portfolio and Public Work Rights')
-  w.bullet('ORCACLUB may identify Client by name and display or reference any publicly published work product (including live websites, published advertisements, social media content, and marketing materials) in ORCACLUB\'s portfolio, case studies, or promotional materials, without prior written consent from Client.')
-  w.bullet('This portfolio right applies only to work that is publicly visible and accessible. Any non-public or confidential work remains subject to the confidentiality obligations of this Agreement.')
-  w.bullet('Client may, at any time, submit a written request that ORCACLUB refrain from referencing Client\'s name or non-public project details in future promotional materials. Such a request is not retroactive.')
-  w.hr()
-
-  // ── Section 7: Remedies ───────────────────────────────────────────────────────
-  w.section('7. Remedies')
-  w.body('Each Party acknowledges that unauthorized disclosure or use of Confidential Information may cause irreparable harm for which monetary damages would be an inadequate remedy. Accordingly, the Disclosing Party shall be entitled to seek equitable relief, including injunction and specific performance, without the requirement to post bond or prove actual damages, in addition to all other remedies available at law or in equity.')
-  w.hr()
-
-  // ── Section 8: General Provisions ────────────────────────────────────────────
-  w.section('8. General Provisions')
-  w.body('Governing Law and Jurisdiction. This Agreement is governed by the laws of the State of California, without regard to conflict-of-law principles. Any disputes shall be resolved in the state or federal courts of California.')
-  w.sp(4)
-  w.body('Entire Agreement. This Agreement is the entire agreement between the Parties regarding its subject matter and supersedes all prior negotiations, representations, and agreements, whether oral or written.')
-  w.sp(4)
-  w.body('Severability. If any provision is found invalid or unenforceable, the remaining provisions shall remain in full force and effect.')
+  w.body('Severability. If any provision is found invalid or unenforceable, it shall be modified to the minimum extent necessary to make it enforceable, and the remaining provisions shall remain in full force and effect.')
   w.sp(4)
   w.body('No Waiver. No failure to exercise any right under this Agreement shall constitute a waiver of that right. Any waiver must be in writing and signed by the waiving Party.')
   w.sp(4)
+  w.body('Assignment. Neither Party may assign this Agreement without the other Party\'s prior written consent, except to a successor in connection with a merger, reorganization, or sale of substantially all of its assets. This Agreement binds and benefits the Parties and their permitted successors and assigns.')
+  w.sp(4)
   w.body('Amendments. This Agreement may be amended only by a written instrument signed by both Parties.')
   w.sp(4)
-  w.body('Electronic Signatures. Electronic signatures are valid and binding under the ESIGN Act and applicable state law.')
+  w.body('Counterparts and Electronic Signatures. This Agreement may be executed in counterparts, each of which is an original and all of which together form one agreement. Electronic signatures and electronically transmitted copies are valid and binding under the ESIGN Act and applicable state law.')
   w.sp(4)
-  w.body('Independent Contractor. Nothing in this Agreement creates an employment, partnership, joint venture, or agency relationship between the Parties.')
+  w.body('Independent Contractor. Nothing in this Agreement creates an employment, partnership, joint venture, or agency relationship between the Parties. Neither Party has authority to bind the other.')
 
   // ── Signature page ────────────────────────────────────────────────────────────
   w.sigPage(
     'Service Provider',
-    'ORCACLUB',
-    'Authorized Representative',
+    spName,
+    spTitle,
     'Client',
     'By signing below, both Parties confirm they have read and understood this Agreement and agree to its terms, effective as of the date noted above.',
   )
@@ -1151,6 +1437,17 @@ export async function buildOrcaclubNdaPdf(d: NdaFormData): Promise<Uint8Array> {
   w._drawFooter()
   return doc.save()
 }
+
+/** Personal NDA — Chance Noonan, with the Kawai employer firewall. */
+export function buildPersonalNdaPdf(d: NdaFormData): Promise<Uint8Array> {
+  return buildNdaCore(d, 'personal')
+}
+
+/** ORCACLUB NDA — the studio entity. */
+export function buildOrcaclubNdaPdf(d: NdaFormData): Promise<Uint8Array> {
+  return buildNdaCore(d, 'orcaclub')
+}
+
 
 // ── SOW core ───────────────────────────────────────────────────────────────────
 
@@ -1165,13 +1462,13 @@ async function buildSowCore(d: SowFormData, brand: 'personal' | 'orcaclub'): Pro
     : undefined
 
   const spName  = d.providerName?.trim() || (isOrcaclub ? 'ORCACLUB' : 'Chance Noonan')
-  const spFull  = d.providerName?.trim() || (isOrcaclub ? 'ORCACLUB Technical Operations Development Studio' : 'Chance Noonan, Independent Freelance Consultant')
+  const spFull  = d.providerName?.trim() || (isOrcaclub ? BRAND_CONTRACT_PARTY : 'Chance Noonan, Independent Freelance Consultant')
   const spTitle = isOrcaclub ? 'Authorized Representative' : 'Independent Freelance Consultant'
-  const subtitle = isOrcaclub ? 'Technical Services Agreement' : 'Independent Contractor Agreement'
+  const subtitle = isOrcaclub ? 'Services Agreement' : 'Independent Contractor Agreement'
   // No "does not constitute legal advice" line — this is an executed agreement,
   // not an informational document, and the disclaimer reads oddly on one.
   const footNote = isOrcaclub
-    ? 'ORCACLUB · Web Design and Marketing Automation · orcaclub.pro'
+    ? BRAND_FOOTER
     : `Prepared by ${spName} · Independent Freelance Consultant`
 
   const w = new DocWriter(
@@ -1246,6 +1543,9 @@ async function buildSowCore(d: SowFormData, brand: 'personal' | 'orcaclub'): Pro
     'Client',
     'By signing below, both Parties confirm they have reviewed this Agreement, understand its terms, and agree to proceed accordingly.',
   )
+
+  // Signed at the end of the work, not at execution — see `completionSignOff`.
+  w.completionSignOff(spName, spTitle)
 
   w._drawFooter()
   return doc.save()
@@ -1342,7 +1642,7 @@ export async function buildPackagePdf(d: PackagePdfData): Promise<Uint8Array> {
   tracked(label, PW - MR - labelW, y + 6, 7.5, bold, P.gray6, 1.6)
   rightText(d.ref, 11, bold, P.ink, y - 8)
   y -= 14
-  tracked('WEB DESIGN AND MARKETING AUTOMATION', ML, y, 6.5, normal, P.gray4, 1.4)
+  tracked(BRAND_STRAPLINE, ML, y, 6.5, normal, P.gray4, 1.4)
   rightText(d.dateLabel, 8.5, normal, P.gray4, y - 6)
   y -= 30
   hr()
@@ -1609,7 +1909,7 @@ export async function buildRetainerStatementPdf(d: RetainerStatementData): Promi
     doc, bold, normal,
     'ret_',
     `RETAINER HOURS STATEMENT — ${blank(d.clientCompany || d.clientName, 'CLIENT')}`,
-    'ORCACLUB · Web Design and Marketing Automation · orcaclub.pro',
+    BRAND_FOOTER,
     { gothic, branded: true },
   )
 
@@ -1845,7 +2145,7 @@ export async function buildRetainerProposalPdf(d: RetainerProposalData): Promise
     doc, bold, normal,
     'prop_',
     `RETAINER PROPOSAL — ${blank(d.clientCompany || d.clientName, 'CLIENT')}`,
-    'ORCACLUB · Web Design and Marketing Automation · orcaclub.pro',
+    BRAND_FOOTER,
     { gothic, branded: true },
   )
 
@@ -2746,7 +3046,7 @@ export async function buildPackageWorkLogPdf(d: PackageWorkLogData): Promise<Uin
     doc, bold, normal,
     'pwl_',
     `PACKAGE WORK LOG — ${blank(d.clientCompany || d.clientName, 'CLIENT')}`,
-    'ORCACLUB · Web Design and Marketing Automation · orcaclub.pro',
+    BRAND_FOOTER,
     { gothic, branded: true },
   )
 

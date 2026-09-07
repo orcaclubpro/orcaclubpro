@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, FolderKanban, Building2, CheckSquare,
-  Receipt, Package, KeyRound, CalendarRange, Files,
+  Receipt, Package, KeyRound, CalendarRange, Files, BarChart3,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { Experience } from '@/app/(spaces)/experience'
@@ -30,6 +30,7 @@ const STAFF_TABS: TabDef[] = [
   { id: 'projects',  label: 'Plan',      icon: FolderKanban,    inNav: true,  navGroup: 'primary' },
   { id: 'clients',   label: 'Clients',   icon: Building2,       inNav: true,  navGroup: 'primary' },
   { id: 'tasks',     label: 'Tasks',     icon: CheckSquare,     inNav: true,  navGroup: 'secondary' },
+  { id: 'analytics', label: 'Analytics', icon: BarChart3,       inNav: true,  navGroup: 'secondary' },
   { id: 'packages',  label: 'Packages',  icon: Package,         inNav: false, navGroup: 'secondary' },
   { id: 'timelines', label: 'Timelines', icon: CalendarRange,   inNav: true,  navGroup: 'secondary' },
   { id: 'files',     label: 'Files',     icon: Files,           inNav: true,  navGroup: 'secondary' },

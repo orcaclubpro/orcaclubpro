@@ -428,7 +428,7 @@ export function PackageDocumentsModal({
                   />
                 </div>
 
-                <SowTermsEditor form={sow} onChange={updateSow} />
+                <SowTermsEditor form={sow} onChange={updateSow} showAgreementFields />
 
                 {sowError && (
                   <div className="rounded-xl px-3 py-2.5 text-xs font-medium bg-red-500/[0.08] border border-red-500/20 text-red-400">

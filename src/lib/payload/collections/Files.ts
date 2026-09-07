@@ -18,7 +18,7 @@ export const Files: CollectionConfig = {
   slug: 'files',
   admin: {
     useAsTitle: 'name',
-    defaultColumns: ['name', 'fileType', 'documentTemplate', 'project', 'sprint', 'createdAt'],
+    defaultColumns: ['name', 'documentTemplate', 'documentStatus', 'clientAccount', 'project', 'createdAt'],
     group: 'Project Management',
     description: 'Manage documents and files linked to projects and sprints',
   },
@@ -140,9 +140,61 @@ export const Files: CollectionConfig = {
       },
     },
 
+    // ── Execution tracking ────────────────────────────────────────────────────
+    // Where a generated agreement stands. `sent` is set by the send action;
+    // `executed` is set by hand once the countersigned copy comes back. Nothing
+    // infers execution — an NDA is signed when someone confirms it was.
+
+    {
+      type: 'row',
+      fields: [
+        {
+          name: 'documentStatus',
+          type: 'select',
+          defaultValue: 'draft',
+          options: [
+            { label: 'Draft', value: 'draft' },
+            { label: 'Sent', value: 'sent' },
+            { label: 'Executed', value: 'executed' },
+          ],
+          admin: {
+            description: 'Where this agreement stands',
+            width: '34%',
+          },
+        },
+        {
+          name: 'sentAt',
+          type: 'date',
+          admin: {
+            description: 'When it was last emailed out',
+            width: '33%',
+            readOnly: true,
+          },
+        },
+        {
+          name: 'executedDate',
+          type: 'date',
+          admin: {
+            description: 'Date both parties signed',
+            width: '33%',
+          },
+        },
+      ],
+    },
+
     // ============================================================================
     // RELATIONSHIPS
     // ============================================================================
+
+    {
+      name: 'clientAccount',
+      type: 'relationship',
+      relationTo: 'client-accounts',
+      index: true,
+      admin: {
+        description: 'Client this document belongs to (set when generated from a client record)',
+      },
+    },
 
     {
       type: 'row',

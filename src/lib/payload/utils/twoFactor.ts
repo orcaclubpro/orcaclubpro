@@ -174,7 +174,7 @@ SECURITY NOTICE: If you didn't create an ORCACLUB account, please ignore this em
 If you have any questions, contact us at chance@orcaclub.pro.
 
 ---
-ORCACLUB - Technical Operations Development Studio
+ORCACLUB - Marketing, Web Development, SEO and AEO
 https://orcaclub.pro
 © 2025 ORCACLUB. All rights reserved.
   `.trim()

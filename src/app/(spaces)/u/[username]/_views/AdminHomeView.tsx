@@ -1,17 +1,19 @@
 'use client'
 
-import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import {
-  ArrowUpRight, CalendarDays, Wallet, Zap, ReceiptText, BarChart3, CalendarRange,
+  ArrowUpRight, Wallet, Zap, ReceiptText, BarChart3, CalendarRange,
   Activity as ActivityIcon,
 } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import DynamicGreeting from '@/components/layout/dynamic-greeting'
 import { Spine } from '@/components/dashboard/Spine'
-import { RangeCalendar } from '@/components/dashboard/RangeCalendar'
 import { ActivityFeed, type ActivityEvent } from '@/components/dashboard/ActivityFeed'
+import {
+  Figure, figureEdges, SectionNav, SectionTitle, Empty, ToneRule, Meter, PeriodControl,
+  useScrollCollapse, type FigureSpec, type LedgerSection,
+} from '@/components/dashboard/ledger'
 import { clientSpineEvents } from '@/lib/dashboard/spine-events'
 import { sprintStatus, orderStatus, projectStatus, toneColor, type StatusTone } from '@/lib/dashboard/status'
 import { orderDate } from '@/lib/dashboard/utils'
@@ -59,7 +61,7 @@ type SectionId =
   | 'activity' | 'needs' | 'moving' | 'invoices' | 'analytics' | 'timeline'
   | 'collected' | 'outstanding' | 'projects' | 'clients'
 
-const SECTIONS: { id: SectionId; label: string; icon: LucideIcon }[] = [
+const SECTIONS: LedgerSection<SectionId>[] = [
   { id: 'activity', label: 'Activity', icon: ActivityIcon },
   { id: 'needs', label: 'Needs you', icon: Wallet },
   { id: 'moving', label: 'Moving', icon: Zap },
@@ -111,140 +113,6 @@ const idOf = (ref: any): string | null =>
 
 /** Where staff act on an order — the Payload admin edit view. */
 const adminOrderHref = (id: string) => `/admin/collections/orders/${id}`
-
-// ─── Count-up ─────────────────────────────────────────────────────────────────
-// The page's one orchestrated moment: the standing tallies itself on arrival,
-// and re-tallies whenever the period changes. State starts at the final value
-// so server-rendered HTML is already correct; a layout effect resets to zero
-// before the browser paints, so nobody sees the final figure flash first.
-
-const useIsoLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
-
-function useCountUp(target: number, duration = 900): number {
-  const [value, setValue] = useState(target)
-  const reduce = useReducedMotion()
-
-  useIsoLayoutEffect(() => {
-    if (reduce || target === 0) {
-      setValue(target)
-      return
-    }
-    setValue(0)
-    let frame = 0
-    const start = performance.now()
-    const step = (now: number) => {
-      const p = Math.min(1, (now - start) / duration)
-      const eased = 1 - Math.pow(1 - p, 3) // ease-out cubic — fast, then settles
-      setValue(target * eased)
-      if (p < 1) frame = requestAnimationFrame(step)
-    }
-    frame = requestAnimationFrame(step)
-    return () => cancelAnimationFrame(frame)
-  }, [target, duration, reduce])
-
-  return value
-}
-
-// ─── Standing figure ──────────────────────────────────────────────────────────
-
-interface FigureSpec {
-  /** Doubles as the React key and the view this figure opens. */
-  key: SectionId
-  value: number
-  format: (n: number) => string
-  label: string
-  note?: string | null
-}
-
-/**
- * Dividers sit between figures, so which edges get a rule depends on where the
- * grid wraps: two per row on phones, four across from `md` up.
- */
-function figureEdges(i: number): string {
-  return cn(
-    'border-[var(--space-divider)]',
-    i % 2 === 0 ? 'border-l-0 pl-0' : 'border-l pl-5',
-    i >= 2 ? 'border-t' : '',
-    i === 0 ? 'md:border-l-0 md:pl-0' : 'md:border-l md:pl-5',
-    'md:border-t-0',
-  )
-}
-
-function Figure({
-  value, format, label, note, active, onSelect, className,
-}: Omit<FigureSpec, 'key'> & {
-  active: boolean
-  onSelect: () => void
-  className?: string
-}) {
-  const shown = useCountUp(value)
-
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      aria-pressed={active}
-      className={cn(
-        'py-4 pr-5 text-left transition-colors duration-150',
-        'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[var(--space-accent)]',
-        active ? 'bg-[var(--space-bg-card)]' : 'hover:bg-[var(--space-bg-card)]',
-        className,
-      )}
-    >
-      <span
-        className="block font-semibold tabular-nums leading-none tracking-[-0.02em] text-[var(--space-text-primary)]"
-        style={{ fontSize: 'clamp(30px, 3.6vw, 46px)' }}
-      >
-        {format(Math.round(shown))}
-      </span>
-      <span className={cn(
-        'mt-3 block text-[13px]',
-        active ? 'text-[var(--space-text-primary)]' : 'text-[var(--space-text-tertiary)]',
-      )}>
-        {label}
-      </span>
-      {note && <span className="mt-1 block text-[12px] text-[var(--space-text-tertiary)]">{note}</span>}
-    </button>
-  )
-}
-
-// ─── Shared section furniture ─────────────────────────────────────────────────
-
-function SectionTitle({ title, aside }: { title: string; aside?: React.ReactNode }) {
-  return (
-    <div className="flex items-baseline gap-3 border-b border-[var(--space-border-hard)] pb-3">
-      <h2 className="text-[15px] font-semibold text-[var(--space-text-primary)]">{title}</h2>
-      <div className="ml-auto text-[13px] text-[var(--space-text-tertiary)]">{aside}</div>
-    </div>
-  )
-}
-
-function Empty({ children }: { children: React.ReactNode }) {
-  return <p className="py-10 text-[14px] text-[var(--space-text-tertiary)]">{children}</p>
-}
-
-/** Shared left rule — the row's status lives here, so no dots or pills are needed. */
-function ToneRule({ tone }: { tone: StatusTone }) {
-  return (
-    <span
-      aria-hidden="true"
-      className="absolute left-0 top-0 h-full w-[2px] opacity-40 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100"
-      style={{ background: toneColor(tone) }}
-    />
-  )
-}
-
-/** A labelled hairline bar — the one chart primitive this page uses. */
-function Meter({ pct, tone }: { pct: number; tone: StatusTone }) {
-  return (
-    <span aria-hidden="true" className="mt-3 block h-[2px] w-full bg-[var(--space-divider)]">
-      <span
-        className="block h-full transition-[width] duration-700 ease-out"
-        style={{ width: `${Math.max(0, Math.min(100, pct))}%`, background: toneColor(tone) }}
-      />
-    </span>
-  )
-}
 
 // ─── A row in the "Needs you" / "Moving" sections ─────────────────────────────
 
@@ -342,232 +210,6 @@ function InvoiceLine({ order }: { order: any }) {
   )
 }
 
-// ─── Period control ───────────────────────────────────────────────────────────
-
-function PeriodControl({
-  value, onChange, custom, onCustomChange, rangeLabel,
-}: {
-  value: PeriodId
-  onChange: (id: PeriodId) => void
-  custom: CustomRange
-  onCustomChange: (r: CustomRange) => void
-  /** The concrete days the chosen period covers, spelled out. */
-  rangeLabel: string
-}) {
-  const [calendarOpen, setCalendarOpen] = useState(false)
-  const [hovered, setHovered] = useState(false)
-  const [pinned, setPinned] = useState(false)
-  const reduce = useReducedMotion()
-
-  const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const clearLeave = () => {
-    if (leaveTimer.current) clearTimeout(leaveTimer.current)
-    leaveTimer.current = null
-  }
-  const enter = () => { clearLeave(); setHovered(true) }
-  const leave = () => {
-    clearLeave()
-    leaveTimer.current = setTimeout(() => setHovered(false), 140)
-  }
-  useEffect(() => clearLeave, [])
-
-  // At rest the control is a single icon with the dates read out beneath it —
-  // the ledger is the point of the page, not its filter. Hovering shows the
-  // choices; clicking pins them open for anyone not using a mouse.
-  const expanded = hovered || pinned || calendarOpen
-
-  const choose = (id: PeriodId) => {
-    onChange(id)
-    // Custom cannot answer for itself, so picking it opens the calendar;
-    // picking it again toggles that calendar back shut.
-    setCalendarOpen(id === 'custom' ? !(value === 'custom' && calendarOpen) : false)
-    // Unpin once a choice is made: still open while the pointer rests here,
-    // and tucked away the moment it leaves.
-    if (id !== 'custom') setPinned(false)
-  }
-
-  return (
-    <div
-      className="relative inline-flex flex-col items-end gap-3"
-      onMouseEnter={enter}
-      onMouseLeave={leave}
-      onBlur={e => {
-        if (!e.currentTarget.contains(e.relatedTarget as Node)) setPinned(false)
-      }}
-    >
-      <AnimatePresence mode="wait" initial={false}>
-        {expanded ? (
-          <motion.div
-            key="expanded"
-            initial={reduce ? false : { opacity: 0, x: 10 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={reduce ? undefined : { opacity: 0, x: 10 }}
-            transition={{ duration: 0.14, ease: [0.25, 0.46, 0.45, 0.94] }}
-            role="group"
-            aria-label="Reporting period"
-            /* One segmented control rather than five loose words: the hairline
-               box says these are the choices, and the solid segment says which
-               is on. The fill is --space-text-primary, so it is ink-black on
-               the light themes and flips to paper-white on charcoal — a literal
-               black chip would vanish into the dark theme's background. */
-            className="flex items-stretch overflow-hidden rounded-lg border border-[var(--space-border-hard)]"
-          >
-            {PERIOD_IDS.map((id, i) => {
-              const selected = value === id
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => choose(id)}
-                  aria-pressed={selected}
-                  aria-expanded={id === 'custom' ? calendarOpen : undefined}
-                  className={cn(
-                    // Six segments do not fit a phone at desktop sizing; the tap height is
-                    // unchanged, only the type and side padding give way.
-                    'flex items-center gap-1.5 whitespace-nowrap px-2 py-[9px] text-[12px] transition-colors duration-150 sm:px-4 sm:text-[13px]',
-                    'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[var(--space-accent)]',
-                    i > 0 && 'border-l border-[var(--space-border-hard)]',
-                    !selected && 'text-[var(--space-text-tertiary)] hover:bg-[var(--space-bg-card)] hover:text-[var(--space-text-primary)]',
-                  )}
-                  style={selected ? { background: 'var(--space-text-primary)', color: 'var(--space-bg-base)' } : undefined}
-                >
-                  {PERIOD_LABEL[id]}
-                  {id === 'custom' && (
-                    <CalendarDays className="size-[14px] shrink-0 opacity-70" aria-hidden="true" />
-                  )}
-                </button>
-              )
-            })}
-          </motion.div>
-        ) : (
-          <motion.button
-            key="collapsed"
-            type="button"
-            initial={reduce ? false : { opacity: 0, x: 10 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={reduce ? undefined : { opacity: 0, x: 10 }}
-            transition={{ duration: 0.14, ease: [0.25, 0.46, 0.45, 0.94] }}
-            onClick={() => setPinned(true)}
-            onFocus={() => setPinned(true)}
-            aria-expanded={false}
-            aria-label={`Reporting period: ${PERIOD_LABEL[value]}, ${rangeLabel}. Open to change it.`}
-            className="rounded-lg border border-[var(--space-border-hard)] p-[9px] text-[var(--space-text-tertiary)] transition-colors duration-150 hover:bg-[var(--space-bg-card)] hover:text-[var(--space-text-primary)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[var(--space-accent)]"
-          >
-            <CalendarDays className="size-[15px]" aria-hidden="true" />
-          </motion.button>
-        )}
-      </AnimatePresence>
-
-      {calendarOpen && (
-        <RangeCalendar
-          value={custom}
-          onChange={onCustomChange}
-          onClose={() => { setCalendarOpen(false); setPinned(false) }}
-        />
-      )}
-    </div>
-  )
-}
-
-// ─── Section sidebar ──────────────────────────────────────────────────────────
-// A panel of section entries — a scrolling row of pills on phones, a column on
-// the right from `lg` up. The active entry is a solid chip that slides between
-// rows, which is the only thing on the page that moves in response to a click.
-
-function SectionNav({
-  value, onChange, counts,
-}: {
-  value: SectionId
-  onChange: (id: SectionId) => void
-  counts: Partial<Record<SectionId, number>>
-}) {
-  const refs = useRef<(HTMLButtonElement | null)[]>([])
-  const navRef = useRef<HTMLElement>(null)
-  const reduce = useReducedMotion()
-
-  // On phones the panel is a scrolling row, so the chosen section can sit past
-  // the right edge with nothing to say it is there. Nudge it into view — by
-  // scrollLeft rather than scrollIntoView, which would also move the page.
-  useEffect(() => {
-    const nav = navRef.current
-    const button = refs.current[SECTIONS.findIndex(s => s.id === value)]
-    if (!nav || !button || nav.scrollWidth <= nav.clientWidth) return
-
-    const behavior = reduce ? 'auto' : 'smooth'
-    const left = button.offsetLeft
-    const right = left + button.offsetWidth
-    if (left < nav.scrollLeft) nav.scrollTo({ left: left - 12, behavior })
-    else if (right > nav.scrollLeft + nav.clientWidth) {
-      nav.scrollTo({ left: right - nav.clientWidth + 12, behavior })
-    }
-  }, [value, reduce])
-
-  const onKeyDown = useCallback((e: React.KeyboardEvent, i: number) => {
-    const last = SECTIONS.length - 1
-    let next = i
-    if (e.key === 'ArrowDown' || e.key === 'ArrowRight') next = i === last ? 0 : i + 1
-    else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') next = i === 0 ? last : i - 1
-    else if (e.key === 'Home') next = 0
-    else if (e.key === 'End') next = last
-    else return
-    e.preventDefault()
-    onChange(SECTIONS[next].id)
-    refs.current[next]?.focus()
-  }, [onChange])
-
-  return (
-    <nav
-      ref={navRef}
-      aria-label="Dashboard sections"
-      className="scrollbar-none flex shrink-0 gap-1 overflow-x-auto rounded-xl border border-[var(--space-border-hard)] p-1.5 lg:sticky lg:w-[212px] lg:flex-col lg:overflow-visible"
-      style={{ top: 'calc(var(--space-header) + 20px)', alignSelf: 'flex-start' }}
-    >
-      {SECTIONS.map(({ id, label, icon: Icon }, i) => {
-        const active = value === id
-        const count = counts[id]
-        return (
-          <button
-            key={id}
-            ref={el => { refs.current[i] = el }}
-            type="button"
-            onClick={() => onChange(id)}
-            onKeyDown={e => onKeyDown(e, i)}
-            aria-current={active ? 'true' : undefined}
-            tabIndex={active ? 0 : -1}
-            className={cn(
-              'relative shrink-0 rounded-lg px-3 py-2.5 text-left text-[14px] transition-colors duration-150 lg:w-full',
-              'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[var(--space-accent)]',
-              !active && 'text-[var(--space-text-tertiary)] hover:bg-[var(--space-bg-card)] hover:text-[var(--space-text-primary)]',
-            )}
-          >
-            {active && (
-              <motion.span
-                layoutId="section-chip"
-                aria-hidden="true"
-                className="absolute inset-0 rounded-lg"
-                style={{ background: 'var(--space-text-primary)' }}
-                transition={{ type: 'spring', stiffness: 520, damping: 42 }}
-              />
-            )}
-            <span
-              className="relative z-10 flex items-center gap-2.5 whitespace-nowrap"
-              style={active ? { color: 'var(--space-bg-base)' } : undefined}
-            >
-              <Icon className="size-4 shrink-0 opacity-70" aria-hidden="true" />
-              {label}
-              {count !== undefined && count > 0 && (
-                <span className={cn('ml-2 text-[13px] tabular-nums lg:ml-auto', !active && 'text-[var(--space-text-tertiary)]')}>
-                  {count}
-                </span>
-              )}
-            </span>
-          </button>
-        )
-      })}
-    </nav>
-  )
-}
-
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function AdminHomeView({
@@ -578,7 +220,10 @@ export function AdminHomeView({
   const [periodId, setPeriodId] = useState<PeriodId>('week')
   const [custom, setCustom] = useState<CustomRange>(EMPTY_CUSTOM_RANGE)
   const [section, setSection] = useState<SectionId>('activity')
+  const standingRef = useRef<HTMLDivElement>(null)
   const reduce = useReducedMotion()
+
+  const standingCollapsed = useScrollCollapse(standingRef)
 
   const period = useMemo(() => resolvePeriod(periodId, Date.now(), custom), [periodId, custom])
 
@@ -774,7 +419,7 @@ export function AdminHomeView({
   const clientNoun = user.role === 'admin' ? 'client' : 'assigned client'
 
 
-  const figures: FigureSpec[] = [
+  const figures: FigureSpec<SectionId>[] = [
     {
       key: 'collected',
       value: pipeline.paid,
@@ -817,70 +462,106 @@ export function AdminHomeView({
   return (
     <div className="space-true-scale mx-auto w-full px-6 pb-24 pt-10 sm:px-10" style={{ maxWidth: '1180px' }}>
 
-      {/* ── Greeting ─────────────────────────────────────────────────────── */}
-      <header className="pb-14 pt-6">
-        <DynamicGreeting fontSize="clamp(30px, 6.5vw, 104px)" />
-      </header>
+      {/* ── The title card ───────────────────────────────────────────────── */}
+      {/* Greeting and standing together: worth the room on arrival, wasted room
+          once you are working in a section. Shut on the way down, open again at
+          the top — the same band the client record collapses.
 
-      {/* ── The standing ─────────────────────────────────────────────────── */}
-      <section aria-label="Standing">
-        <div className="flex justify-end pb-3">
-          <PeriodControl
-            value={periodId}
-            onChange={setPeriodId}
-            custom={custom}
-            onCustomChange={setCustom}
-            rangeLabel={period.rangeLabel}
-          />
+          The measured child sits inside the animating wrapper so it keeps its
+          natural height for `useScrollCollapse` to read while the wrapper's own
+          height is mid-flight. `inert` keeps the shut band's figures and period
+          control out of the tab order and the accessibility tree. */}
+      <motion.div
+        initial={false}
+        animate={{ height: standingCollapsed ? 0 : 'auto', opacity: standingCollapsed ? 0 : 1 }}
+        transition={reduce ? { duration: 0 } : { duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+        inert={standingCollapsed}
+        className="overflow-hidden"
+      >
+        <div ref={standingRef}>
+
+          {/* ── Greeting ─────────────────────────────────────────────────── */}
+          <header className="pb-14 pt-6">
+            <DynamicGreeting fontSize="clamp(30px, 6.5vw, 104px)" />
+          </header>
+
+          {/* ── The standing ─────────────────────────────────────────────────── */}
+          <section aria-label="Standing">
+            <div className="flex justify-end pb-3">
+              <PeriodControl
+                value={periodId}
+                onChange={setPeriodId}
+                custom={custom}
+                onCustomChange={setCustom}
+                rangeLabel={period.rangeLabel}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 border-t border-[var(--space-border-hard)] md:grid-cols-4">
+              {figures.map(({ key, ...figure }, i) => (
+                <Figure
+                  key={key}
+                  {...figure}
+                  active={section === key}
+                  onSelect={() => setSection(key)}
+                  className={figureEdges(i)}
+                />
+              ))}
+            </div>
+
+            {/* The strip's own rule doubles as the pipeline: paid, owed, written off. */}
+            <div
+              className="flex h-[3px] w-full overflow-hidden bg-[var(--space-divider)]"
+              role="img"
+              aria-label={`Invoiced ${period.phrase}: ${Math.round(shares.paid)}% paid, ${Math.round(shares.pending)}% outstanding, ${Math.round(shares.cancelled)}% cancelled`}
+            >
+              <motion.span
+                key={`${periodId}-${custom.from}-${custom.to}`}
+                className="flex h-full w-full origin-left"
+                initial={reduce ? false : { scaleX: 0 }}
+                animate={{ scaleX: 1 }}
+                transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+              >
+                <span style={{ width: `${shares.paid}%`, background: toneColor('ok') }} />
+                <span style={{ width: `${shares.pending}%`, background: toneColor('warn') }} />
+                <span style={{ width: `${shares.cancelled}%`, background: toneColor('danger'), opacity: 0.5 }} />
+              </motion.span>
+            </div>
+
+            {/* The days the figures above actually cover, sitting under the bar
+                that summarises them. */}
+            <p
+              className="pt-3 text-right text-[13px] tabular-nums text-[var(--space-text-tertiary)]"
+              aria-live="polite"
+            >
+              {period.rangeLabel}
+            </p>
+          </section>
+
         </div>
-
-        <div className="grid grid-cols-2 border-t border-[var(--space-border-hard)] md:grid-cols-4">
-          {figures.map(({ key, ...figure }, i) => (
-            <Figure
-              key={key}
-              {...figure}
-              active={section === key}
-              onSelect={() => setSection(key)}
-              className={figureEdges(i)}
-            />
-          ))}
-        </div>
-
-        {/* The strip's own rule doubles as the pipeline: paid, owed, written off. */}
-        <div
-          className="flex h-[3px] w-full overflow-hidden bg-[var(--space-divider)]"
-          role="img"
-          aria-label={`Invoiced ${period.phrase}: ${Math.round(shares.paid)}% paid, ${Math.round(shares.pending)}% outstanding, ${Math.round(shares.cancelled)}% cancelled`}
-        >
-          <motion.span
-            key={`${periodId}-${custom.from}-${custom.to}`}
-            className="flex h-full w-full origin-left"
-            initial={reduce ? false : { scaleX: 0 }}
-            animate={{ scaleX: 1 }}
-            transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-          >
-            <span style={{ width: `${shares.paid}%`, background: toneColor('ok') }} />
-            <span style={{ width: `${shares.pending}%`, background: toneColor('warn') }} />
-            <span style={{ width: `${shares.cancelled}%`, background: toneColor('danger'), opacity: 0.5 }} />
-          </motion.span>
-        </div>
-
-        {/* The days the figures above actually cover, sitting under the bar
-            that summarises them. */}
-        <p
-          className="pt-3 text-right text-[13px] tabular-nums text-[var(--space-text-tertiary)]"
-          aria-live="polite"
-        >
-          {period.rangeLabel}
-        </p>
-      </section>
+      </motion.div>
 
       {/* ── The workspace ────────────────────────────────────────────────── */}
-      <div className="mt-12 flex flex-col gap-8 lg:flex-row lg:gap-12">
+      {/* The top margin closes with the band, so the workspace rises to meet
+          the header instead of leaving a gap where the figures were. 54px is
+          `mt-12` spelled out: --spacing is 4.5px inside .space-true-scale, so
+          the class this replaced was never the 48px its name suggests. */}
+      <motion.div
+        initial={false}
+        animate={{ marginTop: standingCollapsed ? 0 : 54 }}
+        transition={reduce ? { duration: 0 } : { duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+        className="flex flex-col gap-8 lg:flex-row lg:gap-12"
+      >
         {/* Nav is first in the DOM so phones meet it before the content, and
             ordered last on desktop so it sits down the right-hand side. */}
         <div className="lg:order-2">
-          <SectionNav value={section} onChange={setSection} counts={counts} />
+          <SectionNav
+            sections={SECTIONS}
+            value={section}
+            onChange={setSection}
+            counts={counts}
+            ariaLabel="Dashboard sections"
+          />
         </div>
 
         <div className="min-w-0 flex-1 lg:order-1">
@@ -1147,7 +828,21 @@ export function AdminHomeView({
             {section === 'analytics' && (
               <motion.section key="analytics" variants={tabVariants} initial="initial" animate="animate" exit="exit" className="space-y-12">
                 <div>
-                  <SectionTitle title="Revenue collected" aside="last four weeks" />
+                  <SectionTitle
+                    title="Revenue collected"
+                    aside={
+                      /* This section is the glance; the analytics route is the
+                         study — trends, aging, concentration, and what each
+                         standing figure above actually counts. */
+                      <Link
+                        href={`/u/${username}/analytics`}
+                        className="inline-flex items-center gap-1 hover:text-[var(--space-text-primary)]"
+                      >
+                        Full analytics
+                        <ArrowUpRight className="size-[13px]" aria-hidden="true" />
+                      </Link>
+                    }
+                  />
                   <div className="flex items-end gap-4 pt-8" role="img" aria-label={weeklyRevenue.map(w => `${w.label}: ${usd.format(w.revenue)}`).join(', ')}>
                     {weeklyRevenue.map(w => {
                       const max = Math.max(...weeklyRevenue.map(x => x.revenue), 1)
@@ -1237,7 +932,7 @@ export function AdminHomeView({
 
           </AnimatePresence>
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }

@@ -48,9 +48,20 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 export function SowTermsEditor({
   form,
   onChange,
+  showAgreementFields = false,
 }: {
   form: SowFormData
   onChange: (updater: (f: SowFormData) => SowFormData) => void
+  /**
+   * Render the engagement basics — dates, overview, billing, milestones.
+   *
+   * Off for the Files-tab builder, which carries its own fields for these above
+   * the editor. On for the package Documents modal, which otherwise has no way
+   * to reach them: they are derived from the package's freeform notes and, with
+   * no UI, could only be changed by editing those notes in exactly the right
+   * shape.
+   */
+  showAgreementFields?: boolean
 }) {
   const [openClause, setOpenClause] = useState<string | null>(null)
   const [editing, setEditing] = useState<string | null>(null)
@@ -81,8 +92,145 @@ export function SowTermsEditor({
       }
     })
 
+  const milestones = form.milestones?.length ? form.milestones : [{ name: '', date: '', notes: '' }]
+  const setMilestone = (i: number, patch: Partial<{ name: string; date: string; notes: string }>) =>
+    onChange(f => {
+      const list = (f.milestones?.length ? f.milestones : [{ name: '', date: '', notes: '' }]).slice()
+      list[i] = { ...list[i], ...patch }
+      return { ...f, milestones: list }
+    })
+
   return (
     <div className="space-y-5">
+      {/* ── The engagement ────────────────────────────────────────────────── */}
+      {showAgreementFields && (
+        <div className="space-y-3">
+          <SectionLabel>Agreement</SectionLabel>
+          <div className="grid grid-cols-3 gap-3">
+            <Field label="Effective Date" hint="Dates the recital and the signature page.">
+              <input
+                type="date"
+                className={inputCls}
+                value={form.effectiveDate ?? ''}
+                onChange={e => setField('effectiveDate', e.target.value)}
+              />
+            </Field>
+            <Field label="Contract Term" hint="Printed in the fees section.">
+              <input
+                className={inputCls}
+                value={form.contractTerm ?? ''}
+                onChange={e => setField('contractTerm', e.target.value)}
+                placeholder="e.g. 6 months"
+              />
+            </Field>
+            <Field label="Billing Cycle" hint="How often a retainer invoices.">
+              <input
+                className={inputCls}
+                value={form.billingCycle ?? ''}
+                onChange={e => setField('billingCycle', e.target.value)}
+                placeholder="e.g. Monthly"
+              />
+            </Field>
+          </div>
+
+          <Field label="Project Overview" hint="The opening paragraph of the agreement.">
+            <textarea
+              className={`${inputCls} min-h-[4.5rem] resize-y`}
+              value={form.projectOverview ?? ''}
+              onChange={e => setField('projectOverview', e.target.value)}
+              placeholder="What the engagement sets out to do."
+            />
+          </Field>
+
+          <div className="grid grid-cols-4 gap-3">
+            <Field label="Net (days)" hint="Invoice due window.">
+              <input
+                className={inputCls}
+                value={form.netDays ?? ''}
+                onChange={e => setField('netDays', e.target.value)}
+                placeholder="30"
+              />
+            </Field>
+            <Field label="Late Fee (%/mo)" hint="On overdue balances.">
+              <input
+                className={inputCls}
+                value={form.lateFee ?? ''}
+                onChange={e => setField('lateFee', e.target.value)}
+                placeholder="1.5"
+              />
+            </Field>
+            <Field label="Revision Rounds" hint="Included per deliverable.">
+              <input
+                className={inputCls}
+                value={form.revisionRounds ?? ''}
+                onChange={e => setField('revisionRounds', e.target.value)}
+                placeholder="2"
+              />
+            </Field>
+            <Field label="Client Contact" hint="Printed in the parties table.">
+              <input
+                className={inputCls}
+                value={form.clientContact ?? ''}
+                onChange={e => setField('clientContact', e.target.value)}
+                placeholder="name@client.com"
+              />
+            </Field>
+          </div>
+
+          <div className="space-y-2">
+            <Field
+              label="Milestones"
+              hint="Name, target date, and a note. Leave every row blank to print the “to be agreed in writing” fallback."
+            >
+              <div className="space-y-2">
+                {milestones.map((m, i) => (
+                  <div key={i} className="grid grid-cols-[1fr_9rem_1fr_auto] gap-2">
+                    <input
+                      className={inputCls}
+                      value={m.name}
+                      onChange={e => setMilestone(i, { name: e.target.value })}
+                      placeholder="e.g. Design approved"
+                    />
+                    <input
+                      type="date"
+                      className={inputCls}
+                      value={m.date}
+                      onChange={e => setMilestone(i, { date: e.target.value })}
+                    />
+                    <input
+                      className={inputCls}
+                      value={m.notes}
+                      onChange={e => setMilestone(i, { notes: e.target.value })}
+                      placeholder="Note"
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onChange(f => ({ ...f, milestones: (f.milestones ?? []).filter((_, j) => j !== i) }))
+                      }
+                      className="px-2 text-[var(--space-text-muted)] transition-colors hover:text-red-400"
+                      aria-label="Remove milestone"
+                    >
+                      <X className="size-3.5" />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() =>
+                    onChange(f => ({ ...f, milestones: [...(f.milestones ?? []), { name: '', date: '', notes: '' }] }))
+                  }
+                  className="inline-flex items-center gap-1 text-[0.625rem] font-semibold uppercase tracking-widest text-[var(--space-accent)] transition-opacity hover:opacity-80"
+                >
+                  <Plus className="size-3" />
+                  Add milestone
+                </button>
+              </div>
+            </Field>
+          </div>
+        </div>
+      )}
+
       {/* ── Stated numbers ────────────────────────────────────────────────── */}
       <div className="space-y-3">
         <SectionLabel>Contract Terms</SectionLabel>

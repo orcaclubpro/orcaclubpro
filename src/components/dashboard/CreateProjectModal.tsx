@@ -42,10 +42,17 @@ export function CreateProjectModal({
   clientId,
   clientName,
   clients,
+  variant = 'solid',
 }: {
   clientId?: string
   clientName?: string
   clients?: ClientOption[]
+  /**
+   * `solid` is the standalone call to action. `quiet` is the hairline control
+   * the ledger pages use, where a filled accent button would outshout the
+   * section heading it sits beside.
+   */
+  variant?: 'solid' | 'quiet'
 } = {}) {
   const router = useRouter()
   const [open, setOpen]                   = useState(false)
@@ -122,13 +129,27 @@ export function CreateProjectModal({
 
   return (
     <>
-      <Button
-        onClick={() => setOpen(true)}
-        className="bg-[var(--space-accent)] hover:bg-[var(--space-accent)]/90 text-black font-semibold gap-2"
-      >
-        <Plus className="size-4" />
-        Create Project
-      </Button>
+      {variant === 'quiet' ? (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          // Inline size: `.space-true-scale :is(button)` is unlayered CSS and so
+          // outranks any Tailwind text-* utility on a button inside the subtree.
+          style={{ fontSize: 13 }}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--space-border-hard)] px-3 py-1.5 text-[var(--space-text-tertiary)] transition-colors duration-150 hover:bg-[var(--space-bg-card)] hover:text-[var(--space-text-primary)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--space-accent)]"
+        >
+          <Plus className="size-[13px]" aria-hidden="true" />
+          New project
+        </button>
+      ) : (
+        <Button
+          onClick={() => setOpen(true)}
+          className="bg-[var(--space-accent)] hover:bg-[var(--space-accent)]/90 text-black font-semibold gap-2"
+        >
+          <Plus className="size-4" />
+          Create Project
+        </Button>
+      )}
 
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent className="bg-[var(--space-bg-base)] border border-[var(--space-border-hard)] text-[var(--space-text-primary)] p-0 overflow-hidden sm:max-w-[35rem] gap-0">

@@ -153,6 +153,10 @@ export function CollapsibleSidebar({ children, railLabel = 'Details', rail }: Co
               reduce ? { duration: 0 } : { type: 'spring', stiffness: 560, damping: 48, mass: 0.9 }
             }
             inert={!open}
+            // The drawer is a panel of its own controls, so Tab has to keep
+            // walking them here even on pages that otherwise bind Tab to
+            // section cycling. See `useSectionCycle` in `dashboard/ledger`.
+            data-tab-cycle="off"
             className="absolute inset-y-0 left-0 flex flex-col border-r border-[var(--space-border-hard)] bg-[var(--space-bg-base)] shadow-[10px_0_34px_-16px_rgba(0,0,0,0.32)]"
             style={{ width: PANEL_W }}
           >

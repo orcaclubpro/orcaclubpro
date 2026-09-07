@@ -166,6 +166,47 @@ export function resolvePeriod(
   }
 }
 
+/**
+ * The same span of time, immediately before this one — what a figure is
+ * compared against to say whether it went up or down.
+ *
+ * The presets all end at `now` rather than at the end of the calendar unit, so
+ * "Month" means month-to-date. Comparing a 9-day month-to-date against a full
+ * 30-day previous month would manufacture a collapse every time. So the
+ * comparison window is the *elapsed* span shifted back, not the previous
+ * calendar unit: nine days against the nine days before them.
+ *
+ * Returns null when there is nothing to compare against — "all time" has no
+ * before, and a custom range with no lower bound has no measurable span.
+ */
+export function previousPeriod(period: Period): Period | null {
+  if (period.start === null) return null
+  const span = period.end - period.start
+  if (span <= 0) return null
+
+  const end = period.start - 1
+  const start = end - span
+  const days = Math.max(1, Math.ceil(span / 86_400_000))
+  const name = days === 1 ? 'the day before' : `the previous ${days} days`
+
+  return {
+    id: period.id,
+    start,
+    end,
+    name,
+    phrase: `in ${name}`,
+    rangeLabel: spanLabel(start, end),
+    // Both walls matter — this window is explicitly bracketed by the one after it.
+    bounded: true,
+  }
+}
+
+/** Whole days the period covers, rounded up. 0 when the period is unbounded. */
+export function periodDays(period: Period): number {
+  if (period.start === null) return 0
+  return Math.max(1, Math.ceil((period.end - period.start) / 86_400_000))
+}
+
 /** True when an ISO date falls inside the period. Undated records are excluded. */
 export function inPeriod(iso: string | null | undefined, period: Period): boolean {
   if (!iso) return false

@@ -883,7 +883,7 @@ TOTAL: ${fmtUsd(data.totalAmount)} USD
 Questions? Reply to this email or contact chance@orcaclub.pro
 
 ---
-© 2025 ORCACLUB. Technical Operations Development Studio.
+© 2025 ORCACLUB. Marketing, Web Development, SEO and AEO.
   `.trim()
 }
 
@@ -1135,7 +1135,7 @@ The full proposal is attached as a PDF.
 Questions? Reply to this email or contact chance@orcaclub.pro
 
 ---
-© 2025 ORCACLUB. Technical Operations Development Studio.
+© 2025 ORCACLUB. Marketing, Web Development, SEO and AEO.
   `.trim()
 }
 

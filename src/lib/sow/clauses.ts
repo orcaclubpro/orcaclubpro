@@ -65,11 +65,16 @@ export function providerShortName(d: SowFormData): string {
  * the point — "standard hourly rate" appears nowhere else in the agreement and
  * is unenforceable as written.
  */
+/**
+ * The standing rate. A SOW that names no rate prints this one rather than the
+ * old "as quoted in writing" placeholder — an unstated rate is an argument
+ * waiting to happen, and this is the number the studio actually bills at.
+ */
+export const DEFAULT_HOURLY_RATE = '65'
+
 export function hourlyRatePhrase(d: SowFormData): string {
-  const rate = t(d.hourlyRate) || t(d.revisionRate)
-  return rate
-    ? `$${rate} per hour`
-    : "Service Provider's standard hourly rate, as quoted in writing before the work begins"
+  const rate = t(d.hourlyRate) || t(d.revisionRate) || DEFAULT_HOURLY_RATE
+  return `$${rate} per hour`
 }
 
 /**
@@ -89,14 +94,21 @@ export function normalizeSowItems(value: unknown): SowScopeItem[] {
     .filter(item => item.title.length > 0)
 }
 
-/** The out-of-scope exclusions. Negative-only definitions lose arguments. */
+/**
+ * The out-of-scope exclusions. Negative-only definitions lose arguments.
+ *
+ * SEO and content are NOT on this list: they are what the studio sells. An
+ * exclusion that contradicts the Scope of Work above it makes the whole
+ * document arguable, so anything in the standing service line stays off here
+ * and is priced in or out per SOW instead.
+ */
 export const STANDARD_EXCLUSIONS: SowScopeItem[] = [
   { title: 'Hosting, domains, and infrastructure fees', description: 'Server, CDN, domain registration, and any recurring platform cost, contracted and paid by Client.' },
   { title: 'Third-party subscriptions, licenses, and API usage', description: 'Including per-seat software, paid fonts, stock media, and metered API calls.' },
   { title: 'Ongoing maintenance, monitoring, and patching', description: 'No uptime management, alerting, dependency updates, or incident response after handoff.' },
   { title: 'Security audits, penetration testing, and compliance certification', description: '' },
   { title: 'Accessibility (ADA / WCAG) auditing and remediation', description: 'No conformance level is promised, tested, or certified.' },
-  { title: 'Search engine optimization, advertising, and content strategy', description: '' },
+  { title: 'Paid advertising spend and media buying', description: 'Ad budgets are contracted and paid by Client directly to the platform.' },
   { title: 'Copywriting, photography, video, and content creation', description: 'Client supplies all copy and media unless a line item says otherwise.' },
   { title: 'Data migration from existing systems', description: 'Beyond any migration explicitly listed as a deliverable.' },
   { title: 'Staff training and end-user support', description: 'Documentation is limited to handoff notes.' },
@@ -194,7 +206,7 @@ export const SOW_CLAUSES: SowClause[] = [
     required: true,
     note: 'What is actually handed over. Separate from the Services, so acceptance has something concrete to attach to.',
     blocks: () => [
-      { t: 'body', text: 'Service Provider shall deliver the following items (the "Deliverables"). Each is subject to the delivery and acceptance process set out in this Agreement:' },
+      { t: 'body', text: 'Service Provider shall deliver the following items (the "Deliverables"). Each is subject to the delivery and acceptance process set out in this Agreement. The table below is a working record: Client ticks and dates each Deliverable as it is approved.' },
       { t: 'space', h: 4 },
       { t: 'render', key: 'deliverablesTable' },
     ],
@@ -285,7 +297,8 @@ export const SOW_CLAUSES: SowClause[] = [
     blocks: d => {
       const days = num(d.acceptanceDays, '7')
       return [
-        { t: 'body', text: `Service Provider will notify Client in writing when a Deliverable is delivered. Client shall have ${days} days from delivery to review it and to provide a single, consolidated written notice describing any material failure to conform to the description of that Deliverable in this Agreement.` },
+        { t: 'body', text: `Service Provider will notify Client in writing when a Deliverable is delivered. Client shall have ${days} days from delivery to review it and either (a) approve it, or (b) provide a single, consolidated written notice describing any material failure to conform to the description of that Deliverable in this Agreement.` },
+        { t: 'body', text: 'Client approves a Deliverable by ticking its checkbox in the Deliverables table above and entering the date of approval. A ticked and dated row is the Parties\' record that the Deliverable was approved and completed on that date, and Service Provider will keep a countersigned copy of the table as the running record of progress. Approval by email or other writing has the same effect, and Service Provider will mark the table to match.' },
         { t: 'body', text: `If Client does not deliver such a notice within ${days} days, or uses the Deliverable in production, the Deliverable is deemed accepted ("Deemed Acceptance"). Upon Acceptance or Deemed Acceptance: the warranty period for that Deliverable begins, any payment tied to that Deliverable becomes due, and further changes are handled as revisions or a Change Order.` },
         { t: 'body', text: 'Where Client gives timely notice of a material nonconformity, Service Provider will correct it and re-deliver, and the review period begins again as to the corrected Deliverable. Cosmetic preferences, new requirements, and changes of direction are not nonconformities; they are revisions under this Agreement.' },
       ]

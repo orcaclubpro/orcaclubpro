@@ -11,6 +11,8 @@ import type { ClientOption } from '@/components/dashboard/CreateProjectModal'
 import type { ActivityEvent } from '@/components/dashboard/ActivityFeed'
 import { getPreviewClientId } from '@/app/(spaces)/preview'
 import { sortByOrderDate } from '@/lib/dashboard/order-date'
+import type { PortfolioRow } from '@/lib/dashboard/analytics'
+import { getRetainerPortfolio } from '@/actions/retainers'
 
 // The authenticated user, exactly as the layout resolves it (non-null).
 type CurrentUser = NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>
@@ -331,6 +333,132 @@ export async function loadStaffFilesTab(payload: Payload, user: CurrentUser): Pr
   }
 }
 
+// ── Staff: analytics tab ──────────────────────────────────────────────────────
+// The four standing figures, taken apart. Same shape of data as the home tab,
+// but reaching further back, because a figure the home page shows for "this
+// week" is shown here for a year at a time.
+//
+// TWO DELIBERATE DIFFERENCES FROM `loadStaffHome`, both correctness fixes:
+//
+//   1. Packages are scoped to the visible accounts. `findAllPackages` takes no
+//      user and has no `where`, so on the home tab a non-admin's "Outstanding"
+//      mixes their own unpaid invoices with payment schedules belonging to
+//      every client in the system. Half the figure was scoped and half was not.
+//      Here both halves are.
+//   2. Admin orders are not run through `filterOrdersToAccounts`. That helper
+//      exists to scope non-admins, but the home tab applies it to admins too —
+//      and its input is a 100-row account query, so an admin with more than 100
+//      client accounts silently loses every order belonging to the overflow.
+//      Admins already fetch every order; there is nothing to filter them to.
+//
+// `truncated` reports whether a query hit its ceiling, so the view can say the
+// figures are partial instead of presenting a capped sum as a total.
+
+const ANALYTICS_ORDER_LIMIT = 2000
+const ANALYTICS_PACKAGE_LIMIT = 500
+
+export interface StaffAnalyticsData {
+  clientAccounts: any[]
+  allOrders: any[]
+  allProjects: any[]
+  allPackages: any[]
+  serializedProjects: SerializedProject[]
+  activeRetainers: any[]
+  retainerPortfolio: PortfolioRow[]
+  /** A query hit its row ceiling — the totals below it are floors, not totals. */
+  truncated: { orders: boolean; packages: boolean; accounts: boolean }
+}
+
+const findAnalyticsOrders = (payload: Payload, user: CurrentUser, accountIds: any[]) =>
+  user.role !== 'admin' && accountIds.length === 0
+    ? Promise.resolve({ docs: [] as any[] })
+    : payload.find({
+        collection: 'orders',
+        where: user.role === 'admin' ? {} : { clientAccount: { in: accountIds } },
+        depth: 1,
+        sort: '-createdAt',
+        limit: ANALYTICS_ORDER_LIMIT,
+        select: {
+          orderNumber: true,
+          status: true,
+          amount: true,
+          createdAt: true,
+          issuedAt: true,
+          dueDate: true,
+          clientAccount: true,
+          stripeInvoiceUrl: true,
+        },
+        populate: {
+          'client-accounts': { name: true, firstName: true, company: true },
+        },
+      }).then((r) => ({ ...r, docs: sortByOrderDate(r.docs as any[]) }))
+
+// Proposals only — a template is not a debt — and scoped to the accounts this
+// staff member can see. Admins pass no account filter and get everything.
+const findAnalyticsPackages = (payload: Payload, user: CurrentUser, accountIds: any[]) => {
+  const proposalOnly = { type: { equals: 'proposal' } }
+  return user.role !== 'admin' && accountIds.length === 0
+    ? Promise.resolve({ docs: [] as any[] })
+    : payload
+        .find({
+          collection: 'packages',
+          where:
+            user.role === 'admin'
+              ? proposalOnly
+              : { and: [proposalOnly, { clientAccount: { in: accountIds } }] },
+          depth: 1,
+          sort: '-createdAt',
+          limit: ANALYTICS_PACKAGE_LIMIT,
+        })
+        .catch(() => ({ docs: [] as any[] }))
+}
+
+export async function loadStaffAnalytics(
+  payload: Payload,
+  user: CurrentUser,
+): Promise<StaffAnalyticsData> {
+  const [{ docs: clientAccounts }, { docs: allProjects }, { docs: allTasks }] = await Promise.all([
+    findStaffClientAccounts(payload, user),
+    findStaffProjects(payload, user),
+    findStaffTasks(payload, user),
+  ])
+
+  const accountIds = clientAccounts.map((ca: any) => ca.id)
+  const projectIds = allProjects.map((p: any) => p.id)
+
+  const [ordersResult, packagesResult, sprintsResult, { docs: activeRetainers }, portfolio] =
+    await Promise.all([
+      findAnalyticsOrders(payload, user, accountIds),
+      findAnalyticsPackages(payload, user, accountIds),
+      findProjectSprints(payload, projectIds, 500),
+      findActiveRetainers(payload, user, accountIds),
+      // Retainer cycles are anchored to `activatedAt`, not the calendar, and the
+      // portfolio settles each one against the clock before reporting its burn.
+      // Summing this month's time entries here would get the cycle wrong.
+      getRetainerPortfolio().catch(() => ({ success: false as const })),
+    ])
+
+  const orders = ordersResult.docs as any[]
+  const packages = packagesResult.docs as any[]
+
+  return {
+    clientAccounts,
+    // Admins already queried every order; only a non-admin needs the extra
+    // in-memory pass, and for them the DB `in` clause has done it already.
+    allOrders: user.role === 'admin' ? orders : filterOrdersToAccounts(orders, accountIds),
+    allProjects,
+    allPackages: packages,
+    serializedProjects: buildSerializedProjects(allProjects, (sprintsResult as any).docs ?? [], allTasks),
+    activeRetainers,
+    retainerPortfolio: portfolio.success ? (portfolio.rows as PortfolioRow[]) : [],
+    truncated: {
+      orders: orders.length >= ANALYTICS_ORDER_LIMIT,
+      packages: packages.length >= ANALYTICS_PACKAGE_LIMIT,
+      accounts: clientAccounts.length >= 100,
+    },
+  }
+}
+
 // ── Staff: recent activity ────────────────────────────────────────────────────
 // The `activity` collection is an append-only feed written by hooks (see
 // src/lib/payload/hooks/recordActivity.ts): orders created, projects created
@@ -346,11 +474,17 @@ export async function loadStaffFilesTab(payload: Payload, user: CurrentUser): Pr
 // select trims the row to exactly what <ActivityFeed> renders; depth 0 keeps
 // the relationships as ids, since every label the feed shows was denormalized
 // onto the row at write time.
+//
+// The limit is the feed's *reach*, not its length: <ActivityFeed> renders ~40
+// rows, but its lane filter narrows in the browser, so a quiet lane (emails,
+// say) can only look back as far as this fetch. Pulling a few pages' worth up
+// front keeps that filter honest without a round trip per chip — the rows are
+// small and already trimmed by `select`.
 
 export async function loadStaffActivity(
   payload: Payload,
   user: CurrentUser,
-  limit = 40,
+  limit = 150,
 ): Promise<{ activity: ActivityEvent[] }> {
   let where: Record<string, any> = {}
 

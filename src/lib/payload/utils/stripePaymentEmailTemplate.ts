@@ -308,7 +308,7 @@ Your payment is processed securely by Stripe. We never see or store your payment
 Questions? Reply to this email or visit https://orcaclub.pro
 
 ---
-© 2025 ORCACLUB. Technical Operations Development Studio.
+© 2025 ORCACLUB. Marketing, Web Development, SEO and AEO.
   `.trim()
 }
 

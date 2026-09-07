@@ -1,4 +1,5 @@
 import type { SowFormData, SowScopeItem } from '@/lib/document-generators'
+import { DEFAULT_HOURLY_RATE, normalizeSowItems } from '@/lib/sow/clauses'
 import { buildPackagePdf, buildOrcaclubSowPdf } from '@/lib/pdf-generators'
 
 /** The three renderings of a package: the pitch, a straight invoice copy, and the contract. */
@@ -195,6 +196,7 @@ export function packageToSowData(pkg: any): SowFormData {
     revisionRate: extras.revisionRate,
     // Same defaults the SOW builder seeds a blank form with, so a package-driven
     // SOW and a hand-built one come out of the clause registry identically.
+    hourlyRate: DEFAULT_HOURLY_RATE,
     warrantyDays: '30',
     acceptanceDays: '7',
     stallDays: '30',
@@ -205,15 +207,14 @@ export function packageToSowData(pkg: any): SowFormData {
 }
 
 /**
- * Fields the package owns. A saved SOW document keeps its staff-written wording,
- * but scope and pricing always follow the package — otherwise editing a line
- * item on the proposal would leave the contract quoting last week's numbers.
+ * Fields the package owns outright. A saved SOW document keeps its staff-written
+ * wording, but the client, the project, and every number always follow the
+ * package — otherwise editing a line item on the proposal would leave the
+ * contract quoting last week's prices.
  */
 const PACKAGE_OWNED_SOW_FIELDS = [
   'clientName',
   'projectName',
-  'scopeItems',
-  'deliverables',
   'pricingType',
   'projectItems',
   'retainerItems',
@@ -221,9 +222,42 @@ const PACKAGE_OWNED_SOW_FIELDS = [
 ] as const
 
 /**
+ * Item lists where the package owns the shape and staff own the prose.
+ *
+ * These used to be owned outright, which meant the SOW editor rendered Scope and
+ * Deliverables editors whose edits were silently discarded on the next load. The
+ * package still decides WHICH items exist and in what order — that is what keeps
+ * the contract honest about scope — but a description staff wrote against an
+ * item survives, matched back on the item's title.
+ */
+const PACKAGE_SHAPED_SOW_ITEMS = ['scopeItems', 'deliverables'] as const
+
+const titleKey = (t: string) => t.trim().toLowerCase()
+
+/** Package items, carrying forward any description staff wrote for the same title. */
+function mergeItemProse(
+  derived: SowScopeItem[] | undefined,
+  saved: SowScopeItem[] | string[] | undefined,
+): SowScopeItem[] {
+  const items = normalizeSowItems(derived)
+  const written = new Map(
+    normalizeSowItems(saved)
+      .filter(i => i.description?.trim())
+      .map(i => [titleKey(i.title), i.description!.trim()]),
+  )
+  if (written.size === 0) return items
+  return items.map(item => {
+    const prose = written.get(titleKey(item.title))
+    // A description typed on the document wins: the package's line description
+    // is a sales line, the SOW's is what acceptance attaches to.
+    return prose ? { ...item, description: prose } : item
+  })
+}
+
+/**
  * Combine a package's derived SOW with the wording saved on its SOW document.
- * The document wins for everything staff wrote; the package wins for scope and
- * money.
+ * The document wins for everything staff wrote; the package wins for the client,
+ * the project, and the money.
  */
 export function mergePackageSowData(
   derived: SowFormData,
@@ -233,6 +267,12 @@ export function mergePackageSowData(
   const merged = { ...derived, ...saved } as SowFormData
   for (const field of PACKAGE_OWNED_SOW_FIELDS) {
     ;(merged as any)[field] = (derived as any)[field]
+  }
+  for (const field of PACKAGE_SHAPED_SOW_ITEMS) {
+    ;(merged as any)[field] = mergeItemProse(
+      (derived as any)[field],
+      (saved as any)[field],
+    )
   }
   return merged
 }

@@ -51,7 +51,7 @@ export default async function ClientDetailPage({
   const clientAccount: ClientAccount | null = await getClientAccountDetail(clientId)
   if (!clientAccount) notFound()
 
-  const [{ docs: orderDocs }, { docs: projects }, { docs: clientUsers }, packagesResult, credentialsResult] =
+  const [{ docs: orderDocs }, { docs: projects }, { docs: clientUsers }, packagesResult, credentialsResult, ndaResult] =
     await Promise.all([
       payload.find({
         collection: 'orders',
@@ -92,6 +92,21 @@ export default async function ClientDetailPage({
         depth: 1,
         sort: 'title',
         limit: 500,
+      }).catch(() => ({ docs: [] })),
+      // The standing NDA. Newest first, and only the fields the status line
+      // renders — the record itself lives on the Files tab.
+      payload.find({
+        collection: 'files',
+        where: {
+          and: [
+            { clientAccount: { equals: clientId } } as any,
+            { documentTemplate: { equals: 'nda' } } as any,
+          ],
+        },
+        depth: 0,
+        sort: '-createdAt',
+        limit: 1,
+        select: { documentStatus: true, sentAt: true, executedDate: true } as any,
       }).catch(() => ({ docs: [] })),
     ])
   // Ordered on the effective date (issuedAt ?? createdAt), not the fetch order —
@@ -173,6 +188,15 @@ export default async function ClientDetailPage({
   const paidOrders = orders.filter((o) => o.status === 'paid')
   const totalRevenue = paidOrders.reduce((s, o) => s + (o.amount || 0), 0)
 
+  const latestNda = (ndaResult.docs as any[])[0]
+  const ndaDoc = latestNda
+    ? {
+        status: (latestNda.documentStatus ?? 'draft') as 'draft' | 'sent' | 'executed',
+        sentAt: latestNda.sentAt ?? null,
+        executedDate: latestNda.executedDate ?? null,
+      }
+    : null
+
   const teamMembers = Array.isArray(clientAccount.assignedTo)
     ? clientAccount.assignedTo
         .filter((u): u is UserType => typeof u !== 'string')
@@ -198,6 +222,7 @@ export default async function ClientDetailPage({
       orders={orders as any[]}
       projects={projects as Project[]}
       clientUsers={clientUsersList}
+      nda={ndaDoc}
       packages={packages}
       workCounts={workCounts}
       credentials={credentials}

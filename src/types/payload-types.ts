@@ -1074,6 +1074,22 @@ export interface File {
     | boolean
     | null;
   /**
+   * Where this agreement stands
+   */
+  documentStatus?: ('draft' | 'sent' | 'executed') | null;
+  /**
+   * When it was last emailed out
+   */
+  sentAt?: string | null;
+  /**
+   * Date both parties signed
+   */
+  executedDate?: string | null;
+  /**
+   * Client this document belongs to (set when generated from a client record)
+   */
+  clientAccount?: (string | null) | ClientAccount;
+  /**
    * Project this file belongs to (optional)
    */
   project?: (string | null) | Project;
@@ -2982,6 +2998,10 @@ export interface FilesSelect<T extends boolean = true> {
   documentTemplate?: T;
   documentBrand?: T;
   documentData?: T;
+  documentStatus?: T;
+  sentAt?: T;
+  executedDate?: T;
+  clientAccount?: T;
   project?: T;
   sprint?: T;
   version?: T;

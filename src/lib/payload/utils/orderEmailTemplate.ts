@@ -156,7 +156,7 @@ export function generateOrderInvoiceEmail(order: OrderEmailData): string {
                 <a href="https://orcaclub.pro" style="color: #67e8f9; text-decoration: none;">orcaclub.pro</a>
               </p>
               <p style="margin: 0; color: #6b7280; font-size: 12px; font-weight: 300;">
-                © 2025 ORCACLUB. Technical Operations Development Studio.
+                © 2025 ORCACLUB. Marketing, Web Development, SEO and AEO.
               </p>
             </td>
           </tr>

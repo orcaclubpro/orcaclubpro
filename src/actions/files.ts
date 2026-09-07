@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/actions/auth'
 import { getPayload } from 'payload'
 import config from '@payload-config'
 import { baseEmailTemplate } from '@/lib/email/templates/base'
+import { BRAND_SIGNOFF } from '@/lib/brand'
 import {
   buildPersonalNdaPdf,
   buildOrcaclubNdaPdf,
@@ -19,6 +20,7 @@ export async function createDocument({
   documentData,
   projectId,
   sprintId,
+  clientAccountId,
 }: {
   name: string
   description?: string
@@ -27,6 +29,8 @@ export async function createDocument({
   documentData: object
   projectId?: string
   sprintId?: string
+  /** Set when the document is generated from a client record. */
+  clientAccountId?: string
 }): Promise<{ success: boolean; id?: string; error?: string }> {
   try {
     const user = await getCurrentUser()
@@ -47,6 +51,7 @@ export async function createDocument({
         documentData,
         ...(projectId ? { project: projectId } : {}),
         ...(sprintId ? { sprint: sprintId } : {}),
+        ...(clientAccountId ? { clientAccount: clientAccountId } : {}),
       } as any,
     })
 
@@ -67,6 +72,7 @@ export async function updateDocument(
     documentData,
     projectId,
     sprintId,
+    clientAccountId,
   }: {
     name: string
     description?: string
@@ -75,6 +81,7 @@ export async function updateDocument(
     documentData: object
     projectId?: string
     sprintId?: string
+    clientAccountId?: string
   },
 ): Promise<{ success: boolean; error?: string }> {
   try {
@@ -96,6 +103,7 @@ export async function updateDocument(
         documentData,
         ...(projectId ? { project: projectId } : { project: null }),
         ...(sprintId ? { sprint: sprintId } : { sprint: null }),
+        ...(clientAccountId ? { clientAccount: clientAccountId } : {}),
       } as any,
     })
 
@@ -242,7 +250,7 @@ export async function sendDocumentEmail(
       pdfBase64 ? '\nThe document is attached as a PDF.' : fileUrl ? `\nDownload: ${fileUrl}` : '',
       '',
       'For questions, contact chance@orcaclub.pro',
-      'ORCACLUB | Technical Operations Development Studio',
+      BRAND_SIGNOFF,
     ].filter(Boolean).join('\n')
 
     let sent = 0
@@ -279,10 +287,64 @@ export async function sendDocumentEmail(
       }
     }
 
+    // A send is the only status transition the system infers. Execution is not
+    // inferred from anything — see `setDocumentStatus`.
+    if (sent > 0) {
+      try {
+        await payload.update({
+          collection: 'files',
+          id: fileId,
+          data: { documentStatus: 'sent', sentAt: new Date().toISOString() } as any,
+        })
+      } catch (err) {
+        // The mail is already out; a failed status write must not report failure.
+        console.error('[sendDocumentEmail] status update failed:', err)
+      }
+    }
+
     return { success: sent > 0, sent }
   } catch (error) {
     console.error('[sendDocumentEmail]', error)
     return { success: false, error: 'Failed to send document' }
+  }
+}
+
+/**
+ * Move a generated agreement between draft, sent, and executed.
+ *
+ * Executed is set by hand and only by hand: an emailed PDF is not a signed one,
+ * and the whole point of tracking this is knowing which clients actually signed
+ * before their credentials are accepted.
+ */
+export async function setDocumentStatus(
+  id: string,
+  status: 'draft' | 'sent' | 'executed',
+  executedDate?: string,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const user = await getCurrentUser()
+    if (!user || (user.role !== 'admin' && user.role !== 'user')) {
+      return { success: false, error: 'Unauthorized' }
+    }
+
+    const payload = await getPayload({ config })
+
+    await payload.update({
+      collection: 'files',
+      id,
+      data: {
+        documentStatus: status,
+        // Clearing executed clears its date, so the pair can never disagree.
+        executedDate: status === 'executed'
+          ? (executedDate ?? new Date().toISOString())
+          : null,
+      } as any,
+    })
+
+    return { success: true }
+  } catch (error) {
+    console.error('[setDocumentStatus]', error)
+    return { success: false, error: 'Failed to update document status' }
   }
 }
 

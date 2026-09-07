@@ -5,13 +5,14 @@ import { createPortal } from 'react-dom'
 import {
   FileText, FilePen, Search, Trash2, ExternalLink, Plus,
   Loader2, X, ChevronDown, FolderOpen, FileCheck,
-  Building2, User, Download, Save, Pencil, Mail, Send, CheckCircle2, Eye,
+  Building2, User, Download, Save, Pencil, Mail, Send, CheckCircle2, Eye, PenLine,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { createDocument, updateDocument, deleteFileRecord, sendDocumentEmail } from '@/actions/files'
+import { createDocument, updateDocument, deleteFileRecord, sendDocumentEmail, setDocumentStatus } from '@/actions/files'
 import { createPackageFromSow } from '@/actions/packages'
 import { SowTermsEditor } from '@/components/dashboard/SowTermsEditor'
 import type { NdaFormData, SowFormData } from '@/lib/document-generators'
+import { DEFAULT_HOURLY_RATE } from '@/lib/sow/clauses'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -25,8 +26,39 @@ interface FileRecord {
   documentTemplate?: 'nda' | 'sow' | null
   documentBrand?: 'personal' | 'orcaclub' | null
   documentData?: any
+  documentStatus?: 'draft' | 'sent' | 'executed' | null
+  sentAt?: string | null
+  executedDate?: string | null
   file?: any
   createdAt: string
+}
+
+/**
+ * Where an agreement stands, at a glance.
+ *
+ * Draft prints nothing — an unsent document is the resting state and a chip on
+ * every row would say nothing. Only `sent` and `executed` are worth a mark.
+ */
+function StatusChip({ rec }: { rec: FileRecord }) {
+  const status = rec.documentStatus ?? 'draft'
+  if (status === 'draft') return null
+
+  const executed = status === 'executed'
+  return (
+    <span
+      className="text-[0.625rem] font-bold uppercase tracking-widest"
+      style={{ color: executed ? 'rgb(52, 211, 153)' : 'var(--space-text-muted)' }}
+      title={
+        executed && rec.executedDate
+          ? `Executed ${new Date(rec.executedDate).toLocaleDateString()}`
+          : rec.sentAt
+            ? `Sent ${new Date(rec.sentAt).toLocaleDateString()}`
+            : undefined
+      }
+    >
+      {executed ? 'Signed' : 'Sent'}
+    </span>
+  )
 }
 
 interface ProjectOption { id: string; name: string }
@@ -77,7 +109,7 @@ const defaultSow = (providerContact = ''): SowFormData => ({
   lateFee: '1.5',
   revisionRounds: '2',
   revisionRate: '',
-  hourlyRate: '',
+  hourlyRate: DEFAULT_HOURLY_RATE,
   warrantyDays: '30',
   bugSupportHours: '',
   acceptanceDays: '7',
@@ -229,6 +261,7 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
   const [clientDropdownOpen, setClientDropdownOpen] = useState(false)
 
   const [viewingId, setViewingId] = useState<string | null>(null)
+  const [statusId, setStatusId] = useState<string | null>(null)
 
   const [isPending, startTransition] = useTransition()
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -470,6 +503,31 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
     })
   }
 
+  /**
+   * Flip a generated agreement between executed and not.
+   *
+   * Nothing infers execution — sending a PDF is not the same as getting one
+   * back signed, and the reason to track this at all is knowing which clients
+   * actually signed before their credentials are accepted.
+   */
+  function handleToggleExecuted(rec: FileRecord) {
+    const next = rec.documentStatus === 'executed'
+      ? (rec.sentAt ? 'sent' : 'draft')
+      : 'executed'
+    setStatusId(rec.id)
+    startTransition(async () => {
+      const result = await setDocumentStatus(rec.id, next)
+      if (result.success) {
+        setFiles(prev => prev.map(f => f.id !== rec.id ? f : {
+          ...f,
+          documentStatus: next,
+          executedDate: next === 'executed' ? new Date().toISOString() : null,
+        }))
+      }
+      setStatusId(null)
+    })
+  }
+
   function handleEdit(rec: FileRecord) {
     if (!rec.documentTemplate || !rec.documentData) return
     setEditingId(rec.id)
@@ -581,6 +639,7 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
                       {docTypeLabel(rec.documentTemplate)}
                     </span>
                   )}
+                  {rec.documentTemplate && <StatusChip rec={rec} />}
                   {rec.documentBrand && (
                     <span className="text-[0.625rem] text-[var(--space-text-muted)]">
                       {rec.documentBrand === 'orcaclub' ? 'ORCACLUB' : 'Personal'}
@@ -606,6 +665,25 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
                     className="p-1.5 rounded-lg text-[var(--space-text-secondary)] hover:text-[var(--space-text-primary)] hover:bg-[var(--space-bg-card-hover)] transition-colors disabled:opacity-40"
                   >
                     {viewingId === rec.id ? <Loader2 className="size-3.5 animate-spin" /> : <Eye className="size-3.5" />}
+                  </button>
+                )}
+                {rec.documentTemplate && (
+                  <button
+                    onClick={() => handleToggleExecuted(rec)}
+                    disabled={statusId === rec.id}
+                    title={rec.documentStatus === 'executed' ? 'Mark not executed' : 'Mark executed'}
+                    className={cn(
+                      'p-1.5 rounded-lg hover:bg-[var(--space-bg-card-hover)] transition-colors disabled:opacity-40',
+                      rec.documentStatus === 'executed'
+                        ? 'text-emerald-400'
+                        : 'text-[var(--space-text-secondary)] hover:text-emerald-400',
+                    )}
+                  >
+                    {statusId === rec.id
+                      ? <Loader2 className="size-3.5 animate-spin" />
+                      : rec.documentStatus === 'executed'
+                        ? <FileCheck className="size-3.5" />
+                        : <PenLine className="size-3.5" />}
                   </button>
                 )}
                 <button

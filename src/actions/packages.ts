@@ -236,6 +236,13 @@ export async function createSowFromPackage(packageId: string, projectId?: string
         : (pkg as any).projectRef?.id) ??
       undefined
 
+    // File it against the client too, so the SOW shows up on the client record
+    // and not only under its project.
+    const linkedClientId =
+      (typeof (pkg as any).clientAccount === 'string'
+        ? (pkg as any).clientAccount
+        : (pkg as any).clientAccount?.id) ?? undefined
+
     const doc = await payload.create({
       collection: 'files',
       data: {
@@ -246,6 +253,7 @@ export async function createSowFromPackage(packageId: string, projectId?: string
         documentBrand: 'orcaclub',
         documentData: sowData,
         ...(linkedProjectId ? { project: linkedProjectId } : {}),
+        ...(linkedClientId ? { clientAccount: linkedClientId } : {}),
       } as any,
     })
 
@@ -351,6 +359,13 @@ export async function savePackageSowDocument(packageId: string, sowData: SowForm
         ? (pkg as any).projectRef
         : (pkg as any).projectRef?.id) ?? undefined
 
+    // File it against the client too, so the SOW shows up on the client record
+    // and not only under its project.
+    const linkedClientId =
+      (typeof (pkg as any).clientAccount === 'string'
+        ? (pkg as any).clientAccount
+        : (pkg as any).clientAccount?.id) ?? undefined
+
     if (linkedId) {
       const updated = await payload.update({
         collection: 'files',
@@ -371,6 +386,7 @@ export async function savePackageSowDocument(packageId: string, sowData: SowForm
         documentBrand: 'orcaclub',
         documentData: sowData,
         ...(linkedProjectId ? { project: linkedProjectId } : {}),
+        ...(linkedClientId ? { clientAccount: linkedClientId } : {}),
       } as any,
     })
 

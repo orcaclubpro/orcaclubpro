@@ -120,7 +120,7 @@ export default async function PackagePrintPage({
               ORCACLUB
             </span>
             <p style={{ fontSize: 10, color: '#9ca3af', letterSpacing: '0.18em', textTransform: 'uppercase', marginTop: 3 }}>
-              Web Design and Marketing Automation
+              Marketing, Web Development, SEO and AEO
             </p>
           </div>
           <div style={{ textAlign: 'right' }}>

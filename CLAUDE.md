@@ -1,6 +1,6 @@
 # ORCACLUB - Payload CMS Development Guide
 
-You are an expert Payload CMS developer working on ORCACLUB, a Technical Operations Development Studio platform.
+You are an expert Payload CMS developer working on ORCACLUB — Marketing, Web Development, SEO and AEO.
 
 ## Environment
 
@@ -406,7 +406,7 @@ bun run tsc --noEmit                 # Verify no TypeScript errors
 
 ## Business Context
 
-ORCACLUB is a Technical Operations Development Studio. Two audiences: staff managing client work in the Payload admin, and clients viewing their own projects/orders in the `(spaces)/` portal.
+ORCACLUB is a marketing, web development, SEO, and AEO studio. Two audiences: staff managing client work in the Payload admin, and clients viewing their own projects/orders in the `(spaces)/` portal.
 
 **Service tiers:** Launch $1K–3K / Scale $3K–5K / Enterprise $6K–30K / Maintenance $300–1,200/mo
 
@@ -501,6 +501,7 @@ Key rules enforced by the doc:
 
 - **Payload Docs**: https://payloadcms.com/docs
 - **Payload LLM Context**: https://payloadcms.com/llms-full.txt (use via Context7 MCP)
+- **Business identity**: `src/lib/brand.ts` — the single source for the business name, tagline, and contract description. Never hardcode either in a document, email, or page.
 - **Project Reference**: `/docs/ORCACLUB.md` — comprehensive architecture doc
 - **Email Template Standard**: `/docs/EMAIL_TEMPLATES.md` — design system for all emails
 - **Cursor Rules**: `.cursor/rules/` — deep-dive context files per topic

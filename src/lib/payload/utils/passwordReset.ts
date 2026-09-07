@@ -164,7 +164,7 @@ For your security, we recommend:
 If you need assistance, contact us at chance@orcaclub.pro.
 
 ---
-ORCACLUB - Technical Operations Development Studio
+ORCACLUB - Marketing, Web Development, SEO and AEO
 https://orcaclub.pro
 © 2025 ORCACLUB. All rights reserved.
   `.trim()
