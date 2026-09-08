@@ -49,14 +49,17 @@ type Step = 'list' | 'send' | 'sow'
 export function PackageDocumentsModal({
   packageId,
   username,
+  initialStep,
   onClose,
 }: {
   packageId: string
   /** Enables the link through to the saved SOW in the Files tab. */
   username?: string
+  /** Open straight into a document rather than the list — used by `?doc=sow`. */
+  initialStep?: 'sow' | null
   onClose: () => void
 }) {
-  const [step, setStep] = useState<Step>('list')
+  const [step, setStep] = useState<Step>(initialStep === 'sow' ? 'sow' : 'list')
   const [sendFor, setSendFor] = useState<PackageDocumentType | null>(null)
   const [viewing, setViewing] = useState<PackageDocumentType | null>(null)
   const [viewError, setViewError] = useState<string | null>(null)
@@ -109,6 +112,12 @@ export function PackageDocumentsModal({
     setSowPackageItems(res.packageItems)
     return res.sowData
   }, [packageId, sow, sowLoading])
+
+  // Whether the editor was opened from the list, from the send step, or landed on
+  // directly via `?doc=sow`, the draft loads here. `loadSow` no-ops once it has.
+  useEffect(() => {
+    if (step === 'sow') void loadSow()
+  }, [step, loadSow])
 
   const patchBill = (k: keyof typeof billTo, v: string) => setBillTo(b => ({ ...b, [k]: v }))
 
@@ -179,8 +188,10 @@ export function PackageDocumentsModal({
     const emails = addresses.split(',').map(e => e.trim()).filter(e => e.includes('@'))
     if (emails.length === 0) return
 
-    // Unsent edits would go out as the standard text, so the SOW saves first.
-    if (sendFor === 'sow' && sowDirty) {
+    // Unsent edits would go out as the standard text, so the SOW saves first — and
+    // a SOW that was never saved at all still gets a document, because sending a
+    // contract that leaves no record is how one ends up untracked forever.
+    if (sendFor === 'sow' && (sowDirty || !sowDocId)) {
       const ok = await handleSaveSow()
       if (!ok) return
     }
@@ -214,9 +225,8 @@ export function PackageDocumentsModal({
     if (type === 'sow') void loadSow()
   }
 
-  async function openSowEditor() {
+  function openSowEditor() {
     setStep('sow')
-    void loadSow()
   }
 
   function updateSow(updater: (f: SowFormData) => SowFormData) {
@@ -229,7 +239,7 @@ export function PackageDocumentsModal({
   const activeDoc = sendFor ? DOCS.find(d => d.value === sendFor)! : null
   const wide = step === 'sow'
 
-  const sowDocLink = username && sowDocId ? `/u/${username}/files` : null
+  const sowDocLink = username && sowDocId ? `/u/${username}/files?doc=${sowDocId}` : null
 
   // Portaled to <body> so the overlay is never trapped by an ancestor's
   // transform/overflow context and always centers against the viewport.
@@ -368,69 +378,6 @@ export function PackageDocumentsModal({
                   Deliverables and pricing come from the package. Everything below is the contract itself —
                   fill in the overview, set the numbers, and rewrite any clause that does not fit this engagement.
                 </p>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[0.625rem] font-semibold uppercase tracking-widest text-[var(--space-text-secondary)] mb-1">
-                      Service Provider
-                    </label>
-                    <input
-                      value={sow.providerName}
-                      onChange={e => updateSow(f => ({ ...f, providerName: e.target.value }))}
-                      placeholder="ORCACLUB"
-                      className={billToInputCls}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[0.625rem] font-semibold uppercase tracking-widest text-[var(--space-text-secondary)] mb-1">
-                      Service Provider Email
-                    </label>
-                    <input
-                      value={sow.providerContact}
-                      onChange={e => updateSow(f => ({ ...f, providerContact: e.target.value }))}
-                      placeholder="you@orcaclub.pro"
-                      className={billToInputCls}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[0.625rem] font-semibold uppercase tracking-widest text-[var(--space-text-secondary)] mb-1">
-                      Effective Date
-                    </label>
-                    <input
-                      type="date"
-                      value={sow.effectiveDate}
-                      onChange={e => updateSow(f => ({ ...f, effectiveDate: e.target.value }))}
-                      className={billToInputCls}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[0.625rem] font-semibold uppercase tracking-widest text-[var(--space-text-secondary)] mb-1">
-                      Client Contact
-                    </label>
-                    <input
-                      value={sow.clientContact}
-                      onChange={e => updateSow(f => ({ ...f, clientContact: e.target.value }))}
-                      placeholder="Email for notices"
-                      className={billToInputCls}
-                    />
-                  </div>
-                </div>
-                <p className="text-[0.5625rem] text-[var(--space-text-muted)] leading-relaxed -mt-1">
-                  Both emails print in the parties block and are the addresses the Notices clause sends to.
-                </p>
-
-                <div>
-                  <label className="block text-[0.625rem] font-semibold uppercase tracking-widest text-[var(--space-text-secondary)] mb-1">
-                    Project Overview
-                  </label>
-                  <textarea
-                    value={sow.projectOverview}
-                    onChange={e => updateSow(f => ({ ...f, projectOverview: e.target.value }))}
-                    rows={4}
-                    placeholder="What this engagement covers, its goals, and the expected outcome. Left blank, it is written from the project name and deliverables."
-                    className="w-full px-3 py-2.5 text-sm bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] rounded-xl text-[var(--space-text-primary)] placeholder-[#555555] focus:outline-none focus:border-[rgba(139,156,182,0.20)] resize-y"
-                  />
-                </div>
 
                 <SowTermsEditor
                   form={sow}

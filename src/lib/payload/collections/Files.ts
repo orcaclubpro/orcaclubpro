@@ -196,6 +196,22 @@ export const Files: CollectionConfig = {
       },
     },
 
+    // The inverse of `packages.sowDocument`. The link used to run one way, which
+    // meant anything holding the file alone — the Files tab's preview and its
+    // send action — rendered `documentData` raw and missed the package's own
+    // client, pricing, and payment schedule. With the back-reference, every
+    // reader can go through `resolveFileSowData` instead.
+    {
+      name: 'packageRef',
+      type: 'relationship',
+      relationTo: 'packages',
+      index: true,
+      admin: {
+        readOnly: true,
+        description: 'Package this document was generated from — its pricing and client always win',
+      },
+    },
+
     {
       type: 'row',
       fields: [

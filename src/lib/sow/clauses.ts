@@ -153,12 +153,12 @@ export function projectOverviewText(d: SowFormData): string {
   const client = t(d.clientName) || 'Client'
 
   if (scope.length === 0) {
-    return `Service Provider will design, build, and deliver ${project} for ${client}, as further described in the Deliverables listed in this Agreement. The Deliverables in Section 3 define the complete extent of the engagement; anything not listed there is outside its scope.`
+    return `Service Provider will design, build, and deliver ${project} for ${client}, as further described in the Deliverables listed in this Agreement. The Deliverables define the complete extent of the engagement; anything not listed there is outside its scope.`
   }
   const list = scope.length === 1
     ? scope[0]
     : `${scope.slice(0, -1).join('; ')}; and ${scope[scope.length - 1]}`
-  return `Service Provider will design, build, and deliver ${project} for ${client}. The engagement comprises: ${list}. The Deliverables listed in Section 3 define the complete extent of the work; anything not listed there is outside its scope and is handled through a written Change Order.`
+  return `Service Provider will design, build, and deliver ${project} for ${client}. The engagement comprises: ${list}. The Deliverables listed in this Agreement define the complete extent of the work; anything not listed there is outside its scope and is handled through a written Change Order.`
 }
 
 /**
@@ -176,6 +176,27 @@ export function paymentTriggerText(
   if (index === 0) return 'Due upon execution of this Agreement, before work begins'
   if (index === total - 1) return 'Due upon Acceptance or Deemed Acceptance of the final Deliverable'
   return 'Due upon completion of the corresponding milestone'
+}
+
+/**
+ * How a retainer bills and how long it runs.
+ *
+ * This used to print from the PDF writer as `Billing Cycle: — · Contract Term: —`,
+ * which was neither overridable nor a sentence, and showed em-dashes whenever the
+ * fields were unset. Stated here it reads as contract prose and follows the same
+ * override rules as everything else.
+ *
+ * Deliberately self-contained: it states the notice period rather than pointing
+ * at the Termination section, which is disableable and would leave the reference
+ * dangling.
+ */
+export function retainerTermsText(d: SowFormData): string {
+  const cycle = (t(d.billingCycle) || 'Monthly').toLowerCase()
+  const term = t(d.contractTerm)
+  const notice = "terminated by either Party on fourteen (14) days' written notice"
+  return term
+    ? `The retainer bills ${cycle}. The initial term is ${term}, continuing on the same ${cycle} basis thereafter until ${notice}.`
+    : `The retainer bills ${cycle} and continues until ${notice}.`
 }
 
 // ── The registry ───────────────────────────────────────────────────────────────
@@ -258,7 +279,13 @@ export const SOW_CLAUSES: SowClause[] = [
     id: 'fees',
     heading: 'Fees and Pricing',
     required: true,
-    blocks: () => [{ t: 'render', key: 'pricing' }],
+    blocks: d => [
+      { t: 'render', key: 'pricing' },
+      // Only a retainer has a cycle and a term to state.
+      ...(d.pricingType === 'project'
+        ? []
+        : [{ t: 'body' as const, text: retainerTermsText(d) }]),
+    ],
   },
 
   {

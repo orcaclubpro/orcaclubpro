@@ -1025,8 +1025,9 @@ function writeSowPricingSection(w: DocWriter, d: SowFormData) {
     w.table(['Description', 'Monthly Rate'], colW, rows)
     w.totalRow('Total Monthly Retainer', `$${retTotal.toFixed(2)}/mo`, colW)
     w.sp(4)
-    w.body(`Billing Cycle: ${d.billingCycle || '—'}    ·    Contract Term: ${d.contractTerm || '—'}`)
-    w.sp(4)
+    // The billing cycle and contract term are stated by the Fees clause as prose
+    // (`retainerTermsText`) so they can be overridden like any other wording —
+    // they used to print here as a bare label line showing em-dashes when unset.
   }
 }
 

@@ -30,10 +30,15 @@ export async function generateMetadata({
 
 export default async function PackageDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ username: string; client: string; package: string }>
+  searchParams: Promise<{ doc?: string }>
 }) {
   const { username, client: clientId, package: packageId } = await params
+  // The Files tab links here for documents this package owns, so a package can be
+  // opened straight into the Scope of Work editor rather than at the list.
+  const { doc } = await searchParams
 
   const user = await getSessionUser()
   if (!user || user.username !== username) redirect('/login')
@@ -111,6 +116,7 @@ export default async function PackageDetailPage({
       username={username}
       projects={projects.map((p: any) => ({ id: p.id, name: p.name ?? '', status: p.status ?? 'pending' }))}
       packageOrders={serializedOrders}
+      initialDoc={doc === 'sow' ? 'sow' : null}
     />
   )
 }

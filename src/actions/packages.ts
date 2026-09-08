@@ -32,6 +32,7 @@ import { mergePackageRecap, type PackageRecapData } from '@/lib/packages/recap'
 import { getPackageRecapModel } from '@/actions/packageWork'
 import { nextOrderNumber } from '@/lib/payload/utils/orderNumber'
 import { normalizeSowItems } from '@/lib/sow/clauses'
+import { markDocumentSent } from '@/lib/documents/status'
 
 const APP_BASE = process.env.NEXT_PUBLIC_SERVER_URL ?? 'https://app.orcaclub.pro'
 
@@ -379,10 +380,20 @@ export async function savePackageSowDocument(packageId: string, sowData: SowForm
         : (pkg as any).clientAccount?.id) ?? undefined
 
     if (linkedId) {
+      // Re-file on every save, not just at creation. The name, the owning client,
+      // and the project all follow the package — a package reassigned after its
+      // SOW existed used to leave the document filed under the previous client
+      // while printing the new one's name inside.
       const updated = await payload.update({
         collection: 'files',
         id: linkedId,
-        data: { documentData: sowData } as any,
+        data: {
+          name: `SOW — ${pkg.name}`,
+          documentData: sowData,
+          packageRef: packageId,
+          ...(linkedProjectId ? { project: linkedProjectId } : {}),
+          ...(linkedClientId ? { clientAccount: linkedClientId } : {}),
+        } as any,
       })
       revalidatePath(`/u/${user.username}/files`)
       return { success: true as const, id: String(updated.id), created: false }
@@ -397,6 +408,7 @@ export async function savePackageSowDocument(packageId: string, sowData: SowForm
         documentTemplate: 'sow',
         documentBrand: 'orcaclub',
         documentData: sowData,
+        packageRef: packageId,
         ...(linkedProjectId ? { project: linkedProjectId } : {}),
         ...(linkedClientId ? { clientAccount: linkedClientId } : {}),
       } as any,
@@ -2087,11 +2099,26 @@ export async function sendProposalEmail(
     }
 
     if (sendAs === 'sow') {
-      return await sendSowToAddresses(payload, {
+      const sowResult = await sendSowToAddresses(payload, {
         packageName: pkg.name,
         recipientName: bt.name ?? undefined,
         recipientEmail: bt.email ?? validEmails[0],
       }, validEmails, attachments)
+
+      // Stamp the linked document. This is the path staff actually send contracts
+      // from, and it used to leave `documentStatus` on "draft" forever — the
+      // tracking only fired from the Files tab.
+      if ('sent' in sowResult && (sowResult as any).sent > 0) {
+        const linkedSow = (pkg as any).sowDocument
+        const sowFileId = typeof linkedSow === 'string'
+          ? linkedSow
+          : linkedSow?.id
+            ? String(linkedSow.id)
+            : null
+        await markDocumentSent(payload, sowFileId)
+      }
+
+      return sowResult
     }
 
     if (sendAs === 'invoice') {

@@ -101,6 +101,10 @@ export function SowTermsEditor({
       }
     })
 
+  const billingCycle = (form.billingCycle ?? '').trim() || 'Monthly'
+  const billingCycleOptions = ['Weekly', 'Bi-Weekly', 'Monthly', 'Quarterly', 'Annually']
+  if (!billingCycleOptions.includes(billingCycle)) billingCycleOptions.unshift(billingCycle)
+
   const milestones = form.milestones?.length ? form.milestones : [{ name: '', date: '', notes: '' }]
   const setMilestone = (i: number, patch: Partial<{ name: string; date: string; notes: string }>) =>
     onChange(f => {
@@ -122,6 +126,22 @@ export function SowTermsEditor({
                 className={inputCls}
                 value={form.effectiveDate ?? ''}
                 onChange={e => setField('effectiveDate', e.target.value)}
+              />
+            </Field>
+            <Field label="Service Provider" hint="Names the party in the recital and signature block.">
+              <input
+                className={inputCls}
+                value={form.providerName ?? ''}
+                onChange={e => setField('providerName', e.target.value)}
+                placeholder="ORCACLUB"
+              />
+            </Field>
+            <Field label="Service Provider Email" hint="The Notices address in General Provisions.">
+              <input
+                className={inputCls}
+                value={form.providerContact ?? ''}
+                onChange={e => setField('providerContact', e.target.value)}
+                placeholder="you@orcaclub.pro"
               />
             </Field>
           </div>
@@ -169,6 +189,34 @@ export function SowTermsEditor({
               />
             </Field>
           </div>
+
+          {form.pricingType !== 'project' && (
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Billing Cycle" hint="How often the retainer invoices.">
+                {/* Shown value matches what prints: an unset cycle reads as Monthly
+                    in the Fees clause, so the control has to say Monthly too. A
+                    cycle carried in from a package's notes joins the list rather
+                    than silently displaying as the first option. */}
+                <select
+                  className={inputCls}
+                  value={billingCycle}
+                  onChange={e => setField('billingCycle', e.target.value)}
+                >
+                  {billingCycleOptions.map(c => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Contract Term" hint="Blank prints as running until either Party gives notice.">
+                <input
+                  className={inputCls}
+                  value={form.contractTerm ?? ''}
+                  onChange={e => setField('contractTerm', e.target.value)}
+                  placeholder="e.g. 6 months"
+                />
+              </Field>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Field

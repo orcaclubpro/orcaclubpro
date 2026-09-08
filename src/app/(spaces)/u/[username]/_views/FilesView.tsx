@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useTransition, useMemo, useEffect } from 'react'
+import { useState, useTransition, useMemo, useEffect, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { createPortal } from 'react-dom'
 import {
   FileText, FilePen, Search, Trash2, ExternalLink, Plus,
@@ -8,7 +9,7 @@ import {
   Building2, User, Download, Save, Pencil, Mail, Send, CheckCircle2, Eye, PenLine,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { createDocument, updateDocument, deleteFileRecord, sendDocumentEmail, setDocumentStatus } from '@/actions/files'
+import { createDocument, updateDocument, deleteFileRecord, sendDocumentEmail, setDocumentStatus, getFileSowData } from '@/actions/files'
 import { createPackageFromSow } from '@/actions/packages'
 import { SowTermsEditor } from '@/components/dashboard/SowTermsEditor'
 import type { NdaFormData, SowFormData } from '@/lib/document-generators'
@@ -29,6 +30,9 @@ interface FileRecord {
   documentStatus?: 'draft' | 'sent' | 'executed' | null
   sentAt?: string | null
   executedDate?: string | null
+  /** Set when the document was generated from a package — that package owns its pricing. */
+  packageRef?: { id: string } | string | null
+  clientAccount?: { id: string } | string | null
   file?: any
   createdAt: string
 }
@@ -67,6 +71,24 @@ interface SprintOption { id: string; name: string; project?: string | { id: stri
 interface ClientOption { id: string; name: string; email: string }
 interface Recipient { email: string; name?: string }
 
+const relId = (v: { id: string } | string | null | undefined): string | null =>
+  typeof v === 'string' ? v : v?.id ? String(v.id) : null
+
+/**
+ * Where a package-owned document is edited — its package, not the builder here.
+ *
+ * The generic SOW builder exposes client, project, and pricing fields that the
+ * package owns; edits to them were discarded on the next package-modal load and
+ * left the two screens rendering different contracts. Package documents open
+ * where their numbers actually live.
+ */
+function packageEditHref(rec: FileRecord, username: string): string | null {
+  const pkgId = relId(rec.packageRef)
+  const clientId = relId(rec.clientAccount)
+  if (!pkgId || !clientId || !username) return null
+  return `/u/${username}/clients/${clientId}/packages/${pkgId}?doc=sow`
+}
+
 interface FilesViewProps {
   allFiles: FileRecord[]
   allProjects: ProjectOption[]
@@ -74,6 +96,10 @@ interface FilesViewProps {
   clientAccounts?: ClientOption[]
   /** Signed-in staff member — becomes the Service Provider contact on a new SOW. */
   currentUserEmail?: string
+  /** Needed to hand a package-owned document back to the package that owns it. */
+  username?: string
+  /** `?doc=<id>` — the row to scroll to and mark, linked from a package's modal. */
+  highlightDocId?: string | null
 }
 
 // ── Default form states ─────────────────────────────────────────────────────────
@@ -230,7 +256,18 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 
 // ── Main Component ─────────────────────────────────────────────────────────────
 
-export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = [], currentUserEmail = '' }: FilesViewProps) {
+export function FilesView({
+  allFiles, allProjects, allSprints,
+  clientAccounts = [], currentUserEmail = '', username = '', highlightDocId = null,
+}: FilesViewProps) {
+  const router = useRouter()
+  // The package Documents modal links here to show where a contract was filed, so
+  // the row it means has to be findable in a list of 200.
+  const highlightId = highlightDocId
+  const highlightRef = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    highlightRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  }, [highlightId])
   const [files, setFiles] = useState<FileRecord[]>(allFiles)
   const [search, setSearch] = useState('')
   const [filterProject, setFilterProject] = useState('')
@@ -306,17 +343,26 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
       try {
         const { buildPersonalNdaPdf, buildOrcaclubNdaPdf, buildPersonalSowPdf, buildOrcaclubSowPdf } =
           await import('@/lib/pdf-generators')
-        const data = rec.documentData as any
         const brand = rec.documentBrand ?? 'orcaclub'
         let bytes: Uint8Array
         if (rec.documentTemplate === 'nda') {
+          const data = rec.documentData as any
           bytes = brand === 'personal'
             ? await buildPersonalNdaPdf(data)
             : await buildOrcaclubNdaPdf(data)
         } else {
+          // A package's SOW keeps only the staff-written half in `documentData`;
+          // its client and pricing live on the package and are merged in server
+          // side. Rendering the raw data here showed a different contract than
+          // the one the package previews and sends.
+          const resolved = await getFileSowData(rec.id)
+          if (!resolved.success || !resolved.data) {
+            setViewingId(null)
+            return
+          }
           bytes = brand === 'personal'
-            ? await buildPersonalSowPdf(data)
-            : await buildOrcaclubSowPdf(data)
+            ? await buildPersonalSowPdf(resolved.data)
+            : await buildOrcaclubSowPdf(resolved.data)
         }
         const blob = new Blob([new Uint8Array(bytes)], { type: 'application/pdf' })
         const url = URL.createObjectURL(blob)
@@ -530,6 +576,11 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
 
   function handleEdit(rec: FileRecord) {
     if (!rec.documentTemplate || !rec.documentData) return
+
+    // Owned by a package — open it there, where its pricing and client come from.
+    const owned = packageEditHref(rec, username)
+    if (owned) { router.push(owned); return }
+
     setEditingId(rec.id)
     setDocType(rec.documentTemplate)
     setBrand((rec.documentBrand as any) ?? 'orcaclub')
@@ -623,11 +674,13 @@ export function FilesView({ allFiles, allProjects, allSprints, clientAccounts = 
           {filtered.map((rec, i) => (
             <div
               key={rec.id}
+              ref={rec.id === highlightId ? highlightRef : undefined}
               onClick={() => rec.documentTemplate && rec.documentData && handleEdit(rec)}
               className={cn(
                 'flex items-center gap-3 px-4 py-3 hover:bg-[var(--space-bg-card)] transition-colors',
                 i < filtered.length - 1 && 'border-b border-[var(--space-divider)]',
                 rec.documentTemplate && rec.documentData && 'cursor-pointer',
+                rec.id === highlightId && 'bg-[var(--space-bg-card)] ring-1 ring-inset ring-[var(--space-accent)]',
               )}
             >
               <div className="shrink-0">{fileTypeIcon(rec)}</div>

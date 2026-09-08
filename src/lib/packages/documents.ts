@@ -77,8 +77,12 @@ function parseSowExtrasFromNotes(notes?: string | null) {
     lateFee: '1.5',
     revisionRounds: '2',
     revisionRate: '',
-    contractTerm: '3 months',
-    billingCycle: 'Monthly',
+    // Blank, not a guess. These print in the fees section of a retainer
+    // contract, so a default invents a term nobody agreed to; an empty one
+    // falls through to the package's own recurring interval and to prose that
+    // reads correctly with no term stated at all.
+    contractTerm: '',
+    billingCycle: '',
   }
   if (!notes) return extras
 
@@ -173,6 +177,12 @@ export function packageToSowData(pkg: any): SowFormData {
   const extras = parseSowExtrasFromNotes(pkg.notes)
   const client = pkg.clientAccount && typeof pkg.clientAccount === 'object' ? pkg.clientAccount : null
 
+  // How often the retainer bills is already on the line items — reading it there
+  // beats scraping the freeform notes, which only carry it for packages that
+  // came from `createPackageFromSow` in the first place.
+  const recurringInterval = lineItems.find(i => i.isRecurring)?.recurringInterval
+  const derivedBillingCycle = recurringInterval === 'year' ? 'Annually' : 'Monthly'
+
   return {
     providerName: 'ORCACLUB',
     providerContact: 'team@orcaclub.pro',
@@ -187,7 +197,7 @@ export function packageToSowData(pkg: any): SowFormData {
     pricingType,
     projectItems: projectItems.length ? projectItems : [{ desc: '', amount: '' }],
     retainerItems: retainerItems.length ? retainerItems : [{ desc: '', amount: '' }],
-    billingCycle: extras.billingCycle,
+    billingCycle: extras.billingCycle || (retainerItems.length ? derivedBillingCycle : ''),
     contractTerm: extras.contractTerm,
     netDays: extras.netDays,
     paymentSchedule,
@@ -195,8 +205,10 @@ export function packageToSowData(pkg: any): SowFormData {
     revisionRounds: extras.revisionRounds,
     revisionRate: extras.revisionRate,
     // Same defaults the SOW builder seeds a blank form with, so a package-driven
-    // SOW and a hand-built one come out of the clause registry identically.
-    hourlyRate: DEFAULT_HOURLY_RATE,
+    // SOW and a hand-built one come out of the clause registry identically. The
+    // rate is the one exception: a package built from a SOW that stated its own
+    // rate carries it in the notes, and that survives the round-trip.
+    hourlyRate: extras.revisionRate || DEFAULT_HOURLY_RATE,
     warrantyDays: '30',
     acceptanceDays: '7',
     stallDays: '30',
@@ -255,6 +267,58 @@ export function mergePackageSowData(
     ;(merged as any)[field] = savedItems.length ? savedItems : (derived as any)[field]
   }
   return merged
+}
+
+/**
+ * The SOW data a stored file actually renders as.
+ *
+ * A SOW generated from a package is only half a document on its own: the client,
+ * the project, the pricing, and the payment schedule live on the package and are
+ * merged in on every read. Anything that renders or sends a file's `documentData`
+ * directly — the Files tab's preview, its send action — was skipping that and
+ * emailing contracts quoting whatever was true at the last save. Every reader
+ * goes through here instead.
+ *
+ * Files with no package behind them (the standalone SOW builder) pass through
+ * untouched.
+ */
+export async function resolveFileSowData(
+  payload: any,
+  file: any,
+): Promise<SowFormData> {
+  const data = (file?.documentData ?? {}) as SowFormData
+
+  const linked = file?.packageRef
+  let packageId: string | null =
+    typeof linked === 'string' ? linked : linked?.id ? String(linked.id) : null
+
+  // Documents created before `packageRef` existed only carry the forward link, so
+  // fall back to the inverse and heal the record on the way past.
+  if (!packageId && file?.id) {
+    const { docs } = await payload
+      .find({
+        collection: 'packages',
+        where: { sowDocument: { equals: file.id } },
+        depth: 0,
+        limit: 1,
+      })
+      .catch(() => ({ docs: [] as any[] }))
+    if (docs.length > 0) {
+      packageId = String(docs[0].id)
+      await payload
+        .update({ collection: 'files', id: file.id, data: { packageRef: packageId } as any })
+        .catch(() => null)
+    }
+  }
+
+  if (!packageId) return data
+
+  const pkg = await payload
+    .findByID({ collection: 'packages', id: packageId, depth: 1 })
+    .catch(() => null)
+  if (!pkg) return data
+
+  return mergePackageSowData(packageToSowData(pkg), data)
 }
 
 const fmtPdfDate = (iso: string) => {

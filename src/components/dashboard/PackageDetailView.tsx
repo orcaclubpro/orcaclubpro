@@ -43,6 +43,8 @@ interface PackageDetailViewProps {
   username: string
   projects: Array<{ id: string; name: string; status: string }>
   packageOrders: PackageOrderSummary[]
+  /** `?doc=sow` — open the Documents modal straight into that document. */
+  initialDoc?: 'sow' | null
 }
 
 /** Section heading in the dashboard-home idiom: an accent tick beside the label. */
@@ -65,6 +67,7 @@ export function PackageDetailView({
   username,
   projects,
   packageOrders,
+  initialDoc = null,
 }: PackageDetailViewProps) {
   const router = useRouter()
   const backHref = `/u/${username}/clients/${clientId}?tab=packages`
@@ -111,7 +114,10 @@ export function PackageDetailView({
   const [confirmResetEntryId, setConfirmResetEntryId] = useState<string | null>(null)
   const [resetResults, setResetResults]               = useState<Record<string, { note: string } | { error: string }>>({})
 
-  const [docsOpen, setDocsOpen] = useState(false)
+  // `?doc=sow` opens straight into the Scope of Work editor — the Files tab links
+  // here for documents this package owns, and landing on the package with the
+  // modal shut would make that a dead end.
+  const [docsOpen, setDocsOpen] = useState(Boolean(initialDoc))
 
   // Below lg the action rail is a right-edge drawer rather than a column. The
   // split is a real mount decision, not a CSS toggle, so the controls exist
@@ -1117,7 +1123,12 @@ export function PackageDetailView({
 
       {/* ── Documents modal ───────────────────────────────────────────────── */}
       {docsOpen && (
-        <PackageDocumentsModal packageId={pkg.id} username={username} onClose={() => setDocsOpen(false)} />
+        <PackageDocumentsModal
+          packageId={pkg.id}
+          username={username}
+          initialStep={initialDoc}
+          onClose={() => setDocsOpen(false)}
+        />
       )}
     </>
   )
