@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Plus, X, RotateCcw, ChevronDown, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { SowScopeItem } from '@/lib/document-generators'
-import { normalizeSowItems } from '@/lib/sow/clauses'
+import { readSowItems } from '@/lib/sow/clauses'
 
 const inputCls =
   'w-full bg-[var(--space-bg-base)] border border-[#333] rounded-lg px-3 py-2 text-sm text-[var(--space-text-primary)] placeholder-[var(--space-text-muted)] outline-none focus:border-[var(--space-accent)] transition-colors'
@@ -14,8 +14,9 @@ const inputCls =
  * Scope of Work, the Deliverables, and the Out of Scope exclusions. Both parts
  * print on the contract — the title in bold, the description underneath it.
  *
- * Legacy documents stored these as plain strings; `normalizeSowItems` reads both
- * shapes so an old SOW opens without losing its lines.
+ * Legacy documents stored these as plain strings; `readSowItems` accepts both
+ * shapes so an old SOW opens without losing its lines. It deliberately does not
+ * trim or drop anything — see its doc comment; the print path cleans up instead.
  */
 export function SowItemListEditor({
   label,
@@ -40,7 +41,7 @@ export function SowItemListEditor({
   resetLabel?: string
   usingDefaults?: boolean
 }) {
-  const list = normalizeSowItems(items)
+  const list = readSowItems(items)
   const [openDesc, setOpenDesc] = useState<number | null>(null)
 
   const patch = (i: number, next: Partial<SowScopeItem>) =>

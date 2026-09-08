@@ -86,9 +86,32 @@ export function hourlyRatePhrase(d: SowFormData): string {
 }
 
 /**
- * Read a scope / deliverables / exclusions list. Documents saved before these
- * carried descriptions hold plain strings, so both shapes are accepted and an
- * item with no title is dropped.
+ * Read a scope / deliverables / exclusions list as an editor needs it: both
+ * stored shapes accepted, nothing trimmed, nothing dropped.
+ *
+ * The distinction from `normalizeSowItems` matters because these lists are
+ * edited through controlled inputs. Cleaning a value on its way to the input is
+ * cleaning it on every keystroke: a trim eats the space the moment it is typed,
+ * so no title can hold more than one word, and dropping empty titles deletes the
+ * row you just added and the row whose title you just backspaced. Cleaning
+ * belongs at the point of print, not the point of typing.
+ */
+export function readSowItems(value: unknown): SowScopeItem[] {
+  if (!Array.isArray(value)) return []
+  return value.map(entry => {
+    if (typeof entry === 'string') return { title: entry, description: '' }
+    return {
+      title: (entry as SowScopeItem)?.title ?? '',
+      description: (entry as SowScopeItem)?.description ?? '',
+    }
+  })
+}
+
+/**
+ * Read a scope / deliverables / exclusions list for print. Documents saved before
+ * these carried descriptions hold plain strings, so both shapes are accepted; an
+ * item with no title is dropped, because a blank numbered row in a contract is
+ * not a term. Use `readSowItems` anywhere the list is being edited.
  */
 export function normalizeSowItems(value: unknown): SowScopeItem[] {
   if (!Array.isArray(value)) return []

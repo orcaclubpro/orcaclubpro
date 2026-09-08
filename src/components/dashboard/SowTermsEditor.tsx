@@ -11,7 +11,7 @@ import {
   clauseStandardText,
   isClauseEnabled,
   isClauseOverridden,
-  normalizeSowItems,
+  readSowItems,
 } from '@/lib/sow/clauses'
 import { SowItemListEditor } from './SowItemListEditor'
 
@@ -76,8 +76,11 @@ export function SowTermsEditor({
   const [editing, setEditing] = useState<string | null>(null)
 
   const overrides = form.clauseOverrides ?? {}
-  const usingStandardExclusions = normalizeSowItems(form.exclusions).length === 0
-  const exclusions = usingStandardExclusions ? STANDARD_EXCLUSIONS : normalizeSowItems(form.exclusions)
+  // Counted with `readSowItems`, so a row that was just added — still blank —
+  // keeps the list custom instead of snapping back to the standard exclusions.
+  const customExclusions = readSowItems(form.exclusions)
+  const usingStandardExclusions = customExclusions.length === 0
+  const exclusions = usingStandardExclusions ? STANDARD_EXCLUSIONS : customExclusions
 
   const setField = <K extends keyof SowFormData>(k: K, v: SowFormData[K]) =>
     onChange(f => ({ ...f, [k]: v }))
