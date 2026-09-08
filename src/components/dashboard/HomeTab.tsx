@@ -8,6 +8,7 @@ import Link from 'next/link'
 import type { Project, Sprint, Task } from '@/types/payload-types'
 import { formatDate, getDaysUntil } from '@/lib/utils/dateUtils'
 import { cn } from '@/lib/utils'
+import { SectionHeader } from './SectionHeader'
 import { CreateMilestoneModal } from './CreateMilestoneModal'
 import { CreateSprintSheet } from './CreateSprintSheet'
 import { MilestoneEditSheet } from './MilestoneEditSheet'
@@ -60,8 +61,27 @@ const SPRINT_CFG = {
   finished:      { label: 'Finished', dot: 'bg-green-400',         bg: 'bg-green-400/[0.06]',                 border: 'border-green-400/[0.15]',          text: 'text-green-400'         },
 } as const
 
+/** Pill classes for a project status, in the package page's idiom. */
+function projectStatusPill(status: string | null | undefined) {
+  switch (status) {
+    case 'in-progress': return 'text-[var(--space-accent)] border-[rgba(139,156,182,0.18)] bg-[rgba(139,156,182,0.10)]'
+    case 'completed':   return 'text-emerald-400 border-emerald-400/25 bg-emerald-400/10'
+    case 'on-hold':     return 'text-orange-400 border-orange-400/25 bg-orange-400/10'
+    case 'cancelled':   return 'text-red-400 border-red-400/25 bg-red-400/10'
+    default:            return 'text-[var(--space-text-muted)] border-[var(--space-border-hard)] bg-[rgba(255,255,255,0.02)]'
+  }
+}
+
 function getSprintCfg(s: string | null | undefined) {
   return SPRINT_CFG[(s as keyof typeof SPRINT_CFG)] ?? SPRINT_CFG.pending
+}
+
+function fmtBudget(amount: number, currency?: string | null) {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: currency || 'USD',
+    maximumFractionDigits: 0,
+  }).format(amount)
 }
 
 function fmtMonth(d: Date) {
@@ -104,6 +124,12 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
 
   const statusCfg = PROJECT_STATUS[(project.status as keyof typeof PROJECT_STATUS)] ?? PROJECT_STATUS.pending
   const daysLeft  = getDaysUntil(project.projectedEndDate)
+
+  // Cancelled tasks are neither done nor outstanding, so they leave the
+  // denominator rather than counting against the project forever.
+  const countedTasks = tasks.filter(t => t.status !== 'cancelled')
+  const doneTasks = countedTasks.filter(t => t.status === 'completed').length
+  const donePct = countedTasks.length > 0 ? Math.round((doneTasks / countedTasks.length) * 100) : 0
 
   const milestones = useMemo(
     () => [...(project.milestones || [])].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
@@ -218,48 +244,109 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
   return (
     <div className="space-y-12 fluid-enter">
 
-      {/* ── Project header ────────────────────────────────────────────────── */}
+      {/* ── Hero ──────────────────────────────────────────────────────────────
+          The package detail page's idiom: a tracked eyebrow and status pill, a
+          title at reading size rather than display size, then the figures that
+          say where the project stands. The 6xl accent title this replaced left
+          no room above the fold for any of them. */}
       <div className="flex items-start justify-between gap-4">
-        <div className="space-y-2 flex-1 min-w-0">
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <div className={cn('size-2 rounded-full', statusCfg.dot)} />
-            <span className={cn('text-base font-semibold', statusCfg.text)}>{statusCfg.label}</span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2.5 flex-wrap mb-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.25em]" style={{ color: 'var(--space-accent)' }}>
+              Project
+            </p>
+            <span className={cn(
+              'text-[0.5625rem] font-bold uppercase tracking-[0.18em] px-2 py-0.5 rounded-full border',
+              projectStatusPill(project.status),
+            )}>
+              {statusCfg.label}
+            </span>
             {isOngoing && (
-              <>
-                <span className="text-[var(--space-text-secondary)]">·</span>
-                <span className="text-xs tracking-[0.2em] uppercase font-semibold border px-2 py-0.5 rounded-full border-[rgba(139,156,182,0.15)]" style={{ color: 'var(--space-accent)' }}>
-                  Ongoing
-                </span>
-              </>
+              <span className="text-[0.5625rem] font-bold uppercase tracking-[0.18em] px-2 py-0.5 rounded-full border border-[rgba(139,156,182,0.15)]" style={{ color: 'var(--space-accent)' }}>
+                Ongoing
+              </span>
             )}
             {daysLeft !== null && !isOngoing && (
-              <>
-                <span className="text-[var(--space-text-secondary)]">·</span>
-                <span className={cn('text-base font-medium', daysLeft < 0 ? 'text-red-400' : daysLeft < 14 ? 'text-orange-400' : 'text-[var(--space-text-primary)]')}>
-                  {daysLeft < 0 ? `${Math.abs(daysLeft)}d overdue` : `${daysLeft} days remaining`}
-                </span>
-              </>
+              <span className={cn(
+                'text-xs font-medium',
+                daysLeft < 0 ? 'text-red-400' : daysLeft < 14 ? 'text-orange-400' : 'text-[var(--space-text-muted)]',
+              )}>
+                {daysLeft < 0 ? `${Math.abs(daysLeft)}d overdue` : `${daysLeft} days remaining`}
+              </span>
             )}
 
             {/* Client chip — staff only */}
             {!readOnly && client && username && (
-              <>
-                <span className="text-[var(--space-text-secondary)]">·</span>
-                <Link
-                  href={`/u/${username}/clients/${client.id}`}
-                  className="flex items-center gap-1.5 text-xs bg-[var(--space-bg-card-hover)] hover:bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] hover:border-[var(--space-border-hard)] rounded-full px-3 py-1 transition-all duration-150 group"
-                >
-                  <Building2 className="size-3 text-cyan-500/50 group-hover:text-cyan-600 transition-colors shrink-0" />
-                  <span className="text-[var(--space-text-secondary)] group-hover:text-[var(--space-text-tertiary)] font-medium transition-colors">
-                    {client.name}
-                  </span>
-                </Link>
-              </>
+              <Link
+                href={`/u/${username}/clients/${client.id}`}
+                className="flex items-center gap-1.5 text-xs bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] rounded-full px-3 py-1 transition-all duration-150 group"
+              >
+                <Building2 className="size-3 text-cyan-500/50 group-hover:text-cyan-600 transition-colors shrink-0" />
+                <span className="text-[var(--space-text-secondary)] group-hover:text-[var(--space-text-tertiary)] font-medium transition-colors">
+                  {client.name}
+                </span>
+              </Link>
             )}
           </div>
-          <h1 className="text-6xl font-bold tracking-tight text-[var(--space-accent)] leading-none">{project.name}</h1>
+
+          <h1 className="text-2xl sm:text-3xl font-bold text-[var(--space-text-primary)] tracking-tight leading-tight">
+            {project.name}
+          </h1>
+
           {project.description && (
-            <p className="text-[var(--space-text-tertiary)] max-w-2xl leading-relaxed text-base">{project.description}</p>
+            <p className="text-sm text-[var(--space-text-secondary)] leading-relaxed mt-3 max-w-2xl">
+              {project.description}
+            </p>
+          )}
+
+          {/* Standing figures */}
+          <div className="flex items-end gap-8 flex-wrap mt-6">
+            <div>
+              <p className="text-3xl font-bold text-[var(--space-text-primary)] tabular-nums tracking-tight">{countedTasks.length}</p>
+              <p className="text-xs text-[var(--space-text-muted)] mt-1 uppercase tracking-widest">
+                {countedTasks.length === 1 ? 'task' : 'tasks'}
+              </p>
+            </div>
+            <div>
+              <p className="text-3xl font-bold text-[var(--space-text-primary)] tabular-nums tracking-tight">{sprints.length}</p>
+              <p className="text-xs text-[var(--space-text-muted)] mt-1 uppercase tracking-widest">
+                {sprints.length === 1 ? 'sprint' : 'sprints'}
+              </p>
+            </div>
+            <div>
+              <p className="text-3xl font-bold text-[var(--space-text-primary)] tabular-nums tracking-tight">{milestones.length}</p>
+              <p className="text-xs text-[var(--space-text-muted)] mt-1 uppercase tracking-widest">
+                {milestones.length === 1 ? 'milestone' : 'milestones'}
+              </p>
+            </div>
+            {/* Budget is staff information — a client sees their own figures on the
+                package and invoice, not the project's internal number. */}
+            {!readOnly && typeof project.budgetAmount === 'number' && project.budgetAmount > 0 && (
+              <div>
+                <p className="text-3xl font-bold text-[var(--space-text-primary)] tabular-nums tracking-tight">
+                  {fmtBudget(project.budgetAmount, project.currency)}
+                </p>
+                <p className="text-xs text-[var(--space-text-muted)] mt-1 uppercase tracking-widest">budget</p>
+              </div>
+            )}
+          </div>
+
+          {/* Task completion */}
+          {countedTasks.length > 0 && (
+            <div className="mt-6 space-y-1.5 max-w-md">
+              <div className="h-1.5 w-full rounded-full bg-[var(--space-divider)] overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-emerald-400 transition-all duration-500"
+                  style={{ width: `${donePct}%` }}
+                />
+              </div>
+              <div className="flex items-center justify-between text-[0.625rem] text-[var(--space-text-muted)] tabular-nums">
+                <span>
+                  <span className={doneTasks > 0 ? 'text-emerald-400' : ''}>{doneTasks}</span> of {countedTasks.length} complete
+                </span>
+                <span>{donePct}%</span>
+              </div>
+            </div>
           )}
         </div>
 
@@ -268,7 +355,7 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
           <button
             type="button"
             onClick={() => setSettingsOpen(true)}
-            className="shrink-0 flex items-center gap-1.5 text-sm text-[var(--space-text-secondary)] hover:text-[var(--space-text-tertiary)] bg-[rgba(255,255,255,0.02)] hover:bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] hover:border-[var(--space-border-hard)] rounded-lg px-3.5 py-2.5 transition-all duration-150 mt-1"
+            className="shrink-0 flex items-center gap-1.5 text-sm text-[var(--space-text-secondary)] hover:text-[var(--space-text-tertiary)] bg-[rgba(255,255,255,0.02)] hover:bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] rounded-lg px-3.5 py-2.5 transition-all duration-150 mt-1"
           >
             <Settings className="size-3.5" />
             Edit
@@ -308,9 +395,9 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
           <div className="space-y-4">
             {/* Header row */}
             <div className="flex items-center justify-between">
-              <p className="text-sm tracking-[0.2em] uppercase text-[var(--space-text-primary)] font-bold">Active Sprints</p>
+              <SectionHeader>Active sprints</SectionHeader>
               {currentSprints.length > 1 && (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 mb-3">
                   <span className="text-xs text-[var(--space-text-secondary)] tabular-nums">{idx + 1} / {currentSprints.length}</span>
                   <button
                     type="button"
@@ -454,7 +541,7 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
       })()}
 
       {/* ── Timeline label ────────────────────────────────────────────────── */}
-      <p className="text-sm tracking-[0.2em] uppercase text-[var(--space-text-primary)] font-bold">Timeline</p>
+      <SectionHeader>Timeline</SectionHeader>
 
       {/* ── No dates state ────────────────────────────────────────────────── */}
       {!hasTimeline ? (
@@ -786,7 +873,11 @@ export function HomeTab({ project, sprints, tasks, readOnly, username }: HomeTab
       {/* ── Milestone list ────────────────────────────────────────────────── */}
       {milestones.length > 0 && (
         <div className="space-y-1">
-          <p className="text-sm tracking-[0.2em] uppercase text-[var(--space-text-primary)] font-bold mb-6">Milestones</p>
+          <SectionHeader
+            aside={<span className="text-xs text-[var(--space-text-muted)] tabular-nums">{milestones.length}</span>}
+          >
+            Milestones
+          </SectionHeader>
           <div className="space-y-0">
             {milestones.map((m, i) => {
               const isNext = i === nextMilestoneIdx

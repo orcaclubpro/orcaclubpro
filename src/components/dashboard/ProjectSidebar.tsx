@@ -1,6 +1,14 @@
 import Link from 'next/link'
-import { ArrowLeft, Building2, Calendar, DollarSign, Users } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Building2, Calendar, DollarSign, Package, Users } from 'lucide-react'
 import type { Project, Task } from '@/types/payload-types'
+
+/** Just enough of a package to name it and link to it. */
+export interface LinkedPackage {
+  id: string
+  name: string
+  status: string
+  clientId: string | null
+}
 
 interface ProjectSidebarProps {
   project: Project
@@ -9,6 +17,8 @@ interface ProjectSidebarProps {
   readOnly?: boolean
   clientProjects?: Project[]
   staffProjects?: Project[]
+  /** Proposals pointing at this project — staff only, empty otherwise. */
+  packages?: LinkedPackage[]
 }
 
 const statusMap: Record<string, { dot: string; label: string; color: string }> = {
@@ -76,7 +86,7 @@ function ProjectNav({
   )
 }
 
-export function ProjectSidebar({ project, tasks, username, readOnly, clientProjects, staffProjects }: ProjectSidebarProps) {
+export function ProjectSidebar({ project, tasks, username, readOnly, clientProjects, staffProjects, packages = [] }: ProjectSidebarProps) {
   const status = statusMap[project.status] ?? statusMap.pending
   const clientAccount = typeof project.client === 'object' ? project.client : null
 
@@ -155,6 +165,33 @@ export function ProjectSidebar({ project, tasks, username, readOnly, clientProje
               </div>
               <div className="h-1.5 bg-[var(--space-divider)] rounded-full overflow-hidden">
                 <div className="h-full bg-[var(--space-accent)] rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
+              </div>
+            </div>
+          )}
+
+          {/* Linked packages */}
+          {!readOnly && packages.length > 0 && (
+            <div className="space-y-2">
+              <SectionLabel>{packages.length === 1 ? 'Package' : 'Packages'}</SectionLabel>
+              <div className="space-y-1">
+                {packages.map((pkg) => {
+                  const href = pkg.clientId
+                    ? `/u/${username}/clients/${pkg.clientId}/packages/${pkg.id}`
+                    : `/u/${username}/projects/${project.id}?tab=packages`
+                  return (
+                    <Link
+                      key={pkg.id}
+                      href={href}
+                      className="group flex items-center gap-2 rounded-lg px-2 py-1.5 -mx-2 hover:bg-[var(--space-bg-card-hover)] transition-colors"
+                    >
+                      <Package className="size-3.5 text-[var(--space-text-muted)] shrink-0" />
+                      <span className="min-w-0 flex-1 text-xs text-[var(--space-text-primary)] font-medium truncate">
+                        {pkg.name}
+                      </span>
+                      <ArrowRight className="size-3 text-[var(--space-text-muted)] opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                    </Link>
+                  )
+                })}
               </div>
             </div>
           )}

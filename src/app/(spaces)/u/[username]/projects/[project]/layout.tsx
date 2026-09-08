@@ -2,7 +2,7 @@ import { redirect, notFound } from 'next/navigation'
 import { getSessionUser } from '@/app/(spaces)/session'
 import { getPayload } from 'payload'
 import config from '@payload-config'
-import { getProjectDetail, getProjectTasks } from './detail-data'
+import { getProjectDetail, getProjectTasks, getProjectPackages } from './detail-data'
 import { AlertCircle } from 'lucide-react'
 import { ProjectSidebar } from '@/components/dashboard/ProjectSidebar'
 import { CollapsibleSidebar } from '@/components/dashboard/CollapsibleSidebar'
@@ -65,7 +65,7 @@ export default async function ProjectLayout({
     }
   }
 
-  const [tasks, clientProjectsResult, staffProjectsResult] = await Promise.all([
+  const [tasks, clientProjectsResult, staffProjectsResult, linkedPackages] = await Promise.all([
     getProjectTasks(projectId),
     isClient && user.clientAccount
       ? payload.find({
@@ -93,10 +93,20 @@ export default async function ProjectLayout({
           limit: 40,
         })
       : Promise.resolve(null),
+    // The sidebar's quick link. cache()d, so the Packages tab reuses this query
+    // rather than issuing its own.
+    isClient ? Promise.resolve([] as any[]) : getProjectPackages(projectId),
   ])
 
   const clientProjects = clientProjectsResult ? (clientProjectsResult.docs as Project[]) : []
   const staffProjects = staffProjectsResult ? (staffProjectsResult.docs as Project[]) : []
+  const packages = linkedPackages.map((p: any) => ({
+    id: String(p.id),
+    name: p.name ?? '',
+    status: p.status ?? 'draft',
+    clientId:
+      typeof p.clientAccount === 'string' ? p.clientAccount : p.clientAccount?.id ? String(p.clientAccount.id) : null,
+  }))
 
   return (
     <div className="lg:flex" style={{ minHeight: 'calc((100vh - 64px) / 1.3)' }}>
@@ -114,6 +124,7 @@ export default async function ProjectLayout({
           readOnly={isClient}
           clientProjects={isClient ? clientProjects : undefined}
           staffProjects={!isClient ? staffProjects : undefined}
+          packages={packages}
         />
       </CollapsibleSidebar>
 

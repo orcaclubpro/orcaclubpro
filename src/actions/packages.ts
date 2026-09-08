@@ -502,6 +502,33 @@ export async function getPackages() {
   }
 }
 
+/**
+ * Point a package at a project, or clear the link.
+ *
+ * Deliberately narrow. `updatePackage` also rewrites the line items and resets
+ * an accepted proposal's status back to `sent`, which is right when the money
+ * changed and wrong when all that changed is which project the work belongs to.
+ */
+export async function linkPackageToProject(packageId: string, projectId: string | null) {
+  try {
+    const user = await getCurrentUser()
+    if (!user || user.role === 'client') return { success: false as const, error: 'Unauthorized' }
+
+    const payload = await getPayload({ config })
+    await payload.update({
+      collection: 'packages',
+      id: packageId,
+      data: { projectRef: projectId || null } as any,
+    })
+
+    if (projectId) revalidatePath(`/u/${user.username}/projects/${projectId}`)
+    return { success: true as const }
+  } catch (error) {
+    console.error('[linkPackageToProject]', error)
+    return { success: false as const, error: 'Failed to link the package' }
+  }
+}
+
 export async function updatePackage({
   packageId,
   name,

@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { PackageDocumentsModal } from './PackageDocumentsModal'
+import { SectionHeader } from './SectionHeader'
 import { OptionRow } from './package-detail/OptionRow'
 import { ResetInvoicedEntry } from './package-detail/ResetInvoicedEntry'
 import {
@@ -45,19 +46,6 @@ interface PackageDetailViewProps {
   packageOrders: PackageOrderSummary[]
   /** `?doc=sow` — open the Documents modal straight into that document. */
   initialDoc?: 'sow' | null
-}
-
-/** Section heading in the dashboard-home idiom: an accent tick beside the label. */
-function SectionHeader({ children, aside }: { children: React.ReactNode; aside?: React.ReactNode }) {
-  return (
-    <div className="flex items-center justify-between gap-3 mb-3">
-      <div className="flex items-center gap-3">
-        <div className="w-px h-4 bg-[var(--space-accent)]/40 rounded-full shrink-0" />
-        <h2 className="text-sm font-semibold text-[var(--space-text-primary)]">{children}</h2>
-      </div>
-      {aside}
-    </div>
-  )
 }
 
 export function PackageDetailView({
