@@ -286,6 +286,15 @@ async function resolvePackageSowData(payload: any, pkg: any): Promise<SowFormDat
 }
 
 /**
+ * The package's own Scope and Deliverables, handed to the editor so a document
+ * that has drifted from its package can be reset back to them on purpose. The
+ * saved document owns these lists otherwise — see `mergePackageSowData`.
+ */
+function packageSowItems(derived: SowFormData) {
+  return { scopeItems: derived.scopeItems ?? [], deliverables: derived.deliverables ?? [] }
+}
+
+/**
  * The SOW form data for a package: the linked Scope of Work document's saved
  * data when one exists, otherwise a fresh draft derived from the package.
  *
@@ -310,12 +319,14 @@ export async function getPackageSowDraft(packageId: string) {
         : await payload.findByID({ collection: 'files', id: linkedId, depth: 0 }).catch(() => null)
 
       if (file?.documentData) {
-        // Staff-written wording persists; scope and pricing follow the package.
+        // Staff-written wording and lists persist; pricing follows the package.
+        const fromPackage = packageToSowData(pkg)
         return {
           success: true as const,
           documentId: String(file.id),
           documentName: file.name ?? null,
-          sowData: mergePackageSowData(packageToSowData(pkg), file.documentData as Partial<SowFormData>),
+          sowData: mergePackageSowData(fromPackage, file.documentData as Partial<SowFormData>),
+          packageItems: packageSowItems(fromPackage),
         }
       }
     }
@@ -329,6 +340,7 @@ export async function getPackageSowDraft(packageId: string) {
       documentId: null,
       documentName: null,
       sowData: { ...derived, providerContact: user.email || derived.providerContact },
+      packageItems: packageSowItems(derived),
     }
   } catch (error) {
     console.error('[getPackageSowDraft]', error)

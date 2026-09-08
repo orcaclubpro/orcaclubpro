@@ -49,11 +49,12 @@ export function SowTermsEditor({
   form,
   onChange,
   showAgreementFields = false,
+  packageItems,
 }: {
   form: SowFormData
   onChange: (updater: (f: SowFormData) => SowFormData) => void
   /**
-   * Render the engagement basics — dates, overview, billing, milestones.
+   * Render the engagement basics — date, overview, payment terms, milestones.
    *
    * Off for the Files-tab builder, which carries its own fields for these above
    * the editor. On for the package Documents modal, which otherwise has no way
@@ -62,6 +63,14 @@ export function SowTermsEditor({
    * shape.
    */
   showAgreementFields?: boolean
+  /**
+   * The package's own Scope and Deliverables, when this SOW belongs to one.
+   *
+   * The document owns these lists once it is saved, so an edited title survives
+   * reopening; this is what makes re-seeding them from the package an explicit
+   * action rather than something that happens silently on every load.
+   */
+  packageItems?: { scopeItems: SowScopeItem[]; deliverables: SowScopeItem[] }
 }) {
   const [openClause, setOpenClause] = useState<string | null>(null)
   const [editing, setEditing] = useState<string | null>(null)
@@ -113,22 +122,6 @@ export function SowTermsEditor({
                 className={inputCls}
                 value={form.effectiveDate ?? ''}
                 onChange={e => setField('effectiveDate', e.target.value)}
-              />
-            </Field>
-            <Field label="Contract Term" hint="Printed in the fees section.">
-              <input
-                className={inputCls}
-                value={form.contractTerm ?? ''}
-                onChange={e => setField('contractTerm', e.target.value)}
-                placeholder="e.g. 6 months"
-              />
-            </Field>
-            <Field label="Billing Cycle" hint="How often a retainer invoices.">
-              <input
-                className={inputCls}
-                value={form.billingCycle ?? ''}
-                onChange={e => setField('billingCycle', e.target.value)}
-                placeholder="e.g. Monthly"
               />
             </Field>
           </div>
@@ -314,6 +307,8 @@ export function SowTermsEditor({
           items={form.scopeItems}
           placeholder="e.g. Design and build the operations dashboard"
           onChange={next => setField('scopeItems', next)}
+          onReset={packageItems ? () => setField('scopeItems', packageItems.scopeItems) : undefined}
+          resetLabel="Reset to package"
         />
 
         <SowItemListEditor
@@ -322,6 +317,8 @@ export function SowTermsEditor({
           items={form.deliverables}
           placeholder="e.g. Deployed dashboard on Client's infrastructure"
           onChange={next => setField('deliverables', next)}
+          onReset={packageItems ? () => setField('deliverables', packageItems.deliverables) : undefined}
+          resetLabel="Reset to package"
         />
 
         <SowItemListEditor
@@ -350,6 +347,9 @@ export function SowTermsEditor({
           const isEditing = editing === clause.id
           const standard = clauseStandardText(clause, form)
           const hasTable = clauseHasRenderBlocks(clause, form)
+          // A clause whose prose comes from a field is not rewritten here — one
+          // paragraph, one place to type it.
+          const writtenIn = clause.writtenIn
 
           return (
             <div
@@ -387,21 +387,23 @@ export function SowTermsEditor({
                     <RotateCcw className="size-3.5" />
                   </button>
                 )}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setOpenClause(clause.id)
-                    setEditing(isEditing ? null : clause.id)
-                    if (!isEditing && !overridden) setOverride(clause.id, standard)
-                  }}
-                  title="Rewrite this clause"
-                  className={cn(
-                    'shrink-0 p-1 transition-colors',
-                    isEditing ? 'text-[var(--space-accent)]' : 'text-[var(--space-text-secondary)] hover:text-[var(--space-text-primary)]',
-                  )}
-                >
-                  <Pencil className="size-3.5" />
-                </button>
+                {!writtenIn && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenClause(clause.id)
+                      setEditing(isEditing ? null : clause.id)
+                      if (!isEditing && !overridden) setOverride(clause.id, standard)
+                    }}
+                    title="Rewrite this clause"
+                    className={cn(
+                      'shrink-0 p-1 transition-colors',
+                      isEditing ? 'text-[var(--space-accent)]' : 'text-[var(--space-text-secondary)] hover:text-[var(--space-text-primary)]',
+                    )}
+                  >
+                    <Pencil className="size-3.5" />
+                  </button>
+                )}
 
                 {clause.required ? (
                   <span
@@ -434,6 +436,13 @@ export function SowTermsEditor({
                 <div className="px-3 pb-3 space-y-2 border-t border-[var(--space-border-hard)] pt-2">
                   {clause.note && (
                     <p className="text-[0.5625rem] text-[var(--space-text-muted)] leading-relaxed italic">{clause.note}</p>
+                  )}
+                  {writtenIn && (
+                    <p className="text-[0.5625rem] text-[var(--space-text-muted)] leading-relaxed">
+                      {overridden
+                        ? `A rewrite saved on this document is overriding the ${writtenIn} field above. Reset it to print that field again.`
+                        : `Written in the ${writtenIn} field above — this section prints whatever that field holds.`}
+                    </p>
                   )}
                   {hasTable && (
                     <p className="text-[0.5625rem] text-[var(--space-text-muted)] leading-relaxed">

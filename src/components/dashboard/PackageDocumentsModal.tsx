@@ -15,7 +15,7 @@ import {
   savePackageSowDocument,
 } from '@/actions/packages'
 import { SowTermsEditor } from './SowTermsEditor'
-import type { SowFormData } from '@/lib/document-generators'
+import type { SowFormData, SowScopeItem } from '@/lib/document-generators'
 import type { PackageDocumentType } from '@/lib/packages/documents'
 
 const emptyBillTo = {
@@ -69,6 +69,9 @@ export function PackageDocumentsModal({
   // ── Scope of Work ──────────────────────────────────────────────────────────
   const [sow, setSow] = useState<SowFormData | null>(null)
   const [sowDocId, setSowDocId] = useState<string | null>(null)
+  /** The package's own Scope and Deliverables, so the editor can reset back to them. */
+  const [sowPackageItems, setSowPackageItems] =
+    useState<{ scopeItems: SowScopeItem[]; deliverables: SowScopeItem[] } | null>(null)
   const [sowLoading, setSowLoading] = useState(false)
   const [sowSaving, setSowSaving] = useState(false)
   const [sowDirty, setSowDirty] = useState(false)
@@ -103,6 +106,7 @@ export function PackageDocumentsModal({
     if (!res.success) { setSowError(res.error); return null }
     setSow(res.sowData)
     setSowDocId(res.documentId)
+    setSowPackageItems(res.packageItems)
     return res.sowData
   }, [packageId, sow, sowLoading])
 
@@ -428,7 +432,12 @@ export function PackageDocumentsModal({
                   />
                 </div>
 
-                <SowTermsEditor form={sow} onChange={updateSow} showAgreementFields />
+                <SowTermsEditor
+                  form={sow}
+                  onChange={updateSow}
+                  showAgreementFields
+                  packageItems={sowPackageItems ?? undefined}
+                />
 
                 {sowError && (
                   <div className="rounded-xl px-3 py-2.5 text-xs font-medium bg-red-500/[0.08] border border-red-500/20 text-red-400">

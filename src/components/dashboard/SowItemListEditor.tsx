@@ -25,6 +25,7 @@ export function SowItemListEditor({
   descriptionPlaceholder = 'Optional description — prints under the title',
   onChange,
   onReset,
+  resetLabel = 'Reset to standard',
   usingDefaults,
 }: {
   label: string
@@ -35,6 +36,8 @@ export function SowItemListEditor({
   onChange: (next: SowScopeItem[]) => void
   /** Offered when the list is staff-overridden and can fall back to a standard. */
   onReset?: () => void
+  /** What the reset falls back to — the standard list, or the package's own. */
+  resetLabel?: string
   usingDefaults?: boolean
 }) {
   const list = normalizeSowItems(items)
@@ -117,7 +120,7 @@ export function SowItemListEditor({
             onClick={onReset}
             className="flex items-center gap-1 text-[0.625rem] text-[var(--space-text-secondary)] hover:text-[var(--space-text-primary)]"
           >
-            <RotateCcw className="size-3" /> Reset to standard
+            <RotateCcw className="size-3" /> {resetLabel}
           </button>
         )}
       </div>

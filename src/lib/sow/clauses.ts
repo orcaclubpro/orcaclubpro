@@ -39,6 +39,14 @@ export interface SowClause {
   required?: boolean
   /** One-line explanation shown beside the clause in the editor. */
   note?: string
+  /**
+   * Names the form field this clause's prose is written in, when it has one.
+   *
+   * Such a clause is not separately rewritable — an override would shadow the
+   * field, leaving two places to write the same paragraph and no sign of which
+   * one the PDF used. The editor points at the field instead.
+   */
+  writtenIn?: string
   blocks: (d: SowFormData) => SowBlock[]
 }
 
@@ -185,6 +193,7 @@ export const SOW_CLAUSES: SowClause[] = [
     heading: 'Project Overview',
     required: true,
     note: 'Never left blank — derived from the project name and scope when unwritten.',
+    writtenIn: 'Project Overview',
     blocks: d => [{ t: 'body', text: projectOverviewText(d) }],
   },
 

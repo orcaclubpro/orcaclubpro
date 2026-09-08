@@ -222,37 +222,16 @@ const PACKAGE_OWNED_SOW_FIELDS = [
 ] as const
 
 /**
- * Item lists where the package owns the shape and staff own the prose.
+ * Item lists the package seeds and the document then owns.
  *
- * These used to be owned outright, which meant the SOW editor rendered Scope and
- * Deliverables editors whose edits were silently discarded on the next load. The
- * package still decides WHICH items exist and in what order — that is what keeps
- * the contract honest about scope — but a description staff wrote against an
- * item survives, matched back on the item's title.
+ * The package derives the first draft of these, but once a SOW document exists
+ * they are staff prose: a line retitled for the contract is a deliberate edit,
+ * not a stale copy of a line item, and re-deriving them threw those edits away
+ * on every reload. The money still follows the package — pricing, the payment
+ * schedule, and the client are in PACKAGE_OWNED_SOW_FIELDS — and the SOW editor
+ * offers an explicit reset back to the package's own lists.
  */
-const PACKAGE_SHAPED_SOW_ITEMS = ['scopeItems', 'deliverables'] as const
-
-const titleKey = (t: string) => t.trim().toLowerCase()
-
-/** Package items, carrying forward any description staff wrote for the same title. */
-function mergeItemProse(
-  derived: SowScopeItem[] | undefined,
-  saved: SowScopeItem[] | string[] | undefined,
-): SowScopeItem[] {
-  const items = normalizeSowItems(derived)
-  const written = new Map(
-    normalizeSowItems(saved)
-      .filter(i => i.description?.trim())
-      .map(i => [titleKey(i.title), i.description!.trim()]),
-  )
-  if (written.size === 0) return items
-  return items.map(item => {
-    const prose = written.get(titleKey(item.title))
-    // A description typed on the document wins: the package's line description
-    // is a sales line, the SOW's is what acceptance attaches to.
-    return prose ? { ...item, description: prose } : item
-  })
-}
+const DOCUMENT_OWNED_SOW_ITEMS = ['scopeItems', 'deliverables'] as const
 
 /**
  * Combine a package's derived SOW with the wording saved on its SOW document.
@@ -268,11 +247,12 @@ export function mergePackageSowData(
   for (const field of PACKAGE_OWNED_SOW_FIELDS) {
     ;(merged as any)[field] = (derived as any)[field]
   }
-  for (const field of PACKAGE_SHAPED_SOW_ITEMS) {
-    ;(merged as any)[field] = mergeItemProse(
-      (derived as any)[field],
-      (saved as any)[field],
-    )
+  for (const field of DOCUMENT_OWNED_SOW_ITEMS) {
+    // Normalized on the way through: documents saved before items carried
+    // descriptions hold plain strings. An empty saved list falls back to the
+    // package rather than printing a contract with no scope.
+    const savedItems = normalizeSowItems((saved as any)[field])
+    ;(merged as any)[field] = savedItems.length ? savedItems : (derived as any)[field]
   }
   return merged
 }
