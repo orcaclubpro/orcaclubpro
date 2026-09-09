@@ -103,21 +103,70 @@ export async function createStripeInvoiceForOrder(
   }
 }
 
-/** A Stripe invoice payment that has not reached a terminal state yet. */
+/** A Stripe InvoicePayment that has not reached a terminal state yet. */
 const IN_FLIGHT_PAYMENT_STATUS = 'open'
+
+/**
+ * PaymentIntent states in which money is genuinely on its way to the invoice:
+ * `processing` is the ACH debit settling, `requires_capture` is an authorized
+ * card hold. Every other state — no payment method, awaiting customer action,
+ * canceled — means nothing is moving and an offline payment can be recorded.
+ */
+const IN_FLIGHT_INTENT_STATUSES: ReadonlySet<string> = new Set(['processing', 'requires_capture'])
+
+/** The InvoicePayment shape we read off an `expand: ['payments']` retrieve. */
+type InvoicePaymentLike = {
+  status?: string
+  payment?: { payment_intent?: string | { id?: string } | null } | null
+}
+
+/**
+ * PaymentIntent ids behind every InvoicePayment still sitting at `open`.
+ *
+ * `open` alone does NOT mean money is on its way. Stripe defines it as
+ * "incomplete and not credited to the invoice", and it creates a *default*
+ * InvoicePayment in exactly that state the moment an invoice is finalized — so
+ * every unpaid invoice we raise carries one, as does every abandoned or
+ * declined payment attempt. Only the PaymentIntent behind it can tell a settling
+ * ACH debit apart from an invoice nobody has touched.
+ *
+ * Requires `expand: ['payments']` on the retrieve. An invoice without the field
+ * yields nothing, so a missing expand can never block a legitimate offline
+ * fulfillment.
+ */
+export function openPaymentIntentIds(invoice: Stripe.Invoice): string[] {
+  const payments = (invoice as { payments?: { data?: InvoicePaymentLike[] } }).payments
+  return (payments?.data ?? [])
+    .filter((p) => p?.status === IN_FLIGHT_PAYMENT_STATUS)
+    .map((p) => {
+      const intent = p?.payment?.payment_intent
+      return typeof intent === 'string' ? intent : (intent?.id ?? null)
+    })
+    .filter((id): id is string => Boolean(id))
+}
 
 /**
  * True when the invoice already has money on its way to it.
  *
- * ACH debits sit in this state for up to four business days while the invoice
- * still reads `open`, which is exactly when a human is most tempted to press
- * "Mark as Paid". Requires `expand: ['payments']` on the retrieve — an invoice
- * without the field returns false, so a missing expand can never block a
- * legitimate offline fulfillment.
+ * ACH debits stay in flight for up to four business days while the invoice still
+ * reads `open`, which is exactly when a human is most tempted to press "Mark as
+ * Paid". Resolving each open payment's PaymentIntent costs one extra API call on
+ * a rare, human-initiated path — cheap next to the alternative, which is
+ * refusing every offline payment on a freshly finalized invoice.
+ *
+ * Undecidable cases (unretrievable intent, an out-of-band payment record with no
+ * intent at all) return false: Stripe's own refusal inside `invoices.pay` is the
+ * backstop, and it is the authority on this question.
  */
-export function hasPaymentInFlight(invoice: Stripe.Invoice): boolean {
-  const payments = (invoice as { payments?: { data?: Array<{ status?: string }> } }).payments
-  return (payments?.data ?? []).some((p) => p?.status === IN_FLIGHT_PAYMENT_STATUS)
+export async function hasPaymentInFlight(stripe: Stripe, invoice: Stripe.Invoice): Promise<boolean> {
+  for (const intentId of openPaymentIntentIds(invoice)) {
+    const intent = await stripe.paymentIntents.retrieve(intentId).catch((err: any) => {
+      console.warn(`[fulfillOrder] Could not read PaymentIntent ${intentId}: ${err?.message}`)
+      return null
+    })
+    if (intent && IN_FLIGHT_INTENT_STATUSES.has(intent.status)) return true
+  }
+  return false
 }
 
 /**
@@ -188,7 +237,7 @@ export async function fulfillOrderPaidOutOfBand(
       } else if (invoice.status === 'draft') {
         warning = `Stripe invoice ${stripeInvoiceId} is still a draft — it was not updated.`
         console.warn(`[fulfillOrder] ${warning}`)
-      } else if (hasPaymentInFlight(invoice)) {
+      } else if (await hasPaymentInFlight(stripe, invoice)) {
         // Caught before calling Stripe, so the usual case never burns an API error.
         console.warn(
           `[fulfillOrder] Refusing to fulfill order ${order.id}: payment in flight on ${stripeInvoiceId}`,

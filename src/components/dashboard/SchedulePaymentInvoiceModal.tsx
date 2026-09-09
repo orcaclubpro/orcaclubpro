@@ -49,6 +49,8 @@ export interface SchedulePaymentInvoiceModalProps {
   packageId: string
   packageName: string
   entry: { id: string; label: string; amount: number; dueDate?: string | null }
+  /** Project the resulting order is filed under. Omit to leave it unfiled. */
+  projectId?: string
   /** Staff-composed recap for THIS entry, or null. Keyed by entry id in the parent. */
   recapDraft: PackageRecapData | null
   onRecapChange: (entryId: string, recap: PackageRecapData) => void
@@ -70,7 +72,7 @@ interface SendOutcome {
  * a selection of entry ids (see mergePackageRecap in src/lib/packages/recap.ts).
  */
 export function SchedulePaymentInvoiceModal({
-  packageId, packageName, entry, recapDraft, onRecapChange, onClose, onSent,
+  packageId, packageName, entry, projectId, recapDraft, onRecapChange, onClose, onSent,
 }: SchedulePaymentInvoiceModalProps) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -150,7 +152,7 @@ export function SchedulePaymentInvoiceModal({
   async function handleSend() {
     setError(null)
     setSending(true)
-    const result = await sendScheduledPayment(packageId, entry.id, undefined, {
+    const result = await sendScheduledPayment(packageId, entry.id, projectId || undefined, {
       mode,
       fulfillmentNote: fulfilling ? fulfillmentNote : undefined,
       skipEmail,

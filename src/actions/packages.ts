@@ -771,14 +771,30 @@ export async function getPackageTemplates() {
   }
 }
 
+export interface CreateOrderFromPackageOpts {
+  /**
+   * 'invoice' (default) bills the whole package through Stripe and emails the client.
+   * 'fulfill' records it as already settled: no Stripe invoice, no email, the order
+   * created straight to `paid` with a fulfillmentNote for the audit trail. Mirrors
+   * `sendScheduledPayment`'s fulfill mode, one package-wide order instead of one entry.
+   */
+  mode?: 'invoice' | 'fulfill'
+  /** Why this package was fulfilled off-Stripe. Internal only — never emailed. */
+  fulfillmentNote?: string
+}
+
 export async function createOrderFromPackage(
   packageId: string,
   daysUntilDue: number = 30,
   projectId?: string,
+  opts?: CreateOrderFromPackageOpts,
 ) {
   // Track finalized Stripe invoice so we can void it if payload.create fails (orphan prevention)
   let finalizedInvoice: any = null
   let stripe: ReturnType<typeof getStripe> | null = null
+
+  /** Fulfilled packages never touch Stripe and never email — see CreateOrderFromPackageOpts. */
+  const fulfill = opts?.mode === 'fulfill'
 
   try {
     const user = await getCurrentUser()
@@ -810,39 +826,48 @@ export async function createOrderFromPackage(
     const clientAccountId = typeof clientAccount === 'string' ? clientAccount : clientAccount.id
     const stripeCustomerId = typeof clientAccount === 'object' ? clientAccount.stripeCustomerId : null
 
-    if (!stripeCustomerId) {
+    // Only the invoice path needs a Stripe customer — fulfilling bills nothing.
+    if (!stripeCustomerId && !fulfill) {
       return { success: false, error: 'Client account has no Stripe customer ID — set it in the admin panel first' }
     }
-
-    stripe = getStripe()
 
     const totalAmount = lineItems.reduce(
       (sum: number, item: any) => sum + (item.adjustedPrice ?? item.price ?? 0) * (item.quantity ?? 1),
       0
     )
 
-    // 1. Create Stripe invoice BEFORE touching the DB (create → attach items → finalize).
-    //    Webhook looks up the order by stripeInvoiceId (more reliable than metadata).
-    const { invoice: finalized } = await createStripeInvoiceForOrder({
-      stripe,
-      stripeCustomerId,
-      daysUntilDue,
-      description: pkg.name,
-      invoiceMetadata: { orcaclub_package_id: packageId },
-      lines: lineItems.map((item: any) => {
-        const qty = item.quantity ?? 1
-        const unitPrice = item.adjustedPrice ?? item.price ?? 0
-        const descParts = [
-          item.name,
-          qty > 1 ? `${qty} × $${unitPrice}` : null,
-          item.description || null,
-        ].filter(Boolean)
-        return { description: descParts.join(' — '), amount: unitPrice * qty }
-      }),
-    })
-    finalizedInvoice = finalized
-    // Stripe assigns the invoice number at finalization — use it as the order number.
-    const orderNumber = finalized.number ?? finalized.id
+    let orderNumber: string
+
+    if (fulfill) {
+      // Nothing is billed, so there is no Stripe invoice to take a number from.
+      // nextOrderNumber() is the legacy INV- sequence kept for exactly this case.
+      orderNumber = await nextOrderNumber(payload)
+    } else {
+      stripe = getStripe()
+
+      // 1. Create Stripe invoice BEFORE touching the DB (create → attach items → finalize).
+      //    Webhook looks up the order by stripeInvoiceId (more reliable than metadata).
+      const { invoice: finalized } = await createStripeInvoiceForOrder({
+        stripe,
+        stripeCustomerId,
+        daysUntilDue,
+        description: pkg.name,
+        invoiceMetadata: { orcaclub_package_id: packageId },
+        lines: lineItems.map((item: any) => {
+          const qty = item.quantity ?? 1
+          const unitPrice = item.adjustedPrice ?? item.price ?? 0
+          const descParts = [
+            item.name,
+            qty > 1 ? `${qty} × $${unitPrice}` : null,
+            item.description || null,
+          ].filter(Boolean)
+          return { description: descParts.join(' — '), amount: unitPrice * qty }
+        }),
+      })
+      finalizedInvoice = finalized
+      // Stripe assigns the invoice number at finalization — use it as the order number.
+      orderNumber = finalized.number ?? finalized.id
+    }
 
     // 4. Single payload.create with ALL data — triggers updateClientBalance exactly once.
     //    Packages use 'name'; Orders use 'title' — mapped explicitly below.
@@ -855,10 +880,24 @@ export async function createOrderFromPackage(
         packageRef: packageId,
         invoiceType: 'full',
         amount: totalAmount,
-        status: 'pending',
-        stripeCustomerId,
-        stripeInvoiceId: finalizedInvoice.id,
-        stripeInvoiceUrl: finalizedInvoice.hosted_invoice_url || '',
+        // A fulfilled package is settled the moment it is recorded — it never sits
+        // pending, so it never lands on the client's outstanding balance.
+        status: fulfill ? 'paid' : 'pending',
+        ...(stripeCustomerId ? { stripeCustomerId } : {}),
+        // Omit the Stripe fields entirely when fulfilling: stripeInvoiceId is `unique`,
+        // so writing '' would collide across every fulfilled order.
+        ...(finalizedInvoice
+          ? {
+              stripeInvoiceId: finalizedInvoice.id,
+              stripeInvoiceUrl: finalizedInvoice.hosted_invoice_url || '',
+            }
+          : {}),
+        ...(fulfill
+          ? {
+              fulfilledAt: new Date().toISOString(),
+              ...(opts?.fulfillmentNote?.trim() ? { fulfillmentNote: opts.fulfillmentNote.trim() } : {}),
+            }
+          : {}),
         lineItems: lineItems.map((item: any) => ({
           title: item.name,        // Packages use 'name'; Orders use 'title'
           description: item.description ?? undefined,
@@ -869,7 +908,22 @@ export async function createOrderFromPackage(
       } as any,
     })
 
-    // 5. Append an entry to paymentSchedule so the invoice shows in the schedule view.
+    // An Orders afterChange hook can abort the create's Mongo transaction while
+    // swallowing the error, handing back a doc id for a row that was rolled back.
+    // Verify before stamping that id onto the payment schedule below.
+    try {
+      await assertOrderPersisted(payload, order.id as string)
+    } catch (e) {
+      console.error('[createOrderFromPackage] Order did not persist:', e)
+      throw new Error(
+        fulfill
+          ? 'This payment could not be saved, so nothing was recorded — please try again.'
+          : 'The invoice could not be saved, so this package was not billed. ' +
+            'The Stripe invoice has been voided and nothing was charged — please try again.',
+      )
+    }
+
+    // 5. Append an entry to paymentSchedule so the order shows in the schedule view.
     try {
       const existingSchedule = ((pkg as any).paymentSchedule ?? []) as any[]
       const dueDateStr = new Date(Date.now() + daysUntilDue * 86400000).toISOString().split('T')[0]
@@ -880,10 +934,12 @@ export async function createOrderFromPackage(
           paymentSchedule: [
             ...existingSchedule,
             {
-              label: 'Invoice',
+              label: fulfill ? 'Fulfillment' : 'Invoice',
               amount: totalAmount,
               dueDate: dueDateStr,
               orderId: order.id,
+              // Stamped on both paths: it marks the entry as consumed, which is what
+              // the schedule view reads to stop offering it for invoicing again.
               invoicedAt: new Date().toISOString(),
             },
           ],
@@ -895,24 +951,28 @@ export async function createOrderFromPackage(
 
     revalidatePath(`/u/${user.username}/clients`)
 
-    // Non-blocking: send "New Invoice" email to client
-    ;(async () => {
-      try {
-        const clientUsername = await getClientUsername(payload, clientAccountId)
-        const proposalPrintUrl = clientUsername
-          ? `${APP_BASE}/u/${clientUsername}/packages/${packageId}/print`
-          : undefined
-        await sendGenericInvoiceEmail(payload, order.id, user.id, proposalPrintUrl)
-      } catch (e) {
-        console.error('[createOrderFromPackage] Invoice email failed:', e)
-      }
-    })()
+    // Non-blocking: send "New Invoice" email to client. A fulfilled package was paid
+    // before it was recorded — there is nothing to ask the client for.
+    if (!fulfill) {
+      ;(async () => {
+        try {
+          const clientUsername = await getClientUsername(payload, clientAccountId)
+          const proposalPrintUrl = clientUsername
+            ? `${APP_BASE}/u/${clientUsername}/packages/${packageId}/print`
+            : undefined
+          await sendGenericInvoiceEmail(payload, order.id, user.id, proposalPrintUrl)
+        } catch (e) {
+          console.error('[createOrderFromPackage] Invoice email failed:', e)
+        }
+      })()
+    }
 
     return {
       success: true,
-      invoiceUrl: finalizedInvoice.hosted_invoice_url,
+      invoiceUrl: finalizedInvoice?.hosted_invoice_url ?? null,
       orderNumber,
       orderId: order.id,
+      fulfilled: fulfill,
     }
   } catch (error) {
     // If Stripe invoice was finalized but payload.create failed, void it

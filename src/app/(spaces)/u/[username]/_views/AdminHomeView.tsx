@@ -114,6 +114,11 @@ const idOf = (ref: any): string | null =>
 /** Where staff act on an order — the Payload admin edit view. */
 const adminOrderHref = (id: string) => `/admin/collections/orders/${id}`
 
+/** The client's own invoice ledger — the section id is the `?tab=` contract
+ *  of `clients/[client]`, so it must stay `orders`. */
+const clientInvoicesHref = (username: string, accountId: string) =>
+  `/u/${username}/clients/${accountId}?tab=orders`
+
 // ─── A row in the "Needs you" / "Moving" sections ─────────────────────────────
 
 function Row({
@@ -154,11 +159,14 @@ function Row({
 }
 
 // ─── An invoice line ──────────────────────────────────────────────────────────
-// Two destinations, both named: the number opens the order in the admin, the
-// trailing link opens the same invoice on Stripe. The row itself is not a link,
-// so the two anchors stay valid and unambiguous.
+// Two destinations, both named: the number opens the invoice where it belongs —
+// the owning client's Invoices tab, in the portal — and the trailing link opens
+// the same invoice on Stripe. The row itself is not a link, so the two anchors
+// stay valid and unambiguous. Orders with no readable client account (depth-0
+// refs, deleted accounts) fall back to the admin edit view rather than
+// pointing at a client route that cannot be built.
 
-function InvoiceLine({ order }: { order: any }) {
+function InvoiceLine({ order, username }: { order: any; username: string }) {
   const meta = orderStatus(order.status)
   const account = typeof order.clientAccount === 'object' ? order.clientAccount : null
 
@@ -167,7 +175,7 @@ function InvoiceLine({ order }: { order: any }) {
       <ToneRule tone={meta.tone} />
 
       <Link
-        href={adminOrderHref(order.id)}
+        href={account?.id ? clientInvoicesHref(username, account.id) : adminOrderHref(order.id)}
         className="w-[120px] shrink-0 truncate text-[15px] text-[var(--space-text-primary)] underline decoration-transparent underline-offset-4 transition-colors hover:decoration-[var(--space-accent)] focus-visible:decoration-[var(--space-accent)] focus-visible:outline-none"
       >
         {order.orderNumber || 'Invoice'}
@@ -354,7 +362,7 @@ export function AdminHomeView({
         amount: o.amount || 0,
         dueDate: o.dueDate ?? null,
         soonWithin: 3,
-        href: account?.id ? `/u/${username}/clients/${account.id}` : `/u/${username}/clients`,
+        href: account?.id ? clientInvoicesHref(username, account.id) : `/u/${username}/clients`,
       }
     })
 
@@ -589,7 +597,7 @@ export function AdminHomeView({
                 {collectedOrders.length === 0 ? (
                   <Empty>Nothing was collected {period.phrase}.</Empty>
                 ) : (
-                  collectedOrders.map((order: any) => <InvoiceLine key={order.id} order={order} />)
+                  collectedOrders.map((order: any) => <InvoiceLine key={order.id} order={order} username={username} />)
                 )}
               </motion.section>
             )}
@@ -604,7 +612,7 @@ export function AdminHomeView({
                   {openInvoices.length === 0 ? (
                     <Empty>Every invoice raised has been paid.</Empty>
                   ) : (
-                    openInvoices.map((order: any) => <InvoiceLine key={order.id} order={order} />)
+                    openInvoices.map((order: any) => <InvoiceLine key={order.id} order={order} username={username} />)
                   )}
                 </div>
 
@@ -820,7 +828,7 @@ export function AdminHomeView({
                 {latestInvoices.length === 0 ? (
                   <Empty>No invoices yet. Build a package to raise the first one.</Empty>
                 ) : (
-                  latestInvoices.map((order: any) => <InvoiceLine key={order.id} order={order} />)
+                  latestInvoices.map((order: any) => <InvoiceLine key={order.id} order={order} username={username} />)
                 )}
               </motion.section>
             )}

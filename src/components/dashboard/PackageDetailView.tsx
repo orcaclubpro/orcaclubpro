@@ -7,6 +7,7 @@ import Link from 'next/link'
 import {
   FileText, ArrowRight, ArrowLeft, Check, Loader2, Trash2, Copy, CheckCheck,
   Receipt, ExternalLink, CheckCircle2, CalendarDays, ListOrdered, Files, SlidersHorizontal, X,
+  PackageCheck,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { PackageDocumentsModal } from './PackageDocumentsModal'
@@ -17,14 +18,16 @@ import {
   fmt, fmtExact, computeTotals, generateInstallmentDates, computeInstallmentAmounts,
   formatDisplayDate, installmentLabel, statusStyle,
   type Frequency, type LineItem, type PackageDoc, type PackageOrderSummary,
+  type ScheduledEntry,
 } from './package-detail/utils'
+import { SchedulePaymentInvoiceModal } from './SchedulePaymentInvoiceModal'
+import type { PackageRecapData } from '@/lib/packages/recap'
 import {
   updatePackage,
   deleteProposal,
   createOrderFromPackage,
   savePaymentScheduleOnly,
   pushPackageSchedule,
-  sendScheduledPayment,
   removeScheduleEntry,
   resetScheduleEntry,
 } from '@/actions/packages'
@@ -74,14 +77,17 @@ export function PackageDetailView({
   const [deleting, setDeleting]             = useState(false)
   const [copied, setCopied]                 = useState(false)
   const [invoicing, setInvoicing]           = useState(false)
-  const [invoiceResult, setInvoiceResult]   = useState<{ url: string } | { error: string } | null>(null)
+  const [invoiceResult, setInvoiceResult]   = useState<{ url: string } | { recorded: string } | { error: string } | null>(null)
   const [daysUntilDue, setDaysUntilDue]     = useState(30)
   const [selectedProjectId, setSelectedProjectId] = useState(
     pkg.projectRef ? (typeof pkg.projectRef === 'string' ? pkg.projectRef : pkg.projectRef.id) : '',
   )
 
-  // Mode: 'full' (Quick Invoice) | 'schedule' (Payment Schedule)
-  const [mode, setMode] = useState<'full' | 'schedule'>('full')
+  // Mode: 'full' (Quick Invoice) | 'schedule' (Payment Schedule) | 'fulfill' (already settled)
+  const [mode, setMode] = useState<'full' | 'schedule' | 'fulfill'>('full')
+  /** Why this package was settled off-Stripe. Internal only — never emailed. */
+  const [fulfillmentNote, setFulfillmentNote] = useState('')
+  const fulfilling = mode === 'fulfill'
 
   // Payment schedule builder state
   const [scheduleDeposit, setScheduleDeposit]         = useState('')
@@ -93,9 +99,11 @@ export function PackageDetailView({
   const [pushingSchedule, setPushingSchedule]         = useState(false)
   const [pushScheduleResult, setPushScheduleResult]   = useState<string | null>(null)
   const [scheduleError, setScheduleError]             = useState<string | null>(null)
-  const [sendingEntryId, setSendingEntryId]           = useState<string | null>(null)
   const [removingEntryId, setRemovingEntryId]         = useState<string | null>(null)
-  const [entryResults, setEntryResults]               = useState<Record<string, { url: string } | { error: string }>>({})
+  /** The schedule entry whose invoice/fulfil composer is open, if any. */
+  const [composerEntry, setComposerEntry]             = useState<ScheduledEntry | null>(null)
+  /** Recap narrative per entry — survives closing and reopening the composer. */
+  const [recapDrafts, setRecapDrafts]                 = useState<Record<string, PackageRecapData>>({})
   // Reset (un-invoice) an already-invoiced schedule entry: two-click confirm, then the
   // outcome (or the refusal, e.g. the paid guard) shown inline next to the row.
   const [resettingEntryId, setResettingEntryId]       = useState<string | null>(null)
@@ -155,6 +163,13 @@ export function PackageDetailView({
   const { oneTime: packageTotal } = computeTotals(
     (editItems.length > 0 ? editItems : allLineItems).filter(i => !i.isAddOn),
   )
+  // What Quick Invoice / Fulfillment actually bills: EVERY non-add-on line, recurring
+  // ones included, charged once. Deliberately not `packageTotal`, which counts one-time
+  // lines only because the schedule builder prices installments off it.
+  const orderableTotal = (editItems.length > 0 ? editItems : allLineItems)
+    .filter(i => !i.isAddOn)
+    .reduce((s, i) => s + (i.adjustedPrice ?? i.price ?? 0) * (i.quantity ?? 1), 0)
+
   const invoicedPct = packageTotal > 0 ? Math.min(100, (invoicedAmount / packageTotal) * 100) : 0
   const paidPct = packageTotal > 0 ? Math.min(100, (paidAmount / packageTotal) * 100) : 0
 
@@ -204,14 +219,24 @@ export function PackageDetailView({
       setInvoiceResult({ error: saveResult.error ?? 'Failed to save package before invoicing' })
       return
     }
-    const result = await createOrderFromPackage(pkg.id, daysUntilDue, selectedProjectId || undefined)
+    const result = await createOrderFromPackage(
+      pkg.id,
+      daysUntilDue,
+      selectedProjectId || undefined,
+      fulfilling ? { mode: 'fulfill', fulfillmentNote } : undefined,
+    )
     setInvoicing(false)
-    if (result.success && result.invoiceUrl) {
-      setInvoiceResult({ url: result.invoiceUrl })
-      router.refresh()
-    } else {
-      setInvoiceResult({ error: result.error ?? 'Failed to create invoice' })
+    if (!result.success) {
+      setInvoiceResult({ error: result.error ?? (fulfilling ? 'Failed to record payment' : 'Failed to create invoice') })
+      return
     }
+    // A fulfilled package has no hosted invoice to link to — the order number is the receipt.
+    setInvoiceResult(
+      result.invoiceUrl
+        ? { url: result.invoiceUrl }
+        : { recorded: result.orderNumber ?? 'Recorded' },
+    )
+    router.refresh()
   }
 
   const handleSave = async () => {
@@ -323,18 +348,6 @@ export function PackageDetailView({
     }
   }
 
-  const handleSendScheduledPayment = async (entryId: string) => {
-    setSendingEntryId(entryId)
-    const result = await sendScheduledPayment(pkg.id, entryId, selectedProjectId || undefined)
-    setSendingEntryId(null)
-    if (result.success && result.invoiceUrl) {
-      setEntryResults(prev => ({ ...prev, [entryId]: { url: result.invoiceUrl as string } }))
-      router.refresh()
-    } else {
-      setEntryResults(prev => ({ ...prev, [entryId]: { error: result.error ?? 'Failed to send invoice' } }))
-    }
-  }
-
   const handleRemoveScheduleEntry = async (entryId: string) => {
     setRemovingEntryId(entryId)
     const result = await removeScheduleEntry(pkg.id, entryId)
@@ -443,6 +456,19 @@ export function PackageDetailView({
               >
                 Payment Schedule
               </button>
+              <button
+                type="button"
+                onClick={() => setMode('fulfill')}
+                className={cn(
+                  'px-3 py-1.5 text-xs font-medium transition-all border-l',
+                  mode === 'fulfill'
+                    ? 'bg-[rgba(139,156,182,0.10)] border-[rgba(139,156,182,0.15)]'
+                    : 'text-[var(--space-text-muted)] hover:text-[var(--space-text-tertiary)] border-[var(--space-border-hard)]',
+                )}
+                style={mode === 'fulfill' ? { color: 'var(--space-accent)' } : {}}
+              >
+                Fulfillment
+              </button>
             </div>
 
             {/* Quick Invoice — due-date window */}
@@ -460,6 +486,25 @@ export function PackageDetailView({
                   <option value={60}>60 days</option>
                   <option value={90}>90 days</option>
                 </select>
+              </div>
+            )}
+
+            {/* Fulfillment — the whole package, recorded as already paid. Nothing is
+                billed and nothing is emailed, so the only input is the internal note
+                saying why it was settled outside Stripe. */}
+            {mode === 'fulfill' && (
+              <div className="mt-4 space-y-2 max-w-md">
+                <p className="text-[0.625rem] text-[var(--space-text-muted)] leading-relaxed">
+                  Records {fmt(orderableTotal)} as already collected — no Stripe invoice, no email,
+                  and nothing added to {clientName}&apos;s outstanding balance.
+                </p>
+                <input
+                  type="text"
+                  value={fulfillmentNote}
+                  onChange={e => setFulfillmentNote(e.target.value)}
+                  placeholder="How it was settled (e.g. paid by wire 9/02) — internal only"
+                  className="w-full px-3 py-2 text-xs bg-[var(--space-bg-card)] border border-[var(--space-border-hard)] rounded-lg text-[var(--space-text-secondary)] placeholder:text-[var(--space-text-muted)] focus:outline-none focus:border-[rgba(139,156,182,0.20)]"
+                />
               </div>
             )}
 
@@ -845,7 +890,6 @@ export function PackageDetailView({
                     const invoicedOrder = isInvoiced
                       ? packageOrders.find(o => o.id === entry.orderId)
                       : null
-                    const entryResult = entryResults[entry.id]
                     return (
                       <div key={entry.id} className="flex items-center gap-3 px-3.5 py-3">
                         <div className="flex-1 min-w-0 flex items-center gap-3 flex-wrap">
@@ -873,43 +917,33 @@ export function PackageDetailView({
                               <ResetInvoicedEntry
                                 armed={confirmResetEntryId === entry.id}
                                 running={resettingEntryId === entry.id}
-                                disabled={removingEntryId === entry.id || sendingEntryId === entry.id}
+                                disabled={removingEntryId === entry.id}
                                 result={resetResults[entry.id]}
                                 onClick={() => handleResetScheduleEntry(entry.id)}
                                 onBlur={() => setTimeout(() => setConfirmResetEntryId(prev => (prev === entry.id ? null : prev)), 300)}
                               />
                             </>
-                          ) : entryResult && 'url' in entryResult ? (
-                            <a href={entryResult.url} target="_blank" rel="noopener noreferrer"
-                              className="flex items-center gap-1 text-[0.625rem] text-emerald-400 border border-emerald-400/30 bg-emerald-400/[0.06] rounded px-1.5 py-0.5 hover:bg-emerald-400/10">
-                              <CheckCircle2 className="size-3" />
-                              Sent
-                              <ExternalLink className="size-3" />
-                            </a>
                           ) : (
                             <div className="flex items-center gap-1.5">
-                              {entryResult && 'error' in entryResult && (
-                                <span className="text-[0.625rem] text-red-400 max-w-[6.25rem] leading-snug">{entryResult.error}</span>
-                              )}
                               <span className="text-[0.625rem] text-amber-400 bg-amber-400/[0.06] border border-amber-400/20 rounded px-1.5 py-0.5 font-semibold">
                                 Pending
                               </span>
+                              {/* Opens the shared composer: pick the work lines that ride
+                                  along, write the recap, and choose whether this is billed
+                                  through Stripe or recorded as already settled. */}
                               <button
                                 type="button"
-                                disabled={sendingEntryId === entry.id || removingEntryId === entry.id || resettingEntryId === entry.id}
-                                onClick={() => handleSendScheduledPayment(entry.id)}
+                                disabled={removingEntryId === entry.id || resettingEntryId === entry.id}
+                                onClick={() => setComposerEntry(entry)}
                                 className="flex items-center gap-1 px-2 py-1 text-[0.625rem] font-medium border border-[rgba(139,156,182,0.18)] bg-[rgba(139,156,182,0.06)] rounded hover:bg-[rgba(139,156,182,0.10)] disabled:opacity-50 transition-all"
                                 style={{ color: 'var(--space-accent)' }}
                               >
-                                {sendingEntryId === entry.id
-                                  ? <Loader2 className="size-3 animate-spin" />
-                                  : <Receipt className="size-3" />
-                                }
-                                {sendingEntryId === entry.id ? 'Sending…' : 'Send Invoice'}
+                                <Receipt className="size-3" />
+                                Invoice or fulfill
                               </button>
                               <button
                                 type="button"
-                                disabled={sendingEntryId === entry.id || removingEntryId === entry.id || resettingEntryId === entry.id}
+                                disabled={removingEntryId === entry.id || resettingEntryId === entry.id}
                                 onClick={() => handleRemoveScheduleEntry(entry.id)}
                                 className="flex items-center justify-center size-6 text-[var(--space-text-muted)] hover:text-red-400 hover:bg-red-400/[0.08] rounded transition-all disabled:opacity-40"
                                 title="Remove entry"
@@ -1044,8 +1078,8 @@ export function PackageDetailView({
           </button>
 
           <div className="flex items-center gap-2 flex-wrap justify-end">
-            {/* Quick Invoice result */}
-            {mode === 'full' && invoiceResult && 'url' in invoiceResult && (
+            {/* Quick Invoice / Fulfillment result */}
+            {mode !== 'schedule' && invoiceResult && 'url' in invoiceResult && (
               <a href={invoiceResult.url} target="_blank" rel="noopener noreferrer"
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-emerald-400 border border-emerald-500/30 bg-emerald-500/[0.06] rounded-lg hover:bg-emerald-500/10 transition-all">
                 <CheckCircle2 className="size-3.5" />
@@ -1053,7 +1087,13 @@ export function PackageDetailView({
                 <ExternalLink className="size-3" />
               </a>
             )}
-            {mode === 'full' && invoiceResult && 'error' in invoiceResult && (
+            {mode !== 'schedule' && invoiceResult && 'recorded' in invoiceResult && (
+              <span className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-emerald-400 border border-emerald-500/30 bg-emerald-500/[0.06] rounded-lg">
+                <CheckCircle2 className="size-3.5" />
+                Recorded as paid · {invoiceResult.recorded}
+              </span>
+            )}
+            {mode !== 'schedule' && invoiceResult && 'error' in invoiceResult && (
               <p className="text-[0.625rem] text-red-400 max-w-[10rem] leading-snug">{invoiceResult.error}</p>
             )}
 
@@ -1081,15 +1121,20 @@ export function PackageDetailView({
               Save
             </button>
 
-            {mode === 'full' && (
+            {mode !== 'schedule' && (
               <button
                 onClick={handleCreateInvoice}
                 disabled={invoicing || !editItems.length}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border border-[rgba(139,156,182,0.18)] bg-[rgba(139,156,182,0.06)] rounded-lg hover:bg-[rgba(139,156,182,0.10)] disabled:opacity-40 transition-all"
                 style={{ color: 'var(--space-accent)' }}
               >
-                {invoicing ? <Loader2 className="size-3.5 animate-spin" /> : <Receipt className="size-3.5" />}
-                {invoicing ? 'Pushing…' : 'Push Invoice'}
+                {invoicing
+                  ? <Loader2 className="size-3.5 animate-spin" />
+                  : fulfilling ? <PackageCheck className="size-3.5" /> : <Receipt className="size-3.5" />
+                }
+                {invoicing
+                  ? (fulfilling ? 'Recording…' : 'Pushing…')
+                  : (fulfilling ? 'Record as fulfilled' : 'Push Invoice')}
               </button>
             )}
 
@@ -1116,6 +1161,24 @@ export function PackageDetailView({
           username={username}
           initialStep={initialDoc}
           onClose={() => setDocsOpen(false)}
+        />
+      )}
+
+      {/* ── Scheduled payment composer ────────────────────────────────────── */}
+      {/* Same composer the milestones and client-detail schedules use: pick the work
+          lines that ride along, write the recap, and choose Invoice (bill through
+          Stripe and email) or Fulfill (record it already settled, off-Stripe). */}
+      {composerEntry && (
+        <SchedulePaymentInvoiceModal
+          key={composerEntry.id}
+          packageId={pkg.id}
+          packageName={pkg.name}
+          entry={composerEntry}
+          projectId={selectedProjectId || undefined}
+          recapDraft={recapDrafts[composerEntry.id] ?? null}
+          onRecapChange={(id, r) => setRecapDrafts(prev => ({ ...prev, [id]: r }))}
+          onClose={() => setComposerEntry(null)}
+          onSent={() => { setComposerEntry(null); router.refresh() }}
         />
       )}
     </>
