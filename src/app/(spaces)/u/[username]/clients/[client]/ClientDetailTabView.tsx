@@ -145,7 +145,7 @@ function OutstandingNotice({
       className="group relative block w-full border-y border-[var(--space-divider)] py-4 pl-5 pr-4 text-left transition-colors duration-150 hover:bg-[var(--space-bg-card)] focus-visible:bg-[var(--space-bg-card)] focus-visible:outline-none"
     >
       <ToneRule tone="warn" />
-      <div className="flex items-baseline gap-4">
+      <div className="flex items-baseline gap-3 sm:gap-4">
         <span className="min-w-0 flex-1 truncate text-[15px] text-[var(--space-text-primary)]">
           {usd.format(amount)} outstanding
         </span>
@@ -204,7 +204,7 @@ function QuietAction({ onClick, children }: { onClick: () => void; children: Rea
       // Inline size: `.space-true-scale :is(button)` is unlayered CSS and so
       // outranks any Tailwind text-* utility on a button inside the subtree.
       style={{ fontSize: 13 }}
-      className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--space-border-hard)] px-3 py-1.5 text-[var(--space-text-tertiary)] transition-colors duration-150 hover:bg-[var(--space-bg-card)] hover:text-[var(--space-text-primary)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--space-accent)]"
+      className="inline-flex min-h-[38px] items-center gap-1.5 rounded-lg border border-[var(--space-border-hard)] px-3 py-1.5 text-[var(--space-text-tertiary)] transition-colors duration-150 hover:bg-[var(--space-bg-card)] hover:text-[var(--space-text-primary)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--space-accent)] sm:min-h-0"
     >
       {children}
     </button>
@@ -364,7 +364,7 @@ export function ClientDetailTabView({
   }
 
   return (
-    <div className="space-true-scale mx-auto w-full px-6 pb-24 pt-10 sm:px-10" style={{ maxWidth: '1180px' }}>
+    <div className="space-true-scale mx-auto w-full px-4 pb-24 pt-6 sm:px-8 sm:pt-10 lg:px-10" style={{ maxWidth: '1180px' }}>
 
       {/* ── The title card ───────────────────────────────────────────────── */}
       {/* Masthead and figures together: the page's opening statement, shut away
@@ -387,32 +387,45 @@ export function ClientDetailTabView({
         <div ref={standingRef}>
 
           {/* ── Masthead ─────────────────────────────────────────────────────── */}
-          <header className="pb-10 pt-2">
+          <header className="pb-8 pt-2 sm:pb-10">
             <h1
-              className="font-semibold leading-[0.95] tracking-[-0.03em] text-[var(--space-text-primary)]"
+              className="hyphens-auto break-words font-semibold leading-[0.95] tracking-[-0.03em] text-[var(--space-text-primary)]"
               style={{ fontSize: 'clamp(30px, 5vw, 68px)' }}
             >
               {clientAccount.name}
             </h1>
-            <p className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-[14px] text-[var(--space-text-tertiary)]">
-              {clientAccount.company && <span>{clientAccount.company}</span>}
-              {clientAccount.company && clientAccount.email && <span aria-hidden="true">·</span>}
-              {clientAccount.email && <span className="truncate">{clientAccount.email}</span>}
+            {/* One line of standing detail. On a phone it stacks and the
+                separators go with it: a middle dot that wraps onto its own line
+                is noise, and a stacked list needs no separator to be read as a
+                list. The Stripe link keeps a phone-sized tap target. */}
+            <div className="mt-4 flex flex-col gap-1.5 text-[14px] text-[var(--space-text-tertiary)] sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-3 sm:gap-y-1">
+              {clientAccount.company && <span className="min-w-0 break-words">{clientAccount.company}</span>}
+              {clientAccount.company && clientAccount.email && (
+                <span aria-hidden="true" className="hidden sm:inline">·</span>
+              )}
+              {clientAccount.email && (
+                <a
+                  href={`mailto:${clientAccount.email}`}
+                  className="min-w-0 break-all transition-colors hover:text-[var(--space-accent)] focus-visible:text-[var(--space-accent)] focus-visible:outline-none"
+                >
+                  {clientAccount.email}
+                </a>
+              )}
               {clientAccount.stripeCustomerId && (
                 <>
-                  <span aria-hidden="true">·</span>
+                  <span aria-hidden="true" className="hidden sm:inline">·</span>
                   <a
                     href={`https://dashboard.stripe.com/customers/${clientAccount.stripeCustomerId}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 transition-colors hover:text-[var(--space-accent)] focus-visible:text-[var(--space-accent)] focus-visible:outline-none"
+                    className="inline-flex w-fit items-center gap-1 py-1 transition-colors hover:text-[var(--space-accent)] focus-visible:text-[var(--space-accent)] focus-visible:outline-none sm:py-0"
                   >
                     Stripe
                     <ArrowUpRight className="size-[13px]" aria-hidden="true" />
                   </a>
                 </>
               )}
-            </p>
+            </div>
           </header>
 
           {/* ── The standing ─────────────────────────────────────────────────── */}
@@ -463,21 +476,22 @@ export function ClientDetailTabView({
         initial={false}
         animate={{ marginTop: standingCollapsed ? 0 : 54 }}
         transition={reduce ? { duration: 0 } : { duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-        className="flex flex-col gap-8 lg:flex-row lg:gap-12"
+        className="flex flex-col gap-6 lg:flex-row lg:gap-12"
       >
         {/* Nav is first in the DOM so phones meet it before the content, and
-            ordered last on desktop so it sits down the right-hand side. */}
-        <div className="lg:order-2">
-          <SectionNav
-            sections={SECTIONS}
-            value={section}
-            onChange={setSection}
-            counts={counts}
-            navRef={navRef}
-            layoutId="client-section-chip"
-            ariaLabel="Client sections"
-          />
-        </div>
+            ordered last on desktop so it sits down the right-hand side. It is a
+            direct flex child so its sticky position can travel the full height
+            of the workspace on a phone. */}
+        <SectionNav
+          sections={SECTIONS}
+          value={section}
+          onChange={setSection}
+          counts={counts}
+          navRef={navRef}
+          layoutId="client-section-chip"
+          ariaLabel="Client sections"
+          className="lg:order-2"
+        />
 
         <div className="min-w-0 flex-1 lg:order-1">
           <AnimatePresence mode="wait">
@@ -514,7 +528,7 @@ export function ClientDetailTabView({
                   <SectionTitle
                     title="Account details"
                     aside={
-                      <span className="flex items-center justify-end gap-4">
+                      <span className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
                         <NdaStanding nda={nda} />
                         <span>
                           {teamMembers.length > 0
@@ -559,7 +573,7 @@ export function ClientDetailTabView({
                 <SectionTitle
                   title="Projects"
                   aside={
-                    <span className="flex items-center justify-end gap-4">
+                    <span className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
                       {projects.length > 0 && (
                         <span className="tabular-nums">{activeProjects.length} active</span>
                       )}
@@ -598,7 +612,7 @@ export function ClientDetailTabView({
                 <SectionTitle
                   title="Invoices"
                   aside={
-                    <span className="flex items-center justify-end gap-4">
+                    <span className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
                       {orders.length > 0 && (
                         <span className="tabular-nums" style={{ color: toneColor('ok') }}>
                           {usd.format(totalRevenue)} collected

@@ -558,19 +558,20 @@ export function AdminHomeView({
         initial={false}
         animate={{ marginTop: standingCollapsed ? 0 : 54 }}
         transition={reduce ? { duration: 0 } : { duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-        className="flex flex-col gap-8 lg:flex-row lg:gap-12"
+        className="flex flex-col gap-6 lg:flex-row lg:gap-12"
       >
         {/* Nav is first in the DOM so phones meet it before the content, and
-            ordered last on desktop so it sits down the right-hand side. */}
-        <div className="lg:order-2">
-          <SectionNav
-            sections={SECTIONS}
-            value={section}
-            onChange={setSection}
-            counts={counts}
-            ariaLabel="Dashboard sections"
-          />
-        </div>
+            ordered last on desktop so it sits down the right-hand side. It is a
+            direct flex child so its sticky position can travel the full height
+            of the workspace on a phone. */}
+        <SectionNav
+          sections={SECTIONS}
+          value={section}
+          onChange={setSection}
+          counts={counts}
+          ariaLabel="Dashboard sections"
+          className="lg:order-2"
+        />
 
         <div className="min-w-0 flex-1 lg:order-1">
           <AnimatePresence mode="wait">
