@@ -1,25 +1,22 @@
 'use client'
 
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import Link from 'next/link'
-import {
-  ArrowUpRight, Wallet, Zap, ReceiptText, BarChart3, CalendarRange,
-  Activity as ActivityIcon,
-} from 'lucide-react'
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import { ArrowUpRight, Activity as ActivityIcon } from 'lucide-react'
+import { motion, useReducedMotion } from 'motion/react'
 import DynamicGreeting from '@/components/layout/dynamic-greeting'
-import { Spine } from '@/components/dashboard/Spine'
-import { ActivityFeed, type ActivityEvent } from '@/components/dashboard/ActivityFeed'
+import {
+  ActivityFeed, activityLanes, type ActivityEvent, type KindFilter,
+} from '@/components/dashboard/ActivityFeed'
 import {
   Figure, figureEdges, SectionNav, SectionTitle, Empty, ToneRule, Meter, PeriodControl,
-  useScrollCollapse, type FigureSpec, type LedgerSection,
+  useSectionCycle, type FigureSpec, type LedgerSection,
 } from '@/components/dashboard/ledger'
-import { clientSpineEvents } from '@/lib/dashboard/spine-events'
-import { sprintStatus, orderStatus, projectStatus, toneColor, type StatusTone } from '@/lib/dashboard/status'
+import { orderStatus, projectStatus, toneColor, type StatusTone } from '@/lib/dashboard/status'
 import { orderDate } from '@/lib/dashboard/utils'
 import {
-  resolvePeriod, inPeriod, onTimeline, EMPTY_CUSTOM_RANGE,
-  PERIOD_IDS, PERIOD_LABEL, type PeriodId, type CustomRange,
+  resolvePeriod, inPeriod, EMPTY_CUSTOM_RANGE,
+  type PeriodId, type CustomRange,
 } from '@/lib/dashboard/period'
 import type { SerializedProject } from '@/lib/serialization'
 import { tabVariants } from '@/lib/animations'
@@ -28,10 +25,9 @@ import { cn } from '@/lib/utils'
 // ─── The ledger ──────────────────────────────────────────────────────────────
 // The staff home reads like the studio's books opened to today. Two bands:
 //
-//   • The standing — four figures that are always on screen, whichever section
-//     is open. Money in, money owed, work open, clients live.
-//   • The workspace — a sidebar of sections, one at a time, so the page stays
-//     one screen deep instead of a scroll.
+//   • The standing — four figures that are always on screen. Money in, money
+//     owed, work open, clients live. Pressing one opens its workings.
+//   • The workspace — the activity log, with the nav listing its lanes.
 //
 // Two rules this view holds to, because the old five-tab version broke both:
 //   1. Every colour is a --space-* token or a status-ramp tone. No raw hex, no
@@ -55,20 +51,26 @@ interface AdminHomeViewProps {
   activity: ActivityEvent[]
 }
 
-// The sidebar owns five of these; the other four are opened by pressing the
-// figure they belong to, so each headline number can show its own workings.
-type SectionId =
-  | 'activity' | 'needs' | 'moving' | 'invoices' | 'analytics' | 'timeline'
-  | 'collected' | 'outstanding' | 'projects' | 'clients'
+// ─── What the page can be showing ─────────────────────────────────────────────
+// Two kinds of section, one piece of state.
+//
+// The nav lists the *lanes of the activity log* — All, Invoices, New projects,
+// Updates, Emails — because the log is what this page is for. It used to list
+// six other sections instead (Needs you, Moving, Invoices, Analytics, Timeline)
+// and they went unused, so they are gone; Analytics survives as its own route.
+//
+// The other four ids are a standing figure's workings, opened by pressing the
+// figure rather than from the nav. They deliberately share `section` with the
+// lanes: while one is open no lane matches, so the nav simply shows nothing
+// selected, and pressing any lane returns to the log.
 
-const SECTIONS: LedgerSection<SectionId>[] = [
-  { id: 'activity', label: 'Activity', icon: ActivityIcon },
-  { id: 'needs', label: 'Needs you', icon: Wallet },
-  { id: 'moving', label: 'Moving', icon: Zap },
-  { id: 'invoices', label: 'Invoices', icon: ReceiptText },
-  { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-  { id: 'timeline', label: 'Timeline', icon: CalendarRange },
-]
+const FIGURE_SECTIONS = ['collected', 'outstanding', 'projects', 'clients'] as const
+type FigureSection = typeof FIGURE_SECTIONS[number]
+
+type SectionId = KindFilter | FigureSection
+
+const isFigureSection = (id: SectionId): id is FigureSection =>
+  (FIGURE_SECTIONS as readonly string[]).includes(id)
 
 const ACTIVE_PROJECT_STATUSES = new Set(['in-progress', 'pending', 'active'])
 
@@ -227,13 +229,24 @@ export function AdminHomeView({
 }: AdminHomeViewProps) {
   const [periodId, setPeriodId] = useState<PeriodId>('week')
   const [custom, setCustom] = useState<CustomRange>(EMPTY_CUSTOM_RANGE)
-  const [section, setSection] = useState<SectionId>('activity')
-  const standingRef = useRef<HTMLDivElement>(null)
+  // One piece of state for both kinds of section — a lane of the log, or a
+  // standing figure's workings. See the note above `FIGURE_SECTIONS`.
+  const [section, setSection] = useState<SectionId>('all')
+  const navRef = useRef<HTMLElement>(null)
   const reduce = useReducedMotion()
 
-  const standingCollapsed = useScrollCollapse(standingRef)
-
   const period = useMemo(() => resolvePeriod(periodId, Date.now(), custom), [periodId, custom])
+
+  // The lanes the loaded events actually offer. Empty when there is only one
+  // kind, which the nav reads as "there is no real choice to draw".
+  const lanes = useMemo(() => activityLanes(activity), [activity])
+
+  // A lane can vanish between loads. Fall back to the whole log rather than
+  // leaving the page on a lane the nav no longer lists.
+  const activeLane: KindFilter =
+    !isFigureSection(section) && (section === 'all' || lanes.some(l => l.id === section))
+      ? section
+      : 'all'
 
   // ── Money in the selected period ───────────────────────────────────────────
   // Orders carry no paid-at timestamp, so the period is read off the invoice
@@ -341,87 +354,6 @@ export function AdminHomeView({
     [allOrders, period],
   )
 
-  const moving = useMemo(
-    () =>
-      serializedProjects
-        .flatMap(p => p.sprints.map(s => ({ ...s, projectName: p.name })))
-        .filter(s => s.status === 'in-progress' || s.status === 'delayed')
-        .sort((a, b) => new Date(a.endDate).getTime() - new Date(b.endDate).getTime()),
-    [serializedProjects],
-  )
-
-  // Open invoices and not-yet-invoiced schedule entries are the same job —
-  // money someone owes that needs a nudge — so they share one list, soonest first.
-  const needsYou = useMemo(() => {
-    const invoices = openInvoices.map((o: any) => {
-      const account = typeof o.clientAccount === 'object' ? o.clientAccount : null
-      return {
-        key: `order-${o.id}`,
-        primary: o.orderNumber || 'Invoice',
-        secondary: accountName(account),
-        amount: o.amount || 0,
-        dueDate: o.dueDate ?? null,
-        soonWithin: 3,
-        href: account?.id ? clientInvoicesHref(username, account.id) : `/u/${username}/clients`,
-      }
-    })
-
-    const upcoming = scheduled.map(e => ({
-      key: `sched-${e.id}`,
-      primary: e.label,
-      secondary: e.packageName,
-      amount: e.amount,
-      dueDate: e.dueDate,
-      soonWithin: 7,
-      href: e.accountId ? `/u/${username}/clients/${e.accountId}` : `/u/${username}/packages`,
-    }))
-
-    return [...invoices, ...upcoming].sort((a, b) => {
-      if (!a.dueDate) return 1
-      if (!b.dueDate) return -1
-      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
-    })
-  }, [openInvoices, scheduled, username])
-
-  const latestInvoices = useMemo(
-    () =>
-      [...allOrders]
-        .sort((a: any, b: any) => new Date(orderDate(b)).getTime() - new Date(orderDate(a)).getTime())
-        .slice(0, 5),
-    [allOrders],
-  )
-
-  const spineEvents = useMemo(
-    () =>
-      clientSpineEvents(serializedProjects, allOrders, username)
-        .filter(e => onTimeline(e.date, period)),
-    [serializedProjects, allOrders, username, period],
-  )
-
-  const weeklyRevenue = useMemo(() => {
-    const now = Date.now()
-    return [3, 2, 1, 0].map(weeksAgo => {
-      const end = now - weeksAgo * 7 * DAY
-      const start = end - 7 * DAY
-      const inWeek = allOrders.filter((o: any) => {
-        const t = new Date(orderDate(o)).getTime()
-        return t > start && t <= end
-      })
-      return {
-        label: shortDate.format(new Date(start)),
-        revenue: inWeek
-          .filter((o: any) => o.status === 'paid')
-          .reduce((sum: number, o: any) => sum + (o.amount || 0), 0),
-      }
-    })
-  }, [allOrders])
-
-  const projectMix = useMemo(() => ({
-    active: allProjects.filter((p: any) => p.status === 'in-progress').length,
-    pending: allProjects.filter((p: any) => p.status === 'pending').length,
-    completed: allProjects.filter((p: any) => p.status === 'completed').length,
-  }), [allProjects])
-
   // ── Copy ───────────────────────────────────────────────────────────────────
 
   const clientNoun = user.role === 'admin' ? 'client' : 'assigned client'
@@ -461,136 +393,176 @@ export function AdminHomeView({
     },
   ]
 
-  const counts: Partial<Record<SectionId, number>> = {
-    needs: needsYou.length,
-    moving: moving.length,
-    invoices: latestInvoices.length,
-  }
+  // ── The nav ────────────────────────────────────────────────────────────────
+  // The lanes of the log, and nothing else. When only one kind of event is
+  // loaded there is no real choice to offer, so the panel falls back to a single
+  // "Activity" entry rather than a row of one.
+
+  const navSections: LedgerSection<SectionId>[] = useMemo(
+    () =>
+      lanes.length > 0
+        ? lanes.map(l => ({ id: l.id as SectionId, label: l.label, icon: l.icon }))
+        : [{ id: 'all' as SectionId, label: 'Activity', icon: ActivityIcon }],
+    [lanes],
+  )
+
+  const navIds = useMemo(() => navSections.map(s => s.id), [navSections])
+
+  const counts: Partial<Record<SectionId, number>> = useMemo(
+    () => Object.fromEntries(lanes.map(l => [l.id, l.count])),
+    [lanes],
+  )
+
+  // Tab walks the lanes, as it does the sections on the client record. A
+  // figure's workings is not in the nav, so entering the cycle from one would
+  // dead-end on `indexOf === -1`; pointing it at the last lane instead means
+  // the next Tab wraps onto the first, putting you back in the log.
+  const cycleFrom: SectionId = isFigureSection(section)
+    ? navIds[navIds.length - 1]
+    : section
+
+  useSectionCycle(navIds, cycleFrom, setSection, navRef)
 
   return (
     <div className="space-true-scale mx-auto w-full px-6 pb-24 pt-10 sm:px-10" style={{ maxWidth: '1180px' }}>
 
       {/* ── The title card ───────────────────────────────────────────────── */}
-      {/* Greeting and standing together: worth the room on arrival, wasted room
-          once you are working in a section. Shut on the way down, open again at
-          the top — the same band the client record collapses.
+      {/* Greeting and standing together: the page's opening statement, which
+          scrolls away on its own like any other content at the top of a
+          document. It used to collapse on scroll and the page jumped every
+          time — see the note where `useScrollCollapse` used to live in
+          `dashboard/ledger`. Nothing here may animate its own height. */}
+      <div>
 
-          The measured child sits inside the animating wrapper so it keeps its
-          natural height for `useScrollCollapse` to read while the wrapper's own
-          height is mid-flight. `inert` keeps the shut band's figures and period
-          control out of the tab order and the accessibility tree. */}
-      <motion.div
-        initial={false}
-        animate={{ height: standingCollapsed ? 0 : 'auto', opacity: standingCollapsed ? 0 : 1 }}
-        transition={reduce ? { duration: 0 } : { duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-        inert={standingCollapsed}
-        className="overflow-hidden"
-      >
-        <div ref={standingRef}>
+        {/* ── Greeting ─────────────────────────────────────────────────── */}
+        <header className="pb-14 pt-6">
+          <DynamicGreeting fontSize="clamp(30px, 6.5vw, 104px)" />
+        </header>
 
-          {/* ── Greeting ─────────────────────────────────────────────────── */}
-          <header className="pb-14 pt-6">
-            <DynamicGreeting fontSize="clamp(30px, 6.5vw, 104px)" />
-          </header>
+        {/* ── The standing ─────────────────────────────────────────────────── */}
+        <section aria-label="Standing">
+          <div className="flex justify-end pb-3">
+            <PeriodControl
+              value={periodId}
+              onChange={setPeriodId}
+              custom={custom}
+              onCustomChange={setCustom}
+              rangeLabel={period.rangeLabel}
+            />
+          </div>
 
-          {/* ── The standing ─────────────────────────────────────────────────── */}
-          <section aria-label="Standing">
-            <div className="flex justify-end pb-3">
-              <PeriodControl
-                value={periodId}
-                onChange={setPeriodId}
-                custom={custom}
-                onCustomChange={setCustom}
-                rangeLabel={period.rangeLabel}
+          <div className="grid grid-cols-2 border-t border-[var(--space-border-hard)] md:grid-cols-4">
+            {figures.map(({ key, ...figure }, i) => (
+              <Figure
+                key={key}
+                {...figure}
+                active={section === key}
+                onSelect={() => setSection(key)}
+                className={figureEdges(i)}
               />
-            </div>
+            ))}
+          </div>
 
-            <div className="grid grid-cols-2 border-t border-[var(--space-border-hard)] md:grid-cols-4">
-              {figures.map(({ key, ...figure }, i) => (
-                <Figure
-                  key={key}
-                  {...figure}
-                  active={section === key}
-                  onSelect={() => setSection(key)}
-                  className={figureEdges(i)}
-                />
-              ))}
-            </div>
-
-            {/* The strip's own rule doubles as the pipeline: paid, owed, written off. */}
-            <div
-              className="flex h-[3px] w-full overflow-hidden bg-[var(--space-divider)]"
-              role="img"
-              aria-label={`Invoiced ${period.phrase}: ${Math.round(shares.paid)}% paid, ${Math.round(shares.pending)}% outstanding, ${Math.round(shares.cancelled)}% cancelled`}
+          {/* The strip's own rule doubles as the pipeline: paid, owed, written off. */}
+          <div
+            className="flex h-[3px] w-full overflow-hidden bg-[var(--space-divider)]"
+            role="img"
+            aria-label={`Invoiced ${period.phrase}: ${Math.round(shares.paid)}% paid, ${Math.round(shares.pending)}% outstanding, ${Math.round(shares.cancelled)}% cancelled`}
+          >
+            <motion.span
+              key={`${periodId}-${custom.from}-${custom.to}`}
+              className="flex h-full w-full origin-left"
+              initial={reduce ? false : { scaleX: 0 }}
+              animate={{ scaleX: 1 }}
+              transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
             >
-              <motion.span
-                key={`${periodId}-${custom.from}-${custom.to}`}
-                className="flex h-full w-full origin-left"
-                initial={reduce ? false : { scaleX: 0 }}
-                animate={{ scaleX: 1 }}
-                transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-              >
-                <span style={{ width: `${shares.paid}%`, background: toneColor('ok') }} />
-                <span style={{ width: `${shares.pending}%`, background: toneColor('warn') }} />
-                <span style={{ width: `${shares.cancelled}%`, background: toneColor('danger'), opacity: 0.5 }} />
-              </motion.span>
-            </div>
+              <span style={{ width: `${shares.paid}%`, background: toneColor('ok') }} />
+              <span style={{ width: `${shares.pending}%`, background: toneColor('warn') }} />
+              <span style={{ width: `${shares.cancelled}%`, background: toneColor('danger'), opacity: 0.5 }} />
+            </motion.span>
+          </div>
 
-            {/* The days the figures above actually cover, sitting under the bar
-                that summarises them. */}
-            <p
-              className="pt-3 text-right text-[13px] tabular-nums text-[var(--space-text-tertiary)]"
-              aria-live="polite"
-            >
-              {period.rangeLabel}
-            </p>
-          </section>
+          {/* The days the figures above actually cover, sitting under the bar
+              that summarises them. */}
+          <p
+            className="pt-3 text-right text-[13px] tabular-nums text-[var(--space-text-tertiary)]"
+            aria-live="polite"
+          >
+            {period.rangeLabel}
+          </p>
+        </section>
 
-        </div>
-      </motion.div>
+      </div>
 
       {/* ── The workspace ────────────────────────────────────────────────── */}
-      {/* The top margin closes with the band, so the workspace rises to meet
-          the header instead of leaving a gap where the figures were. 54px is
-          `mt-12` spelled out: --spacing is 4.5px inside .space-true-scale, so
-          the class this replaced was never the 48px its name suggests. */}
-      <motion.div
-        initial={false}
-        animate={{ marginTop: standingCollapsed ? 0 : 54 }}
-        transition={reduce ? { duration: 0 } : { duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+      {/* 54px is `mt-12` spelled out: --spacing is 4.5px inside
+          .space-true-scale, so the class this replaced was never the 48px its
+          name suggests. A fixed margin, not an animated one — it used to close
+          along with the collapsing band, which was a third simultaneous height
+          change on a page that already jumped. */}
+      <div
         className="flex flex-col gap-6 lg:flex-row lg:gap-12"
+        style={{ marginTop: 54 }}
       >
         {/* Nav is first in the DOM so phones meet it before the content, and
             ordered last on desktop so it sits down the right-hand side. It is a
             direct flex child so its sticky position can travel the full height
             of the workspace on a phone. */}
         <SectionNav
-          sections={SECTIONS}
+          sections={navSections}
           value={section}
           onChange={setSection}
           counts={counts}
-          ariaLabel="Dashboard sections"
+          navRef={navRef}
+          ariaLabel="Activity lanes"
           className="lg:order-2"
         />
 
+        {/* One keyed wrapper rather than `AnimatePresence mode="wait"`. The old
+            arrangement unmounted the open section, rendered *nothing* for the
+            140ms exit, then mounted the next one — so on a page scrolled past
+            the fold the document collapsed to viewport height mid-swap, the
+            browser clamped the scroll to the top, and changing section threw
+            you back to the greeting. Keying on `section` remounts in one commit:
+            the entering section plays `tabVariants` (opacity, transform, blur —
+            none of which touch layout) and the page never has an empty frame. */}
         <div className="min-w-0 flex-1 lg:order-1">
-          <AnimatePresence mode="wait">
+          <motion.div
+            key={section}
+            variants={tabVariants}
+            initial={reduce ? false : 'initial'}
+            animate="animate"
+          >
 
-            {section === 'activity' && (
-              <motion.section key="activity" variants={tabVariants} initial="initial" animate="animate" exit="exit">
-                <SectionTitle title="Recent activity" aside="newest first" />
+            {/* Every section id that is not a figure's workings is a lane of
+                the log, so this is the page's default and its resting state. */}
+            {!isFigureSection(section) && (
+              <section>
+                {/* The heading names the open lane as well as the order, so the
+                    column says what it is showing without the reader having to
+                    look back at the nav to find out why it is short. */}
+                <SectionTitle
+                  title="Recent activity"
+                  aside={
+                    activeLane === 'all'
+                      ? 'newest first'
+                      : `${lanes.find(l => l.id === activeLane)?.label ?? ''}, newest first`
+                  }
+                />
                 <div className="pt-2">
                   <ActivityFeed
                     events={activity}
                     username={username}
+                    lane={lanes.length > 0 ? activeLane : undefined}
+                    onLaneChange={setSection}
                     emptyMessage="Nothing has happened yet. Orders, projects, retainer logs and emails land here as they go out."
                   />
                 </div>
-              </motion.section>
+              </section>
             )}
 
             {section === 'collected' && (
-              <motion.section key="collected" variants={tabVariants} initial="initial" animate="animate" exit="exit">
+              <section>
                 <SectionTitle
                   title="Collected"
                   aside={`${usd.format(pipeline.paid)} ${period.phrase}`}
@@ -600,11 +572,11 @@ export function AdminHomeView({
                 ) : (
                   collectedOrders.map((order: any) => <InvoiceLine key={order.id} order={order} username={username} />)
                 )}
-              </motion.section>
+              </section>
             )}
 
             {section === 'outstanding' && (
-              <motion.section key="outstanding" variants={tabVariants} initial="initial" animate="animate" exit="exit" className="space-y-10">
+              <section className="space-y-10">
                 <div>
                   <SectionTitle
                     title="Invoiced and unpaid"
@@ -644,11 +616,11 @@ export function AdminHomeView({
                     })
                   )}
                 </div>
-              </motion.section>
+              </section>
             )}
 
             {section === 'projects' && (
-              <motion.section key="projects" variants={tabVariants} initial="initial" animate="animate" exit="exit" className="space-y-10">
+              <section className="space-y-10">
                 <div>
                   <SectionTitle
                     title="Active projects"
@@ -713,11 +685,11 @@ export function AdminHomeView({
                     })
                   )}
                 </div>
-              </motion.section>
+              </section>
             )}
 
             {section === 'clients' && (
-              <motion.section key="clients" variants={tabVariants} initial="initial" animate="animate" exit="exit">
+              <section>
                 <SectionTitle
                   title="Active clients"
                   aside={`ordered in the last ${ACTIVE_CLIENT_MONTHS} months`}
@@ -739,209 +711,12 @@ export function AdminHomeView({
                     />
                   ))
                 )}
-              </motion.section>
+              </section>
             )}
 
-            {section === 'needs' && (
-              <motion.section key="needs" variants={tabVariants} initial="initial" animate="animate" exit="exit">
-                <SectionTitle
-                  title="Needs you"
-                  aside={needsYou.length > 0
-                    ? `${usd.format(outstanding)} owed`
-                    : undefined}
-                />
-                {needsYou.length === 0 ? (
-                  <Empty>Everything invoiced is paid. Nothing to chase.</Empty>
-                ) : (
-                  <>
-                    {needsYou.slice(0, 8).map(item => {
-                      const d = due(item.dueDate, item.soonWithin)
-                      return (
-                        <Row
-                          key={item.key}
-                          href={item.href}
-                          tone={d.tone}
-                          primary={item.primary}
-                          secondary={item.secondary}
-                          right={usd.format(item.amount)}
-                          rightTone={d.tone === 'idle' ? undefined : d.tone}
-                          note={d.label}
-                        />
-                      )
-                    })}
-                    {needsYou.length > 8 && (
-                      <p className="pt-4 text-[13px] text-[var(--space-text-tertiary)]">
-                        {needsYou.length - 8} more owed, totalling{' '}
-                        {usd.format(needsYou.slice(8).reduce((s, i) => s + i.amount, 0))}.
-                      </p>
-                    )}
-                  </>
-                )}
-              </motion.section>
-            )}
-
-            {section === 'moving' && (
-              <motion.section key="moving" variants={tabVariants} initial="initial" animate="animate" exit="exit">
-                <SectionTitle
-                  title="Moving"
-                  aside={moving.length > 0 ? `${moving.length} ${plural(moving.length, 'sprint')} running` : undefined}
-                />
-                {moving.length === 0 ? (
-                  <Empty>No sprint is running. Start one from a project.</Empty>
-                ) : (
-                  moving.map(sprint => {
-                    const meta = sprintStatus(sprint.status)
-                    const d = due(sprint.endDate, 3)
-                    const pct = sprint.totalTasksCount > 0
-                      ? Math.round((sprint.completedTasksCount / sprint.totalTasksCount) * 100)
-                      : 0
-                    return (
-                      <Row
-                        key={sprint.id}
-                        href={`/u/${username}/projects/${sprint.projectId}`}
-                        tone={meta.tone}
-                        primary={sprint.name}
-                        secondary={sprint.projectName}
-                        right={`${sprint.completedTasksCount}/${sprint.totalTasksCount}`}
-                        rightTone={d.tone === 'idle' ? undefined : d.tone}
-                        note={d.label}
-                        progress={pct}
-                      />
-                    )
-                  })
-                )}
-              </motion.section>
-            )}
-
-            {section === 'invoices' && (
-              <motion.section key="invoices" variants={tabVariants} initial="initial" animate="animate" exit="exit">
-                <SectionTitle
-                  title="Latest invoices"
-                  aside={
-                    <Link
-                      href="/admin/collections/orders"
-                      className="underline decoration-[var(--space-divider)] underline-offset-4 transition-colors hover:text-[var(--space-text-primary)] hover:decoration-[var(--space-accent)]"
-                    >
-                      All orders
-                    </Link>
-                  }
-                />
-                {latestInvoices.length === 0 ? (
-                  <Empty>No invoices yet. Build a package to raise the first one.</Empty>
-                ) : (
-                  latestInvoices.map((order: any) => <InvoiceLine key={order.id} order={order} username={username} />)
-                )}
-              </motion.section>
-            )}
-
-            {section === 'analytics' && (
-              <motion.section key="analytics" variants={tabVariants} initial="initial" animate="animate" exit="exit" className="space-y-12">
-                <div>
-                  <SectionTitle
-                    title="Revenue collected"
-                    aside={
-                      /* This section is the glance; the analytics route is the
-                         study — trends, aging, concentration, and what each
-                         standing figure above actually counts. */
-                      <Link
-                        href={`/u/${username}/analytics`}
-                        className="inline-flex items-center gap-1 hover:text-[var(--space-text-primary)]"
-                      >
-                        Full analytics
-                        <ArrowUpRight className="size-[13px]" aria-hidden="true" />
-                      </Link>
-                    }
-                  />
-                  <div className="flex items-end gap-4 pt-8" role="img" aria-label={weeklyRevenue.map(w => `${w.label}: ${usd.format(w.revenue)}`).join(', ')}>
-                    {weeklyRevenue.map(w => {
-                      const max = Math.max(...weeklyRevenue.map(x => x.revenue), 1)
-                      return (
-                        <div key={w.label} className="flex flex-1 flex-col items-start gap-2">
-                          <span className="text-[13px] tabular-nums text-[var(--space-text-primary)]">
-                            {usd.format(w.revenue)}
-                          </span>
-                          <span className="flex h-[3px] w-full bg-[var(--space-divider)]">
-                            <span
-                              className="h-full transition-[width] duration-700 ease-out"
-                              style={{ width: `${(w.revenue / max) * 100}%`, background: toneColor('ok') }}
-                            />
-                          </span>
-                          <span className="text-[12px] text-[var(--space-text-tertiary)]">{w.label}</span>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-
-                <div>
-                  <SectionTitle title="Invoiced" aside={period.phrase} />
-                  {[
-                    { label: 'Collected', amount: pipeline.paid, count: pipeline.paidCount, pct: shares.paid, tone: 'ok' as StatusTone },
-                    { label: 'Outstanding', amount: pipeline.pending, count: pipeline.pendingCount, pct: shares.pending, tone: 'warn' as StatusTone },
-                    { label: 'Cancelled', amount: pipeline.cancelled, count: pipeline.cancelledCount, pct: shares.cancelled, tone: 'danger' as StatusTone },
-                  ].map(row => (
-                    <div key={row.label} className="border-b border-[var(--space-divider)] py-4">
-                      <div className="flex items-baseline gap-4">
-                        <span className="flex-1 text-[15px] text-[var(--space-text-primary)]">{row.label}</span>
-                        <span className="text-[15px] font-medium tabular-nums text-[var(--space-text-primary)]">
-                          {usd.format(row.amount)}
-                        </span>
-                      </div>
-                      <div className="mt-1 text-[13px] text-[var(--space-text-tertiary)]">
-                        {row.count} {plural(row.count, 'invoice')}
-                      </div>
-                      <Meter pct={row.pct} tone={row.tone} />
-                    </div>
-                  ))}
-                </div>
-
-                <div>
-                  <SectionTitle title="Projects" aside={`${allProjects.length} on the books`} />
-                  {[
-                    { label: 'In progress', value: projectMix.active, tone: 'active' as StatusTone },
-                    { label: 'Pending', value: projectMix.pending, tone: 'idle' as StatusTone },
-                    { label: 'Completed', value: projectMix.completed, tone: 'ok' as StatusTone },
-                  ].map(row => (
-                    <div key={row.label} className="border-b border-[var(--space-divider)] py-4">
-                      <div className="flex items-baseline gap-4">
-                        <span className="flex-1 text-[15px] text-[var(--space-text-primary)]">{row.label}</span>
-                        <span className="text-[15px] font-medium tabular-nums text-[var(--space-text-primary)]">
-                          {row.value}
-                        </span>
-                      </div>
-                      <Meter pct={(row.value / Math.max(allProjects.length, 1)) * 100} tone={row.tone} />
-                    </div>
-                  ))}
-                </div>
-
-                {(completedTasksCount > 0 || completedSprintsCount > 0) && (
-                  <p className="text-[13px] text-[var(--space-text-tertiary)]">
-                    Delivered so far: {completedTasksCount.toLocaleString()}{' '}
-                    {plural(completedTasksCount, 'task')} across {completedSprintsCount}{' '}
-                    finished {plural(completedSprintsCount, 'sprint')}.
-                  </p>
-                )}
-              </motion.section>
-            )}
-
-            {section === 'timeline' && (
-              <motion.section key="timeline" variants={tabVariants} initial="initial" animate="animate" exit="exit">
-                <SectionTitle
-                  title="Timeline"
-                  aside={periodId === 'all' ? 'everything on record' : period.phrase}
-                />
-                <div className="pt-6">
-                  <Spine
-                    events={spineEvents}
-                    emptyMessage={`Nothing started, invoiced or paid ${period.phrase}.`}
-                  />
-                </div>
-              </motion.section>
-            )}
-
-          </AnimatePresence>
+          </motion.div>
         </div>
-      </motion.div>
+      </div>
     </div>
   )
 }

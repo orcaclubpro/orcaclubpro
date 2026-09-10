@@ -303,13 +303,22 @@ export function CommandConsole({ username }: CommandConsoleProps) {
     if (target === 'search') setTimeout(() => inputRef.current?.focus(), 40)
   }
 
+  // Closing hides the console; it does not tear it down. The overlay stays mounted
+  // (display:none), so a half-built package, a retainer mid-edit, and a milestone
+  // draft are all exactly where you left them on the next open — closing the console
+  // is no more destructive than switching stations.
+  //
+  // Only the search bar resets, and `station` returns to 'search' so the heavy
+  // stations go inactive and stop polling while the console is away. `launchClientId`
+  // deliberately survives: it keys those stations, so clearing it would remount them
+  // and throw away the very work this is preserving.
   const closeConsole = () => {
     setIsOpen(false)
     setStation('search')
     setQuery('')
     setSelectedIdx(0)
-    setLaunchClientId(undefined)
-    // Drop the deep-link target so a later manual open starts on the portfolio board.
+    // Drop the deep-link target so a later *fresh* mount starts on the portfolio
+    // board. The live Milestones station ignores a null target, so it keeps its place.
     setMilestoneTarget(null)
   }
 
@@ -351,8 +360,9 @@ export function CommandConsole({ username }: CommandConsoleProps) {
     return () => window.removeEventListener('orcaclub:open-milestones', onOpenMilestones)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Global launch keys — L: search · K: retainer · M: milestones · ` : cycle stations.
-  // Ignored while typing.
+  // Global launch keys — L: search · K: retainer · M: milestones. Ignored while typing.
+  // Backtick is NOT a launch key: outside the console it goes home (BacktickHome).
+  // It only cycles stations once the console is already open — see the handler below.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return
@@ -370,18 +380,13 @@ export function CommandConsole({ username }: CommandConsoleProps) {
         e.preventDefault()
         if (isOpenRef.current) goStation('milestones')
         else openConsole('milestones')
-      } else if (e.key === '`' && !isOpenRef.current) {
-        // Backtick opens the console; cycling once open is handled below (fires even
-        // while the search input is focused, which this global handler skips).
-        e.preventDefault()
-        openConsole(STATIONS[0].id)
       }
     }
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // In-console keys — search: arrow/enter/esc. Station: esc collapses to search.
+  // In-console keys — search: arrow/enter/esc. Station: esc closes the console.
   useEffect(() => {
     if (!isOpen) return
     const handler = (e: KeyboardEvent) => {
@@ -397,7 +402,11 @@ export function CommandConsole({ username }: CommandConsoleProps) {
         return
       }
       if (stationRef.current !== 'search') {
-        if (e.key === 'Escape') { e.preventDefault(); goStation('search') }
+        // Esc from a station leaves the console entirely rather than dropping you on
+        // search — the station's own capture handler has already walked back through
+        // its internal levels by the time the key reaches here, so this is the last
+        // step out. Nothing is lost: the station stays mounted behind the close.
+        if (e.key === 'Escape') { e.preventDefault(); closeConsole() }
         return
       }
       const results = resultsRef.current
@@ -498,8 +507,18 @@ export function CommandConsole({ username }: CommandConsoleProps) {
     </button>
   )
 
-  const overlay = isOpen && (
-    <div className="fixed inset-0 z-[70] print:hidden" role="dialog" aria-modal="true">
+  // Always rendered, hidden while closed — see closeConsole. `hidden` is display:none,
+  // which drops it from layout, hit-testing and the tab order, and (because
+  // offsetParent goes null) is what the stations themselves read to stand down. The
+  // dialog role is applied only while open, so nothing treats a closed console as a
+  // live modal.
+  const overlay = (
+    <div
+      className={cn('fixed inset-0 z-[70] print:hidden', !isOpen && 'hidden')}
+      role={isOpen ? 'dialog' : undefined}
+      aria-modal={isOpen ? true : undefined}
+      aria-hidden={isOpen ? undefined : true}
+    >
       {/* Backdrop — click collapses a workspace to search, or dismisses the bar */}
       <div
         className="absolute inset-0 animate-in fade-in duration-150"

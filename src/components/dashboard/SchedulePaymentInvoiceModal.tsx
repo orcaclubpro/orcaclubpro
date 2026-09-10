@@ -1,14 +1,16 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   Loader2, X, Send, CircleCheck, Circle, ArrowRight, AlertTriangle, Check,
-  CalendarDays, FileText, ListChecks, MailX, PackageCheck,
+  CalendarDays, FileText, ListChecks, MailX, PackageCheck, Plus,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { getPackageRecapModel } from '@/actions/packageWork'
+import { getPackageRecapModel, logPackageWork } from '@/actions/packageWork'
 import { sendScheduledPayment } from '@/actions/packages'
 import type { PackageRecapData } from '@/lib/packages/recap'
+import { buildWorkLines, WORK_CATEGORY_LABEL, type WorkCategory } from '@/lib/packages/workLines'
 
 // ── Shared styles (verbatim from RetainerInvoiceModal) ────────────────────────
 const inputCls =
@@ -19,6 +21,16 @@ const accentBtn =
 const ghostBtn =
   'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-[var(--space-border-hard)] text-[var(--space-text-tertiary)] hover:text-[var(--space-text-primary)] hover:bg-[var(--space-bg-card-hover)] transition-all disabled:opacity-50'
 const labelCls = 'text-[0.625rem] font-semibold uppercase tracking-widest text-[var(--space-text-muted)]'
+const selectCls =
+  'px-2 py-1.5 text-xs bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] rounded-lg text-[var(--space-text-secondary)] focus:outline-none focus:border-[rgba(139,156,182,0.20)] transition-colors'
+const numCls =
+  'text-xs bg-[var(--space-bg-card-hover)] border border-[var(--space-border-hard)] rounded-lg text-[var(--space-text-primary)] px-2.5 py-1.5 focus:outline-none focus:border-[rgba(139,156,182,0.20)] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none'
+
+const CATEGORIES = Object.keys(WORK_CATEGORY_LABEL) as WorkCategory[]
+
+function todayInput() {
+  return new Date().toISOString().slice(0, 10)
+}
 
 function fmt(n: number) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(n || 0)
@@ -94,9 +106,51 @@ export function SchedulePaymentInvoiceModal({
   const [sending, setSending] = useState(false)
   const [outcome, setOutcome] = useState<SendOutcome | null>(null)
 
+  // ── Inline work logging ──
+  // Work has to exist before it can ride along, and the only other place to create it
+  // is the command console's Milestones station. Logging it here keeps the send in one
+  // screen: the new entry is appended to the list and pre-selected.
+  const [logOpen, setLogOpen] = useState(false)
+  const [logDate, setLogDate] = useState(todayInput())
+  const [logHours, setLogHours] = useState('')
+  const [logCategory, setLogCategory] = useState<WorkCategory>('work')
+  const [logDesc, setLogDesc] = useState('')
+  const [logging, setLogging] = useState(false)
+  const logRef = useRef<HTMLInputElement>(null)
+
   // The draft is a seed, not a controlled value — re-seeding on every parent keystroke
   // would fight the local editor state.
   const draftSeed = useRef(recapDraft)
+
+  const panelRef = useRef<HTMLDivElement>(null)
+
+  // Escape closes, and the page behind is locked so a scroll gesture over the backdrop
+  // doesn't move the document out from under the dialog.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onKey)
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prev
+    }
+  }, [onClose])
+
+  // Keep Tab inside the dialog — without this, tabbing walks the page behind it.
+  const onKeyDownTrap = useCallback((e: React.KeyboardEvent) => {
+    if (e.key !== 'Tab') return
+    const root = panelRef.current
+    if (!root) return
+    const focusables = root.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    )
+    if (focusables.length === 0) return
+    const first = focusables[0]
+    const last = focusables[focusables.length - 1]
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus() }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus() }
+  }, [])
 
   // Load the recap model + the work lines this payment would carry, once.
   useEffect(() => {
@@ -149,6 +203,59 @@ export function SchedulePaymentInvoiceModal({
 
   const allSelected = workLines.length > 0 && selected.size === workLines.length
 
+  /** Log a new work entry against this package and put it straight on this payment. */
+  async function handleLogWork() {
+    if (!logDesc.trim()) { setError('Describe the work'); return }
+    setError(null)
+    setLogging(true)
+    const r = await logPackageWork({
+      packageId,
+      date: logDate || todayInput(),
+      hours: logHours === '' ? undefined : parseFloat(logHours),
+      category: logCategory,
+      description: logDesc.trim(),
+    })
+    setLogging(false)
+    if (!r.success) { setError(r.error ?? 'Failed to log work'); return }
+
+    // buildWorkLines is the same formatter the server uses, so the row reads exactly
+    // as it will on the invoice — no round-trip needed to show it.
+    const [line] = buildWorkLines([{
+      id: r.id,
+      date: logDate || todayInput(),
+      description: logDesc.trim(),
+      hours: logHours === '' ? null : parseFloat(logHours),
+      category: logCategory,
+    }])
+    setWorkLines((prev) => [...prev, line])
+    setSelected((prev) => new Set(prev).add(r.id))
+    setLogDesc('')
+    setLogHours('')
+    logRef.current?.focus()
+
+    // Re-derive the recap: the new entry changes the item/hour counts and can add a
+    // whole bucket. mergePackageRecap pairs client buckets to server buckets BY INDEX,
+    // so a shifted bucket list would land staff notes on the wrong section — carry the
+    // notes across by label instead of trusting position.
+    const fresh = await getPackageRecapModel(packageId, entry.id)
+    if (!fresh.success) return
+    setWorkLines(fresh.workLines)
+    setModel(fresh.model)
+    setRecap((prev) => {
+      if (!prev) return fresh.model
+      const notesByLabel = new Map(prev.buckets.map((b) => [b.label, b.note]))
+      const next: PackageRecapData = {
+        ...fresh.model,
+        headline: prev.headline,
+        accomplishedHeadline: prev.accomplishedHeadline,
+        remainingHeadline: prev.remainingHeadline,
+        buckets: fresh.model.buckets.map((b) => ({ ...b, note: notesByLabel.get(b.label) ?? b.note })),
+      }
+      onRecapChange(entry.id, next)
+      return next
+    })
+  }
+
   async function handleSend() {
     setError(null)
     setSending(true)
@@ -183,16 +290,29 @@ export function SchedulePaymentInvoiceModal({
   const due = fmtDay(entry.dueDate)
   const dueDays = daysUntilDue(entry.dueDate)
 
-  return (
-    <div className="fixed inset-0 z-[80] print:hidden" role="dialog" aria-modal="true">
+  if (typeof document === 'undefined') return null
+
+  // Portalled to <body>: this dialog is opened from routes wrapped in `.page-enter`,
+  // whose retained animation transform would otherwise become the containing block for
+  // every `fixed` child — anchoring the overlay to the page's full content height
+  // instead of the viewport (send bar off-screen, no internal scroll, no scroll-follow).
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[80] print:hidden flex items-center justify-center p-3"
+      role="dialog"
+      aria-modal="true"
+      aria-label={fulfilling ? 'Fulfill scheduled payment' : 'Send scheduled payment'}
+      onKeyDown={onKeyDownTrap}
+    >
       <div
         className="absolute inset-0 animate-in fade-in duration-150"
         style={{ background: 'rgba(0,0,0,0.62)', backdropFilter: 'blur(3px)' }}
         onClick={onClose}
       />
-      <div className="absolute left-1/2 top-3 bottom-3 -translate-x-1/2 w-full px-3 max-w-[37.5rem]">
+      <div className="relative z-10 w-full max-w-[37.5rem] max-h-full">
         <div
-          className="flex flex-col h-full overflow-hidden rounded-2xl shadow-[0_40px_100px_rgba(0,0,0,0.7)]"
+          ref={panelRef}
+          className="flex flex-col max-h-[calc(100vh-1.5rem)] overflow-hidden rounded-2xl shadow-[0_40px_100px_rgba(0,0,0,0.7)]"
           style={{ background: 'var(--space-bg-card)', border: '1px solid var(--space-border-hard)' }}
         >
           {/* ── Header ── */}
@@ -289,19 +409,72 @@ export function SchedulePaymentInvoiceModal({
                         Attached as $0 lines — the payment above carries the price.
                       </p>
                     </div>
-                    {workLines.length > 0 && (
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {workLines.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setSelected(allSelected ? new Set() : new Set(workLines.map((l) => l.entryId)))}
+                          className={ghostBtn}
+                        >
+                          {allSelected ? 'Select none' : 'Select all'}
+                        </button>
+                      )}
                       <button
                         type="button"
-                        onClick={() => setSelected(allSelected ? new Set() : new Set(workLines.map((l) => l.entryId)))}
-                        className={cn(ghostBtn, 'shrink-0')}
+                        onClick={() => setLogOpen((v) => !v)}
+                        className={cn(ghostBtn, logOpen && 'text-[var(--space-text-primary)] bg-[var(--space-bg-card-hover)]')}
                       >
-                        {allSelected ? 'Select none' : 'Select all'}
+                        <Plus className="size-3" />
+                        Add work
                       </button>
-                    )}
+                    </div>
                   </div>
+
+                  {/* Inline logger — creates a real package work entry, then drops it
+                      into the list above already selected. */}
+                  {logOpen && (
+                    <div className="flex items-end gap-2 flex-wrap px-4 py-3 border-b border-[var(--space-border-hard)] bg-[var(--space-bg-card-hover)]">
+                      <input
+                        type="date"
+                        value={logDate}
+                        onChange={(e) => setLogDate(e.target.value)}
+                        className={cn(numCls, 'w-[8.5rem]')}
+                      />
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.25"
+                        value={logHours}
+                        onChange={(e) => setLogHours(e.target.value)}
+                        placeholder="Hrs"
+                        className={cn(numCls, 'w-16')}
+                      />
+                      <select
+                        value={logCategory}
+                        onChange={(e) => setLogCategory(e.target.value as WorkCategory)}
+                        className={selectCls}
+                      >
+                        {CATEGORIES.map((c) => <option key={c} value={c}>{WORK_CATEGORY_LABEL[c]}</option>)}
+                      </select>
+                      <input
+                        ref={logRef}
+                        value={logDesc}
+                        onChange={(e) => setLogDesc(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter' && !logging) { e.preventDefault(); handleLogWork() } }}
+                        placeholder="What was done"
+                        autoFocus
+                        className={cn(inputCls, 'flex-1 min-w-[9rem] py-1.5 text-xs')}
+                      />
+                      <button type="button" onClick={handleLogWork} disabled={logging} className={accentBtn}>
+                        {logging ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
+                        Log
+                      </button>
+                    </div>
+                  )}
+
                   {workLines.length === 0 ? (
                     <p className="px-4 py-4 text-xs text-[var(--space-text-muted)]">
-                      No unbilled work logged for this package.
+                      No unbilled work logged for this package — use <span className="text-[var(--space-text-secondary)]">Add work</span> to log some onto this {fulfilling ? 'payment' : 'invoice'}.
                     </p>
                   ) : (
                     <div className="divide-y divide-[var(--space-border-hard)]">
@@ -493,7 +666,8 @@ export function SchedulePaymentInvoiceModal({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 

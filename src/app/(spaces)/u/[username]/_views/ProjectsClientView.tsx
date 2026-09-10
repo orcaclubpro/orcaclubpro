@@ -1,4 +1,4 @@
-import { ProjectsView } from '@/components/dashboard/ProjectsView'
+import { ProjectsLedgerView } from '@/components/dashboard/ProjectsLedgerView'
 import type { SerializedProject } from '@/lib/serialization'
 
 export function ProjectsClientView({
@@ -8,5 +8,5 @@ export function ProjectsClientView({
   serializedProjects: SerializedProject[]
   username: string
 }) {
-  return <ProjectsView projects={serializedProjects} username={username} />
+  return <ProjectsLedgerView projects={serializedProjects} username={username} />
 }

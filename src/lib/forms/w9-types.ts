@@ -85,3 +85,41 @@ export function validateW9(data: W9FormData): string[] {
   }
   return problems
 }
+
+// ─── Requesting a W-9 ─────────────────────────────────────────────────────────
+// The other direction. ORCACLUB is the requester here — a contractor, affiliate,
+// or partner has to furnish THEIR W-9 before they can be paid. What goes out is
+// the blank IRS form with only the requester box and line 7 pre-filled, left
+// fillable so it can be completed and signed in any PDF reader.
+//
+// Nothing on the returned form is modelled here. A completed W-9 comes back to
+// the sender's inbox as an attachment and is never parsed, stored, or persisted
+// — see the note at the top of `src/actions/w9.ts`.
+
+export interface W9RequestData {
+  /**
+   * The "Requester's name and address" box — ORCACLUB's own, so the recipient
+   * knows who asked and their bookkeeper can file it. Sent read-only.
+   */
+  requester: string
+  /**
+   * Line 7 — our reference for the engagement, sent read-only so it survives the
+   * round trip and the returned form can be matched to a project or package.
+   */
+  accountNumbers?: string
+  /**
+   * Line 1 prefill, when the legal name is already known for certain. Left
+   * editable — line 1 must be the name on THEIR income tax return, and a wrong
+   * prefill is worse than a blank line.
+   */
+  name?: string
+}
+
+/** Everything a W-9 request will not go out without. */
+export function validateW9Request(data: W9RequestData): string[] {
+  const problems: string[] = []
+  if (!data.requester?.trim()) {
+    problems.push('The requester box needs our name and address — the recipient has to know who asked.')
+  }
+  return problems
+}

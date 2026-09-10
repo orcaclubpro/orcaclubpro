@@ -3,9 +3,9 @@
 import { getPayload } from 'payload'
 import config from '@payload-config'
 import { getCurrentUser } from '@/actions/auth'
-import { fillW9Pdf, validateW9 } from '@/lib/forms/w9'
-import type { W9FormData } from '@/lib/forms/w9-types'
-import { w9Delivery } from '@/lib/email/templates'
+import { buildW9RequestPdf, fillW9Pdf, validateW9, validateW9Request } from '@/lib/forms/w9'
+import type { W9FormData, W9RequestData } from '@/lib/forms/w9-types'
+import { w9Delivery, w9Request } from '@/lib/email/templates'
 import { BRAND_NAME } from '@/lib/brand'
 
 // ─── Form W-9 ─────────────────────────────────────────────────────────────────
@@ -137,5 +137,141 @@ export async function sendW9(
   } catch (error) {
     console.error('[sendW9]', error instanceof Error ? error.message : 'unknown error')
     return { success: false, error: error instanceof Error ? error.message : 'Failed to send the form' }
+  }
+}
+
+// ─── Requesting a W-9 ─────────────────────────────────────────────────────────
+// The other direction: a blank fillable form goes out, a completed one comes
+// back by reply. The same no-persistence rule applies, and it matters more here,
+// because the number on a returned form is somebody else's.
+//
+// A completed W-9 is never fetched, parsed, or filed by this codebase. It lands
+// in the inbox of the staff member who asked — which is why every send below
+// sets `replyTo` to their address rather than the studio's from-address.
+
+/** The recipient of a request. Not necessarily a portal user. */
+export interface W9RequestRecipient {
+  email: string
+  name?: string
+}
+
+/** Named for the person completing it, not for us — it lands in their downloads. */
+const W9_REQUEST_FILENAME = 'Form_W-9_to_complete.pdf'
+
+/** Enough to catch a typo before an attachment with our address on it goes out. */
+const looksLikeEmail = (s: string) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(s.trim())
+
+/**
+ * Build the blank, fillable form and hand it back for the browser to save.
+ *
+ * Useful on its own — some contractors want the form over a channel that is not
+ * email, and this is how staff get a copy to pass along.
+ */
+export async function generateW9Request(data: W9RequestData): Promise<GenerateW9Result> {
+  try {
+    const user = await getCurrentUser()
+    if (!user || user.role === 'client') return { success: false, error: 'Unauthorized' }
+
+    const problems = validateW9Request(data)
+    if (problems.length > 0) return { success: false, error: problems.join(' ') }
+
+    const bytes = await buildW9RequestPdf(data)
+    console.log(`[generateW9Request] built ${W9_REQUEST_FILENAME} (${bytes.byteLength} bytes) for ${user.email}`)
+
+    return {
+      success: true,
+      pdfBase64: Buffer.from(bytes).toString('base64'),
+      filename: W9_REQUEST_FILENAME,
+    }
+  } catch (error) {
+    console.error('[generateW9Request]', error instanceof Error ? error.message : 'unknown error')
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to build the form' }
+  }
+}
+
+/**
+ * Email the blank form to whoever has to complete it.
+ *
+ * Recipients may be portal users on the account or addresses typed in the
+ * composer — a contractor or an accounts-payable desk usually is not a portal
+ * user, and refusing to send to them would make the feature useless. Nothing but
+ * a blank form and our own requester block leaves the server, so a typo costs a
+ * wasted email rather than a disclosure.
+ *
+ * A partial failure is reported honestly: `sent` is how many actually went.
+ */
+export async function sendW9Request(
+  data: W9RequestData,
+  recipients: W9RequestRecipient[],
+  message?: string,
+): Promise<SendW9Result> {
+  try {
+    const user = await getCurrentUser()
+    if (!user || user.role === 'client') return { success: false, error: 'Unauthorized' }
+    if (!recipients.length) return { success: false, error: 'Choose at least one recipient.' }
+
+    const malformed = recipients.filter(r => !looksLikeEmail(r.email))
+    if (malformed.length > 0) {
+      return { success: false, error: `Not an email address: ${malformed.map(r => r.email).join(', ')}.` }
+    }
+
+    const problems = validateW9Request(data)
+    if (problems.length > 0) return { success: false, error: problems.join(' ') }
+
+    // The completed form comes back to the person who asked, not to the shared
+    // from-address — a returned W-9 carries a TIN and should land in one inbox.
+    const replyTo = user.email
+    if (!replyTo) return { success: false, error: 'Your account has no email address to receive the reply.' }
+
+    const payload = await getPayload({ config })
+    const bytes = await buildW9RequestPdf(data)
+    const pdfBase64 = Buffer.from(bytes).toString('base64')
+
+    let sent = 0
+    const failures: string[] = []
+    for (const recipient of recipients) {
+      try {
+        const email = w9Request({
+          recipientName: recipient.name || recipient.email,
+          replyTo,
+          message,
+          filename: W9_REQUEST_FILENAME,
+          reference: data.accountNumbers,
+        })
+        await payload.sendEmail({
+          to: recipient.email,
+          replyTo,
+          subject: email.subject,
+          html: email.html,
+          text: email.text,
+          attachments: [
+            {
+              filename: W9_REQUEST_FILENAME,
+              content: pdfBase64,
+              encoding: 'base64',
+              contentType: 'application/pdf',
+            },
+          ],
+        } as any)
+        sent++
+        console.log(`[sendW9Request] blank W-9 sent to ${recipient.email}, replies to ${replyTo}`)
+      } catch (err) {
+        failures.push(recipient.email)
+        console.error(`[sendW9Request] failed for ${recipient.email}:`, err instanceof Error ? err.message : err)
+      }
+    }
+
+    if (sent === 0) return { success: false, error: 'The request could not be sent. Nothing left the server.' }
+    return {
+      success: true,
+      sent,
+      filename: W9_REQUEST_FILENAME,
+      ...(failures.length > 0
+        ? { error: `Sent to ${sent}, but not to ${failures.join(', ')}.` }
+        : {}),
+    }
+  } catch (error) {
+    console.error('[sendW9Request]', error instanceof Error ? error.message : 'unknown error')
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to send the request' }
   }
 }

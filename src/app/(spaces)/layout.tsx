@@ -3,6 +3,7 @@ import config from "@payload-config"
 import { SpacesHeader } from "@/components/layout/spaces-header"
 import { MobileBottomNav } from "@/components/dashboard/MobileBottomNav"
 import { ClientPreviewBanner } from "@/components/dashboard/ClientPreviewBanner"
+import { BacktickHome } from "@/components/dashboard/BacktickHome"
 import { getSessionUser } from "./session"
 import { effectiveExperience, getPreviewClientId } from "./preview"
 import { HeaderTitleProvider } from "./HeaderTitleContext"
@@ -80,6 +81,9 @@ export default async function SpacesLayout({
         </main>
       </div>
       <MobileBottomNav experience={experience} />
+      {/* Backtick, anywhere in the portal → back to the dashboard home tab.
+          Inert while typing or in a dialog. */}
+      {user?.username && <BacktickHome homeHref={`/u/${user.username}`} />}
       {/* Search now lives inside the CommandConsole, mounted per-dashboard in
           u/[username]/layout (staff-only, preview-aware). */}
     </PackageCountProvider>

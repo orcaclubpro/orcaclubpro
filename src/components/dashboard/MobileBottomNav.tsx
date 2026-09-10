@@ -33,6 +33,15 @@ const SETTLE = 'cubic-bezier(0.32, 0.72, 0, 1)'      // calm, no overshoot
 const OPEN_DELAY = 80    // ms — swallows a pointer sweeping across the bottom edge
 const CLOSE_DELAY = 400  // ms — survives a brief exit without flickering shut
 
+// Hit tolerance around the shell. Closed, the target is the line and a couple
+// of millimetres either side of it — aiming at it has to be deliberate, because
+// everything else along the bottom strip belongs to the content underneath.
+// Open, the band reaches a little past the bar so a wobble off its edge doesn't
+// snap it shut mid-click.
+const CLOSED_HIT_PAD_X = 12   // px per side, past the line's ends
+const CLOSED_HIT_PAD_Y = 9    // px per side, above and below the 5px line
+const OPEN_HIT_PAD_X = 24     // px per side, past the open bar
+
 interface MobileBottomNavProps {
   /** Effective experience — reflects staff "view as client" preview. */
   experience: Experience
@@ -255,17 +264,22 @@ export function MobileBottomNav({ experience }: MobileBottomNavProps) {
         style={{ height: size.h || undefined }}
       >
         {/* ── Approach zone ─────────────────────────────────────────────────
-            A 5px line is far too small to aim at, so the trigger is a wider
-            invisible band around it — only as wide as the bar and only tall
-            enough to catch an approach, leaving the rest of the bottom strip
-            click-through for the content underneath. */}
+            The trigger tracks whatever shape the shell is currently in, plus a
+            small aiming tolerance. Closed that is the indicator line itself, so
+            the bottom strip stays click-through and the bar only comes back for
+            a pointer that went to it on purpose; open it is the bar's own box,
+            with enough margin that leaving and returning doesn't flicker. */}
         {canHover && (
           <div
             aria-hidden="true"
-            className="absolute left-1/2 -translate-x-1/2 bottom-0 pointer-events-auto"
+            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-auto"
             style={{
-              width: Math.max(size.w + 96, 240),
-              height: expanded ? '100%' : '2.75rem',
+              width: showOpen
+                ? size.w + OPEN_HIT_PAD_X * 2
+                : lineW + CLOSED_HIT_PAD_X * 2,
+              height: showOpen
+                ? '100%'
+                : COLLAPSED_H + CLOSED_HIT_PAD_Y * 2,
             }}
             onPointerEnter={openSoon}
             onPointerLeave={closeSoon}

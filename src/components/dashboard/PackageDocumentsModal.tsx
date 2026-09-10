@@ -357,9 +357,11 @@ export function PackageDocumentsModal({
                 )
               })}
 
-              {/* Your own W-9, for a client who needs one before they can pay
-                  an invoice or file a 1099. Composed fresh each time — nothing
-                  about it is stored. See W9Composer. */}
+              {/* Both directions of the form: ours, for a client who needs it
+                  before they can pay an invoice or file a 1099, and a blank
+                  fillable one for a contractor who has to furnish theirs.
+                  Composed fresh each time — nothing about either is stored.
+                  See W9Composer. */}
               {w9 && (
                 <button
                   type="button"
@@ -370,7 +372,7 @@ export function PackageDocumentsModal({
                   <div className="min-w-0 flex-1">
                     <p className="text-xs font-semibold text-[var(--space-text-primary)]">W-9</p>
                     <p className="text-[0.625rem] text-[var(--space-text-muted)] leading-relaxed">
-                      Your taxpayer form for the client to keep on file — filled fresh, never stored
+                      Send ours for the client to keep on file, or request theirs — never stored
                     </p>
                   </div>
                   <ChevronRight className="size-4 mt-0.5 shrink-0 text-[var(--space-text-muted)]" />

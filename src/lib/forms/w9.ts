@@ -1,7 +1,14 @@
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
-import { PDFDocument, StandardFonts, TextAlignment, rgb } from 'pdf-lib'
-import { digitsOnly, validateW9, type W9Classification, type W9FormData } from './w9-types'
+import { PDFBool, PDFDict, PDFDocument, PDFName, StandardFonts, TextAlignment, rgb } from 'pdf-lib'
+import {
+  digitsOnly,
+  validateW9,
+  validateW9Request,
+  type W9Classification,
+  type W9FormData,
+  type W9RequestData,
+} from './w9-types'
 
 // ─── Form W-9 ─────────────────────────────────────────────────────────────────
 // Fills the genuine IRS form rather than drawing a lookalike.
@@ -24,8 +31,8 @@ import { digitsOnly, validateW9, type W9Classification, type W9FormData } from '
 // a TIN to the database, and nothing persists the filled document.
 
 // Re-exported so server callers have one import for the whole feature.
-export { W9_REVISION, formatTin, validateW9, digitsOnly } from './w9-types'
-export type { W9Classification, W9FormData } from './w9-types'
+export { W9_REVISION, formatTin, validateW9, validateW9Request, digitsOnly } from './w9-types'
+export type { W9Classification, W9FormData, W9RequestData } from './w9-types'
 
 const FW9_PATH = path.join(process.cwd(), 'src/lib/forms/fw9.pdf')
 
@@ -160,6 +167,117 @@ export async function fillW9Pdf(data: W9FormData): Promise<Uint8Array> {
 
   // Page 1 only — the rest of the IRS file is instructions for whoever fills it.
   for (let i = doc.getPageCount() - 1; i >= 1; i--) doc.removePage(i)
+
+  return doc.save()
+}
+
+// ─── Requesting a W-9 ─────────────────────────────────────────────────────────
+// The other direction, and a different document. When ORCACLUB is the payer —
+// a contractor, affiliate, or referral partner has to furnish a W-9 before they
+// can be paid — what goes out is the blank IRS form with only the requester box
+// and line 7 filled in, left FILLABLE so the recipient can complete and sign it
+// in whatever PDF reader they have.
+//
+// Two things this deliberately does not do, which `fillW9Pdf` above does:
+//
+//   1. It does not flatten. Flattening draws the values into the page and drops
+//      the fields, which is right for a form we have already completed and wrong
+//      for one someone else still has to fill in.
+//   2. It keeps all six pages. Pages 2–6 are the IRS's line-by-line instructions
+//      — dead weight in a completed form, and the first thing a recipient asks
+//      for when they have to complete one.
+
+/**
+ * The two rules in Part II, as widget rectangles.
+ *
+ * The IRS gives Part II no form field at all — it is ruled space to sign by
+ * hand. A form emailed out and emailed back is never going to be signed by hand,
+ * so a text field is laid over each rule: a typed name is what an electronic
+ * signature on a W-9 actually is, and unlike a digital-certificate signature
+ * field it works in Preview, Acrobat Reader, and a phone's mail client. Anyone
+ * who does hold a certificate can still sign over the top with Fill & Sign.
+ *
+ * Derived from the same label positions as SIGN_LINE / DATE_LINE, widened to the
+ * height of the band between the certification rule and the General Instructions
+ * heading.
+ */
+const SIGN_FIELD = { x: 131, y: 191, width: 249, height: 19 }
+const DATE_FIELD = { x: 409, y: 191, width: 167, height: 19 }
+
+/** Field names for the two added widgets. Flat — a dot would nest them. */
+const SIGN_FIELD_NAME = 'orcaclub_w9_signature'
+const DATE_FIELD_NAME = 'orcaclub_w9_signature_date'
+
+/**
+ * Build a blank, fillable Form W-9 to send to someone who has to furnish one.
+ *
+ * The requester box and line 7 are filled and locked; everything else — name,
+ * classification, address, TIN, signature — is left for the recipient. The
+ * result is not flattened and carries all six IRS pages.
+ */
+export async function buildW9RequestPdf(data: W9RequestData): Promise<Uint8Array> {
+  const problems = validateW9Request(data)
+  if (problems.length > 0) throw new Error(problems.join(' '))
+
+  const doc = await PDFDocument.load(await readFile(FW9_PATH))
+  const form = doc.getForm()
+  const helvetica = await doc.embedFont(StandardFonts.Helvetica)
+
+  // Ours, and locked — the recipient should not be able to retype who asked, and
+  // line 7 is the reference the returned form is matched against.
+  const requester = form.getTextField(FIELD.requester)
+  requester.setText(data.requester.trim())
+  requester.enableReadOnly()
+
+  if (data.accountNumbers?.trim()) {
+    const accounts = form.getTextField(FIELD.line7Accounts)
+    accounts.setAlignment(TextAlignment.Left)
+    accounts.setText(data.accountNumbers.trim())
+    accounts.enableReadOnly()
+  }
+
+  // Theirs, and editable — a prefilled line 1 is a starting point, not a claim
+  // about what is on their tax return.
+  if (data.name?.trim()) form.getTextField(FIELD.line1Name).setText(data.name.trim())
+
+  // Part II, laid over the ruled space the IRS leaves blank.
+  const signature = form.createTextField(SIGN_FIELD_NAME)
+  signature.addToPage(doc.getPage(0), { ...SIGN_FIELD, font: helvetica, borderWidth: 0 })
+
+  const signedOn = form.createTextField(DATE_FIELD_NAME)
+  signedOn.addToPage(doc.getPage(0), { ...DATE_FIELD, font: helvetica, borderWidth: 0 })
+
+  // Sized after the widget exists — the font size lives in the field's default
+  // appearance string, which `addToPage` is what writes.
+  signature.setFontSize(11)
+  signedOn.setFontSize(11)
+
+  // pdf-lib paints a new widget's background white unless told otherwise, and
+  // there is no option for "none" — a white box would hide the rule the field
+  // sits on. Dropping /BG from the appearance characteristics leaves it clear.
+  for (const field of [signature, signedOn]) {
+    for (const widget of field.acroField.getWidgets()) {
+      widget.MK()?.delete(PDFName.of('BG'))
+    }
+  }
+
+  form.updateFieldAppearances(helvetica)
+
+  // `updateFieldAppearances` rewrites every field's default appearance to name
+  // the font it was handed — "/Helvetica" — but the IRS's resource dictionary
+  // only declares /Helv, /HelveticaLTStd-Bold and /ZaDb. `fillW9Pdf` gets away
+  // with the mismatch because flattening bakes the text into the page; a form
+  // still carrying live fields does not, and a reader that cannot resolve the
+  // font draws nothing. Declaring the embedded font under the name the appearance
+  // strings use is what makes the fields render.
+  const resources = form.acroForm.dict.lookupMaybe(PDFName.of('DR'), PDFDict)
+  const fonts = resources?.lookupMaybe(PDFName.of('Font'), PDFDict)
+  if (!fonts) throw new Error('The IRS form is missing its font resources — the blank may be corrupt.')
+  fonts.set(PDFName.of(helvetica.name), helvetica.ref)
+
+  // The recipient's reader has to draw the text they type. Without this the
+  // fields accept input and render empty in several viewers, Preview included.
+  form.acroForm.dict.set(PDFName.of('NeedAppearances'), PDFBool.True)
 
   return doc.save()
 }

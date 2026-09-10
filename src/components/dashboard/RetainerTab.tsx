@@ -505,7 +505,8 @@ export function RetainerTab({ clientId, active }: RetainerTabProps) {
   }, [active, selectedClientId, stage, loading, retainerStatus])
 
   // ── Esc walks back one level (recap → editor → edit form → picker); the final
-  // Esc from the picker bubbles to the console, which collapses to search.
+  // Esc from the picker bubbles to the console, which closes it — this station
+  // stays mounted, so nothing in progress is lost.
   // 1–4 jump stages while not typing. Capture phase so we run before the console.
   useEffect(() => {
     if (!active) return

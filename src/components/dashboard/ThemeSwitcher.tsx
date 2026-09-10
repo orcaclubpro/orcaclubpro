@@ -1,13 +1,49 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
-import { Check, Palette } from 'lucide-react'
+import { Check } from 'lucide-react'
 import { useTheme } from '@/app/(spaces)/ThemeContext'
-import { THEME_LIST, THEMES, type ThemeDefinition, type ThemeMode } from '@/app/(spaces)/themes'
-import { cn } from '@/lib/utils'
+import { THEME_LIST, type ThemeDefinition } from '@/app/(spaces)/themes'
+import { OrcaMark } from './OrcaMark'
 
-/** A miniature live preview of a theme, rendered with that theme's own vars. */
-function ThemeCard({
+/**
+ * Theme rows for the account sidebar.
+ *
+ * Each row is a full-width slab painted entirely in its own theme's variables —
+ * background, card, border, text, accent — wrapped around a miniature of the
+ * portal itself: the header lockup over a content card. You are looking at the
+ * theme, not at a swatch of it, so the contrast you are choosing is the contrast
+ * you get. The rest of the sidebar stays greyscale so these are the only colour
+ * on screen.
+ *
+ * Derived wholly from THEME_LIST — adding a theme to the registry adds a row.
+ */
+
+/** The portal, abstracted to four shapes, drawn in one theme's palette. */
+function ThemeMiniature({ theme }: { theme: ThemeDefinition }) {
+  const v = theme.vars
+  return (
+    <span
+      className="flex h-[42px] w-[58px] shrink-0 flex-col gap-[4px] rounded-[8px] p-[5px]"
+      style={{ background: v['--space-bg-base'], boxShadow: `inset 0 0 0 1px ${v['--space-border-hard']}` }}
+    >
+      {/* Header lockup — orca + wordmark */}
+      <span className="flex items-center gap-[3px]">
+        <OrcaMark size={9} style={{ color: v['--space-nav-fg'] }} />
+        <span className="h-[2px] w-[15px] rounded-full" style={{ background: v['--space-nav-fg'], opacity: 0.8 }} />
+      </span>
+      {/* Content card */}
+      <span
+        className="flex flex-1 items-center gap-[3px] rounded-[4px] px-[4px]"
+        style={{ background: v['--space-bg-card'], boxShadow: `inset 0 0 0 1px ${v['--space-border']}` }}
+      >
+        <span className="h-[2px] flex-1 rounded-full" style={{ background: v['--space-text-secondary'], opacity: 0.55 }} />
+        <span className="size-[5px] shrink-0 rounded-full" style={{ background: v['--space-accent'] }} />
+      </span>
+    </span>
+  )
+}
+
+function ThemeSlab({
   theme,
   active,
   onSelect,
@@ -19,183 +55,67 @@ function ThemeCard({
   const v = theme.vars
   return (
     <button
+      type="button"
       onClick={onSelect}
-      aria-label={`${theme.label} theme`}
       aria-pressed={active}
-      className="group relative flex flex-col gap-1.5 p-1.5 rounded-xl text-left transition-all duration-150 active:scale-[0.97]"
+      className="group relative flex w-full items-stretch overflow-hidden rounded-[14px] text-left transition-[box-shadow,transform] duration-150 active:scale-[0.99] focus:outline-none focus-visible:ring-2"
       style={{
-        background: active ? 'var(--space-bg-card-hover)' : 'transparent',
+        background: v['--space-bg-base'],
         boxShadow: active
           ? `0 0 0 1.5px ${v['--space-accent']}`
-          : '0 0 0 1px var(--space-border)',
+          : `0 0 0 1px ${v['--space-border-hard']}`,
       }}
     >
-      {/* Mini preview — painted with the theme's own colors */}
-      <div
-        className="relative h-11 rounded-lg overflow-hidden flex items-center gap-1.5 px-2"
-        style={{ background: v['--space-bg-base'] }}
-      >
-        <div
-          className="flex-1 h-7 rounded-md flex items-center gap-1 px-1.5"
-          style={{
-            background: v['--space-bg-card'],
-            boxShadow: `inset 0 0 0 1px ${v['--space-border']}`,
-          }}
-        >
-          <span className="text-[0.625rem] font-bold leading-none" style={{ color: v['--space-text-primary'] }}>
-            Aa
+      {/* Selection spine — the only thing that moves between states */}
+      <span
+        className="w-[4px] shrink-0 transition-colors duration-150"
+        style={{ background: active ? v['--space-accent'] : 'transparent' }}
+      />
+
+      <span className="flex min-w-0 flex-1 items-center gap-[12px] py-[10px] pl-[11px] pr-[13px]">
+        <ThemeMiniature theme={theme} />
+
+        <span className="min-w-0 flex-1">
+          <span className="block text-[15px] font-semibold leading-tight" style={{ color: v['--space-text-primary'] }}>
+            {theme.label}
           </span>
+          {/* Mixed from the theme's own ink and paper rather than taken from its
+              tertiary token: the ramp inverts between light and dark modes, so any
+              fixed token falls below readable on half the themes. */}
           <span
-            className="h-1 flex-1 rounded-full"
-            style={{ background: v['--space-text-secondary'], opacity: 0.5 }}
-          />
-        </div>
-        <span
-          className="size-3 rounded-full shrink-0"
-          style={{ background: v['--space-accent'], boxShadow: `0 0 6px ${v['--space-accent-glow']}` }}
-        />
-        {active && (
-          <span
-            className="absolute top-1 right-1 size-3.5 rounded-full flex items-center justify-center"
-            style={{ background: v['--space-accent'] }}
+            className="mt-[3px] block text-[11.5px] leading-[1.35]"
+            style={{ color: `color-mix(in srgb, ${v['--space-text-primary']} 62%, ${v['--space-bg-base']})` }}
           >
-            <Check className="size-2.5" strokeWidth={3} style={{ color: v['--space-bg-base'] }} />
+            {theme.description}
           </span>
-        )}
-      </div>
-      {/* Label */}
-      <span className="text-[0.625rem] font-semibold leading-none px-0.5 text-[var(--space-text-primary)]">
-        {theme.label}
+        </span>
+
+        <span
+          className="flex size-[18px] shrink-0 items-center justify-center rounded-full transition-opacity duration-150"
+          style={{ background: v['--space-accent'], opacity: active ? 1 : 0 }}
+        >
+          <Check className="size-[11px]" strokeWidth={3} style={{ color: v['--space-bg-base'] }} />
+        </span>
       </span>
     </button>
   )
 }
 
-const MODE_ORDER: { mode: ThemeMode; label: string }[] = [
-  { mode: 'light', label: 'Light' },
-  { mode: 'dark', label: 'Dark' },
-]
-
-/**
- * The theme-card grid on its own — no trigger, no popover chrome. Used inside
- * the ThemeSwitcher popover and inside the header UserMenu.
- */
 export function ThemePicker({ onPick }: { onPick?: () => void }) {
   const { themeId, setTheme } = useTheme()
   return (
-    <>
-      {MODE_ORDER.map(({ mode, label }) => {
-        const themes = THEME_LIST.filter((t) => t.mode === mode)
-        if (themes.length === 0) return null
-        return (
-          <div key={mode} className="mt-1.5 first:mt-0">
-            <p className="text-[0.5rem] uppercase tracking-[0.2em] text-[var(--space-text-muted)] font-semibold px-1 pb-1.5">
-              {label}
-            </p>
-            <div className={cn('grid grid-cols-2 gap-1.5')}>
-              {themes.map((theme) => (
-                <ThemeCard
-                  key={theme.id}
-                  theme={theme}
-                  active={theme.id === themeId}
-                  onSelect={() => {
-                    setTheme(theme.id)
-                    onPick?.()
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-        )
-      })}
-    </>
-  )
-}
-
-export function ThemeSwitcher() {
-  const { themeId, setTheme } = useTheme()
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-
-  // Close on outside click
-  useEffect(() => {
-    if (!open) return
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [open])
-
-  const current = THEMES[themeId] ?? THEME_LIST[0]
-
-  return (
-    <div ref={ref} className="relative">
-      {/* Trigger — shows the current theme so it's always obvious which is active */}
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-[var(--space-border)] transition-all duration-200 hover:bg-[var(--space-bg-card-hover)] active:scale-95"
-        style={{ background: open ? 'var(--space-bg-card-hover)' : 'transparent' }}
-        aria-label="Switch theme"
-        aria-expanded={open}
-      >
-        <span
-          className="size-2.5 rounded-full flex-shrink-0 ring-1 ring-[var(--space-border-hard)]"
-          style={{ background: current.swatch }}
-        />
-        <span className="text-[0.6875rem] font-semibold uppercase tracking-widest text-[var(--space-nav-fg-dim)] hidden sm:block">
-          {current.label}
-        </span>
-        <Palette className="size-3.5 text-[var(--space-nav-fg-dim)] sm:hidden" />
-      </button>
-
-      {/* Popover — opens downward since the switcher lives in the top header */}
-      {open && (
-        <div
-          className="absolute top-full left-0 mt-2 w-60 rounded-2xl p-2.5 z-50"
-          style={{
-            background: 'var(--space-bg-card)',
-            border: '1px solid var(--space-border-hard)',
-            boxShadow: '0 8px 40px rgba(0,0,0,0.30), 0 2px 8px rgba(0,0,0,0.15)',
-            animation: 'themeFadeIn 160ms cubic-bezier(0.22,1,0.36,1) forwards',
+    <div className="flex flex-col gap-[9px]">
+      {THEME_LIST.map((theme) => (
+        <ThemeSlab
+          key={theme.id}
+          theme={theme}
+          active={theme.id === themeId}
+          onSelect={() => {
+            setTheme(theme.id)
+            onPick?.()
           }}
-        >
-          <p className="text-[0.5625rem] uppercase tracking-[0.15em] text-[var(--space-text-tertiary)] font-semibold px-1 pb-1">
-            Theme
-          </p>
-          {MODE_ORDER.map(({ mode, label }) => {
-            const themes = THEME_LIST.filter((t) => t.mode === mode)
-            if (themes.length === 0) return null
-            return (
-              <div key={mode} className="mt-1.5">
-                <p className="text-[0.5rem] uppercase tracking-[0.2em] text-[var(--space-text-muted)] font-semibold px-1 pb-1.5">
-                  {label}
-                </p>
-                <div className={cn('grid grid-cols-2 gap-1.5')}>
-                  {themes.map((theme) => (
-                    <ThemeCard
-                      key={theme.id}
-                      theme={theme}
-                      active={theme.id === themeId}
-                      onSelect={() => {
-                        setTheme(theme.id)
-                        setOpen(false)
-                      }}
-                    />
-                  ))}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      )}
-
-      <style>{`
-        @keyframes themeFadeIn {
-          from { opacity: 0; transform: scale(0.95) translateY(4px); }
-          to   { opacity: 1; transform: scale(1)    translateY(0);    }
-        }
-      `}</style>
+        />
+      ))}
     </div>
   )
 }

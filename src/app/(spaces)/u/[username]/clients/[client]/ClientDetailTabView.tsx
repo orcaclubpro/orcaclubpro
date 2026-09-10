@@ -6,11 +6,11 @@ import dynamic from 'next/dynamic'
 import {
   ArrowUpRight, FolderKanban, KeyRound, Package, Plus, ReceiptText, ScrollText,
 } from 'lucide-react'
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import { motion, useReducedMotion } from 'motion/react'
 import type { ClientAccount, Project } from '@/types/payload-types'
 import {
   Figure, figureEdges, SectionNav, SectionTitle, Empty, ToneRule, Meter,
-  useSectionCycle, useScrollCollapse, type FigureSpec, type LedgerSection,
+  useSectionCycle, type FigureSpec, type LedgerSection,
 } from '@/components/dashboard/ledger'
 import { Spine } from '@/components/dashboard/Spine'
 import { ClientCredentialsTab } from '@/components/dashboard/ClientCredentialsTab'
@@ -265,10 +265,7 @@ export function ClientDetailTabView({
   const [section, setSection] = useState<Tab>(initialTab)
   const [creatingOrder, setCreatingOrder] = useState(false)
   const navRef = useRef<HTMLElement>(null)
-  const standingRef = useRef<HTMLDivElement>(null)
   const reduce = useReducedMotion()
-
-  const standingCollapsed = useScrollCollapse(standingRef)
 
   // Sections are real state, not routes — but the `?tab=` URL stays truthful so
   // a link into a section still lands there. The URL *follows* the open section
@@ -367,116 +364,102 @@ export function ClientDetailTabView({
     <div className="space-true-scale mx-auto w-full px-4 pb-24 pt-6 sm:px-8 sm:pt-10 lg:px-10" style={{ maxWidth: '1180px' }}>
 
       {/* ── The title card ───────────────────────────────────────────────── */}
-      {/* Masthead and figures together: the page's opening statement, shut away
-          on the way down so a section gets the full screen, and opened again at
-          the top. Nothing is lost while it is shut — the portal's fixed header
-          carries the client's name the whole time (`SetHeaderTitle` in the
-          route layout), and the section nav is sticky from `lg` up.
+      {/* Masthead and figures together: the record's opening statement, which
+          scrolls away on its own like any other content at the top of a
+          document. It used to collapse on scroll and the page jumped every
+          time — see the note where `useScrollCollapse` used to live in
+          `dashboard/ledger`. Nothing here may animate its own height. */}
+      <div>
 
-          The measured child is inside the animating wrapper, so it keeps its
-          natural height for `useScrollCollapse` to read while the wrapper's own
-          height is mid-flight. `inert` keeps the shut band's figures out of the
-          tab order and the accessibility tree. */}
-      <motion.div
-        initial={false}
-        animate={{ height: standingCollapsed ? 0 : 'auto', opacity: standingCollapsed ? 0 : 1 }}
-        transition={reduce ? { duration: 0 } : { duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-        inert={standingCollapsed}
-        className="overflow-hidden"
-      >
-        <div ref={standingRef}>
-
-          {/* ── Masthead ─────────────────────────────────────────────────────── */}
-          <header className="pb-8 pt-2 sm:pb-10">
-            <h1
-              className="hyphens-auto break-words font-semibold leading-[0.95] tracking-[-0.03em] text-[var(--space-text-primary)]"
-              style={{ fontSize: 'clamp(30px, 5vw, 68px)' }}
-            >
-              {clientAccount.name}
-            </h1>
-            {/* One line of standing detail. On a phone it stacks and the
-                separators go with it: a middle dot that wraps onto its own line
-                is noise, and a stacked list needs no separator to be read as a
-                list. The Stripe link keeps a phone-sized tap target. */}
-            <div className="mt-4 flex flex-col gap-1.5 text-[14px] text-[var(--space-text-tertiary)] sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-3 sm:gap-y-1">
-              {clientAccount.company && <span className="min-w-0 break-words">{clientAccount.company}</span>}
-              {clientAccount.company && clientAccount.email && (
-                <span aria-hidden="true" className="hidden sm:inline">·</span>
-              )}
-              {clientAccount.email && (
-                <a
-                  href={`mailto:${clientAccount.email}`}
-                  className="min-w-0 break-all transition-colors hover:text-[var(--space-accent)] focus-visible:text-[var(--space-accent)] focus-visible:outline-none"
-                >
-                  {clientAccount.email}
-                </a>
-              )}
-              {clientAccount.stripeCustomerId && (
-                <>
-                  <span aria-hidden="true" className="hidden sm:inline">·</span>
-                  <a
-                    href={`https://dashboard.stripe.com/customers/${clientAccount.stripeCustomerId}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex w-fit items-center gap-1 py-1 transition-colors hover:text-[var(--space-accent)] focus-visible:text-[var(--space-accent)] focus-visible:outline-none sm:py-0"
-                  >
-                    Stripe
-                    <ArrowUpRight className="size-[13px]" aria-hidden="true" />
-                  </a>
-                </>
-              )}
-            </div>
-          </header>
-
-          {/* ── The standing ─────────────────────────────────────────────────── */}
-          <section aria-label="Standing">
-            <div className="grid grid-cols-2 border-t border-[var(--space-border-hard)] md:grid-cols-4">
-              {figures.map(({ key, ...figure }, i) => (
-                <Figure
-                  key={figure.label}
-                  {...figure}
-                  active={section === key}
-                  onSelect={() => setSection(key)}
-                  className={figureEdges(i)}
-                />
-              ))}
-            </div>
-
-            <div
-              className="flex h-[3px] w-full overflow-hidden bg-[var(--space-divider)]"
-              role="img"
-              aria-label={`Invoiced to date: ${Math.round(shares.paid)}% collected, ${Math.round(shares.pending)}% outstanding, ${Math.round(shares.cancelled)}% cancelled`}
-            >
-              <motion.span
-                className="flex h-full w-full origin-left"
-                initial={reduce ? false : { scaleX: 0 }}
-                animate={{ scaleX: 1 }}
-                transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+        {/* ── Masthead ─────────────────────────────────────────────────────── */}
+        <header className="pb-8 pt-2 sm:pb-10">
+          <h1
+            className="hyphens-auto break-words font-semibold leading-[0.95] tracking-[-0.03em] text-[var(--space-text-primary)]"
+            style={{ fontSize: 'clamp(30px, 5vw, 68px)' }}
+          >
+            {clientAccount.name}
+          </h1>
+          {/* One line of standing detail. On a phone it stacks and the
+              separators go with it: a middle dot that wraps onto its own line
+              is noise, and a stacked list needs no separator to be read as a
+              list. The Stripe link keeps a phone-sized tap target. */}
+          <div className="mt-4 flex flex-col gap-1.5 text-[14px] text-[var(--space-text-tertiary)] sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-3 sm:gap-y-1">
+            {clientAccount.company && <span className="min-w-0 break-words">{clientAccount.company}</span>}
+            {clientAccount.company && clientAccount.email && (
+              <span aria-hidden="true" className="hidden sm:inline">·</span>
+            )}
+            {clientAccount.email && (
+              <a
+                href={`mailto:${clientAccount.email}`}
+                className="min-w-0 break-all transition-colors hover:text-[var(--space-accent)] focus-visible:text-[var(--space-accent)] focus-visible:outline-none"
               >
-                <span style={{ width: `${shares.paid}%`, background: toneColor('ok') }} />
-                <span style={{ width: `${shares.pending}%`, background: toneColor('warn') }} />
-                <span style={{ width: `${shares.cancelled}%`, background: toneColor('danger'), opacity: 0.5 }} />
-              </motion.span>
-            </div>
+                {clientAccount.email}
+              </a>
+            )}
+            {clientAccount.stripeCustomerId && (
+              <>
+                <span aria-hidden="true" className="hidden sm:inline">·</span>
+                <a
+                  href={`https://dashboard.stripe.com/customers/${clientAccount.stripeCustomerId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex w-fit items-center gap-1 py-1 transition-colors hover:text-[var(--space-accent)] focus-visible:text-[var(--space-accent)] focus-visible:outline-none sm:py-0"
+                >
+                  Stripe
+                  <ArrowUpRight className="size-[13px]" aria-hidden="true" />
+                </a>
+              </>
+            )}
+          </div>
+        </header>
 
-            <p className="pt-3 text-right text-[13px] tabular-nums text-[var(--space-text-tertiary)]">
-              {orders.length} {plural(orders.length, 'invoice')} on record
-            </p>
-          </section>
+        {/* ── The standing ─────────────────────────────────────────────────── */}
+        <section aria-label="Standing">
+          <div className="grid grid-cols-2 border-t border-[var(--space-border-hard)] md:grid-cols-4">
+            {figures.map(({ key, ...figure }, i) => (
+              <Figure
+                key={figure.label}
+                {...figure}
+                active={section === key}
+                onSelect={() => setSection(key)}
+                className={figureEdges(i)}
+              />
+            ))}
+          </div>
 
-        </div>
-      </motion.div>
+          <div
+            className="flex h-[3px] w-full overflow-hidden bg-[var(--space-divider)]"
+            role="img"
+            aria-label={`Invoiced to date: ${Math.round(shares.paid)}% collected, ${Math.round(shares.pending)}% outstanding, ${Math.round(shares.cancelled)}% cancelled`}
+          >
+            <motion.span
+              className="flex h-full w-full origin-left"
+              initial={reduce ? false : { scaleX: 0 }}
+              animate={{ scaleX: 1 }}
+              transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <span style={{ width: `${shares.paid}%`, background: toneColor('ok') }} />
+              <span style={{ width: `${shares.pending}%`, background: toneColor('warn') }} />
+              <span style={{ width: `${shares.cancelled}%`, background: toneColor('danger'), opacity: 0.5 }} />
+            </motion.span>
+          </div>
+
+          <p className="pt-3 text-right text-[13px] tabular-nums text-[var(--space-text-tertiary)]">
+            {orders.length} {plural(orders.length, 'invoice')} on record
+          </p>
+        </section>
+
+      </div>
 
       {/* ── The workspace ────────────────────────────────────────────────── */}
-      {/* The top margin closes with the band, so the workspace rises to meet
-          the header instead of leaving a gap where the figures were. 54px is
-          `mt-12` spelled out: --spacing is 4.5px inside .space-true-scale, so
-          the class this replaced was never the 48px its name suggests. */}
-      <motion.div
-        initial={false}
-        animate={{ marginTop: standingCollapsed ? 0 : 54 }}
-        transition={reduce ? { duration: 0 } : { duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+      {/* 54px is `mt-12` spelled out: --spacing is 4.5px inside
+          .space-true-scale, so the class this replaced was never the 48px its
+          name suggests. A fixed margin, not an animated one — it used to close
+          along with the collapsing band, which was a third simultaneous height
+          change on a page that already jumped. */}
+      <div
         className="flex flex-col gap-6 lg:flex-row lg:gap-12"
+        style={{ marginTop: 54 }}
       >
         {/* Nav is first in the DOM so phones meet it before the content, and
             ordered last on desktop so it sits down the right-hand side. It is a
@@ -493,19 +476,25 @@ export function ClientDetailTabView({
           className="lg:order-2"
         />
 
+        {/* One keyed wrapper rather than `AnimatePresence mode="wait"`. The old
+            arrangement unmounted the open section, rendered *nothing* for the
+            140ms exit, then mounted the next one — so on a record scrolled past
+            the fold the document collapsed to viewport height mid-swap, the
+            browser clamped the scroll to the top, and changing section threw
+            you back to the masthead. Keying on `section` remounts in one commit:
+            the entering section plays `tabVariants` (opacity, transform, blur —
+            none of which touch layout) and the page never has an empty frame. */}
         <div className="min-w-0 flex-1 lg:order-1">
-          <AnimatePresence mode="wait">
+          <motion.div
+            key={section}
+            variants={tabVariants}
+            initial={reduce ? false : 'initial'}
+            animate="animate"
+          >
 
             {/* ─── Overview ───────────────────────────────────────────── */}
             {section === 'overview' && (
-              <motion.section
-                key="overview"
-                variants={tabVariants}
-                initial="initial"
-                animate="animate"
-                exit="exit"
-                className="space-y-12"
-              >
+              <section className="space-y-12">
                 {balance > 0 && (
                   <OutstandingNotice
                     amount={balance}
@@ -564,12 +553,12 @@ export function ClientDetailTabView({
                     />
                   </div>
                 </div>
-              </motion.section>
+              </section>
             )}
 
             {/* ─── Projects ───────────────────────────────────────────── */}
             {section === 'projects' && (
-              <motion.section key="projects" variants={tabVariants} initial="initial" animate="animate" exit="exit">
+              <section>
                 <SectionTitle
                   title="Projects"
                   aside={
@@ -596,19 +585,12 @@ export function ClientDetailTabView({
                     No projects yet. Create one to start tracking work for {clientAccount.name}.
                   </Empty>
                 )}
-              </motion.section>
+              </section>
             )}
 
             {/* ─── Invoices ───────────────────────────────────────────── */}
             {section === 'orders' && (
-              <motion.section
-                key="orders"
-                variants={tabVariants}
-                initial="initial"
-                animate="animate"
-                exit="exit"
-                className="space-y-8"
-              >
+              <section className="space-y-8">
                 <SectionTitle
                   title="Invoices"
                   aside={
@@ -651,33 +633,33 @@ export function ClientDetailTabView({
                   orders={orders as any}
                   role={userRole as 'admin' | 'user' | 'client'}
                 />
-              </motion.section>
+              </section>
             )}
 
             {/* ─── Packages ───────────────────────────────────────────── */}
             {/* ClientPackagesTab and ClientCredentialsTab carry their own
                 headings, so neither gets a SectionTitle above it. */}
             {section === 'packages' && (
-              <motion.section key="packages" variants={tabVariants} initial="initial" animate="animate" exit="exit">
+              <section>
                 <ClientPackagesTab
                   packages={packages as any}
                   clientId={clientId}
                   username={username}
                   packageOrders={packageOrderMap}
                 />
-              </motion.section>
+              </section>
             )}
 
             {/* ─── Accounts ───────────────────────────────────────────── */}
             {section === 'accounts' && (
-              <motion.section key="accounts" variants={tabVariants} initial="initial" animate="animate" exit="exit">
+              <section>
                 <ClientCredentialsTab credentials={credentials as any[]} />
-              </motion.section>
+              </section>
             )}
 
-          </AnimatePresence>
+          </motion.div>
         </div>
-      </motion.div>
+      </div>
     </div>
   )
 }
