@@ -7,14 +7,14 @@ import Link from 'next/link'
 import {
   FileText, ArrowRight, ArrowLeft, Check, Loader2, Trash2, Copy, CheckCheck,
   Receipt, ExternalLink, CheckCircle2, CalendarDays, ListOrdered, Files, SlidersHorizontal, X,
-  PackageCheck, ScrollText,
+  PackageCheck,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { PackageDocumentsModal } from './PackageDocumentsModal'
 import { SectionHeader } from './SectionHeader'
 import { OptionRow } from './package-detail/OptionRow'
 import { ResetInvoicedEntry } from './package-detail/ResetInvoicedEntry'
-import { GenerateW9Modal, type W9Recipient } from './GenerateW9Modal'
+import type { W9Recipient } from './W9Composer'
 import {
   fmt, fmtExact, computeTotals, generateInstallmentDates, computeInstallmentAmounts,
   formatDisplayDate, installmentLabel, statusStyle,
@@ -95,7 +95,6 @@ export function PackageDetailView({
   const [confirmDelete, setConfirmDelete]   = useState(false)
   const [deleting, setDeleting]             = useState(false)
   const [copied, setCopied]                 = useState(false)
-  const [w9Open, setW9Open]                 = useState(false)
   const [invoicing, setInvoicing]           = useState(false)
   const [invoiceResult, setInvoiceResult]   = useState<{ url: string } | { recorded: string } | { error: string } | null>(null)
   const [daysUntilDue, setDaysUntilDue]     = useState(30)
@@ -423,13 +422,6 @@ export function PackageDetailView({
               <button onClick={() => setDocsOpen(true)} className={PKG_ACTION_BTN}>
                 <Files className="size-3.5" />
                 Documents
-              </button>
-              {/* Your own W-9, for a client who needs one before they can pay an
-                  invoice or file a 1099. Nothing about it is stored — see
-                  GenerateW9Modal. */}
-              <button onClick={() => setW9Open(true)} className={PKG_ACTION_BTN}>
-                <ScrollText className="size-3.5" />
-                Generate W-9
               </button>
             </div>
           </div>
@@ -1187,21 +1179,17 @@ export function PackageDetailView({
           packageId={pkg.id}
           username={username}
           initialStep={initialDoc}
+          w9={{
+            clientName,
+            clientCompany,
+            clientAddress,
+            recipients: clientUsers,
+            accountReference: pkg.name,
+            signerName,
+          }}
           onClose={() => setDocsOpen(false)}
         />
       )}
-
-      {/* ── W-9 ───────────────────────────────────────────────────────────── */}
-      <GenerateW9Modal
-        open={w9Open}
-        onClose={() => setW9Open(false)}
-        clientName={clientName}
-        clientCompany={clientCompany}
-        clientAddress={clientAddress}
-        recipients={clientUsers}
-        accountReference={pkg.name}
-        signerName={signerName}
-      />
 
       {/* ── Scheduled payment composer ────────────────────────────────────── */}
       {/* Same composer the milestones and client-detail schedules use: pick the work

@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import {
   X, Loader2, FileText, Receipt, FileSignature, ChevronRight, ChevronLeft,
-  Eye, Send, Files, Pencil, Check, ExternalLink,
+  Eye, Send, Files, Pencil, Check, ExternalLink, ScrollText,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
@@ -15,6 +15,7 @@ import {
   savePackageSowDocument,
 } from '@/actions/packages'
 import { SowTermsEditor } from './SowTermsEditor'
+import { W9Composer, type W9ComposerProps } from './W9Composer'
 import type { SowFormData, SowScopeItem } from '@/lib/document-generators'
 import type { PackageDocumentType } from '@/lib/packages/documents'
 
@@ -38,7 +39,7 @@ const SENT_LABEL: Record<PackageDocumentType, string> = {
   sow: 'Scope of Work',
 }
 
-type Step = 'list' | 'send' | 'sow'
+type Step = 'list' | 'send' | 'sow' | 'w9'
 
 /**
  * The package's documents in one place: each of the three renderings can be
@@ -50,6 +51,7 @@ export function PackageDocumentsModal({
   packageId,
   username,
   initialStep,
+  w9,
   onClose,
 }: {
   packageId: string
@@ -57,6 +59,9 @@ export function PackageDocumentsModal({
   username?: string
   /** Open straight into a document rather than the list — used by `?doc=sow`. */
   initialStep?: 'sow' | null
+  /** When provided, the list grows a W-9 row opening the composer. Staff-only
+      surfaces pass this — the form renders the studio's own TIN. */
+  w9?: W9ComposerProps
   onClose: () => void
 }) {
   const [step, setStep] = useState<Step>(initialStep === 'sow' ? 'sow' : 'list')
@@ -237,7 +242,7 @@ export function PackageDocumentsModal({
   if (typeof document === 'undefined') return null
 
   const activeDoc = sendFor ? DOCS.find(d => d.value === sendFor)! : null
-  const wide = step === 'sow'
+  const wide = step === 'sow' || step === 'w9'
 
   const sowDocLink = username && sowDocId ? `/u/${username}/files?doc=${sowDocId}` : null
 
@@ -269,7 +274,9 @@ export function PackageDocumentsModal({
               <Files className="size-4" style={{ color: 'var(--space-accent)' }} />
             )}
             <h3 className="text-sm font-semibold text-[var(--space-text-primary)]">
-              {step === 'sow' ? 'Scope of Work' : activeDoc ? `Send ${activeDoc.label}` : 'Documents'}
+              {step === 'sow' ? 'Scope of Work'
+                : step === 'w9' ? 'Form W-9'
+                : activeDoc ? `Send ${activeDoc.label}` : 'Documents'}
             </h3>
           </div>
           <button
@@ -349,6 +356,26 @@ export function PackageDocumentsModal({
                   </div>
                 )
               })}
+
+              {/* Your own W-9, for a client who needs one before they can pay
+                  an invoice or file a 1099. Composed fresh each time — nothing
+                  about it is stored. See W9Composer. */}
+              {w9 && (
+                <button
+                  type="button"
+                  onClick={() => setStep('w9')}
+                  className="w-full flex items-start gap-3 rounded-xl border border-[var(--space-border-hard)] px-3 py-2.5 text-left transition-all hover:border-[rgba(139,156,182,0.25)] hover:bg-[var(--space-bg-card-hover)]"
+                >
+                  <ScrollText className="size-4 mt-0.5 shrink-0" style={{ color: 'var(--space-accent)' }} />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold text-[var(--space-text-primary)]">W-9</p>
+                    <p className="text-[0.625rem] text-[var(--space-text-muted)] leading-relaxed">
+                      Your taxpayer form for the client to keep on file — filled fresh, never stored
+                    </p>
+                  </div>
+                  <ChevronRight className="size-4 mt-0.5 shrink-0 text-[var(--space-text-muted)]" />
+                </button>
+              )}
             </div>
 
             {viewError && (
@@ -433,6 +460,11 @@ export function PackageDocumentsModal({
             )}
           </>
         )}
+
+        {/* ── Form W-9 composer ──────────────────────────────────────────── */}
+        {/* Mounted only while on this step, so its state — the TIN above all —
+            is destroyed the moment the user steps back or closes the modal. */}
+        {step === 'w9' && w9 && <W9Composer {...w9} />}
 
         {/* ── Send step ──────────────────────────────────────────────────── */}
         {step === 'send' && activeDoc && (
