@@ -11,6 +11,16 @@ const nextConfig = {
     // Configure turbopack options if needed
   },
 
+  // The Form W-9 blank is read from disk at request time (src/lib/forms/w9.ts).
+  // Next traces JS imports, not `readFile` paths, so without this the file is
+  // absent from a production build and the W-9 composer fails with ENOENT — a
+  // failure that never shows up locally, where the repo is on disk anyway.
+  // Scoped to `/*` rather than the one route because a Server Action can be
+  // bundled wherever it is imported, and 140KB is not worth a silent outage.
+  outputFileTracingIncludes: {
+    '/*': ['src/lib/forms/**/*'],
+  },
+
   // Experimental features for better performance
   experimental: {
     // Optimize package imports

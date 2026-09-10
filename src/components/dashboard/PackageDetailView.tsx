@@ -7,13 +7,14 @@ import Link from 'next/link'
 import {
   FileText, ArrowRight, ArrowLeft, Check, Loader2, Trash2, Copy, CheckCheck,
   Receipt, ExternalLink, CheckCircle2, CalendarDays, ListOrdered, Files, SlidersHorizontal, X,
-  PackageCheck,
+  PackageCheck, ScrollText,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { PackageDocumentsModal } from './PackageDocumentsModal'
 import { SectionHeader } from './SectionHeader'
 import { OptionRow } from './package-detail/OptionRow'
 import { ResetInvoicedEntry } from './package-detail/ResetInvoicedEntry'
+import { GenerateW9Modal, type W9Recipient } from './GenerateW9Modal'
 import {
   fmt, fmtExact, computeTotals, generateInstallmentDates, computeInstallmentAmounts,
   formatDisplayDate, installmentLabel, statusStyle,
@@ -35,6 +36,14 @@ import {
 // Shared style for the share-row buttons (Copy Link / View Package / Documents) so all
 // three get an identical hover: text brightens, border picks up the accent tint,
 // and a subtle card background appears.
+export interface W9Address {
+  line1?: string | null
+  line2?: string | null
+  city?: string | null
+  state?: string | null
+  zip?: string | null
+}
+
 const PKG_ACTION_BTN =
   'flex items-center gap-1.5 px-3 py-1.5 text-xs text-[var(--space-text-secondary)] ' +
   'border border-[var(--space-border-hard)] rounded-lg transition-all ' +
@@ -44,6 +53,12 @@ interface PackageDetailViewProps {
   pkg: PackageDoc
   clientId: string
   clientName: string
+  clientCompany?: string | null
+  clientAddress?: W9Address | null
+  /** Client-side users on the account — offered as W-9 recipients. */
+  clientUsers?: W9Recipient[]
+  /** Whoever is signing the W-9 — the staff member looking at this page. */
+  signerName?: string
   username: string
   projects: Array<{ id: string; name: string; status: string }>
   packageOrders: PackageOrderSummary[]
@@ -55,6 +70,10 @@ export function PackageDetailView({
   pkg,
   clientId,
   clientName,
+  clientCompany,
+  clientAddress,
+  clientUsers = [],
+  signerName,
   username,
   projects,
   packageOrders,
@@ -76,6 +95,7 @@ export function PackageDetailView({
   const [confirmDelete, setConfirmDelete]   = useState(false)
   const [deleting, setDeleting]             = useState(false)
   const [copied, setCopied]                 = useState(false)
+  const [w9Open, setW9Open]                 = useState(false)
   const [invoicing, setInvoicing]           = useState(false)
   const [invoiceResult, setInvoiceResult]   = useState<{ url: string } | { recorded: string } | { error: string } | null>(null)
   const [daysUntilDue, setDaysUntilDue]     = useState(30)
@@ -403,6 +423,13 @@ export function PackageDetailView({
               <button onClick={() => setDocsOpen(true)} className={PKG_ACTION_BTN}>
                 <Files className="size-3.5" />
                 Documents
+              </button>
+              {/* Your own W-9, for a client who needs one before they can pay an
+                  invoice or file a 1099. Nothing about it is stored — see
+                  GenerateW9Modal. */}
+              <button onClick={() => setW9Open(true)} className={PKG_ACTION_BTN}>
+                <ScrollText className="size-3.5" />
+                Generate W-9
               </button>
             </div>
           </div>
@@ -1163,6 +1190,18 @@ export function PackageDetailView({
           onClose={() => setDocsOpen(false)}
         />
       )}
+
+      {/* ── W-9 ───────────────────────────────────────────────────────────── */}
+      <GenerateW9Modal
+        open={w9Open}
+        onClose={() => setW9Open(false)}
+        clientName={clientName}
+        clientCompany={clientCompany}
+        clientAddress={clientAddress}
+        recipients={clientUsers}
+        accountReference={pkg.name}
+        signerName={signerName}
+      />
 
       {/* ── Scheduled payment composer ────────────────────────────────────── */}
       {/* Same composer the milestones and client-detail schedules use: pick the work

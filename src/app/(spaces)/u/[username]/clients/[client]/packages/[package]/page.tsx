@@ -52,7 +52,7 @@ export default async function PackageDetailPage({
 
   const payload = await getPayload({ config })
 
-  const [{ docs: projects }, packageOrders] = await Promise.all([
+  const [{ docs: projects }, packageOrders, { docs: clientUsers }] = await Promise.all([
     payload.find({
       collection: 'projects',
       where: { client: { equals: clientId } },
@@ -62,6 +62,16 @@ export default async function PackageDetailPage({
       select: { name: true, status: true },
     }),
     getPackageOrders(packageId),
+    // Offered as W-9 recipients — a tax form goes to the people on the account,
+    // never to an address typed in from an email.
+    payload.find({
+      collection: 'users',
+      where: { clientAccount: { equals: clientId }, role: { equals: 'client' } },
+      depth: 0,
+      sort: 'firstName',
+      limit: 50,
+      select: { firstName: true, lastName: true, email: true },
+    }),
   ])
 
   const serializedPackage: PackageDoc = {
@@ -113,6 +123,14 @@ export default async function PackageDetailPage({
       pkg={serializedPackage}
       clientId={clientId}
       clientName={clientAccount.name}
+      clientCompany={clientAccount.company ?? null}
+      clientAddress={(clientAccount as any).address ?? null}
+      clientUsers={clientUsers.map((u: any) => ({
+        id: u.id,
+        name: [u.firstName, u.lastName].filter(Boolean).join(' ') || u.email,
+        email: u.email,
+      }))}
+      signerName={[user.firstName, user.lastName].filter(Boolean).join(' ') || user.email}
       username={username}
       projects={projects.map((p: any) => ({ id: p.id, name: p.name ?? '', status: p.status ?? 'pending' }))}
       packageOrders={serializedOrders}
