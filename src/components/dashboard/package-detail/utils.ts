@@ -51,6 +51,28 @@ export interface PackageOrderSummary {
   createdAt: string
 }
 
+/**
+ * A package as the project detail route reads it: enough to summarise where it
+ * stands and link to it, with the order totals already folded in.
+ *
+ * Lives in this plain module rather than beside its view, because the project
+ * page is a Server Component and a Server Component importing anything but a
+ * component out of a `'use client'` module gets a client reference back.
+ */
+export interface ProjectPackage {
+  id: string
+  name: string
+  status: string
+  description?: string | null
+  /** The owning client, needed to build the package's canonical route. */
+  clientId: string | null
+  lineItems: LineItem[]
+  /** Sum of every order raised against this package, cancelled ones aside. */
+  invoiced: number
+  /** Sum of the orders that have been paid. */
+  paid: number
+}
+
 export function fmt(n: number) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
 }

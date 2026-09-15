@@ -35,6 +35,7 @@ import { mergePackageRecap, type PackageRecapData } from '@/lib/packages/recap'
 import { getPackageRecapModel } from '@/actions/packageWork'
 import { nextOrderNumber } from '@/lib/payload/utils/orderNumber'
 import { normalizeSowItems } from '@/lib/sow/clauses'
+import { markDocumentSent } from '@/lib/documents/status'
 
 const APP_BASE = process.env.NEXT_PUBLIC_SERVER_URL ?? 'https://app.orcaclub.pro'
 
@@ -382,10 +383,20 @@ export async function savePackageSowDocument(packageId: string, sowData: SowForm
         : (pkg as any).clientAccount?.id) ?? undefined
 
     if (linkedId) {
+      // Re-file on every save, not just at creation. The name, the owning client,
+      // and the project all follow the package — a package reassigned after its
+      // SOW existed used to leave the document filed under the previous client
+      // while printing the new one's name inside.
       const updated = await payload.update({
         collection: 'files',
         id: linkedId,
-        data: { documentData: sowData } as any,
+        data: {
+          name: `SOW — ${pkg.name}`,
+          documentData: sowData,
+          packageRef: packageId,
+          ...(linkedProjectId ? { project: linkedProjectId } : {}),
+          ...(linkedClientId ? { clientAccount: linkedClientId } : {}),
+        } as any,
       })
       revalidatePath(`/u/${user.username}/files`)
       return { success: true as const, id: String(updated.id), created: false }
@@ -400,6 +411,7 @@ export async function savePackageSowDocument(packageId: string, sowData: SowForm
         documentTemplate: 'sow',
         documentBrand: 'orcaclub',
         documentData: sowData,
+        packageRef: packageId,
         ...(linkedProjectId ? { project: linkedProjectId } : {}),
         ...(linkedClientId ? { clientAccount: linkedClientId } : {}),
       } as any,
@@ -490,6 +502,33 @@ export async function getPackages() {
   } catch (error) {
     console.error('[getPackages]', error)
     return { success: false, packages: [] as any[], error: error instanceof Error ? error.message : 'Failed' }
+  }
+}
+
+/**
+ * Point a package at a project, or clear the link.
+ *
+ * Deliberately narrow. `updatePackage` also rewrites the line items and resets
+ * an accepted proposal's status back to `sent`, which is right when the money
+ * changed and wrong when all that changed is which project the work belongs to.
+ */
+export async function linkPackageToProject(packageId: string, projectId: string | null) {
+  try {
+    const user = await getCurrentUser()
+    if (!user || user.role === 'client') return { success: false as const, error: 'Unauthorized' }
+
+    const payload = await getPayload({ config })
+    await payload.update({
+      collection: 'packages',
+      id: packageId,
+      data: { projectRef: projectId || null } as any,
+    })
+
+    if (projectId) revalidatePath(`/u/${user.username}/projects/${projectId}`)
+    return { success: true as const }
+  } catch (error) {
+    console.error('[linkPackageToProject]', error)
+    return { success: false as const, error: 'Failed to link the package' }
   }
 }
 
@@ -735,16 +774,35 @@ export async function getPackageTemplates() {
   }
 }
 
+export interface CreateOrderFromPackageOpts {
+  /**
+   * 'invoice' (default) bills the whole package through Stripe and emails the client.
+   * 'fulfill' records it as already settled: no Stripe invoice, no email, the order
+   * created straight to `paid` with a fulfillmentNote for the audit trail. Mirrors
+   * `sendScheduledPayment`'s fulfill mode, one package-wide order instead of one entry.
+   */
+  mode?: 'invoice' | 'fulfill'
+  /** Why this package was fulfilled off-Stripe. Internal only — never emailed. */
+  fulfillmentNote?: string
+  /**
+   * Stripe payment method configuration (`pmc_…`) deciding which methods the invoice
+   * offers. Ignored when fulfilling — a fulfilled package raises no invoice.
+   */
+  paymentConfigId?: string
+}
+
 export async function createOrderFromPackage(
   packageId: string,
   daysUntilDue: number = 30,
   projectId?: string,
-  /** Stripe payment method configuration (`pmc_…`) deciding which methods the invoice offers. */
-  paymentConfigId?: string,
+  opts?: CreateOrderFromPackageOpts,
 ) {
   // Track finalized Stripe invoice so we can void it if payload.create fails (orphan prevention)
   let finalizedInvoice: any = null
   let stripe: ReturnType<typeof getStripe> | null = null
+
+  /** Fulfilled packages never touch Stripe and never email — see CreateOrderFromPackageOpts. */
+  const fulfill = opts?.mode === 'fulfill'
 
   try {
     const user = await getCurrentUser()
@@ -774,23 +832,25 @@ export async function createOrderFromPackage(
     }
 
     const clientAccountId = typeof clientAccount === 'string' ? clientAccount : clientAccount.id
-
-    stripe = getStripe()
-
-    // Resolve (and repair) the Stripe customer rather than dead-ending on a missing id —
-    // same self-healing path the orders tab and retainer billing use.
-    const stripeCustomerId = await resolveClientAccountStripeCustomer({
-      payload,
-      stripe,
-      clientAccountId,
-      email: typeof clientAccount === 'object' ? clientAccount.email : null,
-      name: typeof clientAccount === 'object' ? clientAccount.name : null,
-      existingCustomerId: typeof clientAccount === 'object' ? clientAccount.stripeCustomerId : null,
-      metadata: { orcaclub_client_id: clientAccountId, created_via: 'orcaclub_package' },
-    })
+    // Only the invoice path needs a live Stripe customer — fulfilling bills nothing, so it
+    // reuses whatever id the account already carries without calling Stripe at all. On the
+    // billing path we resolve (and repair) rather than dead-ending on a missing id, the same
+    // self-healing path the orders tab and retainer billing use.
+    const existingCustomerId =
+      typeof clientAccount === 'object' ? clientAccount.stripeCustomerId : null
+    const stripeCustomerId = fulfill
+      ? existingCustomerId
+      : await resolveClientAccountStripeCustomer({
+          payload,
+          clientAccountId,
+          email: typeof clientAccount === 'object' ? clientAccount.email : null,
+          name: typeof clientAccount === 'object' ? clientAccount.name : null,
+          existingCustomerId,
+          metadata: { orcaclub_client_id: clientAccountId, created_via: 'orcaclub_package' },
+        })
 
     const paymentConfig = await prepareInvoicePaymentConfig({
-      explicit: paymentConfigId,
+      explicit: opts?.paymentConfigId,
       clientAccountDefault:
         typeof clientAccount === 'object' ? clientAccount.defaultPaymentConfig : null,
     })
@@ -800,29 +860,39 @@ export async function createOrderFromPackage(
       0
     )
 
-    // 1. Create Stripe invoice BEFORE touching the DB (create → attach items → finalize).
-    //    Webhook looks up the order by stripeInvoiceId (more reliable than metadata).
-    const { invoice: finalized } = await createStripeInvoiceForOrder({
-      stripe,
-      stripeCustomerId,
-      daysUntilDue,
-      paymentConfigId: paymentConfig.id,
-      description: pkg.name,
-      invoiceMetadata: { orcaclub_package_id: packageId },
-      lines: lineItems.map((item: any) => {
-        const qty = item.quantity ?? 1
-        const unitPrice = item.adjustedPrice ?? item.price ?? 0
-        const descParts = [
-          item.name,
-          qty > 1 ? `${qty} × $${unitPrice}` : null,
-          item.description || null,
-        ].filter(Boolean)
-        return { description: descParts.join(' — '), amount: unitPrice * qty }
-      }),
-    })
-    finalizedInvoice = finalized
-    // Stripe assigns the invoice number at finalization — use it as the order number.
-    const orderNumber = finalized.number ?? finalized.id
+    let orderNumber: string
+
+    if (fulfill) {
+      // Nothing is billed, so there is no Stripe invoice to take a number from.
+      // nextOrderNumber() is the legacy INV- sequence kept for exactly this case.
+      orderNumber = await nextOrderNumber(payload)
+    } else {
+      stripe = getStripe()
+
+      // 1. Create Stripe invoice BEFORE touching the DB (create → attach items → finalize).
+      //    Webhook looks up the order by stripeInvoiceId (more reliable than metadata).
+      const { invoice: finalized } = await createStripeInvoiceForOrder({
+        stripe,
+        stripeCustomerId,
+        daysUntilDue,
+        paymentConfigId: paymentConfig.id,
+        description: pkg.name,
+        invoiceMetadata: { orcaclub_package_id: packageId },
+        lines: lineItems.map((item: any) => {
+          const qty = item.quantity ?? 1
+          const unitPrice = item.adjustedPrice ?? item.price ?? 0
+          const descParts = [
+            item.name,
+            qty > 1 ? `${qty} × $${unitPrice}` : null,
+            item.description || null,
+          ].filter(Boolean)
+          return { description: descParts.join(' — '), amount: unitPrice * qty }
+        }),
+      })
+      finalizedInvoice = finalized
+      // Stripe assigns the invoice number at finalization — use it as the order number.
+      orderNumber = finalized.number ?? finalized.id
+    }
 
     // 4. Single commit with ALL data — triggers updateClientBalance exactly once, and
     //    proves the row survived before step 5 stamps its id into the payment schedule.
@@ -836,11 +906,23 @@ export async function createOrderFromPackage(
         packageRef: packageId,
         invoiceType: 'full',
         amount: totalAmount,
+        // A fulfilled package is settled the moment it is recorded — it never sits
+        // pending, so it never lands on the client's outstanding balance.
+        status: fulfill ? 'paid' : 'pending',
         stripeCustomerId,
-        stripeInvoiceId: finalizedInvoice.id,
-        stripeInvoiceUrl: finalizedInvoice.hosted_invoice_url,
-        paymentConfigId: paymentConfig.id,
-        paymentConfigName: paymentConfig.name,
+        // commitOrder drops null/empty fields, so a fulfilled order never writes an
+        // empty `stripeInvoiceId` — which is `unique` and would collide across them all.
+        stripeInvoiceId: finalizedInvoice?.id ?? null,
+        stripeInvoiceUrl: finalizedInvoice?.hosted_invoice_url ?? null,
+        // Only meaningful on the invoice path — a fulfilled package raises no invoice.
+        paymentConfigId: fulfill ? null : paymentConfig.id,
+        paymentConfigName: fulfill ? null : paymentConfig.name,
+        ...(fulfill
+          ? {
+              fulfilledAt: new Date().toISOString(),
+              fulfillmentNote: opts?.fulfillmentNote?.trim() || null,
+            }
+          : {}),
         lineItems: lineItems.map((item: any) => ({
           title: item.name,        // Packages use 'name'; Orders use 'title'
           description: item.description ?? undefined,
@@ -851,13 +933,18 @@ export async function createOrderFromPackage(
       },
       {
         logLabel: 'createOrderFromPackage',
-        failureMessage:
-          'The invoice could not be saved, so this package was not billed. ' +
-          'The Stripe invoice has been voided and nothing was charged — please try again.',
+        // commitOrder re-reads the row before returning: an Orders afterChange hook can
+        // abort the create's Mongo transaction while swallowing the error, handing back a
+        // doc id for a row that was rolled back. That check happens before step 5 stamps
+        // the id onto the payment schedule, so a failure leaves no wreckage.
+        failureMessage: fulfill
+          ? 'This payment could not be saved, so nothing was recorded — please try again.'
+          : 'The invoice could not be saved, so this package was not billed. ' +
+            'The Stripe invoice has been voided and nothing was charged — please try again.',
       },
     )
 
-    // 5. Append an entry to paymentSchedule so the invoice shows in the schedule view.
+    // 5. Append an entry to paymentSchedule so the order shows in the schedule view.
     try {
       const existingSchedule = ((pkg as any).paymentSchedule ?? []) as any[]
       const dueDateStr = new Date(Date.now() + daysUntilDue * 86400000).toISOString().split('T')[0]
@@ -868,10 +955,12 @@ export async function createOrderFromPackage(
           paymentSchedule: [
             ...existingSchedule,
             {
-              label: 'Invoice',
+              label: fulfill ? 'Fulfillment' : 'Invoice',
               amount: totalAmount,
               dueDate: dueDateStr,
               orderId: order.id,
+              // Stamped on both paths: it marks the entry as consumed, which is what
+              // the schedule view reads to stop offering it for invoicing again.
               invoicedAt: new Date().toISOString(),
             },
           ],
@@ -884,19 +973,23 @@ export async function createOrderFromPackage(
     revalidatePath(`/u/${user.username}/clients`)
 
     // Awaited — a floating send dies with the serverless function once the action returns.
-    await deliverInvoiceEmail('createOrderFromPackage', async () => {
-      const clientUsername = await getClientUsername(payload, clientAccountId)
-      const proposalPrintUrl = clientUsername
-        ? `${APP_BASE}/u/${clientUsername}/packages/${packageId}/print`
-        : undefined
-      await sendGenericInvoiceEmail(payload, order.id, user.id, proposalPrintUrl)
-    })
+    // A fulfilled package was paid before it was recorded, so there is nothing to ask for.
+    if (!fulfill) {
+      await deliverInvoiceEmail('createOrderFromPackage', async () => {
+        const clientUsername = await getClientUsername(payload, clientAccountId)
+        const proposalPrintUrl = clientUsername
+          ? `${APP_BASE}/u/${clientUsername}/packages/${packageId}/print`
+          : undefined
+        await sendGenericInvoiceEmail(payload, order.id, user.id, proposalPrintUrl)
+      })
+    }
 
     return {
       success: true,
-      invoiceUrl: finalizedInvoice.hosted_invoice_url,
+      invoiceUrl: finalizedInvoice?.hosted_invoice_url ?? null,
       orderNumber,
       orderId: order.id,
+      fulfilled: fulfill,
     }
   } catch (error) {
     // If Stripe invoice was finalized but payload.create failed, void it
@@ -2147,11 +2240,26 @@ export async function sendProposalEmail(
     }
 
     if (sendAs === 'sow') {
-      return await sendSowToAddresses(payload, {
+      const sowResult = await sendSowToAddresses(payload, {
         packageName: pkg.name,
         recipientName: bt.name ?? undefined,
         recipientEmail: bt.email ?? validEmails[0],
       }, validEmails, attachments)
+
+      // Stamp the linked document. This is the path staff actually send contracts
+      // from, and it used to leave `documentStatus` on "draft" forever — the
+      // tracking only fired from the Files tab.
+      if ('sent' in sowResult && (sowResult as any).sent > 0) {
+        const linkedSow = (pkg as any).sowDocument
+        const sowFileId = typeof linkedSow === 'string'
+          ? linkedSow
+          : linkedSow?.id
+            ? String(linkedSow.id)
+            : null
+        await markDocumentSent(payload, sowFileId)
+      }
+
+      return sowResult
     }
 
     if (sendAs === 'invoice') {

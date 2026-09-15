@@ -5,6 +5,9 @@ import { getPayload } from 'payload'
 import config from '@payload-config'
 import { baseEmailTemplate } from '@/lib/email/templates/base'
 import { BRAND_SIGNOFF } from '@/lib/brand'
+import { resolveFileSowData } from '@/lib/packages/documents'
+import { markDocumentSent } from '@/lib/documents/status'
+import type { SowFormData } from '@/lib/document-generators'
 import {
   buildPersonalNdaPdf,
   buildOrcaclubNdaPdf,
@@ -114,6 +117,34 @@ export async function updateDocument(
   }
 }
 
+/**
+ * The SOW data a stored document actually renders as, with its package's client
+ * and pricing merged in.
+ *
+ * The Files tab builds its previews in the browser, so it cannot reach the
+ * package on its own; without this it rendered `documentData` raw and showed a
+ * different contract than the one the package modal previews and sends.
+ */
+export async function getFileSowData(
+  fileId: string,
+): Promise<{ success: boolean; data?: SowFormData; error?: string }> {
+  try {
+    const user = await getCurrentUser()
+    if (!user || (user.role !== 'admin' && user.role !== 'user')) {
+      return { success: false, error: 'Unauthorized' }
+    }
+
+    const payload = await getPayload({ config })
+    const file = await payload.findByID({ collection: 'files', id: fileId, depth: 0 })
+    if (!file) return { success: false, error: 'File not found' }
+
+    return { success: true, data: await resolveFileSowData(payload, file) }
+  } catch (error) {
+    console.error('[getFileSowData]', error)
+    return { success: false, error: 'Failed to load the document' }
+  }
+}
+
 export async function sendDocumentEmail(
   fileId: string,
   recipients: { email: string; name?: string }[],
@@ -160,10 +191,15 @@ export async function sendDocumentEmail(
             : await buildOrcaclubNdaPdf(data)
           pdfFilename = `NDA_${(data.clientName || 'Client').replace(/\s+/g, '_')}.pdf`
         } else {
+          // A SOW generated from a package keeps only the staff-written half in
+          // `documentData` — the client, the pricing, and the payment schedule
+          // live on the package. Rendering the raw data here emailed clients a
+          // contract quoting whatever was true at the last save.
+          const sow = await resolveFileSowData(payload, file)
           bytes = brand === 'personal'
-            ? await buildPersonalSowPdf(data)
-            : await buildOrcaclubSowPdf(data)
-          pdfFilename = `SOW_${(data.projectName || data.clientName || 'Project').replace(/\s+/g, '_')}.pdf`
+            ? await buildPersonalSowPdf(sow)
+            : await buildOrcaclubSowPdf(sow)
+          pdfFilename = `SOW_${(sow.projectName || sow.clientName || 'Project').replace(/\s+/g, '_')}.pdf`
         }
 
         pdfBase64 = Buffer.from(bytes).toString('base64')
@@ -289,18 +325,7 @@ export async function sendDocumentEmail(
 
     // A send is the only status transition the system infers. Execution is not
     // inferred from anything — see `setDocumentStatus`.
-    if (sent > 0) {
-      try {
-        await payload.update({
-          collection: 'files',
-          id: fileId,
-          data: { documentStatus: 'sent', sentAt: new Date().toISOString() } as any,
-        })
-      } catch (err) {
-        // The mail is already out; a failed status write must not report failure.
-        console.error('[sendDocumentEmail] status update failed:', err)
-      }
-    }
+    if (sent > 0) await markDocumentSent(payload, fileId)
 
     return { success: sent > 0, sent }
   } catch (error) {

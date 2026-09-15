@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { CalendarDays } from 'lucide-react'
+import { CalendarDays, Search } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { RangeCalendar } from '@/components/dashboard/RangeCalendar'
@@ -77,7 +77,7 @@ export interface FigureSpec<T extends string = string> {
 export function figureEdges(i: number): string {
   return cn(
     'border-[var(--space-divider)]',
-    i % 2 === 0 ? 'border-l-0 pl-0' : 'border-l pl-5',
+    i % 2 === 0 ? 'border-l-0 pl-0' : 'border-l pl-3 sm:pl-5',
     i >= 2 ? 'border-t' : '',
     i === 0 ? 'md:border-l-0 md:pl-0' : 'md:border-l md:pl-5',
     'md:border-t-0',
@@ -99,7 +99,7 @@ export function Figure({
       onClick={onSelect}
       aria-pressed={active}
       className={cn(
-        'py-4 pr-5 text-left transition-colors duration-150',
+        'py-4 pr-3 text-left transition-colors duration-150 sm:pr-5',
         'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[var(--space-accent)]',
         active ? 'bg-[var(--space-bg-card)]' : 'hover:bg-[var(--space-bg-card)]',
         className,
@@ -107,7 +107,9 @@ export function Figure({
     >
       <span
         className="block font-semibold tabular-nums leading-none tracking-[-0.02em] text-[var(--space-text-primary)]"
-        style={{ fontSize: 'clamp(30px, 3.6vw, 46px)' }}
+        // The floor carries a six-figure sum inside a half-width phone column;
+        // above `md` the figures sit four across and the vw term takes over.
+        style={{ fontSize: 'clamp(28px, 3.6vw, 46px)' }}
       >
         {format(Math.round(shown))}
       </span>
@@ -124,11 +126,79 @@ export function Figure({
 
 // ─── Shared section furniture ─────────────────────────────────────────────────
 
+/**
+ * A section's heading and its running total.
+ *
+ * One baseline row from `sm` up. On a phone the aside drops to its own line —
+ * an aside carrying two figures and a control cannot share 336px with a title,
+ * and `main` clips overflow rather than scrolling it, so the squeeze would have
+ * silently cut the controls off the right edge instead of showing a scrollbar.
+ * It stays right-aligned there, keeping the ledger's label-left/figure-right
+ * rhythm intact on both layouts.
+ */
 export function SectionTitle({ title, aside }: { title: string; aside?: React.ReactNode }) {
   return (
-    <div className="flex items-baseline gap-3 border-b border-[var(--space-border-hard)] pb-3">
+    <div className="flex flex-col gap-2 border-b border-[var(--space-border-hard)] pb-3 sm:flex-row sm:items-baseline sm:gap-3">
       <h2 className="text-[15px] font-semibold text-[var(--space-text-primary)]">{title}</h2>
-      <div className="ml-auto text-[13px] text-[var(--space-text-tertiary)]">{aside}</div>
+      {aside !== undefined && aside !== null && (
+        <div className="text-[13px] text-[var(--space-text-tertiary)] sm:ml-auto">{aside}</div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * The ledger's one text input — a filter over the rows below it.
+ *
+ * Deliberately not a boxed field. Every other control on a ledger page is a
+ * hairline and a piece of type, so a bordered pill with a background would be
+ * the loudest thing on the page while doing the quietest job. It is a rule and
+ * a caret, sitting exactly where the first row would be, and it inherits the
+ * row's own left padding so the caret lines up with the titles it filters.
+ *
+ * `type="search"` rather than `text`, so the platform's own clear affordance
+ * and the Escape-to-clear behaviour come for free; Escape is handled here too
+ * because Firefox does not fire it on the input.
+ */
+export function SearchField({
+  value, onChange, placeholder, label,
+}: {
+  value: string
+  onChange: (v: string) => void
+  placeholder: string
+  /** Accessible name. The visible placeholder is not one. */
+  label: string
+}) {
+  return (
+    <div className="group relative flex items-center gap-3 border-b border-[var(--space-divider)] pl-5 pr-1">
+      <Search
+        aria-hidden="true"
+        className="size-[15px] shrink-0 text-[var(--space-text-muted)] transition-colors group-focus-within:text-[var(--space-text-secondary)]"
+      />
+      <input
+        type="search"
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        onKeyDown={e => { if (e.key === 'Escape' && value) { e.preventDefault(); onChange('') } }}
+        placeholder={placeholder}
+        aria-label={label}
+        className={cn(
+          'min-w-0 flex-1 border-0 bg-transparent py-4 text-[15px] text-[var(--space-text-primary)] outline-none',
+          'placeholder:text-[var(--space-text-muted)]',
+          // Safari draws its own cancel button; the trailing count would collide
+          // with it, and Escape already clears.
+          '[&::-webkit-search-cancel-button]:appearance-none',
+        )}
+      />
+      {value && (
+        <button
+          type="button"
+          onClick={() => onChange('')}
+          className="shrink-0 rounded-lg px-2 py-1 text-[13px] text-[var(--space-text-tertiary)] transition-colors hover:text-[var(--space-text-primary)] focus-visible:outline-none focus-visible:text-[var(--space-text-primary)]"
+        >
+          Clear
+        </button>
+      )}
     </div>
   )
 }
@@ -165,6 +235,13 @@ export function Meter({ pct, tone }: { pct: number; tone: StatusTone }) {
 // the right from `lg` up. The active entry is a solid chip that slides between
 // rows, which is the only thing on a ledger page that moves in response to a
 // click.
+//
+// Sticky at both sizes, and for the same reason: a ledger page is one long
+// section, so a nav that scrolls away leaves the only way out at the top of the
+// document. On a phone it parks directly under the portal header; on desktop it
+// keeps its 20px of air. The solid background is load-bearing rather than
+// decorative — the panel is a row of pills with gaps, and content would
+// otherwise track through them as it passes underneath.
 
 export interface LedgerSection<T extends string> {
   id: T
@@ -176,11 +253,20 @@ export function SectionNav<T extends string>({
   sections, value, onChange, counts, navRef,
   layoutId = 'section-chip',
   ariaLabel = 'Page sections',
+  className,
 }: {
   sections: readonly LedgerSection<T>[]
   value: T
   onChange: (id: T) => void
   counts?: Partial<Record<T, number>>
+  /**
+   * Placement classes. The nav must be a DIRECT child of the workspace flex
+   * container, because a sticky element travels only inside its containing
+   * block — wrapped in a div of its own height it would have nowhere to go on
+   * a phone, where the workspace stacks and the wrapper hugs the nav. Callers
+   * therefore pass their ordering here instead of wrapping.
+   */
+  className?: string
   /** Exposed so `useSectionCycle` can move focus onto the entry it just opened. */
   navRef?: React.RefObject<HTMLElement | null>
   /**
@@ -198,19 +284,22 @@ export function SectionNav<T extends string>({
   // On phones the panel is a scrolling row, so the chosen section can sit past
   // the right edge with nothing to say it is there. Nudge it into view — by
   // scrollLeft rather than scrollIntoView, which would also move the page.
+  //
+  // Instant rather than smooth: the nudge fires on the same click that swaps
+  // the section below it, and an animated slide there is one more thing moving
+  // on its own at exactly the moment the reader is trying to read.
   useEffect(() => {
     const el = nav.current
     const button = refs.current[sections.findIndex(s => s.id === value)]
     if (!el || !button || el.scrollWidth <= el.clientWidth) return
 
-    const behavior = reduce ? 'auto' : 'smooth'
     const left = button.offsetLeft
     const right = left + button.offsetWidth
-    if (left < el.scrollLeft) el.scrollTo({ left: left - 12, behavior })
+    if (left < el.scrollLeft) el.scrollTo({ left: left - 12, behavior: 'auto' })
     else if (right > el.scrollLeft + el.clientWidth) {
-      el.scrollTo({ left: right - el.clientWidth + 12, behavior })
+      el.scrollTo({ left: right - el.clientWidth + 12, behavior: 'auto' })
     }
-  }, [value, reduce, sections, nav])
+  }, [value, sections, nav])
 
   const onKeyDown = useCallback((e: React.KeyboardEvent, i: number) => {
     const last = sections.length - 1
@@ -229,8 +318,25 @@ export function SectionNav<T extends string>({
     <nav
       ref={nav as React.RefObject<HTMLElement>}
       aria-label={ariaLabel}
-      className="scrollbar-none flex shrink-0 gap-1 overflow-x-auto rounded-xl border border-[var(--space-border-hard)] p-1.5 lg:sticky lg:w-[212px] lg:flex-col lg:overflow-visible"
-      style={{ top: 'calc(var(--space-header) + 20px)', alignSelf: 'flex-start' }}
+      className={cn(
+        'scrollbar-none sticky z-20 flex shrink-0 gap-1 overflow-x-auto overscroll-x-contain rounded-xl border border-[var(--space-border-hard)] bg-[var(--space-bg-base)] p-1.5',
+        'top-[var(--space-header)] lg:top-[calc(var(--space-header)_+_20px)]',
+        'lg:w-[212px] lg:flex-col lg:overflow-visible',
+        // `self-stretch` is what makes the row scrollable on a phone, and it is
+        // load-bearing rather than cosmetic. The workspace stacks (`flex-col`)
+        // below `lg`, so the nav's cross axis is its *width*: with the
+        // `align-self: flex-start` that used to sit here, the nav sized itself
+        // to its content instead of to the column, grew wider than the screen,
+        // and `overflow-x: auto` had nothing to scroll because the scrollport
+        // was the content. The pills past the right edge were simply clipped by
+        // `main`'s `overflow-x: clip` and unreachable.
+        //
+        // From `lg` up the workspace is a row, the cross axis is the height, and
+        // stretching there would make the nav as tall as the whole workspace and
+        // strand its sticky position — so it goes back to `flex-start`.
+        'self-stretch lg:self-start',
+        className,
+      )}
     >
       {sections.map(({ id, label, icon: Icon }, i) => {
         const active = value === id
@@ -245,7 +351,7 @@ export function SectionNav<T extends string>({
             aria-current={active ? 'true' : undefined}
             tabIndex={active ? 0 : -1}
             className={cn(
-              'relative shrink-0 rounded-lg px-3 py-2.5 text-left text-[14px] transition-colors duration-150 lg:w-full',
+              'relative flex min-h-[44px] shrink-0 items-center rounded-lg px-3 py-2.5 text-left text-[14px] transition-colors duration-150 lg:min-h-0 lg:w-full',
               'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[var(--space-accent)]',
               !active && 'text-[var(--space-text-tertiary)] hover:bg-[var(--space-bg-card)] hover:text-[var(--space-text-primary)]',
             )}
@@ -256,7 +362,7 @@ export function SectionNav<T extends string>({
                 aria-hidden="true"
                 className="absolute inset-0 rounded-lg"
                 style={{ background: 'var(--space-text-primary)' }}
-                transition={{ type: 'spring', stiffness: 520, damping: 42 }}
+                transition={reduce ? { duration: 0 } : { type: 'spring', stiffness: 520, damping: 42 }}
               />
             )}
             <span
@@ -279,135 +385,28 @@ export function SectionNav<T extends string>({
 }
 
 // ─── Tab-key section cycling ──────────────────────────────────────────────────
-// Tab walks the ledger's sections; Shift+Tab walks them backwards. Both wrap.
+// Moved to `./use-section-cycle` so a nav can take the behaviour without pulling
+// in this module's motion and calendar imports. Re-exported here because the
+// ledger's own consumers have always imported it from this file.
+
+export { useSectionCycle } from './use-section-cycle'
+
+// ─── The standing band does not collapse ──────────────────────────────────────
+// There was a `useScrollCollapse` here that shut the masthead and figures once
+// you scrolled past 150px. It is gone, and nothing replaced it, because the
+// shape of the idea was unfixable at that size: the band it removed is ~410px
+// tall on the staff home, so tripping at 150px deleted 260px of document from
+// *above* the reader's scroll position. The browser clamped the scroll back
+// toward zero, zero is below any sane re-open threshold, so the band opened
+// again and pushed all 410px back in. Asymmetric thresholds did not help — the
+// clamp lands at 0, outside the hysteresis entirely — and Chrome's scroll
+// anchoring, trying to compensate for the same shift, made the loop tighter.
 //
-// This deliberately takes Tab away from the browser's focus-order duty on the
-// page that opts in, so it is guarded rather than absolute. It stands down when
-// taking the key would break something the user is in the middle of:
-//
-//   • a text field, textarea, select or contenteditable has focus — Tab there
-//     is either typing or moving between fields
-//   • a dialog is open anywhere in the document — every modal in the portal is
-//     a Radix `Dialog` (portalled, `role="dialog"`) or hand-rolled with the
-//     same attributes, so one query catches all of them
-//   • a modifier is held, or an IME composition is running
-//   • focus sits inside a subtree marked `data-tab-cycle="off"` — the escape
-//     hatch for any future region that needs ordinary Tab behaviour
-//
-// After cycling, focus lands on the nav entry that just opened, so the ring
-// tracks the change and screen readers announce it. `preventScroll` keeps that
-// from yanking the page — the nav is sticky and already on screen.
-
-const TYPING_TAGS = new Set(['INPUT', 'TEXTAREA', 'SELECT'])
-
-function takesTabItself(node: EventTarget | null): boolean {
-  if (!(node instanceof HTMLElement)) return false
-  if (TYPING_TAGS.has(node.tagName)) return true
-  if (node.isContentEditable) return true
-  return Boolean(node.closest('[contenteditable="true"],[data-tab-cycle="off"]'))
-}
-
-export function useSectionCycle<T extends string>(
-  sections: readonly T[],
-  value: T,
-  onChange: (id: T) => void,
-  navRef: React.RefObject<HTMLElement | null>,
-) {
-  // Set when a cycle fires, read by the effect below once React has committed
-  // the new active entry — the button to focus does not exist until then.
-  const pendingFocus = useRef(false)
-
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== 'Tab' || e.ctrlKey || e.altKey || e.metaKey) return
-      if (e.isComposing) return
-      if (takesTabItself(e.target) || takesTabItself(document.activeElement)) return
-      if (document.querySelector('[role="dialog"],[aria-modal="true"]')) return
-
-      const i = sections.indexOf(value)
-      if (i === -1) return
-
-      e.preventDefault()
-      const last = sections.length - 1
-      const next = e.shiftKey ? (i === 0 ? last : i - 1) : (i === last ? 0 : i + 1)
-      pendingFocus.current = true
-      onChange(sections[next])
-    }
-
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [sections, value, onChange])
-
-  useEffect(() => {
-    if (!pendingFocus.current) return
-    pendingFocus.current = false
-    navRef.current
-      ?.querySelector<HTMLElement>('[aria-current="true"]')
-      ?.focus({ preventScroll: true })
-  }, [value, navRef])
-}
-
-// ─── Collapsing the standing band ─────────────────────────────────────────────
-// The masthead and the figures are the page's title card: worth the room on
-// arrival, wasted room once you are working in a section. This shuts them on
-// the way down and opens them again at the top.
-//
-// The thresholds are deliberately asymmetric. A single trip point would sit
-// exactly where shutting the band moves the page across it, and the band would
-// flap open and shut on every frame; opening only near the very top also means
-// the band never reappears *under* you mid-page, pushing the content you were
-// reading out from under your eye.
-//
-// It stays open on pages too short to absorb the change: shutting the band
-// there shortens the document past the current scroll position, the browser
-// clamps back to the top, and you get one pointless open/shut. Note the room
-// check only gates *entering* the shut state — re-checking it while shut would
-// measure the already-shortened document and reintroduce the flapping.
-
-export function useScrollCollapse(
-  /** The band being collapsed. Measured to decide whether the page can spare it. */
-  ref: React.RefObject<HTMLElement | null>,
-  { collapseAt = 150, expandAt = 24 }: { collapseAt?: number; expandAt?: number } = {},
-): boolean {
-  const [collapsed, setCollapsed] = useState(false)
-  /** The band's open height, remembered while it is shut. */
-  const bandHeight = useRef(0)
-
-  useEffect(() => {
-    let frame = 0
-
-    const read = () => {
-      frame = 0
-      const el = ref.current
-      if (el && el.offsetHeight > 0) bandHeight.current = el.offsetHeight
-
-      const y = window.scrollY
-      const room = document.documentElement.scrollHeight - window.innerHeight
-
-      setCollapsed(was =>
-        was
-          ? y > expandAt
-          : y > collapseAt && room > bandHeight.current + collapseAt,
-      )
-    }
-
-    const onScroll = () => {
-      if (frame) return
-      frame = requestAnimationFrame(read)
-    }
-
-    read()
-    window.addEventListener('scroll', onScroll, { passive: true })
-    window.addEventListener('resize', onScroll, { passive: true })
-    return () => {
-      window.removeEventListener('scroll', onScroll)
-      window.removeEventListener('resize', onScroll)
-      if (frame) cancelAnimationFrame(frame)
-    }
-  }, [ref, collapseAt, expandAt])
-
-  return collapsed
-}
+// The band sits at the top of the document, so it scrolls away on its own. The
+// section nav is sticky and the portal header carries the page's title the
+// whole way down, so the collapse was reclaiming room the reader had already
+// left behind, at the cost of a guaranteed jump. Do not reintroduce it without
+// synchronous scroll compensation.
 
 // ─── Period control ───────────────────────────────────────────────────────────
 

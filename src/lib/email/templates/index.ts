@@ -71,6 +71,20 @@ import {
   type PasswordResetConfirmationData,
 } from './password-reset-confirmation'
 
+import {
+  w9DeliveryHTML,
+  w9DeliveryText,
+  w9DeliverySubject,
+  type W9DeliveryData,
+} from './w9-delivery'
+
+import {
+  w9RequestHTML,
+  w9RequestText,
+  w9RequestSubject,
+  type W9RequestEmailData,
+} from './w9-request'
+
 // Contact Confirmation (sent to customer)
 export function contactConfirmation(data: ContactConfirmationData) {
   return {
@@ -143,6 +157,24 @@ export function passwordResetConfirmation(data: PasswordResetConfirmationData) {
   }
 }
 
+// W-9 Request (sent to a contractor or partner who has to furnish THEIR Form W-9)
+export function w9Request(data: W9RequestEmailData) {
+  return {
+    subject: w9RequestSubject(),
+    html: w9RequestHTML(data),
+    text: w9RequestText(data),
+  }
+}
+
+// W-9 Delivery (sent to a client who requested ORCACLUB's Form W-9)
+export function w9Delivery(data: W9DeliveryData) {
+  return {
+    subject: w9DeliverySubject(),
+    html: w9DeliveryHTML(data),
+    text: w9DeliveryText(data),
+  }
+}
+
 // Export types
 export type {
   ContactConfirmationData,
@@ -153,4 +185,6 @@ export type {
   AccountSetupConfirmationData,
   PasswordResetAdminNotificationData,
   PasswordResetConfirmationData,
+  W9DeliveryData,
+  W9RequestEmailData,
 }

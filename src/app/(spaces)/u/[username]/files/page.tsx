@@ -14,8 +14,15 @@ export async function generateMetadata({ params }: { params: Promise<{ username:
   }
 }
 
-export default async function FilesPage({ params }: { params: Promise<{ username: string }> }) {
+export default async function FilesPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ username: string }>
+  searchParams: Promise<{ doc?: string }>
+}) {
   const { username } = await params
+  const { doc } = await searchParams
   const user = await getSessionUser()
   if (!user || user.username !== username) redirect('/login')
   if (await effectiveExperience(user) !== 'staff') redirect(`/u/${username}`)
@@ -30,6 +37,8 @@ export default async function FilesPage({ params }: { params: Promise<{ username
       allSprints={allSprints}
       clientAccounts={clientAccounts}
       currentUserEmail={user.email ?? ''}
+      username={username}
+      highlightDocId={doc ?? null}
     />
   )
 }

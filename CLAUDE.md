@@ -97,7 +97,7 @@ Legacy `?tab=<id>` URLs redirect to the routes in `u/[username]/page.tsx`. The o
 
 The theme registry in `src/app/(spaces)/themes.ts` is the **single source of truth**. Themes swap `--space-*` CSS variables on `<html>` (custom system — no `next-themes`). Current themes: `sonar` (warm paper, **default**), `light` (neutral), `paper` (Charcoal, dark).
 
-**Add a theme = add one `defineTheme({...})` entry to `THEME_LIST`. Nothing else to touch** — the Payload `dashboardTheme` dropdown (`themeSelectOptions()`), the `ThemeSwitcher` preview cards, and the default (`DEFAULT_THEME`) all derive from the registry.
+**Add a theme = add one `defineTheme({...})` entry to `THEME_LIST`. Nothing else to touch** — the Payload `dashboardTheme` dropdown (`themeSelectOptions()`), the `ThemePicker` theme slabs in the account sidebar, and the default (`DEFAULT_THEME`) all derive from the registry.
 
 ```typescript
 defineTheme({

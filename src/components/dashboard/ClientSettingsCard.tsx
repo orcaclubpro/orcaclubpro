@@ -375,7 +375,10 @@ export function ClientSettingsCard({
                 placeholder="Suite, unit, etc. (optional)"
                 className="h-9 bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)] focus-visible:ring-[var(--space-accent)]/30 text-sm"
               />
-              <div className="grid grid-cols-5 gap-2">
+              {/* City / State / ZIP share a row from `sm` up. On a phone five
+                  columns leave the state field ~60px wide, so the city takes a
+                  row of its own and state and ZIP split the next. */}
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
                 <Input
                   value={form.address.city ?? ''}
                   onChange={(e) => setAddr('city', e.target.value)}
@@ -392,7 +395,7 @@ export function ClientSettingsCard({
                   value={form.address.zip ?? ''}
                   onChange={(e) => setAddr('zip', e.target.value)}
                   placeholder="ZIP"
-                  className="col-span-2 h-9 bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)] focus-visible:ring-[var(--space-accent)]/30 text-sm"
+                  className="col-span-1 sm:col-span-2 h-9 bg-[var(--space-bg-card-hover)] border-[var(--space-border-hard)] text-[var(--space-text-primary)] placeholder:text-[var(--space-text-muted)] focus-visible:ring-[var(--space-accent)]/30 text-sm"
                 />
               </div>
               <Input

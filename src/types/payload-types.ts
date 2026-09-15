@@ -1102,6 +1102,10 @@ export interface File {
    */
   clientAccount?: (string | null) | ClientAccount;
   /**
+   * Package this document was generated from — its pricing and client always win
+   */
+  packageRef?: (string | null) | Package;
+  /**
    * Project this file belongs to (optional)
    */
   project?: (string | null) | Project;
@@ -3017,6 +3021,7 @@ export interface FilesSelect<T extends boolean = true> {
   sentAt?: T;
   executedDate?: T;
   clientAccount?: T;
+  packageRef?: T;
   project?: T;
   sprint?: T;
   version?: T;

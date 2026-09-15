@@ -69,7 +69,52 @@ const KIND_LANE: Record<ActivityEvent['kind'], string> = {
   'email-sent': 'Emails',
 }
 
-type KindFilter = 'all' | ActivityEvent['kind']
+export type KindFilter = 'all' | ActivityEvent['kind']
+
+/** One lane in the filter, and how many of it are loaded. */
+export interface ActivityLane {
+  id: KindFilter
+  label: string
+  icon: LucideIcon
+  count: number
+}
+
+/**
+ * The lanes a set of events actually offers, "All" first.
+ *
+ * Exported because the staff home lists these in its section nav rather than in
+ * a row of chips above the feed — the nav is already the page's one place for
+ * choosing what you are looking at, and a second radio group directly beneath
+ * it was asking the same question twice.
+ *
+ * Counts come from the whole loaded set, not a visible slice: a lane showing
+ * "3" and then rendering three rows is the honest reading. Lanes with nothing
+ * in them never appear, so the list only ever offers a real choice, and events
+ * with an unreadable date are dropped here for the same reason the feed drops
+ * them — a lane must count exactly what it can show.
+ */
+export function activityLanes(events: ActivityEvent[]): ActivityLane[] {
+  const counts = new Map<ActivityEvent['kind'], number>()
+  let total = 0
+  for (const e of events) {
+    if (Number.isNaN(new Date(e.occurredAt).getTime())) continue
+    counts.set(e.kind, (counts.get(e.kind) ?? 0) + 1)
+    total++
+  }
+
+  const lanes = KIND_ORDER.filter((k) => (counts.get(k) ?? 0) > 0).map((k) => ({
+    id: k as KindFilter,
+    label: KIND_LANE[k],
+    icon: KIND_ICON[k],
+    count: counts.get(k) ?? 0,
+  }))
+
+  // A list with one real lane in it is a label, not a control — say there are
+  // no lanes at all and let the caller leave the choice out.
+  if (lanes.length < 2) return []
+
+  return [{ id: 'all' as KindFilter, label: 'All', icon: Layers, count: total }, ...lanes]
+}
 
 // Every colour a row can take comes back through the status ramp, so the feed
 // reads in the same vocabulary as the rest of the portal in every theme.
@@ -121,6 +166,8 @@ export function ActivityFeed({
   limit = 40,
   emptyMessage = 'Nothing has happened yet.',
   filterable = true,
+  lane,
+  onLaneChange,
 }: {
   events: ActivityEvent[]
   username: string
@@ -128,8 +175,19 @@ export function ActivityFeed({
   emptyMessage?: string
   /** Set false where the feed is a fixed excerpt rather than a browsable log. */
   filterable?: boolean
+  /**
+   * Controlled lane. Pass it — with `activityLanes()` rendered somewhere of
+   * your own — and the feed drops its own chip bar and follows yours instead.
+   * Left undefined, the feed owns the choice and shows the bar.
+   */
+  lane?: KindFilter
+  /** Only needed for the "nothing in this lane" way back on a controlled feed. */
+  onLaneChange?: (id: KindFilter) => void
 }) {
-  const [kind, setKind] = useState<KindFilter>('all')
+  const [ownKind, setOwnKind] = useState<KindFilter>('all')
+  const controlled = lane !== undefined
+  const kind = controlled ? lane : ownKind
+  const setKind = controlled ? (onLaneChange ?? (() => {})) : setOwnKind
 
   // Parse and sort once. Rows with an unreadable date are dropped here rather
   // than in the grouping pass, so the lane counts below match what a lane can
@@ -142,22 +200,15 @@ export function ActivityFeed({
     [events],
   )
 
-  // Counts come from the whole loaded set, not the visible slice — a lane
-  // showing "3" and then rendering three rows is the honest reading. Lanes with
-  // nothing in them never appear, so the bar only ever offers a real choice.
-  const lanes = useMemo(() => {
-    const counts = new Map<ActivityEvent['kind'], number>()
-    for (const e of sorted) counts.set(e.kind, (counts.get(e.kind) ?? 0) + 1)
-    return KIND_ORDER.filter((k) => (counts.get(k) ?? 0) > 0).map((k) => ({
-      id: k as KindFilter,
-      label: KIND_LANE[k],
-      icon: KIND_ICON[k],
-      count: counts.get(k) ?? 0,
-    }))
-  }, [sorted])
+  // The same lanes a caller would get from `activityLanes`, so the bar drawn
+  // here and a nav drawn elsewhere can never disagree about what exists or how
+  // many are in it. "All" is split back out because the bar prepends its own.
+  const allLanes = useMemo(() => activityLanes(events), [events])
+  const lanes = useMemo(() => allLanes.filter((l) => l.id !== 'all'), [allLanes])
 
-  // A bar with one lane in it is a label, not a control.
-  const showFilter = filterable && lanes.length > 1
+  // A bar with one lane in it is a label, not a control — and a controlled feed
+  // has its lanes listed by whoever owns them, so it never draws its own.
+  const showFilter = filterable && !controlled && lanes.length > 1
 
   // The chosen lane can vanish between renders — a new load, or a period change
   // upstream that leaves the feed without that kind. Fall back to everything
@@ -201,7 +252,28 @@ export function ActivityFeed({
           />
         )}
         <p className="border-t border-[var(--space-divider)] px-1 py-8 text-center text-[15px] text-[var(--space-text-muted)]">
-          {active === 'all' ? emptyMessage : 'Nothing in this lane.'}
+          {active === 'all' ? (
+            emptyMessage
+          ) : (
+            <>
+              Nothing in this lane.
+              {/* Controlled feeds have no chip bar of their own, so the way back
+                  has to live here — the reader chose this lane and should not
+                  need to find the nav again to leave it. */}
+              {controlled && onLaneChange && (
+                <>
+                  {' '}
+                  <button
+                    type="button"
+                    onClick={() => onLaneChange('all')}
+                    className="underline decoration-[var(--space-divider)] underline-offset-4 transition-colors hover:text-[var(--space-text-primary)] hover:decoration-[var(--space-accent)] focus-visible:outline-none focus-visible:text-[var(--space-text-primary)]"
+                  >
+                    Show everything
+                  </button>
+                </>
+              )}
+            </>
+          )}
         </p>
       </>
     )

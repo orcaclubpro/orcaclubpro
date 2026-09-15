@@ -4,7 +4,7 @@
 // Adding a theme = add ONE `defineTheme({...})` entry to THEME_LIST below.
 // Everything else derives from it automatically:
 //   • Payload's `dashboardTheme` dropdown  → themeSelectOptions()
-//   • The ThemeSwitcher preview cards       → THEME_LIST / theme.vars
+//   • The sidebar's theme slabs             → THEME_LIST / theme.vars
 //   • The runtime + Payload default         → DEFAULT_THEME
 //
 // `defineTheme` expands a short spec (accent + base bg + mode) into the full

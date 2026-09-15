@@ -1,9 +1,8 @@
 "use client"
 
 import Link from "next/link"
-import { LogOut } from "lucide-react"
-import { logoutAction } from "@/actions/auth"
-import { UserMenu } from "@/components/dashboard/UserMenu"
+import { AccountSidebar } from "@/components/dashboard/AccountSidebar"
+import { OrcaMark } from "@/components/dashboard/OrcaMark"
 import { WelcomeInfoButton } from "@/components/dashboard/WelcomeInfoButton"
 import { useHeaderTitle } from "@/app/(spaces)/HeaderTitleContext"
 
@@ -22,10 +21,6 @@ interface SpacesHeaderProps {
 }
 
 export function SpacesHeader({ user, showTips }: SpacesHeaderProps) {
-  const handleLogout = async () => {
-    await logoutAction()
-  }
-
   const isDeveloper = user?.role === 'admin' || user?.role === 'user'
   const isClient = user?.role === 'client'
   const homeHref = '/'
@@ -44,6 +39,8 @@ export function SpacesHeader({ user, showTips }: SpacesHeaderProps) {
             href={homeHref}
             className="flex items-center gap-2.5 shrink-0 focus:outline-none hover:opacity-70 transition-opacity"
           >
+            {/* Masked, so the orca inherits nav colour instead of staying white on the light themes */}
+            <OrcaMark size={38} style={{ color: 'var(--space-nav-fg)' }} />
             <span className="text-[19px] font-bold tracking-[0.2em] text-[var(--space-nav-fg)]">
               SPACES
             </span>
@@ -77,30 +74,18 @@ export function SpacesHeader({ user, showTips }: SpacesHeaderProps) {
               <WelcomeInfoButton firstName={user.firstName} showTips={showTips} />
             )}
 
-            {/* Orca menu — theme · view as client (staff) · account settings */}
-            {user.email != null && (
-              <UserMenu
-                name={
-                  isClient
-                    ? (`${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() || user.email)
-                    : (user.name ?? user.email)
-                }
-                email={user.email}
-                title={user.title}
-                role={user.role}
-                isStaff={isDeveloper}
-              />
-            )}
-
-            {/* Logout — always the far-right control */}
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg text-[17px] font-medium text-[var(--space-nav-fg-dim)] hover:text-[var(--space-nav-fg)] hover:bg-[var(--space-bg-card-hover)] transition-all duration-200 focus:outline-none"
-              aria-label="Logout"
-            >
-              <LogOut className="h-[22px] w-[22px]" />
-              <span className="hidden sm:inline">Logout</span>
-            </button>
+            {/* One control: the menu. Appearance, view as client, account, sign out. */}
+            <AccountSidebar
+              name={
+                isClient
+                  ? (`${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() || user.email || '')
+                  : (user.name ?? user.email ?? '')
+              }
+              email={user.email ?? ''}
+              title={user.title}
+              role={user.role}
+              isStaff={isDeveloper}
+            />
           </div>
         )}
 

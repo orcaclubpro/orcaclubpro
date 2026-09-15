@@ -666,6 +666,14 @@ h4, .text-heading-4 {
    layout, so marketing pages keep the 16px root. */
 html:has(#spaces-root) {
   font-size: 24px; /* 16 × 1.5 — portal runs a step larger than the old zoom */
+
+  /* Instant, deliberately. The portal's pages change document height as
+     sections swap and panels mount, and the browser answers every one of those
+     by clamping the scroll position. With `scroll-behavior: smooth` inherited
+     from `html`, each of those clamps became a visible glide and the page read
+     as scrolling itself. Marketing pages keep the smooth anchors they were
+     written for — this only opts the portal out. */
+  scroll-behavior: auto;
 }
 
 /* Header height. Absolute px because the fixed header sits outside the scaled

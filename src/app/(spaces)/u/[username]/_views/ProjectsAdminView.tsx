@@ -1,4 +1,4 @@
-import { ProjectsView } from '@/components/dashboard/ProjectsView'
+import { ProjectsLedgerView } from '@/components/dashboard/ProjectsLedgerView'
 import type { SerializedProject } from '@/lib/serialization'
 import type { ClientOption } from '@/components/dashboard/CreateProjectModal'
 
@@ -13,7 +13,7 @@ export function ProjectsAdminView({
   userRole: string
 }) {
   return (
-    <ProjectsView
+    <ProjectsLedgerView
       projects={serializedProjects}
       username={username}
       canCreate

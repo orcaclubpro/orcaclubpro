@@ -1,21 +1,21 @@
 'use client'
 
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState, useEffect, useMemo, useCallback } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
+import { PROJECT_BASE_TABS, type ProjectTab } from './project-tabs'
+import { useSectionCycle } from './use-section-cycle'
 
 interface ProjectTabNavProps {
   activeTab: string
   basePath: string
+  /** The tabs to show. Packages is staff-only, so the page decides the set. */
+  tabs?: ProjectTab[]
 }
 
-const tabs = [
-  { key: 'overview', label: 'Overview' },
-  { key: 'sprints', label: 'Sprints' },
-  { key: 'credentials', label: 'Accounts' },
-]
-
-export function ProjectTabNav({ activeTab, basePath }: ProjectTabNavProps) {
+export function ProjectTabNav({ activeTab, basePath, tabs = PROJECT_BASE_TABS }: ProjectTabNavProps) {
+  const router = useRouter()
   const containerRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const [indicatorStyle, setIndicatorStyle] = useState<{ left: number; width: number; opacity: number }>({
@@ -42,6 +42,13 @@ export function ProjectTabNav({ activeTab, basePath }: ProjectTabNavProps) {
     }
   }, [activeTab])
 
+  const keys = useMemo(() => tabs.map(t => t.key), [tabs])
+  const go = useCallback(
+    (key: string) => router.push(`${basePath}?tab=${key}`),
+    [router, basePath],
+  )
+  useSectionCycle(keys, activeTab, go, containerRef)
+
   return (
     <div ref={scrollRef} className="overflow-x-auto scrollbar-none">
     <div ref={containerRef} className="relative flex items-center h-11 gap-1 min-w-max">
@@ -50,6 +57,7 @@ export function ProjectTabNav({ activeTab, basePath }: ProjectTabNavProps) {
           key={tab.key}
           href={`${basePath}?tab=${tab.key}`}
           data-active={activeTab === tab.key ? 'true' : undefined}
+          aria-current={activeTab === tab.key ? 'true' : undefined}
           className={cn(
             'px-4 h-full flex items-center text-sm font-medium transition-colors duration-150',
             activeTab === tab.key ? 'text-[var(--space-text-primary)]' : 'text-gray-500 hover:text-gray-300'

@@ -308,8 +308,8 @@ export function MilestonesTab({ clientId, username, initialTarget }: MilestonesT
   }, [packageId, stage, loading, isVisible])
 
   // ── Esc walks back one level (recap composer → send modal → editor → board);
-  // the final Esc from the board bubbles to the console, which collapses to
-  // search. 1–4 jump stages while not typing. Capture phase so we run before the
+  // the final Esc from the board bubbles to the console, which closes it (the
+  // station stays mounted). 1–4 jump stages while not typing. Capture phase so we run before the
   // console (which also means we own closing the modals — their own listeners
   // never see the event).
   useEffect(() => {

@@ -46,3 +46,17 @@ export const BRAND_FULL_NAME = `${BRAND_NAME} · ${BRAND_TAGLINE}`
  * "by and between ___ and ___".
  */
 export const BRAND_CONTRACT_PARTY = `${BRAND_NAME}, ${BRAND_LEGAL_DESCRIPTION}`
+
+/**
+ * Mailing address, one line per entry, as it prints in the "Requester's name and
+ * address" box of a Form W-9 sent out for a contractor or partner to complete.
+ *
+ * Seeded with the locality the email footer and the site footer already publish.
+ * Add a street and ZIP here when there is one to give — a requester box with a
+ * full address is what lets the recipient's bookkeeper file the form against a
+ * vendor record. The composer lets staff type over it for a one-off.
+ */
+export const BRAND_ADDRESS_LINES: string[] = ['Orange, CA, USA']
+
+/** The requester box on an outgoing W-9 request: the name, then the address. */
+export const BRAND_REQUESTER_BLOCK = [BRAND_NAME, ...BRAND_ADDRESS_LINES].join('\n')
