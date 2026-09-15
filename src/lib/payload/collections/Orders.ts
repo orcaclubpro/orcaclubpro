@@ -224,6 +224,29 @@ const Orders: CollectionConfig = {
       },
     },
     {
+      name: 'stripePaymentConfig',
+      type: 'text',
+      index: true,
+      admin: {
+        description:
+          'Stripe payment method configuration (pmc_…) used as the preset for which methods this ' +
+          'invoice offers. Recorded at creation — editing it here does not change an already ' +
+          'finalized Stripe invoice.',
+        position: 'sidebar',
+        readOnly: true,
+      },
+    },
+    {
+      name: 'stripePaymentConfigName',
+      type: 'text',
+      admin: {
+        description: 'Name of that configuration at the time the invoice was raised (e.g. "Card Custom").',
+        position: 'sidebar',
+        readOnly: true,
+        condition: (data) => Boolean(data?.stripePaymentConfig),
+      },
+    },
+    {
       name: 'invoiceType',
       type: 'select',
       options: [

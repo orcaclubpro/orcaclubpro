@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getRetainerBillingModel, sendRetainerInvoice, sendRetainerRecapEmail } from '@/actions/retainers'
+import { PaymentConfigSelect } from '@/components/dashboard/PaymentConfigSelect'
 import type { RecapData } from '@/lib/retainers/recap'
 
 // ── Shared styles (aligned with RetainerTab / RetainerRecapModal) ─────────────
@@ -90,6 +91,8 @@ export function RetainerInvoiceModal({
   const [invoiceTo, setInvoiceTo] = useState('')
   const [invoiceMsg, setInvoiceMsg] = useState('')
   const [forceInvoice, setForceInvoice] = useState(false)
+  /** Stripe payment method configuration — '' means the account default. */
+  const [paymentConfigId, setPaymentConfigId] = useState('')
 
   // ── Recap & hours (this month) ────────────────────────────────────────────────
   const [recapOn, setRecapOn] = useState(true)
@@ -167,6 +170,7 @@ export function RetainerInvoiceModal({
         plannedWork: includePlanned ? model.nextPlanned : [],
         includeWorkLog,
         force: forceInvoice || undefined,
+        paymentConfigId: paymentConfigId || undefined,
       })
       result.invoice = r.success
         ? {
@@ -350,10 +354,17 @@ export function RetainerInvoiceModal({
                         <span className={labelCls}>Message (optional)</span>
                         <textarea value={invoiceMsg} onChange={(e) => setInvoiceMsg(e.target.value)} rows={2} placeholder={`A note above the invoice — e.g. "Thanks for a great ${model.current.monthLabel}."`} className={cn(areaCls, 'mt-1 text-xs')} />
                       </label>
-                      <label className="block w-28">
-                        <span className={labelCls}>Due in (days)</span>
-                        <input type="number" min={1} value={dueDaysStr} onChange={(e) => setDueDaysStr(e.target.value)} className={cn(numCls, 'mt-1')} />
-                      </label>
+                      <div className="flex flex-wrap items-start gap-3">
+                        <label className="block w-28">
+                          <span className={labelCls}>Due in (days)</span>
+                          <input type="number" min={1} value={dueDaysStr} onChange={(e) => setDueDaysStr(e.target.value)} className={cn(numCls, 'mt-1')} />
+                        </label>
+                        <PaymentConfigSelect
+                          className="flex-1 min-w-[14rem]"
+                          value={paymentConfigId}
+                          onChange={setPaymentConfigId}
+                        />
+                      </div>
                     </>
                   )}
                 </SectionCard>

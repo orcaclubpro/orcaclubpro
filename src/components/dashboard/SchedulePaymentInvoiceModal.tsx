@@ -8,6 +8,7 @@ import {
 import { cn } from '@/lib/utils'
 import { getPackageRecapModel } from '@/actions/packageWork'
 import { sendScheduledPayment } from '@/actions/packages'
+import { PaymentConfigSelect } from '@/components/dashboard/PaymentConfigSelect'
 import type { PackageRecapData } from '@/lib/packages/recap'
 
 // ── Shared styles (verbatim from RetainerInvoiceModal) ────────────────────────
@@ -86,6 +87,8 @@ export function SchedulePaymentInvoiceModal({
   const [attachRecapPdf, setAttachRecapPdf] = useState(true)
   const [includeWorkInEmail, setIncludeWorkInEmail] = useState(true)
   const [skipEmail, setSkipEmail] = useState(false)
+  /** Stripe payment method configuration — '' means the account default. */
+  const [paymentConfigId, setPaymentConfigId] = useState('')
 
   const fulfilling = mode === 'fulfill'
 
@@ -158,6 +161,7 @@ export function SchedulePaymentInvoiceModal({
       recap: fulfilling ? undefined : recap ?? undefined,
       attachRecapPdf: !fulfilling && !skipEmail && attachRecapPdf,
       includeWorkInEmail: !fulfilling && !skipEmail && includeWorkInEmail,
+      paymentConfigId: paymentConfigId || undefined,
     })
     setSending(false)
 
@@ -458,6 +462,13 @@ export function SchedulePaymentInvoiceModal({
                         title="Skip email"
                         hint="Creates the order and Stripe invoice without notifying the client."
                       />
+                      {/* Fulfilling raises no invoice, so this only appears on the billing path. */}
+                      <div className="p-3">
+                        <PaymentConfigSelect
+                          value={paymentConfigId}
+                          onChange={setPaymentConfigId}
+                        />
+                      </div>
                     </div>
                   )}
                 </div>

@@ -179,7 +179,9 @@ export const trackOrderActivity: CollectionAfterChangeHook = ({
     amount: typeof doc.amount === 'number' ? doc.amount : null,
     clientAccount: clientId,
     order: relId(doc),
-    project: relId(doc.project),
+    // `projectRef` is the relationship; `doc.project` is the DEPRECATED name text field —
+    // feeding that string to a relationship field makes the whole activity write fail.
+    project: relId(doc.projectRef),
     ...who,
   }))
 

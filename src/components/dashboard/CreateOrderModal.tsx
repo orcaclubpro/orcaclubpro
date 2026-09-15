@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClientOrder } from '@/actions/orders'
+import { PaymentConfigSelect } from '@/components/dashboard/PaymentConfigSelect'
 
 // ── Shared styles (verbatim from SchedulePaymentInvoiceModal / RetainerInvoiceModal) ──
 const inputCls =
@@ -107,6 +108,8 @@ export function CreateOrderModal({ clientId, clientName, projectId, onClose }: C
   /** 'invoice' bills the order; 'fulfill' records it already settled, off-Stripe. */
   const [mode, setMode] = useState<'invoice' | 'fulfill'>('invoice')
   const [fulfillmentNote, setFulfillmentNote] = useState('')
+  /** Stripe payment method configuration — '' means the account default. */
+  const [paymentConfigId, setPaymentConfigId] = useState('')
 
   const fulfilling = mode === 'fulfill'
 
@@ -171,6 +174,7 @@ export function CreateOrderModal({ clientId, clientName, projectId, onClose }: C
       skipEmail,
       createStripeInvoice: willCreateStripe,
       invoiceUrl: fulfilling ? undefined : invoiceLink.trim() || undefined,
+      paymentConfigId: paymentConfigId || undefined,
     })
     setSubmitting(false)
 
@@ -390,6 +394,14 @@ export function CreateOrderModal({ clientId, clientName, projectId, onClose }: C
                       </select>
                     </label>
                   </div>
+
+                  {/* Only meaningful when a Stripe invoice is actually raised. */}
+                  <PaymentConfigSelect
+                    className="mt-3"
+                    visible={willCreateStripe}
+                    value={paymentConfigId}
+                    onChange={setPaymentConfigId}
+                  />
                 </div>
 
                 {/* ── ③ Billing ── */}

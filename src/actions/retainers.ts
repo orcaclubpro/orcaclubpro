@@ -9,7 +9,9 @@ import { deriveRecapDefaults, mergeRecap, RECAP_CATEGORY_LABEL, type RecapData }
 import { deriveScopeRecapDefaults, mergeScopeRecap, type ScopeRecapData } from '@/lib/retainers/scopeRecap'
 import { getStripe } from '@/lib/stripe'
 import { resolveStripeCustomer } from '@/lib/stripe/customers'
-import { createStripeInvoiceForOrder, assertOrderPersisted } from '@/lib/stripe/invoices'
+import { createStripeInvoiceForOrder } from '@/lib/stripe/invoices'
+import { commitOrder } from '@/lib/orders/commitOrder'
+import { prepareInvoicePaymentConfig } from '@/lib/stripe/paymentConfigs'
 import {
   buildRetainerStatementPdf,
   buildRetainerRecapPdf,
@@ -2237,6 +2239,11 @@ export async function sendRetainerInvoice(input: {
   includeWorkLog?: boolean
   /** Send even though this cycle already has an order. */
   force?: boolean
+  /**
+   * Stripe payment method configuration (`pmc_…`) deciding which methods this retainer
+   * invoice offers. Omit to use the client's standing default, then the account's.
+   */
+  paymentConfigId?: string
 }) {
   // The billing package is created before the Stripe invoice — tracked here so a
   // mid-flow failure can remove it again (no orphaned client-facing documents).
@@ -2389,11 +2396,19 @@ export async function sendRetainerInvoice(input: {
     })
     billingPackageId = pkg.id as string
 
+    const paymentConfig = await prepareInvoicePaymentConfig({
+      explicit: input.paymentConfigId,
+      clientAccountDefault: ((account as any)?.defaultPaymentConfig as string | undefined) ?? null,
+    })
+
     const { invoice, invoiceId, hostedInvoiceUrl } = await createStripeInvoiceForOrder({
       stripe,
       stripeCustomerId: resolved.customerId,
       daysUntilDue: input.daysUntilDue ?? 30,
+      paymentConfigId: paymentConfig.id,
       description: `${month} Retainer — ${clientName}`,
+      // Fallback only — used when no configuration resolves, preserving the card + ACH
+      // behavior retainer billing has always had.
       paymentSettings: { payment_method_types: ['card', 'us_bank_account'] },
       invoiceMetadata: {
         created_via: 'orcaclub_retainer',
@@ -2404,48 +2419,43 @@ export async function sendRetainerInvoice(input: {
       lines: lines.map((l) => ({ description: l.title, amount: l.amount })),
     })
 
-    // ── The linked Order — void the Stripe invoice if this write fails ───────────
+    // ── The linked Order — commitOrder voids the Stripe invoice if this write fails ──
+    // `orderCreated` stays false until the row is proven to exist, so a failure still
+    // takes the outer catch (which deletes the billing package) rather than leaving
+    // both orphaned behind a false success.
     const orderNumber = invoice.number ?? invoiceId
-    let order
-    try {
-      order = await payload.create({
-        collection: 'orders',
-        data: {
-          orderNumber,
-          clientAccount: input.clientAccountId,
-          amount: total,
-          status: 'pending',
-          stripeCustomerId: resolved.customerId,
-          stripeInvoiceId: invoiceId,
-          stripeInvoiceUrl: hostedInvoiceUrl,
-          retainerRef: input.retainerId,
-          retainerCycleStart: cycle.start,
-          packageRef: billingPackageId,
-          invoiceType: 'retainer',
-          invoiceNote: `${month} Retainer`,
-          ...(invoice.due_date ? { dueDate: new Date(invoice.due_date * 1000).toISOString() } : {}),
-          lineItems: [
-            ...lines.map((l) => ({ title: l.title, quantity: 1, price: l.amount, isRecurring: false })),
-            // Itemized hours at $0 — covered by the lines above; amount still balances.
-            ...workLines.map((l) => ({ title: l.title, description: l.description, quantity: 1, price: 0 })),
-          ],
-        } as any,
-      })
-      // Payload runs afterChange hooks inside the create's Mongo transaction. A hook that
-      // catches its own error (updateClientBalance → syncClientAccountToUser) still leaves
-      // the transaction aborted, so `payload.create` can hand back a doc with an id for a
-      // row that was rolled back. Re-read before ANYTHING stamps against `order.id` —
-      // and only then treat the order as created, so a throw here still takes the cleanup
-      // path below (void the Stripe invoice) and the outer catch (delete the billing
-      // package) instead of leaving both orphaned behind a false success.
-      await assertOrderPersisted(payload, order.id as string)
-      orderCreated = true
-    } catch (createErr) {
-      await stripe.invoices.voidInvoice(invoiceId).catch((e: unknown) =>
-        console.error('[sendRetainerInvoice] Failed to void orphaned invoice:', e),
-      )
-      throw createErr
-    }
+    const order = await commitOrder(
+      payload,
+      {
+        orderNumber,
+        clientAccountId: input.clientAccountId,
+        amount: total,
+        stripeCustomerId: resolved.customerId,
+        stripeInvoiceId: invoiceId,
+        stripeInvoiceUrl: hostedInvoiceUrl,
+        paymentConfigId: paymentConfig.id,
+        paymentConfigName: paymentConfig.name,
+        retainerRef: input.retainerId,
+        retainerCycleStart: cycle.start,
+        packageRef: billingPackageId,
+        invoiceType: 'retainer',
+        invoiceNote: `${month} Retainer`,
+        ...(invoice.due_date ? { dueDate: new Date(invoice.due_date * 1000).toISOString() } : {}),
+        lineItems: [
+          ...lines.map((l) => ({ title: l.title, quantity: 1, price: l.amount, isRecurring: false })),
+          // Itemized hours at $0 — covered by the lines above; amount still balances.
+          ...workLines.map((l) => ({ title: l.title, description: l.description, quantity: 1, price: 0 })),
+        ],
+      },
+      {
+        logLabel: 'sendRetainerInvoice',
+        voidOnFailure: { stripe, invoiceId },
+        failureMessage:
+          `${month}'s retainer could not be saved, so it was not billed. ` +
+          'The Stripe invoice has been voided and nothing was charged — please try again.',
+      },
+    )
+    orderCreated = true
 
     // Record the invoice on the package's payment schedule (best-effort).
     await payload

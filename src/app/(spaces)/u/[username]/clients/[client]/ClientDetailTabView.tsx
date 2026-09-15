@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import dynamic from 'next/dynamic'
 import {
   ArrowUpRight, FolderKanban, KeyRound, Package, Plus, ReceiptText, ScrollText,
 } from 'lucide-react'
@@ -15,6 +14,7 @@ import {
 import { Spine } from '@/components/dashboard/Spine'
 import { ClientCredentialsTab } from '@/components/dashboard/ClientCredentialsTab'
 import { ClientOrdersTab } from '@/components/dashboard/ClientOrdersTab'
+import { ClientPackagesTab } from '@/components/dashboard/ClientPackagesTab'
 import { ScheduledPaymentsSection } from '@/components/dashboard/ScheduledPaymentsSection'
 import { ClientSettingsCard } from '@/components/dashboard/ClientSettingsCard'
 import { ProjectRowActions } from '@/components/dashboard/ProjectRowActions'
@@ -25,10 +25,6 @@ import { clientSpineEvents } from '@/lib/dashboard/spine-events'
 import { projectStatus, toneColor } from '@/lib/dashboard/status'
 import type { SerializedProject } from '@/lib/serialization'
 import { tabVariants } from '@/lib/animations'
-
-const ClientPackagesTab = dynamic(
-  () => import('@/components/dashboard/ClientPackagesTab').then(m => ({ default: m.ClientPackagesTab }))
-)
 
 // ─── The client record ───────────────────────────────────────────────────────
 // One client's books, opened to the same shape as the studio's own (see

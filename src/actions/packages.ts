@@ -7,7 +7,10 @@ import type { SowFormData } from '@/lib/document-generators'
 import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
 import { getStripe } from '@/lib/stripe'
-import { assertOrderPersisted, createStripeInvoiceForOrder } from '@/lib/stripe/invoices'
+import { createStripeInvoiceForOrder } from '@/lib/stripe/invoices'
+import { resolveClientAccountStripeCustomer } from '@/lib/stripe/customers'
+import { commitOrder, deliverInvoiceEmail } from '@/lib/orders/commitOrder'
+import { prepareInvoicePaymentConfig } from '@/lib/stripe/paymentConfigs'
 import {
   sendGenericInvoiceEmail,
   sendInvoiceCopyToAddresses,
@@ -736,6 +739,8 @@ export async function createOrderFromPackage(
   packageId: string,
   daysUntilDue: number = 30,
   projectId?: string,
+  /** Stripe payment method configuration (`pmc_…`) deciding which methods the invoice offers. */
+  paymentConfigId?: string,
 ) {
   // Track finalized Stripe invoice so we can void it if payload.create fails (orphan prevention)
   let finalizedInvoice: any = null
@@ -769,13 +774,26 @@ export async function createOrderFromPackage(
     }
 
     const clientAccountId = typeof clientAccount === 'string' ? clientAccount : clientAccount.id
-    const stripeCustomerId = typeof clientAccount === 'object' ? clientAccount.stripeCustomerId : null
-
-    if (!stripeCustomerId) {
-      return { success: false, error: 'Client account has no Stripe customer ID — set it in the admin panel first' }
-    }
 
     stripe = getStripe()
+
+    // Resolve (and repair) the Stripe customer rather than dead-ending on a missing id —
+    // same self-healing path the orders tab and retainer billing use.
+    const stripeCustomerId = await resolveClientAccountStripeCustomer({
+      payload,
+      stripe,
+      clientAccountId,
+      email: typeof clientAccount === 'object' ? clientAccount.email : null,
+      name: typeof clientAccount === 'object' ? clientAccount.name : null,
+      existingCustomerId: typeof clientAccount === 'object' ? clientAccount.stripeCustomerId : null,
+      metadata: { orcaclub_client_id: clientAccountId, created_via: 'orcaclub_package' },
+    })
+
+    const paymentConfig = await prepareInvoicePaymentConfig({
+      explicit: paymentConfigId,
+      clientAccountDefault:
+        typeof clientAccount === 'object' ? clientAccount.defaultPaymentConfig : null,
+    })
 
     const totalAmount = lineItems.reduce(
       (sum: number, item: any) => sum + (item.adjustedPrice ?? item.price ?? 0) * (item.quantity ?? 1),
@@ -788,6 +806,7 @@ export async function createOrderFromPackage(
       stripe,
       stripeCustomerId,
       daysUntilDue,
+      paymentConfigId: paymentConfig.id,
       description: pkg.name,
       invoiceMetadata: { orcaclub_package_id: packageId },
       lines: lineItems.map((item: any) => {
@@ -805,21 +824,23 @@ export async function createOrderFromPackage(
     // Stripe assigns the invoice number at finalization — use it as the order number.
     const orderNumber = finalized.number ?? finalized.id
 
-    // 4. Single payload.create with ALL data — triggers updateClientBalance exactly once.
+    // 4. Single commit with ALL data — triggers updateClientBalance exactly once, and
+    //    proves the row survived before step 5 stamps its id into the payment schedule.
     //    Packages use 'name'; Orders use 'title' — mapped explicitly below.
-    const order = await payload.create({
-      collection: 'orders',
-      data: {
+    const order = await commitOrder(
+      payload,
+      {
         orderNumber,
-        clientAccount: clientAccountId,
-        projectRef: projectId || undefined,
+        clientAccountId,
+        projectRef: projectId,
         packageRef: packageId,
         invoiceType: 'full',
         amount: totalAmount,
-        status: 'pending',
         stripeCustomerId,
         stripeInvoiceId: finalizedInvoice.id,
-        stripeInvoiceUrl: finalizedInvoice.hosted_invoice_url || '',
+        stripeInvoiceUrl: finalizedInvoice.hosted_invoice_url,
+        paymentConfigId: paymentConfig.id,
+        paymentConfigName: paymentConfig.name,
         lineItems: lineItems.map((item: any) => ({
           title: item.name,        // Packages use 'name'; Orders use 'title'
           description: item.description ?? undefined,
@@ -827,8 +848,14 @@ export async function createOrderFromPackage(
           price: item.adjustedPrice ?? item.price ?? 0,
           isRecurring: item.isRecurring ?? false,
         })),
-      } as any,
-    })
+      },
+      {
+        logLabel: 'createOrderFromPackage',
+        failureMessage:
+          'The invoice could not be saved, so this package was not billed. ' +
+          'The Stripe invoice has been voided and nothing was charged — please try again.',
+      },
+    )
 
     // 5. Append an entry to paymentSchedule so the invoice shows in the schedule view.
     try {
@@ -856,18 +883,14 @@ export async function createOrderFromPackage(
 
     revalidatePath(`/u/${user.username}/clients`)
 
-    // Non-blocking: send "New Invoice" email to client
-    ;(async () => {
-      try {
-        const clientUsername = await getClientUsername(payload, clientAccountId)
-        const proposalPrintUrl = clientUsername
-          ? `${APP_BASE}/u/${clientUsername}/packages/${packageId}/print`
-          : undefined
-        await sendGenericInvoiceEmail(payload, order.id, user.id, proposalPrintUrl)
-      } catch (e) {
-        console.error('[createOrderFromPackage] Invoice email failed:', e)
-      }
-    })()
+    // Awaited — a floating send dies with the serverless function once the action returns.
+    await deliverInvoiceEmail('createOrderFromPackage', async () => {
+      const clientUsername = await getClientUsername(payload, clientAccountId)
+      const proposalPrintUrl = clientUsername
+        ? `${APP_BASE}/u/${clientUsername}/packages/${packageId}/print`
+        : undefined
+      await sendGenericInvoiceEmail(payload, order.id, user.id, proposalPrintUrl)
+    })
 
     return {
       success: true,
@@ -911,30 +934,25 @@ export async function savePaymentSchedule(
 
     revalidatePath(`/u/${user.username}/clients`)
 
-    // Non-blocking: send "Payment Schedule" email to client
-    ;(async () => {
-      try {
-        const clientAccount = pkg.clientAccount as any
-        if (!clientAccount?.email) return
-        const clientAccountId = typeof clientAccount === 'string' ? clientAccount : clientAccount.id
-        const clientUsername = await getClientUsername(payload, clientAccountId)
-        const proposalPrintUrl = clientUsername
-          ? `${APP_BASE}/u/${clientUsername}/packages/${packageId}/print`
-          : undefined
-        const totalAmount = entries.reduce((s, e) => s + e.amount, 0)
-        await sendPaymentScheduleEmail(payload, {
-          customerEmail: clientAccount.email,
-          customerName: clientAccount.name ?? undefined,
-          packageName: pkg.name,
-          packageDescription: pkg.description ?? undefined,
-          entries,
-          totalAmount,
-          proposalPrintUrl,
-        })
-      } catch (e) {
-        console.error('[savePaymentSchedule] Schedule email failed:', e)
-      }
-    })()
+    await deliverInvoiceEmail('savePaymentSchedule', async () => {
+      const clientAccount = pkg.clientAccount as any
+      if (!clientAccount?.email) return
+      const clientAccountId = typeof clientAccount === 'string' ? clientAccount : clientAccount.id
+      const clientUsername = await getClientUsername(payload, clientAccountId)
+      const proposalPrintUrl = clientUsername
+        ? `${APP_BASE}/u/${clientUsername}/packages/${packageId}/print`
+        : undefined
+      const totalAmount = entries.reduce((s, e) => s + e.amount, 0)
+      await sendPaymentScheduleEmail(payload, {
+        customerEmail: clientAccount.email,
+        customerName: clientAccount.name ?? undefined,
+        packageName: pkg.name,
+        packageDescription: pkg.description ?? undefined,
+        entries,
+        totalAmount,
+        proposalPrintUrl,
+      })
+    })
 
     return { success: true, schedule: (updated as any).paymentSchedule ?? [] }
   } catch (error) {
@@ -1139,6 +1157,11 @@ export interface SendScheduledPaymentOpts {
   attachRecapPdf?: boolean
   /** Render the itemized work log in the invoice email body. */
   includeWorkInEmail?: boolean
+  /**
+   * Stripe payment method configuration (`pmc_…`) deciding which methods the invoice
+   * offers. Ignored when fulfilling — a fulfilled payment raises no invoice.
+   */
+  paymentConfigId?: string
 }
 
 export async function sendScheduledPayment(
@@ -1185,12 +1208,20 @@ export async function sendScheduledPayment(
     if (!clientAccount) return { success: false, error: 'No client account associated with this proposal' }
 
     const clientAccountId = typeof clientAccount === 'string' ? clientAccount : clientAccount.id
-    const stripeCustomerId = typeof clientAccount === 'object' ? clientAccount.stripeCustomerId : null
-
-    // Only the invoice path needs a Stripe customer — fulfilling bills nothing.
-    if (!stripeCustomerId && !fulfill) {
-      return { success: false, error: 'Client account has no Stripe customer ID — set it in the admin panel first' }
-    }
+    // Only the invoice path needs a live Stripe customer — fulfilling bills nothing, so it
+    // reuses whatever id the account already carries without calling Stripe at all.
+    const existingCustomerId =
+      typeof clientAccount === 'object' ? clientAccount.stripeCustomerId : null
+    const stripeCustomerId = fulfill
+      ? existingCustomerId
+      : await resolveClientAccountStripeCustomer({
+          payload,
+          clientAccountId,
+          email: typeof clientAccount === 'object' ? clientAccount.email : null,
+          name: typeof clientAccount === 'object' ? clientAccount.name : null,
+          existingCustomerId,
+          metadata: { orcaclub_client_id: clientAccountId, created_via: 'orcaclub_package' },
+        })
 
     // ── Pending work this invoice consumes ──────────────────────────────────────
     // Default: every pending logged entry. `workLineIds: []` attaches none.
@@ -1228,6 +1259,12 @@ export async function sendScheduledPayment(
 
     const invoiceType = resolveInvoiceType(entry)
 
+    const paymentConfig = await prepareInvoicePaymentConfig({
+      explicit: opts?.paymentConfigId,
+      clientAccountDefault:
+        typeof clientAccount === 'object' ? clientAccount.defaultPaymentConfig : null,
+    })
+
     let orderNumber: string
 
     if (fulfill) {
@@ -1243,6 +1280,7 @@ export async function sendScheduledPayment(
         stripe,
         stripeCustomerId,
         daysUntilDue,
+        paymentConfigId: paymentConfig.id,
         description: pkg.name,
         invoiceMetadata: {
           orcaclub_package_id: packageId,
@@ -1258,12 +1296,17 @@ export async function sendScheduledPayment(
       orderNumber = finalized.number ?? finalized.id
     }
 
-    const order = await payload.create({
-      collection: 'orders',
-      data: {
+    // commitOrder verifies the row survived its own afterChange hooks BEFORE anything
+    // below stamps that id onto work entries and the payment schedule — at this point
+    // nothing has been stamped, so a throw here leaves no wreckage. Stripe field
+    // omission matters: `stripeInvoiceId` is `unique`, so writing '' on a fulfilled
+    // order would collide with every other fulfilled order.
+    const order = await commitOrder(
+      payload,
+      {
         orderNumber,
-        clientAccount: clientAccountId,
-        projectRef: projectId || undefined,
+        clientAccountId,
+        projectRef: projectId,
         packageRef: packageId,
         invoiceType,
         invoiceNote: entry.label,
@@ -1271,19 +1314,16 @@ export async function sendScheduledPayment(
         // A fulfilled payment is settled the moment it is recorded — it never sits
         // pending, so it never lands on the client's outstanding balance.
         status: fulfill ? 'paid' : 'pending',
-        ...(stripeCustomerId ? { stripeCustomerId } : {}),
-        // Omit the Stripe fields entirely when fulfilling: stripeInvoiceId is `unique`,
-        // so writing '' would collide across every fulfilled order.
-        ...(finalizedInvoice
-          ? {
-              stripeInvoiceId: finalizedInvoice.id,
-              stripeInvoiceUrl: finalizedInvoice.hosted_invoice_url || '',
-            }
-          : {}),
+        stripeCustomerId,
+        stripeInvoiceId: finalizedInvoice?.id ?? null,
+        stripeInvoiceUrl: finalizedInvoice?.hosted_invoice_url ?? null,
+        // Only meaningful on the invoice path — a fulfilled payment raises no invoice.
+        paymentConfigId: fulfill ? null : paymentConfig.id,
+        paymentConfigName: fulfill ? null : paymentConfig.name,
         ...(fulfill
           ? {
               fulfilledAt: new Date().toISOString(),
-              ...(opts?.fulfillmentNote?.trim() ? { fulfillmentNote: opts.fulfillmentNote.trim() } : {}),
+              fulfillmentNote: opts?.fulfillmentNote?.trim() || null,
             }
           : {}),
         lineItems: [
@@ -1291,28 +1331,15 @@ export async function sendScheduledPayment(
           // Itemized work at $0 — covered by the payment line; the amount still balances.
           ...workLines.map((l) => ({ title: l.title, description: l.description, price: 0, quantity: 1 })),
         ],
-      } as any,
-    })
-
-    // ── Confirm the order actually persisted ────────────────────────────────────
-    // An Orders afterChange hook (updateClientBalance → syncClientAccountToUser) can
-    // abort the create's Mongo transaction while swallowing the error — `payload.create`
-    // still hands back a doc with an id for a row that was rolled back. Everything below
-    // stamps that id onto work entries and the payment schedule, so verify FIRST: at this
-    // point nothing has been stamped, so a throw here leaves no wreckage — the catch just
-    // voids the Stripe invoice and returns a real error.
-    try {
-      await assertOrderPersisted(payload, order.id as string)
-    } catch (e) {
-      // Keep the diagnostic detail in the server log; surface something legible upstream.
-      console.error('[sendScheduledPayment] Order did not persist:', e)
-      throw new Error(
-        fulfill
+      },
+      {
+        logLabel: 'sendScheduledPayment',
+        failureMessage: fulfill
           ? 'This payment could not be saved, so nothing was recorded — please try again.'
           : 'The invoice could not be saved, so this payment was not recorded. ' +
             'The Stripe invoice has been voided and nothing was billed — please try again.',
-      )
-    }
+      },
+    )
 
     // ── Recap model — MUST be captured before stamping ──────────────────────────
     // getPackageRecapModel derives from *pending* (unstamped) work entries. The loop
@@ -1363,39 +1390,35 @@ export async function sendScheduledPayment(
     // skipEmail is set). The work section and the recap PDF are independently toggleable;
     // either failing must not stop the email, and the email failing must not stop the invoice.
     if (sendEmail) {
-      ;(async () => {
-        try {
-          const clientUsername = await getClientUsername(payload, clientAccountId)
-          const proposalPrintUrl = clientUsername
-            ? `${APP_BASE}/u/${clientUsername}/packages/${packageId}/print`
-            : undefined
+      await deliverInvoiceEmail('sendScheduledPayment', async () => {
+        const clientUsername = await getClientUsername(payload, clientAccountId)
+        const proposalPrintUrl = clientUsername
+          ? `${APP_BASE}/u/${clientUsername}/packages/${packageId}/print`
+          : undefined
 
-          const attachments: EmailAttachment[] = []
-          if (opts?.attachRecapPdf && recapModelForEmail) {
-            try {
-              const merged = mergePackageRecap(recapModelForEmail, opts.recap)
-              const pdf = await buildPackageRecapPdf({ ...merged, generatedOn: new Date().toISOString() })
-              attachments.push({
-                filename: `ORCACLUB-Recap-${entry.label.replace(/[^\w-]+/g, '-')}.pdf`,
-                content: Buffer.from(pdf).toString('base64'),
-                encoding: 'base64',
-                contentType: 'application/pdf',
-              })
-            } catch (e) {
-              console.error('[sendScheduledPayment] Recap PDF failed (sending without):', e)
-            }
+        const attachments: EmailAttachment[] = []
+        if (opts?.attachRecapPdf && recapModelForEmail) {
+          try {
+            const merged = mergePackageRecap(recapModelForEmail, opts.recap)
+            const pdf = await buildPackageRecapPdf({ ...merged, generatedOn: new Date().toISOString() })
+            attachments.push({
+              filename: `ORCACLUB-Recap-${entry.label.replace(/[^\w-]+/g, '-')}.pdf`,
+              content: Buffer.from(pdf).toString('base64'),
+              encoding: 'base64',
+              contentType: 'application/pdf',
+            })
+          } catch (e) {
+            console.error('[sendScheduledPayment] Recap PDF failed (sending without):', e)
           }
-
-          await sendGenericInvoiceEmail(payload, order.id, user.id, proposalPrintUrl, {
-            workLog: opts?.includeWorkInEmail
-              ? workLines.map((l) => ({ title: l.title, description: l.description }))
-              : undefined,
-            attachments: attachments.length ? attachments : undefined,
-          })
-        } catch (e) {
-          console.error('[sendScheduledPayment] Invoice email failed:', e)
         }
-      })()
+
+        await sendGenericInvoiceEmail(payload, order.id, user.id, proposalPrintUrl, {
+          workLog: opts?.includeWorkInEmail
+            ? workLines.map((l) => ({ title: l.title, description: l.description }))
+            : undefined,
+          attachments: attachments.length ? attachments : undefined,
+        })
+      })
     }
 
     return {
@@ -1436,6 +1459,8 @@ export async function createPartialInvoiceFromPackage(
   label: string,
   daysUntilDue: number = 30,
   projectId?: string,
+  /** Stripe payment method configuration (`pmc_…`) deciding which methods the invoice offers. */
+  paymentConfigId?: string,
 ) {
   let finalizedInvoice: any = null
   let stripe: ReturnType<typeof getStripe> | null = null
@@ -1471,13 +1496,24 @@ export async function createPartialInvoiceFromPackage(
     }
 
     const clientAccountId = typeof clientAccount === 'string' ? clientAccount : clientAccount.id
-    const stripeCustomerId = typeof clientAccount === 'object' ? clientAccount.stripeCustomerId : null
-
-    if (!stripeCustomerId) {
-      return { success: false, error: 'Client account has no Stripe customer ID — set it in the admin panel first' }
-    }
 
     stripe = getStripe()
+
+    const stripeCustomerId = await resolveClientAccountStripeCustomer({
+      payload,
+      stripe,
+      clientAccountId,
+      email: typeof clientAccount === 'object' ? clientAccount.email : null,
+      name: typeof clientAccount === 'object' ? clientAccount.name : null,
+      existingCustomerId: typeof clientAccount === 'object' ? clientAccount.stripeCustomerId : null,
+      metadata: { orcaclub_client_id: clientAccountId, created_via: 'orcaclub_package' },
+    })
+
+    const paymentConfig = await prepareInvoicePaymentConfig({
+      explicit: paymentConfigId,
+      clientAccountDefault:
+        typeof clientAccount === 'object' ? clientAccount.defaultPaymentConfig : null,
+    })
 
     // Map label to invoiceType
     const invoiceType = label.toLowerCase().includes('deposit') ? 'deposit'
@@ -1490,6 +1526,7 @@ export async function createPartialInvoiceFromPackage(
       stripe,
       stripeCustomerId,
       daysUntilDue,
+      paymentConfigId: paymentConfig.id,
       description: pkg.name,
       invoiceMetadata: {
         orcaclub_package_id: packageId,
@@ -1501,23 +1538,30 @@ export async function createPartialInvoiceFromPackage(
     const orderNumber = finalized.number ?? finalized.id
 
     // 4. Create order record
-    const order = await payload.create({
-      collection: 'orders',
-      data: {
+    const order = await commitOrder(
+      payload,
+      {
         orderNumber,
-        clientAccount: clientAccountId,
-        projectRef: projectId || undefined,
+        clientAccountId,
+        projectRef: projectId,
         packageRef: packageId,
         invoiceType,
         invoiceNote: label,
         amount,
-        status: 'pending',
         stripeCustomerId,
         stripeInvoiceId: finalizedInvoice.id,
-        stripeInvoiceUrl: finalizedInvoice.hosted_invoice_url || '',
+        stripeInvoiceUrl: finalizedInvoice.hosted_invoice_url,
+        paymentConfigId: paymentConfig.id,
+        paymentConfigName: paymentConfig.name,
         lineItems: [{ title: label, price: amount, quantity: 1 }],
-      } as any,
-    })
+      },
+      {
+        logLabel: 'createPartialInvoiceFromPackage',
+        failureMessage:
+          `"${label}" could not be saved, so it was not billed. ` +
+          'The Stripe invoice has been voided and nothing was charged — please try again.',
+      },
+    )
 
     revalidatePath(`/u/${user.username}/clients`)
 
@@ -1548,6 +1592,8 @@ async function _sendScheduleEntryInvoice(
   clientAccountId: string,
   stripeCustomerId: string,
   actorUserId: string,
+  /** Already-resolved preset — the caller runs the precedence chain once for the whole push. */
+  paymentConfig: { id: string | null; name: string | null } = { id: null, name: null },
 ): Promise<{ orderId: string; invoiceUrl: string | null }> {
   const daysUntilDue = entry.dueDate
     ? Math.max(1, Math.round((new Date(entry.dueDate).getTime() - Date.now()) / 86400000))
@@ -1559,65 +1605,52 @@ async function _sendScheduleEntryInvoice(
     stripe,
     stripeCustomerId,
     daysUntilDue,
+    paymentConfigId: paymentConfig.id,
     description: proposalName,
     invoiceMetadata: { orcaclub_package_id: packageId, orcaclub_invoice_type: invoiceType },
     lines: [{ description: `${entry.label} — ${proposalName}`, amount: entry.amount }],
   })
   const orderNumber = finalizedInvoice.number ?? finalizedInvoice.id
 
-  const order = await payload.create({
-    collection: 'orders',
-    data: {
+  // The persistence guard matters more on this path than anywhere else. The caller
+  // stamps this id onto the schedule entry, and if the stamp never lands the entry
+  // stays unlinked — so the next push bills the same row again and the client gets a
+  // second Stripe invoice and a second email for one payment. commitOrder verifies
+  // before the email goes out, and voids so a retry starts clean instead of double-billing.
+  // Note the void now also covers a throw from `payload.create` itself, which the old
+  // hand-rolled guard did not — that case used to strand a live, payable invoice.
+  const order = await commitOrder(
+    payload,
+    {
       orderNumber,
-      clientAccount: clientAccountId,
+      clientAccountId,
       packageRef: packageId,
       invoiceType,
       invoiceNote: entry.label,
       amount: entry.amount,
-      status: 'pending',
       stripeCustomerId,
       stripeInvoiceId: finalizedInvoice.id,
-      stripeInvoiceUrl: finalizedInvoice.hosted_invoice_url || '',
+      stripeInvoiceUrl: finalizedInvoice.hosted_invoice_url,
+      paymentConfigId: paymentConfig.id,
+      paymentConfigName: paymentConfig.name,
       lineItems: [{ title: entry.label, price: entry.amount, quantity: 1 }],
-    } as any,
-  })
-
-  // ── Confirm the order actually persisted ──────────────────────────────────────
-  // The same guard sendScheduledPayment uses, and for the same reason: an Orders
-  // afterChange hook can abort the create's Mongo transaction while swallowing the
-  // error, so `payload.create` hands back an id for a row that was rolled back.
-  //
-  // It matters more on this path than on that one. The caller stamps this id onto the
-  // schedule entry, and if that stamp never lands the entry stays unlinked — so the
-  // next push bills the same row again, and the client gets a second Stripe invoice
-  // and a second email for one payment. Verifying before the email means a phantom
-  // order never reaches the customer, and voiding the invoice means a retry starts
-  // clean instead of double-billing.
-  try {
-    await assertOrderPersisted(payload, order.id as string)
-  } catch (e) {
-    console.error('[_sendScheduleEntryInvoice] Order did not persist:', e)
-    await stripe.invoices
-      .voidInvoice(finalizedInvoice.id as string)
-      .catch((v: any) => console.error('[_sendScheduleEntryInvoice] Failed to void orphaned invoice:', v))
-    throw new Error(
-      `"${entry.label}" could not be saved, so it was not billed. ` +
+    },
+    {
+      logLabel: '_sendScheduleEntryInvoice',
+      voidOnFailure: { stripe, invoiceId: finalizedInvoice.id as string },
+      failureMessage:
+        `"${entry.label}" could not be saved, so it was not billed. ` +
         'The Stripe invoice has been voided and nothing was charged — please try again.',
-    )
-  }
+    },
+  )
 
-  // Non-blocking invoice email
-  ;(async () => {
-    try {
-      const clientUsername = await getClientUsername(payload, clientAccountId)
-      const proposalPrintUrl = clientUsername
-        ? `${APP_BASE}/u/${clientUsername}/packages/${packageId}/print`
-        : undefined
-      await sendGenericInvoiceEmail(payload, order.id, actorUserId, proposalPrintUrl)
-    } catch (e) {
-      console.error('[_sendScheduleEntryInvoice] Invoice email failed:', e)
-    }
-  })()
+  await deliverInvoiceEmail('_sendScheduleEntryInvoice', async () => {
+    const clientUsername = await getClientUsername(payload, clientAccountId)
+    const proposalPrintUrl = clientUsername
+      ? `${APP_BASE}/u/${clientUsername}/packages/${packageId}/print`
+      : undefined
+    await sendGenericInvoiceEmail(payload, order.id, actorUserId, proposalPrintUrl)
+  })
 
   return { orderId: order.id, invoiceUrl: finalizedInvoice.hosted_invoice_url ?? null }
 }
@@ -1667,7 +1700,7 @@ export async function savePaymentScheduleOnly(
 }
 
 /** Sends Stripe invoices for all pending payment schedule entries. Admin/user only. */
-export async function pushPackageSchedule(packageId: string) {
+export async function pushPackageSchedule(packageId: string, paymentConfigId?: string) {
   try {
     const user = await getCurrentUser()
     if (!user || user.role === 'client') return { success: false, error: 'Unauthorized' }
@@ -1693,12 +1726,19 @@ export async function pushPackageSchedule(packageId: string) {
     if (!stripeCustomerId) return { success: false, error: 'Client has no Stripe customer ID' }
 
     const stripe = getStripe()
+    // Resolved once for the whole push rather than per entry — every invoice in one
+    // schedule should offer the same methods.
+    const paymentConfig = await prepareInvoicePaymentConfig({
+      explicit: paymentConfigId,
+      clientAccountDefault:
+        typeof clientAccount === 'object' ? clientAccount.defaultPaymentConfig : null,
+    })
     const invoiceUrls: string[] = []
     let updatedSchedule = [...currentSchedule]
 
     for (const entry of pendingEntries) {
       const { orderId, invoiceUrl } = await _sendScheduleEntryInvoice(
-        payload, stripe, entry, packageId, pkg.name, clientAccountId, stripeCustomerId, user.id,
+        payload, stripe, entry, packageId, pkg.name, clientAccountId, stripeCustomerId, user.id, paymentConfig,
       )
 
       updatedSchedule = updatedSchedule.map(e =>
@@ -1750,11 +1790,6 @@ export async function acceptPackage(packageId: string) {
 
     const clientAccount = proposal.clientAccount as any
     const clientAccountId = typeof clientAccount === 'string' ? clientAccount : clientAccount?.id
-    const stripeCustomerId = typeof clientAccount === 'object' ? clientAccount?.stripeCustomerId : null
-
-    if (!stripeCustomerId) {
-      return { success: false, error: 'No payment method on file — contact your team to set up billing.' }
-    }
 
     const schedule = ((proposal as any).paymentSchedule ?? []) as Array<{
       id: string; label: string; amount: number; dueDate?: string | null; orderId?: string | null
@@ -1768,6 +1803,21 @@ export async function acceptPackage(packageId: string) {
     }
 
     const stripe = getStripe()
+    const stripeCustomerId = await resolveClientAccountStripeCustomer({
+      payload,
+      stripe,
+      clientAccountId,
+      email: typeof clientAccount === 'object' ? clientAccount?.email : null,
+      name: typeof clientAccount === 'object' ? clientAccount?.name : null,
+      existingCustomerId: typeof clientAccount === 'object' ? clientAccount?.stripeCustomerId : null,
+      metadata: { orcaclub_client_id: clientAccountId, created_via: 'orcaclub_package_accept' },
+    })
+    // A client accepting their own package gets whatever preset the account is set to —
+    // there is no UI here to choose one, so only the standing defaults apply.
+    const paymentConfig = await prepareInvoicePaymentConfig({
+      clientAccountDefault:
+        typeof clientAccount === 'object' ? clientAccount?.defaultPaymentConfig : null,
+    })
     const invoiceUrls: string[] = []
 
     if (schedule.length > 0 && pendingEntries.length > 0) {
@@ -1776,7 +1826,7 @@ export async function acceptPackage(packageId: string) {
 
       for (const entry of pendingEntries) {
         const { orderId, invoiceUrl } = await _sendScheduleEntryInvoice(
-          payload, stripe, entry, packageId, proposal.name, clientAccountId, stripeCustomerId, user.id,
+          payload, stripe, entry, packageId, proposal.name, clientAccountId, stripeCustomerId, user.id, paymentConfig,
         )
 
         updatedSchedule = updatedSchedule.map(e =>
@@ -1792,80 +1842,90 @@ export async function acceptPackage(packageId: string) {
         if (invoiceUrl) invoiceUrls.push(invoiceUrl)
       }
 
-      // Send a single acceptance confirmation showing the full payment schedule
-      ;(async () => {
-        try {
-          const clientUsername = await getClientUsername(payload, clientAccountId)
-          const proposalPrintUrl = clientUsername
-            ? `${APP_BASE}/u/${clientUsername}/packages/${packageId}/print`
-            : undefined
-          const totalAmount = schedule.reduce((s, e) => s + (e.amount ?? 0), 0)
-          await sendPaymentScheduleEmail(payload, {
-            customerName: typeof clientAccount === 'object' ? (clientAccount?.name ?? undefined) : undefined,
-            customerEmail: typeof clientAccount === 'object' ? (clientAccount?.email ?? '') : '',
-            packageName: proposal.name,
-            packageDescription: (proposal as any).description ?? undefined,
-            entries: schedule.map(e => ({ label: e.label, amount: e.amount, dueDate: e.dueDate ?? null })),
-            totalAmount,
-            proposalPrintUrl,
-          })
-        } catch (e) {
-          console.error('[acceptPackage] Schedule confirmation email failed:', e)
-        }
-      })()
+      // Send a single acceptance confirmation showing the full payment schedule.
+      // Awaited for the same reason as every other send here — a floating promise
+      // dies with the serverless function the moment the action returns.
+      await deliverInvoiceEmail('acceptPackage:schedule', async () => {
+        const clientUsername = await getClientUsername(payload, clientAccountId)
+        const proposalPrintUrl = clientUsername
+          ? `${APP_BASE}/u/${clientUsername}/packages/${packageId}/print`
+          : undefined
+        const totalAmount = schedule.reduce((s, e) => s + (e.amount ?? 0), 0)
+        await sendPaymentScheduleEmail(payload, {
+          customerName: typeof clientAccount === 'object' ? (clientAccount?.name ?? undefined) : undefined,
+          customerEmail: typeof clientAccount === 'object' ? (clientAccount?.email ?? '') : '',
+          packageName: proposal.name,
+          packageDescription: (proposal as any).description ?? undefined,
+          entries: schedule.map(e => ({ label: e.label, amount: e.amount, dueDate: e.dueDate ?? null })),
+          totalAmount,
+          proposalPrintUrl,
+        })
+      })
     } else if (lineItems.length > 0) {
       // No schedule — create one full invoice from all line items
-      const totalAmount = lineItems.reduce((s: number, item: any) => s + (item.price ?? 0) * (item.quantity ?? 1), 0)
+      // `adjustedPrice ?? price` — the same basis createOrderFromPackage bills on.
+      // Reading `price` alone here meant a staff-sent invoice and a client-accepted
+      // one could quote two different totals for the same package.
+      const unitPriceOf = (item: any) => item.adjustedPrice ?? item.price ?? 0
+      const totalAmount = lineItems.reduce((s: number, item: any) => s + unitPriceOf(item) * (item.quantity ?? 1), 0)
 
       const { invoice: finalizedInvoice } = await createStripeInvoiceForOrder({
         stripe,
         stripeCustomerId,
         daysUntilDue: 30,
+        paymentConfigId: paymentConfig.id,
         description: proposal.name,
         invoiceMetadata: { orcaclub_package_id: packageId },
         lines: lineItems.map((item: any) => ({
           description: item.name,
-          amount: (item.price ?? 0) * (item.quantity ?? 1),
+          amount: unitPriceOf(item) * (item.quantity ?? 1),
         })),
       })
       const orderNumber = finalizedInvoice.number ?? finalizedInvoice.id
 
-      const order = await payload.create({
-        collection: 'orders',
-        data: {
+      // voidOnFailure closes the worst gap in this file: this branch finalized a
+      // payable Stripe invoice and, if the order write failed, the outer catch only
+      // logged — leaving the client billed with no order and no way for the
+      // invoice.paid webhook (which resolves on stripeInvoiceId) to ever reconcile it.
+      const order = await commitOrder(
+        payload,
+        {
           orderNumber,
-          clientAccount: clientAccountId,
+          clientAccountId,
           packageRef: packageId,
           invoiceType: 'full',
           amount: totalAmount,
-          status: 'pending',
           stripeCustomerId,
           stripeInvoiceId: finalizedInvoice.id,
-          stripeInvoiceUrl: finalizedInvoice.hosted_invoice_url || '',
+          stripeInvoiceUrl: finalizedInvoice.hosted_invoice_url,
+          paymentConfigId: paymentConfig.id,
+          paymentConfigName: paymentConfig.name,
           lineItems: lineItems.map((item: any) => ({
             title: item.name,
             description: item.description ?? undefined,
             quantity: item.quantity ?? 1,
-            price: item.price ?? 0,
+            price: unitPriceOf(item),
             isRecurring: item.isRecurring ?? false,
           })),
-        } as any,
-      })
+        },
+        {
+          logLabel: 'acceptPackage',
+          voidOnFailure: { stripe, invoiceId: finalizedInvoice.id as string },
+          failureMessage:
+            'This package could not be accepted, so it was not billed. ' +
+            'The Stripe invoice has been voided and nothing was charged — please try again.',
+        },
+      )
 
       if (finalizedInvoice.hosted_invoice_url) invoiceUrls.push(finalizedInvoice.hosted_invoice_url)
 
-      // Non-blocking invoice email
-      ;(async () => {
-        try {
-          const clientUsername = await getClientUsername(payload, clientAccountId)
-          const proposalPrintUrl = clientUsername
-            ? `${APP_BASE}/u/${clientUsername}/packages/${packageId}/print`
-            : undefined
-          await sendGenericInvoiceEmail(payload, order.id, user.id, proposalPrintUrl)
-        } catch (e) {
-          console.error('[acceptPackage] Invoice email failed:', e)
-        }
-      })()
+      await deliverInvoiceEmail('acceptPackage', async () => {
+        const clientUsername = await getClientUsername(payload, clientAccountId)
+        const proposalPrintUrl = clientUsername
+          ? `${APP_BASE}/u/${clientUsername}/packages/${packageId}/print`
+          : undefined
+        await sendGenericInvoiceEmail(payload, order.id, user.id, proposalPrintUrl)
+      })
     }
 
     // Mark as accepted
@@ -2185,19 +2245,24 @@ export async function linkScheduleEntriesToOrders(packageId: string) {
       const orderNumber = await nextOrderNumber(payload)
       const invoiceType = resolveInvoiceType(entry)
 
-      const order = await payload.create({
-        collection: 'orders',
-        data: {
+      // No Stripe leg on this path — these are placeholder orders that back-fill
+      // schedule entries, so there is nothing to void, only a row to verify.
+      const order = await commitOrder(
+        payload,
+        {
           orderNumber,
-          clientAccount: clientAccountId,
+          clientAccountId,
           packageRef: packageId,
           invoiceType,
           invoiceNote: entry.label,
           amount: entry.amount,
-          status: 'pending',
           lineItems: [{ title: entry.label, price: entry.amount, quantity: 1 }],
-        } as any,
-      })
+        },
+        {
+          logLabel: 'linkScheduleEntriesToOrders',
+          failureMessage: `"${entry.label}" could not be linked to an order — please try again.`,
+        },
+      )
 
       const idx = updatedSchedule.findIndex(e => e.id === entry.id)
       if (idx !== -1) updatedSchedule[idx] = { ...updatedSchedule[idx], orderId: order.id }

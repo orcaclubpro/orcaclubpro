@@ -5,11 +5,12 @@ import { getPayload } from 'payload'
 import config from '@payload-config'
 import { getStripe } from '@/lib/stripe'
 import {
-  assertOrderPersisted,
   createStripeInvoiceForOrder,
   fulfillOrderPaidOutOfBand,
 } from '@/lib/stripe/invoices'
+import { commitOrder, deliverInvoiceEmail } from '@/lib/orders/commitOrder'
 import { resolveStripeCustomer } from '@/lib/stripe/customers'
+import { prepareInvoicePaymentConfig } from '@/lib/stripe/paymentConfigs'
 import { sendGenericInvoiceEmail } from '@/lib/payload/utils/genericInvoiceEmailTemplate'
 import { nextOrderNumber } from '@/lib/payload/utils/orderNumber'
 import { revalidatePath } from 'next/cache'
@@ -34,6 +35,12 @@ export interface CreateClientOrderInput {
   /** Defaults to 'full'. */
   invoiceType?: 'full' | 'deposit' | 'installment' | 'balance'
   projectId?: string
+  /**
+   * Stripe payment method configuration (`pmc_…`) deciding which methods the invoice
+   * offers — e.g. the card-enabled preset for a client who wants to pay by card.
+   * Omit to fall back to the client account's default, then the account's own.
+   */
+  paymentConfigId?: string
   /**
    * 'invoice' (default) bills the order — Stripe invoice and/or email, per the flags below.
    * 'fulfill' records it as already settled: no Stripe call, no email, status `paid`, with a
@@ -201,6 +208,12 @@ export async function createClientOrder(
     let orderInvoiceUrl: string | null = null
     let dueDate: string | undefined
 
+    // Per-invoice preset → this client's standing default → env default → account default.
+    const paymentConfig = await prepareInvoicePaymentConfig({
+      explicit: input.paymentConfigId,
+      clientAccountDefault: (account as any).defaultPaymentConfig as string | undefined,
+    })
+
     if (withStripeInvoice) {
       stripe = getStripe()
 
@@ -230,6 +243,7 @@ export async function createClientOrder(
         stripe,
         stripeCustomerId: resolved.customerId,
         daysUntilDue,
+        paymentConfigId: paymentConfig.id,
         description: invoiceNote ?? `Invoice — ${clientName}`,
         invoiceMetadata: {
           orcaclub_client_id: input.clientAccountId,
@@ -268,56 +282,44 @@ export async function createClientOrder(
       if (!fulfill) dueDate = new Date(Date.now() + daysUntilDue * DAY_MS).toISOString()
     }
 
-    const order = await payload.create({
-      collection: 'orders',
-      data: {
+    // commitOrder writes the row and proves it survived its own afterChange hooks
+    // before anything downstream trusts the id. A throw here lands in the catch
+    // below, which voids the finalized Stripe invoice.
+    const order = await commitOrder(
+      payload,
+      {
         orderNumber,
-        clientAccount: input.clientAccountId,
-        projectRef: input.projectId || undefined,
+        clientAccountId: input.clientAccountId,
+        projectRef: input.projectId,
         invoiceType,
-        ...(invoiceNote ? { invoiceNote } : {}),
+        invoiceNote,
         amount: total,
         // A fulfilled order is settled the moment it is recorded — it never sits pending,
         // so it never lands on the client's outstanding balance.
         status: fulfill ? 'paid' : 'pending',
-        ...(stripeCustomerId ? { stripeCustomerId } : {}),
-        ...(stripeInvoiceId ? { stripeInvoiceId } : {}),
-        ...(orderInvoiceUrl ? { stripeInvoiceUrl: orderInvoiceUrl } : {}),
-        ...(dueDate ? { dueDate } : {}),
+        stripeCustomerId,
+        stripeInvoiceId,
+        stripeInvoiceUrl: orderInvoiceUrl,
+        // Recorded even on a Payload-only order — it still says which preset was intended.
+        paymentConfigId: paymentConfig.id,
+        paymentConfigName: paymentConfig.name,
+        dueDate,
         ...(fulfill
           ? {
               fulfilledAt: new Date().toISOString(),
-              ...(input.fulfillmentNote?.trim() ? { fulfillmentNote: input.fulfillmentNote.trim() } : {}),
+              fulfillmentNote: input.fulfillmentNote?.trim() || null,
             }
           : {}),
-        lineItems: lines.map((l) => ({
-          title: l.title,
-          description: l.description,
-          quantity: l.quantity,
-          price: l.price,
-          isRecurring: false,
-        })),
-      } as any,
-    })
-
-    // ── Confirm the order actually persisted ─────────────────────────────────
-    // An Orders afterChange hook (updateClientBalance → syncClientAccountToUser) can
-    // abort the create's Mongo transaction while swallowing the error — `payload.create`
-    // still returns a doc with an id for a row that was rolled back. Verify before we
-    // report success or email the client about an invoice with no order behind it; a
-    // throw here reaches the catch below, which voids the finalized Stripe invoice.
-    try {
-      await assertOrderPersisted(payload, order.id as string)
-    } catch (e) {
-      // Keep the diagnostic detail in the server log; surface something legible upstream.
-      console.error('[createClientOrder] Order did not persist:', e)
-      throw new Error(
-        withStripeInvoice
+        lineItems: lines,
+      },
+      {
+        logLabel: 'createClientOrder',
+        failureMessage: withStripeInvoice
           ? 'The invoice could not be saved, so no order was created. ' +
             'The Stripe invoice has been voided and the client was not billed — please try again.'
           : 'The order could not be saved — nothing was recorded. Please try again.',
-      )
-    }
+      },
+    )
 
     revalidatePath(`/u/${user.username}/clients`)
 
@@ -333,15 +335,13 @@ export async function createClientOrder(
     } else if (!stripeInvoiceId && !orderInvoiceUrl) {
       notice = 'No email sent — the order has no invoice link for the client to pay from.'
     } else {
-      emailed = true
-      // Non-blocking: the order + Stripe invoice must survive an email failure.
-      ;(async () => {
-        try {
-          await sendGenericInvoiceEmail(payload, order.id as string, user.id as string)
-        } catch (e) {
-          console.error('[createClientOrder] Invoice email failed (order still created):', e)
-        }
-      })()
+      // Awaited, not fire-and-forget: a floating promise can be killed the moment the
+      // action returns on a serverless host, silently eating the invoice email. The
+      // order + Stripe invoice still survive a failed send.
+      emailed = await deliverInvoiceEmail('createClientOrder', () =>
+        sendGenericInvoiceEmail(payload, order.id, user.id as string),
+      )
+      if (!emailed) notice = 'The order was created, but the invoice email could not be sent.'
     }
 
     return {

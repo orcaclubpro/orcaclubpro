@@ -94,9 +94,13 @@ export const updateClientBalance: CollectionAfterChangeHook = async ({
       // Don't fail the order creation if balance update fails
     }
 
-    // Update order with balance snapshot (only on creation)
-    // Skip this during the create operation - we'll set it via beforeChange instead
-    if (!doc.balanceSnapshot && operation === 'update') {
+    // Stamp the balance snapshot (audit trail: what the client owed after this order).
+    // This used to be skipped on `create` with a note about doing it in beforeChange —
+    // no such hook was ever written, so every new order shipped without a snapshot.
+    // Doing it here costs one extra write and is safe: the nested update carries
+    // `skipBalanceUpdate`, and trackOrderActivity ignores non-create operations, so
+    // neither afterChange hook re-enters.
+    if (!doc.balanceSnapshot && (operation === 'create' || operation === 'update')) {
       try {
         await retryOnTransientError(async () => {
           await payload.update({

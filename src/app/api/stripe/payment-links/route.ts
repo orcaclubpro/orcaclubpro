@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getStripe } from '@/lib/stripe'
 import { resolveStripeCustomer } from '@/lib/stripe/customers'
 import { createStripeInvoiceForOrder } from '@/lib/stripe/invoices'
+import { commitOrder } from '@/lib/orders/commitOrder'
+import { prepareInvoicePaymentConfig } from '@/lib/stripe/paymentConfigs'
 import { getPayload } from 'payload'
 import configPromise from '@payload-config'
 import { headers } from 'next/headers'
@@ -65,7 +67,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
 
-    const { customerEmail, customerName, lineItems, project } = body
+    const { customerEmail, customerName, lineItems, project, paymentConfigId } = body
 
     // Validation
     if (!customerEmail || !lineItems || lineItems.length === 0) {
@@ -188,11 +190,20 @@ export async function POST(request: NextRequest) {
 
     // 5. Create the Stripe invoice FIRST so we can stamp its real invoice number
     //    onto the order. Attach every line item explicitly, then finalize.
+    const paymentConfig = await prepareInvoicePaymentConfig({
+      explicit: paymentConfigId,
+      clientAccountDefault:
+        (clientAccount.docs[0]?.defaultPaymentConfig as string | undefined) ?? null,
+    })
+
     const { invoice, invoiceId, hostedInvoiceUrl } = await createStripeInvoiceForOrder({
       stripe,
       stripeCustomerId,
       daysUntilDue: 30,
+      paymentConfigId: paymentConfig.id,
       ...(project ? { description: `Order — ${project}` } : {}),
+      // Fallback only — used when no configuration resolves, preserving this route's
+      // long-standing card + ACH behavior.
       paymentSettings: {
         payment_method_types: ['card', 'us_bank_account'], // Enable ACH (capped at $5)
       },
@@ -215,36 +226,38 @@ export async function POST(request: NextRequest) {
     const orderNumber = invoice.number ?? invoiceId
     console.log('[Stripe Invoice] Invoice finalized:', invoiceId, '→', orderNumber)
 
-    // 6. Create the order with the Stripe invoice already linked. If this write
-    //    fails, void the invoice so we never strand a payable invoice with no
-    //    matching order (the webhook resolves orders by stripeInvoiceId).
-    let order
-    try {
-      order = await payload.create({
-        collection: 'orders',
-        data: {
-          orderNumber,
-          clientAccount: clientAccountId,
-          amount: totalAmount,
-          status: 'pending', // Will be updated to 'paid' via webhook
-          stripeCustomerId,
-          stripeInvoiceId: invoiceId,
-          stripeInvoiceUrl: hostedInvoiceUrl,
-          project: project || undefined, // Optional project name
-          lineItems: lineItems.map((item: any) => ({
-            title: item.title,
-            quantity: item.quantity,
-            price: item.unitPrice,
-            isRecurring: false,
-          })),
-        },
-      })
-    } catch (createErr) {
-      await stripe.invoices.voidInvoice(invoiceId).catch((e: any) =>
-        console.error('[Stripe Invoice] Failed to void orphaned invoice:', e)
-      )
-      throw createErr
-    }
+    // 6. Create the order with the Stripe invoice already linked. commitOrder voids
+    //    the invoice if the write fails OR silently fails to persist, so we never
+    //    strand a payable invoice with no matching order (the webhook resolves
+    //    orders by stripeInvoiceId).
+    const order = await commitOrder(
+      payload,
+      {
+        orderNumber,
+        clientAccountId,
+        amount: totalAmount,
+        // status defaults to 'pending' — updated to 'paid' via webhook
+        stripeCustomerId,
+        stripeInvoiceId: invoiceId,
+        stripeInvoiceUrl: hostedInvoiceUrl,
+        paymentConfigId: paymentConfig.id,
+        paymentConfigName: paymentConfig.name,
+        projectName: project, // DEPRECATED free-text name; this route has no project id
+        lineItems: lineItems.map((item: any) => ({
+          title: item.title,
+          quantity: item.quantity,
+          price: item.unitPrice,
+          isRecurring: false,
+        })),
+      },
+      {
+        logLabel: 'Stripe Invoice',
+        voidOnFailure: { stripe, invoiceId },
+        failureMessage:
+          'The invoice could not be saved, so no order was created. ' +
+          'The Stripe invoice has been voided and the customer was not billed — please try again.',
+      },
+    )
 
     console.log('[Stripe Invoice] Created order record:', order.id, orderNumber)
 

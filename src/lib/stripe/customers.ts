@@ -7,6 +7,7 @@
  * resolved id (mutating hook `data`, updating the client-account doc, etc.).
  */
 
+import type { Payload, PayloadRequest } from 'payload'
 import type Stripe from 'stripe'
 import { getStripe } from '@/lib/stripe'
 
@@ -102,4 +103,61 @@ export async function resolveStripeCustomer(
     ...(params.metadata ? { metadata: params.metadata } : {}),
   })
   return { customerId: created.id, action: 'created', clearedInvalidId }
+}
+
+/**
+ * Resolve the Stripe customer for a client account and persist any correction.
+ *
+ * `resolveStripeCustomer` talks to Stripe only; this wraps it with the write-back
+ * that every caller was repeating. It also replaces the "Client account has no
+ * Stripe customer ID — set it in the admin panel first" dead end that the package
+ * flows used to hit: the orders tab, retainer billing, and the admin payment-links
+ * route all self-heal here, so a package should too. A stale or deleted id is
+ * repaired the same way.
+ *
+ * Throws when the account has no email — Stripe cannot resolve a customer without one.
+ */
+export async function resolveClientAccountStripeCustomer(params: {
+  payload: Payload
+  clientAccountId: string
+  email: string | null | undefined
+  name?: string | null
+  existingCustomerId?: string | null
+  /** Metadata applied only when a brand-new Stripe customer is created. */
+  metadata?: Record<string, string>
+  stripe?: Stripe
+  req?: PayloadRequest
+}): Promise<string> {
+  const { payload, clientAccountId, email } = params
+
+  if (!email) {
+    throw new Error(
+      'This client account has no email address — add one before invoicing, so Stripe has somewhere to send the invoice.',
+    )
+  }
+
+  const resolved = await resolveStripeCustomer({
+    ...(params.stripe ? { stripe: params.stripe } : {}),
+    email,
+    name: params.name ?? null,
+    existingCustomerId: params.existingCustomerId ?? null,
+    ...(params.metadata ? { metadata: params.metadata } : {}),
+  })
+
+  if (resolved.customerId !== params.existingCustomerId) {
+    await payload
+      .update({
+        collection: 'client-accounts',
+        id: clientAccountId,
+        data: { stripeCustomerId: resolved.customerId } as never,
+        ...(params.req ? { req: params.req } : {}),
+      })
+      .catch((e: unknown) =>
+        // Non-fatal: the invoice can still be raised against the resolved customer.
+        // Worst case the next flow resolves it again and re-attempts the write.
+        console.error('[resolveClientAccountStripeCustomer] Failed to persist customer id:', e),
+      )
+  }
+
+  return resolved.customerId
 }

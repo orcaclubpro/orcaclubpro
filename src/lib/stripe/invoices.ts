@@ -13,6 +13,7 @@ import type { Payload, PayloadRequest } from 'payload'
 import type Stripe from 'stripe'
 import { getStripe } from '@/lib/stripe'
 import { sendPaymentReceiptOnce } from '@/lib/payload/utils/paymentConfirmationEmail'
+import { invoicePaymentSettingsFor } from '@/lib/stripe/paymentConfigs'
 
 export interface StripeInvoiceLineInput {
   /** Line description shown on the Stripe invoice. */
@@ -36,6 +37,15 @@ export interface CreateStripeInvoiceParams {
   lineMetadata?: Record<string, string>
   /** Passed straight to `invoices.create` (e.g. `payment_method_types`). */
   paymentSettings?: Stripe.InvoiceCreateParams.PaymentSettings
+  /**
+   * A Stripe payment method configuration (`pmc_…`) to use as the preset for which
+   * methods this invoice offers. Resolved to `payment_settings.payment_method_types`
+   * here — the Invoices API does not accept a configuration id directly.
+   *
+   * Takes precedence over `paymentSettings`. An id that cannot be resolved falls back
+   * to the account's own invoice defaults rather than failing the invoice.
+   */
+  paymentConfigId?: string | null
   /** Three-letter currency code. Defaults to 'usd'. */
   currency?: string
   /** Reuse an existing Stripe client instead of the singleton. */
@@ -64,13 +74,19 @@ export async function createStripeInvoiceForOrder(
   const stripe = params.stripe ?? getStripe()
   const currency = params.currency ?? 'usd'
 
+  // A configuration is a preset for the method list, so it wins over a hand-written
+  // `paymentSettings`; when it resolves to nothing we fall back to whatever the caller
+  // passed, and failing that to the account's invoice template settings.
+  const paymentSettings =
+    (await invoicePaymentSettingsFor(params.paymentConfigId, { stripe })) ?? params.paymentSettings
+
   const invoice = await stripe.invoices.create({
     customer: params.stripeCustomerId,
     collection_method: 'send_invoice',
     days_until_due: params.daysUntilDue ?? 30,
     auto_advance: false,
     ...(params.description ? { description: params.description } : {}),
-    ...(params.paymentSettings ? { payment_settings: params.paymentSettings } : {}),
+    ...(paymentSettings ? { payment_settings: paymentSettings } : {}),
     ...(params.invoiceMetadata ? { metadata: params.invoiceMetadata } : {}),
   })
 

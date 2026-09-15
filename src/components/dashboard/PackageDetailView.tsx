@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { PackageDocumentsModal } from './PackageDocumentsModal'
+import { PaymentConfigSelect } from '@/components/dashboard/PaymentConfigSelect'
 import { OptionRow } from './package-detail/OptionRow'
 import { ResetInvoicedEntry } from './package-detail/ResetInvoicedEntry'
 import {
@@ -91,6 +92,12 @@ export function PackageDetailView({
 
   // Mode: 'full' (Quick Invoice) | 'schedule' (Payment Schedule)
   const [mode, setMode] = useState<'full' | 'schedule'>('full')
+  /**
+   * Stripe payment method configuration for every invoice raised from this page —
+   * Quick Invoice, Push Schedule, and the per-entry Send Invoice alike. '' means the
+   * account default (which on this account is ACH only).
+   */
+  const [paymentConfigId, setPaymentConfigId] = useState('')
 
   // Payment schedule builder state
   const [scheduleDeposit, setScheduleDeposit]         = useState('')
@@ -210,7 +217,7 @@ export function PackageDetailView({
       setInvoiceResult({ error: saveResult.error ?? 'Failed to save package before invoicing' })
       return
     }
-    const result = await createOrderFromPackage(pkg.id, daysUntilDue, selectedProjectId || undefined)
+    const result = await createOrderFromPackage(pkg.id, daysUntilDue, selectedProjectId || undefined, paymentConfigId || undefined)
     setInvoicing(false)
     if (result.success && result.invoiceUrl) {
       setInvoiceResult({ url: result.invoiceUrl })
@@ -319,7 +326,7 @@ export function PackageDetailView({
   const handlePushSchedule = async () => {
     setPushScheduleResult(null)
     setPushingSchedule(true)
-    const result = await pushPackageSchedule(pkg.id)
+    const result = await pushPackageSchedule(pkg.id, paymentConfigId || undefined)
     setPushingSchedule(false)
     if (result.success) {
       setPushScheduleResult(`${result.count} invoice${(result.count ?? 0) !== 1 ? 's' : ''} sent`)
@@ -331,7 +338,9 @@ export function PackageDetailView({
 
   const handleSendScheduledPayment = async (entryId: string) => {
     setSendingEntryId(entryId)
-    const result = await sendScheduledPayment(pkg.id, entryId, selectedProjectId || undefined)
+    const result = await sendScheduledPayment(pkg.id, entryId, selectedProjectId || undefined, {
+      paymentConfigId: paymentConfigId || undefined,
+    })
     setSendingEntryId(null)
     if (result.success && result.invoiceUrl) {
       setEntryResults(prev => ({ ...prev, [entryId]: { url: result.invoiceUrl as string } }))
@@ -450,6 +459,14 @@ export function PackageDetailView({
                 Payment Schedule
               </button>
             </div>
+
+            {/* Applies to both modes — Quick Invoice, Push Schedule and per-entry sends
+                all raise Stripe invoices from this same choice. */}
+            <PaymentConfigSelect
+              className="mt-4 max-w-sm"
+              value={paymentConfigId}
+              onChange={setPaymentConfigId}
+            />
 
             {/* Quick Invoice — due-date window */}
             {mode === 'full' && (

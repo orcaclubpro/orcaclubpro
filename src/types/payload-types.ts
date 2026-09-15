@@ -607,6 +607,10 @@ export interface ClientAccount {
    */
   stripeCustomerId?: string | null;
   /**
+   * Stripe payment method configuration (pmc_…) this client's invoices default to — e.g. a card-enabled preset for a client who never pays by ACH. Leave empty to use the account default. A per-invoice choice still overrides this.
+   */
+  defaultPaymentConfig?: string | null;
+  /**
    * Outstanding balance from PENDING orders (what client owes) - auto-updated
    */
   accountBalance?: number | null;
@@ -731,6 +735,14 @@ export interface Order {
    * Start of the billed retainer cycle — one order per (retainer, cycle)
    */
   retainerCycleStart?: string | null;
+  /**
+   * Stripe payment method configuration (pmc_…) used as the preset for which methods this invoice offers. Recorded at creation — editing it here does not change an already finalized Stripe invoice.
+   */
+  stripePaymentConfig?: string | null;
+  /**
+   * Name of that configuration at the time the invoice was raised (e.g. "Card Custom").
+   */
+  stripePaymentConfigName?: string | null;
   /**
    * Type of invoice (for deposit/payment plan tracking)
    */
@@ -2675,6 +2687,7 @@ export interface ClientAccountsSelect<T extends boolean = true> {
       };
   shopifyCustomerId?: T;
   stripeCustomerId?: T;
+  defaultPaymentConfig?: T;
   accountBalance?: T;
   totalOrders?: T;
   assignedTo?: T;
@@ -2713,6 +2726,8 @@ export interface OrdersSelect<T extends boolean = true> {
   packageRef?: T;
   retainerRef?: T;
   retainerCycleStart?: T;
+  stripePaymentConfig?: T;
+  stripePaymentConfigName?: T;
   invoiceType?: T;
   invoiceNote?: T;
   issuedAt?: T;

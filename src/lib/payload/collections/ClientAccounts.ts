@@ -157,6 +157,17 @@ const ClientAccounts: CollectionConfig = {
                 position: 'sidebar',
               },
             },
+            {
+              name: 'defaultPaymentConfig',
+              type: 'text',
+              admin: {
+                description:
+                  'Stripe payment method configuration (pmc_…) this client\'s invoices default to — ' +
+                  'e.g. a card-enabled preset for a client who never pays by ACH. Leave empty to use ' +
+                  'the account default. A per-invoice choice still overrides this.',
+                position: 'sidebar',
+              },
+            },
 
             // FINANCIAL TRACKING (Auto-calculated via hooks)
             {
