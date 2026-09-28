@@ -10,28 +10,40 @@ a client.
 
 ## 1. Get your API key
 
-Start the app:
+There is **no admin UI for this.** Payload declares `enableAPIKey` and `apiKey` with
+`admin: { components: { Field: false } }`, so neither field renders in the admin panel — there
+is no checkbox to tick. Use the script:
 
 ```bash
-bun run bun:dev
+node scripts/mcp-api-key.mjs --email you@orcaclub.pro --show          # check current state
+node scripts/mcp-api-key.mjs --email you@orcaclub.pro --set --yes     # generate one
 ```
 
-Then in the browser:
+`--set` prints the key once. Copy it then.
 
-1. Go to `http://localhost:3000/admin` — check the startup log for the port; if 3000 was
-   taken it will say `using available port 3001 instead`
-2. **Collections → Users →** click your own user
-3. Tick **Enable API Key**
-4. **Save** — do this before copying anything
-5. Copy the key from the **API Key** field
+**Check the secret fingerprint the script prints.** `apiKeyIndex` is
+`HMAC-SHA1(PAYLOAD_SECRET, key)`, and API-key auth looks the user up by that index — so a key
+provisioned under a different `PAYLOAD_SECRET` than the environment reading it fails with a
+bare 401 and nothing in the log. Compare the fingerprint against the `PAYLOAD_SECRET` in your
+deployment's env vars before trusting the key. Provision with the same secret production runs.
 
-**The step everyone misses:** copying the key before hitting Save. The key field populates as
-soon as you tick the box, but the key does not work until the record is saved with
-`enableAPIKey` set. A key copied from an unsaved form is a valid-looking UUID that fails auth.
-If you hit a 401, redo this step first.
+Then enable the feature — it ships **off**:
 
-Treat the key like a password — it carries your full staff role. Revoke it by unticking the
-box and saving.
+```ts
+// src/lib/payload/payload.config.ts, Users.auth
+useAPIKey: true,
+```
+
+Deploy that. Order matters: provision the key first, enable second. Turning `useAPIKey` on
+while `users.apiKey` holds anything that is not a valid Payload-encrypted string makes the
+field's `afterRead` hook throw `ERR_CRYPTO_INVALID_IV` on **every read of that user**, which
+breaks admin login and passkey verification. If you hit that, recover with:
+
+```bash
+node scripts/mcp-api-key.mjs --email you@orcaclub.pro --clear --yes
+```
+
+Treat the key like a password — it carries your full staff role. Revoke with `--clear`.
 
 ---
 
@@ -91,11 +103,20 @@ curl -H "Authorization: users API-Key YOUR_KEY_HERE" \
   http://localhost:3000/api/users/me
 ```
 
-- `{"user":null,...}` → Payload is rejecting the key. Go back to step 1: the usual cause is
-  **Enable API Key was never saved**. Re-tick it, save, copy the key again.
+- `{"user":null,...}` → Payload is rejecting the key. Check state and secret alignment:
+  `node scripts/mcp-api-key.mjs --email you@orcaclub.pro --show`. If `enableAPIKey` is not
+  `true`, or the printed secret fingerprint differs from the env var the server is running
+  with, re-provision with `--set --yes` under the right `PAYLOAD_SECRET`.
 - Returns your user → the key is good, so the problem is in the Claude config. Check the
   header is `users API-Key <key>` (not `Bearer`), and that the server is registered to this
   project (`claude mcp list` from the orcaclubpro directory).
+
+**`ERR_CRYPTO_INVALID_IV` / "Invalid initialization vector" in the server log, and login or
+passkey breaking** — `users.apiKey` holds a value Payload cannot decrypt, and its `afterRead`
+hook throws on every read of that user. Recover with
+`node scripts/mcp-api-key.mjs --email you@orcaclub.pro --clear --yes`, then re-provision with
+`--set`. Commenting out `useAPIKey` and redeploying also stops it immediately, since the field
+and its hook disappear.
 
 **`Route not found "/api/mcp"`** — the dev server was started before the route existed.
 Turbopack does not hot-add new routes. Restart it.
