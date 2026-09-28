@@ -640,21 +640,27 @@ const Users: CollectionConfig = {
     // Email verification disabled - we use custom 2FA for admin users, clients don't need verification
     // verify: false, (commented out - this is the default)
     tokenExpiration: 60 * 60 * 24 * 30, // 30 days
-    // ── useAPIKey is intentionally OFF ──────────────────────────────────────────
-    // Turning it on adds Payload's `apiKey` field, whose `afterRead` hook calls
-    // `payload.decrypt()` on the stored value (see node_modules/payload/dist/auth/
-    // baseFields/apiKey.js). If that value is not a Payload-encrypted string —
-    // `{32 hex chars IV}{hex ciphertext}` — the hook throws ERR_CRYPTO_INVALID_IV on
-    // EVERY read of the user, which breaks login and passkey verification in the admin
-    // panel and the portal. There is no admin UI to set it either: both `enableAPIKey`
-    // and `apiKey` are declared `admin: { components: { Field: false } }`.
+    // API-key auth, used ONLY by the MCP server at /api/mcp (src/app/api/mcp/route.ts).
+    // `payload.auth({ headers })` resolves an `Authorization: users API-Key <key>` header to
+    // the owning user, which is what lets the existing cookie-auth server actions run
+    // unchanged for an MCP caller. Keys are per-user, so a session carries exactly that
+    // user's role and access — and the route rejects any non-staff key outright.
     //
-    // So do not flip this on by itself. Re-enabling means also providing a safe way to
-    // provision the key (a script or custom admin field that writes THROUGH Payload so
-    // `beforeChange` encrypts it and `apiKeyIndex` gets its HMAC) and confirming
-    // PAYLOAD_SECRET is identical in every environment that reads it — the index is
-    // `HMAC-SHA1(payload.secret, apiKey)`, so a secret mismatch silently fails auth.
-    // useAPIKey: true,  // ← MCP at /api/mcp needs this; see docs/MCP.md
+    // ⚠ Enabling this adds Payload's `apiKey` field, whose `afterRead` hook calls
+    // `payload.decrypt()` on the stored value (node_modules/payload/dist/auth/baseFields/
+    // apiKey.js). A value that is not a valid Payload-encrypted string —
+    // `{32 hex chars IV}{hex ciphertext}` — makes that hook throw ERR_CRYPTO_INVALID_IV on
+    // EVERY read of that user, which breaks admin login and passkey verification. A NULL or
+    // absent value is fine; the hook guards on `value ?`. So the rule is: provision keys only
+    // via `scripts/mcp-api-key.mjs`, which writes the encrypted value and the
+    // `HMAC-SHA1(payload.secret, key)` lookup index the way Payload expects.
+    //
+    // If it does break, the fix is a DATA change, not a deploy:
+    //   node scripts/mcp-api-key.mjs --email <you> --clear --yes
+    //
+    // PAYLOAD_SECRET must be identical in every environment that reads a key — the lookup
+    // index is an HMAC under it, so a mismatch fails auth with a bare 401 and no log line.
+    useAPIKey: true,
     forgotPassword: {
       generateEmailSubject: () => 'Password Reset | ORCACLUB',
       generateEmailHTML: (args) => {
