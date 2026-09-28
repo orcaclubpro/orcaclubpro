@@ -523,6 +523,9 @@ export interface User {
     | null;
   updatedAt: string;
   createdAt: string;
+  enableAPIKey?: boolean | null;
+  apiKey?: string | null;
+  apiKeyIndex?: string | null;
   email: string;
   resetPasswordToken?: string | null;
   resetPasswordExpiration?: string | null;
@@ -1409,6 +1412,36 @@ export interface Retainer {
    * When the scheduled change takes effect.
    */
   pendingEffectiveFrom?: string | null;
+  /**
+   * Drafted cycle recaps awaiting review. Narrative only — all numbers are re-derived from the cycle on read.
+   */
+  recapDrafts?:
+    | {
+        /**
+         * ISO start of the cycle this draft recaps — the row key.
+         */
+        cycleStart: string;
+        /**
+         * Partial<RecapData> — narrative fields only.
+         */
+        narrative:
+          | {
+              [k: string]: unknown;
+            }
+          | unknown[]
+          | string
+          | number
+          | boolean
+          | null;
+        draftedAt?: string | null;
+        draftedBy?: (string | null) | User;
+        /**
+         * Where the draft came from. Agent drafts are never sent unreviewed.
+         */
+        source?: ('composer' | 'agent') | null;
+        id?: string | null;
+      }[]
+    | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -2653,6 +2686,9 @@ export interface UsersSelect<T extends boolean = true> {
       };
   updatedAt?: T;
   createdAt?: T;
+  enableAPIKey?: T;
+  apiKey?: T;
+  apiKeyIndex?: T;
   email?: T;
   resetPasswordToken?: T;
   resetPasswordExpiration?: T;
@@ -2892,6 +2928,16 @@ export interface RetainersSelect<T extends boolean = true> {
   pendingHoursPerMonth?: T;
   pendingOverageRate?: T;
   pendingEffectiveFrom?: T;
+  recapDrafts?:
+    | T
+    | {
+        cycleStart?: T;
+        narrative?: T;
+        draftedAt?: T;
+        draftedBy?: T;
+        source?: T;
+        id?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
 }

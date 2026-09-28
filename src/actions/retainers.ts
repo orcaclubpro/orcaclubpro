@@ -2050,6 +2050,126 @@ const TIER_LABEL: Record<RetainerTier, string> = { basic: 'Basic', growth: 'Grow
  * cycle summary; narrative fields start blank. Next-month priorities are seeded
  * from any planned (draft) items already sitting in the *next* cycle. Staff only.
  */
+// ── Recap drafts ───────────────────────────────────────────────────────────────
+// A recap is derived facts + staff narrative (see src/lib/retainers/recap.ts). The
+// facts are recomputed from the cycle on every read; only the narrative is worth
+// persisting, and persisting ONLY the narrative is what makes a drafted recap safe
+// to hand to an agent — there is no numeric field in the stored row to get wrong.
+
+interface RecapDraftRow {
+  cycleStart?: string | null
+  narrative?: unknown
+  draftedAt?: string | null
+  draftedBy?: unknown
+  source?: 'composer' | 'agent' | null
+}
+
+/** Day-precision cycle key, so a start matches regardless of its time component. */
+function cycleKey(v: string | null | undefined): string {
+  return v ? new Date(v).toISOString().slice(0, 10) : ''
+}
+
+/** The saved draft row for a cycle, or null. */
+function findRecapDraft(retainer: unknown, cycleStart: string): RecapDraftRow | null {
+  const rows = ((retainer as { recapDrafts?: RecapDraftRow[] } | null)?.recapDrafts ?? []) as RecapDraftRow[]
+  const want = cycleKey(cycleStart)
+  return rows.find((r) => cycleKey(r.cycleStart) === want) ?? null
+}
+
+/**
+ * Keep only the narrative half of a recap. Every number and every piece of client
+ * identity is dropped: `getRecapModel` re-derives those, so storing a copy would
+ * only create a second version that can disagree with the cycle. Bucket rows keep
+ * their label and note and lose their hours for the same reason.
+ */
+function pickRecapNarrative(r: Partial<RecapData>): Partial<RecapData> {
+  const out: Partial<RecapData> = {}
+  if (r.headline !== undefined) out.headline = r.headline
+  if (r.bucketsHeadline !== undefined) out.bucketsHeadline = r.bucketsHeadline
+  if (r.siteHealth !== undefined) out.siteHealth = { label: r.siteHealth.label, note: r.siteHealth.note }
+  if (r.openRequests !== undefined) {
+    out.openRequests = { count: Number(r.openRequests.count) || 0, note: r.openRequests.note }
+  }
+  if (Array.isArray(r.buckets)) {
+    // hours omitted on purpose — mergeRecap zips these by index onto server hours.
+    out.buckets = r.buckets.map((b) => ({ label: b?.label ?? '', note: b?.note ?? '', hours: 0 }))
+  }
+  if (r.showCampaigns !== undefined) out.showCampaigns = r.showCampaigns
+  if (Array.isArray(r.campaigns)) out.campaigns = r.campaigns
+  if (Array.isArray(r.recommendations)) out.recommendations = r.recommendations
+  if (Array.isArray(r.notesDecided)) out.notesDecided = r.notesDecided
+  if (Array.isArray(r.notesOpen)) out.notesOpen = r.notesOpen
+  if (Array.isArray(r.nextMonthPriorities)) out.nextMonthPriorities = r.nextMonthPriorities
+  if (Array.isArray(r.asksFromClient)) out.asksFromClient = r.asksFromClient
+  if (r.nextCallLabel !== undefined) out.nextCallLabel = r.nextCallLabel
+  return out
+}
+
+/**
+ * Persist a drafted recap narrative for one cycle so it can be reviewed and edited
+ * before anything leaves the building. Re-drafting a cycle replaces its row.
+ *
+ * Saving is NOT sending. `sendRetainerRecapEmail` is the only path that reaches a
+ * client and it is always staff-invoked — which is why an agent is allowed to write
+ * here and is never given the send tool.
+ */
+export async function saveRecapDraft(input: {
+  clientAccountId: string
+  /** Any date inside the cycle being recapped. Defaults to the current cycle. */
+  ref?: string
+  recap: Partial<RecapData>
+  source?: 'composer' | 'agent'
+}) {
+  try {
+    const user = await getCurrentUser()
+    if (!user || user.role === 'client') return { success: false as const, error: 'Unauthorized' }
+    if (!input.clientAccountId) return { success: false as const, error: 'A client is required' }
+    if (!input.recap || typeof input.recap !== 'object') {
+      return { success: false as const, error: 'A recap draft is required' }
+    }
+
+    const summary = await getRetainerSummary(input.clientAccountId, input.ref)
+    if (!summary.success) return { success: false as const, error: summary.error }
+    if (!summary.retainer || !summary.cycle) {
+      return { success: false as const, error: 'No retainer cycle to recap' }
+    }
+    const { retainer, cycle } = summary
+
+    // Replace this cycle's row, leave every other cycle's row untouched (including
+    // its original author — only the row being written gets stamped).
+    const existing = (((retainer as any).recapDrafts ?? []) as RecapDraftRow[]).filter(
+      (r) => cycleKey(r.cycleStart) !== cycleKey(cycle.start),
+    )
+    const rows: RecapDraftRow[] = [
+      ...existing,
+      {
+        cycleStart: cycle.start,
+        narrative: pickRecapNarrative(input.recap),
+        draftedAt: new Date().toISOString(),
+        draftedBy: user.id,
+        source: input.source ?? 'composer',
+      },
+    ]
+
+    const payload = await getPayload({ config })
+    await payload.update({
+      collection: 'retainers',
+      id: retainer.id,
+      data: { recapDrafts: rows } as any,
+    })
+
+    if (user.username) revalidatePath(`/u/${user.username}/clients`)
+    return {
+      success: true as const,
+      cycleStart: cycle.start,
+      cycleLabel: cycle.label,
+    }
+  } catch (error) {
+    console.error('[saveRecapDraft]', error)
+    return { success: false as const, error: error instanceof Error ? error.message : 'Failed to save recap draft' }
+  }
+}
+
 export async function getRecapModel(clientAccountId: string, refDate?: string) {
   try {
     const user = await getCurrentUser()
@@ -2082,7 +2202,7 @@ export async function getRecapModel(clientAccountId: string, refDate?: string) {
       nextMonthPriorities = nextSummary.drafts.map((d) => d.description ?? '').filter(Boolean)
     }
 
-    const model = deriveRecapDefaults({
+    const derived = deriveRecapDefaults({
       clientName: account?.name ?? 'Client',
       clientCompany: account?.company ?? null,
       tier: summary.terms.tier,
@@ -2097,11 +2217,18 @@ export async function getRecapModel(clientAccountId: string, refDate?: string) {
       nextMonthPriorities,
     })
 
+    // Layer a saved draft's narrative over the derived model. `mergeRecap` is
+    // server-authoritative on every number, so a draft can only ever contribute
+    // narrative — it cannot move an hour, a fee, or an item count.
+    const saved = findRecapDraft(summary.retainer, summary.cycle.start)
+    const model = saved ? mergeRecap(derived, saved.narrative as Partial<RecapData>) : derived
+
     return {
       success: true as const,
       model,
       retainerId: summary.retainer.id,
       cycleStart: summary.cycle.start,
+      draft: saved ? { draftedAt: saved.draftedAt ?? null, source: saved.source ?? 'composer' } : null,
     }
   } catch (error) {
     console.error('[getRecapModel]', error)

@@ -640,6 +640,12 @@ const Users: CollectionConfig = {
     // Email verification disabled - we use custom 2FA for admin users, clients don't need verification
     // verify: false, (commented out - this is the default)
     tokenExpiration: 60 * 60 * 24 * 30, // 30 days
+    // API-key auth, used ONLY by the MCP server at /api/mcp (src/app/api/mcp/route.ts).
+    // `payload.auth({ headers })` resolves an `Authorization: users API-Key <key>` header
+    // to the owning user, which is what lets the existing cookie-auth server actions run
+    // unchanged for an MCP caller. Keys are per-user, so an MCP session carries exactly
+    // that user's role and access — and the route rejects any non-staff key outright.
+    useAPIKey: true,
     forgotPassword: {
       generateEmailSubject: () => 'Password Reset | ORCACLUB',
       generateEmailHTML: (args) => {

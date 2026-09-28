@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "orcaclub": {
+      "type": "http",
+      "url": "${ORCACLUB_MCP_URL:-https://orcaclub.pro/api/mcp}",
+      "headers": {
+        "Authorization": "users API-Key ${ORCACLUB_MCP_KEY}"
+      }
+    }
+  }
+}

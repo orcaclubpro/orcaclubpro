@@ -360,6 +360,36 @@ const { user } = await payload.auth({ headers: await headers() })
 const { docs } = await payload.find({ collection: 'orders', user, overrideAccess: false })
 ```
 
+## MCP Server — agent access to staff operations
+
+`/api/mcp` (`src/app/api/mcp/route.ts`) exposes staff operations over the Model Context
+Protocol, so an MCP client (Claude Code, or Claude desktop as a custom connector) can draft
+recaps, log work, build packages/SOWs, and manage milestones. Tools live in
+`src/lib/mcp/tools.ts`.
+
+**Auth** — `Authorization: users API-Key <key>`. `payload.auth({ headers })` resolves it to
+the owning user, which is why the existing cookie-auth server actions run unchanged: the
+request carries a real staff identity. Enable "API Key" on your own user in the admin panel
+(`Users.auth.useAPIKey` is on). The route rejects `role: 'client'` keys at the door.
+
+**Stateless** — a fresh `McpServer` + `WebStandardStreamableHTTPServerTransport`
+(`sessionIdGenerator: undefined`) per request, because nothing in memory survives between
+Vercel invocations.
+
+| Rule | Why |
+|------|-----|
+| Every tool wraps an existing `src/actions/` function | The actions own the auth checks, cap math, cycle anchoring, and closed-retainer guards. A second implementation against the Local API would eventually disagree with the app. |
+| No tool moves money or reaches a client | No order creation, no Stripe call, no invoice, no email send. The agent drafts; a human reviews and sends. |
+| Recap drafts persist narrative only | `Retainers.recapDrafts[]` stores `Partial<RecapData>` narrative keyed by `cycleStart`. Every number is re-derived from the cycle on read and merged via `mergeRecap`, which is server-authoritative on all of them — so no stored field can carry a wrong hour to a client. `pickRecapNarrative` in `src/actions/retainers.ts` is the allowlist. |
+| `save_recap_draft` is not a send | It fills the composer for review. `sendRetainerRecapEmail` remains the only path to a client and is always staff-invoked. |
+| Adding a tool | Wrap the action, never `payload.create/update` directly — the same rule as everywhere else in this codebase. |
+
+Client config is `.mcp.json` (committed, holds no secret). `${ORCACLUB_MCP_KEY}` expands from
+the **shell environment** — Claude Code does not read `.env.local` — so export it in your
+shell profile. `ORCACLUB_MCP_URL` overrides the endpoint for local dev. The alternative is
+`claude mcp add --transport http orcaclub <url> --header "Authorization: users API-Key <key>"`,
+which stores the key in local Claude config and needs no env var.
+
 ## Authentication
 
 **Login 2FA is bypassed** — `beforeLogin.ts` passes all authenticated users through (the file contains no re-enable scaffolding; enforcing 2FA again means writing the check back in). Account-setup 2FA (`sendTwoFactorEmail` hook, `/api/resend-2fa`, `/api/verify-2fa`) is still active.

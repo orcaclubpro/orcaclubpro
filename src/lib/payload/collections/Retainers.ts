@@ -321,6 +321,50 @@ const Retainers: CollectionConfig = {
         },
       ],
     },
+    // ── Recap drafts ────────────────────────────────────────────────────────────
+    // A drafted cycle recap waiting for staff review. ONLY the narrative half of
+    // RecapData is stored (see src/lib/retainers/recap.ts): every number — hours
+    // used/unused, items shipped, bucket hours, plan terms — is re-derived from the
+    // cycle on read and merged over this via `mergeRecap`, which is server-authoritative
+    // on all of them. So a draft can never carry a fabricated hour, whoever wrote it.
+    // One row per cycle, keyed by `cycleStart`; re-drafting a cycle replaces its row.
+    {
+      name: 'recapDrafts',
+      type: 'array',
+      admin: {
+        readOnly: true,
+        description:
+          'Drafted cycle recaps awaiting review. Narrative only — all numbers are re-derived from the cycle on read.',
+        condition: (data) => Boolean(data?.recapDrafts?.length),
+      },
+      fields: [
+        {
+          name: 'cycleStart',
+          type: 'date',
+          required: true,
+          index: true,
+          admin: { description: 'ISO start of the cycle this draft recaps — the row key.' },
+        },
+        {
+          name: 'narrative',
+          type: 'json',
+          required: true,
+          admin: { description: 'Partial<RecapData> — narrative fields only.' },
+        },
+        { name: 'draftedAt', type: 'date' },
+        { name: 'draftedBy', type: 'relationship', relationTo: 'users' },
+        {
+          name: 'source',
+          type: 'select',
+          defaultValue: 'composer',
+          options: [
+            { label: 'Composer', value: 'composer' },
+            { label: 'Agent', value: 'agent' },
+          ],
+          admin: { description: 'Where the draft came from. Agent drafts are never sent unreviewed.' },
+        },
+      ],
+    },
   ],
 }
 
