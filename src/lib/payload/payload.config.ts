@@ -38,6 +38,8 @@ import { Timelines } from './collections/Timelines'
 import Solutions from './collections/Solutions'
 import { Pages } from './collections/Pages'
 import { Activity } from './collections/Activity'
+import { OAuthGrants } from './collections/OAuthGrants'
+import { oauthAccessTokenStrategy } from '@/lib/oauth/strategy'
 import { withActivityLogging } from './utils/emailActivityAdapter'
 import { anyone, authenticated, authenticatedOrPublished, adminOnly, adminOrSelf, canAccessAdmin } from './access'
 import { themeSelectOptions, DEFAULT_THEME, isThemeId } from '@/app/(spaces)/themes'
@@ -661,6 +663,10 @@ const Users: CollectionConfig = {
     // PAYLOAD_SECRET must be identical in every environment that reads a key — the lookup
     // index is an HMAC under it, so a mismatch fails auth with a bare 401 and no log line.
     useAPIKey: true,
+    // OAuth access tokens for the MCP endpoint (claude.ai connectors, Claude Code). Runs
+    // before the API-key and JWT strategies and only claims `Bearer oc_at_…` headers.
+    // See src/lib/oauth/core.ts for the whole flow.
+    strategies: [oauthAccessTokenStrategy],
     forgotPassword: {
       generateEmailSubject: () => 'Password Reset | ORCACLUB',
       generateEmailHTML: (args) => {
@@ -1044,7 +1050,7 @@ export default buildConfig({
   editor: lexicalEditor(),
 
   // Define and configure your collections in this array
-  collections: [Media, Clients, Leads, Categories, Tags, Posts, Solutions, Pages, Users, ClientAccounts, Orders, Packages, PackageWorkEntries, ServiceItems, Retainers, RetainerTimeEntries, WebhookEvents, Projects, Tasks, Sprints, Files, Credentials, Timelines, Activity],
+  collections: [Media, Clients, Leads, Categories, Tags, Posts, Solutions, Pages, Users, ClientAccounts, Orders, Packages, PackageWorkEntries, ServiceItems, Retainers, RetainerTimeEntries, WebhookEvents, Projects, Tasks, Sprints, Files, Credentials, Timelines, Activity, OAuthGrants],
 
   // Your Payload secret - should be a complex and secure string, unguessable
   secret: (() => {

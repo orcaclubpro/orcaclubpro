@@ -8,8 +8,8 @@
  * of the same rule and eventually disagreeing with the app.
  *
  * The actions resolve their own caller via `getCurrentUser()` →
- * `payload.auth({ headers })`, which reads the `Authorization: users API-Key <key>`
- * header on the inbound MCP request. So they authenticate the agent exactly as they
+ * `payload.auth({ headers })`, which reads the inbound `Authorization` header (OAuth Bearer or
+ * `users API-Key`). So they authenticate the agent exactly as they
  * authenticate a logged-in staff member in the browser, with no separate code path.
  *
  * ── What is deliberately NOT here ────────────────────────────────────────────────

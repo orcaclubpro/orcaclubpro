@@ -91,6 +91,7 @@ export interface Config {
     credentials: Credential;
     timelines: Timeline;
     activity: Activity;
+    'oauth-grants': OauthGrant;
     'payload-jobs': PayloadJob;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -127,6 +128,7 @@ export interface Config {
     credentials: CredentialsSelect<false> | CredentialsSelect<true>;
     timelines: TimelinesSelect<false> | TimelinesSelect<true>;
     activity: ActivitySelect<false> | ActivitySelect<true>;
+    'oauth-grants': OauthGrantsSelect<false> | OauthGrantsSelect<true>;
     'payload-jobs': PayloadJobsSelect<false> | PayloadJobsSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -2114,6 +2116,37 @@ export interface Activity {
   createdAt: string;
 }
 /**
+ * MCP connections approved via OAuth (claude.ai connectors, Claude Code). Set "Revoked at" to disconnect.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "oauth-grants".
+ */
+export interface OauthGrant {
+  id: string;
+  user: string | User;
+  clientId: string;
+  clientName: string;
+  redirectUri: string;
+  resource: string;
+  scope?: string | null;
+  codeHash?: string | null;
+  codeChallenge?: string | null;
+  codeExpiresAt?: string | null;
+  accessTokenHash?: string | null;
+  accessExpiresAt?: string | null;
+  refreshTokenHash?: string | null;
+  previousRefreshTokenHash?: string | null;
+  rotatedAt?: string | null;
+  refreshExpiresAt?: string | null;
+  lastUsedAt?: string | null;
+  /**
+   * Set to disconnect this client. Takes effect on its next request.
+   */
+  revokedAt?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-jobs".
  */
@@ -2307,6 +2340,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'activity';
         value: string | Activity;
+      } | null)
+    | ({
+        relationTo: 'oauth-grants';
+        value: string | OauthGrant;
       } | null)
     | ({
         relationTo: 'payload-jobs';
@@ -3191,6 +3228,31 @@ export interface ActivitySelect<T extends boolean = true> {
         to?: T;
         id?: T;
       };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "oauth-grants_select".
+ */
+export interface OauthGrantsSelect<T extends boolean = true> {
+  user?: T;
+  clientId?: T;
+  clientName?: T;
+  redirectUri?: T;
+  resource?: T;
+  scope?: T;
+  codeHash?: T;
+  codeChallenge?: T;
+  codeExpiresAt?: T;
+  accessTokenHash?: T;
+  accessExpiresAt?: T;
+  refreshTokenHash?: T;
+  previousRefreshTokenHash?: T;
+  rotatedAt?: T;
+  refreshExpiresAt?: T;
+  lastUsedAt?: T;
+  revokedAt?: T;
   updatedAt?: T;
   createdAt?: T;
 }
