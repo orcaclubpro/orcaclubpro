@@ -41,6 +41,10 @@ const RATE_LIMIT_RULES: Record<string, [number, number]> = {
   '/api/auth/forgot-password':     [5,  15 * 60 * 1000], // 5 / 15 min
   '/api/contact':                  [5,  60 * 60 * 1000], // 5 / hour — spam prevention
   '/api/booking':                  [5,  60 * 60 * 1000], // 5 / hour
+  // OAuth for /api/mcp. Claude calls these from Anthropic's shared egress range, so the
+  // per-IP budget is shared by every connected staff member — keep it roomy.
+  '/api/oauth/register':           [30, 15 * 60 * 1000],
+  '/api/oauth/token':              [120, 15 * 60 * 1000],
 }
 
 function getClientIp(request: NextRequest): string {

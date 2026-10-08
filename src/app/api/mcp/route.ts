@@ -6,9 +6,16 @@
  * and SOWs, managing milestones. The tool surface is in `src/lib/mcp/tools.ts`.
  *
  * ── Auth ────────────────────────────────────────────────────────────────────────
- * Callers send a Payload user API key:
+ * Two ways in, both resolved by `payload.auth({ headers })`:
  *
- *   Authorization: users API-Key <key>
+ *   Authorization: Bearer oc_at_<token>     OAuth — claude.ai connectors, Claude Code
+ *   Authorization: users API-Key <key>      per-user API key (scripts/mcp-api-key.mjs)
+ *
+ * OAuth is the account-wide path: add this URL once as a claude.ai custom connector and
+ * it follows you to every device. An unauthenticated request gets a 401 whose
+ * `WWW-Authenticate` header points at the protected-resource metadata — that header is
+ * what starts the OAuth flow, so it must survive any proxy in front of this route. The
+ * authorization server lives in src/lib/oauth/.
  *
  * `payload.auth({ headers })` resolves that to the owning user, which is why the
  * existing cookie-auth server actions work unchanged here — the request carries a real
@@ -29,6 +36,7 @@ import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/
 
 import { getCurrentUser } from '@/actions/auth'
 import { registerOrcaclubTools } from '@/lib/mcp/tools'
+import { SCOPE, protectedResourceMetadataUrl } from '@/lib/oauth/core'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -36,10 +44,10 @@ export const runtime = 'nodejs'
 export const maxDuration = 300
 
 /** A JSON-RPC-shaped error, so MCP clients surface the reason instead of a bare status. */
-function rpcError(status: number, message: string): Response {
+function rpcError(status: number, message: string, headers: Record<string, string> = {}): Response {
   return Response.json(
     { jsonrpc: '2.0', error: { code: -32_000, message }, id: null },
-    { status, headers: { 'Content-Type': 'application/json' } },
+    { status, headers: { 'Content-Type': 'application/json', ...headers } },
   )
 }
 
@@ -48,7 +56,9 @@ async function handle(req: Request): Promise<Response> {
   // payload.auth, so this resolves the API key's owner.
   const user = await getCurrentUser()
   if (!user) {
-    return rpcError(401, 'Unauthorized — send an Authorization: users API-Key <key> header.')
+    return rpcError(401, 'Unauthorized — connect via OAuth, or send an Authorization: users API-Key <key> header.', {
+      'WWW-Authenticate': `Bearer resource_metadata="${protectedResourceMetadataUrl()}", scope="${SCOPE}"`,
+    })
   }
   if (user.role === 'client') {
     return rpcError(403, 'Forbidden — the MCP tool surface is staff only.')

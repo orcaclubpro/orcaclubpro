@@ -171,7 +171,7 @@ access: {
 stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET)
 ```
 
-## Collections (20 total)
+## Collections (21 total)
 
 Most collections have their own file in `src/lib/payload/collections/`; **Users, Media, Leads, Categories, Tags, and Posts are defined inline in `payload.config.ts`**.
 
@@ -179,7 +179,7 @@ Most collections have their own file in `src/lib/payload/collections/`; **Users,
 
 | Collection | Slug | Purpose | Key Hooks |
 |-----------|------|---------|-----------|
-| Users | `users` | Admin/staff/client auth. Roles: `admin`, `user`, `client` | `beforeLogin`, `createClientAccount`, `syncUserToClientAccount` |
+| Users | `users` | Admin/staff/client auth. Roles: `admin`, `user`, `client`. Auth strategies: local JWT, API key, OAuth (`src/lib/oauth/strategy.ts`) | `beforeLogin`, `createClientAccount`, `syncUserToClientAccount` |
 | ClientAccounts | `client-accounts` | Central client record. Stripe/Shopify IDs, account balance | `createStripeCustomer`, `createShopifyCustomer`, `syncClientAccountToUser` |
 | Orders | `orders` | Financial records with line items. `pending → paid → cancelled` | `updateClientBalance` (afterChange + afterDelete) |
 | Projects | `projects` | Project management with milestones, budget, dates | — |
@@ -190,6 +190,7 @@ Most collections have their own file in `src/lib/payload/collections/`; **Users,
 | ServiceItems | `service-items` | Line-item catalog for packages/orders | — |
 | Credentials | `credentials` | Client-facing credentials attached to projects | — |
 | WebhookEvents | `webhook-events` | Stripe webhook idempotency tracker | — |
+| OAuthGrants | `oauth-grants` | MCP OAuth connections — hashed codes/tokens, revoke via `revokedAt` | — |
 
 ### Content & Marketing
 
@@ -238,6 +239,7 @@ adminOrUserOrOwnOrder     // Staff, or the client whose clientAccount owns the o
 | ServiceItems | adminOrUser | adminOrUser | adminOrUser | adminOnly |
 | Credentials | adminOrUser | adminOrProjectMember | adminOrUser | adminOnly |
 | WebhookEvents | internal | adminOnly | adminOnly | adminOnly |
+| OAuthGrants | internal | adminOrOwnGrant | adminOrOwnGrant | adminOnly |
 | Media | authenticated | anyone | authenticated | authenticated |
 | Clients | authenticated | anyone | authenticated | authenticated |
 | Leads | anyone | authenticated | authenticated | authenticated |
@@ -330,6 +332,7 @@ Components are registered in `payload.config.ts` using **file paths** (not direc
 | `/api/auth/passkey/*` | POST/GET | WebAuthn passkeys — `register-options`, `verify-register`, `authenticate-options`, `verify-authenticate`, `credentials` |
 | `/api/auth/request-unlock`, `/api/auth/unlock-account` | POST | Locked-account recovery flow |
 | `/api/resend-2fa`, `/api/verify-2fa` | POST | Account-setup 2FA verification |
+| `/api/oauth/register`, `/api/oauth/token` | POST | MCP OAuth — stateless client registration; code + refresh grants. Consent UI at `/oauth/authorize`, discovery at `/.well-known/oauth-*` |
 
 ### Business Logic
 
@@ -367,10 +370,29 @@ Protocol, so an MCP client (Claude Code, or Claude desktop as a custom connector
 recaps, log work, build packages/SOWs, and manage milestones. Tools live in
 `src/lib/mcp/tools.ts`.
 
-**Auth** — `Authorization: users API-Key <key>`. `payload.auth({ headers })` resolves it to
-the owning user, which is why the existing cookie-auth server actions run unchanged: the
-request carries a real staff identity. Enable "API Key" on your own user in the admin panel
-(`Users.auth.useAPIKey` is on). The route rejects `role: 'client'` keys at the door.
+**Auth** — two headers, both resolved by `payload.auth({ headers })` to a real staff user, which
+is why the existing cookie-auth server actions run unchanged. The route rejects `role: 'client'`
+callers at the door.
+
+- **OAuth (primary)** — `Authorization: Bearer oc_at_…`. ORCACLUB is its own OAuth 2.1
+  authorization server (`src/lib/oauth/`), so `https://orcaclub.pro/api/mcp` is added **once**
+  as a claude.ai custom connector (Settings → Connectors) and follows the account to web,
+  desktop, mobile, and Claude Code. Flow: 401 + `WWW-Authenticate` → `/.well-known/oauth-*`
+  → client via Claude's metadata document (CIMD) or stateless `/api/oauth/register` →
+  `/oauth/authorize` (staff consent, PKCE S256) → `/api/oauth/token`. Tokens are opaque; only
+  SHA-256 hashes live in `oauth-grants` (revoke = set `revokedAt`). The `oauthAccessToken`
+  strategy on `Users.auth.strategies` turns the Bearer back into the user.
+- **API key** — `Authorization: users API-Key <key>`, for scripts. Provision ONLY via
+  `node scripts/mcp-api-key.mjs` (Payload hides the field in the admin UI, and a malformed
+  stored value breaks every read of that user).
+
+| OAuth rule | Why |
+|------------|-----|
+| Redirects must pass `isAllowedRedirect` (Claude's callback or loopback) | Whatever a client registers. A staff member phished into approving can't send a code anywhere else. Widen with `OAUTH_EXTRA_REDIRECT_URIS`. |
+| CIMD fetches only allowlisted hosts (`claude.ai`, `claude.com`, `OAUTH_CIMD_HOSTS`) | Fetching arbitrary client_id URLs from the server is SSRF. |
+| Code redemption and refresh rotation use atomic `findOneAndUpdate` | A Local API read-then-write lets two concurrent requests redeem one code. |
+| `OAUTH_ISSUER` for local testing | `.env.local` points `NEXT_PUBLIC_SERVER_URL` at prod; set `OAUTH_ISSUER=http://localhost:3000` when running the flow locally. |
+| No `Authorization` header entry in `.mcp.json` | A local entry for the same URL hides the account connector in Claude Code, and a rejected header disables the OAuth fallback. |
 
 **Stateless** — a fresh `McpServer` + `WebStandardStreamableHTTPServerTransport`
 (`sessionIdGenerator: undefined`) per request, because nothing in memory survives between
@@ -384,11 +406,9 @@ Vercel invocations.
 | `save_recap_draft` is not a send | It fills the composer for review. `sendRetainerRecapEmail` remains the only path to a client and is always staff-invoked. |
 | Adding a tool | Wrap the action, never `payload.create/update` directly — the same rule as everywhere else in this codebase. |
 
-Client config is `.mcp.json` (committed, holds no secret). `${ORCACLUB_MCP_KEY}` expands from
-the **shell environment** — Claude Code does not read `.env.local` — so export it in your
-shell profile. `ORCACLUB_MCP_URL` overrides the endpoint for local dev. The alternative is
-`claude mcp add --transport http orcaclub <url> --header "Authorization: users API-Key <key>"`,
-which stores the key in local Claude config and needs no env var.
+Testing: `npx @modelcontextprotocol/inspector` against a local dev server (with
+`OAUTH_ISSUER`). claude.ai itself can only reach the deployed URL; it caches discovery docs
+for ~5 minutes after a change.
 
 ## Authentication
 

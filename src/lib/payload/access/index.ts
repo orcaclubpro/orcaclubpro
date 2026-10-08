@@ -170,6 +170,17 @@ export const adminOrUserOrOwnOrder: Access = ({ req: { user } }) => {
   return false
 }
 
+/**
+ * Admin sees all OAuth grants; other staff see only the connections they approved.
+ * Clients never hold grants (the authorize screen is staff-only).
+ */
+export const adminOrOwnGrant: Access = ({ req: { user } }) => {
+  if (!user) return false
+  if (user.role === 'admin') return true
+  if (user.role === 'user') return { user: { equals: user.id } }
+  return false
+}
+
 // ============================================================================
 // FIELD-LEVEL ACCESS FUNCTIONS
 // ============================================================================
