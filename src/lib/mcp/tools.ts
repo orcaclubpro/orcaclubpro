@@ -48,6 +48,7 @@ import {
   createTrackedTask,
   updateTrackedTask,
   listTrackedTasks,
+  getTrackedTask,
   listProjects,
   getPackageOverview,
   getProjectProgress,
@@ -628,8 +629,10 @@ export function registerOrcaclubTools(server: McpServer): void {
     {
       title: 'List tasks',
       description:
-        'Tasks, newest-updated first, filtered by package, project, client account, status (one or several), owner ' +
-        'bot or ccq id. Paged: limit (default 25, max 100) and page.',
+        'Tasks filtered by package, project, client account, status (one or several), owner bot or ccq id, and ' +
+        'updatedSince / createdSince (ISO date-time, inclusive). sort: -updatedAt (default), -createdAt, createdAt ' +
+        '(oldest first, for pollers) or dueDate. Rows include createdAt and updatedAt. Paged: limit (default 25, ' +
+        'max 100) and page; the envelope carries nextPage (null on the last page).',
       inputSchema: z
         .object({
           packageId: z.string().optional(),
@@ -638,12 +641,27 @@ export function registerOrcaclubTools(server: McpServer): void {
           status: z.union([TASK_STATUS, z.array(TASK_STATUS)]).optional(),
           ownerBot: z.string().optional(),
           ccqTaskId: z.string().optional(),
+          sort: z.enum(['-updatedAt', '-createdAt', 'createdAt', 'dueDate']).optional(),
+          updatedSince: z.string().datetime({ offset: true }).optional().describe('ISO date-time, inclusive.'),
+          createdSince: z.string().datetime({ offset: true }).optional().describe('ISO date-time, inclusive.'),
           limit: z.number().int().min(1).max(100).optional(),
           page: z.number().int().min(1).optional(),
         })
         .strict(),
     },
     async (input) => run(() => listTrackedTasks(input)),
+  )
+
+  server.registerTool(
+    'task_get',
+    {
+      title: 'Get a task',
+      description:
+        'One task by id: the task_list row (status, owner, ccq id, QA record, createdAt, updatedAt) plus its ' +
+        'internal botContext (brief, repo, branch, live URL, decisions, notes). Read-only.',
+      inputSchema: z.object({ id: z.string().min(1) }).strict(),
+    },
+    async ({ id }) => run(() => getTrackedTask(id)),
   )
 
   server.registerTool(

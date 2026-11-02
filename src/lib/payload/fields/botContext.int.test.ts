@@ -1527,6 +1527,66 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
     expect(byClient.items.every((t: any) => t.status === 'pending')).toBe(true)
   })
 
+  test('MCP task_list v2: createdAt in rows, sort createdAt (oldest first), createdSince/updatedSince, nextPage', async () => {
+    const { packageId } = await trackingFixture()
+    const c = await mcpClient()
+    const titles = ['v2-first', 'v2-second', 'v2-third']
+    for (const title of titles) {
+      ok(await c.callTool({ name: 'task_create', arguments: { actor: 'gojo', title, packageId } }))
+      await Bun.sleep(5)
+    }
+    const oldest = ok(await c.callTool({ name: 'task_list', arguments: { packageId, sort: 'createdAt' } }))
+    expect(oldest.items.map((t: any) => t.title)).toEqual(titles)
+    expect(oldest.items.every((t: any) => typeof t.createdAt === 'string')).toBe(true)
+    expect(oldest.nextPage).toBeNull()
+
+    const newest = ok(await c.callTool({ name: 'task_list', arguments: { packageId, sort: '-createdAt' } }))
+    expect(newest.items.map((t: any) => t.title)).toEqual([...titles].reverse())
+
+    const paged = ok(await c.callTool({ name: 'task_list', arguments: { packageId, sort: 'createdAt', limit: 2 } }))
+    expect(paged.hasNextPage).toBe(true)
+    expect(paged.nextPage).toBe(2)
+    const page2 = ok(await c.callTool({ name: 'task_list', arguments: { packageId, sort: 'createdAt', limit: 2, page: 2 } }))
+    expect(page2.items.map((t: any) => t.title)).toEqual(['v2-third'])
+
+    const since = oldest.items[1].createdAt
+    const created = ok(await c.callTool({ name: 'task_list', arguments: { packageId, sort: 'createdAt', createdSince: since } }))
+    expect(created.items.map((t: any) => t.title)).toEqual(['v2-second', 'v2-third'])
+
+    ok(await c.callTool({ name: 'task_update', arguments: { actor: 'gojo', id: oldest.items[0].id, title: 'v2-first-edited' } }))
+    const edited = ok(await c.callTool({ name: 'task_list', arguments: { packageId } }))
+    const firstRow = edited.items.find((t: any) => t.title === 'v2-first-edited')
+    const updated = ok(
+      await c.callTool({ name: 'task_list', arguments: { packageId, updatedSince: firstRow.updatedAt } }),
+    )
+    expect(updated.items.map((t: any) => t.title)).toEqual(['v2-first-edited'])
+
+    const future = ok(
+      await c.callTool({ name: 'task_list', arguments: { packageId, createdSince: '2999-01-01T00:00:00.000Z' } }),
+    )
+    expect(future.items).toHaveLength(0)
+    const bad: any = await c.callTool({ name: 'task_list', arguments: { packageId, updatedSince: 'yesterday' } })
+    expect(bad.isError).toBe(true)
+    const badSort: any = await c.callTool({ name: 'task_list', arguments: { packageId, sort: 'title' } })
+    expect(badSort.isError).toBe(true)
+  })
+
+  test('MCP task_get returns the row plus botContext, and a clean error for a missing or malformed id', async () => {
+    const c = await mcpClient()
+    const out = ok(await c.callTool({ name: 'task_get', arguments: { id: taskId } }))
+    expect(out.task.id).toBe(taskId)
+    expect(typeof out.task.createdAt).toBe('string')
+    expect(out.task.botContext).toMatchObject({ brief: CTX.brief, repo: CTX.repo, ownerBot: 'vegapunk' })
+    for (const id of ['6ae000000000000000000000', 'not-an-id']) {
+      const res: any = await c.callTool({ name: 'task_get', arguments: { id } })
+      expect(res.isError).toBe(true)
+      expect(JSON.stringify(res.content)).toContain('not found')
+    }
+    // task_get is read-only: it takes no actor and writes no audit row.
+    const extra: any = await c.callTool({ name: 'task_get', arguments: { id: taskId, actor: 'orca' } })
+    expect(extra.isError).toBe(true)
+  })
+
   test('MCP get_package returns tasks, milestones and progress percent, without prices', async () => {
     const { packageId } = await trackingFixture()
     const c = await mcpClient()
@@ -1668,6 +1728,7 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
       task_create: { actor: 'vegapunk', title: 'Leak task', projectId },
       task_update: { actor: 'vegapunk', id: taskId, title: 'Leak Task' },
       task_list: {},
+      task_get: { id: taskId },
       get_package: { packageId },
       get_project_progress: { projectId },
     }
@@ -1679,7 +1740,7 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
       expect({ tool: t.name, leak: LEAK.test(out) }).toEqual({ tool: t.name, leak: false })
       covered.push(t.name)
     }
-    expect(covered.length).toBeGreaterThanOrEqual(23)
+    expect(covered.length).toBeGreaterThanOrEqual(24)
 
     // log_work: loggedBy is an id, and the self-reported actor is stored.
     expect(typeof loggedEntry.entry.loggedBy === 'string' || loggedEntry.entry.loggedBy?.name !== undefined).toBe(true)
