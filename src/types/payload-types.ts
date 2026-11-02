@@ -1911,6 +1911,10 @@ export interface RetainerTimeEntry {
    */
   loggedBy?: (string | null) | User;
   /**
+   * Bot or ccq task id that logged this via MCP (self-reported)
+   */
+  actor?: string | null;
+  /**
    * hours/mo at log time
    */
   capAtLog?: number | null;
@@ -3107,6 +3111,7 @@ export interface RetainerTimeEntriesSelect<T extends boolean = true> {
   retainer?: T;
   clientAccount?: T;
   loggedBy?: T;
+  actor?: T;
   capAtLog?: T;
   overageRateAtLog?: T;
   feeAtLog?: T;

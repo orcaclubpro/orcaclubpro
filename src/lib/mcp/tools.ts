@@ -55,6 +55,8 @@ import { ACTOR } from '@/lib/mcp/actor'
 import { checkWriteInput, prepareSowSave } from '@/lib/mcp/writeGuard'
 import { runAsMcp } from '@/lib/payload/access/mcpMoney'
 import { recordAgentWrite, targetIdOf } from '@/lib/mcp/audit'
+import { sanitizeToolOutput } from '@/lib/mcp/sanitize'
+import { CUSTOM_LINE_BLOCKED } from '@/lib/payload/fields/catalogLinePrice'
 
 // ── Result plumbing ─────────────────────────────────────────────────────────────
 
@@ -63,10 +65,14 @@ type ToolResult = {
   isError?: boolean
 }
 
-/** JSON-encode a value as MCP text content. */
-function text(value: unknown, isError = false): ToolResult {
+/**
+ * JSON-encode a value as MCP text content. Every tool result passes through here,
+ * so this is where `sanitizeToolOutput` runs: populated users collapse to
+ * `{ id, name }` and API keys, sessions, passkeys and 2FA codes never leave.
+ */
+export function text(value: unknown, isError = false): ToolResult {
   return {
-    content: [{ type: 'text', text: JSON.stringify(value, null, 2) }],
+    content: [{ type: 'text', text: JSON.stringify(sanitizeToolOutput(value), null, 2) }],
     ...(isError ? { isError: true } : {}),
   }
 }
@@ -289,7 +295,8 @@ export function registerOrcaclubTools(server: McpServer): void {
         description: z.string().optional(),
       }),
     },
-    guardedWrite('log_work', async (input) => run(() => logHours(input))),
+    // The self-reported actor is stored on the entry: all bots share one MCP user.
+    guardedWrite('log_work', async (input, actor) => run(() => logHours({ ...input, actor }))),
   )
 
   server.registerTool(
@@ -377,7 +384,12 @@ export function registerOrcaclubTools(server: McpServer): void {
         notes: z.string().optional().describe('Internal notes — not client-facing.'),
         lineItems: z.array(
           z.object({
-            serviceItemId: z.string().describe('Service catalog item id (list_service_items); sets the price.'),
+            // Optional in the schema only so a missing id gets the friendly catalog
+            // error below instead of a bare "Required" validation failure.
+            serviceItemId: z
+              .string()
+              .optional()
+              .describe('Required. Service catalog item id (list_service_items); sets the price.'),
             name: z.string(),
             description: z.string().optional(),
             quantity: z.number().optional(),
@@ -394,15 +406,16 @@ export function registerOrcaclubTools(server: McpServer): void {
         ),
       }),
     },
-    guardedWrite('create_package', async ({ lineItems, ...rest }) =>
+    guardedWrite('create_package', async ({ lineItems, ...rest }) => {
+      if (lineItems.some((li) => !li.serviceItemId?.trim())) return text({ error: CUSTOM_LINE_BLOCKED }, true)
       // No price is sent: the Packages fill hook prices each catalog line from its service item.
-      run(() =>
+      return run(() =>
         createPackage({
           ...rest,
           lineItems: lineItems.map(({ serviceItemId, ...item }) => ({ ...item, sourceServiceItem: serviceItemId })),
         }),
-      ),
-    ),
+      )
+    }),
   )
 
   server.registerTool(

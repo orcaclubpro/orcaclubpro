@@ -121,6 +121,7 @@ export async function createPackage({
         type: 'template',
         status: 'draft',
       },
+      depth: 0, // never return populated user/client docs
     })
 
     return { success: true, package: pkg }

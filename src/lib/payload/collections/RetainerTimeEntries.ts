@@ -124,6 +124,14 @@ const RetainerTimeEntries: CollectionConfig = {
       relationTo: 'users',
       admin: { readOnly: true, description: 'Staff member who logged this entry' },
     },
+    {
+      // Self-reported by the MCP log_work tool. All bots share one MCP user, so
+      // `loggedBy` alone can't say which bot logged the hours. Unverified.
+      name: 'actor',
+      type: 'text',
+      index: true,
+      admin: { readOnly: true, description: 'Bot or ccq task id that logged this via MCP (self-reported)' },
+    },
     // ── Term snapshot ──────────────────────────────────────────────────────────
     // The retainer's terms frozen at log time, so past months keep the cap/rate
     // they were actually billed under even after the retainer is later edited.

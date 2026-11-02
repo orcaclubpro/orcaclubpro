@@ -1846,6 +1846,8 @@ export async function logHours(input: {
   category?: TimeEntryCategory
   priority?: TimeEntryPriority
   description?: string
+  /** Self-reported MCP actor (bot name or ccq id). Unverified; set only by the log_work tool. */
+  actor?: string
 }) {
   try {
     const user = await getCurrentUser()
@@ -1901,7 +1903,11 @@ export async function logHours(input: {
         overageRateAtLog: terms.overageRate,
         feeAtLog: terms.monthlyFee,
         tierAtLog: terms.tier,
+        ...(input.actor ? { actor: input.actor } : {}),
       } as any,
+      // depth 0: a populated entry carries full user docs (loggedBy,
+      // retainer.clientAccount.assignedTo) back to the caller.
+      depth: 0,
     })
 
     return { success: true as const, id: entry.id, entry: entry as unknown as TimeEntryDoc }
@@ -1954,6 +1960,7 @@ export async function createDraft(input: {
         description: input.description.trim(),
         loggedBy: user.id,
       } as any,
+      depth: 0, // never return populated user docs
     })
 
     return { success: true as const, id: entry.id, entry: entry as unknown as TimeEntryDoc }
@@ -2006,7 +2013,7 @@ export async function updateTimeEntry(input: {
     if (input.description !== undefined) data.description = input.description
     if (input.hours !== undefined) data.hours = input.hours
 
-    const updated = await payload.update({ collection: 'retainer-time-entries', id: input.id, data: data as any })
+    const updated = await payload.update({ collection: 'retainer-time-entries', id: input.id, data: data as any, depth: 0 })
     return { success: true as const, id: input.id, entry: updated as unknown as TimeEntryDoc }
   } catch (error) {
     console.error('[updateTimeEntry]', error)

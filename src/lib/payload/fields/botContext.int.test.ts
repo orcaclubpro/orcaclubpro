@@ -1460,4 +1460,112 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
     expect(docs.length).toBeGreaterThan(0)
     expect(docs[0]?.tool).toBe('save_sow')
   })
+
+  // ── MCP output never leaks user secrets ─────────────────────────────────────
+  // log_work used to return loggedBy and retainer.clientAccount.assignedTo as
+  // full user docs (API key, sessions, passkeys). Every tool is called here with
+  // a staff user that carries those fields, and no output may contain them.
+
+  const LEAK = /apiKey|apiKeyIndex|enableAPIKey|"sessions"|passkey|PASSKEY-FAKE|loginTwoFactor|twoFactorCode|"hash"|"salt"|SESSION-FAKE|resetPassword/
+
+  test('MCP: no tool output contains apiKey, sessions or passkey data (all tools)', async () => {
+    const db = payload.db as any
+    await db.collections.users.updateOne(
+      { _id: staff.id },
+      {
+        $set: {
+          name: 'Staff Admin',
+          sessions: [{ id: 'SESSION-FAKE', createdAt: new Date(), expiresAt: new Date(Date.now() + 3600_000) }],
+          passkeyCredentials: [{ credentialId: 'PASSKEY-FAKE', publicKey: 'PASSKEY-FAKE', counter: 0 }],
+          loginTwoFactorCode: '000000',
+        },
+      },
+    )
+    const ca = await db.collections['client-accounts'].create({
+      name: 'Leak Retainer Co',
+      email: 'leakret@test.local',
+      assignedTo: [staff.id],
+    })
+    const caId = String(ca._id)
+    const r = await db.collections.retainers.create({
+      clientAccount: ca._id,
+      tier: 'basic',
+      status: 'active',
+      startDate: '2026-01-01T00:00:00.000Z',
+      activatedAt: '2026-01-01T00:00:00.000Z',
+      monthlyFee: 1000,
+      hoursPerMonth: 10,
+      overageRate: 120,
+    })
+    const retainerId = String(r._id)
+    const si = await db.collections['service-items'].create({ name: 'Leak SI', billingType: 'fixed', defaultPrice: 100 })
+
+    const c = await mcpClient()
+    const { tools } = await c.listTools()
+    const call = async (name: string, args: Record<string, unknown>) => {
+      const res: any = await c.callTool({ name, arguments: args })
+      return JSON.stringify(res.content)
+    }
+
+    const logged = await call('log_work', {
+      actor: 'vegapunk',
+      retainerId,
+      clientAccountId: caId,
+      date: '2026-11-01',
+      hours: 1,
+      description: 'Leak check',
+    })
+    const loggedEntry = JSON.parse(JSON.parse(logged)[0].text)
+    expect(loggedEntry.success).toBe(true)
+    const entryId = String(loggedEntry.id)
+
+    const ARGS: Record<string, Record<string, unknown>> = {
+      list_clients: {},
+      get_retainer_portfolio: {},
+      get_retainer_summary: { clientAccountId: caId },
+      get_recap_draft: { clientAccountId: caId },
+      save_recap_draft: { actor: 'vegapunk', clientAccountId: caId, recap: { headline: 'Leak check' } },
+      get_scope_recap: { retainerId },
+      log_work: { actor: 'vegapunk', retainerId, clientAccountId: caId, date: '2026-11-02', hours: 1 },
+      create_draft_entry: { actor: 'vegapunk', retainerId, clientAccountId: caId, date: '2026-11-03', description: 'Plan' },
+      update_time_entry: { actor: 'vegapunk', id: entryId, description: 'Leak check, edited' },
+      list_packages: {},
+      list_service_items: {},
+      create_package: { actor: 'vegapunk', name: 'Leak pkg', lineItems: [{ serviceItemId: String(si._id), name: 'Line' }] },
+      get_sow_draft: { packageId },
+      save_sow: { actor: 'vegapunk', packageId, sowData: {} },
+      create_milestone: { actor: 'vegapunk', projectId, title: 'Leak MS', date: '2026-12-01' },
+      update_milestone: { actor: 'vegapunk', projectId, milestoneIndex: 0, title: 'Leak MS', date: '2026-12-02' },
+      toggle_milestone: { actor: 'vegapunk', projectId, milestoneIndex: 0 },
+      task_create: { actor: 'vegapunk', title: 'Leak task', projectId },
+      task_update: { actor: 'vegapunk', id: taskId, title: 'Leak Task' },
+      task_list: {},
+      get_package: { packageId },
+      get_project_progress: { projectId },
+    }
+    const covered: string[] = []
+    for (const t of tools) {
+      // A new tool without args here still gets called with {} (an error result
+      // is still checked), so nothing slips past this test unexamined.
+      const out = await call(t.name, ARGS[t.name] ?? {})
+      expect({ tool: t.name, leak: LEAK.test(out) }).toEqual({ tool: t.name, leak: false })
+      covered.push(t.name)
+    }
+    expect(covered.length).toBeGreaterThanOrEqual(22)
+
+    // log_work: loggedBy is an id, and the self-reported actor is stored.
+    expect(typeof loggedEntry.entry.loggedBy === 'string' || loggedEntry.entry.loggedBy?.name !== undefined).toBe(true)
+    const stored: any = await payload.findByID({ collection: 'retainer-time-entries', id: entryId, depth: 0 })
+    expect(stored.actor).toBe('vegapunk')
+  })
+
+  test('MCP create_package line without serviceItemId returns the friendly catalog error', async () => {
+    const c = await mcpClient()
+    const res: any = await c.callTool({
+      name: 'create_package',
+      arguments: { actor: 'vegapunk', name: 'Bot no SI', lineItems: [{ name: 'Site' }] },
+    })
+    expect(res.isError).toBe(true)
+    expect(JSON.parse(res.content[0].text).error).toBe(CUSTOM_LINE_BLOCKED)
+  })
 })
