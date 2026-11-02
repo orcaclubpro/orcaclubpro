@@ -562,6 +562,87 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
     expect(created.lineItems[0].price).toBe(9999)
   })
 
+  // ── Catalog line items never end at $0 (fields/linePriceFromServiceItem.ts) ──
+
+  async function expectCatalogReject(pkgId: string, line: Record<string, unknown>, msg: RegExp) {
+    const before: any = await payload.findByID({ collection: 'packages', id: pkgId, user: staff, overrideAccess: false })
+    let status: number | undefined
+    let message = ''
+    try {
+      await payload.update({
+        collection: 'packages',
+        id: pkgId,
+        data: { lineItems: [...before.lineItems, line] } as any,
+        user: staffUser,
+        overrideAccess: false,
+      })
+    } catch (e: any) {
+      status = e.status
+      message = String(e.message)
+    }
+    expect(status).toBe(400)
+    expect(message).toMatch(msg)
+    const after: any = await payload.findByID({ collection: 'packages', id: pkgId, user: staff, overrideAccess: false })
+    expect(after.lineItems).toEqual(before.lineItems)
+    expect(after.updatedAt).toBe(before.updatedAt)
+  }
+
+  test('catalog line never $0: service item with no defaultPrice is rejected with 400, package unchanged', async () => {
+    const db = payload.db as any
+    const si = await db.collections['service-items'].create({ name: 'Unpriced', billingType: 'fixed' })
+    const siId = String(si._id)
+    const pkg = await moneyFixture()
+    await expectCatalogReject(
+      pkg.id,
+      { name: 'Unpriced line', quantity: 1, sourceServiceItem: siId },
+      new RegExp(`"Unpriced line".*${siId}.*no price set`),
+    )
+  })
+
+  test('catalog line never $0: service item with defaultPrice 0 is rejected with 400', async () => {
+    const db = payload.db as any
+    const si = await db.collections['service-items'].create({ name: 'Free', billingType: 'fixed', defaultPrice: 0 })
+    const siId = String(si._id)
+    const pkg = await moneyFixture()
+    await expectCatalogReject(pkg.id, { name: 'Zero line', quantity: 1, sourceServiceItem: siId }, /"Zero line".*no price set/)
+  })
+
+  test('catalog line never $0: missing service item id is rejected with 400', async () => {
+    const pkg = await moneyFixture()
+    const missingId = '0123456789abcdef01234567'
+    await expectCatalogReject(
+      pkg.id,
+      { name: 'Ghost line', quantity: 1, sourceServiceItem: missingId },
+      new RegExp(`"Ghost line".*${missingId}.*does not exist`),
+    )
+  })
+
+  test('catalog line never $0: non-catalog line at $0 still saves (no regression)', async () => {
+    // Mirrors MCP create_package: non-catalog lines are written at price 0 for staff to price later.
+    const pkg = await moneyFixture()
+    await payload.update({
+      collection: 'packages',
+      id: pkg.id,
+      data: { lineItems: [pkg.lineItems[0], { name: 'Custom work', quantity: 1, price: 0 }] } as any,
+      user: staff,
+      overrideAccess: false,
+    })
+    const back: any = await payload.findByID({ collection: 'packages', id: pkg.id, user: staff, overrideAccess: false })
+    expect(back.lineItems).toHaveLength(2)
+    expect(back.lineItems[1].name).toBe('Custom work')
+    expect(back.lineItems[1].price).toBe(0)
+    expect(back.lineItems[0].price).toBe(3000)
+
+    // And on create, like createPackage does.
+    const created: any = await payload.create({
+      collection: 'packages',
+      data: { name: 'Unpriced draft', type: 'template', status: 'draft', lineItems: [{ name: 'Custom work', price: 0 }] } as any,
+      user: staff,
+      overrideAccess: false,
+    })
+    expect(created.lineItems[0].price).toBe(0)
+  })
+
   // ── Package line-item Stripe ids are staff-only (fields/packageStripeIds.ts) ──
 
   test('client cannot read lineItems.stripePriceId (API path, overrideAccess:false)', async () => {

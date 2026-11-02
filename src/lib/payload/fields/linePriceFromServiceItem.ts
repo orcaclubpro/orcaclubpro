@@ -13,10 +13,14 @@
  *   `sourceServiceItem` changed, are filled. A stored line keeps its price even
  *   if the catalog price later changes.
  * - Only an empty price is filled, so an admin's explicit price stands.
+ * - A catalog-linked line never ends at $0: if a line would be filled but its
+ *   service item is missing or has no positive `defaultPrice`, the write fails
+ *   with a 400. Lines without `sourceServiceItem` are not touched (MCP
+ *   `create_package` makes those at $0 on purpose for staff to price).
  * - Runs after the MCP money guard, which judges the caller's input, not the
  *   server-filled value.
  */
-import type { CollectionBeforeChangeHook } from 'payload'
+import { APIError, type CollectionBeforeChangeHook } from 'payload'
 
 type Row = Record<string, unknown> & { id?: unknown; price?: unknown; sourceServiceItem?: unknown }
 
@@ -33,18 +37,26 @@ export const fillLinePriceFromServiceItem: CollectionBeforeChangeHook = async ({
     if (row?.id != null) storedById.set(String(row.id), row)
   }
 
-  const cache = new Map<string, number | null>()
-  const catalogPrice = async (id: string): Promise<number | null> => {
-    if (!cache.has(id)) {
-      const item = (await req.payload.db.findOne({
+  type Lookup = { found: false } | { found: true; price: number | null }
+  const cache = new Map<string, Lookup>()
+  const catalogPrice = async (id: string): Promise<Lookup> => {
+    const hit = cache.get(id)
+    if (hit) return hit
+    let item: { defaultPrice?: unknown } | null = null
+    try {
+      item = (await req.payload.db.findOne({
         collection: 'service-items',
         where: { id: { equals: id } },
         req,
       })) as { defaultPrice?: unknown } | null
-      const price = typeof item?.defaultPrice === 'number' ? item.defaultPrice : null
-      cache.set(id, price)
+    } catch {
+      item = null // malformed id: treat as not found
     }
-    return cache.get(id) ?? null
+    const result: Lookup = item
+      ? { found: true, price: typeof item.defaultPrice === 'number' ? item.defaultPrice : null }
+      : { found: false }
+    cache.set(id, result)
+    return result
   }
 
   for (const row of data.lineItems as Row[]) {
@@ -54,8 +66,20 @@ export const fillLinePriceFromServiceItem: CollectionBeforeChangeHook = async ({
     const isNew = !stored
     const sourceChanged = stored ? idOf(stored.sourceServiceItem) !== source : false
     if (!isNew && !sourceChanged) continue
-    const price = await catalogPrice(source)
-    if (price != null) row.price = price
+    const lookup = await catalogPrice(source)
+    const label = typeof row.name === 'string' && row.name ? `"${row.name}"` : '(unnamed)'
+    if (!lookup.found) {
+      throw new APIError(`Line item ${label}: service item ${source} does not exist.`, 400, undefined, true)
+    }
+    if (lookup.price == null || !Number.isFinite(lookup.price) || lookup.price <= 0) {
+      throw new APIError(
+        `Line item ${label}: catalog item ${source} has no price set (defaultPrice must be greater than 0).`,
+        400,
+        undefined,
+        true,
+      )
+    }
+    row.price = lookup.price
   }
   return data
 }
