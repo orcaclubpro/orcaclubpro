@@ -509,6 +509,59 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
     ).rejects.toThrow(/retainer-time-entries: money fields are read-only for MCP requests \(overageRateAtLog\)/)
   })
 
+  test('line item added from a service item gets its price server-side from the locked defaultPrice', async () => {
+    const db = payload.db as any
+    const si = await db.collections['service-items'].create({ name: 'SEO audit', billingType: 'fixed', defaultPrice: 1250 })
+    const siId = String(si._id)
+    const pkg = await moneyFixture()
+    const existing = pkg.lineItems[0]
+
+    // Staff (role user) can add a catalog line without a price; the server fills it.
+    await payload.update({
+      collection: 'packages',
+      id: pkg.id,
+      data: { lineItems: [existing, { name: 'SEO audit', quantity: 1, sourceServiceItem: siId }] } as any,
+      user: staffUser,
+      overrideAccess: false,
+    })
+    let back: any = await payload.findByID({ collection: 'packages', id: pkg.id, user: staff, overrideAccess: false })
+    expect(back.lineItems).toHaveLength(2)
+    expect(back.lineItems[1].price).toBe(1250)
+    expect(back.lineItems[0].price).toBe(3000) // untouched
+
+    // Staff still cannot choose the price, even on a catalog line.
+    await expect(
+      payload.update({
+        collection: 'packages',
+        id: pkg.id,
+        data: { lineItems: [...back.lineItems, { name: 'SEO audit', sourceServiceItem: siId, price: 1 }] } as any,
+        user: staffUser,
+        overrideAccess: false,
+      }),
+    ).rejects.toThrow(/read-only for non-admin users/)
+
+    // A stored catalog line keeps its price when the catalog price changes later.
+    await db.collections['service-items'].updateOne({ _id: si._id }, { $set: { defaultPrice: 9999 } })
+    await payload.update({
+      collection: 'packages',
+      id: pkg.id,
+      data: { notes: 'later edit', lineItems: back.lineItems } as any,
+      user: staffUser,
+      overrideAccess: false,
+    })
+    back = await payload.findByID({ collection: 'packages', id: pkg.id, user: staff, overrideAccess: false })
+    expect(back.lineItems[1].price).toBe(1250)
+
+    // On create too: an admin creating a package from the catalog gets the catalog price.
+    const created: any = await payload.create({
+      collection: 'packages',
+      data: { name: 'From catalog', type: 'template', status: 'draft', lineItems: [{ name: 'SEO audit', sourceServiceItem: siId }] } as any,
+      user: staff,
+      overrideAccess: false,
+    })
+    expect(created.lineItems[0].price).toBe(9999)
+  })
+
   // ── Package line-item Stripe ids are staff-only (fields/packageStripeIds.ts) ──
 
   test('client cannot read lineItems.stripePriceId (API path, overrideAccess:false)', async () => {

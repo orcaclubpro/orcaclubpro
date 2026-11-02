@@ -1,6 +1,7 @@
 import type { CollectionConfig } from 'payload'
 import { adminOrUser, adminOnly, staffOnlyField } from '../access/index'
 import { restorePackageStripeIds, stripPackageStripeIds } from '../fields/packageStripeIds'
+import { fillLinePriceFromServiceItem } from '../fields/linePriceFromServiceItem'
 import { botContextField, guardBotContextWrite, stripBotContext } from '../fields/botContext'
 import { MONEY_FIELD_ACCESS, PACKAGE_MONEY, rejectMcpMoneyWrites, rejectDeniedMoneyWrites } from '../access/mcpMoney'
 
@@ -37,7 +38,13 @@ const Packages: CollectionConfig = {
   hooks: {
     // 403 naming the money fields for MCP / non-admin access-checked writes (access/mcpMoney.ts).
     beforeOperation: [rejectDeniedMoneyWrites('packages', PACKAGE_MONEY)],
-    beforeChange: [rejectMcpMoneyWrites('packages', PACKAGE_MONEY), restorePackageStripeIds, guardBotContextWrite],
+    beforeChange: [
+      rejectMcpMoneyWrites('packages', PACKAGE_MONEY),
+      // After the MCP guard: it judges the caller's input, not the catalog price.
+      fillLinePriceFromServiceItem,
+      restorePackageStripeIds,
+      guardBotContextWrite,
+    ],
     afterRead: [stripBotContext, stripPackageStripeIds],
   },
   indexes: [
