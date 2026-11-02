@@ -2,7 +2,7 @@ import type { CollectionConfig } from 'payload'
 import { createStripeCustomerHook } from '../hooks/createStripeCustomer'
 import { syncClientAccountToUser } from '../hooks/syncClientAccountToUser'
 import { clearClientAccountOnDelete } from '../hooks/clearClientAccountOnDelete'
-import { MONEY_FIELD_ACCESS, CLIENT_ACCOUNT_MONEY, rejectMcpMoneyWrites } from '../access/mcpMoney'
+import { MONEY_FIELD_ACCESS, CLIENT_ACCOUNT_MONEY, rejectMcpMoneyWrites, rejectDeniedMoneyWrites } from '../access/mcpMoney'
 
 const ClientAccounts: CollectionConfig = {
   slug: 'client-accounts',
@@ -12,6 +12,8 @@ const ClientAccounts: CollectionConfig = {
     group: 'Clients',
   },
   hooks: {
+    // 403 naming the money fields for MCP / non-admin access-checked writes (access/mcpMoney.ts).
+    beforeOperation: [rejectDeniedMoneyWrites('client-accounts', CLIENT_ACCOUNT_MONEY)],
     beforeChange: [rejectMcpMoneyWrites('client-accounts', CLIENT_ACCOUNT_MONEY), createStripeCustomerHook],
     afterChange: [syncClientAccountToUser],
     afterDelete: [clearClientAccountOnDelete],

@@ -29,13 +29,30 @@
  */
 import { AsyncLocalStorage } from 'node:async_hooks'
 import { APIError } from 'payload'
-import type { CollectionBeforeChangeHook, FieldAccess, PayloadRequest } from 'payload'
+import type {
+  CollectionBeforeChangeHook,
+  CollectionBeforeOperationHook,
+  CollectionSlug,
+  FieldAccess,
+  PayloadRequest,
+} from 'payload'
 
 const mcpStore = new AsyncLocalStorage<{ viaMcp: true }>()
 
 /** Run `fn` (and every Payload call it makes) as an MCP request. */
 export function runAsMcp<T>(fn: () => T): T {
   return mcpStore.run({ viaMcp: true }, fn)
+}
+
+/**
+ * Run `fn` outside any MCP marker. Only for system bookkeeping that derives money
+ * purely from values already stored, never from caller input — e.g. a retainer's
+ * scheduled term change being promoted on read (`settleRetainer`). A request
+ * authenticated by an MCP strategy or carrying `context.viaMcp` stays MCP; this
+ * only lifts the AsyncLocalStorage marker for calls made with no user.
+ */
+export function runOutsideMcp<T>(fn: () => T): T {
+  return mcpStore.exit(fn)
 }
 
 /** Auth strategies whose callers are MCP clients or scripts, never a browser login. */
@@ -114,12 +131,78 @@ export function moneyOnCreate(data: Doc, spec: MoneySpec): string[] {
 }
 
 /** The 403 every money rejection uses; it names the fields. */
-export function moneyError(slug: string, fields: string[]): APIError {
+export function moneyError(slug: string, fields: string[], who: 'MCP requests' | 'non-admin users' = 'MCP requests'): APIError {
   return new APIError(
-    `${slug}: money fields are read-only for MCP requests (${fields.join(', ')}). ` +
+    `${slug}: money fields are read-only for ${who} (${fields.join(', ')}). ` +
       'Only an admin with a normal login can change prices, fees, status or Stripe fields.',
     403,
   )
+}
+
+/**
+ * Overlay update data on the stored doc. Array rows in `data` that match a stored
+ * row by id inherit the subfields they leave out: non-staff readers never see
+ * some subfields (e.g. lineItems[].stripePriceId), and the restore hooks keep the
+ * stored value, so an omitted subfield is not a change.
+ */
+function overlay(stored: Doc, data: Doc, spec: MoneySpec): Doc {
+  const merged: Doc = { ...stored, ...data }
+  for (const arr of Object.keys(spec.arrays ?? {})) {
+    if (!Array.isArray(data[arr]) || !Array.isArray(stored[arr])) continue
+    const byId = new Map((stored[arr] as Doc[]).filter((r) => r?.id != null).map((r) => [String(r.id), r]))
+    merged[arr] = (data[arr] as Doc[]).map((row) => {
+      const prev = row?.id != null ? byId.get(String(row.id)) : undefined
+      return prev ? { ...prev, ...row } : row
+    })
+  }
+  return merged
+}
+
+/**
+ * beforeOperation: refuse, with a 403 that names the fields, any create/update
+ * that would change a money field when the caller may not:
+ * - an MCP-marked request (any access mode); or
+ * - a non-admin caller on an access-checked call (`overrideAccess: false`: REST,
+ *   GraphQL, admin panel), where field access would otherwise drop the fields
+ *   silently and report success.
+ * Trusted server code (`overrideAccess: true`, not MCP) is unaffected.
+ * Unchanged money values (a full-document round-trip) pass.
+ */
+export function rejectDeniedMoneyWrites(
+  slug: CollectionSlug,
+  spec: MoneySpec,
+  opts: { skipMcpCreate?: boolean } = {},
+): CollectionBeforeOperationHook {
+  return async ({ args, operation, req }) => {
+    if (operation !== 'create' && operation !== 'update') return args
+    const data = (args as { data?: unknown }).data
+    if (!data || typeof data !== 'object' || Array.isArray(data)) return args
+
+    const mcp = isMcpRequest(req)
+    if (mcp && operation === 'create' && opts.skipMcpCreate) return args
+    const accessChecked = (args as { overrideAccess?: boolean }).overrideAccess === false
+    if (!mcp && (!accessChecked || req?.user?.role === 'admin')) return args
+    const who = mcp ? 'MCP requests' : 'non-admin users'
+
+    let changed: string[]
+    if (operation === 'create') {
+      changed = moneyOnCreate(data as Doc, spec)
+    } else {
+      const id = (args as { id?: unknown }).id
+      if (id != null) {
+        const stored = (await req.payload.db.findOne({ collection: slug, where: { id: { equals: id } }, req })) as Doc | null
+        changed = moneyDiff(stored, overlay(stored ?? {}, data as Doc, spec), spec)
+      } else {
+        // Bulk update by `where`: no single original to compare, so any money
+        // value in the data counts.
+        changed = [...moneyProjection(data as Doc, spec).entries()]
+          .filter(([path, v]) => v !== null || path.split(/[.[]/)[0]! in (data as Doc))
+          .map(([path]) => path)
+      }
+    }
+    if (changed.length > 0) throw moneyError(slug, changed, who)
+    return args
+  }
 }
 
 /**

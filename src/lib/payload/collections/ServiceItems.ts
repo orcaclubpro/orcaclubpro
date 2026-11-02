@@ -1,6 +1,6 @@
 import type { CollectionConfig } from 'payload'
 import { adminOrUser, adminOnly } from '../access/index'
-import { MONEY_FIELD_ACCESS, SERVICE_ITEM_MONEY, rejectMcpMoneyWrites } from '../access/mcpMoney'
+import { MONEY_FIELD_ACCESS, SERVICE_ITEM_MONEY, rejectMcpMoneyWrites, rejectDeniedMoneyWrites } from '../access/mcpMoney'
 
 /**
  * ServiceItems Collection
@@ -15,6 +15,8 @@ import { MONEY_FIELD_ACCESS, SERVICE_ITEM_MONEY, rejectMcpMoneyWrites } from '..
 const ServiceItems: CollectionConfig = {
   slug: 'service-items',
   hooks: {
+    // 403 naming the money fields for MCP / non-admin access-checked writes (access/mcpMoney.ts).
+    beforeOperation: [rejectDeniedMoneyWrites('service-items', SERVICE_ITEM_MONEY)],
     // Money fields are read-only for MCP requests (access/mcpMoney.ts).
     beforeChange: [rejectMcpMoneyWrites('service-items', SERVICE_ITEM_MONEY)],
   },

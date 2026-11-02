@@ -1,6 +1,6 @@
 import type { CollectionConfig } from 'payload'
 import { adminOrUser, adminOnly } from '../access/index'
-import { MONEY_FIELD_ACCESS, RETAINER_MONEY, rejectMcpMoneyWrites } from '../access/mcpMoney'
+import { MONEY_FIELD_ACCESS, RETAINER_MONEY, rejectMcpMoneyWrites, rejectDeniedMoneyWrites } from '../access/mcpMoney'
 
 /**
  * Retainers Collection
@@ -32,6 +32,8 @@ import { MONEY_FIELD_ACCESS, RETAINER_MONEY, rejectMcpMoneyWrites } from '../acc
 const Retainers: CollectionConfig = {
   slug: 'retainers',
   hooks: {
+    // 403 naming the money fields for MCP / non-admin access-checked writes (access/mcpMoney.ts).
+    beforeOperation: [rejectDeniedMoneyWrites('retainers', RETAINER_MONEY)],
     // Money fields are read-only for MCP requests (access/mcpMoney.ts).
     beforeChange: [rejectMcpMoneyWrites('retainers', RETAINER_MONEY)],
   },

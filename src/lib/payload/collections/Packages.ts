@@ -2,7 +2,7 @@ import type { CollectionConfig } from 'payload'
 import { adminOrUser, adminOnly, staffOnlyField } from '../access/index'
 import { restorePackageStripeIds, stripPackageStripeIds } from '../fields/packageStripeIds'
 import { botContextField, guardBotContextWrite, stripBotContext } from '../fields/botContext'
-import { MONEY_FIELD_ACCESS, PACKAGE_MONEY, rejectMcpMoneyWrites } from '../access/mcpMoney'
+import { MONEY_FIELD_ACCESS, PACKAGE_MONEY, rejectMcpMoneyWrites, rejectDeniedMoneyWrites } from '../access/mcpMoney'
 
 const Packages: CollectionConfig = {
   slug: 'packages',
@@ -35,6 +35,8 @@ const Packages: CollectionConfig = {
     delete: adminOnly,
   },
   hooks: {
+    // 403 naming the money fields for MCP / non-admin access-checked writes (access/mcpMoney.ts).
+    beforeOperation: [rejectDeniedMoneyWrites('packages', PACKAGE_MONEY)],
     beforeChange: [rejectMcpMoneyWrites('packages', PACKAGE_MONEY), restorePackageStripeIds, guardBotContextWrite],
     afterRead: [stripBotContext, stripPackageStripeIds],
   },

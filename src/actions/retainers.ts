@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { runOutsideMcp } from '@/lib/payload/access/mcpMoney'
 import { getCurrentUser } from '@/actions/auth'
 import { getPayload } from 'payload'
 import config from '@payload-config'
@@ -386,11 +387,13 @@ async function settleRetainer(
   // honest landing place for those records is closed, with the era they billed intact
   // and reachable. Done lazily on read so no migration is needed.
   if (isScoping(retainer) && iso(retainer.nonRetainerSince)) {
-    const healed = await payload.update({
-      collection: 'retainers',
-      id: retainer.id,
-      data: { status: 'inactive', endedAt: iso(retainer.nonRetainerSince) } as any,
-    })
+    const healed = await runOutsideMcp(() =>
+      payload.update({
+        collection: 'retainers',
+        id: retainer.id,
+        data: { status: 'inactive', endedAt: iso(retainer.nonRetainerSince) } as any,
+      }),
+    )
     return healed as unknown as RetainerDoc
   }
 
@@ -422,11 +425,16 @@ async function settleRetainer(
 
   if (Object.keys(updates).length === 0) return retainer
 
-  const settled = await payload.update({
-    collection: 'retainers',
-    id: retainer.id,
-    data: updates as any,
-  })
+  // Settling promotes terms already stored on the retainer (or winds it down) on
+  // the clock — no caller input — so it runs outside the MCP money lock; otherwise
+  // every MCP read of a retainer with a due change would 403 (access/mcpMoney.ts).
+  const settled = await runOutsideMcp(() =>
+    payload.update({
+      collection: 'retainers',
+      id: retainer.id,
+      data: updates as any,
+    }),
+  )
   return settled as unknown as RetainerDoc
 }
 

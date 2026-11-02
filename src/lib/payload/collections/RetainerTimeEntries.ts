@@ -1,6 +1,6 @@
 import type { CollectionConfig } from 'payload'
 import { adminOrUser, adminOnly } from '../access/index'
-import { MONEY_FIELD_ACCESS, rejectMcpTimeEntryMoneyWrites } from '../access/mcpMoney'
+import { MONEY_FIELD_ACCESS, rejectMcpTimeEntryMoneyWrites, rejectDeniedMoneyWrites, TIME_ENTRY_MONEY } from '../access/mcpMoney'
 import { trackRetainerLogActivity } from '../hooks/recordActivity'
 
 /**
@@ -28,6 +28,8 @@ const RetainerTimeEntries: CollectionConfig = {
     delete: adminOnly,
   },
   hooks: {
+    // 403 naming the money fields for MCP / non-admin access-checked writes (access/mcpMoney.ts).
+    beforeOperation: [rejectDeniedMoneyWrites('retainer-time-entries', TIME_ENTRY_MONEY, { skipMcpCreate: true })],
     // A "log added" is a new entry — draft entries are planned work, not time spent.
     // Snapshots (overageRateAtLog, feeAtLog) are read-only for MCP beyond the stored terms.
     beforeChange: [rejectMcpTimeEntryMoneyWrites],

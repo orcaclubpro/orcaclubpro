@@ -30,6 +30,8 @@ const CTX = {
 
 let payload: Payload
 let staff: any // role admin
+/** The user the server actions see as the MCP caller (getAuthenticatedUser is mocked). */
+let mcpCaller: any = null
 let staffUser: any // role user (non-admin staff), assigned to the project
 let client: any
 let clientAccountId: string
@@ -72,6 +74,14 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
       HeadingFeature: () => ({}),
     }))
     process.env.PAYLOAD_SECRET ||= 'local-test-secret-not-real'
+    // Server actions resolve their caller from request headers; outside Next there
+    // is no request, so hand them the test's MCP caller directly.
+    mock.module('@/lib/payload/get-current-user', () => ({ getAuthenticatedUser: async () => mcpCaller }))
+    mock.module('next/cache', () => ({
+      revalidatePath: () => undefined,
+      revalidateTag: () => undefined,
+      unstable_cache: (fn: unknown) => fn,
+    }))
     const { getPayload } = await import('payload')
     const { default: config } = await import('@payload-config')
     payload = await getPayload({ config })
@@ -92,6 +102,7 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
       clientAccount: ca._id,
     })
     staff = asUser(staffDoc.toObject())
+    mcpCaller = { ...staff, _strategy: 'oauth-access-token' } // Chance's admin user on an MCP token
     staffUser = asUser(staffUserDoc.toObject())
     client = { ...asUser(clientDoc.toObject()), clientAccount: clientAccountId }
 
@@ -370,18 +381,12 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
     ).rejects.toThrow(MCP_REJECT)
   })
 
-  test('admin on an OAuth (MCP) token is treated as MCP: money field access denied and hook rejects', async () => {
+  test('admin on an OAuth (MCP) token is treated as MCP: 403 naming the fields in both access modes', async () => {
     const pkg = await moneyFixture()
     const oauthAdmin = { ...staff, _strategy: 'oauth-access-token' }
-    // overrideAccess:false → field access drops the price silently.
-    await payload.update({
-      collection: 'packages',
-      id: pkg.id,
-      data: { hourlyRate: 1 } as any,
-      user: oauthAdmin,
-      overrideAccess: false,
-    }).catch(() => undefined)
-    // overrideAccess:true (server-action style) → the hook rejects.
+    await expect(
+      payload.update({ collection: 'packages', id: pkg.id, data: { hourlyRate: 1 } as any, user: oauthAdmin, overrideAccess: false }),
+    ).rejects.toThrow(/packages: money fields are read-only for MCP requests \(hourlyRate\)/)
     await expect(
       payload.update({ collection: 'packages', id: pkg.id, data: { hourlyRate: 2 } as any, user: oauthAdmin }),
     ).rejects.toThrow(MCP_REJECT)
@@ -389,13 +394,66 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
     expect(back.hourlyRate).toBe(150)
   })
 
-  test('only admin with a normal login can update money fields (role user is denied by field access)', async () => {
+  test('staff (role user) update including money fields gets 403 naming them, not a silent drop', async () => {
     const pkg = await moneyFixture()
-    await payload.update({ collection: 'packages', id: pkg.id, data: { hourlyRate: 99 } as any, user: staffUser, overrideAccess: false })
-    let back: any = await payload.findByID({ collection: 'packages', id: pkg.id, user: staff, overrideAccess: false })
+    const row = { ...pkg.lineItems[0], price: 1 }
+    let message = ''
+    let status = 0
+    await payload
+      .update({
+        collection: 'packages',
+        id: pkg.id,
+        data: { hourlyRate: 99, name: 'renamed', lineItems: [row] } as any,
+        user: staffUser,
+        overrideAccess: false,
+      })
+      .catch((e: any) => {
+        message = e.message
+        status = e.status
+      })
+    expect(status).toBe(403)
+    expect(message).toContain('read-only for non-admin users')
+    expect(message).toContain('hourlyRate')
+    expect(message).toContain('.price')
+    const back: any = await payload.findByID({ collection: 'packages', id: pkg.id, user: staff, overrideAccess: false })
     expect(back.hourlyRate).toBe(150)
+    expect(back.name).toBe('Money Proposal')
+  })
+
+  test('staff (role user) round-trip with unchanged money fields still saves', async () => {
+    const pkg = await moneyFixture()
+    const asStaffUser: any = await payload.findByID({ collection: 'packages', id: pkg.id, user: staffUser, overrideAccess: false })
+    await payload.update({
+      collection: 'packages',
+      id: pkg.id,
+      data: { ...asStaffUser, notes: 'staff note' },
+      user: staffUser,
+      overrideAccess: false,
+    })
+    const back: any = await payload.findByID({ collection: 'packages', id: pkg.id, user: staff, overrideAccess: false })
+    expect(back.notes).toBe('staff note')
+    expect(back.lineItems[0].stripePriceId).toBe('price_secret_1')
+  })
+
+  test('MCP update that includes a money field returns 403 naming it before field access runs', async () => {
+    const { runAsMcp } = await import('@/lib/payload/access/mcpMoney')
+    const pkg = await moneyFixture()
+    let status = 0
+    let message = ''
+    await runAsMcp(() =>
+      payload.update({ collection: 'packages', id: pkg.id, data: { status: 'accepted' } as any, user: staff, overrideAccess: false }),
+    ).catch((e: any) => {
+      status = e.status
+      message = e.message
+    })
+    expect(status).toBe(403)
+    expect(message).toContain('read-only for MCP requests (status)')
+  })
+
+  test('only an admin with a normal login can update money fields', async () => {
+    const pkg = await moneyFixture()
     await payload.update({ collection: 'packages', id: pkg.id, data: { hourlyRate: 175 } as any, user: staff, overrideAccess: false })
-    back = await payload.findByID({ collection: 'packages', id: pkg.id, user: staff, overrideAccess: false })
+    const back: any = await payload.findByID({ collection: 'packages', id: pkg.id, user: staff, overrideAccess: false })
     expect(back.hourlyRate).toBe(175)
   })
 
@@ -546,6 +604,62 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
       budget: 100,
     })
     expect(msg).toContain('budget')
+  })
+
+  test('MCP get_retainer_summary still works when a scheduled fee change is due (settle runs outside the money lock)', async () => {
+    const db = payload.db as any
+    const ca = await db.collections['client-accounts'].create({ name: 'Settle Co', email: 'settle@test.local' })
+    const past = '2026-01-01T00:00:00.000Z'
+    const r = await db.collections.retainers.create({
+      clientAccount: ca._id,
+      tier: 'basic',
+      status: 'active',
+      startDate: past,
+      activatedAt: past,
+      monthlyFee: 1000,
+      hoursPerMonth: 10,
+      overageRate: 120,
+      pendingMonthlyFee: 2000,
+      pendingOverageRate: 150,
+      pendingEffectiveFrom: '2026-06-01T00:00:00.000Z',
+    })
+    const c = await mcpClient()
+    const res: any = await c.callTool({ name: 'get_retainer_summary', arguments: { clientAccountId: String(ca._id) } })
+    expect(res.isError).toBeFalsy()
+    const settled: any = await payload.findByID({ collection: 'retainers', id: String(r._id) })
+    expect(settled.monthlyFee).toBe(2000)
+    expect(settled.overageRate).toBe(150)
+  })
+
+  test('MCP log_work still creates an entry with the retainer rate snapshot', async () => {
+    const db = payload.db as any
+    const ca = await db.collections['client-accounts'].create({ name: 'Log Co', email: 'log@test.local' })
+    const r = await db.collections.retainers.create({
+      clientAccount: ca._id,
+      tier: 'basic',
+      status: 'active',
+      startDate: '2026-01-01T00:00:00.000Z',
+      activatedAt: '2026-01-01T00:00:00.000Z',
+      monthlyFee: 1000,
+      hoursPerMonth: 10,
+      overageRate: 120,
+    })
+    const c = await mcpClient()
+    const res: any = await c.callTool({
+      name: 'log_work',
+      arguments: {
+        actor: 'vegapunk',
+        retainerId: String(r._id),
+        clientAccountId: String(ca._id),
+        date: '2026-11-01',
+        hours: 1.5,
+        description: 'Fixed the nav',
+      },
+    })
+    expect(res.isError).toBeFalsy()
+    const { docs } = await payload.find({ collection: 'retainer-time-entries', where: { retainer: { equals: String(r._id) } } })
+    expect(docs.length).toBe(1)
+    expect(docs[0]?.overageRateAtLog).toBe(120)
   })
 
   test('rejected MCP write leaves an agent-write activity row with the actor', async () => {

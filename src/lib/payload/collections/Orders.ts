@@ -2,7 +2,7 @@ import type { CollectionConfig } from 'payload'
 import { updateClientBalance, revertClientBalance } from '../hooks/updateClientBalance'
 import { trackOrderActivity } from '../hooks/recordActivity'
 import { adminOnly, adminOrUser, adminOrUserOrOwnOrder } from '../access'
-import { MONEY_FIELD_ACCESS, ORDER_MONEY, rejectMcpMoneyWrites } from '../access/mcpMoney'
+import { MONEY_FIELD_ACCESS, ORDER_MONEY, rejectMcpMoneyWrites, rejectDeniedMoneyWrites } from '../access/mcpMoney'
 
 const Orders: CollectionConfig = {
   slug: 'orders',
@@ -14,6 +14,8 @@ const Orders: CollectionConfig = {
     group: 'Clients',
   },
   hooks: {
+    // 403 naming the money fields for MCP / non-admin access-checked writes (access/mcpMoney.ts).
+    beforeOperation: [rejectDeniedMoneyWrites('orders', ORDER_MONEY)],
     beforeChange: [rejectMcpMoneyWrites('orders', ORDER_MONEY)],
     beforeValidate: [
       async ({ data, operation }) => {
