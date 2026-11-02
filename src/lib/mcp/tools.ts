@@ -721,7 +721,8 @@ export function registerOrcaclubTools(server: McpServer): void {
         'entryId); recap | statement (clientAccountId, optional ref date inside the cycle); scope-recap | ' +
         'retainer-proposal (retainerId). Returns filename, size, sha256, the client and a sourceRef. The PDF ' +
         'bytes come back as base64 only with includeBytes: true; they are hundreds of KB, so an agent should ' +
-        'leave it off and let the local drafts saver (mcploop/drafts.py) write the file to Drive.',
+        'leave it off and let the local drafts saver (mcploop/drafts.py) write the file to Drive. invoice-copy and ' +
+        'statement are on hold (needs-review) until the money review lands.',
       inputSchema: z
         .object({
           type: z.enum(DRAFT_TYPES),
