@@ -52,6 +52,7 @@ import {
   getPackageOverview,
   getProjectProgress,
 } from '@/actions/taskTracking'
+import { getClientStatus } from '@/actions/clientStatus'
 import type { SowFormData } from '@/lib/document-generators'
 import { ACTOR, normalizeActor } from '@/lib/mcp/actor'
 import { checkWriteInput, prepareSowSave } from '@/lib/mcp/writeGuard'
@@ -629,21 +630,36 @@ export function registerOrcaclubTools(server: McpServer): void {
       title: 'List tasks',
       description:
         'Tasks, newest-updated first, filtered by package, project, client account, status (one or several), owner ' +
-        'bot or ccq id. Paged: limit (default 25, max 100) and page.',
+        'bot (one or several, e.g. ["orca","vegapunk"]) or ccq id. Owner + status together is one call, e.g. ' +
+        '{ ownerBot: ["orca","vegapunk"], status: ["pending","in-progress"] }. Paged: limit (default 25, max 100) and page.',
       inputSchema: z
         .object({
           packageId: z.string().optional(),
           projectId: z.string().optional(),
           clientAccountId: z.string().optional(),
           status: z.union([TASK_STATUS, z.array(TASK_STATUS)]).optional(),
-          ownerBot: z.string().optional(),
+          ownerBot: z
+            .union([z.string().min(1), z.array(z.string().min(1)).min(1).max(20)])
+            .optional()
+            .describe('One owner bot / ccq id, or a list (matches any of them). Case-insensitive for bot names.'),
           ccqTaskId: z.string().optional(),
           limit: z.number().int().min(1).max(100).optional(),
           page: z.number().int().min(1).optional(),
         })
         .strict(),
     },
-    async (input) => run(() => listTrackedTasks(input)),
+    async (input) =>
+      run(() =>
+        listTrackedTasks({
+          ...input,
+          // Stored owners are canonical (guardedWrite normalizes them), so match on the same form.
+          ownerBot: Array.isArray(input.ownerBot)
+            ? input.ownerBot.map((o) => normalizeActor(o))
+            : input.ownerBot === undefined
+              ? undefined
+              : normalizeActor(input.ownerBot),
+        }),
+      ),
   )
 
   server.registerTool(
@@ -691,5 +707,30 @@ export function registerOrcaclubTools(server: McpServer): void {
       inputSchema: z.object({ projectId: z.string() }).strict(),
     },
     async ({ projectId }) => run(() => getProjectProgress(projectId)),
+  )
+
+  // ── Per-client digest (plan step 3, feature #8) ──────────────────────────────
+
+  server.registerTool(
+    'client_status',
+    {
+      title: 'Client status digest',
+      description:
+        'Per-client roll-up of open work: task counts (open, pending, in-progress, blocked, waiting-chance, overdue), ' +
+        'the waiting-on-Chance and blocked tasks, open tasks oldest first, open projects with progress percent and ' +
+        'next milestone, retainer hours (used/cap, cycle, health) and draft documents. One client with ' +
+        'clientAccountId, or every client you can see (clients with nothing open are omitted unless includeEmpty). ' +
+        'Most urgent client first. Read-only; no prices or amounts.',
+      inputSchema: z
+        .object({
+          clientAccountId: z.string().optional(),
+          includeDrafts: z.boolean().optional().describe('Default true.'),
+          includeRetainer: z.boolean().optional().describe('Default true.'),
+          includeEmpty: z.boolean().optional().describe('Keep clients with nothing open. Default false.'),
+          taskLimit: z.number().int().min(1).max(200).optional().describe('Task rows per client (default 50); counts are always complete.'),
+        })
+        .strict(),
+    },
+    async (input) => run(() => getClientStatus(input)),
   )
 }

@@ -1670,6 +1670,7 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
       task_list: {},
       get_package: { packageId },
       get_project_progress: { projectId },
+      client_status: { clientAccountId: caId },
     }
     const covered: string[] = []
     for (const t of tools) {
@@ -1764,5 +1765,129 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
     }
     await rejected(c, 'project_create', { name: 'Bot budget project', clientAccountId: MCP_PROJECT_CLIENT_ID })
     expect(await projectsNamed('Bot budget project')).toHaveLength(0)
+  })
+  // ── task_list by owner + status, and client_status (plan step 3) ─────────────
+
+  /** A fresh client with one project and four open tasks (one per status) plus a closed one. */
+  async function digestFixture(tag: string) {
+    const db = payload.db as any
+    const ca = await db.collections['client-accounts'].create({ name: `Digest ${tag}`, email: `digest-${tag}@test.local` })
+    const caId = String(ca._id)
+    const project = await payload.create({
+      collection: 'projects',
+      data: {
+        name: `Digest project ${tag}`,
+        client: caId,
+        assignedTo: [staffUser.id],
+        botContext: CTX,
+        milestones: [
+          { title: 'Kickoff', date: '2026-10-01', completed: true },
+          { title: 'Launch', date: '2026-12-01', completed: false },
+        ],
+      } as any,
+      user: staff,
+      overrideAccess: false,
+      context: { skipActivityLog: true },
+    })
+    const pid = String(project.id)
+    const c = await mcpClient()
+    const make = async (title: string, ownerBot: string, status: 'pending' | 'in-progress' | 'completed') =>
+      ok(
+        await c.callTool({
+          name: 'task_create',
+          arguments: {
+            actor: 'orca',
+            title,
+            projectId: pid,
+            ownerBot,
+            status,
+            ...(status === 'completed' ? {} : { dueDate: title.includes('late') ? '2026-01-01' : '2099-01-01' }),
+          },
+        }),
+      ).task.id as string
+    const pending = await make(`${tag} pending late`, 'orca', 'pending')
+    const working = await make(`${tag} working`, 'vegapunk', 'in-progress')
+    const blocked = await make(`${tag} blocked`, 'sia', 'pending')
+    const waiting = await make(`${tag} waiting`, 'orca', 'pending')
+    const done = await make(`${tag} done`, 'orca', 'completed')
+    // blocked / waiting-chance arrive with plan step 2; set them on the raw rows so the
+    // digest proves it counts them already (updateOne skips mongoose validators).
+    const { Types } = await import('mongoose')
+    const tasks = db.collections.tasks
+    await tasks.updateOne({ _id: new Types.ObjectId(blocked) }, { $set: { status: 'blocked' } })
+    await tasks.updateOne({ _id: new Types.ObjectId(waiting) }, { $set: { status: 'waiting-chance' } })
+    // A draft SOW for the client, and one already sent (must not show).
+    await db.collections.files.create({ name: `Draft SOW ${tag}`, documentTemplate: 'sow', documentStatus: 'draft', clientAccount: ca._id, project: project.id })
+    await db.collections.files.create({ name: `Sent SOW ${tag}`, documentTemplate: 'sow', documentStatus: 'sent', clientAccount: ca._id, project: project.id })
+    return { c, caId, pid, ids: { pending, working, blocked, waiting, done } }
+  }
+
+  test('MCP task_list takes ownerBot as a list, combined with a status list (one call)', async () => {
+    const { c, pid, ids } = await digestFixture('own')
+    const out = ok(
+      await c.callTool({
+        name: 'task_list',
+        arguments: { projectId: pid, ownerBot: ['ORCA', 'vegapunk'], status: ['pending', 'in-progress'], limit: 100 },
+      }),
+    )
+    expect(out.items.map((t: any) => t.id).sort()).toEqual([ids.pending, ids.working].sort())
+    // A single owner still works, case-insensitively.
+    const one = ok(await c.callTool({ name: 'task_list', arguments: { projectId: pid, ownerBot: 'Sia', limit: 100 } }))
+    expect(one.items.map((t: any) => t.id)).toEqual([ids.blocked])
+    // An empty list is rejected by the schema, not treated as "everyone".
+    await rejected(c, 'task_list', { projectId: pid, ownerBot: [] })
+  })
+
+  test('MCP client_status rolls up one client: counts, waiting-on-Chance, blocked, projects, drafts, no money', async () => {
+    const { c, caId, pid, ids } = await digestFixture('one')
+    const out = ok(await c.callTool({ name: 'client_status', arguments: { clientAccountId: caId } }))
+    expect(out.clients).toHaveLength(1)
+    const row = out.clients[0]
+    expect(row.clientAccountId).toBe(caId)
+    expect(row.name).toBe('Digest one')
+    expect(row.counts).toEqual({ open: 4, pending: 1, inProgress: 1, blocked: 1, waitingChance: 1, other: 0, overdue: 1 })
+    expect(row.waitingOnChance.map((t: any) => t.id)).toEqual([ids.waiting])
+    expect(row.blocked.map((t: any) => t.id)).toEqual([ids.blocked])
+    // Oldest first, closed task left out.
+    expect(row.tasks.map((t: any) => t.id)).toEqual([ids.pending, ids.working, ids.blocked, ids.waiting])
+    expect(row.tasks.some((t: any) => t.id === ids.done)).toBe(false)
+    expect(row.projects).toHaveLength(1)
+    expect(row.projects[0]).toMatchObject({ id: pid, tasksDone: 1, tasksTotal: 5, milestonesDone: 1, milestonesTotal: 2 })
+    expect(row.projects[0].nextMilestone).toMatchObject({ title: 'Launch' })
+    expect(row.drafts.map((d: any) => d.name)).toEqual(['Draft SOW one'])
+    expect(row.hours).toBeNull()
+    expect(out.totals.waitingChance).toBe(1)
+    const raw = JSON.stringify(out)
+    expect(raw).not.toContain(CTX.brief)
+    expect(/price|amount|stripe|overage|rate"/i.test(raw)).toBe(false)
+  })
+
+  test('MCP client_status for every client omits empty ones and puts waiting-on-Chance first', async () => {
+    const { c, caId } = await digestFixture('all')
+    const db = payload.db as any
+    const quiet = await db.collections['client-accounts'].create({ name: 'Digest quiet', email: 'quiet@test.local' })
+    const out = ok(await c.callTool({ name: 'client_status', arguments: { includeRetainer: false } }))
+    const names = out.clients.map((r: any) => r.name)
+    expect(names).toContain('Digest all')
+    expect(names).not.toContain('Digest quiet')
+    expect(out.omittedEmptyClients).toBeGreaterThanOrEqual(1)
+    // Every client with a waiting task sorts ahead of every client without one.
+    const flags = out.clients.map((r: any) => r.counts.waitingChance > 0)
+    expect(flags.indexOf(false) === -1 || flags.lastIndexOf(true) < flags.indexOf(false)).toBe(true)
+    expect(out.clients.find((r: any) => r.clientAccountId === caId).counts.waitingChance).toBe(1)
+    const withEmpty = ok(await c.callTool({ name: 'client_status', arguments: { includeEmpty: true, includeRetainer: false } }))
+    expect(withEmpty.clients.map((r: any) => r.clientAccountId)).toContain(String(quiet._id))
+  })
+
+  test('MCP client_status rejects a client-role caller and a bad id', async () => {
+    const c = await mcpClient()
+    expect((await rejected(c, 'client_status', { clientAccountId: 'not-an-id' })).toLowerCase()).toContain('valid id')
+    const prev = mcpCaller
+    mcpCaller = client
+    try {
+      expect(await rejected(c, 'client_status', {})).toContain('Unauthorized')
+    } finally {
+      mcpCaller = prev
+    }
   })
 })

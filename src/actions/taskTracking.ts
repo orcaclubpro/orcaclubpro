@@ -313,7 +313,8 @@ export async function listTrackedTasks(input: {
   projectId?: string
   clientAccountId?: string
   status?: TaskStatus | TaskStatus[]
-  ownerBot?: string
+  /** One owner, or several (any-of). */
+  ownerBot?: string | string[]
   ccqTaskId?: string
   limit?: number
   page?: number
@@ -333,7 +334,12 @@ export async function listTrackedTasks(input: {
     if (input.status) {
       and.push(Array.isArray(input.status) ? { status: { in: input.status } } : { status: { equals: input.status } })
     }
-    if (input.ownerBot) and.push({ ownerBot: { equals: input.ownerBot } })
+    if (Array.isArray(input.ownerBot)) {
+      const owners = [...new Set(input.ownerBot.map((o) => o.trim()).filter(Boolean))]
+      if (owners.length) and.push({ ownerBot: { in: owners } })
+    } else if (input.ownerBot?.trim()) {
+      and.push({ ownerBot: { equals: input.ownerBot.trim() } })
+    }
     if (input.ccqTaskId) and.push({ ccqTaskId: { equals: input.ccqTaskId } })
 
     const res = await payload.find({
