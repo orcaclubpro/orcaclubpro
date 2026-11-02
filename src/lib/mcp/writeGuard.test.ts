@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 
 import { BOT_ACTORS, isValidActor } from './actor'
-import { checkWriteInput, findMoneyKeys, isWriteTool, prepareSowSave, WRITE_TOOL_FIELDS } from './writeGuard'
+import { checkWriteInput, findMoneyKeys, isWriteTool, milestoneRef, prepareSowSave, WRITE_TOOL_FIELDS } from './writeGuard'
 
 const ACTOR = 'vegapunk'
 
@@ -239,5 +239,19 @@ describe('mcp actor', () => {
   test('accepts a ccq task id', () => expect(isValidActor('T261101-232341')).toBe(true))
   test('rejects missing, blank and unknown actors', () => {
     for (const bad of [undefined, null, '', 'chance', 'Vegapunk', 'T2611-1', 42]) expect(isValidActor(bad)).toBe(false)
+  })
+})
+
+describe('milestoneRef', () => {
+  test('accepts exactly one of milestoneId / milestoneIndex', () => {
+    expect(milestoneRef({ milestoneId: 'abc' }).ok).toBe(true)
+    expect(milestoneRef({ milestoneIndex: 0 }).ok).toBe(true)
+    expect(milestoneRef({}).ok).toBe(false)
+    expect(milestoneRef({ milestoneId: 'abc', milestoneIndex: 1 }).ok).toBe(false)
+  })
+
+  test('milestone tools allowlist milestoneId', () => {
+    expect(checkWriteInput('update_milestone', { projectId: 'p', milestoneId: 'm', title: 't', date: 'd', actor: 'orca' }).ok).toBe(true)
+    expect(checkWriteInput('toggle_milestone', { projectId: 'p', milestoneId: 'm', actor: 'orca' }).ok).toBe(true)
   })
 })

@@ -43,6 +43,8 @@ import {
 } from '@/actions/packages'
 import { listServiceItems } from '@/actions/package-builder'
 import { createProject, createMilestone, updateMilestone, toggleMilestoneCompletion } from '@/actions/projects'
+import { getDraftPdf } from '@/actions/draftDocuments'
+import { DRAFT_TYPES } from '@/lib/documents/draftTypes'
 import { checkProjectCreateScope, MCP_PROJECT_CLIENT_ID } from '@/lib/mcp/projectScope'
 import {
   createTrackedTask,
@@ -57,7 +59,7 @@ import {
 import { getClientStatus } from '@/actions/clientStatus'
 import type { SowFormData } from '@/lib/document-generators'
 import { ACTOR, normalizeActor } from '@/lib/mcp/actor'
-import { checkWriteInput, prepareSowSave } from '@/lib/mcp/writeGuard'
+import { checkWriteInput, milestoneRef, prepareSowSave } from '@/lib/mcp/writeGuard'
 import { runAsMcp } from '@/lib/payload/access/mcpMoney'
 import { recordAgentWrite, targetIdOf } from '@/lib/mcp/audit'
 import { sanitizeToolOutput } from '@/lib/mcp/sanitize'
@@ -505,6 +507,8 @@ export function registerOrcaclubTools(server: McpServer): void {
 
   // ── Milestones ────────────────────────────────────────────────────────────────
 
+  const MILESTONE_ID = z.string().min(1).describe('Milestone row id, from get_project_progress milestones[].id.')
+
   server.registerTool(
     'create_milestone',
     {
@@ -527,35 +531,44 @@ export function registerOrcaclubTools(server: McpServer): void {
     {
       title: 'Update a project milestone',
       description:
-        'Replace a milestone by its index in the project. `title` and `date` are required — this overwrites the ' +
-        'row, so carry forward any value you are not changing.',
+        'Replace one milestone, addressed by milestoneId (the row id from get_project_progress; preferred) or ' +
+        'milestoneIndex (legacy: shifts when rows are added or removed). Pass exactly one. `title` and `date` are ' +
+        'required — this overwrites the row, so carry forward any value you are not changing.',
       inputSchema: writeSchema({
         projectId: z.string(),
-        milestoneIndex: z.number().int().min(0),
+        milestoneId: MILESTONE_ID.optional(),
+        milestoneIndex: z.number().int().min(0).optional(),
         title: z.string(),
         date: z.string(),
         description: z.string().optional(),
         completed: z.boolean().optional(),
       }),
     },
-    guardedWrite('update_milestone', async (input) =>
-      run(() => updateMilestone(input) as Promise<{ success: boolean; error?: string }>),
-    ),
+    guardedWrite('update_milestone', async (input) => {
+      const ref = milestoneRef(input)
+      if (!ref.ok) return text({ error: ref.error }, true)
+      return run(() => updateMilestone(input) as Promise<{ success: boolean; error?: string }>)
+    }),
   )
 
   server.registerTool(
     'toggle_milestone',
     {
       title: 'Toggle milestone completion',
-      description: 'Flip a milestone between complete and incomplete by its index.',
+      description:
+        'Flip a milestone between complete and incomplete. Address it by milestoneId (preferred) or ' +
+        'milestoneIndex (legacy); pass exactly one.',
       inputSchema: writeSchema({
         projectId: z.string(),
-        milestoneIndex: z.number().int().min(0),
+        milestoneId: MILESTONE_ID.optional(),
+        milestoneIndex: z.number().int().min(0).optional(),
       }),
     },
-    guardedWrite('toggle_milestone', async (input) =>
-      run(() => toggleMilestoneCompletion(input) as Promise<{ success: boolean; error?: string }>),
-    ),
+    guardedWrite('toggle_milestone', async (input) => {
+      const ref = milestoneRef(input)
+      if (!ref.ok) return text({ error: ref.error }, true)
+      return run(() => toggleMilestoneCompletion(input) as Promise<{ success: boolean; error?: string }>)
+    }),
   )
 
   // ── Tasks & progress (plan step 2) ─────────────────────────────────────────────
@@ -742,7 +755,9 @@ export function registerOrcaclubTools(server: McpServer): void {
     {
       title: 'Get project progress',
       description:
-        'One project: milestones, open tasks, task counts by status, and progress percent (tasks + milestones).',
+        'One project in one call: milestones (with row ids for update_milestone / toggle_milestone), open tasks, ' +
+        'task counts by status, progress percent, plus what links to it: packages (name, type, status), document ' +
+        "files (template, draft/sent status) and the client's retainer (status, tier). No prices.",
       inputSchema: z.object({ projectId: z.string() }).strict(),
     },
     async ({ projectId }) => run(() => getProjectProgress(projectId)),
@@ -780,5 +795,34 @@ export function registerOrcaclubTools(server: McpServer): void {
         .strict(),
     },
     async (input) => run(() => getClientStatus(input)),
+  )
+
+  // ── Draft documents (plan step 6) ─────────────────────────────────────────────
+
+  server.registerTool(
+    'get_draft_pdf',
+    {
+      title: 'Render a draft document (PDF)',
+      description:
+        'Render one document as a PDF stamped DRAFT, not sent, from the same builders and derived numbers the ' +
+        'staff preview uses. Read-only: nothing is created, billed, saved or sent; Chance sends the final from the ' +
+        'portal. Address it by type: sow | proposal | invoice-copy (packageId); package-recap (packageId + ' +
+        'entryId); recap | statement (clientAccountId, optional ref date inside the cycle); scope-recap | ' +
+        'retainer-proposal (retainerId). Returns filename, size, sha256, the client and a sourceRef. The PDF ' +
+        'bytes come back as base64 only with includeBytes: true; they are hundreds of KB, so an agent should ' +
+        'leave it off and let the local drafts saver (mcploop/drafts.py) write the file to Drive.',
+      inputSchema: z
+        .object({
+          type: z.enum(DRAFT_TYPES),
+          packageId: z.string().optional(),
+          clientAccountId: z.string().optional(),
+          retainerId: z.string().optional(),
+          ref: z.string().optional().describe('recap / statement: any ISO date inside the cycle. Omit for now.'),
+          entryId: z.string().optional().describe('package-recap: payment-schedule entry id.'),
+          includeBytes: z.boolean().optional(),
+        })
+        .strict(),
+    },
+    async (input) => run(() => getDraftPdf(input)),
   )
 }

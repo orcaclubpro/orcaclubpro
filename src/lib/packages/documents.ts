@@ -110,6 +110,29 @@ function parseSowExtrasFromNotes(notes?: string | null) {
   return extras
 }
 
+/**
+ * SOW milestones taken from the package's linked project, or null when there are
+ * none to take.
+ *
+ * Needs `pkg.projectRef` populated (every SOW reader loads the package at depth
+ * 1). Project milestones are the delivery record staff tick off in the portal,
+ * so when they exist the contract follows them instead of the snapshot parsed
+ * out of the package notes. Dates go out as YYYY-MM-DD, the shape the SOW form
+ * and PDF read.
+ */
+export function projectSowMilestones(pkg: any): Array<{ name: string; date: string; notes: string }> | null {
+  const project = pkg?.projectRef
+  if (!project || typeof project !== 'object' || !Array.isArray(project.milestones)) return null
+  const rows = (project.milestones as any[])
+    .filter((m) => typeof m?.title === 'string' && m.title.trim())
+    .map((m) => ({
+      name: m.title.trim() as string,
+      date: typeof m.date === 'string' ? m.date.slice(0, 10) : '',
+      notes: typeof m.description === 'string' ? m.description.trim() : '',
+    }))
+  return rows.length ? rows : null
+}
+
 /** Map a package/proposal document to a SOW form payload (inverse of createPackageFromSow). */
 export function packageToSowData(pkg: any): SowFormData {
   // A SOW is a contract, so add-ons are excluded outright — an option the client has
@@ -175,7 +198,8 @@ export function packageToSowData(pkg: any): SowFormData {
       ]
 
   const extras = parseSowExtrasFromNotes(pkg.notes)
-  const client = pkg.clientAccount && typeof pkg.clientAccount === 'object' ? pkg.clientAccount : null
+  const fromProject = projectSowMilestones(pkg)
+  const client =pkg.clientAccount && typeof pkg.clientAccount === 'object' ? pkg.clientAccount : null
 
   // How often the retainer bills is already on the line items — reading it there
   // beats scraping the freeform notes, which only carry it for packages that
@@ -193,7 +217,7 @@ export function packageToSowData(pkg: any): SowFormData {
     projectOverview: pkg.description ?? '',
     scopeItems,
     deliverables,
-    milestones: extras.milestones.length ? extras.milestones : [{ name: '', date: '', notes: '' }],
+    milestones: fromProject ?? (extras.milestones.length ? extras.milestones : [{ name: '', date: '', notes: '' }]),
     pricingType,
     projectItems: projectItems.length ? projectItems : [{ desc: '', amount: '' }],
     retainerItems: retainerItems.length ? retainerItems : [{ desc: '', amount: '' }],
@@ -249,16 +273,23 @@ const DOCUMENT_OWNED_SOW_ITEMS = ['scopeItems', 'deliverables'] as const
  * Combine a package's derived SOW with the wording saved on its SOW document.
  * The document wins for everything staff wrote; the package wins for the client,
  * the project, and the money.
+ *
+ * Pass the package (loaded at depth 1) as `pkg` and, when its linked project has
+ * milestones, the milestones follow the project too: a date moved in the portal
+ * shows up in the contract instead of the one saved with the document.
  */
 export function mergePackageSowData(
   derived: SowFormData,
   saved: Partial<SowFormData> | null | undefined,
+  pkg?: unknown,
 ): SowFormData {
   if (!saved) return derived
   const merged = { ...derived, ...saved } as SowFormData
   for (const field of PACKAGE_OWNED_SOW_FIELDS) {
     ;(merged as any)[field] = (derived as any)[field]
   }
+  const fromProject = pkg ? projectSowMilestones(pkg) : null
+  if (fromProject) merged.milestones = fromProject
   for (const field of DOCUMENT_OWNED_SOW_ITEMS) {
     // Normalized on the way through: documents saved before items carried
     // descriptions hold plain strings. An empty saved list falls back to the
@@ -318,7 +349,7 @@ export async function resolveFileSowData(
     .catch(() => null)
   if (!pkg) return data
 
-  return mergePackageSowData(packageToSowData(pkg), data)
+  return mergePackageSowData(packageToSowData(pkg), data, pkg)
 }
 
 const fmtPdfDate = (iso: string) => {

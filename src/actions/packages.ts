@@ -294,7 +294,7 @@ async function resolvePackageSowData(payload: any, pkg: any): Promise<SowFormDat
     : await payload.findByID({ collection: 'files', id: linkedId, depth: 0 }).catch(() => null)
 
   if (!file?.documentData) return packageToSowData(pkg)
-  return mergePackageSowData(packageToSowData(pkg), file.documentData as Partial<SowFormData>)
+  return mergePackageSowData(packageToSowData(pkg), file.documentData as Partial<SowFormData>, pkg)
 }
 
 /**
@@ -337,7 +337,7 @@ export async function getPackageSowDraft(packageId: string) {
           success: true as const,
           documentId: String(file.id),
           documentName: file.name ?? null,
-          sowData: mergePackageSowData(fromPackage, file.documentData as Partial<SowFormData>),
+          sowData: mergePackageSowData(fromPackage, file.documentData as Partial<SowFormData>, pkg),
           packageItems: packageSowItems(fromPackage),
         }
       }
