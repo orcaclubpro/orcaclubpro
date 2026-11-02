@@ -14,6 +14,8 @@
  * 2. Money key scan. Any key, at any depth, that is a real money field name
  *    (`MONEY_KEYS`) or a `stripe…` field is rejected. That includes inside
  *    `save_sow.sowData`, apart from the SOW's own money fields.
+ * 2b. Chance-only key scan. Any key, at any depth, in `CHANCE_ONLY_KEYS` (the
+ *    approved-hours budget) is rejected: only Chance sets it, in the portal.
  * 3. SOW money diff + carry-forward (`prepareSowSave`). `save_sow` round-trips a
  *    whole document that legitimately contains the prices `get_sow_draft` gave
  *    it. Those may come back unchanged or be left out (then the stored value is
@@ -53,6 +55,7 @@ export const WRITE_TOOL_FIELDS: Record<string, readonly string[]> = {
     'ownerBot',
     'ccqTaskId',
     'qa',
+    'actualHours',
   ],
   task_update: [
     'id',
@@ -67,6 +70,7 @@ export const WRITE_TOOL_FIELDS: Record<string, readonly string[]> = {
     'ownerBot',
     'ccqTaskId',
     'qa',
+    'actualHours',
   ],
 }
 
@@ -138,6 +142,30 @@ export const SOW_MONEY_FIELDS = [
 /** SOW clauses whose wording states fees, payment terms, rates or the liability cap. */
 export const SOW_MONEY_CLAUSES = ['fees', 'payment', 'revisions', 'liability'] as const
 
+/**
+ * Keys only Chance (the business owner) may set. No MCP write may carry them, at
+ * any depth, whoever the caller is: a bot reads the approved hours, it never
+ * approves them.
+ */
+export const CHANCE_ONLY_KEYS: ReadonlySet<string> = new Set([
+  'approvedHours',
+  'approvedHoursAt',
+  'approvedHoursNote',
+])
+
+/** Every key path in `value` whose key is Chance-only. */
+export function findChanceOnlyKeys(value: unknown, path = ''): string[] {
+  if (Array.isArray(value)) return value.flatMap((v, i) => findChanceOnlyKeys(v, `${path}[${i}]`))
+  if (!value || typeof value !== 'object') return []
+  const hits: string[] = []
+  for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+    const here = path ? `${path}.${key}` : key
+    if (CHANCE_ONLY_KEYS.has(key)) hits.push(here)
+    hits.push(...findChanceOnlyKeys(child, here))
+  }
+  return hits
+}
+
 export type GuardResult = { ok: true } | { ok: false; error: string }
 
 /** Every key path in `value` whose key is a money field. */
@@ -174,6 +202,17 @@ export function checkWriteInput(tool: string, input: unknown): GuardResult {
 
   const record = input as Record<string, unknown>
   const accepted = new Set<string>([...COMMON_WRITE_FIELDS, ...allowed])
+  // Before the allowlist message, so the bot learns why rather than "not allowed".
+  const chanceOnly = findChanceOnlyKeys(record)
+  if (chanceOnly.length > 0) {
+    return {
+      ok: false,
+      error:
+        `${tool}: approved hours are set by Chance only and are read-only over MCP (${chanceOnly.join(', ')}). ` +
+        'Read them with get_project_progress; ask Chance to change them.',
+    }
+  }
+
   const unknown = Object.keys(record).filter((k) => !accepted.has(k))
   if (unknown.length > 0) {
     return { ok: false, error: `${tool}: field(s) not allowed via MCP: ${unknown.join(', ')}` }

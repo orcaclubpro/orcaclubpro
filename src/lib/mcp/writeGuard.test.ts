@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 
 import { BOT_ACTORS, isValidActor } from './actor'
-import { checkWriteInput, findMoneyKeys, isWriteTool, prepareSowSave, WRITE_TOOL_FIELDS } from './writeGuard'
+import { CHANCE_ONLY_KEYS, checkWriteInput, findChanceOnlyKeys, findMoneyKeys, isWriteTool, prepareSowSave, WRITE_TOOL_FIELDS } from './writeGuard'
 
 const ACTOR = 'vegapunk'
 
@@ -239,5 +239,40 @@ describe('mcp actor', () => {
   test('accepts a ccq task id', () => expect(isValidActor('T261101-232341')).toBe(true))
   test('rejects missing, blank and unknown actors', () => {
     for (const bad of [undefined, null, '', 'chance', 'Vegapunk', 'T2611-1', 42]) expect(isValidActor(bad)).toBe(false)
+  })
+})
+
+describe('mcp write guard: approved hours are Chance-only', () => {
+  test('rejects approvedHours keys on every MCP write tool, top level and nested', () => {
+    for (const tool of Object.keys(WRITE_TOOL_FIELDS)) {
+      for (const key of CHANCE_ONLY_KEYS) {
+        const top = checkWriteInput(tool, { actor: ACTOR, [key]: 10 })
+        expect(top.ok).toBe(false)
+        if (!top.ok) expect(top.error).toContain('Chance only')
+        const nested = checkWriteInput(tool, { actor: ACTOR, qa: { [key]: 10 } })
+        expect(nested.ok).toBe(false)
+      }
+    }
+  })
+
+  test('finds approvedHours deep inside arrays and objects', () => {
+    expect(findChanceOnlyKeys({ sowData: { items: [{ approvedHours: 4 }] } })).toEqual([
+      'sowData.items[0].approvedHours',
+    ])
+    expect(findChanceOnlyKeys({ hours: 4, actualHours: 2 })).toEqual([])
+  })
+
+  test('task_create and task_update accept actualHours', () => {
+    expect(checkWriteInput('task_update', { actor: ACTOR, id: 't1', status: 'completed', actualHours: 1.5 }).ok).toBe(
+      true,
+    )
+    expect(checkWriteInput('task_create', { actor: ACTOR, title: 'x', projectId: 'p', actualHours: 0.25 }).ok).toBe(
+      true,
+    )
+  })
+
+  test('project_create still cannot carry approved hours', () => {
+    const res = checkWriteInput('project_create', { actor: ACTOR, name: 'x', approvedHours: 40 })
+    expect(res.ok).toBe(false)
   })
 })

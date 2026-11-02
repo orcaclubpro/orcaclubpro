@@ -16,6 +16,7 @@ import type { Where } from 'payload'
 import config from '@payload-config'
 
 import { getCurrentUser } from '@/actions/auth'
+import { computeProjectHours, type ProjectHours } from '@/lib/tasks/hours'
 import { computeProgress, type Progress } from '@/lib/tasks/progress'
 import { lexicalToPlainText, plainTextToLexical } from '@/lib/tasks/richText'
 
@@ -59,6 +60,9 @@ function taskRow(t: Record<string, any>) {
           reportLink: t.qa.reportLink ?? null,
         }
       : null,
+    /** Work hours logged on the task (not billable time). */
+    actualHours: typeof t.actualHours === 'number' ? t.actualHours : null,
+    estimatedHours: typeof t.estimatedHours === 'number' ? t.estimatedHours : null,
     lastActor: t.lastActor ?? null,
     dueDate: t.dueDate ?? null,
     completedAt: t.completedAt ?? null,
@@ -134,7 +138,9 @@ export async function createTrackedTask(input: {
   ownerBot?: string
   ccqTaskId?: string
   qa?: QaInput
-}): Promise<{ success: true; task: TrackedTask } | Fail> {
+  /** Work hours spent, in quarter hours. */
+  actualHours?: number
+}): Promise<{ success: true; task: TrackedTask; warnings?: string[] } | Fail> {
   try {
     const user = await staffCaller()
     if (!user) return fail('Unauthorized')
@@ -185,16 +191,30 @@ export async function createTrackedTask(input: {
         ...(input.ownerBot ? { ownerBot: input.ownerBot } : {}),
         ...(input.ccqTaskId ? { ccqTaskId: input.ccqTaskId } : {}),
         ...(input.qa ? { qa: input.qa } : {}),
+        ...(input.actualHours !== undefined ? { actualHours: input.actualHours } : {}),
         lastActor: input.actor,
       },
       depth: 1,
       user,
       overrideAccess: false,
     })
-    return { success: true, task: taskRow(task as Record<string, any>) }
+    const row = taskRow(task as Record<string, any>)
+    const warnings = closeWarnings(row)
+    return { success: true, task: row, ...(warnings.length ? { warnings } : {}) }
   } catch (e) {
     return fail(errorMessage(e))
   }
+}
+
+/**
+ * Agents log hours when they close a task. A close without hours still saves
+ * (sync may fill them in later), but the tool output says so.
+ */
+function closeWarnings(row: TrackedTask): string[] {
+  if (row.status === 'completed' && (row.actualHours == null || row.actualHours <= 0)) {
+    return ['Task completed with no actualHours. Log the hours spent: task_update { id, actualHours }.']
+  }
+  return []
 }
 
 /** findByID that returns null when the doc is missing, invisible to the caller, or the id is malformed. */
@@ -256,7 +276,9 @@ export async function updateTrackedTask(input: {
   ownerBot?: string | null
   ccqTaskId?: string | null
   qa?: QaInput
-}): Promise<{ success: true; task: TrackedTask } | Fail> {
+  /** Work hours spent, in quarter hours; null clears them. */
+  actualHours?: number | null
+}): Promise<{ success: true; task: TrackedTask; warnings?: string[] } | Fail> {
   try {
     const user = await staffCaller()
     if (!user) return fail('Unauthorized')
@@ -291,6 +313,7 @@ export async function updateTrackedTask(input: {
     if (input.ccqTaskId !== undefined) data.ccqTaskId = input.ccqTaskId
     // qa is merged, so a bot can record a verdict without restating the rest.
     if (input.qa !== undefined) data.qa = { ...(current.qa ?? {}), ...input.qa }
+    if (input.actualHours !== undefined) data.actualHours = input.actualHours
 
     const task = await payload.update({
       collection: 'tasks',
@@ -300,7 +323,10 @@ export async function updateTrackedTask(input: {
       user,
       overrideAccess: false,
     })
-    return { success: true, task: taskRow(task as Record<string, any>) }
+    const row = taskRow(task as Record<string, any>)
+    // Warn only on the call that closes the task, not on later edits to a closed one.
+    const warnings = input.status === 'completed' && current.status !== 'completed' ? closeWarnings(row) : []
+    return { success: true, task: row, ...(warnings.length ? { warnings } : {}) }
   } catch (e) {
     return fail(errorMessage(e))
   }
@@ -462,6 +488,8 @@ export async function getProjectProgress(projectId: string): Promise<
       milestones: Milestone[]
       openTasks: TrackedTask[]
       progress: Progress
+      /** Approved (Chance-only) vs logged task hours. Over budget is a warning, never a block. */
+      hours: ProjectHours
     }
   | Fail
 > {
@@ -496,6 +524,8 @@ export async function getProjectProgress(projectId: string): Promise<
         .filter((t) => t.status === 'pending' || t.status === 'in-progress')
         .map((t) => taskRow({ ...t, project: { id: String(project.id), name: project.name } })),
       progress: computeProgress({ tasks, milestones }),
+      // `approvedHours` is read when present; until the Chance-only field lands it is null.
+      hours: computeProjectHours({ approvedHours: project.approvedHours, tasks }),
     }
   } catch (e) {
     return fail(errorMessage(e))

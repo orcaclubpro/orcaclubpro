@@ -55,6 +55,7 @@ import {
 import type { SowFormData } from '@/lib/document-generators'
 import { ACTOR, normalizeActor } from '@/lib/mcp/actor'
 import { checkWriteInput, prepareSowSave } from '@/lib/mcp/writeGuard'
+import { isQuarterHour, MAX_TASK_HOURS } from '@/lib/tasks/hours'
 import { runAsMcp } from '@/lib/payload/access/mcpMoney'
 import { recordAgentWrite, targetIdOf } from '@/lib/mcp/audit'
 import { sanitizeToolOutput } from '@/lib/mcp/sanitize'
@@ -569,6 +570,15 @@ export function registerOrcaclubTools(server: McpServer): void {
     .strict()
   const OWNER_BOT = ACTOR.describe('Bot (or ccq task id) that owns this task.')
   const CCQ_ID = z.string().regex(/^T\d{6}-\d{6}$/).describe('ccq queue id, e.g. T261101-232341.')
+  const ACTUAL_HOURS = z
+    .number()
+    .min(0)
+    .max(MAX_TASK_HOURS)
+    .refine(isQuarterHour, 'Hours are logged in quarter-hour steps (0.25, 0.5, 1.75, …).')
+    .describe(
+      'Work hours spent on the task, in quarter hours. Log them when you close the task. This is NOT billable ' +
+        'time: it never creates a log_work entry.',
+    )
 
   server.registerTool(
     'task_create',
@@ -577,7 +587,8 @@ export function registerOrcaclubTools(server: McpServer): void {
       description:
         'Create a work item on a package and/or project. Pass packageId to file it under a package; the project is ' +
         "taken from the package's linked project, or pass projectId. A task with a ccqTaskId is a tracked dev task: " +
-        'it can only be completed once qa.status is "pass" with qa.commit set.',
+        'it can only be completed once qa.status is "pass" with qa.commit set. Pass actualHours when the work is ' +
+        'already done.',
       inputSchema: writeSchema({
         title: z.string().min(1),
         description: z.string().optional().describe('Plain text; one paragraph per line.'),
@@ -590,6 +601,7 @@ export function registerOrcaclubTools(server: McpServer): void {
         ownerBot: OWNER_BOT.optional(),
         ccqTaskId: CCQ_ID.optional(),
         qa: QA.optional(),
+        actualHours: ACTUAL_HOURS.optional(),
       }),
     },
     guardedWrite('task_create', async (input, actor) => run(() => createTrackedTask({ ...input, actor }))),
@@ -601,7 +613,9 @@ export function registerOrcaclubTools(server: McpServer): void {
       title: 'Update a task',
       description:
         'Change a task: status, owner, links, QA record. Only the fields you pass change; `qa` is merged into the ' +
-        'existing QA record. Completing a tracked task (one with a ccqTaskId) needs qa.status "pass" and qa.commit.',
+        'existing QA record. Completing a tracked task (one with a ccqTaskId) needs qa.status "pass" and qa.commit. ' +
+        'When you close a task, log the hours spent in the same call (actualHours); a close without hours saves but ' +
+        'returns a warning. Approved hours are Chance-only and cannot be set here.',
       inputSchema: writeSchema({
         id: z.string(),
         title: z.string().min(1).optional(),
@@ -618,6 +632,7 @@ export function registerOrcaclubTools(server: McpServer): void {
         ownerBot: OWNER_BOT.nullable().optional(),
         ccqTaskId: CCQ_ID.nullable().optional(),
         qa: QA.optional(),
+        actualHours: ACTUAL_HOURS.nullable().optional(),
       }),
     },
     guardedWrite('task_update', async (input, actor) => run(() => updateTrackedTask({ ...input, actor }))),
@@ -687,7 +702,9 @@ export function registerOrcaclubTools(server: McpServer): void {
     {
       title: 'Get project progress',
       description:
-        'One project: milestones, open tasks, task counts by status, and progress percent (tasks + milestones).',
+        'One project: milestones, open tasks, task counts by status, progress percent (tasks + milestones), and ' +
+        'hours: { approved, used, remaining, completedWithoutHours, warnings }. `approved` is the Chance-only hours ' +
+        'budget (null when unset); `used` sums the tasks\' actualHours. Over budget is a warning, never a block.',
       inputSchema: z.object({ projectId: z.string() }).strict(),
     },
     async ({ projectId }) => run(() => getProjectProgress(projectId)),
