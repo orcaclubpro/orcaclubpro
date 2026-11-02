@@ -739,7 +739,10 @@ export function registerOrcaclubTools(server: McpServer): void {
         'the waiting-on-Chance and blocked tasks, open tasks oldest first, open projects with progress percent and ' +
         'next milestone, retainer hours (used/cap, cycle, health) and draft documents. One client with ' +
         'clientAccountId, or every client you can see (clients with nothing open are omitted unless includeEmpty). ' +
-        'Most urgent client first. Read-only; no prices or amounts.',
+        'waitingOnChance also holds open tasks whose QA is PASS with a #qa post in qa.reportLink (waitingReason "qa-pass"). ' +
+        'recentWork: the 20 most recently updated tasks across clients (any status) with project, client, status, ' +
+        'one-line result, commit, live URL, recap/#qa link, Drive folder and key file from botContext. ' +
+        'One call = full check-in. Most urgent client first. Read-only; no prices or amounts.',
       inputSchema: z
         .object({
           clientAccountId: z.string().optional(),
@@ -747,6 +750,7 @@ export function registerOrcaclubTools(server: McpServer): void {
           includeRetainer: z.boolean().optional().describe('Default true.'),
           includeEmpty: z.boolean().optional().describe('Keep clients with nothing open. Default false.'),
           taskLimit: z.number().int().min(1).max(200).optional().describe('Task rows per client (default 50); counts are always complete.'),
+          recentLimit: z.number().int().min(0).max(100).optional().describe('recentWork rows (default 20; 0 skips it).'),
         })
         .strict(),
     },

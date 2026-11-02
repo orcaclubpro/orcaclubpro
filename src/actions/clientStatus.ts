@@ -19,6 +19,7 @@ import { getRetainerPortfolio } from '@/actions/retainers'
 import { computeProgress } from '@/lib/tasks/progress'
 import {
   buildClientDigest,
+  buildRecentWork,
   CLOSED_PROJECT_STATUSES,
   CLOSED_TASK_STATUSES,
   type ClientDigest,
@@ -26,6 +27,7 @@ import {
   type RawDraft,
   type RawProject,
   type RawRetainer,
+  type RecentWorkRow,
 } from '@/lib/tasks/clientDigest'
 
 type Fail = { success: false; error: string }
@@ -42,6 +44,8 @@ export type ClientStatusResult = {
   clients: ClientDigest[]
   totals: DigestCounts & { clients: number }
   omittedEmptyClients: number
+  /** The most recently updated tasks (any status) across the clients in scope, newest first. */
+  recentWork: RecentWorkRow[]
   /** Set when the retainer portfolio could not be loaded; the rest of the digest is still valid. */
   retainerError: string | null
 }
@@ -52,6 +56,7 @@ export async function getClientStatus(input: {
   includeRetainer?: boolean
   includeEmpty?: boolean
   taskLimit?: number
+  recentLimit?: number
 }): Promise<ClientStatusResult | Fail> {
   try {
     const user = await getCurrentUser()
@@ -110,6 +115,7 @@ export async function getClientStatus(input: {
           ccqTaskId: true,
           project: true,
           dueDate: true,
+          qa: true,
           createdAt: true,
           updatedAt: true,
         },
@@ -232,6 +238,71 @@ export async function getClientStatus(input: {
       }))
     }
 
+    // ── Recent work: newest-updated tasks, any status ────────────────────────
+    // botContext needs a staff `user` on the request (stripBotContext); this caller is staff.
+    const recentLimit = Math.min(100, Math.max(0, input.recentLimit ?? 20))
+    let recentWork: RecentWorkRow[] = []
+    if (recentLimit > 0) {
+      const recentDocs = (
+        await payload.find({
+          collection: 'tasks',
+          where: oneClient ? { 'project.client': { equals: oneClient } } : {},
+          sort: '-updatedAt',
+          limit: recentLimit,
+          depth: 0,
+          select: {
+            title: true,
+            status: true,
+            ownerBot: true,
+            ccqTaskId: true,
+            project: true,
+            qa: true,
+            botContext: true,
+            completedAt: true,
+            updatedAt: true,
+          },
+          user,
+          overrideAccess: false,
+        })
+      ).docs as Record<string, any>[]
+      const recentProjectIds = [...new Set(recentDocs.map((t) => idOf(t.project)).filter(Boolean) as string[])]
+      const recentProjects = recentProjectIds.length
+        ? ((
+            await payload.find({
+              collection: 'projects',
+              where: { id: { in: recentProjectIds } },
+              limit: recentProjectIds.length,
+              depth: 0,
+              select: { name: true, client: true, botContext: true },
+              user,
+              overrideAccess: false,
+            })
+          ).docs as Record<string, any>[])
+        : []
+      recentWork = buildRecentWork({
+        tasks: recentDocs.map((t) => ({
+          id: String(t.id),
+          title: t.title ?? null,
+          status: t.status ?? null,
+          ownerBot: t.ownerBot ?? null,
+          ccqTaskId: t.ccqTaskId ?? null,
+          projectId: idOf(t.project),
+          qa: t.qa ?? null,
+          botContext: t.botContext && typeof t.botContext === 'object' ? t.botContext : null,
+          completedAt: t.completedAt ?? null,
+          updatedAt: t.updatedAt ?? null,
+        })),
+        projects: recentProjects.map((p) => ({
+          id: String(p.id),
+          name: p.name ?? null,
+          clientAccountId: idOf(p.client),
+          liveUrl: p.botContext && typeof p.botContext === 'object' ? (p.botContext.liveUrl ?? null) : null,
+        })),
+        clients,
+        limit: recentLimit,
+      })
+    }
+
     const generatedAt = new Date().toISOString()
     const digest = buildClientDigest({
       clients,
@@ -246,6 +317,7 @@ export async function getClientStatus(input: {
         createdAt: t.createdAt ?? null,
         updatedAt: t.updatedAt ?? null,
         dueDate: t.dueDate ?? null,
+        qa: t.qa ?? null,
       })),
       projects,
       retainers,
@@ -258,7 +330,7 @@ export async function getClientStatus(input: {
     // With one client asked for, drop the "(no client)" bucket: it isn't that client.
     const rows = oneClient ? digest.clients.filter((c) => c.clientAccountId === oneClient) : digest.clients
 
-    return { success: true, generatedAt, ...digest, clients: rows, retainerError }
+    return { success: true, generatedAt, ...digest, clients: rows, recentWork, retainerError }
   } catch (e) {
     return fail(e instanceof Error ? e.message : 'Unexpected error')
   }

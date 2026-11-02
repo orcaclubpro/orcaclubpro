@@ -10,6 +10,9 @@
  * - No prices. Retainer rows carry hours, cap, cycle and health only; the
  *   portfolio's overage amount is dropped on purpose.
  * - Tasks are listed oldest first (createdAt), so the longest-waiting item leads.
+ * - Waiting on Chance = status `waiting-chance`, OR (until that status exists)
+ *   an open task whose QA is PASS with a #qa post (a Discord message link) in
+ *   `qa.reportLink`: QA passed and the push ask is sitting in #qa.
  */
 
 export const CLOSED_TASK_STATUSES = ['completed', 'cancelled'] as const
@@ -41,6 +44,10 @@ export type DigestTask = {
   updatedAt: string | null
   dueDate: string | null
   overdue: boolean
+  /** QA verdict, commit and report link (Drive / #qa post), when QA has run. */
+  qa: { status: string; commit: string | null; reportLink: string | null } | null
+  /** Why the task is in waitingOnChance; null when it isn't. */
+  waitingReason: 'status' | 'qa-pass' | null
 }
 
 export type DigestProject = {
@@ -101,6 +108,7 @@ export type RawTask = {
   createdAt?: string | null
   updatedAt?: string | null
   dueDate?: string | null
+  qa?: { status?: string | null; commit?: string | null; reportLink?: string | null } | null
 }
 export type RawProject = {
   id: string
@@ -167,6 +175,22 @@ const emptyCounts = (): DigestCounts => ({
 
 const byCreatedAsc = (a: { createdAt?: string | null; id: string }, b: { createdAt?: string | null; id: string }) =>
   (a.createdAt ?? '').localeCompare(b.createdAt ?? '') || a.id.localeCompare(b.id)
+
+/** A Discord message link (`discord.com/channels/<guild>/<channel>/<message>`): how a #qa post is linked. */
+const QA_POST_LINK = /^https:\/\/(?:www\.|ptb\.|canary\.)?discord(?:app)?\.com\/channels\/\d+\/\d+\/\d+/i
+
+export const isQaPostLink = (v: unknown): boolean => typeof v === 'string' && QA_POST_LINK.test(v.trim())
+
+/**
+ * Why an open task is waiting on Chance, or null. The `waiting-chance` status
+ * wins; otherwise QA PASS plus a #qa post link means the push ask is in #qa.
+ */
+export function waitingReasonOf(t: Pick<RawTask, 'status' | 'qa'>): DigestTask['waitingReason'] {
+  if (!isOpenTaskStatus(t.status)) return null
+  if (t.status === 'waiting-chance') return 'status'
+  if (t.qa?.status === 'pass' && isQaPostLink(t.qa.reportLink)) return 'qa-pass'
+  return null
+}
 
 /** The first incomplete milestone: earliest dated first, undated after, in list order. */
 export function nextMilestoneOf(milestones: RawProject['milestones']): DigestProject['nextMilestone'] {
@@ -237,8 +261,10 @@ export function buildClientDigest(input: DigestInput): {
     const rows: DigestTask[] = b.tasks.sort(byCreatedAsc).map((t) => {
       const status = t.status ?? 'pending'
       const overdue = Boolean(t.dueDate) && Number.isFinite(nowMs) && Date.parse(t.dueDate as string) < nowMs
+      const waitingReason = waitingReasonOf(t)
       counts.open++
-      counts[COUNT_KEY[status] ?? 'other']++
+      // A QA-pass row is counted as waiting, not as its raw status, so the buckets still sum to `open`.
+      counts[waitingReason === 'qa-pass' ? 'waitingChance' : (COUNT_KEY[status] ?? 'other')]++
       if (overdue) counts.overdue++
       const project = t.projectId ? projectById.get(t.projectId) : undefined
       return {
@@ -254,6 +280,10 @@ export function buildClientDigest(input: DigestInput): {
         updatedAt: t.updatedAt ?? null,
         dueDate: t.dueDate ?? null,
         overdue,
+        qa: t.qa
+          ? { status: t.qa.status ?? 'pending', commit: t.qa.commit ?? null, reportLink: t.qa.reportLink ?? null }
+          : null,
+        waitingReason,
       }
     })
     for (const k of Object.keys(counts) as Array<keyof DigestCounts>) totals[k] += counts[k]
@@ -266,7 +296,7 @@ export function buildClientDigest(input: DigestInput): {
       name: id === null ? '(no client)' : (client?.name ?? 'Client'),
       company: client?.company ?? null,
       counts,
-      waitingOnChance: rows.filter((t) => t.status === 'waiting-chance'),
+      waitingOnChance: rows.filter((t) => t.waitingReason !== null),
       blocked: rows.filter((t) => t.status === 'blocked'),
       tasks: rows.slice(0, limit),
       tasksTruncated: rows.length > limit,
@@ -314,4 +344,129 @@ export function buildClientDigest(input: DigestInput): {
       a.name.localeCompare(b.name),
   )
   return { clients: out, totals, omittedEmptyClients: omitted }
+}
+
+
+// ── Recent work: the N most recently updated tasks, any status, any client ──
+
+export type RawBotContext = {
+  brief?: string | null
+  repo?: string | null
+  branch?: string | null
+  liveUrl?: string | null
+  decisions?: string | null
+  notes?: string | null
+} | null
+
+export type RawRecentTask = RawTask & {
+  completedAt?: string | null
+  botContext?: RawBotContext
+}
+
+export type RecentWorkRow = {
+  id: string
+  title: string
+  status: string
+  ownerBot: string | null
+  ccqTaskId: string | null
+  project: { id: string; name: string | null } | null
+  client: { id: string; name: string | null } | null
+  /** One line: botContext `Result:` line, else the first line of notes, else brief. */
+  result: string | null
+  /** QA commit, else a `Commit:` line in botContext. */
+  commit: string | null
+  /** Task botContext.liveUrl, else the project's. */
+  liveUrl: string | null
+  /** qa.reportLink (go-live recap / #qa post / Drive QA report), else a `Recap:` / `QA:` line. */
+  recapOrQaLink: string | null
+  qaStatus: string | null
+  /** A `Drive:` line or a drive.google.com/drive/folders link in botContext. */
+  driveFolder: string | null
+  /** A `Key file:` / `File:` line in botContext. */
+  keyFile: string | null
+  repo: string | null
+  branch: string | null
+  updatedAt: string | null
+  completedAt: string | null
+}
+
+const ONE_LINE_MAX = 200
+const oneLine = (v: string): string => {
+  const s = v.replace(/\s+/g, ' ').trim()
+  return s.length > ONE_LINE_MAX ? `${s.slice(0, ONE_LINE_MAX - 1)}…` : s
+}
+
+/** botContext text blocks searched for `Label: value` lines, in order of trust. */
+const bcText = (bc: RawBotContext): string[] =>
+  bc ? [bc.notes, bc.decisions, bc.brief].filter((x): x is string => typeof x === 'string' && x.trim() !== '') : []
+
+/** First `Label: value` line (case-insensitive, optional leading `-`/`*`) across the botContext texts. */
+export function labeledLine(bc: RawBotContext, labels: string[]): string | null {
+  const re = new RegExp(`^\\s*[-*]?\\s*(?:${labels.join('|')})\\s*[:=]\\s*(.+?)\\s*$`, 'im')
+  for (const text of bcText(bc)) {
+    const m = re.exec(text)
+    if (m?.[1]) return oneLine(m[1].replace(/^`(.*)`$/, '$1'))
+  }
+  return null
+}
+
+const DRIVE_FOLDER_URL = /https:\/\/drive\.google\.com\/drive\/(?:u\/\d+\/)?folders\/[\w-]+[^\s)>\]]*/i
+
+export function resultOf(bc: RawBotContext): string | null {
+  const labeled = labeledLine(bc, ['result', 'outcome'])
+  if (labeled) return labeled
+  const firstNote = bc?.notes?.split('\n').map((l) => l.trim()).find(Boolean)
+  if (firstNote) return oneLine(firstNote)
+  const brief = bc?.brief?.trim()
+  return brief ? oneLine(brief.split('\n')[0] ?? brief) : null
+}
+
+export function driveFolderOf(bc: RawBotContext): string | null {
+  const labeled = labeledLine(bc, ['drive folder', 'drive'])
+  if (labeled) return labeled
+  for (const text of bcText(bc)) {
+    const m = DRIVE_FOLDER_URL.exec(text)
+    if (m) return m[0]
+  }
+  return null
+}
+
+export function buildRecentWork(input: {
+  tasks: RawRecentTask[]
+  projects: Array<{ id: string; name?: string | null; clientAccountId: string | null; liveUrl?: string | null }>
+  clients: RawClient[]
+  limit?: number
+}): RecentWorkRow[] {
+  const limit = Math.max(1, input.limit ?? 20)
+  const projectById = new Map(input.projects.map((p) => [p.id, p]))
+  const clientById = new Map(input.clients.map((c) => [c.id, c]))
+  return [...input.tasks]
+    .sort((a, b) => (b.updatedAt ?? '').localeCompare(a.updatedAt ?? '') || b.id.localeCompare(a.id))
+    .slice(0, limit)
+    .map((t) => {
+      const bc = t.botContext ?? null
+      const p = t.projectId ? projectById.get(t.projectId) : undefined
+      const clientId = p?.clientAccountId ?? null
+      const c = clientId ? clientById.get(clientId) : undefined
+      return {
+        id: t.id,
+        title: t.title ?? '(untitled)',
+        status: t.status ?? 'pending',
+        ownerBot: t.ownerBot ?? null,
+        ccqTaskId: t.ccqTaskId ?? null,
+        project: t.projectId ? { id: t.projectId, name: p?.name ?? null } : null,
+        client: clientId ? { id: clientId, name: c?.name ?? null } : null,
+        result: resultOf(bc),
+        commit: t.qa?.commit || labeledLine(bc, ['commit', 'sha']),
+        liveUrl: bc?.liveUrl || labeledLine(bc, ['live url', 'live link']) || p?.liveUrl || null,
+        recapOrQaLink: t.qa?.reportLink || labeledLine(bc, ['recap', 'go-live', '#qa', 'qa post', 'qa link']),
+        qaStatus: t.qa?.status ?? null,
+        driveFolder: driveFolderOf(bc),
+        keyFile: labeledLine(bc, ['key file', 'file', 'path']),
+        repo: bc?.repo || null,
+        branch: bc?.branch || null,
+        updatedAt: t.updatedAt ?? null,
+        completedAt: t.completedAt ?? null,
+      }
+    })
 }
