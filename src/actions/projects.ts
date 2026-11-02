@@ -132,12 +132,28 @@ export async function createMilestone({
   }
 }
 
+/**
+ * Resolve a milestone to its array index, by row id (preferred: it survives other
+ * writers inserting or removing rows) or by index (legacy). Done on the same read
+ * the caller then writes from.
+ */
+function milestoneIndexOf(
+  milestones: ReadonlyArray<{ id?: string | null }>,
+  ref: { milestoneId?: string; milestoneIndex?: number },
+): number {
+  if (ref.milestoneId) return milestones.findIndex((m) => m.id === ref.milestoneId)
+  const i = ref.milestoneIndex ?? -1
+  return Number.isInteger(i) && i >= 0 && i < milestones.length ? i : -1
+}
+
 export async function toggleMilestoneCompletion({
   projectId,
-  milestoneIndex,
+  milestoneIndex: indexRef,
+  milestoneId,
 }: {
   projectId: string
-  milestoneIndex: number
+  milestoneIndex?: number
+  milestoneId?: string
 }) {
   try {
     const user = await getCurrentUser()
@@ -164,12 +180,14 @@ export async function toggleMilestoneCompletion({
       }
     }
 
-    if (!project.milestones || !project.milestones[milestoneIndex]) {
+    const milestones = project.milestones || []
+    const milestoneIndex = milestoneIndexOf(milestones, { milestoneId, milestoneIndex: indexRef })
+    if (milestoneIndex === -1) {
       return { success: false, error: 'Milestone not found' }
     }
 
     // Toggle completion status
-    const updatedMilestones = project.milestones.map((milestone, index) => {
+    const updatedMilestones = milestones.map((milestone, index) => {
       if (index === milestoneIndex) {
         return { ...milestone, completed: !milestone.completed }
       }
@@ -182,7 +200,8 @@ export async function toggleMilestoneCompletion({
       data: { milestones: updatedMilestones },
     })
 
-    return { success: true }
+    const row = updatedMilestones[milestoneIndex]
+    return { success: true, milestone: { id: row.id ?? null, title: row.title, completed: Boolean(row.completed) } }
   } catch (error) {
     console.error('[toggleMilestoneCompletion]', error)
     return {
@@ -194,14 +213,16 @@ export async function toggleMilestoneCompletion({
 
 export async function updateMilestone({
   projectId,
-  milestoneIndex,
+  milestoneIndex: indexRef,
+  milestoneId,
   title,
   date,
   description,
   completed,
 }: {
   projectId: string
-  milestoneIndex: number
+  milestoneIndex?: number
+  milestoneId?: string
   title: string
   date: string
   description?: string
@@ -223,7 +244,8 @@ export async function updateMilestone({
     }
 
     const milestones = [...(project.milestones || [])]
-    if (milestoneIndex < 0 || milestoneIndex >= milestones.length) {
+    const milestoneIndex = milestoneIndexOf(milestones, { milestoneId, milestoneIndex: indexRef })
+    if (milestoneIndex === -1) {
       return { success: false, error: 'Milestone not found' }
     }
 
@@ -236,7 +258,7 @@ export async function updateMilestone({
     }
 
     await payload.update({ collection: 'projects', id: projectId, data: { milestones } })
-    return { success: true }
+    return { success: true, milestone: { id: milestones[milestoneIndex].id ?? null, index: milestoneIndex } }
   } catch (error) {
     console.error('[updateMilestone]', error)
     return { success: false, error: error instanceof Error ? error.message : 'Failed to update milestone' }

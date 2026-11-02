@@ -447,7 +447,80 @@ export async function getPackageOverview(packageId: string): Promise<
   }
 }
 
-/** A project's milestones, task counts by status, open tasks and progress. */
+/** What hangs off a project, for one-call discovery. Names and states only: no prices. */
+type ProjectLinks = {
+  packages: Array<{ id: string; name: string; type: string | null; status: string | null }>
+  files: Array<{
+    id: string
+    name: string
+    documentTemplate: string | null
+    documentStatus: string | null
+    packageId: string | null
+    updatedAt: string | null
+  }>
+  retainer: { id: string; status: string | null; tier: string | null } | null
+}
+
+async function projectLinks(
+  payload: Awaited<ReturnType<typeof getPayload>>,
+  user: any,
+  projectId: string,
+  clientAccountId: string | null,
+): Promise<ProjectLinks> {
+  const scoped = { depth: 0, user, overrideAccess: false } as const
+  const [packages, files, retainers] = await Promise.all([
+    payload
+      .find({
+        collection: 'packages',
+        where: { projectRef: { equals: projectId } },
+        select: { name: true, type: true, status: true },
+        sort: '-updatedAt',
+        limit: 50,
+        ...scoped,
+      })
+      .then((r) => r.docs as Record<string, any>[])
+      .catch(() => []),
+    payload
+      .find({
+        collection: 'files',
+        where: { project: { equals: projectId } },
+        select: { name: true, documentTemplate: true, documentStatus: true, packageRef: true, updatedAt: true },
+        sort: '-updatedAt',
+        limit: 50,
+        ...scoped,
+      })
+      .then((r) => r.docs as Record<string, any>[])
+      .catch(() => []),
+    clientAccountId
+      ? payload
+          .find({
+            collection: 'retainers',
+            where: { clientAccount: { equals: clientAccountId } },
+            select: { status: true, tier: true },
+            sort: '-updatedAt',
+            limit: 1,
+            ...scoped,
+          })
+          .then((r) => r.docs as Record<string, any>[])
+          .catch(() => [])
+      : Promise.resolve([] as Record<string, any>[]),
+  ])
+  const r = retainers[0]
+  return {
+    packages: packages.map((p) => ({ id: String(p.id), name: p.name, type: p.type ?? null, status: p.status ?? null })),
+    files: files.map((f) => ({
+      id: String(f.id),
+      name: f.name,
+      documentTemplate: f.documentTemplate ?? null,
+      documentStatus: f.documentStatus ?? null,
+      packageId: idOf(f.packageRef),
+      updatedAt: f.updatedAt ?? null,
+    })),
+    retainer: r ? { id: String(r.id), status: r.status ?? null, tier: r.tier ?? null } : null,
+  }
+}
+
+/** A project's milestones, task counts by status, open tasks, progress, and what links to it. */
 export async function getProjectProgress(projectId: string): Promise<
   | {
       success: true
@@ -462,7 +535,7 @@ export async function getProjectProgress(projectId: string): Promise<
       milestones: Milestone[]
       openTasks: TrackedTask[]
       progress: Progress
-    }
+    } & ProjectLinks
   | Fail
 > {
   try {
@@ -479,6 +552,7 @@ export async function getProjectProgress(projectId: string): Promise<
     })) as Record<string, any>
     const tasks = await allTasks(payload, user, { project: { equals: projectId } })
     const milestones = milestonesOf(project)
+    const links = await projectLinks(payload, user, projectId, idOf(project.client))
 
     return {
       success: true,
@@ -496,6 +570,7 @@ export async function getProjectProgress(projectId: string): Promise<
         .filter((t) => t.status === 'pending' || t.status === 'in-progress')
         .map((t) => taskRow({ ...t, project: { id: String(project.id), name: project.name } })),
       progress: computeProgress({ tasks, milestones }),
+      ...links,
     }
   } catch (e) {
     return fail(errorMessage(e))

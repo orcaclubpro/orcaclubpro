@@ -39,8 +39,8 @@ export const WRITE_TOOL_FIELDS: Record<string, readonly string[]> = {
   // No budget/currency: a project's budget is set by a human in the portal.
   project_create: ['name', 'description', 'clientAccountId', 'startDate', 'projectedEndDate'],
   create_milestone: ['projectId', 'title', 'date', 'description'],
-  update_milestone: ['projectId', 'milestoneIndex', 'title', 'date', 'description', 'completed'],
-  toggle_milestone: ['projectId', 'milestoneIndex'],
+  update_milestone: ['projectId', 'milestoneId', 'milestoneIndex', 'title', 'date', 'description', 'completed'],
+  toggle_milestone: ['projectId', 'milestoneId', 'milestoneIndex'],
   task_create: [
     'title',
     'description',
@@ -139,6 +139,15 @@ export const SOW_MONEY_FIELDS = [
 export const SOW_MONEY_CLAUSES = ['fees', 'payment', 'revisions', 'liability'] as const
 
 export type GuardResult = { ok: true } | { ok: false; error: string }
+
+/** A milestone write names its row exactly once: by `milestoneId` (preferred) or `milestoneIndex`. */
+export function milestoneRef(input: { milestoneId?: unknown; milestoneIndex?: unknown }): GuardResult {
+  const byId = input.milestoneId !== undefined && input.milestoneId !== null && input.milestoneId !== ''
+  const byIndex = input.milestoneIndex !== undefined && input.milestoneIndex !== null
+  if (byId && byIndex) return { ok: false, error: 'Pass milestoneId or milestoneIndex, not both' }
+  if (!byId && !byIndex) return { ok: false, error: 'milestoneId (preferred) or milestoneIndex is required' }
+  return { ok: true }
+}
 
 /** Every key path in `value` whose key is a money field. */
 export function findMoneyKeys(value: unknown, path = ''): string[] {
