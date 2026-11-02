@@ -491,7 +491,11 @@ export async function assignPackageToClient({
   }
 }
 
-export async function getPackages() {
+/**
+ * Package templates, newest first. With `clientId`, that client's packages
+ * (proposals and anything else assigned to them) instead.
+ */
+export async function getPackages(opts: { clientId?: string } = {}) {
   try {
     const user = await getCurrentUser()
     if (!user || user.role === 'client') return { success: false, packages: [] as any[], error: 'Unauthorized' }
@@ -500,7 +504,7 @@ export async function getPackages() {
 
     const { docs } = await payload.find({
       collection: 'packages',
-      where: { type: { equals: 'template' } },
+      where: opts.clientId ? { clientAccount: { equals: opts.clientId } } : { type: { equals: 'template' } },
       sort: '-updatedAt',
       limit: 100,
       depth: 0,

@@ -19,9 +19,26 @@ export function isValidActor(value: unknown): value is string {
   return (BOT_ACTORS as readonly string[]).includes(value) || CCQ_TASK_ID.test(value)
 }
 
+/**
+ * Canonical form of a self-reported actor: bot names are case-insensitive
+ * (`Vegapunk` → `vegapunk`), a ccq id keeps its form with an uppercase `T`.
+ * Returns the input unchanged when it is neither, so validation still fails it.
+ */
+export function normalizeActor(value: string): string
+export function normalizeActor(value: unknown): unknown
+export function normalizeActor(value: unknown): unknown {
+  if (typeof value !== 'string') return value
+  const v = value.trim()
+  const lower = v.toLowerCase()
+  if ((BOT_ACTORS as readonly string[]).includes(lower)) return lower
+  if (CCQ_TASK_ID.test(v.toUpperCase())) return v.toUpperCase()
+  return value
+}
+
+/** Accepts any letter case; write paths store `normalizeActor(value)`. */
 export const ACTOR = z
   .string()
-  .refine(isValidActor, {
+  .refine((v) => isValidActor(normalizeActor(v)), {
     message: `actor must be one of ${BOT_ACTORS.join('|')} or a ccq task id like T261101-232341`,
   })
   .describe(`Who is making this write: ${BOT_ACTORS.join(' | ')} | <ccq task id>. Required on every write.`)

@@ -1376,6 +1376,130 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
     expect(back.package ?? null).toBeNull()
   })
 
+  test("task_create with clientAccountId rejects another client's real project and creates nothing", async () => {
+    const a = await trackingFixture()
+    const other = await otherClientFixture()
+    const c = await mcpClient()
+    const db = payload.db as any
+    // The other client's real project, the first client's package and client id.
+    const msg = await rejected(c, 'task_create', {
+      actor: 'orca',
+      title: 'Pinned cross-client',
+      projectId: other.projectId,
+      packageId: a.packageId,
+      clientAccountId,
+    })
+    expect(msg).toContain(other.projectId)
+    // Project alone, pinned to the first client: still rejected.
+    const msg2 = await rejected(c, 'task_create', {
+      actor: 'orca',
+      title: 'Pinned cross-client',
+      projectId: other.projectId,
+      clientAccountId,
+    })
+    expect(msg2).toContain(`not ${clientAccountId}`)
+    expect(await db.collections.tasks.countDocuments({ title: 'Pinned cross-client' })).toBe(0)
+    // The right client pin passes.
+    const out = ok(
+      await c.callTool({
+        name: 'task_create',
+        arguments: { actor: 'orca', title: 'Pinned ok', projectId: a.projectId, clientAccountId },
+      }),
+    )
+    expect(out.task.projectId).toBe(a.projectId)
+  })
+
+  test("task_update with clientAccountId rejects moving onto another client's real project", async () => {
+    const a = await trackingFixture()
+    const other = await otherClientFixture()
+    const c = await mcpClient()
+    const task = await trackedTask(c, a.packageId)
+    const msg = await rejected(c, 'task_update', {
+      actor: 'orca',
+      id: task.id,
+      projectId: other.projectId,
+      packageId: null,
+      clientAccountId,
+    })
+    expect(msg).toContain(`not ${clientAccountId}`)
+    const back = await reread(task.id)
+    expect(String(back.project)).toBe(a.projectId)
+    expect(String(back.package)).toBe(a.packageId)
+  })
+
+  test('task_create rejects a client package on a project with no client', async () => {
+    const db = payload.db as any
+    const bare = await db.collections.projects.create({ name: 'Clientless Project' })
+    const pkg = await db.collections.packages.create({
+      name: 'Client Pkg No Ref',
+      type: 'proposal',
+      status: 'draft',
+      clientAccount: clientAccountId,
+    })
+    const c = await mcpClient()
+    const msg = await rejected(c, 'task_create', {
+      actor: 'orca',
+      title: 'Clientless mix',
+      projectId: String(bare._id),
+      packageId: String(pkg._id),
+    })
+    expect(msg).toContain('(none)')
+    expect(await db.collections.tasks.countDocuments({ title: 'Clientless mix' })).toBe(0)
+  })
+
+  test('actor is case-insensitive and stored lowercase', async () => {
+    const a = await trackingFixture()
+    const c = await mcpClient()
+    const out = ok(
+      await c.callTool({
+        name: 'task_create',
+        arguments: { actor: 'Vegapunk', title: 'Case actor', packageId: a.packageId, ownerBot: 'ORCA' },
+      }),
+    )
+    expect(out.task.lastActor).toBe('vegapunk')
+    expect(out.task.ownerBot).toBe('orca')
+    await rejected(c, 'task_create', { actor: 'Nobody', title: 'Bad actor', packageId: a.packageId })
+  })
+
+  test('list_projects filters by client and returns progress', async () => {
+    const a = await trackingFixture()
+    const other = await otherClientFixture()
+    const c = await mcpClient()
+    ok(await c.callTool({ name: 'task_create', arguments: { actor: 'orca', title: 'LP task', projectId: a.projectId } }))
+    const out = ok(await c.callTool({ name: 'list_projects', arguments: { clientId: clientAccountId, limit: 100 } }))
+    const ids = out.items.map((p: any) => p.id)
+    expect(ids).toContain(a.projectId)
+    expect(ids).not.toContain(other.projectId)
+    for (const p of out.items) expect(p.clientAccountId).toBe(clientAccountId)
+    const row = out.items.find((p: any) => p.id === a.projectId)
+    expect(row.name).toBe('Tracking Project')
+    expect(row.progress.milestones).toEqual({ total: 2, done: 1 })
+    expect(row.progress.tasks.total).toBeGreaterThanOrEqual(1)
+    expect(typeof row.progress.percent).toBe('number')
+    expect(JSON.stringify(out)).not.toContain(CTX.brief)
+  })
+
+  test('list_packages with clientId returns only that client\'s packages', async () => {
+    const a = await trackingFixture()
+    const other = await otherClientFixture()
+    const c = await mcpClient()
+    const out = ok(await c.callTool({ name: 'list_packages', arguments: { clientId: other.clientAccountId } }))
+    const ids = out.packages.map((p: any) => String(p.id))
+    expect(ids).toContain(other.packageId)
+    expect(ids).not.toContain(a.packageId)
+    const mine = ok(await c.callTool({ name: 'list_packages', arguments: { clientId: clientAccountId } }))
+    expect(mine.packages.map((p: any) => String(p.id))).toContain(a.packageId)
+  })
+
+  test('get_project_progress names the project on open tasks', async () => {
+    const a = await trackingFixture()
+    const c = await mcpClient()
+    ok(await c.callTool({ name: 'task_create', arguments: { actor: 'orca', title: 'Named open task', projectId: a.projectId } }))
+    const out = ok(await c.callTool({ name: 'get_project_progress', arguments: { projectId: a.projectId } }))
+    expect(out.openTasks.length).toBeGreaterThan(0)
+    for (const t of out.openTasks) expect(t.projectName).toBe('Tracking Project')
+  })
+
   test('MCP task_list filters by package, project, client and status', async () => {
     const a = await trackingFixture()
     const b = await trackingFixture()

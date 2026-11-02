@@ -94,6 +94,30 @@ async function visibleProject(
   }
 }
 
+/**
+ * The client check a task's project must pass. A package and its project must
+ * belong to the same client: when either side names a client, the other must
+ * name the same one (a client package on a client-less project, or the reverse,
+ * is rejected). When the caller passes `clientAccountId`, the project must
+ * belong to that client. Returns an error message, or null when allowed.
+ */
+function clientLinkError(opts: {
+  projectId: string
+  projectClient: string | null
+  packageId?: string | null
+  pkgClient?: string | null
+  clientAccountId?: string | null
+}): string | null {
+  const { projectId, projectClient, packageId, pkgClient, clientAccountId } = opts
+  if (clientAccountId && projectClient !== clientAccountId) {
+    return `Project ${projectId} belongs to client account ${projectClient ?? '(none)'}, not ${clientAccountId}; the task was not saved.`
+  }
+  if (packageId && (pkgClient || projectClient) && pkgClient !== projectClient) {
+    return `Package ${packageId} belongs to client account ${pkgClient ?? '(none)'}, but project ${projectId} belongs to client account ${projectClient ?? '(none)'}; the task was not saved.`
+  }
+  return null
+}
+
 // ── Create ────────────────────────────────────────────────────────────────────
 
 export async function createTrackedTask(input: {
@@ -102,6 +126,8 @@ export async function createTrackedTask(input: {
   description?: string
   projectId?: string
   packageId?: string
+  /** When set, the project must belong to this client account. */
+  clientAccountId?: string
   status?: TaskStatus
   priority?: TaskPriority
   dueDate?: string
@@ -136,12 +162,14 @@ export async function createTrackedTask(input: {
     const project = await visibleProject(payload, user, projectId)
     if (!project) return fail(`Project ${projectId} not found (it does not exist or you cannot access it)`)
 
-    const projectClient = idOf(project.client)
-    if (input.packageId && pkgClient && projectClient && pkgClient !== projectClient) {
-      return fail(
-        `Package ${input.packageId} belongs to client account ${pkgClient}, but project ${projectId} belongs to client account ${projectClient}`,
-      )
-    }
+    const clientError = clientLinkError({
+      projectId,
+      projectClient: idOf(project.client),
+      packageId: input.packageId,
+      pkgClient,
+      clientAccountId: input.clientAccountId,
+    })
+    if (clientError) return fail(clientError)
 
     const task = await payload.create({
       collection: 'tasks',
@@ -195,23 +223,20 @@ async function checkTaskLinks(
   user: NonNullable<Awaited<ReturnType<typeof staffCaller>>>,
   projectId: string | null,
   packageId: string | null,
+  clientAccountId?: string | null,
 ): Promise<string | null> {
   if (!projectId) return 'A task must belong to a project'
   const project = await findVisible(payload, user, 'projects', projectId)
   if (!project) return `Project ${projectId} not found`
-  if (!packageId) return null
+  const projectClient = idOf(project.client)
+  if (!packageId) return clientLinkError({ projectId, projectClient, clientAccountId })
   const pkg = await findVisible(payload, user, 'packages', packageId)
   if (!pkg) return `Package ${packageId} not found`
   const pkgProject = idOf(pkg.projectRef)
   if (pkgProject && pkgProject !== projectId) {
     return `Package ${packageId} belongs to project ${pkgProject}, not ${projectId}`
   }
-  const pkgClient = idOf(pkg.clientAccount)
-  const projectClient = idOf(project.client)
-  if (pkgClient && projectClient && pkgClient !== projectClient) {
-    return `Package ${packageId} belongs to client ${pkgClient}, but project ${projectId} belongs to client ${projectClient}`
-  }
-  return null
+  return clientLinkError({ projectId, projectClient, packageId, pkgClient: idOf(pkg.clientAccount), clientAccountId })
 }
 
 // ── Update ────────────────────────────────────────────────────────────────────
@@ -223,6 +248,8 @@ export async function updateTrackedTask(input: {
   description?: string
   projectId?: string
   packageId?: string | null
+  /** When set, the task's resulting project must belong to this client account. */
+  clientAccountId?: string
   status?: TaskStatus
   priority?: TaskPriority
   dueDate?: string | null
@@ -245,10 +272,10 @@ export async function updateTrackedTask(input: {
 
     // Moving a task re-runs the create-time match on the resulting pair, so it can
     // never end up on another client's project or package, or on a missing one.
-    if (input.projectId !== undefined || input.packageId !== undefined) {
+    if (input.projectId !== undefined || input.packageId !== undefined || input.clientAccountId !== undefined) {
       const nextProject = input.projectId !== undefined ? input.projectId : idOf(current.project)
       const nextPackage = input.packageId !== undefined ? input.packageId : idOf(current.package)
-      const linkError = await checkTaskLinks(payload, user, nextProject, nextPackage)
+      const linkError = await checkTaskLinks(payload, user, nextProject, nextPackage, input.clientAccountId)
       if (linkError) return fail(linkError)
     }
 
@@ -464,8 +491,99 @@ export async function getProjectProgress(projectId: string): Promise<
         projectedEndDate: project.projectedEndDate ?? null,
       },
       milestones,
-      openTasks: tasks.filter((t) => t.status === 'pending' || t.status === 'in-progress').map(taskRow),
+      // Tasks load at depth 0, so name them from the project already in hand.
+      openTasks: tasks
+        .filter((t) => t.status === 'pending' || t.status === 'in-progress')
+        .map((t) => taskRow({ ...t, project: { id: String(project.id), name: project.name } })),
       progress: computeProgress({ tasks, milestones }),
+    }
+  } catch (e) {
+    return fail(errorMessage(e))
+  }
+}
+
+// ── Project list ─────────────────────────────────────────────────────────────
+
+type ProjectStatus = 'pending' | 'in-progress' | 'on-hold' | 'completed' | 'cancelled'
+
+export type ProjectRow = {
+  id: string
+  name: string
+  status: string | null
+  clientAccountId: string | null
+  startDate: string | null
+  projectedEndDate: string | null
+  progress: Progress
+}
+
+/**
+ * Projects the caller can see (collection access applies), newest-updated first,
+ * optionally filtered by client account and status, each with its progress.
+ */
+export async function listProjects(input: {
+  clientId?: string
+  status?: ProjectStatus | ProjectStatus[]
+  limit?: number
+  page?: number
+}): Promise<{ success: true; items: ProjectRow[]; total: number; page: number; hasNextPage: boolean } | Fail> {
+  try {
+    const user = await staffCaller()
+    if (!user) return fail('Unauthorized')
+    const payload = await getPayload({ config })
+
+    const and: Where[] = []
+    if (input.clientId) and.push({ client: { equals: input.clientId } })
+    if (input.status) {
+      and.push(Array.isArray(input.status) ? { status: { in: input.status } } : { status: { equals: input.status } })
+    }
+    const res = await payload.find({
+      collection: 'projects',
+      where: and.length ? { and } : {},
+      sort: '-updatedAt',
+      limit: Math.min(Math.max(input.limit ?? 25, 1), 100),
+      page: input.page ?? 1,
+      depth: 0,
+      select: { name: true, status: true, client: true, startDate: true, projectedEndDate: true, milestones: true },
+      user,
+      overrideAccess: false,
+    })
+    const projects = res.docs as Record<string, any>[]
+    const ids = projects.map((p) => String(p.id))
+    const taskDocs = ids.length
+      ? ((
+          await payload.find({
+            collection: 'tasks',
+            where: { project: { in: ids } },
+            limit: 5000,
+            depth: 0,
+            select: { project: true, status: true },
+            user,
+            overrideAccess: false,
+          })
+        ).docs as Record<string, any>[])
+      : []
+    const tasksBy = new Map<string, Record<string, any>[]>()
+    for (const t of taskDocs) {
+      const pid = idOf(t.project)
+      if (!pid) continue
+      const list = tasksBy.get(pid) ?? []
+      list.push(t)
+      tasksBy.set(pid, list)
+    }
+    return {
+      success: true,
+      items: projects.map((p) => ({
+        id: String(p.id),
+        name: p.name,
+        status: p.status ?? null,
+        clientAccountId: idOf(p.client),
+        startDate: p.startDate ?? null,
+        projectedEndDate: p.projectedEndDate ?? null,
+        progress: computeProgress({ tasks: tasksBy.get(String(p.id)) ?? [], milestones: milestonesOf(p) }),
+      })),
+      total: res.totalDocs,
+      page: res.page ?? 1,
+      hasNextPage: res.hasNextPage,
     }
   } catch (e) {
     return fail(errorMessage(e))

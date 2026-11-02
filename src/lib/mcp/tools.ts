@@ -47,11 +47,12 @@ import {
   createTrackedTask,
   updateTrackedTask,
   listTrackedTasks,
+  listProjects,
   getPackageOverview,
   getProjectProgress,
 } from '@/actions/taskTracking'
 import type { SowFormData } from '@/lib/document-generators'
-import { ACTOR } from '@/lib/mcp/actor'
+import { ACTOR, normalizeActor } from '@/lib/mcp/actor'
 import { checkWriteInput, prepareSowSave } from '@/lib/mcp/writeGuard'
 import { runAsMcp } from '@/lib/payload/access/mcpMoney'
 import { recordAgentWrite, targetIdOf } from '@/lib/mcp/audit'
@@ -105,8 +106,13 @@ function guardedWrite<I extends Record<string, unknown>>(
   handler: (input: I, actor: string) => Promise<ToolResult>,
 ): (input: I & { actor: string }) => Promise<ToolResult> {
   return (input) => runAsMcp(async () => {
-    const { actor, ...rest } = input
-    const check = checkWriteInput(tool, input)
+    // Actor names are case-insensitive; everything downstream sees the canonical form.
+    const actor = normalizeActor(input.actor)
+    const { actor: _raw, ...restRaw } = input
+    const rest = 'ownerBot' in restRaw && typeof restRaw.ownerBot === 'string'
+      ? { ...restRaw, ownerBot: normalizeActor(restRaw.ownerBot) }
+      : restRaw
+    const check = checkWriteInput(tool, { ...rest, actor })
     if (!check.ok) {
       await recordAgentWrite({ actor, tool, ok: false, targetId: targetIdOf(rest), error: check.error })
       return text({ error: check.error }, true)
@@ -346,10 +352,12 @@ export function registerOrcaclubTools(server: McpServer): void {
     'list_packages',
     {
       title: 'List packages',
-      description: 'All packages and proposals with their status and line items.',
-      inputSchema: z.object({}),
+      description:
+        'Package templates with their status and line items. Pass clientId (list_clients) to list that ' +
+        "client's packages and proposals instead.",
+      inputSchema: z.object({ clientId: z.string().optional() }).strict(),
     },
-    async () => run(() => getPackages()),
+    async ({ clientId }) => run(() => getPackages({ clientId })),
   )
 
   server.registerTool(
@@ -541,6 +549,7 @@ export function registerOrcaclubTools(server: McpServer): void {
         description: z.string().optional().describe('Plain text; one paragraph per line.'),
         packageId: z.string().optional(),
         projectId: z.string().optional(),
+        clientAccountId: z.string().optional().describe('If set, the project must belong to this client account.'),
         status: TASK_STATUS.optional(),
         priority: TASK_PRIORITY.optional(),
         dueDate: z.string().optional().describe('ISO date.'),
@@ -565,6 +574,10 @@ export function registerOrcaclubTools(server: McpServer): void {
         description: z.string().optional(),
         packageId: z.string().nullable().optional(),
         projectId: z.string().optional(),
+        clientAccountId: z
+          .string()
+          .optional()
+          .describe("If set, the task's resulting project must belong to this client account."),
         status: TASK_STATUS.optional(),
         priority: TASK_PRIORITY.optional(),
         dueDate: z.string().nullable().optional(),
@@ -597,6 +610,30 @@ export function registerOrcaclubTools(server: McpServer): void {
         .strict(),
     },
     async (input) => run(() => listTrackedTasks(input)),
+  )
+
+  server.registerTool(
+    'list_projects',
+    {
+      title: 'List projects',
+      description:
+        'Projects you can see, newest-updated first, with status, client account, dates and progress (tasks + ' +
+        'milestones done/total, percent). Filter by clientId and status. Paged: limit (default 25, max 100) and page.',
+      inputSchema: z
+        .object({
+          clientId: z.string().optional(),
+          status: z
+            .union([
+              z.enum(['pending', 'in-progress', 'on-hold', 'completed', 'cancelled']),
+              z.array(z.enum(['pending', 'in-progress', 'on-hold', 'completed', 'cancelled'])),
+            ])
+            .optional(),
+          limit: z.number().int().min(1).max(100).optional(),
+          page: z.number().int().min(1).optional(),
+        })
+        .strict(),
+    },
+    async (input) => run(() => listProjects(input)),
   )
 
   server.registerTool(
