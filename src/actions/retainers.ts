@@ -1861,10 +1861,29 @@ export async function logHours(input: {
     const raw = (await payload
       .findByID({ collection: 'retainers', id: input.retainerId, depth: 0 })
       .catch(() => null)) as RetainerDoc | null
-    const retainer = raw ? await settleRetainer(payload, raw, now) : null
+    // Hours are only ever logged against a real retainer of this client. Without
+    // one there are no terms to freeze, and the entry would later be billed at the
+    // default rates instead (Finn, 2026-11-02).
+    if (!raw) {
+      return {
+        success: false as const,
+        error: `Retainer ${input.retainerId} not found. Hours must be logged against an existing retainer; nothing was logged.`,
+      }
+    }
+    const retainerClient =
+      typeof raw.clientAccount === 'object' && raw.clientAccount
+        ? String((raw.clientAccount as { id?: unknown }).id)
+        : String(raw.clientAccount ?? '')
+    if (retainerClient !== String(input.clientAccountId)) {
+      return {
+        success: false as const,
+        error: `Retainer ${input.retainerId} does not belong to client account ${input.clientAccountId}; nothing was logged.`,
+      }
+    }
+    const retainer = await settleRetainer(payload, raw, now)
     const locked = historyLockError(retainer)
     if (locked) return { success: false as const, error: locked }
-    const terms = retainer ? effectiveTerms(retainer, entryDate) : null
+    const terms = effectiveTerms(retainer, entryDate)
 
     const entry = await payload.create({
       collection: 'retainer-time-entries',
@@ -1878,10 +1897,10 @@ export async function logHours(input: {
         priority: input.priority ?? 'medium',
         description: input.description || undefined,
         loggedBy: user.id,
-        capAtLog: terms?.hoursPerMonth ?? undefined,
-        overageRateAtLog: terms?.overageRate ?? undefined,
-        feeAtLog: terms?.monthlyFee ?? undefined,
-        tierAtLog: terms?.tier ?? undefined,
+        capAtLog: terms.hoursPerMonth,
+        overageRateAtLog: terms.overageRate,
+        feeAtLog: terms.monthlyFee,
+        tierAtLog: terms.tier,
       } as any,
     })
 

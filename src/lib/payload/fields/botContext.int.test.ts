@@ -662,6 +662,39 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
     expect(docs[0]?.overageRateAtLog).toBe(120)
   })
 
+  test('MCP log_work requires an existing retainer of that client: no entry at default rates', async () => {
+    const db = payload.db as any
+    const ca = await db.collections['client-accounts'].create({ name: 'NoRetainer Co', email: 'noret@test.local' })
+    const other = await db.collections['client-accounts'].create({ name: 'Other Co', email: 'other@test.local' })
+    const r = await db.collections.retainers.create({
+      clientAccount: other._id,
+      tier: 'basic',
+      status: 'active',
+      startDate: '2026-01-01T00:00:00.000Z',
+      activatedAt: '2026-01-01T00:00:00.000Z',
+      monthlyFee: 1000,
+      hoursPerMonth: 10,
+      overageRate: 120,
+    })
+    const c = await mcpClient()
+    const base = { actor: 'vegapunk', clientAccountId: String(ca._id), date: '2026-11-01', hours: 2, description: 'x' }
+
+    const missing: any = await c.callTool({ name: 'log_work', arguments: { ...base, retainerId: '6ae000000000000000000000' } })
+    expect(missing.isError).toBe(true)
+    expect(JSON.stringify(missing.content)).toContain('not found. Hours must be logged against an existing retainer')
+
+    const wrongClient: any = await c.callTool({ name: 'log_work', arguments: { ...base, retainerId: String(r._id) } })
+    expect(wrongClient.isError).toBe(true)
+    expect(JSON.stringify(wrongClient.content)).toContain('does not belong to client account')
+
+    const { totalDocs } = await payload.find({
+      collection: 'retainer-time-entries',
+      where: { clientAccount: { equals: String(ca._id) } },
+    })
+    expect(totalDocs).toBe(0)
+    await rejected(c, 'log_work', { actor: 'vegapunk', clientAccountId: String(ca._id), date: '2026-11-01', hours: 2 })
+  })
+
   // ── Plan step 2: task tracking tools ─────────────────────────────────────────
 
   async function trackingFixture() {
