@@ -33,6 +33,9 @@ export default function HeroSection({
   return (
     <section className="h-screen relative z-10 flex flex-col items-center justify-center">
       <div className="max-w-3xl mx-auto px-6 text-center w-full">
+        {/* The visible brand is a logo image + animated greeting, so the page
+            heading is visually hidden; screen readers and crawlers need one <h1>. */}
+        <h1 className="sr-only">ORCACLUB: websites that get you found</h1>
 
         {/* Logo */}
         <ScrollReveal>

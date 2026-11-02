@@ -37,6 +37,9 @@ export default function DeskPage() {
 
   return (
     <main className="read hub-read">
+      {/* The hub's visible headings are per-channel <h2>s; the page heading is
+          visually hidden so the page still has exactly one <h1>. */}
+      <h1 className="sr-only">SONAR: signal from beneath the noise</h1>
       <div className="hub">
         <ChannelCarousel channels={channels} />
       </div>
