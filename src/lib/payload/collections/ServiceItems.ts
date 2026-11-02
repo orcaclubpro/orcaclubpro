@@ -1,5 +1,6 @@
 import type { CollectionConfig } from 'payload'
 import { adminOrUser, adminOnly } from '../access/index'
+import { MONEY_FIELD_ACCESS, SERVICE_ITEM_MONEY, rejectMcpMoneyWrites } from '../access/mcpMoney'
 
 /**
  * ServiceItems Collection
@@ -13,6 +14,10 @@ import { adminOrUser, adminOnly } from '../access/index'
  */
 const ServiceItems: CollectionConfig = {
   slug: 'service-items',
+  hooks: {
+    // Money fields are read-only for MCP requests (access/mcpMoney.ts).
+    beforeChange: [rejectMcpMoneyWrites('service-items', SERVICE_ITEM_MONEY)],
+  },
   admin: {
     useAsTitle: 'name',
     group: 'Clients',
@@ -57,6 +62,8 @@ const ServiceItems: CollectionConfig = {
         },
         {
           name: 'defaultPrice',
+          // Money: admin with a normal login only; never via MCP (access/mcpMoney.ts).
+          access: MONEY_FIELD_ACCESS,
           type: 'number',
           min: 0,
           admin: {
@@ -66,6 +73,8 @@ const ServiceItems: CollectionConfig = {
         },
         {
           name: 'defaultRate',
+          // Money: admin with a normal login only; never via MCP (access/mcpMoney.ts).
+          access: MONEY_FIELD_ACCESS,
           type: 'number',
           min: 0,
           defaultValue: 40,

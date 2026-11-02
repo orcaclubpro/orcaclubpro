@@ -73,6 +73,11 @@ export const MONEY_KEYS: ReadonlySet<string> = new Set([
   'paymentLinkUrl',
   'paymentConfigId',
   'defaultPaymentConfig',
+  // service items / time-entry snapshots
+  'defaultPrice',
+  'defaultRate',
+  'overageRateAtLog',
+  'feeAtLog',
   // SOW money terms
   'revisionRate',
   'lateFee',

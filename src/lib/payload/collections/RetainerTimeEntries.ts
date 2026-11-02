@@ -1,5 +1,6 @@
 import type { CollectionConfig } from 'payload'
 import { adminOrUser, adminOnly } from '../access/index'
+import { MONEY_FIELD_ACCESS, rejectMcpTimeEntryMoneyWrites } from '../access/mcpMoney'
 import { trackRetainerLogActivity } from '../hooks/recordActivity'
 
 /**
@@ -28,6 +29,8 @@ const RetainerTimeEntries: CollectionConfig = {
   },
   hooks: {
     // A "log added" is a new entry — draft entries are planned work, not time spent.
+    // Snapshots (overageRateAtLog, feeAtLog) are read-only for MCP beyond the stored terms.
+    beforeChange: [rejectMcpTimeEntryMoneyWrites],
     afterChange: [trackRetainerLogActivity],
   },
   fields: [
@@ -134,12 +137,16 @@ const RetainerTimeEntries: CollectionConfig = {
         },
         {
           name: 'overageRateAtLog',
+          // Money: admin with a normal login only; never via MCP (access/mcpMoney.ts).
+          access: MONEY_FIELD_ACCESS,
           type: 'number',
           min: 0,
           admin: { width: '25%', readOnly: true, description: 'overage $/hr at log time' },
         },
         {
           name: 'feeAtLog',
+          // Money: admin with a normal login only; never via MCP (access/mcpMoney.ts).
+          access: MONEY_FIELD_ACCESS,
           type: 'number',
           min: 0,
           admin: { width: '25%', readOnly: true, description: 'fee/mo at log time' },

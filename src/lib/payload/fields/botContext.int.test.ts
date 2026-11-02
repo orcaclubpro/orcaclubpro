@@ -399,6 +399,58 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
     expect(back.hourlyRate).toBe(175)
   })
 
+  test('MCP-flagged Payload write of service-item defaultPrice/defaultRate is rejected', async () => {
+    const db = payload.db as any
+    const si = await db.collections['service-items'].create({ name: 'Audit', billingType: 'fixed', defaultPrice: 500, defaultRate: 120 })
+    for (const data of [{ defaultPrice: 1 }, { defaultRate: 1 }]) {
+      await expect(
+        payload.update({ collection: 'service-items', id: String(si._id), data: data as any, context: { viaMcp: true } }),
+      ).rejects.toThrow(/service-items: money fields are read-only for MCP requests \((defaultPrice|defaultRate)\)/)
+    }
+  })
+
+  test('MCP time entry: snapshot of stored retainer terms is allowed, a tampered overageRateAtLog is rejected', async () => {
+    const db = payload.db as any
+    const r = await db.collections.retainers.create({
+      clientAccount: clientAccountId,
+      tier: 'basic',
+      status: 'active',
+      monthlyFee: 1000,
+      overageRate: 120,
+      hoursPerMonth: 10,
+    })
+    const base = {
+      retainer: String(r._id),
+      clientAccount: clientAccountId,
+      date: '2026-11-02T00:00:00.000Z',
+      hours: 1,
+      status: 'logged',
+      category: 'work',
+      priority: 'medium',
+    }
+    const ok: any = await payload.create({
+      collection: 'retainer-time-entries',
+      data: { ...base, overageRateAtLog: 120, feeAtLog: 1000 } as any,
+      context: { viaMcp: true, skipActivityLog: true },
+    })
+    expect(ok.overageRateAtLog).toBe(120)
+    await expect(
+      payload.create({
+        collection: 'retainer-time-entries',
+        data: { ...base, overageRateAtLog: 1, feeAtLog: 1000 } as any,
+        context: { viaMcp: true, skipActivityLog: true },
+      }),
+    ).rejects.toThrow(/overageRateAtLog/)
+    await expect(
+      payload.update({
+        collection: 'retainer-time-entries',
+        id: ok.id,
+        data: { overageRateAtLog: 5 } as any,
+        context: { viaMcp: true, skipActivityLog: true },
+      }),
+    ).rejects.toThrow(/retainer-time-entries: money fields are read-only for MCP requests \(overageRateAtLog\)/)
+  })
+
   // ── Package line-item Stripe ids are staff-only (fields/packageStripeIds.ts) ──
 
   test('client cannot read lineItems.stripePriceId (API path, overrideAccess:false)', async () => {

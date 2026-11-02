@@ -113,6 +113,15 @@ export function moneyOnCreate(data: Doc, spec: MoneySpec): string[] {
   return moneyDiff(baseline, { ...defaults, ...data }, spec)
 }
 
+/** The 403 every money rejection uses; it names the fields. */
+export function moneyError(slug: string, fields: string[]): APIError {
+  return new APIError(
+    `${slug}: money fields are read-only for MCP requests (${fields.join(', ')}). ` +
+      'Only an admin with a normal login can change prices, fees, status or Stripe fields.',
+    403,
+  )
+}
+
 /**
  * beforeChange: throw 403 when an MCP-marked request changes a money field.
  * Update data is partial at the top level, so it is overlaid on the original.
@@ -124,13 +133,7 @@ export function rejectMcpMoneyWrites(slug: string, spec: MoneySpec): CollectionB
       operation === 'create'
         ? moneyOnCreate(data, spec)
         : moneyDiff(originalDoc as Doc, { ...(originalDoc as Doc), ...data }, spec)
-    if (changed.length > 0) {
-      throw new APIError(
-        `${slug}: money fields are read-only for MCP requests (${changed.join(', ')}). ` +
-          'Only an admin with a normal login can change prices, fees, status or Stripe fields.',
-        403,
-      )
-    }
+    if (changed.length > 0) throw moneyError(slug, changed)
     return data
   }
 }
@@ -174,4 +177,53 @@ export const ORDER_MONEY: MoneySpec = {
 
 export const CLIENT_ACCOUNT_MONEY: MoneySpec = {
   fields: ['stripeCustomerId'],
+}
+
+export const SERVICE_ITEM_MONEY: MoneySpec = {
+  fields: ['defaultPrice', 'defaultRate'],
+}
+
+/** Retainer time-entry snapshots of the terms in force when the hours were logged. */
+export const TIME_ENTRY_MONEY: MoneySpec = {
+  fields: ['overageRateAtLog', 'feeAtLog'],
+}
+
+/**
+ * Time entries: an MCP `log_work` legitimately writes `overageRateAtLog` and
+ * `feeAtLog` on create, but only as a snapshot of the retainer's stored terms
+ * (current or pending). So under MCP a create may carry a snapshot only when it
+ * equals one of those stored values; anything else, and any change on update,
+ * is a 403.
+ */
+export const rejectMcpTimeEntryMoneyWrites: CollectionBeforeChangeHook = async ({
+  data,
+  operation,
+  originalDoc,
+  req,
+}) => {
+  if (!data || !isMcpRequest(req)) return data
+
+  if (operation !== 'create') {
+    const changed = moneyDiff(originalDoc as Doc, { ...(originalDoc as Doc), ...data }, TIME_ENTRY_MONEY)
+    if (changed.length > 0) throw moneyError('retainer-time-entries', changed)
+    return data
+  }
+
+  const retainerId = typeof data.retainer === 'object' ? data.retainer?.id : data.retainer
+  const retainer = retainerId
+    ? ((await req.payload.db.findOne({
+        collection: 'retainers',
+        where: { id: { equals: retainerId } },
+        req,
+      })) as Doc | null)
+    : null
+  const allowed: Record<string, unknown[]> = {
+    overageRateAtLog: [retainer?.overageRate ?? 65, retainer?.pendingOverageRate],
+    feeAtLog: [retainer?.monthlyFee ?? 0, retainer?.pendingMonthlyFee],
+  }
+  const bad = Object.entries(allowed)
+    .filter(([f, ok]) => !isEmpty(data[f]) && !ok.some((v) => !isEmpty(v) && Number(v) === Number(data[f])))
+    .map(([f]) => f)
+  if (bad.length > 0) throw moneyError('retainer-time-entries', bad)
+  return data
 }
