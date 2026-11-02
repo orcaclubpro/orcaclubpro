@@ -13,6 +13,7 @@
  */
 import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test'
 import type { Payload } from 'payload'
+import { CUSTOM_LINE_BLOCKED } from './catalogLinePrice'
 
 const TEST_DB = process.env.TEST_DATABASE_URI ?? ''
 const IS_LOCAL = /^mongodb:\/\/(127\.0\.0\.1|localhost)(:\d+)?\/[\w-]+$/.test(TEST_DB)
@@ -290,14 +291,13 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
     )
     expect(status).toBeGreaterThanOrEqual(400)
     expect(status).toBeLessThan(500)
-    expect(message).toContain("Line item 'Custom work' needs a service item with a fixed defaultPrice")
-    expect(message).toContain('freeform lines are not allowed for staff or MCP.')
+    expect(message).toBe(CUSTOM_LINE_BLOCKED)
     const back: any = await payload.findByID({ collection: 'packages', id: pkg.id, user: staff, overrideAccess: false })
     expect(back.lineItems).toHaveLength(1)
     expect(back.lineItems[0].price).toBe(3000)
   })
 
-  test('catalog-only lines: role user adding a line from an hourly item with only defaultRate gets 4xx', async () => {
+  test('catalog-only lines: role user adding an hourly-rate line without hours gets 4xx', async () => {
     const db = payload.db as any
     const si = await db.collections['service-items'].create({ name: 'Dev hours', billingType: 'hourly', defaultRate: 120 })
     const siId = String(si._id)
@@ -313,8 +313,7 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
     )
     expect(status).toBeGreaterThanOrEqual(400)
     expect(status).toBeLessThan(500)
-    expect(message).toContain('hourly/freeform lines are not allowed for staff or MCP')
-    expect(message).toContain(`(service item ${siId} has no defaultPrice)`)
+    expect(message).toContain(`Line item 'Dev hours': hourly service item ${siId} needs hours greater than 0`)
 
     // A service item id that does not exist says so.
     const missing = '0123456789abcdef01234567'
@@ -344,8 +343,7 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
     )
     expect(status).toBeGreaterThanOrEqual(400)
     expect(status).toBeLessThan(500)
-    expect(message).toContain("Line item 'Freeform' needs a service item with a fixed defaultPrice")
-    expect(message).toContain('freeform lines are not allowed for staff or MCP.')
+    expect(message).toBe(CUSTOM_LINE_BLOCKED)
     const { totalDocs } = await payload.find({ collection: 'packages', where: { name: { equals: 'bot freeform' } } })
     expect(totalDocs).toBe(0)
   })
@@ -410,6 +408,183 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
     const hit = body.items.find((i: any) => i.id === String(si._id))
     expect(hit).toMatchObject({ name: 'Catalog listing probe', billingType: 'fixed', defaultPrice: 777, archived: false })
     expect(body.items.some((i: any) => i.name === 'Archived probe')).toBe(false)
+  })
+
+  // ── Hourly catalog lines: price = locked defaultRate × hours (Finn, Nov 2 2026) ──
+
+  async function hourlyItem(rate = 120) {
+    const si = await (payload.db as any).collections['service-items'].create({
+      name: 'Dev hours',
+      billingType: 'hourly',
+      defaultRate: rate,
+    })
+    return String(si._id)
+  }
+
+  test('hourly lines: role user adds an hourly line with hours; server prices it rate × hours', async () => {
+    const siId = await hourlyItem(120)
+    const pkg = await moneyFixture()
+    await payload.update({
+      collection: 'packages',
+      id: pkg.id,
+      data: { lineItems: [pkg.lineItems[0], { name: 'Dev hours', sourceServiceItem: siId, hours: 3 }] } as any,
+      user: staffUser,
+      overrideAccess: false,
+    })
+    const back: any = await payload.findByID({ collection: 'packages', id: pkg.id, user: staff, overrideAccess: false })
+    expect(back.lineItems).toHaveLength(2)
+    expect(back.lineItems[1].price).toBe(360)
+    expect(back.lineItems[1].hours).toBe(3)
+    expect(back.lineItems[1].billingType).toBe('hourly')
+    expect(back.lineItems[0].price).toBe(3000) // untouched
+  })
+
+  test('hourly lines: role user sending hours 0 or negative gets 4xx and the package is unchanged', async () => {
+    const siId = await hourlyItem(120)
+    const pkg = await moneyFixture()
+    for (const hours of [0, -2]) {
+      const { status, message } = await failure(
+        payload.update({
+          collection: 'packages',
+          id: pkg.id,
+          data: { lineItems: [pkg.lineItems[0], { name: 'Dev hours', sourceServiceItem: siId, hours }] } as any,
+          user: staffUser,
+          overrideAccess: false,
+        }),
+      )
+      expect(status).toBeGreaterThanOrEqual(400)
+      expect(status).toBeLessThan(500)
+      expect(message).toContain('needs hours greater than 0')
+    }
+    const back: any = await payload.findByID({ collection: 'packages', id: pkg.id, user: staff, overrideAccess: false })
+    expect(back.lineItems).toHaveLength(1)
+  })
+
+  test('hourly lines: role user cannot price an hourly line themselves (price is still a 403)', async () => {
+    const siId = await hourlyItem(120)
+    const pkg = await moneyFixture()
+    const { status } = await failure(
+      payload.update({
+        collection: 'packages',
+        id: pkg.id,
+        data: { lineItems: [pkg.lineItems[0], { name: 'Dev hours', sourceServiceItem: siId, hours: 3, price: 1 }] } as any,
+        user: staffUser,
+        overrideAccess: false,
+      }),
+    )
+    expect(status).toBe(403)
+    const back: any = await payload.findByID({ collection: 'packages', id: pkg.id, user: staff, overrideAccess: false })
+    expect(back.lineItems).toHaveLength(1)
+  })
+
+  test('hourly lines: changing hours on a stored hourly line re-prices it; hours 0 is rejected', async () => {
+    const siId = await hourlyItem(100)
+    const pkg = await moneyFixture()
+    await payload.update({
+      collection: 'packages',
+      id: pkg.id,
+      data: { lineItems: [pkg.lineItems[0], { name: 'Dev hours', sourceServiceItem: siId, hours: 2 }] } as any,
+      user: staffUser,
+      overrideAccess: false,
+    })
+    let back: any = await payload.findByID({ collection: 'packages', id: pkg.id, user: staff, overrideAccess: false })
+    expect(back.lineItems[1].price).toBe(200)
+
+    const line = back.lineItems[1]
+    await payload.update({
+      collection: 'packages',
+      id: pkg.id,
+      data: { lineItems: [back.lineItems[0], { id: line.id, name: line.name, sourceServiceItem: siId, hours: 5 }] } as any,
+      user: staffUser,
+      overrideAccess: false,
+    })
+    back = await payload.findByID({ collection: 'packages', id: pkg.id, user: staff, overrideAccess: false })
+    expect(back.lineItems[1].price).toBe(500)
+    expect(back.lineItems[1].hours).toBe(5)
+
+    const { status } = await failure(
+      payload.update({
+        collection: 'packages',
+        id: pkg.id,
+        data: { lineItems: [back.lineItems[0], { id: line.id, name: line.name, sourceServiceItem: siId, hours: 0 }] } as any,
+        user: staffUser,
+        overrideAccess: false,
+      }),
+    )
+    expect(status).toBe(400)
+    back = await payload.findByID({ collection: 'packages', id: pkg.id, user: staff, overrideAccess: false })
+    expect(back.lineItems[1].price).toBe(500)
+  })
+
+  test('hourly lines: MCP create_package with an hourly serviceItemId and hours is priced rate × hours', async () => {
+    const siId = await hourlyItem(120)
+    const c = await mcpClient()
+    const res: any = await c.callTool({
+      name: 'create_package',
+      arguments: {
+        actor: 'vegapunk',
+        name: 'Bot hourly pkg',
+        lineItems: [{ serviceItemId: siId, name: 'Dev hours', hours: 2.5 }],
+      },
+    })
+    expect(res.isError).toBeFalsy()
+    const { docs } = await payload.find({
+      collection: 'packages',
+      where: { name: { equals: 'Bot hourly pkg' } },
+      user: staff,
+      overrideAccess: false,
+      depth: 0,
+    })
+    expect(docs).toHaveLength(1)
+    const line: any = docs[0]!.lineItems![0]
+    expect(line.price).toBe(300)
+    expect(line.hours).toBe(2.5)
+    expect(line.billingType).toBe('hourly')
+  })
+
+  test('hourly lines: MCP create_package with an hourly item but no hours is rejected and creates nothing', async () => {
+    const siId = await hourlyItem(120)
+    const c = await mcpClient()
+    const res: any = await c.callTool({
+      name: 'create_package',
+      arguments: { actor: 'vegapunk', name: 'Bot hourly no hours', lineItems: [{ serviceItemId: siId, name: 'Dev hours' }] },
+    })
+    expect(res.isError).toBe(true)
+    expect(res.content[0].text).toContain('needs hours greater than 0')
+    const { totalDocs } = await payload.find({ collection: 'packages', where: { name: { equals: 'Bot hourly no hours' } } })
+    expect(totalDocs).toBe(0)
+  })
+
+  test('hourly lines: MCP create_package with hours 0 or a price on an hourly line is rejected', async () => {
+    const siId = await hourlyItem(120)
+    const c = await mcpClient()
+    await rejected(c, 'create_package', {
+      actor: 'vegapunk',
+      name: 'Bot hourly zero',
+      lineItems: [{ serviceItemId: siId, name: 'Dev hours', hours: 0 }],
+    })
+    await rejected(c, 'create_package', {
+      actor: 'vegapunk',
+      name: 'Bot hourly priced',
+      lineItems: [{ serviceItemId: siId, name: 'Dev hours', hours: 2, price: 1 }],
+    })
+    const { totalDocs } = await payload.find({
+      collection: 'packages',
+      where: { name: { in: ['Bot hourly zero', 'Bot hourly priced'] } },
+    })
+    expect(totalDocs).toBe(0)
+  })
+
+  test('freeform lines: MCP-marked create with no service item gets the exact custom-line message', async () => {
+    const { status, message } = await failure(
+      payload.create({
+        collection: 'packages',
+        data: { name: 'bot custom', type: 'template', status: 'draft', lineItems: [{ name: 'Custom', hours: 3 }] } as any,
+        context: { viaMcp: true },
+      }),
+    )
+    expect(status).toBe(400)
+    expect(message).toBe('Price comes from the service item. Pick one, or ask Chance for a custom line.')
   })
 
   // ── Payload-level money lock for MCP requests (access/mcpMoney.ts) ───────────
@@ -748,7 +923,7 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
     await expectCatalogReject(
       pkg.id,
       { name: 'Unpriced line', quantity: 1, sourceServiceItem: siId },
-      new RegExp(`"Unpriced line".*${siId}.*no price set`),
+      new RegExp(`'Unpriced line'.*${siId}.*no locked price`),
     )
   })
 
@@ -757,7 +932,7 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
     const si = await db.collections['service-items'].create({ name: 'Free', billingType: 'fixed', defaultPrice: 0 })
     const siId = String(si._id)
     const pkg = await moneyFixture()
-    await expectCatalogReject(pkg.id, { name: 'Zero line', quantity: 1, sourceServiceItem: siId }, /"Zero line".*no price set/)
+    await expectCatalogReject(pkg.id, { name: 'Zero line', quantity: 1, sourceServiceItem: siId }, /'Zero line'.*no locked price/)
   })
 
   test('catalog line never $0: missing service item id is rejected with 400', async () => {
@@ -766,7 +941,7 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
     await expectCatalogReject(
       pkg.id,
       { name: 'Ghost line', quantity: 1, sourceServiceItem: missingId },
-      new RegExp(`"Ghost line".*${missingId}.*does not exist`),
+      new RegExp(`'Ghost line'.*${missingId}.*does not exist`),
     )
   })
 

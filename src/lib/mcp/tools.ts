@@ -351,8 +351,9 @@ export function registerOrcaclubTools(server: McpServer): void {
       title: 'List service catalog items',
       description:
         'The service catalog: id, name, billingType, defaultPrice, defaultRate, archived. Use an id as a ' +
-        "create_package line's serviceItemId. Only items with a positive defaultPrice can be used as lines " +
-        '(an hourly item with only defaultRate cannot). Archived items are skipped unless includeArchived is true.',
+        "create_package line's serviceItemId. A fixed/recurring item needs a positive defaultPrice; an hourly item " +
+        'with a positive defaultRate is priced defaultRate × the line hours. Archived items are skipped unless ' +
+        'includeArchived is true.',
       inputSchema: z.object({ includeArchived: z.boolean().optional() }),
     },
     async ({ includeArchived }) => run(() => listServiceItems({ includeArchived })),
@@ -366,8 +367,9 @@ export function registerOrcaclubTools(server: McpServer): void {
         'Create a draft package template with itemized lines. Created as type `template`, status `draft` — ' +
         'it is not assigned to a client and nothing is billed. Every line must come from the service catalog: ' +
         "pass its `serviceItemId` (see list_service_items) and the server prices the line from that item's " +
-        'locked defaultPrice. An item without a positive defaultPrice is rejected. Prices are read-only over ' +
-        'MCP: sending a price or Stripe id is rejected.',
+        'locked price: an hourly item with a defaultRate is priced defaultRate × `hours` (hours required, > 0); ' +
+        'any other item takes its defaultPrice. An item with neither is rejected, and so is a line with no ' +
+        'service item. Prices are read-only over MCP: sending a price or Stripe id is rejected.',
       inputSchema: writeSchema({
         name: z.string(),
         description: z.string().optional(),
@@ -379,6 +381,11 @@ export function registerOrcaclubTools(server: McpServer): void {
             name: z.string(),
             description: z.string().optional(),
             quantity: z.number().optional(),
+            hours: z
+              .number()
+              .positive()
+              .optional()
+              .describe('Required for an hourly service item: the line is priced defaultRate × hours.'),
             isRecurring: z.boolean().optional(),
             recurringInterval: z.enum(['month', 'year']).optional(),
           })

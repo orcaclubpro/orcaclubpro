@@ -93,6 +93,8 @@ export async function createPackage({
     /** Optional: a catalog line (`sourceServiceItem`) is priced server-side from the item's defaultPrice. */
     price?: number
     quantity?: number
+    /** Hourly catalog lines: hours worked; the server prices the line as defaultRate × hours. */
+    hours?: number
     isRecurring?: boolean
     recurringInterval?: 'month' | 'year'
     stripePriceId?: string
