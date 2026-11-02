@@ -12,6 +12,10 @@ import { ThemeProvider } from "./ThemeContext"
 import { countClientProposalPackages, resolveActiveClientAccount } from "./u/[username]/dashboard-data"
 import { THEMES, DEFAULT_THEME } from "./themes"
 import type { ThemeId } from "./themes"
+import { SiteDocument, siteMetadata } from "@/components/layout/site-document"
+
+// Root layout for the portal (no src/app/layout.tsx; see site-document.tsx).
+export const metadata = siteMetadata
 
 export default async function SpacesLayout({
   children,
@@ -44,6 +48,7 @@ export default async function SpacesLayout({
     .join(';')
 
   return (
+    <SiteDocument>
     <ThemeProvider initialTheme={initialTheme} username={user?.username ?? undefined}>
     <HeaderTitleProvider>
     <PackageCountProvider initialCount={packageCount}>
@@ -89,5 +94,6 @@ export default async function SpacesLayout({
     </PackageCountProvider>
     </HeaderTitleProvider>
     </ThemeProvider>
+    </SiteDocument>
   )
 }

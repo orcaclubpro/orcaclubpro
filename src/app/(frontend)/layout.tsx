@@ -1,6 +1,10 @@
 import { HeaderServer } from "@/components/layout/header-server"
 import { Footer } from "@/components/layout/footer"
 import { PasskeyHotkey } from "@/components/auth/PasskeyHotkey"
+import { SiteDocument, siteMetadata } from "@/components/layout/site-document"
+
+// Root layout for the marketing site (there is no src/app/layout.tsx; see site-document.tsx).
+export const metadata = siteMetadata
 
 export default function FrontendLayout({
   children,
@@ -8,7 +12,7 @@ export default function FrontendLayout({
   children: React.ReactNode
 }) {
   return (
-    <>
+    <SiteDocument>
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-cyan-400 focus:text-black focus:font-semibold focus:rounded-md"
@@ -20,6 +24,6 @@ export default function FrontendLayout({
       <Footer />
       {/* Press "K" anywhere on the marketing site to sign in with a passkey. */}
       <PasskeyHotkey />
-    </>
+    </SiteDocument>
   )
 }

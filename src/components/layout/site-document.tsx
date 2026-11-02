@@ -5,9 +5,17 @@ import Script from "next/script"
 import { Toaster } from "sonner"
 import { JsonLd } from "@/lib/seo/json-ld"
 import { organizationSchema, webSiteSchema } from "@/lib/seo/schema"
-import "./globals.css"
+import "@/app/globals.css"
 
-export const metadata: Metadata = {
+// The site's <html> document, shared by every route group except (payload).
+//
+// There is deliberately no src/app/layout.tsx: Payload's admin RootLayout
+// renders its own <html>, so a top-level layout would nest <html> inside
+// <body> on /admin and fail hydration (React #418). Each route group is its
+// own root layout instead — (frontend), (sonar), (spaces) and ui-preview-tmp
+// wrap their tree in <SiteDocument> and export `siteMetadata`; (payload)
+// keeps Payload's. See https://payloadcms.com/docs/getting-started/installation
+export const siteMetadata: Metadata = {
   metadataBase: new URL('https://orcaclub.pro'),
   title: "ORCACLUB | Built to Surface",
   description:
@@ -87,7 +95,7 @@ export const metadata: Metadata = {
   },
 }
 
-export default function RootLayout({
+export function SiteDocument({
   children,
 }: {
   children: React.ReactNode
