@@ -888,6 +888,54 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
     await rejected(c, 'task_create', { title: 'no actor', packageId })
   })
 
+  test('task_create rejects a projectId that does not exist and creates nothing', async () => {
+    const c = await mcpClient()
+    const db = payload.db as any
+    const missing = '0123456789abcdef01234567'
+    const res: any = await c.callTool({
+      name: 'task_create',
+      arguments: { actor: 'orca', title: 'Ghost project task', projectId: missing },
+    })
+    expect(res.isError).toBe(true)
+    expect(JSON.stringify(res.content)).toContain(`Project ${missing} not found`)
+    expect(await db.collections.tasks.countDocuments({ title: 'Ghost project task' })).toBe(0)
+  })
+
+  test("task_create rejects a package whose client differs from the project's client", async () => {
+    const db = payload.db as any
+    const otherCa = await db.collections['client-accounts'].create({ name: 'Other Client Co', email: 'fix3-other@test.local' })
+    const otherProject = await db.collections.projects.create({ name: 'Other Client Project', client: otherCa._id })
+    // A package of the first client with no project link, so only the client check can catch it.
+    const pkg: any = await payload.create({
+      collection: 'packages',
+      data: { name: 'Unlinked Package', type: 'proposal', status: 'draft', clientAccount: clientAccountId } as any,
+      user: staff,
+      overrideAccess: false,
+    })
+    const c = await mcpClient()
+    const res: any = await c.callTool({
+      name: 'task_create',
+      arguments: { actor: 'orca', title: 'Cross-client task', packageId: String(pkg.id), projectId: String(otherProject._id) },
+    })
+    expect(res.isError).toBe(true)
+    const msg = JSON.stringify(res.content)
+    expect(msg).toContain(clientAccountId)
+    expect(msg).toContain(String(otherCa._id))
+    expect(await db.collections.tasks.countDocuments({ title: 'Cross-client task' })).toBe(0)
+  })
+
+  test('task_create rejects nothing on the happy path: matching project + package still creates the task', async () => {
+    const { projectId, packageId } = await trackingFixture()
+    const c = await mcpClient()
+    const byBoth = ok(
+      await c.callTool({ name: 'task_create', arguments: { actor: 'orca', title: 'Happy both', projectId, packageId } }),
+    )
+    expect(byBoth.task.projectId).toBe(projectId)
+    expect(byBoth.task.packageId).toBe(packageId)
+    const byProject = ok(await c.callTool({ name: 'task_create', arguments: { actor: 'orca', title: 'Happy project', projectId } }))
+    expect(byProject.task.projectId).toBe(projectId)
+  })
+
   test('MCP task_update merges qa, and a tracked task needs qa pass + commit to complete', async () => {
     const { packageId } = await trackingFixture()
     const c = await mcpClient()

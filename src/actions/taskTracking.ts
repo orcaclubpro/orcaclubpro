@@ -68,6 +68,32 @@ function taskRow(t: Record<string, any>) {
 
 export type TrackedTask = ReturnType<typeof taskRow>
 
+/**
+ * Loads a project as the caller sees it. Returns null when the id doesn't exist
+ * or collection access hides it from this user, so a task is never created
+ * against a project the caller can't see.
+ */
+async function visibleProject(
+  payload: Awaited<ReturnType<typeof getPayload>>,
+  user: NonNullable<Awaited<ReturnType<typeof staffCaller>>>,
+  id: string,
+) {
+  try {
+    const project = await payload.findByID({
+      collection: 'projects',
+      id,
+      depth: 0,
+      user,
+      overrideAccess: false,
+      disableErrors: true,
+    })
+    return project ?? null
+  } catch {
+    // A malformed id (not an ObjectId) throws a cast error instead of returning null.
+    return null
+  }
+}
+
 // ── Create ────────────────────────────────────────────────────────────────────
 
 export async function createTrackedTask(input: {
@@ -89,6 +115,7 @@ export async function createTrackedTask(input: {
     const payload = await getPayload({ config })
 
     let projectId = input.projectId ?? null
+    let pkgClient: string | null = null
     if (input.packageId) {
       const pkg = await payload.findByID({
         collection: 'packages',
@@ -102,8 +129,19 @@ export async function createTrackedTask(input: {
         return fail(`Package ${input.packageId} belongs to project ${pkgProject}, not ${projectId}`)
       }
       projectId = projectId ?? pkgProject
+      pkgClient = idOf(pkg.clientAccount)
     }
     if (!projectId) return fail('Pass projectId, or a packageId whose package is linked to a project')
+
+    const project = await visibleProject(payload, user, projectId)
+    if (!project) return fail(`Project ${projectId} not found (it does not exist or you cannot access it)`)
+
+    const projectClient = idOf(project.client)
+    if (input.packageId && pkgClient && projectClient && pkgClient !== projectClient) {
+      return fail(
+        `Package ${input.packageId} belongs to client account ${pkgClient}, but project ${projectId} belongs to client account ${projectClient}`,
+      )
+    }
 
     const task = await payload.create({
       collection: 'tasks',
