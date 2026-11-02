@@ -1,24 +1,11 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Montserrat, JetBrains_Mono } from "next/font/google"
+import { montserrat, jetbrainsMono } from "@/fonts"
 import Script from "next/script"
 import { Toaster } from "sonner"
 import { JsonLd } from "@/lib/seo/json-ld"
 import { organizationSchema, webSiteSchema } from "@/lib/seo/schema"
 import "./globals.css"
-
-const montserrat = Montserrat({
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700", "800"],
-  variable: "--font-montserrat",
-  display: "swap",
-})
-
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
-  variable: "--font-mono",
-  display: "swap",
-})
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://orcaclub.pro'),

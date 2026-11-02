@@ -5,9 +5,7 @@ import DynamicGreeting from "@/components/layout/dynamic-greeting"
 import { ArrowRight } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
-import { Cinzel_Decorative } from "next/font/google"
-
-const gothic = Cinzel_Decorative({ weight: "700", subsets: ["latin"] })
+import { cinzelDecorative as gothic } from "@/fonts"
 
 interface HeroSectionProps {
   clients?: any[]

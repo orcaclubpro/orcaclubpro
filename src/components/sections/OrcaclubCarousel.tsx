@@ -5,9 +5,7 @@ import { motion, AnimatePresence } from "motion/react"
 import Image from "next/image"
 import Link from "next/link"
 import { ArrowLeft, ArrowRight, X, Grid2X2, ChevronLeft, ChevronRight } from "lucide-react"
-import { Cinzel_Decorative } from "next/font/google"
-
-const cinzel = Cinzel_Decorative({ weight: "700", subsets: ["latin"] })
+import { cinzelDecorative as cinzel } from "@/fonts"
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 

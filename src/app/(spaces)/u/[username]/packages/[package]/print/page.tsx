@@ -2,11 +2,9 @@ import { redirect, notFound } from 'next/navigation'
 import { getCurrentUser } from '@/actions/auth'
 import { getPayload } from 'payload'
 import config from '@payload-config'
-import { Cinzel_Decorative } from 'next/font/google'
+import { cinzelDecorative as gothic } from '@/fonts'
 import { PackageActions } from './PackageActions'
 import { ScrollToTop } from './ScrollToTop'
-
-const gothic = Cinzel_Decorative({ weight: '700', subsets: ['latin'] })
 
 interface LineItem {
   id?: string

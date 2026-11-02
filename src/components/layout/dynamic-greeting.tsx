@@ -1,9 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
-import { Cinzel_Decorative } from "next/font/google"
-
-const gothic = Cinzel_Decorative({ weight: "700", subsets: ["latin"] })
+import { cinzelDecorative as gothic } from "@/fonts"
 
 interface DynamicGreetingProps {
   className?: string

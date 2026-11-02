@@ -2,12 +2,10 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Cinzel_Decorative } from 'next/font/google'
+import { cinzelDecorative as gothic } from '@/fonts'
 import { Lock, ArrowRight, AlertCircle } from 'lucide-react'
 import { verifyTimelineAccess } from '@/actions/timelines'
 import { cn } from '@/lib/utils'
-
-const gothic = Cinzel_Decorative({ weight: '700', subsets: ['latin'] })
 
 interface Props {
   slug: string

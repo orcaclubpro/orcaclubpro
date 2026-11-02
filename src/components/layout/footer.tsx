@@ -2,10 +2,8 @@
 
 import Link from "next/link"
 import { Linkedin, Instagram } from "lucide-react"
-import { Cinzel_Decorative } from "next/font/google"
+import { cinzelDecorative as gothic } from "@/fonts"
 import { FOOTER_LINKS, type NavItem } from "@/data/nav"
-
-const gothic = Cinzel_Decorative({ weight: "700", subsets: ["latin"] })
 
 // New-IA footer — link data lives in src/data/nav.ts (FOOTER_LINKS), shared
 // with the header so labels and hrefs can never drift. The Legal column feeds

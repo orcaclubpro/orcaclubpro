@@ -24,10 +24,8 @@ import { updateProject, deleteProject } from '@/actions/projects'
 import { getClientAccounts } from '@/actions/clients'
 import type { Project, Task } from '@/types/payload-types'
 import { cn } from '@/lib/utils'
-import { Cinzel_Decorative } from 'next/font/google'
+import { cinzelDecorative as gothic } from '@/fonts'
 import { ClientAccountCombobox } from './ClientAccountCombobox'
-
-const gothic = Cinzel_Decorative({ weight: '700', subsets: ['latin'] })
 
 type StatusType = 'pending' | 'in-progress' | 'on-hold' | 'completed' | 'cancelled'
 type CurrencyType = 'USD' | 'EUR' | 'GBP'

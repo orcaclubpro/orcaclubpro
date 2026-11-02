@@ -10,11 +10,9 @@ import {
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { logoutAction } from "@/actions/auth"
-import { Cinzel_Decorative } from "next/font/google"
+import { cinzelDecorative as gothic } from "@/fonts"
 import { NAV_ITEMS, type NavItem } from "@/data/nav"
 import { OFFERS } from "@/data/pricing"
-
-const gothic = Cinzel_Decorative({ weight: "700", subsets: ["latin"] })
 
 /**
  * Nav structure lives in src/data/nav.ts — this file only maps routes to icons,
