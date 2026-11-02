@@ -36,6 +36,7 @@ import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/
 
 import { getCurrentUser } from '@/actions/auth'
 import { registerOrcaclubTools } from '@/lib/mcp/tools'
+import { runAsMcp } from '@/lib/payload/access/mcpMoney'
 import { SCOPE, protectedResourceMetadataUrl } from '@/lib/oauth/core'
 
 export const dynamic = 'force-dynamic'
@@ -74,7 +75,8 @@ async function handle(req: Request): Promise<Response> {
 
   try {
     await server.connect(transport)
-    return await transport.handleRequest(req)
+    // Mark everything this request does as MCP: Payload refuses money writes from it.
+    return await runAsMcp(() => transport.handleRequest(req))
   } finally {
     // Per-request lifecycle: nothing is reused, so tear both down either way.
     await transport.close().catch(() => {})

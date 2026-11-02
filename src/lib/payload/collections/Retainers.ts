@@ -1,5 +1,6 @@
 import type { CollectionConfig } from 'payload'
 import { adminOrUser, adminOnly } from '../access/index'
+import { MONEY_FIELD_ACCESS, RETAINER_MONEY, rejectMcpMoneyWrites } from '../access/mcpMoney'
 
 /**
  * Retainers Collection
@@ -30,6 +31,10 @@ import { adminOrUser, adminOnly } from '../access/index'
  */
 const Retainers: CollectionConfig = {
   slug: 'retainers',
+  hooks: {
+    // Money fields are read-only for MCP requests (access/mcpMoney.ts).
+    beforeChange: [rejectMcpMoneyWrites('retainers', RETAINER_MONEY)],
+  },
   admin: {
     useAsTitle: 'tier',
     group: 'Clients',
@@ -112,6 +117,8 @@ const Retainers: CollectionConfig = {
       fields: [
         {
           name: 'monthlyFee',
+          // Money: admin with a normal login only; never via MCP (access/mcpMoney.ts).
+          access: MONEY_FIELD_ACCESS,
           type: 'number',
           min: 0,
           admin: { width: '34%', description: 'USD per month — empty while scoping.' },
@@ -124,6 +131,8 @@ const Retainers: CollectionConfig = {
         },
         {
           name: 'overageRate',
+          // Money: admin with a normal login only; never via MCP (access/mcpMoney.ts).
+          access: MONEY_FIELD_ACCESS,
           type: 'number',
           min: 0,
           defaultValue: 65,
@@ -231,9 +240,9 @@ const Retainers: CollectionConfig = {
               ],
               admin: { width: '25%' },
             },
-            { name: 'proposedMonthlyFee', type: 'number', min: 0, admin: { width: '25%', description: 'USD/mo' } },
+            { name: 'proposedMonthlyFee', access: MONEY_FIELD_ACCESS, type: 'number', min: 0, admin: { width: '25%', description: 'USD/mo' } },
             { name: 'proposedHoursPerMonth', type: 'number', min: 0, admin: { width: '25%', description: 'Hour cap' } },
-            { name: 'proposedOverageRate', type: 'number', min: 0, admin: { width: '25%', description: 'USD/hr' } },
+            { name: 'proposedOverageRate', access: MONEY_FIELD_ACCESS, type: 'number', min: 0, admin: { width: '25%', description: 'USD/hr' } },
           ],
         },
         {
@@ -293,6 +302,8 @@ const Retainers: CollectionConfig = {
         },
         {
           name: 'pendingMonthlyFee',
+          // Money: admin with a normal login only; never via MCP (access/mcpMoney.ts).
+          access: MONEY_FIELD_ACCESS,
           type: 'number',
           min: 0,
           admin: { readOnly: true, condition: (data) => Boolean(data?.pendingEffectiveFrom) },
@@ -305,6 +316,8 @@ const Retainers: CollectionConfig = {
         },
         {
           name: 'pendingOverageRate',
+          // Money: admin with a normal login only; never via MCP (access/mcpMoney.ts).
+          access: MONEY_FIELD_ACCESS,
           type: 'number',
           min: 0,
           admin: { readOnly: true, condition: (data) => Boolean(data?.pendingEffectiveFrom) },

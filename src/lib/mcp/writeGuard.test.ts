@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 
 import { BOT_ACTORS, isValidActor } from './actor'
-import { checkWriteInput, findMoneyKeys, isWriteTool, sowMoneyChanges, WRITE_TOOL_FIELDS } from './writeGuard'
+import { checkWriteInput, findMoneyKeys, isWriteTool, prepareSowSave, WRITE_TOOL_FIELDS } from './writeGuard'
 
 const ACTOR = 'vegapunk'
 
@@ -12,7 +12,8 @@ describe('mcp write guard: price/Stripe writes are rejected', () => {
       { stripePriceId: 'price_123' },
       { stripeCustomerId: 'cus_123' },
       { paymentLink: 'https://buy.stripe.com/x' },
-      { payment_link: 'https://buy.stripe.com/x' },
+      { stripe_customer: 'cus_123' },
+      { monthlyFee: 1000 },
       { amount: 5 },
       { hourlyRate: 150 },
       { adjustedPrice: 10 },
@@ -97,48 +98,137 @@ describe('mcp write guard: price/Stripe writes are rejected', () => {
   })
 
   test('findMoneyKeys reports nested paths', () => {
-    expect(findMoneyKeys({ a: { b: [{ unitPrice: 1 }] } })).toEqual(['a.b[0].unitPrice'])
+    expect(findMoneyKeys({ a: { b: [{ price: 1 }] } })).toEqual(['a.b[0].price'])
+  })
+
+  test('key scan matches exact money field names only, not generic total/cost/budget/rate', () => {
+    expect(
+      findMoneyKeys({
+        total: 3,
+        cost: 'low',
+        budget: 'tight',
+        rate: 'fast',
+        totalHours: 4,
+        costNote: 'n',
+        priceNote: 'n',
+        rateLimit: 1,
+        nested: [{ total: 1, budgetNote: 'x' }],
+      }),
+    ).toEqual([])
+    expect(findMoneyKeys({ hourlyRate: 1, stripePriceId: 'p', nested: { adjustedPrice: 2 } })).toEqual([
+      'hourlyRate',
+      'stripePriceId',
+      'nested.adjustedPrice',
+    ])
+  })
+
+  test('save_sow input: key scan runs on sowData (outside the SOW money fields)', () => {
+    const bad = checkWriteInput('save_sow', {
+      actor: ACTOR,
+      packageId: 'p',
+      sowData: { projectName: 'x', milestones: [{ name: 'm', date: 'd', notes: 'n', price: 5 }] },
+    })
+    expect(bad.ok).toBe(false)
+    if (!bad.ok) expect(bad.error).toContain('sowData.milestones[0].price')
+    expect(checkWriteInput('save_sow', { actor: ACTOR, packageId: 'p', sowData: { stripePriceId: 'x' } }).ok).toBe(false)
+    expect(
+      checkWriteInput('save_sow', {
+        actor: ACTOR,
+        packageId: 'p',
+        sowData: { projectName: 'x', projectItems: [{ desc: 'Build', amount: '3000' }], hourlyRate: '150' },
+      }).ok,
+    ).toBe(true)
   })
 })
 
-describe('mcp write guard: save_sow money diff', () => {
+describe('mcp write guard: save_sow money diff (prepareSowSave)', () => {
   const current = {
     projectName: 'Site',
     pricingType: 'project',
-    projectItems: [{ description: 'Build', price: '3000' }],
+    projectItems: [{ desc: 'Build', amount: '3000' }],
     retainerItems: [],
-    paymentSchedule: [{ label: 'Deposit', amount: '1500' }],
+    paymentSchedule: [{ label: 'Deposit', pct: '50', note: '', amount: '1500' }],
+    netDays: '15',
     hourlyRate: '150',
     revisionRate: '120',
     lateFee: '1.5',
+    reactivationFee: '750',
+    liabilityFloor: '2000',
+    clauseOverrides: { fees: 'Custom fee wording', scope: 'Custom scope' },
+    clauseDisabled: ['payment', 'hosting'],
   }
 
   test('allows an unchanged round-trip with edited wording', () => {
-    expect(sowMoneyChanges(current, { ...current, projectName: 'Site v2', projectOverview: 'New words' })).toEqual([])
+    const res = prepareSowSave(current, { ...current, projectName: 'Site v2', projectOverview: 'New words' })
+    expect(res.ok).toBe(true)
+    if (res.ok) expect(res.sowData.projectName).toBe('Site v2')
   })
 
-  test('allows money fields to be omitted (package re-derives them)', () => {
-    expect(sowMoneyChanges(current, { projectName: 'Site' })).toEqual([])
+  test('save_sow: omitted money fields keep their old values', () => {
+    const res = prepareSowSave(current, { projectName: 'Site', projectOverview: 'only prose' })
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+    for (const f of [
+      'pricingType',
+      'projectItems',
+      'paymentSchedule',
+      'netDays',
+      'hourlyRate',
+      'revisionRate',
+      'lateFee',
+      'reactivationFee',
+      'liabilityFloor',
+    ] as const) {
+      expect(res.sowData[f]).toEqual(current[f])
+    }
+    expect((res.sowData.clauseOverrides as Record<string, string>).fees).toBe('Custom fee wording')
+    expect(res.sowData.clauseDisabled).toContain('payment')
+  })
+
+  test('save_sow: omitted money clause entries keep their old values while prose clauses follow the input', () => {
+    const res = prepareSowSave(current, {
+      ...current,
+      clauseOverrides: { scope: 'New scope' },
+      clauseDisabled: ['hosting'],
+    })
+    // Omitting `fees` from clauseOverrides / `payment` from clauseDisabled is a change → rejected.
+    expect(res.ok).toBe(false)
+    const omitted = prepareSowSave(current, { projectName: 'Site', clauseOverrides: { scope: 'New scope', fees: 'Custom fee wording' } })
+    expect(omitted.ok).toBe(true)
+    if (omitted.ok) {
+      expect(omitted.sowData.clauseOverrides).toEqual({ scope: 'New scope', fees: 'Custom fee wording' })
+      expect(omitted.sowData.clauseDisabled).toEqual(['payment'])
+    }
   })
 
   test('rejects a changed line price', () => {
-    expect(
-      sowMoneyChanges(current, { ...current, projectItems: [{ description: 'Build', price: '1' }] }),
-    ).toEqual(['projectItems'])
+    const res = prepareSowSave(current, { ...current, projectItems: [{ desc: 'Build', amount: '1' }] })
+    expect(res.ok).toBe(false)
+    if (!res.ok) expect(res.error).toContain('projectItems')
   })
 
-  test('rejects changed rates, fees and payment schedule', () => {
-    const changed = sowMoneyChanges(current, {
+  test('rejects changed rates, fees, net days and payment schedule', () => {
+    const res = prepareSowSave(current, {
       ...current,
       hourlyRate: '10',
       lateFee: '0',
-      paymentSchedule: [{ label: 'Deposit', amount: '1' }],
+      netDays: '90',
+      paymentSchedule: [{ label: 'Deposit', pct: '50', note: '', amount: '1' }],
     })
-    expect(changed).toEqual(expect.arrayContaining(['hourlyRate', 'lateFee', 'paymentSchedule']))
+    expect(res.ok).toBe(false)
+    if (!res.ok) {
+      for (const f of ['hourlyRate', 'lateFee', 'netDays', 'paymentSchedule']) expect(res.error).toContain(f)
+    }
   })
 
-  test('rejects a stray Stripe key added to sowData', () => {
-    expect(sowMoneyChanges(current, { ...current, stripePriceId: 'price_1' })).toEqual(['stripePriceId'])
+  test('rejects rewriting or re-enabling a money clause', () => {
+    expect(prepareSowSave(current, { ...current, clauseOverrides: { fees: 'Free!', scope: 'Custom scope' } }).ok).toBe(false)
+    expect(prepareSowSave(current, { ...current, clauseDisabled: ['hosting', 'liability'] }).ok).toBe(false)
+  })
+
+  test('rejects a stray money key in sowData (key scan)', () => {
+    expect(prepareSowSave(current, { ...current, stripePriceId: 'price_1' }).ok).toBe(false)
+    expect(prepareSowSave(current, { ...current, scopeItems: [{ title: 't', price: 9 }] }).ok).toBe(false)
   })
 })
 

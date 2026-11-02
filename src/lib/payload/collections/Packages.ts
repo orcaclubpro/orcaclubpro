@@ -1,6 +1,8 @@
 import type { CollectionConfig } from 'payload'
-import { adminOrUser, adminOnly } from '../access/index'
+import { adminOrUser, adminOnly, staffOnlyField } from '../access/index'
+import { restorePackageStripeIds, stripPackageStripeIds } from '../fields/packageStripeIds'
 import { botContextField, guardBotContextWrite, stripBotContext } from '../fields/botContext'
+import { MONEY_FIELD_ACCESS, PACKAGE_MONEY, rejectMcpMoneyWrites } from '../access/mcpMoney'
 
 const Packages: CollectionConfig = {
   slug: 'packages',
@@ -33,8 +35,8 @@ const Packages: CollectionConfig = {
     delete: adminOnly,
   },
   hooks: {
-    beforeChange: [guardBotContextWrite],
-    afterRead: [stripBotContext],
+    beforeChange: [rejectMcpMoneyWrites('packages', PACKAGE_MONEY), restorePackageStripeIds, guardBotContextWrite],
+    afterRead: [stripBotContext, stripPackageStripeIds],
   },
   indexes: [
     // Dashboard query: packages for a client account filtered by type
@@ -81,6 +83,8 @@ const Packages: CollectionConfig = {
     },
     {
       name: 'status',
+      // Money: admin with a normal login only; never via MCP (access/mcpMoney.ts).
+      access: MONEY_FIELD_ACCESS,
       type: 'select',
       options: [
         { label: 'Draft', value: 'draft' },
@@ -153,6 +157,8 @@ const Packages: CollectionConfig = {
     },
     {
       name: 'hourlyRate',
+      // Money: admin with a normal login only; never via MCP (access/mcpMoney.ts).
+      access: MONEY_FIELD_ACCESS,
       type: 'number',
       min: 0,
       admin: {
@@ -191,6 +197,8 @@ const Packages: CollectionConfig = {
         },
         {
           name: 'amount',
+          // Money: admin with a normal login only; never via MCP (access/mcpMoney.ts).
+          access: MONEY_FIELD_ACCESS,
           type: 'number',
           required: true,
           admin: { description: 'Dollar amount for this payment' },
@@ -205,11 +213,15 @@ const Packages: CollectionConfig = {
         },
         {
           name: 'orderId',
+          // Money: admin with a normal login only; never via MCP (access/mcpMoney.ts).
+          access: MONEY_FIELD_ACCESS,
           type: 'text',
           admin: { description: 'Set when invoiced — links to the Order record', readOnly: true },
         },
         {
           name: 'invoicedAt',
+          // Money: admin with a normal login only; never via MCP (access/mcpMoney.ts).
+          access: MONEY_FIELD_ACCESS,
           type: 'date',
           admin: { description: 'When the invoice was sent', readOnly: true },
         },
@@ -266,6 +278,8 @@ const Packages: CollectionConfig = {
           fields: [
             {
               name: 'price',
+              // Money: admin with a normal login only; never via MCP (access/mcpMoney.ts).
+              access: MONEY_FIELD_ACCESS,
               type: 'number',
               required: true,
               min: 0,
@@ -276,6 +290,8 @@ const Packages: CollectionConfig = {
             },
             {
               name: 'adjustedPrice',
+              // Money: admin with a normal login only; never via MCP (access/mcpMoney.ts).
+              access: MONEY_FIELD_ACCESS,
               type: 'number',
               min: 0,
               admin: {
@@ -349,6 +365,9 @@ const Packages: CollectionConfig = {
         },
         {
           name: 'stripePriceId',
+          // Money: admin with a normal login only; never via MCP (access/mcpMoney.ts).
+          // Read: staff only — clients never see Stripe ids (fields/packageStripeIds.ts).
+          access: { ...MONEY_FIELD_ACCESS, read: staffOnlyField },
           type: 'text',
           admin: {
             description: 'Stripe Price ID (optional)',

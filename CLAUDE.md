@@ -406,6 +406,7 @@ Vercel invocations.
 | `save_recap_draft` is not a send | It fills the composer for review. `sendRetainerRecapEmail` remains the only path to a client and is always staff-invoked. |
 | Adding a tool | Wrap the action, never `payload.create/update` directly — the same rule as everywhere else in this codebase. |
 | Write tools go through `guardedWrite` | Required `actor` (bot name or ccq task id, `src/lib/mcp/actor.ts`), per-tool field allowlist + money/Stripe key scan (`src/lib/mcp/writeGuard.ts`), one awaited `activity` row of kind `agent-write`. The shared MCP account is read-only on prices, Stripe ids and payment links: `create_package` lines are created at $0, `save_sow` rejects any changed money field. Add a new write tool to `WRITE_TOOL_FIELDS`. |
+| Money is locked at the Payload level for MCP | `src/lib/payload/access/mcpMoney.ts`: the MCP route and every tool run inside `runAsMcp` (AsyncLocalStorage); `req.context.viaMcp` and OAuth/API-key auth also mark a request as MCP. A beforeChange hook on Packages/Retainers/Orders/ClientAccounts throws 403 on any MCP write that changes a money field (prices, fees, status, Stripe ids), whatever `overrideAccess` says; field access lets only `admin` with a normal login change them. `packages.lineItems[].stripePriceId` is staff-read-only. |
 
 Testing: `npx @modelcontextprotocol/inspector` against a local dev server (with
 `OAUTH_ISSUER`). claude.ai itself can only reach the deployed URL; it caches discovery docs

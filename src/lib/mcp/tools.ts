@@ -44,7 +44,8 @@ import {
 import { createMilestone, updateMilestone, toggleMilestoneCompletion } from '@/actions/projects'
 import type { SowFormData } from '@/lib/document-generators'
 import { ACTOR } from '@/lib/mcp/actor'
-import { checkWriteInput, sowMoneyChanges } from '@/lib/mcp/writeGuard'
+import { checkWriteInput, prepareSowSave } from '@/lib/mcp/writeGuard'
+import { runAsMcp } from '@/lib/payload/access/mcpMoney'
 import { recordAgentWrite, targetIdOf } from '@/lib/mcp/audit'
 
 // ── Result plumbing ─────────────────────────────────────────────────────────────
@@ -70,7 +71,9 @@ function text(value: unknown, isError = false): ToolResult {
  */
 async function run<T extends { success: boolean; error?: string }>(fn: () => Promise<T>): Promise<ToolResult> {
   try {
-    const res = await fn()
+    // Every Payload call the action makes is marked as an MCP request, so the
+    // Payload-level money guard (access/mcpMoney.ts) applies to it.
+    const res = await runAsMcp(fn)
     if (!res?.success) return text({ error: res?.error ?? 'Action failed' }, true)
     return text(res)
   } catch (error) {
@@ -87,7 +90,7 @@ function guardedWrite<I extends Record<string, unknown>>(
   tool: string,
   handler: (input: I) => Promise<ToolResult>,
 ): (input: I & { actor: string }) => Promise<ToolResult> {
-  return async (input) => {
+  return (input) => runAsMcp(async () => {
     const { actor, ...rest } = input
     const check = checkWriteInput(tool, input)
     if (!check.ok) {
@@ -103,7 +106,7 @@ function guardedWrite<I extends Record<string, unknown>>(
       error: res.isError ? res.content[0]?.text : null,
     })
     return res
-  }
+  })
 }
 
 /** Input schema for a write tool: its own fields plus a required `actor`; unknown keys are rejected. */
@@ -385,7 +388,8 @@ export function registerOrcaclubTools(server: McpServer): void {
       title: 'Save SOW',
       description:
         'Write a package SOW. Pass the COMPLETE document from get_sow_draft with your edits applied — this is a ' +
-        'whole-document replace, not a merge. Saving does not send it to anyone.',
+        'whole-document replace, not a merge. Saving does not send it to anyone. Money fields (line items, payment ' +
+        'schedule, rates, fees, money clauses) are read-only: send them back unchanged or leave them out.',
       inputSchema: writeSchema({
         packageId: z.string(),
         sowData: z
@@ -395,21 +399,13 @@ export function registerOrcaclubTools(server: McpServer): void {
     },
     guardedWrite('save_sow', async ({ packageId, sowData }) => {
       // The SOW carries prices it was handed by get_sow_draft. They may come back
-      // unchanged; any change to a money field is rejected (writeGuard.ts).
+      // unchanged or be left out (the stored value is kept); any change is
+      // rejected (writeGuard.ts prepareSowSave).
       const current = await getPackageSowDraft(packageId)
       if (!current.success) return text({ error: current.error ?? 'Package not found' }, true)
-      const changed = sowMoneyChanges(current.sowData as unknown as Record<string, unknown>, sowData)
-      if (changed.length > 0) {
-        return text(
-          {
-            error:
-              `save_sow: price/payment fields are read-only over MCP and were changed: ${changed.join(', ')}. ` +
-              'Send them back exactly as get_sow_draft returned them.',
-          },
-          true,
-        )
-      }
-      return run(() => savePackageSowDocument(packageId, sowData as unknown as SowFormData))
+      const prepared = prepareSowSave(current.sowData as unknown as Record<string, unknown>, sowData)
+      if (!prepared.ok) return text({ error: prepared.error }, true)
+      return run(() => savePackageSowDocument(packageId, prepared.sowData as unknown as SowFormData))
     }),
   )
 

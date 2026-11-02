@@ -2,19 +2,22 @@
  * Write guard for MCP tools: the shared MCP account is read-only on prices,
  * Stripe ids, and payment links.
  *
- * Three checks, applied before any write tool reaches its action:
+ * This is the tool-layer half. Payload itself also refuses money writes from
+ * MCP-marked requests (src/lib/payload/access/mcpMoney.ts), so a tool that slips
+ * past this file still cannot change a price.
+ *
+ * Checks, applied before any write tool reaches its action:
  *
  * 1. Field allowlist. Every write tool declares the exact input keys it accepts
  *    (`WRITE_TOOL_FIELDS`). Any other key is rejected rather than silently dropped,
- *    so a bot learns that a price field is off-limits instead of believing it
- *    was saved.
- * 2. Money/Stripe key scan. Any key anywhere in the input whose name looks like
- *    price, Stripe, payment link, amount, rate, or fee is rejected, even inside
- *    free-form records. This is the backstop if an allowlist entry is ever widened
- *    by mistake.
- * 3. SOW money diff. `save_sow` round-trips a whole document that legitimately
- *    contains prices it was given by `get_sow_draft`. Those values may come back
- *    unchanged; any change to a money field is rejected (`sowMoneyChanges`).
+ *    so a bot learns a price field is off-limits instead of believing it saved.
+ * 2. Money key scan. Any key, at any depth, that is a real money field name
+ *    (`MONEY_KEYS`) or a `stripe…` field is rejected. That includes inside
+ *    `save_sow.sowData`, apart from the SOW's own money fields.
+ * 3. SOW money diff + carry-forward (`prepareSowSave`). `save_sow` round-trips a
+ *    whole document that legitimately contains the prices `get_sow_draft` gave
+ *    it. Those may come back unchanged or be left out (then the stored value is
+ *    kept); any change is rejected.
  *
  * Billing stays out of MCP: Stripe is the source of prices (plan step 5).
  */
@@ -24,7 +27,7 @@ const COMMON_WRITE_FIELDS = ['actor'] as const
 
 /**
  * The input keys each MCP write tool accepts. A tool not listed here is treated
- * as read-only by `run`, and is not given an actor or an audit row.
+ * as read-only and gets no actor or audit row.
  */
 export const WRITE_TOOL_FIELDS: Record<string, readonly string[]> = {
   save_recap_draft: ['clientAccountId', 'ref', 'recap'],
@@ -41,17 +44,48 @@ export const WRITE_TOOL_FIELDS: Record<string, readonly string[]> = {
 export const isWriteTool = (tool: string): boolean => Object.hasOwn(WRITE_TOOL_FIELDS, tool)
 
 /**
- * Key names that carry money or billing identity. Matched case-insensitively
- * against every key at every depth. `hours` is deliberately absent: hours are
- * work, not price, and the actions own the cap math.
+ * Exact key names that carry money or billing identity: the real money fields of
+ * Packages, Retainers, Orders, ClientAccounts and the SOW. Any `stripe…` field
+ * also counts (every one is a Stripe id, URL or config). Generic words such as
+ * total, cost, budget or rate are deliberately NOT matched: they are not stored
+ * money fields, and blocking them rejects harmless input. `hours` is work, not
+ * price.
  */
-const MONEY_KEY =
-  /(price|stripe|payment_?link|paymentlink|payment_?config|amount|rate$|^rate|fee$|^fee|invoice|cost|budget|total|balance|discount)/i
+export const MONEY_KEYS: ReadonlySet<string> = new Set([
+  // packages
+  'price',
+  'adjustedPrice',
+  'hourlyRate',
+  'amount',
+  'orderId',
+  'invoicedAt',
+  // retainers
+  'monthlyFee',
+  'overageRate',
+  'proposedMonthlyFee',
+  'proposedOverageRate',
+  'pendingMonthlyFee',
+  'pendingOverageRate',
+  // orders / client accounts
+  'balanceSnapshot',
+  'accountBalance',
+  'paymentLink',
+  'paymentLinkUrl',
+  'paymentConfigId',
+  'defaultPaymentConfig',
+  // SOW money terms
+  'revisionRate',
+  'lateFee',
+  'reactivationFee',
+  'liabilityFloor',
+])
+
+export const isMoneyKey = (key: string): boolean => MONEY_KEYS.has(key) || /^stripe[A-Z_]/.test(key)
 
 /**
- * Keys inside `save_sow.sowData` that are allowed to carry money because the SOW
- * shape itself holds them. They are not rejected by the key scan; instead
- * `sowMoneyChanges` rejects any change to their values.
+ * Keys inside `save_sow.sowData` that legitimately carry money because the SOW
+ * shape holds them. They are excluded from the key scan; `prepareSowSave`
+ * rejects any change to them and keeps the stored value when they are omitted.
  */
 export const SOW_MONEY_FIELDS = [
   'pricingType',
@@ -59,6 +93,7 @@ export const SOW_MONEY_FIELDS = [
   'retainerItems',
   'paymentSchedule',
   'billingCycle',
+  'netDays',
   'hourlyRate',
   'revisionRate',
   'lateFee',
@@ -66,24 +101,30 @@ export const SOW_MONEY_FIELDS = [
   'liabilityFloor',
 ] as const
 
-/** Keys whose subtree is exempt from the key scan (checked by value diff instead). */
-const SCAN_EXEMPT: Record<string, readonly string[]> = {
-  save_sow: ['sowData'],
-}
+/** SOW clauses whose wording states fees, payment terms, rates or the liability cap. */
+export const SOW_MONEY_CLAUSES = ['fees', 'payment', 'revisions', 'liability'] as const
 
 export type GuardResult = { ok: true } | { ok: false; error: string }
 
-/** Every key path in `value` whose key name looks like money/Stripe. */
+/** Every key path in `value` whose key is a money field. */
 export function findMoneyKeys(value: unknown, path = ''): string[] {
   if (Array.isArray(value)) return value.flatMap((v, i) => findMoneyKeys(v, `${path}[${i}]`))
   if (!value || typeof value !== 'object') return []
   const hits: string[] = []
   for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
     const here = path ? `${path}.${key}` : key
-    if (MONEY_KEY.test(key)) hits.push(here)
+    if (isMoneyKey(key)) hits.push(here)
     hits.push(...findMoneyKeys(child, here))
   }
   return hits
+}
+
+type SowRecord = Record<string, unknown>
+
+/** sowData minus the SOW's own money fields and clause controls (diffed separately). */
+function sowScanView(sow: SowRecord): SowRecord {
+  const skip = new Set<string>([...SOW_MONEY_FIELDS, 'clauseOverrides', 'clauseDisabled'])
+  return Object.fromEntries(Object.entries(sow).filter(([k]) => !skip.has(k)))
 }
 
 /**
@@ -104,21 +145,23 @@ export function checkWriteInput(tool: string, input: unknown): GuardResult {
     return { ok: false, error: `${tool}: field(s) not allowed via MCP: ${unknown.join(', ')}` }
   }
 
-  const exempt = new Set(SCAN_EXEMPT[tool] ?? [])
-  const scanned = Object.fromEntries(Object.entries(record).filter(([k]) => !exempt.has(k)))
+  const scanned =
+    tool === 'save_sow' && record.sowData && typeof record.sowData === 'object' && !Array.isArray(record.sowData)
+      ? { ...record, sowData: sowScanView(record.sowData as SowRecord) }
+      : record
   const money = findMoneyKeys(scanned)
   if (money.length > 0) {
     return {
       ok: false,
       error:
         `${tool}: price/Stripe/payment fields are read-only over MCP (${money.join(', ')}). ` +
-        'Prices are set by staff in the portal; Stripe is the source.',
+        'Prices are set by an admin in the portal; Stripe is the source.',
     }
   }
   return { ok: true }
 }
 
-/** Stable JSON for value comparison (key order independent). */
+/** Stable JSON for value comparison (key order independent, undefined ignored). */
 function stable(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(stable).join(',')}]`
   if (value && typeof value === 'object') {
@@ -130,19 +173,70 @@ function stable(value: unknown): string {
   return JSON.stringify(value ?? null)
 }
 
+const overridesOf = (sow: SowRecord) => (sow.clauseOverrides ?? {}) as Record<string, string>
+const disabledOf = (sow: SowRecord) => (Array.isArray(sow.clauseDisabled) ? (sow.clauseDisabled as string[]) : [])
+
 /**
- * SOW money fields whose value in `incoming` differs from `current` (the draft
- * `get_sow_draft` returns). A field missing from `incoming` is not a change
- * here: the package-owned ones are re-derived from the package on every read.
- * Other money keys anywhere in sowData that are not SOW fields are reported too.
+ * Validate and complete a `save_sow` document against the current draft
+ * (`get_sow_draft`). `save_sow` is a whole-document replace, so:
+ *
+ * - a money field, or money clause wording/on-off, that is **present** must equal
+ *   the current value, or the save is rejected;
+ * - one that is **omitted** keeps its current value. Leaving a field out must
+ *   never reset a rate or fee to the template default;
+ * - any other money key anywhere in sowData is rejected (the key scan).
  */
-export function sowMoneyChanges(current: Record<string, unknown>, incoming: Record<string, unknown>): string[] {
+export function prepareSowSave(
+  current: SowRecord,
+  incoming: SowRecord,
+): { ok: true; sowData: SowRecord } | { ok: false; error: string } {
+  const stray = findMoneyKeys(sowScanView(incoming), 'sowData')
+  if (stray.length > 0) {
+    return { ok: false, error: `save_sow: money fields are read-only over MCP (${stray.join(', ')})` }
+  }
+
   const changed: string[] = SOW_MONEY_FIELDS.filter(
     (f) => f in incoming && stable(incoming[f]) !== stable(current[f]),
   )
-  const known = new Set<string>(SOW_MONEY_FIELDS)
-  const stray = findMoneyKeys(
-    Object.fromEntries(Object.entries(incoming).filter(([k]) => !known.has(k))),
-  ).filter((p) => !(p in current))
-  return [...changed, ...stray]
+  if ('clauseOverrides' in incoming) {
+    for (const id of SOW_MONEY_CLAUSES) {
+      if ((overridesOf(incoming)[id] ?? null) !== (overridesOf(current)[id] ?? null)) {
+        changed.push(`clauseOverrides.${id}`)
+      }
+    }
+  }
+  if ('clauseDisabled' in incoming) {
+    for (const id of SOW_MONEY_CLAUSES) {
+      if (disabledOf(incoming).includes(id) !== disabledOf(current).includes(id)) changed.push(`clauseDisabled.${id}`)
+    }
+  }
+  if (changed.length > 0) {
+    return {
+      ok: false,
+      error:
+        `save_sow: price/payment fields are read-only over MCP and were changed: ${changed.join(', ')}. ` +
+        'Send them back exactly as get_sow_draft returned them, or leave them out.',
+    }
+  }
+
+  // Keep every omitted money value from the current document.
+  const sowData: SowRecord = { ...incoming }
+  for (const f of SOW_MONEY_FIELDS) {
+    if (!(f in incoming) && f in current) sowData[f] = current[f]
+  }
+  const overrides: Record<string, string> = { ...overridesOf(incoming) }
+  for (const id of SOW_MONEY_CLAUSES) {
+    const stored = overridesOf(current)[id]
+    if (stored !== undefined) overrides[id] = stored
+    else delete overrides[id]
+  }
+  if ('clauseOverrides' in incoming || 'clauseOverrides' in current) sowData.clauseOverrides = overrides
+  const moneyClauses: readonly string[] = SOW_MONEY_CLAUSES
+  const disabled = [
+    ...disabledOf(incoming).filter((id) => !moneyClauses.includes(id)),
+    ...disabledOf(current).filter((id) => moneyClauses.includes(id)),
+  ]
+  if ('clauseDisabled' in incoming || 'clauseDisabled' in current) sowData.clauseDisabled = disabled
+
+  return { ok: true, sowData }
 }

@@ -2,6 +2,7 @@ import type { CollectionConfig } from 'payload'
 import { createStripeCustomerHook } from '../hooks/createStripeCustomer'
 import { syncClientAccountToUser } from '../hooks/syncClientAccountToUser'
 import { clearClientAccountOnDelete } from '../hooks/clearClientAccountOnDelete'
+import { MONEY_FIELD_ACCESS, CLIENT_ACCOUNT_MONEY, rejectMcpMoneyWrites } from '../access/mcpMoney'
 
 const ClientAccounts: CollectionConfig = {
   slug: 'client-accounts',
@@ -11,7 +12,7 @@ const ClientAccounts: CollectionConfig = {
     group: 'Clients',
   },
   hooks: {
-    beforeChange: [createStripeCustomerHook],
+    beforeChange: [rejectMcpMoneyWrites('client-accounts', CLIENT_ACCOUNT_MONEY), createStripeCustomerHook],
     afterChange: [syncClientAccountToUser],
     afterDelete: [clearClientAccountOnDelete],
   },
@@ -149,6 +150,8 @@ const ClientAccounts: CollectionConfig = {
             // STRIPE INTEGRATION
             {
               name: 'stripeCustomerId',
+              // Money: admin with a normal login only; never via MCP (access/mcpMoney.ts).
+              access: MONEY_FIELD_ACCESS,
               type: 'text',
               unique: true,
               index: true,

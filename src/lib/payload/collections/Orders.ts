@@ -2,6 +2,7 @@ import type { CollectionConfig } from 'payload'
 import { updateClientBalance, revertClientBalance } from '../hooks/updateClientBalance'
 import { trackOrderActivity } from '../hooks/recordActivity'
 import { adminOnly, adminOrUser, adminOrUserOrOwnOrder } from '../access'
+import { MONEY_FIELD_ACCESS, ORDER_MONEY, rejectMcpMoneyWrites } from '../access/mcpMoney'
 
 const Orders: CollectionConfig = {
   slug: 'orders',
@@ -13,6 +14,7 @@ const Orders: CollectionConfig = {
     group: 'Clients',
   },
   hooks: {
+    beforeChange: [rejectMcpMoneyWrites('orders', ORDER_MONEY)],
     beforeValidate: [
       async ({ data, operation }) => {
         // Validate line items exist and amount > 0
@@ -74,6 +76,8 @@ const Orders: CollectionConfig = {
         },
         {
           name: 'status',
+          // Money: admin with a normal login only; never via MCP (access/mcpMoney.ts).
+          access: MONEY_FIELD_ACCESS,
           type: 'select',
           options: [
             { label: 'Pending Payment', value: 'pending' },
@@ -127,6 +131,8 @@ const Orders: CollectionConfig = {
         },
         {
           name: 'amount',
+          // Money: admin with a normal login only; never via MCP (access/mcpMoney.ts).
+          access: MONEY_FIELD_ACCESS,
           type: 'number',
           required: true,
           min: 0.01, // ✅ Prevent $0 orders (minimum 1 cent)
@@ -141,6 +147,8 @@ const Orders: CollectionConfig = {
     // BALANCE SNAPSHOT (Sidebar)
     {
       name: 'balanceSnapshot',
+      // Money: admin with a normal login only; never via MCP (access/mcpMoney.ts).
+      access: MONEY_FIELD_ACCESS,
       type: 'number',
       admin: {
         description: 'Client balance after this order (audit trail)',
@@ -152,6 +160,8 @@ const Orders: CollectionConfig = {
     // STRIPE INTEGRATION
     {
       name: 'stripeInvoiceId',
+      // Money: admin with a normal login only; never via MCP (access/mcpMoney.ts).
+      access: MONEY_FIELD_ACCESS,
       type: 'text',
       unique: true,
       index: true,
@@ -162,6 +172,8 @@ const Orders: CollectionConfig = {
     },
     {
       name: 'stripeInvoiceUrl',
+      // Money: admin with a normal login only; never via MCP (access/mcpMoney.ts).
+      access: MONEY_FIELD_ACCESS,
       type: 'text',
       admin: {
         description: 'Stripe hosted invoice URL (sent to customer)',
@@ -175,6 +187,8 @@ const Orders: CollectionConfig = {
     },
     {
       name: 'stripeCustomerId',
+      // Money: admin with a normal login only; never via MCP (access/mcpMoney.ts).
+      access: MONEY_FIELD_ACCESS,
       type: 'text',
       index: true,
       admin: {
@@ -184,6 +198,8 @@ const Orders: CollectionConfig = {
     },
     {
       name: 'stripePaymentIntentId',
+      // Money: admin with a normal login only; never via MCP (access/mcpMoney.ts).
+      access: MONEY_FIELD_ACCESS,
       type: 'text',
       admin: {
         description: 'Stripe Payment Intent ID (after payment)',
@@ -225,6 +241,8 @@ const Orders: CollectionConfig = {
     },
     {
       name: 'stripePaymentConfig',
+      // Money: admin with a normal login only; never via MCP (access/mcpMoney.ts).
+      access: MONEY_FIELD_ACCESS,
       type: 'text',
       index: true,
       admin: {
@@ -238,6 +256,8 @@ const Orders: CollectionConfig = {
     },
     {
       name: 'stripePaymentConfigName',
+      // Money: admin with a normal login only; never via MCP (access/mcpMoney.ts).
+      access: MONEY_FIELD_ACCESS,
       type: 'text',
       admin: {
         description: 'Name of that configuration at the time the invoice was raised (e.g. "Card Custom").',
@@ -382,6 +402,8 @@ const Orders: CollectionConfig = {
             },
             {
               name: 'price',
+              // Money: admin with a normal login only; never via MCP (access/mcpMoney.ts).
+              access: MONEY_FIELD_ACCESS,
               type: 'number',
               required: true,
               min: 0,
@@ -425,6 +447,8 @@ const Orders: CollectionConfig = {
         // Technical IDs (collapsed by default)
         {
           name: 'stripePriceId',
+          // Money: admin with a normal login only; never via MCP (access/mcpMoney.ts).
+          access: MONEY_FIELD_ACCESS,
           type: 'text',
           admin: {
             description: 'Stripe Price ID (for subscriptions)',

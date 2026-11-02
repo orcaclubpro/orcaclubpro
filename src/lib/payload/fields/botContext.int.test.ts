@@ -254,6 +254,181 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
     expect(after.botContext.updatedAt > before.botContext.updatedAt).toBe(true)
   })
 
+  // ── Payload-level money lock for MCP requests (access/mcpMoney.ts) ───────────
+  // These call the Local API directly — no MCP tool in the way — to prove Payload
+  // itself refuses the write once the request is marked as MCP.
+
+  const MCP_REJECT = /read-only for MCP requests/
+
+  async function moneyFixture() {
+    const pkg: any = await payload.create({
+      collection: 'packages',
+      data: {
+        name: 'Money Proposal',
+        type: 'proposal',
+        status: 'draft',
+        clientAccount: clientAccountId,
+        hourlyRate: 150,
+        lineItems: [{ name: 'Build', price: 3000, adjustedPrice: 2800, quantity: 1, stripePriceId: 'price_secret_1' }],
+      } as any,
+      user: staff, // admin, normal login
+      overrideAccess: false,
+    })
+    return pkg
+  }
+
+  test('MCP-flagged Payload update of package line-item price is rejected (context.viaMcp)', async () => {
+    const pkg = await moneyFixture()
+    const row = { ...pkg.lineItems[0], price: 1 }
+    await expect(
+      payload.update({ collection: 'packages', id: pkg.id, data: { lineItems: [row] } as any, context: { viaMcp: true } }),
+    ).rejects.toThrow(MCP_REJECT)
+    const back: any = await payload.findByID({ collection: 'packages', id: pkg.id, user: staff, overrideAccess: false })
+    expect(back.lineItems[0].price).toBe(3000)
+  })
+
+  test('MCP-flagged Payload update is rejected inside runAsMcp (the path the MCP tools use)', async () => {
+    const { runAsMcp } = await import('@/lib/payload/access/mcpMoney')
+    const pkg = await moneyFixture()
+    for (const data of [
+      { hourlyRate: 1 },
+      { status: 'accepted' },
+      { lineItems: [{ ...pkg.lineItems[0], adjustedPrice: 1 }] },
+      { lineItems: [{ ...pkg.lineItems[0], stripePriceId: 'price_evil' }] },
+    ]) {
+      await expect(
+        runAsMcp(() => payload.update({ collection: 'packages', id: pkg.id, data: data as any })),
+      ).rejects.toThrow(MCP_REJECT)
+    }
+    const back: any = await payload.findByID({ collection: 'packages', id: pkg.id, user: staff, overrideAccess: false })
+    expect(back.hourlyRate).toBe(150)
+    expect(back.status).toBe('draft')
+    expect(back.lineItems[0].adjustedPrice).toBe(2800)
+    expect(back.lineItems[0].stripePriceId).toBe('price_secret_1')
+  })
+
+  test('MCP-flagged non-money update still succeeds (no false positive)', async () => {
+    const { runAsMcp } = await import('@/lib/payload/access/mcpMoney')
+    const pkg = await moneyFixture()
+    await runAsMcp(() => payload.update({ collection: 'packages', id: pkg.id, data: { notes: 'bot note' } as any }))
+    const back: any = await payload.findByID({ collection: 'packages', id: pkg.id, user: staff, overrideAccess: false })
+    expect(back.notes).toBe('bot note')
+    expect(back.lineItems[0].stripePriceId).toBe('price_secret_1')
+  })
+
+  test('MCP-flagged create with a price or Stripe id is rejected; $0 draft is allowed', async () => {
+    await expect(
+      payload.create({
+        collection: 'packages',
+        data: { name: 'bot priced', lineItems: [{ name: 'x', price: 500 }] } as any,
+        context: { viaMcp: true },
+      }),
+    ).rejects.toThrow(MCP_REJECT)
+    const ok: any = await payload.create({
+      collection: 'packages',
+      data: { name: 'bot zero', type: 'template', status: 'draft', lineItems: [{ name: 'x', price: 0 }] } as any,
+      context: { viaMcp: true },
+    })
+    expect(ok.id).toBeTruthy()
+  })
+
+  test('MCP-flagged Payload write of retainer fees is rejected', async () => {
+    const db = payload.db as any
+    const r = await db.collections.retainers.create({ clientAccount: clientAccountId, tier: 'basic', status: 'active', monthlyFee: 1000, overageRate: 120 })
+    for (const data of [{ monthlyFee: 1 }, { overageRate: 1 }, { proposedMonthlyFee: 1 }, { pendingOverageRate: 1 }]) {
+      await expect(
+        payload.update({ collection: 'retainers', id: String(r._id), data: data as any, context: { viaMcp: true } }),
+      ).rejects.toThrow(MCP_REJECT)
+    }
+  })
+
+  test('MCP-flagged Payload write of order Stripe/price fields is rejected', async () => {
+    const db = payload.db as any
+    const lineItems = [{ name: 'Build', price: 100, quantity: 1 }]
+    const o = await db.collections.orders.create({ clientAccount: clientAccountId, amount: 100, status: 'pending', lineItems })
+    const id = String(o._id)
+    const current: any = await payload.findByID({ collection: 'orders', id })
+    for (const data of [
+      { stripeInvoiceId: 'in_evil', lineItems: current.lineItems },
+      { status: 'paid', lineItems: current.lineItems },
+      { lineItems: [{ ...current.lineItems[0], price: 1 }] },
+    ]) {
+      await expect(payload.update({ collection: 'orders', id, data: data as any, context: { viaMcp: true } })).rejects.toThrow(
+        MCP_REJECT,
+      )
+    }
+  })
+
+  test('MCP-flagged Payload write of client stripeCustomerId is rejected', async () => {
+    await expect(
+      payload.update({
+        collection: 'client-accounts',
+        id: clientAccountId,
+        data: { stripeCustomerId: 'cus_evil' } as any,
+        context: { viaMcp: true },
+      }),
+    ).rejects.toThrow(MCP_REJECT)
+  })
+
+  test('admin on an OAuth (MCP) token is treated as MCP: money field access denied and hook rejects', async () => {
+    const pkg = await moneyFixture()
+    const oauthAdmin = { ...staff, _strategy: 'oauth-access-token' }
+    // overrideAccess:false → field access drops the price silently.
+    await payload.update({
+      collection: 'packages',
+      id: pkg.id,
+      data: { hourlyRate: 1 } as any,
+      user: oauthAdmin,
+      overrideAccess: false,
+    }).catch(() => undefined)
+    // overrideAccess:true (server-action style) → the hook rejects.
+    await expect(
+      payload.update({ collection: 'packages', id: pkg.id, data: { hourlyRate: 2 } as any, user: oauthAdmin }),
+    ).rejects.toThrow(MCP_REJECT)
+    const back: any = await payload.findByID({ collection: 'packages', id: pkg.id, user: staff, overrideAccess: false })
+    expect(back.hourlyRate).toBe(150)
+  })
+
+  test('only admin with a normal login can update money fields (role user is denied by field access)', async () => {
+    const pkg = await moneyFixture()
+    await payload.update({ collection: 'packages', id: pkg.id, data: { hourlyRate: 99 } as any, user: staffUser, overrideAccess: false })
+    let back: any = await payload.findByID({ collection: 'packages', id: pkg.id, user: staff, overrideAccess: false })
+    expect(back.hourlyRate).toBe(150)
+    await payload.update({ collection: 'packages', id: pkg.id, data: { hourlyRate: 175 } as any, user: staff, overrideAccess: false })
+    back = await payload.findByID({ collection: 'packages', id: pkg.id, user: staff, overrideAccess: false })
+    expect(back.hourlyRate).toBe(175)
+  })
+
+  // ── Package line-item Stripe ids are staff-only (fields/packageStripeIds.ts) ──
+
+  test('client cannot read lineItems.stripePriceId (API path, overrideAccess:false)', async () => {
+    const pkg = await moneyFixture()
+    const doc: any = await payload.findByID({ collection: 'packages', id: pkg.id, user: client, overrideAccess: false })
+    expect(doc.lineItems[0].price).toBe(3000)
+    expect(doc.lineItems[0].stripePriceId).toBeUndefined()
+    expect(JSON.stringify(doc)).not.toContain('price_secret_1')
+  })
+
+  test('portal/page reads (no user or client user) never include lineItems.stripePriceId', async () => {
+    const pkg = await moneyFixture()
+    const anon: any = await payload.findByID({ collection: 'packages', id: pkg.id })
+    const asClient: any = await payload.findByID({ collection: 'packages', id: pkg.id, user: client })
+    const list = await payload.find({ collection: 'packages', where: { id: { equals: pkg.id } } })
+    expect(JSON.stringify([anon, asClient, list.docs])).not.toContain('price_secret_1')
+    const staffDoc: any = await payload.findByID({ collection: 'packages', id: pkg.id, user: staffUser, overrideAccess: false })
+    expect(staffDoc.lineItems[0].stripePriceId).toBe('price_secret_1')
+  })
+
+  test('non-staff update does not wipe lineItems.stripePriceId', async () => {
+    const pkg = await moneyFixture()
+    await payload.update({ collection: 'packages', id: pkg.id, data: { name: 'renamed by server' } as any })
+    const stripped: any = await payload.findByID({ collection: 'packages', id: pkg.id })
+    await payload.update({ collection: 'packages', id: pkg.id, data: { lineItems: stripped.lineItems } as any })
+    const back: any = await payload.findByID({ collection: 'packages', id: pkg.id, user: staff, overrideAccess: false })
+    expect(back.name).toBe('renamed by server')
+    expect(back.lineItems[0].stripePriceId).toBe('price_secret_1')
+  })
+
   // ── MCP write tools (real McpServer, in-memory transport) ────────────────────
 
   async function mcpClient() {
