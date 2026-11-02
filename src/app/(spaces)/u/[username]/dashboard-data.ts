@@ -508,7 +508,13 @@ export async function loadStaffActivity(
   const { docs } = await payload
     .find({
       collection: 'activity',
-      where,
+      // MCP audit rows (agent-write) are not part of the human feed.
+      where: {
+        and: [
+          ...(Object.keys(where).length > 0 ? [where] : []),
+          { kind: { not_equals: 'agent-write' } },
+        ],
+      },
       depth: 0,
       sort: '-occurredAt',
       limit,

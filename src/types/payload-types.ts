@@ -909,6 +909,28 @@ export interface Project {
    * Budget currency
    */
   currency?: ('USD' | 'EUR' | 'GBP') | null;
+  /**
+   * Internal working context for bots and staff. Never shown to clients.
+   */
+  botContext?: {
+    /**
+     * What this is and what done looks like.
+     */
+    brief?: string | null;
+    repo?: string | null;
+    branch?: string | null;
+    liveUrl?: string | null;
+    /**
+     * Decisions in force, one per line.
+     */
+    decisions?: string | null;
+    notes?: string | null;
+    /**
+     * gojo | vegapunk | edison | shaka | finn | … or a ccq task id
+     */
+    ownerBot?: string | null;
+    updatedAt?: string | null;
+  };
   updatedAt: string;
   createdAt: string;
 }
@@ -1043,6 +1065,28 @@ export interface Package {
         id?: string | null;
       }[]
     | null;
+  /**
+   * Internal working context for bots and staff. Never shown to clients.
+   */
+  botContext?: {
+    /**
+     * What this is and what done looks like.
+     */
+    brief?: string | null;
+    repo?: string | null;
+    branch?: string | null;
+    liveUrl?: string | null;
+    /**
+     * Decisions in force, one per line.
+     */
+    decisions?: string | null;
+    notes?: string | null;
+    /**
+     * gojo | vegapunk | edison | shaka | finn | … or a ccq task id
+     */
+    ownerBot?: string | null;
+    updatedAt?: string | null;
+  };
   updatedAt: string;
   createdAt: string;
 }
@@ -1262,6 +1306,28 @@ export interface Task {
    * Actual hours spent on task
    */
   actualHours?: number | null;
+  /**
+   * Internal working context for bots and staff. Never shown to clients.
+   */
+  botContext?: {
+    /**
+     * What this is and what done looks like.
+     */
+    brief?: string | null;
+    repo?: string | null;
+    branch?: string | null;
+    liveUrl?: string | null;
+    /**
+     * Decisions in force, one per line.
+     */
+    decisions?: string | null;
+    notes?: string | null;
+    /**
+     * gojo | vegapunk | edison | shaka | finn | … or a ccq task id
+     */
+    ownerBot?: string | null;
+    updatedAt?: string | null;
+  };
   updatedAt: string;
   createdAt: string;
 }
@@ -2060,7 +2126,7 @@ export interface Timeline {
  */
 export interface Activity {
   id: string;
-  kind: 'order-created' | 'project-created' | 'project-updated' | 'retainer-log' | 'email-sent';
+  kind: 'order-created' | 'project-created' | 'project-updated' | 'retainer-log' | 'email-sent' | 'agent-write';
   /**
    * When the event happened. The feed sorts on this, not createdAt.
    */
@@ -2097,6 +2163,14 @@ export interface Activity {
    * Name snapshot — survives the user being renamed or deleted.
    */
   actorName?: string | null;
+  /**
+   * Bot or ccq task id that made an MCP write (the shared MCP user cannot say which bot).
+   */
+  agentActor?: string | null;
+  /**
+   * MCP tool name for agent-write rows.
+   */
+  tool?: string | null;
   clientAccount?: (string | null) | ClientAccount;
   project?: (string | null) | Project;
   order?: (string | null) | Order;
@@ -2888,6 +2962,18 @@ export interface PackagesSelect<T extends boolean = true> {
         stripePriceId?: T;
         id?: T;
       };
+  botContext?:
+    | T
+    | {
+        brief?: T;
+        repo?: T;
+        branch?: T;
+        liveUrl?: T;
+        decisions?: T;
+        notes?: T;
+        ownerBot?: T;
+        updatedAt?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
 }
@@ -3041,6 +3127,18 @@ export interface ProjectsSelect<T extends boolean = true> {
       };
   budgetAmount?: T;
   currency?: T;
+  botContext?:
+    | T
+    | {
+        brief?: T;
+        repo?: T;
+        branch?: T;
+        liveUrl?: T;
+        decisions?: T;
+        notes?: T;
+        ownerBot?: T;
+        updatedAt?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
 }
@@ -3060,6 +3158,18 @@ export interface TasksSelect<T extends boolean = true> {
   completedAt?: T;
   estimatedHours?: T;
   actualHours?: T;
+  botContext?:
+    | T
+    | {
+        brief?: T;
+        repo?: T;
+        branch?: T;
+        liveUrl?: T;
+        decisions?: T;
+        notes?: T;
+        ownerBot?: T;
+        updatedAt?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
 }
@@ -3216,6 +3326,8 @@ export interface ActivitySelect<T extends boolean = true> {
   recipient?: T;
   actor?: T;
   actorName?: T;
+  agentActor?: T;
+  tool?: T;
   clientAccount?: T;
   project?: T;
   order?: T;

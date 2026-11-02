@@ -1,5 +1,6 @@
 import type { CollectionConfig } from 'payload'
 import { adminOrUser, adminOnly } from '../access/index'
+import { botContextField, guardBotContextWrite, stripBotContext } from '../fields/botContext'
 
 const Packages: CollectionConfig = {
   slug: 'packages',
@@ -30,6 +31,10 @@ const Packages: CollectionConfig = {
     },
     update: adminOrUser,
     delete: adminOnly,
+  },
+  hooks: {
+    beforeChange: [guardBotContextWrite],
+    afterRead: [stripBotContext],
   },
   indexes: [
     // Dashboard query: packages for a client account filtered by type
@@ -352,6 +357,8 @@ const Packages: CollectionConfig = {
       ],
     },
 
+    // Internal-only working context. Field access + afterRead strip keep it from clients.
+    botContextField,
   ],
 }
 

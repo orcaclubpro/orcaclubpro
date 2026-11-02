@@ -1,6 +1,7 @@
 import type { CollectionConfig } from 'payload'
 import { adminOnly, adminOrAssigned, adminOrUser } from '../access'
 import { trackProjectActivity } from '../hooks/recordActivity'
+import { botContextField, guardBotContextWrite, stripBotContext } from '../fields/botContext'
 
 /**
  * Projects Collection
@@ -30,7 +31,9 @@ export const Projects: CollectionConfig = {
   },
   hooks: {
     // Records creates, and updates that moved a meaningful field.
+    beforeChange: [guardBotContextWrite],
     afterChange: [trackProjectActivity],
+    afterRead: [stripBotContext],
   },
   fields: [
     // ============================================================================
@@ -235,6 +238,8 @@ export const Projects: CollectionConfig = {
         },
       ],
     },
+    // Internal-only working context. Field access + afterRead strip keep it from clients.
+    botContextField,
   ],
 }
 

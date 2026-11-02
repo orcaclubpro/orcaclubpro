@@ -193,3 +193,20 @@ export const adminOrOwnGrant: Access = ({ req: { user } }) => {
 //     update: () => false,
 //   }
 // }
+
+// ============================================================================
+// STAFF-ONLY FIELDS
+// ============================================================================
+
+/** True for `admin` and `user` (staff); false for clients and anonymous requests. */
+export const isStaffUser = (user: unknown): boolean => {
+  const role = (user as { role?: unknown } | null | undefined)?.role
+  return role === 'admin' || role === 'user'
+}
+
+/**
+ * Field-level access: staff only. Field access must return a boolean (no query
+ * constraints). Used for internal-only groups such as `botContext`, which no
+ * client may read or write.
+ */
+export const staffOnlyField: FieldAccess = ({ req: { user } }) => isStaffUser(user)

@@ -405,6 +405,7 @@ Vercel invocations.
 | Recap drafts persist narrative only | `Retainers.recapDrafts[]` stores `Partial<RecapData>` narrative keyed by `cycleStart`. Every number is re-derived from the cycle on read and merged via `mergeRecap`, which is server-authoritative on all of them — so no stored field can carry a wrong hour to a client. `pickRecapNarrative` in `src/actions/retainers.ts` is the allowlist. |
 | `save_recap_draft` is not a send | It fills the composer for review. `sendRetainerRecapEmail` remains the only path to a client and is always staff-invoked. |
 | Adding a tool | Wrap the action, never `payload.create/update` directly — the same rule as everywhere else in this codebase. |
+| Write tools go through `guardedWrite` | Required `actor` (bot name or ccq task id, `src/lib/mcp/actor.ts`), per-tool field allowlist + money/Stripe key scan (`src/lib/mcp/writeGuard.ts`), one awaited `activity` row of kind `agent-write`. The shared MCP account is read-only on prices, Stripe ids and payment links: `create_package` lines are created at $0, `save_sow` rejects any changed money field. Add a new write tool to `WRITE_TOOL_FIELDS`. |
 
 Testing: `npx @modelcontextprotocol/inspector` against a local dev server (with
 `OAUTH_ISSUER`). claude.ai itself can only reach the deployed URL; it caches discovery docs
@@ -520,6 +521,7 @@ import { Button } from '@/components/ui/button'
 | Shopify creates duplicate customer | `createCustomerSafely()` does email lookup first — use it |
 | 2FA flow appears broken | It's intentionally disabled — `beforeLogin.ts` passes all users |
 | Client can see another client's data | Missing `overrideAccess: false` in `(spaces)/` query |
+| `botContext` missing on a server read | Internal-only group on Packages/Projects/Tasks (`src/lib/payload/fields/botContext.ts`). It is stripped from every read without a **staff** `user` on the request, whatever `overrideAccess` says, so pass a staff `user` when server code needs it. Non-staff writes can't set or clear it. Never render it in `(spaces)` client views. |
 | MongoDB write conflict in balance hook | `updateClientBalance.ts` has exponential retry — don't remove it |
 | Dashboard view renders a blank/missing field | Staff loaders use `select` — add the field to the loader's `select` in `dashboard-data.ts` |
 | New dashboard route shows nothing while loading | Add a `loading.tsx` (compose from `LoadingSkeleton.tsx`) — prefetch needs a loading boundary |

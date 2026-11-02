@@ -1,5 +1,6 @@
 import type { CollectionConfig, CollectionBeforeChangeHook } from 'payload'
 import { adminOnly, adminOrAssigned, adminOrUser } from '../access'
+import { botContextField, guardBotContextWrite, stripBotContext } from '../fields/botContext'
 
 /**
  * Tasks Collection
@@ -46,7 +47,8 @@ export const Tasks: CollectionConfig = {
     delete: adminOnly, // Only admins can delete tasks
   },
   hooks: {
-    beforeChange: [setCompletedAtOnCompletion],
+    beforeChange: [setCompletedAtOnCompletion, guardBotContextWrite],
+    afterRead: [stripBotContext],
   },
   indexes: [
     // Dashboard queries: tasks by assignee filtered by status / sorted by due date
@@ -208,6 +210,8 @@ export const Tasks: CollectionConfig = {
         },
       ],
     },
+    // Internal-only working context. Field access + afterRead strip keep it from clients.
+    botContextField,
   ],
 }
 

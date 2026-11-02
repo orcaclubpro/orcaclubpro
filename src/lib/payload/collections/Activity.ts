@@ -52,6 +52,7 @@ export const Activity: CollectionConfig = {
     { fields: ['kind', 'occurredAt'] },
     { fields: ['clientAccount', 'occurredAt'] },
     { fields: ['actor', 'occurredAt'] },
+    { fields: ['agentActor', 'occurredAt'] },
   ],
   fields: [
     {
@@ -68,6 +69,9 @@ export const Activity: CollectionConfig = {
             { label: 'Project updated', value: 'project-updated' },
             { label: 'Retainer hours logged', value: 'retainer-log' },
             { label: 'Email sent', value: 'email-sent' },
+            // One row per MCP write, carrying the bot `agentActor`. Kept out of
+            // the staff home feed (loadStaffActivity filters it) — it is audit.
+            { label: 'Agent write (MCP)', value: 'agent-write' },
           ],
           admin: { width: '50%' },
         },
@@ -141,6 +145,26 @@ export const Activity: CollectionConfig = {
             width: '50%',
             description: 'Name snapshot — survives the user being renamed or deleted.',
           },
+        },
+      ],
+    },
+
+    {
+      type: 'row',
+      fields: [
+        {
+          name: 'agentActor',
+          type: 'text',
+          index: true,
+          admin: {
+            width: '50%',
+            description: 'Bot or ccq task id that made an MCP write (the shared MCP user cannot say which bot).',
+          },
+        },
+        {
+          name: 'tool',
+          type: 'text',
+          admin: { width: '50%', description: 'MCP tool name for agent-write rows.' },
         },
       ],
     },

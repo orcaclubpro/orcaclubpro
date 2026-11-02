@@ -14,7 +14,10 @@
  *
  * ── What is deliberately NOT here ────────────────────────────────────────────────
  * Nothing that moves money or reaches a client. No order creation, no Stripe call, no
- * invoice, no email send. The agent drafts; a human opens the composer, reads it, and
+ * invoice, no email send. The shared MCP account is read-only on prices, Stripe ids, and
+ * payment links: every write tool goes through `guardedWrite` (field allowlist + money
+ * scan + required `actor`, see writeGuard.ts / actor.ts) and leaves an `agent-write`
+ * activity row. The agent drafts; a human opens the composer, reads it, and
  * sends. `save_recap_draft` writes narrative to a review queue — it is not a send.
  */
 import { z } from 'zod'
@@ -40,6 +43,9 @@ import {
 } from '@/actions/packages'
 import { createMilestone, updateMilestone, toggleMilestoneCompletion } from '@/actions/projects'
 import type { SowFormData } from '@/lib/document-generators'
+import { ACTOR } from '@/lib/mcp/actor'
+import { checkWriteInput, sowMoneyChanges } from '@/lib/mcp/writeGuard'
+import { recordAgentWrite, targetIdOf } from '@/lib/mcp/audit'
 
 // ── Result plumbing ─────────────────────────────────────────────────────────────
 
@@ -71,6 +77,37 @@ async function run<T extends { success: boolean; error?: string }>(fn: () => Pro
     return text({ error: error instanceof Error ? error.message : 'Unexpected error' }, true)
   }
 }
+
+/**
+ * Wrap a write tool: require `actor`, enforce the field allowlist and the
+ * price/Stripe read-only rule (see writeGuard.ts), run the action without
+ * `actor`, and record one `agent-write` activity row either way.
+ */
+function guardedWrite<I extends Record<string, unknown>>(
+  tool: string,
+  handler: (input: I) => Promise<ToolResult>,
+): (input: I & { actor: string }) => Promise<ToolResult> {
+  return async (input) => {
+    const { actor, ...rest } = input
+    const check = checkWriteInput(tool, input)
+    if (!check.ok) {
+      await recordAgentWrite({ actor, tool, ok: false, targetId: targetIdOf(rest), error: check.error })
+      return text({ error: check.error }, true)
+    }
+    const res = await handler(rest as unknown as I)
+    await recordAgentWrite({
+      actor,
+      tool,
+      ok: !res.isError,
+      targetId: targetIdOf(rest),
+      error: res.isError ? res.content[0]?.text : null,
+    })
+    return res
+  }
+}
+
+/** Input schema for a write tool: its own fields plus a required `actor`; unknown keys are rejected. */
+const writeSchema = <S extends z.ZodRawShape>(shape: S) => z.object({ ...shape, actor: ACTOR }).strict()
 
 // ── Shared shapes ───────────────────────────────────────────────────────────────
 
@@ -191,13 +228,13 @@ export function registerOrcaclubTools(server: McpServer): void {
         'Save recap narrative for staff review. This does NOT send anything — it fills the recap composer so ' +
         'a human can read, edit, and send it. Only narrative is stored; every number is re-derived from the ' +
         'cycle on read, so nothing here can alter an hour or a fee. Re-saving a cycle replaces its draft.',
-      inputSchema: z.object({
+      inputSchema: writeSchema({
         clientAccountId: z.string(),
         ref: z.string().optional().describe('Any ISO date inside the cycle being recapped.'),
         recap: RECAP_NARRATIVE,
       }),
     },
-    async ({ clientAccountId, ref, recap }) =>
+    guardedWrite('save_recap_draft', async ({ clientAccountId, ref, recap }) =>
       run(() =>
         saveRecapDraft({
           clientAccountId,
@@ -206,6 +243,7 @@ export function registerOrcaclubTools(server: McpServer): void {
           source: 'agent',
         }),
       ),
+    ),
   )
 
   server.registerTool(
@@ -230,7 +268,7 @@ export function registerOrcaclubTools(server: McpServer): void {
         'Record work already done. Logged hours count against the monthly cap. Write the description the way ' +
         'the client should read it — every recap seeds its bucket notes from these strings, so a terse entry ' +
         'costs you twice.',
-      inputSchema: z.object({
+      inputSchema: writeSchema({
         retainerId: z.string(),
         clientAccountId: z.string(),
         date: z.string().describe('ISO date the work happened.'),
@@ -240,7 +278,7 @@ export function registerOrcaclubTools(server: McpServer): void {
         description: z.string().optional(),
       }),
     },
-    async (input) => run(() => logHours(input)),
+    guardedWrite('log_work', async (input) => run(() => logHours(input))),
   )
 
   server.registerTool(
@@ -250,7 +288,7 @@ export function registerOrcaclubTools(server: McpServer): void {
       description:
         'Add planned, not-yet-done work. Drafts carry an hour estimate but never count against the cap, and ' +
         "they seed the next cycle's priorities in its recap.",
-      inputSchema: z.object({
+      inputSchema: writeSchema({
         retainerId: z.string(),
         clientAccountId: z.string(),
         date: z.string().describe('ISO date the work is planned for.'),
@@ -260,7 +298,7 @@ export function registerOrcaclubTools(server: McpServer): void {
         hours: z.number().optional().describe('Estimated hours.'),
       }),
     },
-    async (input) => run(() => createDraft(input)),
+    guardedWrite('create_draft_entry', async (input) => run(() => createDraft(input))),
   )
 
   server.registerTool(
@@ -271,7 +309,7 @@ export function registerOrcaclubTools(server: McpServer): void {
         'Amend an existing entry — most usefully, rewrite a terse description into something client-readable, ' +
         'which improves this recap and every future one. Entries on a closed retainer are billed history and ' +
         'are rejected.',
-      inputSchema: z.object({
+      inputSchema: writeSchema({
         id: z.string(),
         date: z.string().optional(),
         hours: z.number().optional(),
@@ -281,7 +319,7 @@ export function registerOrcaclubTools(server: McpServer): void {
         description: z.string().optional(),
       }),
     },
-    async (input) => run(() => updateTimeEntry(input)),
+    guardedWrite('update_time_entry', async (input) => run(() => updateTimeEntry(input))),
   )
 
   // ── Packages & SOW ────────────────────────────────────────────────────────────
@@ -302,8 +340,9 @@ export function registerOrcaclubTools(server: McpServer): void {
       title: 'Create a package template',
       description:
         'Create a draft package template with itemized lines. Created as type `template`, status `draft` — ' +
-        'it is not assigned to a client and nothing is billed. Pricing is in dollars.',
-      inputSchema: z.object({
+        'it is not assigned to a client and nothing is billed. Prices are read-only over MCP: every line is ' +
+        'created at $0 and staff set prices in the portal. Sending a price is rejected.',
+      inputSchema: writeSchema({
         name: z.string(),
         description: z.string().optional(),
         coverMessage: z.string().optional(),
@@ -312,15 +351,19 @@ export function registerOrcaclubTools(server: McpServer): void {
           z.object({
             name: z.string(),
             description: z.string().optional(),
-            price: z.number().describe('USD.'),
             quantity: z.number().optional(),
             isRecurring: z.boolean().optional(),
             recurringInterval: z.enum(['month', 'year']).optional(),
-          }),
+          })
+          // strict: a `price`/`stripePriceId` on a line is rejected, not silently dropped.
+          .strict(),
         ),
       }),
     },
-    async (input) => run(() => createPackage(input)),
+    guardedWrite('create_package', async ({ lineItems, ...rest }) =>
+      // Prices are not writable over MCP: every line starts at $0 for staff to price.
+      run(() => createPackage({ ...rest, lineItems: lineItems.map((item) => ({ ...item, price: 0 })) })),
+    ),
   )
 
   server.registerTool(
@@ -343,15 +386,31 @@ export function registerOrcaclubTools(server: McpServer): void {
       description:
         'Write a package SOW. Pass the COMPLETE document from get_sow_draft with your edits applied — this is a ' +
         'whole-document replace, not a merge. Saving does not send it to anyone.',
-      inputSchema: z.object({
+      inputSchema: writeSchema({
         packageId: z.string(),
         sowData: z
           .record(z.string(), z.unknown())
           .describe('The full SowFormData object, shaped exactly as get_sow_draft returned it.'),
       }),
     },
-    async ({ packageId, sowData }) =>
-      run(() => savePackageSowDocument(packageId, sowData as unknown as SowFormData)),
+    guardedWrite('save_sow', async ({ packageId, sowData }) => {
+      // The SOW carries prices it was handed by get_sow_draft. They may come back
+      // unchanged; any change to a money field is rejected (writeGuard.ts).
+      const current = await getPackageSowDraft(packageId)
+      if (!current.success) return text({ error: current.error ?? 'Package not found' }, true)
+      const changed = sowMoneyChanges(current.sowData as unknown as Record<string, unknown>, sowData)
+      if (changed.length > 0) {
+        return text(
+          {
+            error:
+              `save_sow: price/payment fields are read-only over MCP and were changed: ${changed.join(', ')}. ` +
+              'Send them back exactly as get_sow_draft returned them.',
+          },
+          true,
+        )
+      }
+      return run(() => savePackageSowDocument(packageId, sowData as unknown as SowFormData))
+    }),
   )
 
   // ── Milestones ────────────────────────────────────────────────────────────────
@@ -361,14 +420,16 @@ export function registerOrcaclubTools(server: McpServer): void {
     {
       title: 'Create a project milestone',
       description: 'Add a milestone to a project.',
-      inputSchema: z.object({
+      inputSchema: writeSchema({
         projectId: z.string(),
         title: z.string(),
         date: z.string().describe('ISO target date.'),
         description: z.string().optional(),
       }),
     },
-    async (input) => run(() => createMilestone(input) as Promise<{ success: boolean; error?: string }>),
+    guardedWrite('create_milestone', async (input) =>
+      run(() => createMilestone(input) as Promise<{ success: boolean; error?: string }>),
+    ),
   )
 
   server.registerTool(
@@ -378,7 +439,7 @@ export function registerOrcaclubTools(server: McpServer): void {
       description:
         'Replace a milestone by its index in the project. `title` and `date` are required — this overwrites the ' +
         'row, so carry forward any value you are not changing.',
-      inputSchema: z.object({
+      inputSchema: writeSchema({
         projectId: z.string(),
         milestoneIndex: z.number().int().min(0),
         title: z.string(),
@@ -387,7 +448,9 @@ export function registerOrcaclubTools(server: McpServer): void {
         completed: z.boolean().optional(),
       }),
     },
-    async (input) => run(() => updateMilestone(input) as Promise<{ success: boolean; error?: string }>),
+    guardedWrite('update_milestone', async (input) =>
+      run(() => updateMilestone(input) as Promise<{ success: boolean; error?: string }>),
+    ),
   )
 
   server.registerTool(
@@ -395,12 +458,13 @@ export function registerOrcaclubTools(server: McpServer): void {
     {
       title: 'Toggle milestone completion',
       description: 'Flip a milestone between complete and incomplete by its index.',
-      inputSchema: z.object({
+      inputSchema: writeSchema({
         projectId: z.string(),
         milestoneIndex: z.number().int().min(0),
       }),
     },
-    async (input) =>
+    guardedWrite('toggle_milestone', async (input) =>
       run(() => toggleMilestoneCompletion(input) as Promise<{ success: boolean; error?: string }>),
+    ),
   )
 }
