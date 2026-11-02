@@ -41,6 +41,7 @@ import {
   getPackageSowDraft,
   savePackageSowDocument,
 } from '@/actions/packages'
+import { listServiceItems } from '@/actions/package-builder'
 import { createMilestone, updateMilestone, toggleMilestoneCompletion } from '@/actions/projects'
 import {
   createTrackedTask,
@@ -345,13 +346,28 @@ export function registerOrcaclubTools(server: McpServer): void {
   )
 
   server.registerTool(
+    'list_service_items',
+    {
+      title: 'List service catalog items',
+      description:
+        'The service catalog: id, name, billingType, defaultPrice, defaultRate, archived. Use an id as a ' +
+        "create_package line's serviceItemId. Only items with a positive defaultPrice can be used as lines " +
+        '(an hourly item with only defaultRate cannot). Archived items are skipped unless includeArchived is true.',
+      inputSchema: z.object({ includeArchived: z.boolean().optional() }),
+    },
+    async ({ includeArchived }) => run(() => listServiceItems({ includeArchived })),
+  )
+
+  server.registerTool(
     'create_package',
     {
       title: 'Create a package template',
       description:
         'Create a draft package template with itemized lines. Created as type `template`, status `draft` — ' +
-        'it is not assigned to a client and nothing is billed. Prices are read-only over MCP: every line is ' +
-        'created at $0 and staff set prices in the portal. Sending a price is rejected.',
+        'it is not assigned to a client and nothing is billed. Every line must come from the service catalog: ' +
+        "pass its `serviceItemId` (see list_service_items) and the server prices the line from that item's " +
+        'locked defaultPrice. An item without a positive defaultPrice is rejected. Prices are read-only over ' +
+        'MCP: sending a price or Stripe id is rejected.',
       inputSchema: writeSchema({
         name: z.string(),
         description: z.string().optional(),
@@ -359,6 +375,7 @@ export function registerOrcaclubTools(server: McpServer): void {
         notes: z.string().optional().describe('Internal notes — not client-facing.'),
         lineItems: z.array(
           z.object({
+            serviceItemId: z.string().describe('Service catalog item id (list_service_items); sets the price.'),
             name: z.string(),
             description: z.string().optional(),
             quantity: z.number().optional(),
@@ -371,8 +388,13 @@ export function registerOrcaclubTools(server: McpServer): void {
       }),
     },
     guardedWrite('create_package', async ({ lineItems, ...rest }) =>
-      // Prices are not writable over MCP: every line starts at $0 for staff to price.
-      run(() => createPackage({ ...rest, lineItems: lineItems.map((item) => ({ ...item, price: 0 })) })),
+      // No price is sent: the Packages fill hook prices each catalog line from its service item.
+      run(() =>
+        createPackage({
+          ...rest,
+          lineItems: lineItems.map(({ serviceItemId, ...item }) => ({ ...item, sourceServiceItem: serviceItemId })),
+        }),
+      ),
     ),
   )
 

@@ -265,6 +265,153 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
     expect(after.botContext.updatedAt > before.botContext.updatedAt).toBe(true)
   })
 
+  // ── Catalog-only line items for staff/MCP (fields/requireCatalogLines.ts) ────
+
+  /** Run `p` and return the thrown error's status + message (0/'' when it resolves). */
+  async function failure(p: Promise<unknown>): Promise<{ status: number; message: string }> {
+    try {
+      await p
+      return { status: 0, message: '' }
+    } catch (e: any) {
+      return { status: Number(e?.status ?? 0), message: String(e?.message ?? e) }
+    }
+  }
+
+  test('catalog-only lines: role user adding a line with no service item gets 4xx and the package is unchanged', async () => {
+    const pkg = await moneyFixture()
+    const { status, message } = await failure(
+      payload.update({
+        collection: 'packages',
+        id: pkg.id,
+        data: { lineItems: [pkg.lineItems[0], { name: 'Custom work', quantity: 1 }] } as any,
+        user: staffUser,
+        overrideAccess: false,
+      }),
+    )
+    expect(status).toBeGreaterThanOrEqual(400)
+    expect(status).toBeLessThan(500)
+    expect(message).toContain("Line item 'Custom work' needs a service item with a fixed defaultPrice")
+    expect(message).toContain('freeform lines are not allowed for staff or MCP.')
+    const back: any = await payload.findByID({ collection: 'packages', id: pkg.id, user: staff, overrideAccess: false })
+    expect(back.lineItems).toHaveLength(1)
+    expect(back.lineItems[0].price).toBe(3000)
+  })
+
+  test('catalog-only lines: role user adding a line from an hourly item with only defaultRate gets 4xx', async () => {
+    const db = payload.db as any
+    const si = await db.collections['service-items'].create({ name: 'Dev hours', billingType: 'hourly', defaultRate: 120 })
+    const siId = String(si._id)
+    const pkg = await moneyFixture()
+    const { status, message } = await failure(
+      payload.update({
+        collection: 'packages',
+        id: pkg.id,
+        data: { lineItems: [pkg.lineItems[0], { name: 'Dev hours', sourceServiceItem: siId }] } as any,
+        user: staffUser,
+        overrideAccess: false,
+      }),
+    )
+    expect(status).toBeGreaterThanOrEqual(400)
+    expect(status).toBeLessThan(500)
+    expect(message).toContain('hourly/freeform lines are not allowed for staff or MCP')
+    expect(message).toContain(`(service item ${siId} has no defaultPrice)`)
+
+    // A service item id that does not exist says so.
+    const missing = '0123456789abcdef01234567'
+    const gone = await failure(
+      payload.update({
+        collection: 'packages',
+        id: pkg.id,
+        data: { lineItems: [pkg.lineItems[0], { name: 'Ghost', sourceServiceItem: missing }] } as any,
+        user: staffUser,
+        overrideAccess: false,
+      }),
+    )
+    expect(gone.status).toBeGreaterThanOrEqual(400)
+    expect(gone.status).toBeLessThan(500)
+    expect(gone.message).toContain(`service item ${missing} not found`)
+    const back: any = await payload.findByID({ collection: 'packages', id: pkg.id, user: staff, overrideAccess: false })
+    expect(back.lineItems).toHaveLength(1)
+  })
+
+  test('catalog-only lines: MCP-marked create with a non-catalog line gets 4xx', async () => {
+    const { status, message } = await failure(
+      payload.create({
+        collection: 'packages',
+        data: { name: 'bot freeform', type: 'template', status: 'draft', lineItems: [{ name: 'Freeform' }] } as any,
+        context: { viaMcp: true },
+      }),
+    )
+    expect(status).toBeGreaterThanOrEqual(400)
+    expect(status).toBeLessThan(500)
+    expect(message).toContain("Line item 'Freeform' needs a service item with a fixed defaultPrice")
+    expect(message).toContain('freeform lines are not allowed for staff or MCP.')
+    const { totalDocs } = await payload.find({ collection: 'packages', where: { name: { equals: 'bot freeform' } } })
+    expect(totalDocs).toBe(0)
+  })
+
+  test('catalog-only lines: MCP create_package with serviceItemId prices the line from defaultPrice', async () => {
+    const db = payload.db as any
+    const si = await db.collections['service-items'].create({ name: 'Landing page', billingType: 'fixed', defaultPrice: 1800 })
+    const c = await mcpClient()
+    const res: any = await c.callTool({
+      name: 'create_package',
+      arguments: {
+        actor: 'vegapunk',
+        name: 'Bot catalog pkg',
+        lineItems: [{ serviceItemId: String(si._id), name: 'Landing page', quantity: 2 }],
+      },
+    })
+    expect(res.isError).toBeFalsy()
+    const { docs } = await payload.find({
+      collection: 'packages',
+      where: { name: { equals: 'Bot catalog pkg' } },
+      user: staff,
+      overrideAccess: false,
+      depth: 0,
+    })
+    expect(docs).toHaveLength(1)
+    const line: any = docs[0]!.lineItems![0]
+    expect(line.price).toBe(1800)
+    expect(line.quantity).toBe(2)
+    expect(String(line.sourceServiceItem)).toBe(String(si._id))
+  })
+
+  test('catalog-only lines: MCP create_package with a line missing serviceItemId is rejected', async () => {
+    const c = await mcpClient()
+    await rejected(c, 'create_package', { actor: 'vegapunk', name: 'Bot no catalog', lineItems: [{ name: 'Site' }] })
+    const { totalDocs } = await payload.find({ collection: 'packages', where: { name: { equals: 'Bot no catalog' } } })
+    expect(totalDocs).toBe(0)
+  })
+
+  test('catalog-only lines: admin on a normal login can still add a custom non-catalog line with a price', async () => {
+    const pkg = await moneyFixture()
+    await payload.update({
+      collection: 'packages',
+      id: pkg.id,
+      data: { lineItems: [pkg.lineItems[0], { name: 'Custom rush fee', price: 450, quantity: 1 }] } as any,
+      user: staff,
+      overrideAccess: false,
+    })
+    const back: any = await payload.findByID({ collection: 'packages', id: pkg.id, user: staff, overrideAccess: false })
+    expect(back.lineItems).toHaveLength(2)
+    expect(back.lineItems[1].price).toBe(450)
+    expect(back.lineItems[1].sourceServiceItem ?? null).toBeNull()
+  })
+
+  test('catalog-only lines: MCP list_service_items returns the seeded item', async () => {
+    const db = payload.db as any
+    const si = await db.collections['service-items'].create({ name: 'Catalog listing probe', billingType: 'fixed', defaultPrice: 777 })
+    await db.collections['service-items'].create({ name: 'Archived probe', billingType: 'fixed', defaultPrice: 5, archived: true })
+    const c = await mcpClient()
+    const res: any = await c.callTool({ name: 'list_service_items', arguments: {} })
+    expect(res.isError).toBeFalsy()
+    const body = JSON.parse(res.content[0].text)
+    const hit = body.items.find((i: any) => i.id === String(si._id))
+    expect(hit).toMatchObject({ name: 'Catalog listing probe', billingType: 'fixed', defaultPrice: 777, archived: false })
+    expect(body.items.some((i: any) => i.name === 'Archived probe')).toBe(false)
+  })
+
   // ── Payload-level money lock for MCP requests (access/mcpMoney.ts) ───────────
   // These call the Local API directly — no MCP tool in the way — to prove Payload
   // itself refuses the write once the request is marked as MCP.
@@ -327,7 +474,7 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
     expect(back.lineItems[0].stripePriceId).toBe('price_secret_1')
   })
 
-  test('MCP-flagged create with a price or Stripe id is rejected; $0 draft is allowed', async () => {
+  test('MCP-flagged create with a price or Stripe id is rejected; an unpriced catalog-line draft is allowed', async () => {
     await expect(
       payload.create({
         collection: 'packages',
@@ -335,12 +482,15 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
         context: { viaMcp: true },
       }),
     ).rejects.toThrow(MCP_REJECT)
+    // Lines must now come from the catalog (requireCatalogLines); the server fills the price.
+    const si = await (payload.db as any).collections['service-items'].create({ name: 'x', billingType: 'fixed', defaultPrice: 300 })
     const ok: any = await payload.create({
       collection: 'packages',
-      data: { name: 'bot zero', type: 'template', status: 'draft', lineItems: [{ name: 'x', price: 0 }] } as any,
+      data: { name: 'bot zero', type: 'template', status: 'draft', lineItems: [{ name: 'x', sourceServiceItem: String(si._id) }] } as any,
       context: { viaMcp: true },
     })
     expect(ok.id).toBeTruthy()
+    expect(ok.lineItems[0].price).toBe(300)
   })
 
   test('MCP-flagged Payload write of retainer fees is rejected', async () => {
@@ -573,7 +723,10 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
         collection: 'packages',
         id: pkgId,
         data: { lineItems: [...before.lineItems, line] } as any,
-        user: staffUser,
+        // Admin on a normal login: staff/MCP callers are stopped earlier by the
+        // catalog-only rule (requireCatalogLines), so this exercises the
+        // never-$0 fill check that guards admins and trusted code.
+        user: staff,
         overrideAccess: false,
       })
     } catch (e: any) {

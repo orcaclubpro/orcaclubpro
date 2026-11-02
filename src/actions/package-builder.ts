@@ -83,6 +83,55 @@ export async function getServiceCatalog() {
   }
 }
 
+/** Compact catalog row for MCP callers: enough to pick a `serviceItemId`. */
+export interface ServiceItemSummary {
+  id: string
+  name: string
+  billingType: ServiceItem['billingType']
+  defaultPrice: number | null
+  defaultRate: number | null
+  archived: boolean
+}
+
+/**
+ * Service catalog listing for MCP (`list_service_items`). Staff only, read
+ * through the caller's own access (`user` + `overrideAccess: false`). Archived
+ * items are skipped unless `includeArchived` is set.
+ */
+export async function listServiceItems({ includeArchived = false }: { includeArchived?: boolean } = {}) {
+  try {
+    const user = await getCurrentUser()
+    if (!user) return { success: false, items: [] as ServiceItemSummary[], error: 'Unauthorized' }
+    if (user.role !== 'admin' && user.role !== 'user') {
+      return { success: false, items: [] as ServiceItemSummary[], error: 'Staff only' }
+    }
+
+    const payload = await getPayload({ config })
+    const { docs } = await payload.find({
+      collection: 'service-items',
+      where: includeArchived ? {} : { archived: { not_equals: true } },
+      sort: ['-starred', '-usageCount'],
+      limit: 500,
+      depth: 0,
+      user,
+      overrideAccess: false,
+    })
+
+    const items: ServiceItemSummary[] = docs.map((d) => ({
+      id: String(d.id),
+      name: d.name,
+      billingType: d.billingType,
+      defaultPrice: typeof d.defaultPrice === 'number' ? d.defaultPrice : null,
+      defaultRate: typeof d.defaultRate === 'number' ? d.defaultRate : null,
+      archived: d.archived === true,
+    }))
+    return { success: true, items }
+  } catch (error) {
+    console.error('[listServiceItems]', error)
+    return { success: false, items: [] as ServiceItemSummary[], error: error instanceof Error ? error.message : 'Failed' }
+  }
+}
+
 /** Star / unstar a catalog item — starred items render first in the builder. Admin/user only. */
 export async function toggleServiceItemStar(id: string, starred: boolean) {
   try {

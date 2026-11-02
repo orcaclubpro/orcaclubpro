@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/actions/auth'
 import { getPayload } from 'payload'
 import config from '@payload-config'
 import type { SowFormData } from '@/lib/document-generators'
+import type { Package } from '@/types/payload-types'
 import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
 import { getStripe } from '@/lib/stripe'
@@ -89,11 +90,13 @@ export async function createPackage({
   lineItems: Array<{
     name: string
     description?: string
-    price: number
+    /** Optional: a catalog line (`sourceServiceItem`) is priced server-side from the item's defaultPrice. */
+    price?: number
     quantity?: number
     isRecurring?: boolean
     recurringInterval?: 'month' | 'year'
     stripePriceId?: string
+    sourceServiceItem?: string
   }>
 }) {
   try {
@@ -110,7 +113,9 @@ export async function createPackage({
         description,
         coverMessage,
         notes,
-        lineItems,
+        // `price` is required on the stored row but may be omitted here: a catalog
+        // line is priced in beforeChange (fields/linePriceFromServiceItem.ts).
+        lineItems: lineItems as Package['lineItems'],
         type: 'template',
         status: 'draft',
       },

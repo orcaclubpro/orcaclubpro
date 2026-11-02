@@ -2,6 +2,7 @@ import type { CollectionConfig } from 'payload'
 import { adminOrUser, adminOnly, staffOnlyField } from '../access/index'
 import { restorePackageStripeIds, stripPackageStripeIds } from '../fields/packageStripeIds'
 import { fillLinePriceFromServiceItem } from '../fields/linePriceFromServiceItem'
+import { requireCatalogLines } from '../fields/requireCatalogLines'
 import { botContextField, guardBotContextWrite, stripBotContext } from '../fields/botContext'
 import { MONEY_FIELD_ACCESS, PACKAGE_MONEY, rejectMcpMoneyWrites, rejectDeniedMoneyWrites } from '../access/mcpMoney'
 
@@ -37,7 +38,9 @@ const Packages: CollectionConfig = {
   },
   hooks: {
     // 403 naming the money fields for MCP / non-admin access-checked writes (access/mcpMoney.ts).
-    beforeOperation: [rejectDeniedMoneyWrites('packages', PACKAGE_MONEY)],
+    // Then: staff/MCP line items must come from the service catalog with a set price
+    // (fields/requireCatalogLines.ts). After the money guard, so a sent price is a 403 first.
+    beforeOperation: [rejectDeniedMoneyWrites('packages', PACKAGE_MONEY), requireCatalogLines],
     beforeChange: [
       rejectMcpMoneyWrites('packages', PACKAGE_MONEY),
       // After the MCP guard: it judges the caller's input, not the catalog price.
