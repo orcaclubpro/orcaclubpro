@@ -744,6 +744,9 @@ export function registerOrcaclubTools(server: McpServer): void {
         'one-line result, commit, live URL, recap/#qa link and key file from botContext. Every task row (recentWork and ' +
         'per-client) carries drive {deliverable, internal} from the task description lines "drive deliverable: <link>" and ' +
         '"drive internal: <link>" (newest line wins; botContext notes as fallback). ' +
+        'Every task row also carries latest {next, decision, result, leftOff}: the newest "next:", "decision:" and ' +
+        '"result:" lines appended to the task description, plus the newest Stop-hook "left off <time PT>: <state> | ' +
+        'next: ... | commit: ... | result: ..." line (its next/result segments count too; the newest line wins). ' +
         'One call = full check-in. Most urgent client first. Read-only; no prices or amounts.',
       inputSchema: z
         .object({

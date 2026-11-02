@@ -56,6 +56,8 @@ export type DigestTask = {
   waitingReason: 'status' | 'qa-pass' | null
   /** `drive deliverable:` / `drive internal:` lines: task description (last wins), else botContext. */
   drive: DriveLinks
+  /** Newest `next:` / `decision:` / `result:` / `left off` lines appended to the task description. */
+  latest: LatestNotes
 }
 
 export type DigestProject = {
@@ -296,6 +298,7 @@ export function buildClientDigest(input: DigestInput): {
           : null,
         waitingReason,
         drive: driveLinksOf(t.botContext ?? null, t.description),
+        latest: latestNotesOf(t.description),
       }
     })
     for (const k of Object.keys(counts) as Array<keyof DigestCounts>) totals[k] += counts[k]
@@ -394,6 +397,8 @@ export type RecentWorkRow = {
   qaStatus: string | null
   /** `drive deliverable:` / `drive internal:` lines: task description (last wins), else botContext. */
   drive: DriveLinks
+  /** Newest `next:` / `decision:` / `result:` / `left off` lines appended to the task description. */
+  latest: LatestNotes
   /** A `Key file:` / `File:` line in botContext. */
   keyFile: string | null
   repo: string | null
@@ -459,6 +464,49 @@ export function driveLinksOf(bc: RawBotContext, description?: string | null): Dr
   }
 }
 
+/**
+ * The newest note lines agents append to a task description (append-only; readers take the LAST one):
+ *   `next: <who>: <step>`, `decision: ...`, `result: ...`, and the Stop hook's
+ *   `left off <YYYY-MM-DD HH:MM PT>: <state> | next: ... | commit: ... | result: ...`.
+ * A `left off` line's `next:` / `result:` segments count as next/result lines at that position; `-` means none.
+ */
+export type LatestNotes = {
+  next: string | null
+  decision: string | null
+  result: string | null
+  /** The newest `left off` line, without the `left off` prefix. */
+  leftOff: string | null
+}
+
+const NOTE_LINE = /^\s*[-*>]?\s*(next|decision|result)\s*:\s*(.+?)\s*$/i
+const LEFT_OFF_LINE = /^\s*[-*>]?\s*left off\s+(\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(?:\s*[A-Z]{2,4})?)\s*:\s*(.*?)\s*$/i
+
+const noteValue = (v: string | undefined): string | null => {
+  const s = (v ?? '').replace(/^`(.*)`$/, '$1').trim()
+  return !s || s === '-' || /^<[^>]*>$/.test(s) ? null : oneLine(s)
+}
+
+export function latestNotesOf(description: string | null | undefined): LatestNotes {
+  const out: LatestNotes = { next: null, decision: null, result: null, leftOff: null }
+  if (!description) return out
+  for (const line of description.split('\n')) {
+    const lo = LEFT_OFF_LINE.exec(line)
+    if (lo) {
+      out.leftOff = oneLine(`${lo[1]}: ${lo[2] ?? ''}`)
+      for (const seg of (lo[2] ?? '').split('|').slice(1)) {
+        const m = /^\s*(next|result)\s*:\s*(.*)$/i.exec(seg)
+        const v = m ? noteValue(m[2]) : null
+        if (m && v) out[m[1]!.toLowerCase() as 'next' | 'result'] = v
+      }
+      continue
+    }
+    const m = NOTE_LINE.exec(line)
+    const v = m ? noteValue(m[2]) : null
+    if (m && v) out[m[1]!.toLowerCase() as 'next' | 'decision' | 'result'] = v
+  }
+  return out
+}
+
 export function buildRecentWork(input: {
   tasks: RawRecentTask[]
   projects: Array<{ id: string; name?: string | null; clientAccountId: string | null; liveUrl?: string | null }>
@@ -490,6 +538,7 @@ export function buildRecentWork(input: {
         recapOrQaLink: t.qa?.reportLink || labeledLine(bc, ['recap', 'go-live', '#qa', 'qa post', 'qa link']),
         qaStatus: t.qa?.status ?? null,
         drive: driveLinksOf(bc, t.description),
+        latest: latestNotesOf(t.description),
         keyFile: labeledLine(bc, ['key file', 'file', 'path']),
         repo: bc?.repo || null,
         branch: bc?.branch || null,
