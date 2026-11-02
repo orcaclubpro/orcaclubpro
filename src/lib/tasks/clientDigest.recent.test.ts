@@ -9,7 +9,9 @@ import {
   lastLabeledLine,
   resultOf,
   waitingReasonOf,
+  descriptionText,
 } from './clientDigest'
+import { plainTextToLexical } from './richText'
 
 const QA_POST = 'https://discord.com/channels/111/222/333'
 const NOW = '2026-11-02T20:00:00.000Z'
@@ -158,5 +160,22 @@ describe('recentWork', () => {
       clients: [],
     })
     expect(rows[0]!.drive).toEqual({ deliverable: 'https://drive.google.com/drive/folders/NEW', internal: null })
+  })
+})
+
+describe('descriptionText (Tasks.description is Lexical rich text)', () => {
+  test('Lexical JSON from the DB becomes line-per-paragraph text the drive parser reads', () => {
+    const stored = plainTextToLexical('Brief.\n\ndrive deliverable: https://drive.google.com/drive/folders/D1\ndrive internal: https://drive.google.com/drive/folders/I1')
+    const text = descriptionText(stored)
+    expect(driveLinksOf(null, text)).toEqual({
+      deliverable: 'https://drive.google.com/drive/folders/D1',
+      internal: 'https://drive.google.com/drive/folders/I1',
+    })
+  })
+  test('plain strings pass through; empty/absent values are null', () => {
+    expect(descriptionText('drive internal: x')).toBe('drive internal: x')
+    expect(descriptionText(null)).toBe(null)
+    expect(descriptionText({ root: { children: [] } })).toBe(null)
+    expect(descriptionText(42)).toBe(null)
   })
 })

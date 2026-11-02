@@ -15,6 +15,12 @@
  *   `qa.reportLink`: QA passed and the push ask is sitting in #qa.
  */
 
+import { lexicalToPlainText } from './richText'
+
+/** Task description is Lexical rich text (one paragraph per line); plain strings pass through. */
+export const descriptionText = (v: unknown): string | null =>
+  typeof v === 'string' ? v : v && typeof v === 'object' ? lexicalToPlainText(v) || null : null
+
 export const CLOSED_TASK_STATUSES = ['completed', 'cancelled'] as const
 export const CLOSED_PROJECT_STATUSES = ['completed', 'cancelled'] as const
 
