@@ -42,6 +42,7 @@ import {
   savePackageSowDocument,
 } from '@/actions/packages'
 import { listServiceItems } from '@/actions/package-builder'
+import { getClientProfile } from '@/actions/clientProfile'
 import { createProject, createMilestone, updateMilestone, toggleMilestoneCompletion } from '@/actions/projects'
 import { checkProjectCreateScope, MCP_PROJECT_CLIENT_ID } from '@/lib/mcp/projectScope'
 import {
@@ -192,6 +193,20 @@ export function registerOrcaclubTools(server: McpServer): void {
       inputSchema: z.object({}),
     },
     async () => run(() => getClientAccountsList()),
+  )
+
+  server.registerTool(
+    'get_client_profile',
+    {
+      title: 'Client profile',
+      description:
+        'One client account: name, company, contact, the profile block (facts, rules, Drive folder, billing ' +
+        'notes) and a read-only billing view of the active retainer (tier, cycle, hours used/cap/remaining, ' +
+        'health). Billing is hours only: no prices, amounts or Stripe ids. `billing` is null when the client has ' +
+        'no active or scoping retainer. If `profileStatus` is set, the profile block is not in the schema yet.',
+      inputSchema: z.object({ clientAccountId: z.string().min(1) }).strict(),
+    },
+    async ({ clientAccountId }) => run(() => getClientProfile(clientAccountId)),
   )
 
   server.registerTool(
