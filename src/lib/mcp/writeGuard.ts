@@ -36,6 +36,8 @@ export const WRITE_TOOL_FIELDS: Record<string, readonly string[]> = {
   update_time_entry: ['id', 'date', 'hours', 'category', 'priority', 'completion', 'description'],
   create_package: ['name', 'description', 'coverMessage', 'notes', 'lineItems'],
   save_sow: ['packageId', 'sowData'],
+  // No budget/currency: a project's budget is set by a human in the portal.
+  project_create: ['name', 'description', 'clientAccountId', 'startDate', 'projectedEndDate'],
   create_milestone: ['projectId', 'title', 'date', 'description'],
   update_milestone: ['projectId', 'milestoneIndex', 'title', 'date', 'description', 'completed'],
   toggle_milestone: ['projectId', 'milestoneIndex'],

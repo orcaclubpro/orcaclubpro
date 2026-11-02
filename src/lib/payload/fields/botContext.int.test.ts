@@ -14,6 +14,7 @@
 import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test'
 import type { Payload } from 'payload'
 import { CUSTOM_LINE_BLOCKED } from './catalogLinePrice'
+import { MCP_PROJECT_CLIENT_ID } from '@/lib/mcp/projectScope'
 
 const TEST_DB = process.env.TEST_DATABASE_URI ?? ''
 const IS_LOCAL = /^mongodb:\/\/(127\.0\.0\.1|localhost)(:\d+)?\/[\w-]+$/.test(TEST_DB)
@@ -90,6 +91,8 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
     const db = payload.db as any
     const ca = await db.collections['client-accounts'].create({ name: 'Leak Test Co', email: 'leak@test.local' })
     clientAccountId = String(ca._id)
+    // The internal client account project_create is pinned to (local test DB only).
+    await db.collections['client-accounts'].create({ _id: MCP_PROJECT_CLIENT_ID, name: 'Internal Co', email: 'internal@test.local' })
     const staffDoc = await db.collections.users.create({ email: 'staff@test.local', role: 'admin', username: 'staff-t' })
     const staffUserDoc = await db.collections.users.create({
       email: 'staff-user@test.local',
@@ -1661,6 +1664,7 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
       create_milestone: { actor: 'vegapunk', projectId, title: 'Leak MS', date: '2026-12-01' },
       update_milestone: { actor: 'vegapunk', projectId, milestoneIndex: 0, title: 'Leak MS', date: '2026-12-02' },
       toggle_milestone: { actor: 'vegapunk', projectId, milestoneIndex: 0 },
+      project_create: { actor: 'vegapunk', name: 'Leak internal project', clientAccountId: MCP_PROJECT_CLIENT_ID },
       task_create: { actor: 'vegapunk', title: 'Leak task', projectId },
       task_update: { actor: 'vegapunk', id: taskId, title: 'Leak Task' },
       task_list: {},
@@ -1675,7 +1679,7 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
       expect({ tool: t.name, leak: LEAK.test(out) }).toEqual({ tool: t.name, leak: false })
       covered.push(t.name)
     }
-    expect(covered.length).toBeGreaterThanOrEqual(22)
+    expect(covered.length).toBeGreaterThanOrEqual(23)
 
     // log_work: loggedBy is an id, and the self-reported actor is stored.
     expect(typeof loggedEntry.entry.loggedBy === 'string' || loggedEntry.entry.loggedBy?.name !== undefined).toBe(true)
@@ -1691,5 +1695,74 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
     })
     expect(res.isError).toBe(true)
     expect(JSON.parse(res.content[0].text).error).toBe(CUSTOM_LINE_BLOCKED)
+  })
+
+  // ── project_create: internal client only, no budget ──────────────────────────
+
+  const projectsNamed = async (name: string) =>
+    (await payload.find({ collection: 'projects', where: { name: { equals: name } }, depth: 0 })).docs as any[]
+
+  test('MCP project_create creates a pending project under the pinned internal client', async () => {
+    const c = await mcpClient()
+    const res: any = await c.callTool({
+      name: 'project_create',
+      arguments: {
+        actor: 'orca',
+        name: 'Bot internal project',
+        description: 'made by a bot',
+        clientAccountId: MCP_PROJECT_CLIENT_ID,
+        startDate: '2026-11-02',
+        projectedEndDate: '2026-12-01',
+      },
+    })
+    expect(res.isError).toBeFalsy()
+    const out = JSON.parse(res.content[0].text)
+    expect(out.project).toEqual({
+      id: expect.any(String),
+      name: 'Bot internal project',
+      status: 'pending',
+      clientAccountId: MCP_PROJECT_CLIENT_ID,
+    })
+    const [doc] = await projectsNamed('Bot internal project')
+    expect(String(doc.id)).toBe(out.project.id)
+    expect(String(doc.client)).toBe(MCP_PROJECT_CLIENT_ID)
+    expect(doc.status).toBe('pending')
+    expect(doc.budgetAmount ?? null).toBeNull()
+    expect((doc.assignedTo ?? []).map(String)).toContain(String(mcpCaller.id))
+  })
+
+  test('MCP project_create refuses a real client account with needs-chance and writes nothing', async () => {
+    const c = await mcpClient()
+    const res: any = await c.callTool({
+      name: 'project_create',
+      arguments: { actor: 'orca', name: 'Bot client project', clientAccountId },
+    })
+    expect(res.isError).toBe(true)
+    const out = JSON.parse(res.content[0].text)
+    expect(out.code).toBe('needs-chance')
+    expect(out.error.startsWith('needs-chance:')).toBe(true)
+    expect(await projectsNamed('Bot client project')).toHaveLength(0)
+  })
+
+  test('MCP project_create with no client account returns needs-chance and writes nothing', async () => {
+    const c = await mcpClient()
+    const res: any = await c.callTool({ name: 'project_create', arguments: { actor: 'orca', name: 'Bot orphan project' } })
+    expect(res.isError).toBe(true)
+    expect(JSON.parse(res.content[0].text).code).toBe('needs-chance')
+    expect(await projectsNamed('Bot orphan project')).toHaveLength(0)
+  })
+
+  test('MCP project_create rejects budget/currency and a missing actor', async () => {
+    const c = await mcpClient()
+    for (const extra of [{ budget: 5000 }, { currency: 'USD' }, { budgetAmount: 5000 }]) {
+      await rejected(c, 'project_create', {
+        actor: 'orca',
+        name: 'Bot budget project',
+        clientAccountId: MCP_PROJECT_CLIENT_ID,
+        ...extra,
+      })
+    }
+    await rejected(c, 'project_create', { name: 'Bot budget project', clientAccountId: MCP_PROJECT_CLIENT_ID })
+    expect(await projectsNamed('Bot budget project')).toHaveLength(0)
   })
 })

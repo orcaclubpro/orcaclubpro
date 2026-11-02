@@ -42,7 +42,8 @@ import {
   savePackageSowDocument,
 } from '@/actions/packages'
 import { listServiceItems } from '@/actions/package-builder'
-import { createMilestone, updateMilestone, toggleMilestoneCompletion } from '@/actions/projects'
+import { createProject, createMilestone, updateMilestone, toggleMilestoneCompletion } from '@/actions/projects'
+import { checkProjectCreateScope, MCP_PROJECT_CLIENT_ID } from '@/lib/mcp/projectScope'
 import {
   createTrackedTask,
   updateTrackedTask,
@@ -463,6 +464,39 @@ export function registerOrcaclubTools(server: McpServer): void {
       const prepared = prepareSowSave(current.sowData as unknown as Record<string, unknown>, sowData)
       if (!prepared.ok) return text({ error: prepared.error }, true)
       return run(() => savePackageSowDocument(packageId, prepared.sowData as unknown as SowFormData))
+    }),
+  )
+
+  // ── Projects ──────────────────────────────────────────────────────────────────
+
+  server.registerTool(
+    'project_create',
+    {
+      title: 'Create a project',
+      description:
+        `Create a project (status pending) under the internal client account ${MCP_PROJECT_CLIENT_ID} only. ` +
+        'Any other clientAccountId, or none, is refused with a needs-chance error: projects for real clients ' +
+        'are created by Chance in the portal. No budget or currency: those are set by a human.',
+      inputSchema: writeSchema({
+        name: z.string().trim().min(1).max(120),
+        description: z.string().optional(),
+        clientAccountId: z
+          .string()
+          .optional()
+          .describe(`Must be ${MCP_PROJECT_CLIENT_ID}; anything else returns needs-chance.`),
+        startDate: z.union([z.iso.datetime({ offset: true }), z.iso.date()]).optional().describe('ISO date.'),
+        projectedEndDate: z.union([z.iso.datetime({ offset: true }), z.iso.date()]).optional().describe('ISO date.'),
+      }),
+    },
+    guardedWrite('project_create', async ({ clientAccountId, ...rest }) => {
+      const scope = checkProjectCreateScope(clientAccountId)
+      if (!scope.ok) return text({ error: scope.error, code: 'needs-chance' }, true)
+      return run(async () => {
+        const res = await createProject({ ...rest, clientId: scope.clientId })
+        if (!res.success || !('project' in res) || !res.project) return res
+        const p = res.project
+        return { success: true, project: { id: p.id, name: p.name, status: p.status, clientAccountId: scope.clientId } }
+      })
     }),
   )
 
