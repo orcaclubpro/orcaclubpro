@@ -1302,6 +1302,18 @@ export interface Task {
    * Last bot/ccq id to write this via MCP
    */
   lastActor?: string | null;
+  /**
+   * Bot/ccq id that claimed this task
+   */
+  claimedBy?: string | null;
+  /**
+   * Last claim or renewal
+   */
+  claimedAt?: string | null;
+  /**
+   * After this, another bot may reclaim the task
+   */
+  leaseExpiresAt?: string | null;
   qa?: {
     status?: ('pending' | 'pass' | 'fail') | null;
     /**
@@ -3190,6 +3202,9 @@ export interface TasksSelect<T extends boolean = true> {
   ownerBot?: T;
   ccqTaskId?: T;
   lastActor?: T;
+  claimedBy?: T;
+  claimedAt?: T;
+  leaseExpiresAt?: T;
   qa?:
     | T
     | {

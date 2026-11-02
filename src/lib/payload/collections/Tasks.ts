@@ -9,7 +9,15 @@ import { isValidActor } from '@/lib/mcp/actor'
  * Bot-tracking fields: internal, never shown to clients (stripped from non-staff
  * reads, restored on non-staff writes; see fields/staffOnlyFields.ts).
  */
-export const TASK_TRACKING_FIELDS = ['ownerBot', 'ccqTaskId', 'qa', 'lastActor'] as const
+export const TASK_TRACKING_FIELDS = [
+  'ownerBot',
+  'ccqTaskId',
+  'qa',
+  'lastActor',
+  'claimedBy',
+  'claimedAt',
+  'leaseExpiresAt',
+] as const
 
 const STAFF_ONLY = { read: staffOnlyField, create: staffOnlyField, update: staffOnlyField }
 
@@ -30,6 +38,21 @@ export const requireQaPassToComplete: CollectionBeforeChangeHook = ({ data, orig
         400,
       )
     }
+  }
+  return data
+}
+
+/**
+ * A task sent back to `pending` is free again: drop its claim and lease so the
+ * next task_claim sees a clean task. The claim itself is set only by task_claim
+ * (src/lib/tasks/claim.ts), with a conditional update that skips these hooks.
+ */
+export const clearClaimOnRelease: CollectionBeforeChangeHook = ({ data, originalDoc }) => {
+  if (!data) return data
+  if (data.status === 'pending' && originalDoc && originalDoc.status !== 'pending') {
+    data.claimedBy = null
+    data.claimedAt = null
+    data.leaseExpiresAt = null
   }
   return data
 }
@@ -85,6 +108,7 @@ export const Tasks: CollectionConfig = {
       restoreStaffOnly('tasks', TASK_TRACKING_FIELDS),
       requireQaPassToComplete,
       setCompletedAtOnCompletion,
+      clearClaimOnRelease,
       guardBotContextWrite,
     ],
     afterRead: [stripBotContext, stripStaffOnly(TASK_TRACKING_FIELDS)],
@@ -231,6 +255,43 @@ export const Tasks: CollectionConfig = {
           type: 'text',
           access: STAFF_ONLY,
           admin: { width: '34%', readOnly: true, description: 'Last bot/ccq id to write this via MCP' },
+        },
+      ],
+    },
+    // Claim + lease, written only by task_claim's atomic update (src/lib/tasks/claim.ts).
+    {
+      type: 'row',
+      fields: [
+        {
+          name: 'claimedBy',
+          type: 'text',
+          index: true,
+          access: STAFF_ONLY,
+          validate: (value: unknown) =>
+            value == null || value === '' || isValidActor(value) || 'Unknown bot or ccq task id',
+          admin: { width: '33%', readOnly: true, description: 'Bot/ccq id that claimed this task' },
+        },
+        {
+          name: 'claimedAt',
+          type: 'date',
+          access: STAFF_ONLY,
+          admin: {
+            width: '33%',
+            readOnly: true,
+            date: { pickerAppearance: 'dayAndTime' },
+            description: 'Last claim or renewal',
+          },
+        },
+        {
+          name: 'leaseExpiresAt',
+          type: 'date',
+          access: STAFF_ONLY,
+          admin: {
+            width: '34%',
+            readOnly: true,
+            date: { pickerAppearance: 'dayAndTime' },
+            description: 'After this, another bot may reclaim the task',
+          },
         },
       ],
     },

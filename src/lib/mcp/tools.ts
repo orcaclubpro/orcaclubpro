@@ -47,6 +47,7 @@ import { checkProjectCreateScope, MCP_PROJECT_CLIENT_ID } from '@/lib/mcp/projec
 import {
   createTrackedTask,
   updateTrackedTask,
+  claimTrackedTask,
   listTrackedTasks,
   getTrackedTask,
   listProjects,
@@ -624,6 +625,23 @@ export function registerOrcaclubTools(server: McpServer): void {
       }),
     },
     guardedWrite('task_update', async (input, actor) => run(() => updateTrackedTask({ ...input, actor }))),
+  )
+
+  server.registerTool(
+    'task_claim',
+    {
+      title: 'Claim a task',
+      description:
+        'Atomically take a pending task: it becomes in-progress with claimedBy = actor and a lease (default 30 ' +
+        'minutes, 1–1440). Only one caller can win; the others get an error naming the holder. A task whose lease ' +
+        'has expired can be reclaimed, and the holder can call again to renew its lease. A task moved to ' +
+        'in-progress without a lease cannot be claimed. Setting a task back to pending (task_update) clears the claim.',
+      inputSchema: writeSchema({
+        id: z.string().describe('Task id.'),
+        leaseMinutes: z.number().int().min(1).max(1440).optional().describe('Lease length in minutes (default 30).'),
+      }),
+    },
+    guardedWrite('task_claim', async (input, actor) => run(() => claimTrackedTask({ ...input, actor }))),
   )
 
   server.registerTool(

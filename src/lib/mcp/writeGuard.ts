@@ -54,6 +54,7 @@ export const WRITE_TOOL_FIELDS: Record<string, readonly string[]> = {
     'ccqTaskId',
     'qa',
   ],
+  task_claim: ['id', 'leaseMinutes'],
   task_update: [
     'id',
     'title',

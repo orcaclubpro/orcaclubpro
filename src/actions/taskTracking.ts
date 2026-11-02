@@ -18,6 +18,7 @@ import config from '@payload-config'
 import { getCurrentUser } from '@/actions/auth'
 import { computeProgress, type Progress } from '@/lib/tasks/progress'
 import { lexicalToPlainText, plainTextToLexical } from '@/lib/tasks/richText'
+import { claimFilter, claimKind, claimRefusal, claimUpdate, isTaskId } from '@/lib/tasks/claim'
 
 type TaskStatus = 'pending' | 'in-progress' | 'completed' | 'cancelled'
 type TaskPriority = 'low' | 'medium' | 'high' | 'urgent'
@@ -62,6 +63,9 @@ function taskRow(t: Record<string, any>) {
         }
       : null,
     lastActor: t.lastActor ?? null,
+    claimedBy: t.claimedBy ?? null,
+    claimedAt: t.claimedAt ?? null,
+    leaseExpiresAt: t.leaseExpiresAt ?? null,
     dueDate: t.dueDate ?? null,
     completedAt: t.completedAt ?? null,
     createdAt: t.createdAt ?? null,
@@ -347,6 +351,61 @@ export async function updateTrackedTask(input: {
       overrideAccess: false,
     })
     return { success: true, task: taskRow(task as Record<string, any>) }
+  } catch (e) {
+    return fail(errorMessage(e))
+  }
+}
+
+// ── Claim ─────────────────────────────────────────────────────────────────────
+
+/**
+ * Atomically take a task: pending → in-progress with claimedBy + a lease, or
+ * reclaim one whose lease expired, or renew your own live lease. The flip is one
+ * conditional `findOneAndUpdate` (see src/lib/tasks/claim.ts), so two callers
+ * can never both win. The visibility read before it only decides whether the
+ * caller may see the task at all; it plays no part in the race.
+ *
+ * The raw update skips Payload hooks: none apply to this transition (no QA gate,
+ * no completedAt, no botContext), and the MCP layer writes the audit row.
+ */
+export async function claimTrackedTask(input: {
+  actor: string
+  id: string
+  leaseMinutes?: number
+}): Promise<
+  | { success: true; outcome: 'claimed' | 'renewed' | 'reclaimed'; previousClaimedBy: string | null; task: TrackedTask }
+  | Fail
+> {
+  try {
+    const user = await staffCaller()
+    if (!user) return fail('Unauthorized')
+    if (!isTaskId(input.id)) return fail(`Task ${input.id} not found`)
+    const payload = await getPayload({ config })
+
+    const visible = await payload
+      .findByID({ collection: 'tasks', id: input.id, depth: 0, user, overrideAccess: false, disableErrors: true })
+      .catch(() => null)
+    if (!visible) return fail(`Task ${input.id} not found (it does not exist or you cannot access it)`)
+
+    const model = (payload.db as any).collections.tasks
+    const now = new Date()
+    const before = await model
+      .findOneAndUpdate(claimFilter(input.id, input.actor, now), claimUpdate(input.actor, now, input.leaseMinutes), {
+        returnDocument: 'before',
+      })
+      .lean()
+    if (!before) {
+      const current = await model.findOne({ _id: input.id }, { status: 1, claimedBy: 1, leaseExpiresAt: 1 }).lean()
+      return fail(claimRefusal(current, input.id, now))
+    }
+
+    const task = await payload.findByID({ collection: 'tasks', id: input.id, depth: 1, user, overrideAccess: false })
+    return {
+      success: true,
+      outcome: claimKind(before, input.actor, now),
+      previousClaimedBy: before.status === 'pending' ? null : (before.claimedBy ?? null),
+      task: taskRow(task as Record<string, any>),
+    }
   } catch (e) {
     return fail(errorMessage(e))
   }
