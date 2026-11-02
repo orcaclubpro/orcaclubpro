@@ -48,6 +48,7 @@ import {
   createTrackedTask,
   updateTrackedTask,
   listTrackedTasks,
+  getTrackedTask,
   listProjects,
   getPackageOverview,
   getProjectProgress,
@@ -629,9 +630,12 @@ export function registerOrcaclubTools(server: McpServer): void {
     {
       title: 'List tasks',
       description:
-        'Tasks, newest-updated first, filtered by package, project, client account, status (one or several), owner ' +
-        'bot (one or several, e.g. ["orca","vegapunk"]) or ccq id. Owner + status together is one call, e.g. ' +
-        '{ ownerBot: ["orca","vegapunk"], status: ["pending","in-progress"] }. Paged: limit (default 25, max 100) and page.',
+        'Tasks filtered by package, project, client account, status (one or several), owner bot (one or several, ' +
+        'e.g. ["orca","vegapunk"]), ccq id, and updatedSince / createdSince (ISO date-time, inclusive). Owner + ' +
+        'status together is one call, e.g. { ownerBot: ["orca","vegapunk"], status: ["pending","in-progress"] }. ' +
+        'sort: -updatedAt (default), -createdAt, createdAt (oldest first, for pollers) or dueDate. Rows include ' +
+        'createdAt and updatedAt. Paged: limit (default 25, max 100) and page; the envelope carries nextPage (null ' +
+        'on the last page).',
       inputSchema: z
         .object({
           packageId: z.string().optional(),
@@ -643,6 +647,9 @@ export function registerOrcaclubTools(server: McpServer): void {
             .optional()
             .describe('One owner bot / ccq id, or a list (matches any of them). Case-insensitive for bot names.'),
           ccqTaskId: z.string().optional(),
+          sort: z.enum(['-updatedAt', '-createdAt', 'createdAt', 'dueDate']).optional(),
+          updatedSince: z.string().datetime({ offset: true }).optional().describe('ISO date-time, inclusive.'),
+          createdSince: z.string().datetime({ offset: true }).optional().describe('ISO date-time, inclusive.'),
           limit: z.number().int().min(1).max(100).optional(),
           page: z.number().int().min(1).optional(),
         })
@@ -660,6 +667,18 @@ export function registerOrcaclubTools(server: McpServer): void {
               : normalizeActor(input.ownerBot),
         }),
       ),
+  )
+
+  server.registerTool(
+    'task_get',
+    {
+      title: 'Get a task',
+      description:
+        'One task by id: the task_list row (status, owner, ccq id, QA record, createdAt, updatedAt) plus its ' +
+        'internal botContext (brief, repo, branch, live URL, decisions, notes). Read-only.',
+      inputSchema: z.object({ id: z.string().min(1) }).strict(),
+    },
+    async ({ id }) => run(() => getTrackedTask(id)),
   )
 
   server.registerTool(

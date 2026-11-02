@@ -21,6 +21,8 @@ import { lexicalToPlainText, plainTextToLexical } from '@/lib/tasks/richText'
 
 type TaskStatus = 'pending' | 'in-progress' | 'completed' | 'cancelled'
 type TaskPriority = 'low' | 'medium' | 'high' | 'urgent'
+/** task_list sort orders. */
+export type TaskListSort = '-updatedAt' | '-createdAt' | 'createdAt' | 'dueDate'
 type QaInput = { status?: 'pending' | 'pass' | 'fail'; commit?: string; date?: string; reportLink?: string }
 
 type Fail = { success: false; error: string }
@@ -37,7 +39,7 @@ async function staffCaller() {
   return user
 }
 
-/** Compact task row for MCP output. Never includes botContext. */
+/** Compact task row for MCP output. Never includes botContext (task_get adds it). */
 function taskRow(t: Record<string, any>) {
   const project = t.project && typeof t.project === 'object' ? t.project : null
   return {
@@ -62,6 +64,7 @@ function taskRow(t: Record<string, any>) {
     lastActor: t.lastActor ?? null,
     dueDate: t.dueDate ?? null,
     completedAt: t.completedAt ?? null,
+    createdAt: t.createdAt ?? null,
     updatedAt: t.updatedAt ?? null,
   }
 }
@@ -316,10 +319,23 @@ export async function listTrackedTasks(input: {
   /** One owner, or several (any-of). */
   ownerBot?: string | string[]
   ccqTaskId?: string
+  /** Sort order; default newest-updated first. */
+  sort?: TaskListSort
+  /** ISO date-time: only tasks updated at or after it. */
+  updatedSince?: string
+  /** ISO date-time: only tasks created at or after it. */
+  createdSince?: string
   limit?: number
   page?: number
 }): Promise<
-  | { success: true; items: TrackedTask[]; total: number; page: number; hasNextPage: boolean }
+  | {
+      success: true
+      items: TrackedTask[]
+      total: number
+      page: number
+      hasNextPage: boolean
+      nextPage: number | null
+    }
   | Fail
 > {
   try {
@@ -341,11 +357,20 @@ export async function listTrackedTasks(input: {
       and.push({ ownerBot: { equals: input.ownerBot.trim() } })
     }
     if (input.ccqTaskId) and.push({ ccqTaskId: { equals: input.ccqTaskId } })
+    for (const [field, value] of [
+      ['updatedAt', input.updatedSince],
+      ['createdAt', input.createdSince],
+    ] as const) {
+      if (value === undefined) continue
+      const at = new Date(value)
+      if (Number.isNaN(at.getTime())) return fail(`${field === 'updatedAt' ? 'updatedSince' : 'createdSince'}: not an ISO date-time`)
+      and.push({ [field]: { greater_than_equal: at.toISOString() } })
+    }
 
     const res = await payload.find({
       collection: 'tasks',
       where: and.length ? { and } : {},
-      sort: '-updatedAt',
+      sort: input.sort ?? '-updatedAt',
       limit: Math.min(Math.max(input.limit ?? 25, 1), 100),
       page: input.page ?? 1,
       depth: 1,
@@ -358,6 +383,70 @@ export async function listTrackedTasks(input: {
       total: res.totalDocs,
       page: res.page ?? 1,
       hasNextPage: res.hasNextPage,
+      nextPage: res.nextPage ?? null,
+    }
+  } catch (e) {
+    return fail(errorMessage(e))
+  }
+}
+
+// ── Get one ───────────────────────────────────────────────────────────────────
+
+type BotContextRow = {
+  brief: string | null
+  repo: string | null
+  branch: string | null
+  liveUrl: string | null
+  decisions: string | null
+  notes: string | null
+  ownerBot: string | null
+  updatedAt: string | null
+}
+
+/**
+ * One task as the caller sees it: the task_list row plus its staff-only
+ * botContext (brief, repo, branch, live URL, decisions, notes). Read-only.
+ */
+export async function getTrackedTask(
+  id: string,
+): Promise<{ success: true; task: TrackedTask & { botContext: BotContextRow | null } } | Fail> {
+  try {
+    const user = await staffCaller()
+    if (!user) return fail('Unauthorized')
+    const payload = await getPayload({ config })
+    let doc: Record<string, any> | null = null
+    try {
+      doc = (await payload.findByID({
+        collection: 'tasks',
+        id,
+        depth: 1,
+        user,
+        overrideAccess: false,
+        disableErrors: true,
+      })) as Record<string, any> | null
+    } catch {
+      // A malformed id (not an ObjectId) throws a cast error instead of returning null.
+      doc = null
+    }
+    if (!doc) return fail(`Task ${id} not found (it does not exist or you cannot access it)`)
+    const bc = doc.botContext && typeof doc.botContext === 'object' ? (doc.botContext as Record<string, any>) : null
+    return {
+      success: true,
+      task: {
+        ...taskRow(doc),
+        botContext: bc
+          ? {
+              brief: bc.brief ?? null,
+              repo: bc.repo ?? null,
+              branch: bc.branch ?? null,
+              liveUrl: bc.liveUrl ?? null,
+              decisions: bc.decisions ?? null,
+              notes: bc.notes ?? null,
+              ownerBot: bc.ownerBot ?? null,
+              updatedAt: bc.updatedAt ?? null,
+            }
+          : null,
+      },
     }
   } catch (e) {
     return fail(errorMessage(e))
