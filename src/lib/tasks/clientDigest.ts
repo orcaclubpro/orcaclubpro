@@ -48,7 +48,7 @@ export type DigestTask = {
   qa: { status: string; commit: string | null; reportLink: string | null } | null
   /** Why the task is in waitingOnChance; null when it isn't. */
   waitingReason: 'status' | 'qa-pass' | null
-  /** botContext `drive deliverable:` / `drive internal:` note lines. */
+  /** `drive deliverable:` / `drive internal:` lines: task description (last wins), else botContext. */
   drive: DriveLinks
 }
 
@@ -111,6 +111,8 @@ export type RawTask = {
   updatedAt?: string | null
   dueDate?: string | null
   qa?: { status?: string | null; commit?: string | null; reportLink?: string | null } | null
+  /** Task description; the poller appends `drive deliverable:` / `drive internal:` lines here. */
+  description?: string | null
   botContext?: RawBotContext
 }
 export type RawProject = {
@@ -287,7 +289,7 @@ export function buildClientDigest(input: DigestInput): {
           ? { status: t.qa.status ?? 'pending', commit: t.qa.commit ?? null, reportLink: t.qa.reportLink ?? null }
           : null,
         waitingReason,
-        drive: driveLinksOf(t.botContext ?? null),
+        drive: driveLinksOf(t.botContext ?? null, t.description),
       }
     })
     for (const k of Object.keys(counts) as Array<keyof DigestCounts>) totals[k] += counts[k]
@@ -384,7 +386,7 @@ export type RecentWorkRow = {
   /** qa.reportLink (go-live recap / #qa post / Drive QA report), else a `Recap:` / `QA:` line. */
   recapOrQaLink: string | null
   qaStatus: string | null
-  /** botContext `drive deliverable:` / `drive internal:` note lines. */
+  /** `drive deliverable:` / `drive internal:` lines: task description (last wins), else botContext. */
   drive: DriveLinks
   /** A `Key file:` / `File:` line in botContext. */
   keyFile: string | null
@@ -425,15 +427,29 @@ export function resultOf(bc: RawBotContext): string | null {
 }
 
 /**
- * Typed Drive links from botContext note lines: `drive deliverable: <link>` is
- * the client-facing deliverable, `drive internal: <link>` the team-only folder.
+ * Typed Drive links. The poller appends `drive deliverable: <link>` (client-facing
+ * deliverable) and `drive internal: <link>` (team-only) lines to the task
+ * description, so the LAST such description line wins (newest upload). botContext
+ * note lines are the fallback for tasks that recorded links there.
  */
 export type DriveLinks = { deliverable: string | null; internal: string | null }
 
-export function driveLinksOf(bc: RawBotContext): DriveLinks {
+/** Last `label: value` line in free text (case-insensitive, optional `-`/`*` bullet); skips `<link>` placeholders. */
+export function lastLabeledLine(text: string | null | undefined, label: string): string | null {
+  if (!text) return null
+  const re = new RegExp(`^\\s*[-*]?\\s*${label}\\s*[:=]\\s*(.+?)\\s*$`, 'gim')
+  let found: string | null = null
+  for (const m of text.matchAll(re)) {
+    const v = (m[1] ?? '').replace(/^`(.*)`$/, '$1').trim()
+    if (v && !/^<[^>]*>$/.test(v)) found = oneLine(v)
+  }
+  return found
+}
+
+export function driveLinksOf(bc: RawBotContext, description?: string | null): DriveLinks {
   return {
-    deliverable: labeledLine(bc, ['drive deliverable']),
-    internal: labeledLine(bc, ['drive internal']),
+    deliverable: lastLabeledLine(description, 'drive deliverable') ?? labeledLine(bc, ['drive deliverable']),
+    internal: lastLabeledLine(description, 'drive internal') ?? labeledLine(bc, ['drive internal']),
   }
 }
 
@@ -467,7 +483,7 @@ export function buildRecentWork(input: {
         liveUrl: bc?.liveUrl || labeledLine(bc, ['live url', 'live link']) || p?.liveUrl || null,
         recapOrQaLink: t.qa?.reportLink || labeledLine(bc, ['recap', 'go-live', '#qa', 'qa post', 'qa link']),
         qaStatus: t.qa?.status ?? null,
-        drive: driveLinksOf(bc),
+        drive: driveLinksOf(bc, t.description),
         keyFile: labeledLine(bc, ['key file', 'file', 'path']),
         repo: bc?.repo || null,
         branch: bc?.branch || null,

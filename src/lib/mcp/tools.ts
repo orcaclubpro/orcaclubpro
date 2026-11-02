@@ -742,8 +742,8 @@ export function registerOrcaclubTools(server: McpServer): void {
         'waitingOnChance also holds open tasks whose QA is PASS with a #qa post in qa.reportLink (waitingReason "qa-pass"). ' +
         'recentWork: the 20 most recently updated tasks across clients (any status) with project, client, status, ' +
         'one-line result, commit, live URL, recap/#qa link and key file from botContext. Every task row (recentWork and ' +
-        'per-client) carries drive {deliverable, internal} from botContext note lines "drive deliverable: <link>" and ' +
-        '"drive internal: <link>". ' +
+        'per-client) carries drive {deliverable, internal} from the task description lines "drive deliverable: <link>" and ' +
+        '"drive internal: <link>" (newest line wins; botContext notes as fallback). ' +
         'One call = full check-in. Most urgent client first. Read-only; no prices or amounts.',
       inputSchema: z
         .object({

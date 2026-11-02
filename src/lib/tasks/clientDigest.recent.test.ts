@@ -6,6 +6,7 @@ import {
   driveLinksOf,
   isQaPostLink,
   labeledLine,
+  lastLabeledLine,
   resultOf,
   waitingReasonOf,
 } from './clientDigest'
@@ -35,7 +36,7 @@ describe('waitingOnChance fallback: QA PASS + #qa post', () => {
       clients: [{ id: 'A', name: 'Acme' }],
       tasks: [
         { id: 't1', projectId: 'pA', status: 'in-progress', createdAt: '2026-10-01', qa: { status: 'pass', commit: 'abc1234', reportLink: QA_POST } },
-        { id: 't2', projectId: 'pA', status: 'pending', createdAt: '2026-10-02', qa: { status: 'pass', reportLink: 'https://drive.google.com/x' } },
+        { id: 't2', projectId: 'pA', status: 'pending', createdAt: '2026-10-02', qa: { status: 'pass', reportLink: 'https://drive.google.com/x' }, description: 'Brief.\n\ndrive internal: https://drive.google.com/drive/folders/T2INT' },
         {
           id: 't3',
           projectId: 'pA',
@@ -58,7 +59,8 @@ describe('waitingOnChance fallback: QA PASS + #qa post', () => {
     expect(a.counts).toMatchObject({ open: 3, waitingChance: 2, inProgress: 0, pending: 1 })
     expect(d.totals.waitingChance).toBe(2)
     expect(a.waitingOnChance[1]!.drive).toEqual({ deliverable: 'https://drive.google.com/d/1', internal: null })
-    expect(a.tasks.find((t) => t.id === 't2')!.drive).toEqual({ deliverable: null, internal: null })
+    expect(a.tasks.find((t) => t.id === 't2')!.drive).toEqual({ deliverable: null, internal: 'https://drive.google.com/drive/folders/T2INT' })
+    expect(a.tasks.find((t) => t.id === 't1')!.drive).toEqual({ deliverable: null, internal: null })
   })
 })
 
@@ -130,5 +132,31 @@ describe('recentWork', () => {
     expect(rows[2]!.commit).toBe(null)
     expect(rows[2]!.drive).toEqual({ deliverable: null, internal: null })
     expect(rows.at(-1)!.id).toBe('t05')
+  })
+
+  test('drive links come from the task description (poller append_note), newest wins, botContext fallback', () => {
+    const description =
+      "MCP-only. Parse lines 'drive deliverable: <link>' in prose.\n\n" +
+      '[poller] started 2026-11-02 15:03 PST | ccq T1\n\n' +
+      'drive deliverable: https://drive.google.com/drive/folders/OLD\n\n' +
+      'drive internal: <link>\n\n' +
+      'Drive Deliverable: https://drive.google.com/drive/folders/NEW\n\n' +
+      '[poller] finished 2026-11-02 15:30 PST | ccq T1 done'
+    expect(lastLabeledLine(description, 'drive deliverable')).toBe('https://drive.google.com/drive/folders/NEW')
+    expect(lastLabeledLine(description, 'drive internal')).toBe(null)
+    expect(lastLabeledLine(null, 'drive internal')).toBe(null)
+    // description wins per field; botContext fills the field the description lacks
+    expect(driveLinksOf(bc, description)).toEqual({
+      deliverable: 'https://drive.google.com/drive/folders/NEW',
+      internal: 'https://drive.google.com/drive/folders/INT',
+    })
+    expect(driveLinksOf(null, description)).toEqual({ deliverable: 'https://drive.google.com/drive/folders/NEW', internal: null })
+    expect(driveLinksOf(null, 'Parse botContext note lines "drive deliverable: x" mid-sentence')).toEqual({ deliverable: null, internal: null })
+    const rows = buildRecentWork({
+      tasks: [{ id: 'r1', projectId: null, updatedAt: '2026-11-02T00:00:00Z', description }],
+      projects: [],
+      clients: [],
+    })
+    expect(rows[0]!.drive).toEqual({ deliverable: 'https://drive.google.com/drive/folders/NEW', internal: null })
   })
 })
