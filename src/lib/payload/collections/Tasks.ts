@@ -1,6 +1,38 @@
+import { APIError } from 'payload'
 import type { CollectionConfig, CollectionBeforeChangeHook } from 'payload'
-import { adminOnly, adminOrAssigned, adminOrUser } from '../access'
+import { adminOnly, adminOrAssigned, adminOrUser, staffOnlyField } from '../access'
 import { botContextField, guardBotContextWrite, stripBotContext } from '../fields/botContext'
+import { restoreStaffOnly, stripStaffOnly } from '../fields/staffOnlyFields'
+import { isValidActor } from '@/lib/mcp/actor'
+
+/**
+ * Bot-tracking fields: internal, never shown to clients (stripped from non-staff
+ * reads, restored on non-staff writes; see fields/staffOnlyFields.ts).
+ */
+export const TASK_TRACKING_FIELDS = ['ownerBot', 'ccqTaskId', 'qa', 'lastActor'] as const
+
+const STAFF_ONLY = { read: staffOnlyField, create: staffOnlyField, update: staffOnlyField }
+
+/**
+ * A tracked dev task (one with a `ccqTaskId`) can only be completed once QA has
+ * passed it on a recorded commit. Ordinary portal tasks are unaffected.
+ */
+export const requireQaPassToComplete: CollectionBeforeChangeHook = ({ data, originalDoc }) => {
+  if (!data) return data
+  const merged = { ...(originalDoc ?? {}), ...data } as Record<string, any>
+  const completing = data.status === 'completed' && originalDoc?.status !== 'completed'
+  if (completing && merged.ccqTaskId) {
+    const qa = (merged.qa ?? {}) as { status?: string; commit?: string }
+    if (qa.status !== 'pass' || !qa.commit) {
+      throw new APIError(
+        `Task ${merged.ccqTaskId} cannot be completed: qa.status must be "pass" with qa.commit set ` +
+          `(got status "${qa.status ?? 'none'}", commit "${qa.commit ?? ''}").`,
+        400,
+      )
+    }
+  }
+  return data
+}
 
 /**
  * Tasks Collection
@@ -47,13 +79,23 @@ export const Tasks: CollectionConfig = {
     delete: adminOnly, // Only admins can delete tasks
   },
   hooks: {
-    beforeChange: [setCompletedAtOnCompletion, guardBotContextWrite],
-    afterRead: [stripBotContext],
+    // restoreStaffOnly first, so the QA gate sees the stored ccqTaskId/qa even on
+    // a non-staff write.
+    beforeChange: [
+      restoreStaffOnly('tasks', TASK_TRACKING_FIELDS),
+      requireQaPassToComplete,
+      setCompletedAtOnCompletion,
+      guardBotContextWrite,
+    ],
+    afterRead: [stripBotContext, stripStaffOnly(TASK_TRACKING_FIELDS)],
   },
   indexes: [
     // Dashboard queries: tasks by assignee filtered by status / sorted by due date
     { fields: ['assignedTo', 'status'] },
     { fields: ['assignedTo', 'dueDate'] },
+    // MCP task_list filters: by package or project, then status.
+    { fields: ['package', 'status'] },
+    { fields: ['project', 'status'] },
   ],
   fields: [
     // ============================================================================
@@ -148,6 +190,74 @@ export const Tasks: CollectionConfig = {
             description: 'User assigned to this task',
             width: '50%',
           },
+        },
+      ],
+    },
+
+    {
+      name: 'package',
+      type: 'relationship',
+      relationTo: 'packages',
+      index: true,
+      admin: { description: 'Package (proposal/SOW) this work delivers, if any' },
+    },
+
+    // ============================================================================
+    // BOT TRACKING (internal — staff only)
+    // ============================================================================
+    {
+      type: 'row',
+      fields: [
+        {
+          name: 'ownerBot',
+          type: 'text',
+          index: true,
+          access: STAFF_ONLY,
+          validate: (value: unknown) =>
+            value == null || value === '' || isValidActor(value) || 'Unknown bot or ccq task id',
+          admin: { width: '33%', description: 'Bot that owns this task (gojo, vegapunk, …)' },
+        },
+        {
+          name: 'ccqTaskId',
+          type: 'text',
+          index: true,
+          access: STAFF_ONLY,
+          validate: (value: unknown) =>
+            value == null || value === '' || /^T\d{6}-\d{6}$/.test(String(value)) || 'ccq task id like T261101-232341',
+          admin: { width: '33%', description: 'ccq queue id. Tracked tasks need a QA pass to complete.' },
+        },
+        {
+          name: 'lastActor',
+          type: 'text',
+          access: STAFF_ONLY,
+          admin: { width: '34%', readOnly: true, description: 'Last bot/ccq id to write this via MCP' },
+        },
+      ],
+    },
+    {
+      name: 'qa',
+      type: 'group',
+      label: 'QA',
+      access: STAFF_ONLY,
+      fields: [
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'status',
+              type: 'select',
+              defaultValue: 'pending',
+              options: [
+                { label: 'Pending', value: 'pending' },
+                { label: 'Pass', value: 'pass' },
+                { label: 'Fail', value: 'fail' },
+              ],
+              admin: { width: '25%' },
+            },
+            { name: 'commit', type: 'text', admin: { width: '25%', description: 'Commit QA ran against' } },
+            { name: 'date', type: 'date', admin: { width: '25%' } },
+            { name: 'reportLink', type: 'text', admin: { width: '25%', description: 'QA report (Drive / #qa)' } },
+          ],
         },
       ],
     },

@@ -1,0 +1,381 @@
+'use server'
+
+/**
+ * Task tracking for bots and staff: tasks linked to a package and/or project,
+ * with an owner bot, a ccq id and a QA record, plus package/project progress.
+ * Wrapped by the MCP tools task_create, task_update, task_list, get_package and
+ * get_project_progress (src/lib/mcp/tools.ts).
+ *
+ * Every Payload call passes the caller with `overrideAccess: false`, so
+ * collection and field access apply as they would in the portal. Money stays
+ * out: these actions never write a money field, and the package view returns no
+ * prices.
+ */
+import { getPayload } from 'payload'
+import type { Where } from 'payload'
+import config from '@payload-config'
+
+import { getCurrentUser } from '@/actions/auth'
+import { computeProgress, type Progress } from '@/lib/tasks/progress'
+import { lexicalToPlainText, plainTextToLexical } from '@/lib/tasks/richText'
+
+type TaskStatus = 'pending' | 'in-progress' | 'completed' | 'cancelled'
+type TaskPriority = 'low' | 'medium' | 'high' | 'urgent'
+type QaInput = { status?: 'pending' | 'pass' | 'fail'; commit?: string; date?: string; reportLink?: string }
+
+type Fail = { success: false; error: string }
+const fail = (error: string): Fail => ({ success: false, error })
+
+const idOf = (v: unknown): string | null =>
+  v == null ? null : typeof v === 'object' ? (((v as { id?: unknown }).id as string | undefined) ?? null) : String(v)
+
+const errorMessage = (e: unknown) => (e instanceof Error ? e.message : 'Unexpected error')
+
+async function staffCaller() {
+  const user = await getCurrentUser()
+  if (!user || (user.role !== 'admin' && user.role !== 'user')) return null
+  return user
+}
+
+/** Compact task row for MCP output. Never includes botContext. */
+function taskRow(t: Record<string, any>) {
+  const project = t.project && typeof t.project === 'object' ? t.project : null
+  return {
+    id: String(t.id),
+    title: t.title,
+    description: lexicalToPlainText(t.description) || null,
+    status: t.status,
+    priority: t.priority ?? null,
+    projectId: idOf(t.project),
+    projectName: project?.name ?? null,
+    packageId: idOf(t.package),
+    ownerBot: t.ownerBot ?? null,
+    ccqTaskId: t.ccqTaskId ?? null,
+    qa: t.qa
+      ? {
+          status: t.qa.status ?? 'pending',
+          commit: t.qa.commit ?? null,
+          date: t.qa.date ?? null,
+          reportLink: t.qa.reportLink ?? null,
+        }
+      : null,
+    lastActor: t.lastActor ?? null,
+    dueDate: t.dueDate ?? null,
+    completedAt: t.completedAt ?? null,
+    updatedAt: t.updatedAt ?? null,
+  }
+}
+
+export type TrackedTask = ReturnType<typeof taskRow>
+
+// ── Create ────────────────────────────────────────────────────────────────────
+
+export async function createTrackedTask(input: {
+  actor: string
+  title: string
+  description?: string
+  projectId?: string
+  packageId?: string
+  status?: TaskStatus
+  priority?: TaskPriority
+  dueDate?: string
+  ownerBot?: string
+  ccqTaskId?: string
+  qa?: QaInput
+}): Promise<{ success: true; task: TrackedTask } | Fail> {
+  try {
+    const user = await staffCaller()
+    if (!user) return fail('Unauthorized')
+    const payload = await getPayload({ config })
+
+    let projectId = input.projectId ?? null
+    if (input.packageId) {
+      const pkg = await payload.findByID({
+        collection: 'packages',
+        id: input.packageId,
+        depth: 0,
+        user,
+        overrideAccess: false,
+      })
+      const pkgProject = idOf(pkg.projectRef)
+      if (projectId && pkgProject && projectId !== pkgProject) {
+        return fail(`Package ${input.packageId} belongs to project ${pkgProject}, not ${projectId}`)
+      }
+      projectId = projectId ?? pkgProject
+    }
+    if (!projectId) return fail('Pass projectId, or a packageId whose package is linked to a project')
+
+    const task = await payload.create({
+      collection: 'tasks',
+      data: {
+        title: input.title,
+        ...(input.description ? { description: plainTextToLexical(input.description) as any } : {}),
+        project: projectId,
+        ...(input.packageId ? { package: input.packageId } : {}),
+        assignedTo: user.id,
+        status: input.status ?? 'pending',
+        priority: input.priority ?? 'medium',
+        ...(input.dueDate ? { dueDate: input.dueDate } : {}),
+        ...(input.ownerBot ? { ownerBot: input.ownerBot } : {}),
+        ...(input.ccqTaskId ? { ccqTaskId: input.ccqTaskId } : {}),
+        ...(input.qa ? { qa: input.qa } : {}),
+        lastActor: input.actor,
+      },
+      depth: 1,
+      user,
+      overrideAccess: false,
+    })
+    return { success: true, task: taskRow(task as Record<string, any>) }
+  } catch (e) {
+    return fail(errorMessage(e))
+  }
+}
+
+// ── Update ────────────────────────────────────────────────────────────────────
+
+export async function updateTrackedTask(input: {
+  actor: string
+  id: string
+  title?: string
+  description?: string
+  projectId?: string
+  packageId?: string | null
+  status?: TaskStatus
+  priority?: TaskPriority
+  dueDate?: string | null
+  ownerBot?: string | null
+  ccqTaskId?: string | null
+  qa?: QaInput
+}): Promise<{ success: true; task: TrackedTask } | Fail> {
+  try {
+    const user = await staffCaller()
+    if (!user) return fail('Unauthorized')
+    const payload = await getPayload({ config })
+
+    const current = (await payload.findByID({
+      collection: 'tasks',
+      id: input.id,
+      depth: 0,
+      user,
+      overrideAccess: false,
+    })) as Record<string, any>
+
+    const data: Record<string, unknown> = { lastActor: input.actor }
+    if (input.title !== undefined) data.title = input.title
+    if (input.description !== undefined) data.description = plainTextToLexical(input.description)
+    if (input.projectId !== undefined) data.project = input.projectId
+    if (input.packageId !== undefined) data.package = input.packageId
+    if (input.status !== undefined) data.status = input.status
+    if (input.priority !== undefined) data.priority = input.priority
+    if (input.dueDate !== undefined) data.dueDate = input.dueDate
+    if (input.ownerBot !== undefined) data.ownerBot = input.ownerBot
+    if (input.ccqTaskId !== undefined) data.ccqTaskId = input.ccqTaskId
+    // qa is merged, so a bot can record a verdict without restating the rest.
+    if (input.qa !== undefined) data.qa = { ...(current.qa ?? {}), ...input.qa }
+
+    const task = await payload.update({
+      collection: 'tasks',
+      id: input.id,
+      data: data as any,
+      depth: 1,
+      user,
+      overrideAccess: false,
+    })
+    return { success: true, task: taskRow(task as Record<string, any>) }
+  } catch (e) {
+    return fail(errorMessage(e))
+  }
+}
+
+// ── List ──────────────────────────────────────────────────────────────────────
+
+export async function listTrackedTasks(input: {
+  packageId?: string
+  projectId?: string
+  clientAccountId?: string
+  status?: TaskStatus | TaskStatus[]
+  ownerBot?: string
+  ccqTaskId?: string
+  limit?: number
+  page?: number
+}): Promise<
+  | { success: true; items: TrackedTask[]; total: number; page: number; hasNextPage: boolean }
+  | Fail
+> {
+  try {
+    const user = await staffCaller()
+    if (!user) return fail('Unauthorized')
+    const payload = await getPayload({ config })
+
+    const and: Where[] = []
+    if (input.packageId) and.push({ package: { equals: input.packageId } })
+    if (input.projectId) and.push({ project: { equals: input.projectId } })
+    if (input.clientAccountId) and.push({ 'project.client': { equals: input.clientAccountId } })
+    if (input.status) {
+      and.push(Array.isArray(input.status) ? { status: { in: input.status } } : { status: { equals: input.status } })
+    }
+    if (input.ownerBot) and.push({ ownerBot: { equals: input.ownerBot } })
+    if (input.ccqTaskId) and.push({ ccqTaskId: { equals: input.ccqTaskId } })
+
+    const res = await payload.find({
+      collection: 'tasks',
+      where: and.length ? { and } : {},
+      sort: '-updatedAt',
+      limit: Math.min(Math.max(input.limit ?? 25, 1), 100),
+      page: input.page ?? 1,
+      depth: 1,
+      user,
+      overrideAccess: false,
+    })
+    return {
+      success: true,
+      items: res.docs.map((d) => taskRow(d as Record<string, any>)),
+      total: res.totalDocs,
+      page: res.page ?? 1,
+      hasNextPage: res.hasNextPage,
+    }
+  } catch (e) {
+    return fail(errorMessage(e))
+  }
+}
+
+// ── Package + project progress ───────────────────────────────────────────────
+
+type Milestone = { id: string | null; title: string; date: string | null; completed: boolean }
+
+const milestonesOf = (project: Record<string, any> | null): Milestone[] =>
+  (Array.isArray(project?.milestones) ? project!.milestones : []).map((m: Record<string, any>) => ({
+    id: m.id ?? null,
+    title: m.title,
+    date: m.date ?? null,
+    completed: Boolean(m.completed),
+  }))
+
+async function allTasks(payload: Awaited<ReturnType<typeof getPayload>>, user: any, where: Where) {
+  const res = await payload.find({
+    collection: 'tasks',
+    where,
+    sort: 'createdAt',
+    limit: 500,
+    depth: 0,
+    user,
+    overrideAccess: false,
+  })
+  return res.docs as Record<string, any>[]
+}
+
+/** A package with its tasks, its project's milestones, and progress. No prices. */
+export async function getPackageOverview(packageId: string): Promise<
+  | {
+      success: true
+      package: {
+        id: string
+        name: string
+        type: string | null
+        status: string | null
+        clientAccountId: string | null
+        projectId: string | null
+        lineItems: Array<{ name: string; quantity: number | null }>
+      }
+      tasks: TrackedTask[]
+      milestones: Milestone[]
+      progress: Progress
+    }
+  | Fail
+> {
+  try {
+    const user = await staffCaller()
+    if (!user) return fail('Unauthorized')
+    const payload = await getPayload({ config })
+
+    const pkg = (await payload.findByID({
+      collection: 'packages',
+      id: packageId,
+      depth: 0,
+      user,
+      overrideAccess: false,
+    })) as Record<string, any>
+    const projectId = idOf(pkg.projectRef)
+    const project = projectId
+      ? ((await payload.findByID({ collection: 'projects', id: projectId, depth: 0, user, overrideAccess: false })) as Record<
+          string,
+          any
+        >)
+      : null
+    const tasks = await allTasks(payload, user, { package: { equals: packageId } })
+    const milestones = milestonesOf(project)
+
+    return {
+      success: true,
+      package: {
+        id: String(pkg.id),
+        name: pkg.name,
+        type: pkg.type ?? null,
+        status: pkg.status ?? null,
+        clientAccountId: idOf(pkg.clientAccount),
+        projectId,
+        lineItems: (Array.isArray(pkg.lineItems) ? pkg.lineItems : []).map((li: Record<string, any>) => ({
+          name: li.name,
+          quantity: li.quantity ?? null,
+        })),
+      },
+      tasks: tasks.map(taskRow),
+      milestones,
+      progress: computeProgress({ tasks, milestones }),
+    }
+  } catch (e) {
+    return fail(errorMessage(e))
+  }
+}
+
+/** A project's milestones, task counts by status, open tasks and progress. */
+export async function getProjectProgress(projectId: string): Promise<
+  | {
+      success: true
+      project: {
+        id: string
+        name: string
+        status: string | null
+        clientAccountId: string | null
+        startDate: string | null
+        projectedEndDate: string | null
+      }
+      milestones: Milestone[]
+      openTasks: TrackedTask[]
+      progress: Progress
+    }
+  | Fail
+> {
+  try {
+    const user = await staffCaller()
+    if (!user) return fail('Unauthorized')
+    const payload = await getPayload({ config })
+
+    const project = (await payload.findByID({
+      collection: 'projects',
+      id: projectId,
+      depth: 0,
+      user,
+      overrideAccess: false,
+    })) as Record<string, any>
+    const tasks = await allTasks(payload, user, { project: { equals: projectId } })
+    const milestones = milestonesOf(project)
+
+    return {
+      success: true,
+      project: {
+        id: String(project.id),
+        name: project.name,
+        status: project.status ?? null,
+        clientAccountId: idOf(project.client),
+        startDate: project.startDate ?? null,
+        projectedEndDate: project.projectedEndDate ?? null,
+      },
+      milestones,
+      openTasks: tasks.filter((t) => t.status === 'pending' || t.status === 'in-progress').map(taskRow),
+      progress: computeProgress({ tasks, milestones }),
+    }
+  } catch (e) {
+    return fail(errorMessage(e))
+  }
+}

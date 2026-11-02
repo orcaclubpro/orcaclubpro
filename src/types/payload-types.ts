@@ -1287,6 +1287,34 @@ export interface Task {
    */
   assignedTo: string | User;
   /**
+   * Package (proposal/SOW) this work delivers, if any
+   */
+  package?: (string | null) | Package;
+  /**
+   * Bot that owns this task (gojo, vegapunk, …)
+   */
+  ownerBot?: string | null;
+  /**
+   * ccq queue id. Tracked tasks need a QA pass to complete.
+   */
+  ccqTaskId?: string | null;
+  /**
+   * Last bot/ccq id to write this via MCP
+   */
+  lastActor?: string | null;
+  qa?: {
+    status?: ('pending' | 'pass' | 'fail') | null;
+    /**
+     * Commit QA ran against
+     */
+    commit?: string | null;
+    date?: string | null;
+    /**
+     * QA report (Drive / #qa)
+     */
+    reportLink?: string | null;
+  };
+  /**
    * Optional: Sprint this task is part of
    */
   sprint?: (string | null) | Sprint;
@@ -3153,6 +3181,18 @@ export interface TasksSelect<T extends boolean = true> {
   priority?: T;
   project?: T;
   assignedTo?: T;
+  package?: T;
+  ownerBot?: T;
+  ccqTaskId?: T;
+  lastActor?: T;
+  qa?:
+    | T
+    | {
+        status?: T;
+        commit?: T;
+        date?: T;
+        reportLink?: T;
+      };
   sprint?: T;
   dueDate?: T;
   completedAt?: T;

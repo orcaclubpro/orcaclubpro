@@ -42,6 +42,13 @@ import {
   savePackageSowDocument,
 } from '@/actions/packages'
 import { createMilestone, updateMilestone, toggleMilestoneCompletion } from '@/actions/projects'
+import {
+  createTrackedTask,
+  updateTrackedTask,
+  listTrackedTasks,
+  getPackageOverview,
+  getProjectProgress,
+} from '@/actions/taskTracking'
 import type { SowFormData } from '@/lib/document-generators'
 import { ACTOR } from '@/lib/mcp/actor'
 import { checkWriteInput, prepareSowSave } from '@/lib/mcp/writeGuard'
@@ -88,7 +95,7 @@ async function run<T extends { success: boolean; error?: string }>(fn: () => Pro
  */
 function guardedWrite<I extends Record<string, unknown>>(
   tool: string,
-  handler: (input: I) => Promise<ToolResult>,
+  handler: (input: I, actor: string) => Promise<ToolResult>,
 ): (input: I & { actor: string }) => Promise<ToolResult> {
   return (input) => runAsMcp(async () => {
     const { actor, ...rest } = input
@@ -97,7 +104,7 @@ function guardedWrite<I extends Record<string, unknown>>(
       await recordAgentWrite({ actor, tool, ok: false, targetId: targetIdOf(rest), error: check.error })
       return text({ error: check.error }, true)
     }
-    const res = await handler(rest as unknown as I)
+    const res = await handler(rest as unknown as I, actor)
     await recordAgentWrite({
       actor,
       tool,
@@ -462,5 +469,114 @@ export function registerOrcaclubTools(server: McpServer): void {
     guardedWrite('toggle_milestone', async (input) =>
       run(() => toggleMilestoneCompletion(input) as Promise<{ success: boolean; error?: string }>),
     ),
+  )
+
+  // ── Tasks & progress (plan step 2) ─────────────────────────────────────────────
+
+  const TASK_STATUS = z.enum(['pending', 'in-progress', 'completed', 'cancelled'])
+  const TASK_PRIORITY = z.enum(['low', 'medium', 'high', 'urgent'])
+  const QA = z
+    .object({
+      status: z.enum(['pending', 'pass', 'fail']).optional(),
+      commit: z.string().optional().describe('Full commit hash QA ran against.'),
+      date: z.string().optional().describe('ISO date of the QA verdict.'),
+      reportLink: z.string().optional().describe('Link to the QA report (Drive Team/QA/<branch> or #qa post).'),
+    })
+    .strict()
+  const OWNER_BOT = ACTOR.describe('Bot (or ccq task id) that owns this task.')
+  const CCQ_ID = z.string().regex(/^T\d{6}-\d{6}$/).describe('ccq queue id, e.g. T261101-232341.')
+
+  server.registerTool(
+    'task_create',
+    {
+      title: 'Create a task',
+      description:
+        'Create a work item on a package and/or project. Pass packageId to file it under a package; the project is ' +
+        "taken from the package's linked project, or pass projectId. A task with a ccqTaskId is a tracked dev task: " +
+        'it can only be completed once qa.status is "pass" with qa.commit set.',
+      inputSchema: writeSchema({
+        title: z.string().min(1),
+        description: z.string().optional().describe('Plain text; one paragraph per line.'),
+        packageId: z.string().optional(),
+        projectId: z.string().optional(),
+        status: TASK_STATUS.optional(),
+        priority: TASK_PRIORITY.optional(),
+        dueDate: z.string().optional().describe('ISO date.'),
+        ownerBot: OWNER_BOT.optional(),
+        ccqTaskId: CCQ_ID.optional(),
+        qa: QA.optional(),
+      }),
+    },
+    guardedWrite('task_create', async (input, actor) => run(() => createTrackedTask({ ...input, actor }))),
+  )
+
+  server.registerTool(
+    'task_update',
+    {
+      title: 'Update a task',
+      description:
+        'Change a task: status, owner, links, QA record. Only the fields you pass change; `qa` is merged into the ' +
+        'existing QA record. Completing a tracked task (one with a ccqTaskId) needs qa.status "pass" and qa.commit.',
+      inputSchema: writeSchema({
+        id: z.string(),
+        title: z.string().min(1).optional(),
+        description: z.string().optional(),
+        packageId: z.string().nullable().optional(),
+        projectId: z.string().optional(),
+        status: TASK_STATUS.optional(),
+        priority: TASK_PRIORITY.optional(),
+        dueDate: z.string().nullable().optional(),
+        ownerBot: OWNER_BOT.nullable().optional(),
+        ccqTaskId: CCQ_ID.nullable().optional(),
+        qa: QA.optional(),
+      }),
+    },
+    guardedWrite('task_update', async (input, actor) => run(() => updateTrackedTask({ ...input, actor }))),
+  )
+
+  server.registerTool(
+    'task_list',
+    {
+      title: 'List tasks',
+      description:
+        'Tasks, newest-updated first, filtered by package, project, client account, status (one or several), owner ' +
+        'bot or ccq id. Paged: limit (default 25, max 100) and page.',
+      inputSchema: z
+        .object({
+          packageId: z.string().optional(),
+          projectId: z.string().optional(),
+          clientAccountId: z.string().optional(),
+          status: z.union([TASK_STATUS, z.array(TASK_STATUS)]).optional(),
+          ownerBot: z.string().optional(),
+          ccqTaskId: z.string().optional(),
+          limit: z.number().int().min(1).max(100).optional(),
+          page: z.number().int().min(1).optional(),
+        })
+        .strict(),
+    },
+    async (input) => run(() => listTrackedTasks(input)),
+  )
+
+  server.registerTool(
+    'get_package',
+    {
+      title: 'Get package progress',
+      description:
+        "One package with its tasks, its project's milestones, and progress (tasks and milestones done/total, " +
+        'percent). Line items are listed by name and quantity only; no prices.',
+      inputSchema: z.object({ packageId: z.string() }).strict(),
+    },
+    async ({ packageId }) => run(() => getPackageOverview(packageId)),
+  )
+
+  server.registerTool(
+    'get_project_progress',
+    {
+      title: 'Get project progress',
+      description:
+        'One project: milestones, open tasks, task counts by status, and progress percent (tasks + milestones).',
+      inputSchema: z.object({ projectId: z.string() }).strict(),
+    },
+    async ({ projectId }) => run(() => getProjectProgress(projectId)),
   )
 }

@@ -39,6 +39,31 @@ export const WRITE_TOOL_FIELDS: Record<string, readonly string[]> = {
   create_milestone: ['projectId', 'title', 'date', 'description'],
   update_milestone: ['projectId', 'milestoneIndex', 'title', 'date', 'description', 'completed'],
   toggle_milestone: ['projectId', 'milestoneIndex'],
+  task_create: [
+    'title',
+    'description',
+    'packageId',
+    'projectId',
+    'status',
+    'priority',
+    'dueDate',
+    'ownerBot',
+    'ccqTaskId',
+    'qa',
+  ],
+  task_update: [
+    'id',
+    'title',
+    'description',
+    'packageId',
+    'projectId',
+    'status',
+    'priority',
+    'dueDate',
+    'ownerBot',
+    'ccqTaskId',
+    'qa',
+  ],
 }
 
 export const isWriteTool = (tool: string): boolean => Object.hasOwn(WRITE_TOOL_FIELDS, tool)

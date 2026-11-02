@@ -662,6 +662,167 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
     expect(docs[0]?.overageRateAtLog).toBe(120)
   })
 
+  // ── Plan step 2: task tracking tools ─────────────────────────────────────────
+
+  async function trackingFixture() {
+    const project: any = await payload.create({
+      collection: 'projects',
+      data: {
+        name: 'Tracking Project',
+        client: clientAccountId,
+        assignedTo: [staffUser.id],
+        milestones: [
+          { title: 'Design', date: '2026-11-05T00:00:00.000Z', completed: true },
+          { title: 'Launch', date: '2026-11-20T00:00:00.000Z', completed: false },
+        ],
+      } as any,
+      user: staff,
+      overrideAccess: false,
+      context: { skipActivityLog: true },
+    })
+    const pkg: any = await payload.create({
+      collection: 'packages',
+      data: { name: 'Tracking Package', type: 'proposal', status: 'draft', clientAccount: clientAccountId, projectRef: project.id } as any,
+      user: staff,
+      overrideAccess: false,
+    })
+    return { projectId: String(project.id), packageId: String(pkg.id) }
+  }
+
+  const ok = (res: any) => {
+    expect(res.isError).toBeFalsy()
+    return JSON.parse(res.content[0].text)
+  }
+
+  test('MCP task_create files a task under a package (project taken from the package) and records the actor', async () => {
+    const { projectId, packageId } = await trackingFixture()
+    const c = await mcpClient()
+    const out = ok(
+      await c.callTool({
+        name: 'task_create',
+        arguments: {
+          actor: 'vegapunk',
+          title: 'Build hero section',
+          description: 'Line one\nLine two',
+          packageId,
+          ownerBot: 'orca',
+          ccqTaskId: 'T261102-001500',
+          priority: 'high',
+        },
+      }),
+    )
+    expect(out.task.projectId).toBe(projectId)
+    expect(out.task.packageId).toBe(packageId)
+    expect(out.task.ownerBot).toBe('orca')
+    expect(out.task.ccqTaskId).toBe('T261102-001500')
+    expect(out.task.lastActor).toBe('vegapunk')
+    expect(out.task.description).toBe('Line one\nLine two')
+    expect(out.task.qa.status).toBe('pending')
+    await rejected(c, 'task_create', { title: 'no actor', packageId })
+  })
+
+  test('MCP task_update merges qa, and a tracked task needs qa pass + commit to complete', async () => {
+    const { packageId } = await trackingFixture()
+    const c = await mcpClient()
+    const created = ok(
+      await c.callTool({
+        name: 'task_create',
+        arguments: { actor: 'orca', title: 'Tracked work', packageId, ccqTaskId: 'T261102-001600' },
+      }),
+    )
+    const id = created.task.id
+    const blocked: any = await c.callTool({ name: 'task_update', arguments: { actor: 'orca', id, status: 'completed' } })
+    expect(blocked.isError).toBe(true)
+    expect(JSON.stringify(blocked.content)).toContain('qa.status must be')
+    ok(await c.callTool({ name: 'task_update', arguments: { actor: 'shaka', id, qa: { status: 'pass', reportLink: 'drive://qa' } } }))
+    const stillBlocked: any = await c.callTool({ name: 'task_update', arguments: { actor: 'orca', id, status: 'completed' } })
+    expect(stillBlocked.isError).toBe(true)
+    const done = ok(
+      await c.callTool({
+        name: 'task_update',
+        arguments: { actor: 'shaka', id, status: 'completed', qa: { commit: 'e358cb92d68562e0d7fbf61ad1bceb12c8470d79' } },
+      }),
+    )
+    expect(done.task.status).toBe('completed')
+    expect(done.task.qa).toMatchObject({ status: 'pass', reportLink: 'drive://qa', commit: 'e358cb92d68562e0d7fbf61ad1bceb12c8470d79' })
+    expect(done.task.lastActor).toBe('shaka')
+    expect(done.task.completedAt).toBeTruthy()
+  })
+
+  test('MCP task_list filters by package, project, client and status', async () => {
+    const a = await trackingFixture()
+    const b = await trackingFixture()
+    const c = await mcpClient()
+    for (const [title, pkg, status] of [
+      ['a1', a.packageId, 'pending'],
+      ['a2', a.packageId, 'in-progress'],
+      ['b1', b.packageId, 'pending'],
+    ] as const) {
+      ok(await c.callTool({ name: 'task_create', arguments: { actor: 'gojo', title, packageId: pkg, status } }))
+    }
+    const byPkg = ok(await c.callTool({ name: 'task_list', arguments: { packageId: a.packageId } }))
+    expect(byPkg.items.map((t: any) => t.title).sort()).toEqual(['a1', 'a2'])
+    const byProject = ok(await c.callTool({ name: 'task_list', arguments: { projectId: b.projectId } }))
+    expect(byProject.items.map((t: any) => t.title)).toEqual(['b1'])
+    const byStatus = ok(
+      await c.callTool({ name: 'task_list', arguments: { packageId: a.packageId, status: ['in-progress'] } }),
+    )
+    expect(byStatus.items.map((t: any) => t.title)).toEqual(['a2'])
+    const byClient = ok(await c.callTool({ name: 'task_list', arguments: { clientAccountId, status: 'pending', limit: 100 } }))
+    expect(byClient.items.map((t: any) => t.title)).toEqual(expect.arrayContaining(['a1', 'b1']))
+    expect(byClient.items.every((t: any) => t.status === 'pending')).toBe(true)
+  })
+
+  test('MCP get_package returns tasks, milestones and progress percent, without prices', async () => {
+    const { packageId } = await trackingFixture()
+    const c = await mcpClient()
+    ok(await c.callTool({ name: 'task_create', arguments: { actor: 'gojo', title: 'done one', packageId, status: 'completed' } }))
+    ok(await c.callTool({ name: 'task_create', arguments: { actor: 'gojo', title: 'open one', packageId } }))
+    ok(await c.callTool({ name: 'task_create', arguments: { actor: 'gojo', title: 'dropped', packageId, status: 'cancelled' } }))
+    const out = ok(await c.callTool({ name: 'get_package', arguments: { packageId } }))
+    expect(out.package.id).toBe(packageId)
+    expect(out.tasks).toHaveLength(3)
+    expect(out.milestones.map((m: any) => m.title)).toEqual(['Design', 'Launch'])
+    // (1 done task + 1 done milestone) / (2 live tasks + 2 milestones) = 50%
+    expect(out.progress.percent).toBe(50)
+    expect(out.progress.tasks.byStatus.cancelled).toBe(1)
+    expect(JSON.stringify(out)).not.toMatch(/"price"|"adjustedPrice"|stripe/i)
+  })
+
+  test('MCP get_project_progress returns milestones, open tasks and progress', async () => {
+    const { projectId, packageId } = await trackingFixture()
+    const c = await mcpClient()
+    ok(await c.callTool({ name: 'task_create', arguments: { actor: 'gojo', title: 'p-open', packageId } }))
+    ok(await c.callTool({ name: 'task_create', arguments: { actor: 'gojo', title: 'p-done', projectId, status: 'completed' } }))
+    const out = ok(await c.callTool({ name: 'get_project_progress', arguments: { projectId } }))
+    expect(out.project.id).toBe(projectId)
+    expect(out.milestones).toHaveLength(2)
+    expect(out.openTasks.map((t: any) => t.title)).toEqual(['p-open'])
+    expect(out.progress).toMatchObject({ tasks: { total: 2, done: 1 }, milestones: { total: 2, done: 1 }, percent: 50 })
+  })
+
+  test('task tracking fields never reach a client, and non-staff updates do not wipe them', async () => {
+    const { packageId } = await trackingFixture()
+    const c = await mcpClient()
+    const created = ok(
+      await c.callTool({
+        name: 'task_create',
+        arguments: { actor: 'vegapunk', title: 'secret tracking', packageId, ownerBot: 'finn', ccqTaskId: 'T261102-001700', qa: { status: 'fail', commit: 'abc' } },
+      }),
+    )
+    const id = created.task.id
+    const anon: any = await payload.findByID({ collection: 'tasks', id })
+    const asClient: any = await payload.findByID({ collection: 'tasks', id, user: client })
+    for (const doc of [anon, asClient]) {
+      for (const f of ['ownerBot', 'ccqTaskId', 'qa', 'lastActor']) expect(doc[f]).toBeUndefined()
+    }
+    await payload.update({ collection: 'tasks', id, data: { title: 'renamed by portal' } as any })
+    const back: any = await payload.findByID({ collection: 'tasks', id, user: staff, overrideAccess: false })
+    expect(back.title).toBe('renamed by portal')
+    expect(back).toMatchObject({ ownerBot: 'finn', ccqTaskId: 'T261102-001700', lastActor: 'vegapunk' })
+    expect(back.qa).toMatchObject({ status: 'fail', commit: 'abc' })
+  })
+
   test('rejected MCP write leaves an agent-write activity row with the actor', async () => {
     const c = await mcpClient()
     await rejected(c, 'save_sow', { actor: 'T261101-232341', packageId, sowData: { stripePriceId: 'x' } })
