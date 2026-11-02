@@ -29,6 +29,13 @@ export const DRAFT_SOURCE: Record<DraftType, 'packageId' | 'clientAccountId' | '
 /** Types that print billing numbers; Finn reviews changes to these arms. */
 export const MONEY_DRAFT_TYPES: ReadonlySet<DraftType> = new Set(['invoice-copy', 'statement'])
 
+/**
+ * Hold on the money arms until Finn's one-line review (board 6ae8f92eb561c9874fff2801).
+ * While false, get_draft_pdf refuses invoice-copy and statement with code `needs-review`.
+ * Flip to true in its own commit once Finn signs off.
+ */
+export const MONEY_DRAFTS_ENABLED = false
+
 export type DraftInput = {
   type: DraftType
   packageId?: string
@@ -58,6 +65,9 @@ export type DraftResult = {
 /** Validate the id a type needs. Pure, so it is unit-tested. */
 export function checkDraftInput(input: DraftInput): { ok: true; id: string } | { ok: false; error: string } {
   if (!DRAFT_TYPES.includes(input.type)) return { ok: false, error: `Unknown draft type: ${String(input.type)}` }
+  if (MONEY_DRAFT_TYPES.has(input.type) && !MONEY_DRAFTS_ENABLED) {
+    return { ok: false, error: `${input.type} drafts are on hold until Finn's money review (code: needs-review)` }
+  }
   const key = DRAFT_SOURCE[input.type]
   const id = input[key]?.trim()
   if (!id) return { ok: false, error: `${input.type} needs ${key}` }
