@@ -1062,8 +1062,17 @@ export default buildConfig({
     return process.env.PAYLOAD_SECRET
   })(),
   // Using MongoDB adapter
+  // Using MongoDB adapter. No fallback: an unset DATABASE_URI used to fall through
+  // to a hardcoded production URI, so any local run without it wrote to prod.
   db: mongooseAdapter({
-    url: process.env.DATABASE_URI || 'mongodb+srv://chance:ara9YRAkRe7blAqF@orcapod.f5yp3f7.mongodb.net/orcapod',
+    url: (() => {
+      if (!process.env.DATABASE_URI) {
+        throw new Error(
+          'DATABASE_URI environment variable is required — refusing to start without an explicit database',
+        )
+      }
+      return process.env.DATABASE_URI
+    })(),
   }),
   // Email configuration using Gmail SMTP via nodemailer
   //
