@@ -169,6 +169,51 @@ export async function createTrackedTask(input: {
   }
 }
 
+/** findByID that returns null when the doc is missing, invisible to the caller, or the id is malformed. */
+async function findVisible(
+  payload: Awaited<ReturnType<typeof getPayload>>,
+  user: NonNullable<Awaited<ReturnType<typeof staffCaller>>>,
+  collection: 'projects' | 'packages',
+  id: string,
+): Promise<Record<string, unknown> | null> {
+  try {
+    const doc = await payload.findByID({ collection, id, depth: 0, user, overrideAccess: false, disableErrors: true })
+    return (doc as Record<string, unknown> | null) ?? null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Checks that a task's resulting project/package pair is consistent: both exist
+ * and are visible, the package's projectRef (if set) is that project, and the
+ * package's client account matches the project's client. Returns an error
+ * message, or null when the pair is valid.
+ */
+async function checkTaskLinks(
+  payload: Awaited<ReturnType<typeof getPayload>>,
+  user: NonNullable<Awaited<ReturnType<typeof staffCaller>>>,
+  projectId: string | null,
+  packageId: string | null,
+): Promise<string | null> {
+  if (!projectId) return 'A task must belong to a project'
+  const project = await findVisible(payload, user, 'projects', projectId)
+  if (!project) return `Project ${projectId} not found`
+  if (!packageId) return null
+  const pkg = await findVisible(payload, user, 'packages', packageId)
+  if (!pkg) return `Package ${packageId} not found`
+  const pkgProject = idOf(pkg.projectRef)
+  if (pkgProject && pkgProject !== projectId) {
+    return `Package ${packageId} belongs to project ${pkgProject}, not ${projectId}`
+  }
+  const pkgClient = idOf(pkg.clientAccount)
+  const projectClient = idOf(project.client)
+  if (pkgClient && projectClient && pkgClient !== projectClient) {
+    return `Package ${packageId} belongs to client ${pkgClient}, but project ${projectId} belongs to client ${projectClient}`
+  }
+  return null
+}
+
 // ── Update ────────────────────────────────────────────────────────────────────
 
 export async function updateTrackedTask(input: {
@@ -197,6 +242,15 @@ export async function updateTrackedTask(input: {
       user,
       overrideAccess: false,
     })) as Record<string, any>
+
+    // Moving a task re-runs the create-time match on the resulting pair, so it can
+    // never end up on another client's project or package, or on a missing one.
+    if (input.projectId !== undefined || input.packageId !== undefined) {
+      const nextProject = input.projectId !== undefined ? input.projectId : idOf(current.project)
+      const nextPackage = input.packageId !== undefined ? input.packageId : idOf(current.package)
+      const linkError = await checkTaskLinks(payload, user, nextProject, nextPackage)
+      if (linkError) return fail(linkError)
+    }
 
     const data: Record<string, unknown> = { lastActor: input.actor }
     if (input.title !== undefined) data.title = input.title

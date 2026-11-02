@@ -964,6 +964,90 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
     expect(done.task.completedAt).toBeTruthy()
   })
 
+  /** Another client account with its own project, plus a package with no projectRef. Raw inserts, no hooks. */
+  async function otherClientFixture() {
+    const db = payload.db as any
+    const ca = await db.collections['client-accounts'].create({ name: 'Other Co', email: `other-${Date.now()}@test.local` })
+    const project = await db.collections.projects.create({ name: 'Other Project', client: ca._id })
+    const pkg = await db.collections.packages.create({
+      name: 'Other Package',
+      type: 'proposal',
+      status: 'draft',
+      clientAccount: ca._id,
+    })
+    return { clientAccountId: String(ca._id), projectId: String(project._id), packageId: String(pkg._id) }
+  }
+
+  async function trackedTask(c: any, packageId: string) {
+    return ok(await c.callTool({ name: 'task_create', arguments: { actor: 'orca', title: 'Move me', packageId } })).task
+  }
+
+  async function reread(id: string) {
+    return (await payload.findByID({ collection: 'tasks', id, depth: 0, user: staff, overrideAccess: false })) as any
+  }
+
+  test('task_update rejects moving a task to another client\'s project, and leaves it unchanged', async () => {
+    const a = await trackingFixture()
+    const other = await otherClientFixture()
+    const c = await mcpClient()
+    const task = await trackedTask(c, a.packageId)
+    const msg = await rejected(c, 'task_update', { actor: 'orca', id: task.id, projectId: other.projectId, title: 'moved' })
+    expect(msg).toContain(a.packageId)
+    const back = await reread(task.id)
+    expect(String(back.project)).toBe(a.projectId)
+    expect(String(back.package)).toBe(a.packageId)
+    expect(back.title).toBe('Move me')
+  })
+
+  test('task_update rejects linking a task to another client\'s package', async () => {
+    const a = await trackingFixture()
+    const other = await otherClientFixture()
+    const c = await mcpClient()
+    const task = await trackedTask(c, a.packageId)
+    const msg = await rejected(c, 'task_update', { actor: 'orca', id: task.id, packageId: other.packageId })
+    expect(msg).toContain(other.clientAccountId)
+    const back = await reread(task.id)
+    expect(String(back.package)).toBe(a.packageId)
+  })
+
+  test('task_update rejects a non-existent projectId', async () => {
+    const a = await trackingFixture()
+    const c = await mcpClient()
+    const task = await trackedTask(c, a.packageId)
+    const missing = '64b000000000000000000000'
+    const msg = await rejected(c, 'task_update', { actor: 'orca', id: task.id, projectId: missing, packageId: null })
+    expect(msg).toContain(`Project ${missing} not found`)
+    const back = await reread(task.id)
+    expect(String(back.project)).toBe(a.projectId)
+    expect(String(back.package)).toBe(a.packageId)
+  })
+
+  test('task_update rejects a package whose projectRef is a different project of the same client', async () => {
+    const a = await trackingFixture()
+    const b = await trackingFixture()
+    const c = await mcpClient()
+    const task = await trackedTask(c, a.packageId)
+    const msg = await rejected(c, 'task_update', { actor: 'orca', id: task.id, packageId: b.packageId })
+    expect(msg).toContain(`belongs to project ${b.projectId}`)
+    const back = await reread(task.id)
+    expect(String(back.package)).toBe(a.packageId)
+  })
+
+  test('task_update rejects nothing on a valid move to another project of the same client with packageId null', async () => {
+    const a = await trackingFixture()
+    const b = await trackingFixture()
+    const c = await mcpClient()
+    const task = await trackedTask(c, a.packageId)
+    const out = ok(
+      await c.callTool({ name: 'task_update', arguments: { actor: 'orca', id: task.id, projectId: b.projectId, packageId: null } }),
+    )
+    expect(out.task.projectId).toBe(b.projectId)
+    expect(out.task.packageId).toBeNull()
+    const back = await reread(task.id)
+    expect(String(back.project)).toBe(b.projectId)
+    expect(back.package ?? null).toBeNull()
+  })
+
   test('MCP task_list filters by package, project, client and status', async () => {
     const a = await trackingFixture()
     const b = await trackingFixture()
