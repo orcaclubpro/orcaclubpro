@@ -48,6 +48,8 @@ export type DigestTask = {
   qa: { status: string; commit: string | null; reportLink: string | null } | null
   /** Why the task is in waitingOnChance; null when it isn't. */
   waitingReason: 'status' | 'qa-pass' | null
+  /** botContext `drive deliverable:` / `drive internal:` note lines. */
+  drive: DriveLinks
 }
 
 export type DigestProject = {
@@ -109,6 +111,7 @@ export type RawTask = {
   updatedAt?: string | null
   dueDate?: string | null
   qa?: { status?: string | null; commit?: string | null; reportLink?: string | null } | null
+  botContext?: RawBotContext
 }
 export type RawProject = {
   id: string
@@ -284,6 +287,7 @@ export function buildClientDigest(input: DigestInput): {
           ? { status: t.qa.status ?? 'pending', commit: t.qa.commit ?? null, reportLink: t.qa.reportLink ?? null }
           : null,
         waitingReason,
+        drive: driveLinksOf(t.botContext ?? null),
       }
     })
     for (const k of Object.keys(counts) as Array<keyof DigestCounts>) totals[k] += counts[k]
@@ -380,8 +384,8 @@ export type RecentWorkRow = {
   /** qa.reportLink (go-live recap / #qa post / Drive QA report), else a `Recap:` / `QA:` line. */
   recapOrQaLink: string | null
   qaStatus: string | null
-  /** A `Drive:` line or a drive.google.com/drive/folders link in botContext. */
-  driveFolder: string | null
+  /** botContext `drive deliverable:` / `drive internal:` note lines. */
+  drive: DriveLinks
   /** A `Key file:` / `File:` line in botContext. */
   keyFile: string | null
   repo: string | null
@@ -410,7 +414,6 @@ export function labeledLine(bc: RawBotContext, labels: string[]): string | null 
   return null
 }
 
-const DRIVE_FOLDER_URL = /https:\/\/drive\.google\.com\/drive\/(?:u\/\d+\/)?folders\/[\w-]+[^\s)>\]]*/i
 
 export function resultOf(bc: RawBotContext): string | null {
   const labeled = labeledLine(bc, ['result', 'outcome'])
@@ -421,14 +424,17 @@ export function resultOf(bc: RawBotContext): string | null {
   return brief ? oneLine(brief.split('\n')[0] ?? brief) : null
 }
 
-export function driveFolderOf(bc: RawBotContext): string | null {
-  const labeled = labeledLine(bc, ['drive folder', 'drive'])
-  if (labeled) return labeled
-  for (const text of bcText(bc)) {
-    const m = DRIVE_FOLDER_URL.exec(text)
-    if (m) return m[0]
+/**
+ * Typed Drive links from botContext note lines: `drive deliverable: <link>` is
+ * the client-facing deliverable, `drive internal: <link>` the team-only folder.
+ */
+export type DriveLinks = { deliverable: string | null; internal: string | null }
+
+export function driveLinksOf(bc: RawBotContext): DriveLinks {
+  return {
+    deliverable: labeledLine(bc, ['drive deliverable']),
+    internal: labeledLine(bc, ['drive internal']),
   }
-  return null
 }
 
 export function buildRecentWork(input: {
@@ -461,7 +467,7 @@ export function buildRecentWork(input: {
         liveUrl: bc?.liveUrl || labeledLine(bc, ['live url', 'live link']) || p?.liveUrl || null,
         recapOrQaLink: t.qa?.reportLink || labeledLine(bc, ['recap', 'go-live', '#qa', 'qa post', 'qa link']),
         qaStatus: t.qa?.status ?? null,
-        driveFolder: driveFolderOf(bc),
+        drive: driveLinksOf(bc),
         keyFile: labeledLine(bc, ['key file', 'file', 'path']),
         repo: bc?.repo || null,
         branch: bc?.branch || null,

@@ -3,7 +3,7 @@ import { describe, expect, test } from 'bun:test'
 import {
   buildClientDigest,
   buildRecentWork,
-  driveFolderOf,
+  driveLinksOf,
   isQaPostLink,
   labeledLine,
   resultOf,
@@ -36,7 +36,13 @@ describe('waitingOnChance fallback: QA PASS + #qa post', () => {
       tasks: [
         { id: 't1', projectId: 'pA', status: 'in-progress', createdAt: '2026-10-01', qa: { status: 'pass', commit: 'abc1234', reportLink: QA_POST } },
         { id: 't2', projectId: 'pA', status: 'pending', createdAt: '2026-10-02', qa: { status: 'pass', reportLink: 'https://drive.google.com/x' } },
-        { id: 't3', projectId: 'pA', status: 'waiting-chance', createdAt: '2026-10-03' },
+        {
+          id: 't3',
+          projectId: 'pA',
+          status: 'waiting-chance',
+          createdAt: '2026-10-03',
+          botContext: { notes: 'drive deliverable: https://drive.google.com/d/1' },
+        },
       ],
       projects: [{ id: 'pA', name: 'Site', status: 'in-progress', clientAccountId: 'A', percent: 0, tasksDone: 0, tasksTotal: 3, milestonesDone: 0, milestonesTotal: 0, milestones: [] }],
       retainers: [],
@@ -51,28 +57,35 @@ describe('waitingOnChance fallback: QA PASS + #qa post', () => {
     expect(a.waitingOnChance[0]!.qa).toEqual({ status: 'pass', commit: 'abc1234', reportLink: QA_POST })
     expect(a.counts).toMatchObject({ open: 3, waitingChance: 2, inProgress: 0, pending: 1 })
     expect(d.totals.waitingChance).toBe(2)
+    expect(a.waitingOnChance[1]!.drive).toEqual({ deliverable: 'https://drive.google.com/d/1', internal: null })
+    expect(a.tasks.find((t) => t.id === 't2')!.drive).toEqual({ deliverable: null, internal: null })
   })
 })
 
 describe('recentWork', () => {
   const bc = {
-    notes: 'Shipped the hero rework.\nResult: hero + nav live on preview\nDrive: Team/QA/vp/hero\n- Key file: `src/app/(frontend)/page.tsx`',
+    notes:
+      'Shipped the hero rework.\nResult: hero + nav live on preview\nDrive deliverable: https://drive.google.com/drive/folders/DELIV\n' +
+      'drive internal: https://drive.google.com/drive/folders/INT\n- Key file: `src/app/(frontend)/page.tsx`',
     brief: 'Rework the hero',
     liveUrl: 'https://preview.example.com',
     repo: 'orcaclubpro',
     branch: 'vp/hero',
   }
 
-  test('labeledLine / resultOf / driveFolderOf', () => {
+  test('labeledLine / resultOf / driveLinksOf', () => {
     expect(labeledLine(bc, ['key file', 'file'])).toBe('src/app/(frontend)/page.tsx')
     expect(resultOf(bc)).toBe('hero + nav live on preview')
     expect(resultOf({ notes: '\n  First line here\nsecond' })).toBe('First line here')
     expect(resultOf({ brief: 'Only a brief' })).toBe('Only a brief')
     expect(resultOf(null)).toBe(null)
-    expect(driveFolderOf(bc)).toBe('Team/QA/vp/hero')
-    expect(driveFolderOf({ notes: 'see https://drive.google.com/drive/folders/1AbC-d_9 for QA' })).toBe(
-      'https://drive.google.com/drive/folders/1AbC-d_9',
-    )
+    expect(driveLinksOf(bc)).toEqual({
+      deliverable: 'https://drive.google.com/drive/folders/DELIV',
+      internal: 'https://drive.google.com/drive/folders/INT',
+    })
+    expect(driveLinksOf({ notes: 'Drive: Team/QA/x' })).toEqual({ deliverable: null, internal: null })
+    expect(driveLinksOf({ decisions: 'drive internal = https://drive.google.com/x' }).internal).toBe('https://drive.google.com/x')
+    expect(driveLinksOf(null)).toEqual({ deliverable: null, internal: null })
     expect(resultOf({ notes: 'x'.repeat(500) })!.length).toBe(200)
   })
 
@@ -105,13 +118,17 @@ describe('recentWork', () => {
       liveUrl: 'https://preview.example.com',
       recapOrQaLink: QA_POST,
       qaStatus: 'pass',
-      driveFolder: 'Team/QA/vp/hero',
+      drive: {
+        deliverable: 'https://drive.google.com/drive/folders/DELIV',
+        internal: 'https://drive.google.com/drive/folders/INT',
+      },
       keyFile: 'src/app/(frontend)/page.tsx',
       repo: 'orcaclubpro',
       branch: 'vp/hero',
     })
     expect(rows[2]!.liveUrl).toBe('https://acme.example.com')
     expect(rows[2]!.commit).toBe(null)
+    expect(rows[2]!.drive).toEqual({ deliverable: null, internal: null })
     expect(rows.at(-1)!.id).toBe('t05')
   })
 })
