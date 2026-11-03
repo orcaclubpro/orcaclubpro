@@ -1276,7 +1276,7 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
     expect(byProject.task.projectId).toBe(projectId)
   })
 
-  test('MCP task_update merges qa, and a tracked task needs qa pass + commit to complete', async () => {
+  test('MCP task_update merges qa, and a tracked task needs qa pass + (commit or reportLink) to complete', async () => {
     const { packageId } = await trackingFixture()
     const c = await mcpClient()
     const created = ok(
@@ -1289,19 +1289,37 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
     const blocked: any = await c.callTool({ name: 'task_update', arguments: { actor: 'orca', id, status: 'completed' } })
     expect(blocked.isError).toBe(true)
     expect(JSON.stringify(blocked.content)).toContain('qa.status must be')
-    ok(await c.callTool({ name: 'task_update', arguments: { actor: 'shaka', id, qa: { status: 'pass', reportLink: 'drive://qa' } } }))
+    ok(await c.callTool({ name: 'task_update', arguments: { actor: 'shaka', id, qa: { status: 'pass' } } }))
     const stillBlocked: any = await c.callTool({ name: 'task_update', arguments: { actor: 'orca', id, status: 'completed' } })
     expect(stillBlocked.isError).toBe(true)
     const done = ok(
       await c.callTool({
         name: 'task_update',
-        arguments: { actor: 'shaka', id, status: 'completed', qa: { commit: 'e358cb92d68562e0d7fbf61ad1bceb12c8470d79' } },
+        arguments: { actor: 'shaka', id, status: 'completed', qa: { reportLink: 'drive://qa' } },
       }),
     )
     expect(done.task.status).toBe('completed')
-    expect(done.task.qa).toMatchObject({ status: 'pass', reportLink: 'drive://qa', commit: 'e358cb92d68562e0d7fbf61ad1bceb12c8470d79' })
+    expect(done.task.qa).toMatchObject({ status: 'pass', reportLink: 'drive://qa' })
+    expect(done.task.qa.commit ?? null).toBeNull()
     expect(done.task.lastActor).toBe('shaka')
     expect(done.task.completedAt).toBeTruthy()
+
+    const viaCommit = ok(
+      await c.callTool({ name: 'task_create', arguments: { ...INTAKE, actor: 'orca', title: 'Tracked work 2', packageId, ccqTaskId: 'T261102-001601' } }),
+    ).task.id
+    const committed = ok(
+      await c.callTool({
+        name: 'task_update',
+        arguments: {
+          actor: 'shaka',
+          id: viaCommit,
+          status: 'completed',
+          qa: { status: 'pass', commit: 'e358cb92d68562e0d7fbf61ad1bceb12c8470d79' },
+        },
+      }),
+    )
+    expect(committed.task.status).toBe('completed')
+    expect(committed.task.qa).toMatchObject({ status: 'pass', commit: 'e358cb92d68562e0d7fbf61ad1bceb12c8470d79' })
   })
 
   /** Another client account with its own project, plus a package with no projectRef. Raw inserts, no hooks. */
