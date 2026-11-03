@@ -602,7 +602,8 @@ export function registerOrcaclubTools(server: McpServer): void {
     {
       title: 'Update a task',
       description:
-        'Change a task: status, owner, links, QA record. Only the fields you pass change; `qa` is merged into the ' +
+        'Change a task: status, owner, links, QA record. `id` may be the full id or a unique 8+ hex-char prefix. ' +
+        'Only the fields you pass change; `qa` is merged into the ' +
         'existing QA record. Completing a tracked task (one with a ccqTaskId) needs qa.status "pass" and qa.commit.',
       inputSchema: writeSchema({
         id: z.string(),
@@ -674,7 +675,8 @@ export function registerOrcaclubTools(server: McpServer): void {
     {
       title: 'Get a task',
       description:
-        'One task by id: the task_list row (status, owner, ccq id, QA record, createdAt, updatedAt) plus its ' +
+        'One task by id (full 24-hex id, or a unique prefix of 8+ hex chars like 6ae9184d; an ambiguous prefix ' +
+        'is an error listing the matches): the task_list row (status, owner, ccq id, QA record, createdAt, updatedAt) plus its ' +
         'internal botContext (brief, repo, branch, live URL, decisions, notes). Read-only.',
       inputSchema: z.object({ id: z.string().min(1) }).strict(),
     },

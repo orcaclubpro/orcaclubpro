@@ -200,6 +200,46 @@ export async function createTrackedTask(input: {
   }
 }
 
+const FULL_ID = /^[0-9a-f]{24}$/i
+const ID_PREFIX = /^[0-9a-f]{8,23}$/i
+
+/**
+ * Resolves a task id the way people type it in chat: a full 24-hex ObjectId, or
+ * a unique prefix of 8+ hex chars (e.g. `6ae9184d`). A prefix becomes an
+ * inclusive `_id` range (prefix padded with 0s / fs), looked up as the caller
+ * with `overrideAccess: false`, so only tasks the caller can see resolve.
+ * Read-only. Returns the full id, or an error message (not found / ambiguous).
+ */
+async function resolveTaskId(
+  payload: Awaited<ReturnType<typeof getPayload>>,
+  user: NonNullable<Awaited<ReturnType<typeof staffCaller>>>,
+  raw: string,
+): Promise<{ id: string } | { error: string }> {
+  const id = raw.trim()
+  if (FULL_ID.test(id) || !ID_PREFIX.test(id)) return { id }
+  const prefix = id.toLowerCase()
+  const res = await payload.find({
+    collection: 'tasks',
+    where: {
+      id: {
+        greater_than_equal: prefix.padEnd(24, '0'),
+        less_than_equal: prefix.padEnd(24, 'f'),
+      },
+    },
+    sort: 'createdAt',
+    limit: 5,
+    depth: 0,
+    user,
+    overrideAccess: false,
+  })
+  const ids = res.docs.map((d) => String((d as { id: unknown }).id))
+  if (ids.length === 1) return { id: ids[0]! }
+  if (ids.length === 0) return { error: `Task ${id} not found (it does not exist or you cannot access it)` }
+  return {
+    error: `Task id prefix ${id} is ambiguous: matches ${ids.join(', ')}${ids.length === 5 ? ', …' : ''}. Use more characters.`,
+  }
+}
+
 /** findByID that returns null when the doc is missing, invisible to the caller, or the id is malformed. */
 async function findVisible(
   payload: Awaited<ReturnType<typeof getPayload>>,
@@ -264,10 +304,13 @@ export async function updateTrackedTask(input: {
     const user = await staffCaller()
     if (!user) return fail('Unauthorized')
     const payload = await getPayload({ config })
+    const resolved = await resolveTaskId(payload, user, input.id)
+    if ('error' in resolved) return fail(resolved.error)
+    const taskId = resolved.id
 
     const current = (await payload.findByID({
       collection: 'tasks',
-      id: input.id,
+      id: taskId,
       depth: 0,
       user,
       overrideAccess: false,
@@ -297,7 +340,7 @@ export async function updateTrackedTask(input: {
 
     const task = await payload.update({
       collection: 'tasks',
-      id: input.id,
+      id: taskId,
       data: data as any,
       depth: 1,
       user,
@@ -414,11 +457,13 @@ export async function getTrackedTask(
     const user = await staffCaller()
     if (!user) return fail('Unauthorized')
     const payload = await getPayload({ config })
+    const resolved = await resolveTaskId(payload, user, id)
+    if ('error' in resolved) return fail(resolved.error)
     let doc: Record<string, any> | null = null
     try {
       doc = (await payload.findByID({
         collection: 'tasks',
-        id,
+        id: resolved.id,
         depth: 1,
         user,
         overrideAccess: false,

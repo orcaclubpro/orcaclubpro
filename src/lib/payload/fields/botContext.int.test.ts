@@ -1587,6 +1587,50 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
     expect(extra.isError).toBe(true)
   })
 
+  test('MCP task_get / task_update resolve a unique 8+ hex-char id prefix and reject an ambiguous one', async () => {
+    const c = await mcpClient()
+    const tasks = (payload.db as any).collections.tasks
+    const src = (await tasks.findById(taskId).lean()) as Record<string, any>
+    // Two copies whose ids share a random 8-char prefix, differing at char 9.
+    const p = Array.from({ length: 8 }, () => Math.floor(Math.random() * 16).toString(16)).join('')
+    const idA = `${p}1${'0'.repeat(14)}a`
+    const idB = `${p}2${'0'.repeat(14)}b`
+    for (const id of [idA, idB]) await tasks.create({ ...src, _id: id, title: `prefix ${id}` })
+
+    // Unique prefix (9 chars, and upper case) resolves to the full id.
+    expect(ok(await c.callTool({ name: 'task_get', arguments: { id: `${p}1` } })).task.id).toBe(idA)
+    expect(ok(await c.callTool({ name: 'task_get', arguments: { id: `${p}2`.toUpperCase() } })).task.id).toBe(idB)
+    // A 12-char prefix of an ordinary task works too.
+    expect(ok(await c.callTool({ name: 'task_get', arguments: { id: taskId.slice(0, 12) } })).task.id).toBe(taskId)
+
+    // Shared 8-char prefix: ambiguous, error lists both matches.
+    const amb: any = await c.callTool({ name: 'task_get', arguments: { id: p } })
+    expect(amb.isError).toBe(true)
+    const ambText = JSON.stringify(amb.content)
+    expect(ambText).toContain('ambiguous')
+    expect(ambText).toContain(idA)
+    expect(ambText).toContain(idB)
+
+    // Shorter than 8 chars is not treated as a prefix.
+    const short: any = await c.callTool({ name: 'task_get', arguments: { id: p.slice(0, 7) } })
+    expect(short.isError).toBe(true)
+    expect(JSON.stringify(short.content)).toContain('not found')
+
+    // task_update takes the prefix too, and refuses to guess on an ambiguous one.
+    const upd = ok(await c.callTool({ name: 'task_update', arguments: { actor: 'orca', id: `${p}2`, title: 'renamed via prefix' } }))
+    expect(upd.task.id).toBe(idB)
+    expect((await reread(idB)).title).toBe('renamed via prefix')
+    const updAmb: any = await c.callTool({ name: 'task_update', arguments: { actor: 'orca', id: p, title: 'nope' } })
+    expect(updAmb.isError).toBe(true)
+    expect(JSON.stringify(updAmb.content)).toContain('ambiguous')
+    expect((await reread(idA)).title).toBe(`prefix ${idA}`)
+
+    // No match for a well-formed prefix: clean not-found.
+    const none: any = await c.callTool({ name: 'task_get', arguments: { id: 'ffffffff0' } })
+    expect(none.isError).toBe(true)
+    expect(JSON.stringify(none.content)).toContain('not found')
+  })
+
   test('MCP get_package returns tasks, milestones and progress percent, without prices', async () => {
     const { packageId } = await trackingFixture()
     const c = await mcpClient()
