@@ -50,6 +50,8 @@ import {
   createTrackedTask,
   updateTrackedTask,
   claimTrackedTask,
+  addTaskItems,
+  myWork,
   listTrackedTasks,
   getTrackedTask,
   listProjects,
@@ -586,6 +588,53 @@ export function registerOrcaclubTools(server: McpServer): void {
   const OWNER_BOT = ACTOR.describe('Bot (or ccq task id) that owns this task.')
   const CCQ_ID = z.string().regex(/^T\d{6}-\d{6}$/).describe('ccq queue id, e.g. T261101-232341.')
 
+  // Structured task fields (board 6aea1fd4; rules in src/lib/tasks/structure.ts).
+  const ITEM_OWNER = z
+    .string()
+    .min(1)
+    .max(64)
+    .describe('dev | cm | fin | <bot name>. Default dev.')
+  const ITEM_STATUS = z.enum(['open', 'done', 'dropped'])
+  const ITEM_BASE = {
+    text: z.string().min(1).max(1000),
+    status: ITEM_STATUS.optional().describe('Default open. dropped needs dropReason; dropped items stay visible.'),
+    done: z.boolean().optional().describe('Shorthand for status done/open.'),
+    dropReason: z.string().max(2000).nullable().optional(),
+    owner: ITEM_OWNER.optional(),
+  }
+  const DELIVERABLE = z
+    .object({ ...ITEM_BASE, link: z.string().max(2000).nullable().optional().describe('File path, URL or Discord link.') })
+    .strict()
+  const CHECK_ITEM = z
+    .object({ ...ITEM_BASE, proof: z.string().max(2000).nullable().optional().describe('Commit, test output, path or URL.') })
+    .strict()
+  const NOTE = z
+    .object({
+      words: z.string().min(1).max(2000).describe("What changed, in the asker's words."),
+      source: z.string().min(1).max(300).describe('Who asked and where, e.g. "Chance, Development 11:46 AM PT".'),
+      at: z.string().datetime({ offset: true }).optional().describe('When it was asked (default now).'),
+    })
+    .strict()
+  const SCREEN = z
+    .object({
+      path: z.string().min(1).max(2000).describe('Image path under ~/dev/orca/qa/ccrecap-shots/.'),
+      caption: z.string().max(300).nullable().optional(),
+      discordLink: z.string().max(2000).nullable().optional().describe('discord.com/channels/… message link.'),
+      sentToDrive: z.boolean().optional(),
+    })
+    .strict()
+  const STRUCTURE = {
+    ask: z.string().min(1).max(4000).optional().describe("The request in the asker's words. Locked once set."),
+    lead: z.string().min(1).max(64).nullable().optional().describe('The one bot leading the task.'),
+    deliverables: z.array(DELIVERABLE).optional().describe('End deliverables (at least 1 on create, no maximum).'),
+    checklist: z.array(CHECK_ITEM).optional().describe('Checklist (at least 1 on create, no maximum).'),
+    screens: z.array(SCREEN).optional(),
+  }
+  const CREATE_ONLY = {
+    askUpdates: z.array(NOTE).optional().describe('Seed ask updates (later: task_add_items).'),
+    changes: z.array(NOTE).optional().describe('Seed change lines (later: automatic + task_add_items).'),
+  }
+
   server.registerTool(
     'task_create',
     {
@@ -594,7 +643,11 @@ export function registerOrcaclubTools(server: McpServer): void {
         'Create a work item on a package and/or project. Pass packageId to file it under a package; the project is ' +
         "taken from the package's linked project, or pass projectId. A task with a ccqTaskId is a tracked dev task: " +
         'it can only be completed once qa.status is "pass" with qa.commit set. The returned task carries `url`, ' +
-        'a deep link to its admin page (use it in pings).',
+        'a deep link to its admin page (use it in pings). Intake: a new task needs an ask, at ' +
+        'least 1 deliverable and at least 1 checklist item (no maximum), passed as fields or as Ask:/Deliverables:/' +
+        'Checklist: sections in the description (copied into the fields; "- [ ] [cm] item — proof: x" lines keep their ' +
+        'owner tag, untagged = dev). Otherwise it is refused with code "intake" and the missing list. No upper cap. ' +
+        'Read-only reviews are exempt.',
       inputSchema: writeSchema({
         title: z.string().min(1),
         description: z.string().optional().describe('Plain text; one paragraph per line.'),
@@ -607,6 +660,8 @@ export function registerOrcaclubTools(server: McpServer): void {
         ownerBot: OWNER_BOT.optional(),
         ccqTaskId: CCQ_ID.optional(),
         qa: QA.optional(),
+        ...STRUCTURE,
+        ...CREATE_ONLY,
       }),
     },
     guardedWrite('task_create', async (input, actor) => run(() => createTrackedTask({ ...input, actor }))),
@@ -619,7 +674,10 @@ export function registerOrcaclubTools(server: McpServer): void {
       description:
         'Change a task: status, owner, links, QA record. `id` may be the full id or a unique 8+ hex-char prefix. ' +
         'Only the fields you pass change; `qa` is merged into the ' +
-        'existing QA record. Completing a tracked task (one with a ccqTaskId) needs qa.status "pass" and qa.commit.',
+        'existing QA record. Completing a tracked task (one with a ccqTaskId) needs qa.status "pass" and qa.commit. ' +
+        'lead can change; deliverables/checklist/screens replace the whole list (to add, edit, drop or reorder single ' +
+        'items use task_add_items). ask is locked once set; askUpdates and changes are append-only (task_add_items). ' +
+        'Every edit bumps version and writes one changes line. Completing needs every non-dropped item done.',
       inputSchema: writeSchema({
         id: z.string(),
         title: z.string().min(1).optional(),
@@ -636,9 +694,79 @@ export function registerOrcaclubTools(server: McpServer): void {
         ownerBot: OWNER_BOT.nullable().optional(),
         ccqTaskId: CCQ_ID.nullable().optional(),
         qa: QA.optional(),
+        ...STRUCTURE,
       }),
     },
     guardedWrite('task_update', async (input, actor) => run(() => updateTrackedTask({ ...input, actor }))),
+  )
+
+  server.registerTool(
+    'task_add_items',
+    {
+      title: 'Add, edit, drop or reorder task items',
+      description:
+        'Change a task item by item, never rewriting it. Append askUpdates (dated direction changes in the ' +
+        "asker's words), deliverables, checklist items, changes and screens; edit rows by id with `set` " +
+        '(deliverable/checklist: text, status open|done|dropped + dropReason, owner, link/proof; screen: caption, ' +
+        'discordLink, sentToDrive); reorder with `order` [{kind, ids: every current row id in the new order}]. ' +
+        'Dropped items stay visible with their reason. New items get addedBy = you. Each call writes one changes ' +
+        'line with you as actor and bumps version. Appends are atomic, so parallel writers never lose rows; a ' +
+        'reorder is refused if the task changed since you read it. Screens already on the task are skipped. ' +
+        'Returns the new row ids. At most 50 items per call.',
+      inputSchema: writeSchema({
+        id: z.string().describe('Task id (full, or a unique 8+ hex-char prefix).'),
+        askUpdates: z.array(NOTE).optional(),
+        deliverables: z.array(DELIVERABLE).optional(),
+        checklist: z.array(CHECK_ITEM).optional(),
+        changes: z.array(NOTE).optional(),
+        screens: z.array(SCREEN).optional(),
+        set: z
+          .array(
+            z
+              .object({
+                kind: z.enum(['deliverable', 'checklist', 'screen']),
+                id: z.string().describe('Row id from task_get.'),
+                text: z.string().min(1).max(1000).optional(),
+                status: ITEM_STATUS.optional(),
+                done: z.boolean().optional(),
+                dropReason: z.string().max(2000).nullable().optional(),
+                owner: ITEM_OWNER.optional(),
+                link: z.string().max(2000).nullable().optional(),
+                proof: z.string().max(2000).nullable().optional(),
+                caption: z.string().max(300).nullable().optional(),
+                discordLink: z.string().max(2000).nullable().optional(),
+                sentToDrive: z.boolean().optional(),
+              })
+              .strict(),
+          )
+          .optional()
+          .describe('Row edits by id.'),
+        order: z
+          .array(z.object({ kind: z.enum(['deliverable', 'checklist']), ids: z.array(z.string()).min(1) }).strict())
+          .optional()
+          .describe('New order: every current row id of that list, each once.'),
+      }),
+    },
+    guardedWrite('task_add_items', async (input, actor) => run(() => addTaskItems({ ...input, actor }))),
+  )
+
+  server.registerTool(
+    'my_work',
+    {
+      title: 'My work',
+      description:
+        "One owner's work across every open task (pending + in-progress), oldest task first: its Now lines (built " +
+        'from the newest `next [lane]:` / `left off [lane]:` / `result [lane]:` lines; untagged = dev) and its open ' +
+        'deliverable/checklist items. owner is a lane (dev, cm, fin) or a bot name (matches items it owns and Now ' +
+        'lines waiting on it). Read-only.',
+      inputSchema: z
+        .object({
+          owner: z.string().min(1).max(64),
+          limit: z.number().int().min(1).max(200).optional().describe('Tasks returned (default 50).'),
+        })
+        .strict(),
+    },
+    async (input) => run(() => myWork(input)),
   )
 
   server.registerTool(
@@ -709,10 +837,19 @@ export function registerOrcaclubTools(server: McpServer): void {
       description:
         'One task by id (full 24-hex id, or a unique prefix of 8+ hex chars like 6ae9184d; an ambiguous prefix ' +
         'is an error listing the matches): the task_list row (status, owner, ccq id, QA record, createdAt, updatedAt, url) plus its ' +
-        'internal botContext (brief, repo, branch, live URL, decisions, notes). Read-only.',
-      inputSchema: z.object({ id: z.string().min(1) }).strict(),
+        'internal botContext (brief, repo, branch, live URL, decisions, notes), the structured fields (ask, ' +
+        'askUpdates, deliverables, checklist, changes, screens; each item has a `line` in "- [ ] [dev] item — proof: x" ' +
+        'form), summary ("v3, dev 4/6, cm 1/3, fin 0/1") and the Now block (one line per lane). With owner (dev, cm, ' +
+        "fin or a bot) it returns that owner's pickup view instead: Ask + askUpdates, its Now line, its open items, " +
+        'the last 5 changes and botContext links. Read-only.',
+      inputSchema: z
+        .object({
+          id: z.string().min(1),
+          owner: z.string().min(1).max(64).optional().describe('Lane (dev, cm, fin) or bot: return its pickup view.'),
+        })
+        .strict(),
     },
-    async ({ id }) => run(() => getTrackedTask(id)),
+    async ({ id, owner }) => run(() => getTrackedTask(id, owner)),
   )
 
   server.registerTool(

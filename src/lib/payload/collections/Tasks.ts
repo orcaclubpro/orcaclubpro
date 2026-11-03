@@ -4,6 +4,7 @@ import { adminOnly, adminOrAssigned, adminOrUser, staffOnlyField } from '../acce
 import { botContextField, guardBotContextWrite, stripBotContext } from '../fields/botContext'
 import { restoreStaffOnly, stripStaffOnly } from '../fields/staffOnlyFields'
 import { isValidActor } from '@/lib/mcp/actor'
+import { closeGateMissing } from '@/lib/tasks/structure'
 
 /**
  * Bot-tracking fields: internal, never shown to clients (stripped from non-staff
@@ -17,6 +18,15 @@ export const TASK_TRACKING_FIELDS = [
   'claimedBy',
   'claimedAt',
   'leaseExpiresAt',
+  // Structured task fields (board 6aea1fd4): internal working context, staff only.
+  'ask',
+  'lead',
+  'askUpdates',
+  'deliverables',
+  'checklist',
+  'changes',
+  'screens',
+  'version',
 ] as const
 
 const STAFF_ONLY = { read: staffOnlyField, create: staffOnlyField, update: staffOnlyField }
@@ -38,6 +48,55 @@ export const requireQaPassToComplete: CollectionBeforeChangeHook = ({ data, orig
         400,
       )
     }
+  }
+  return data
+}
+
+/**
+ * `ask` is the request in the asker's words, locked once set: a later ask is a
+ * new row in changes[], never an edit. Setting it on a task that has none (the
+ * backfill, or the first structured write on an old task) is allowed. Scripts
+ * that must correct one pass `context: { unlockAsk: true }`.
+ */
+export const lockAsk: CollectionBeforeChangeHook = ({ data, originalDoc, context }) => {
+  if (!data || data.ask === undefined || context?.unlockAsk) return data
+  const before = typeof originalDoc?.ask === 'string' ? originalDoc.ask.trim() : ''
+  const after = typeof data.ask === 'string' ? data.ask.trim() : ''
+  if (before && after !== before) {
+    throw new APIError('The ask is locked once set; add the new request to changes[] (task_add_items) instead.', 400)
+  }
+  return data
+}
+
+/**
+ * askUpdates[] and changes[] are append-only: an update must keep every existing
+ * row (same id, same order) at the front. Scripts that must repair one pass
+ * `context: { unlockNotes: true }`.
+ */
+export const appendOnlyNotes: CollectionBeforeChangeHook = ({ data, originalDoc, context }) => {
+  if (!data || !originalDoc || context?.unlockNotes) return data
+  for (const key of ['askUpdates', 'changes'] as const) {
+    if (data[key] === undefined) continue
+    const before: { id?: string }[] = Array.isArray(originalDoc[key]) ? originalDoc[key] : []
+    const after: { id?: string }[] = Array.isArray(data[key]) ? data[key] : []
+    const kept = before.every((row, i) => after[i] && String(after[i].id) === String(row.id))
+    if (!kept) throw new APIError(`${key} is append-only; add rows with task_add_items.`, 400)
+  }
+  return data
+}
+
+/**
+ * Close gate (board 6aea1fd4): a task completes only when every non-dropped
+ * deliverable and checklist item is done (all lanes: dev, cm, fin, bots), and a
+ * task touching prices, terms, hours, invoices or tax carries a [fin] money check
+ * item. Legacy tasks with no structured items are not gated here.
+ */
+export const closeGate: CollectionBeforeChangeHook = ({ data, originalDoc, context }) => {
+  if (!data || data.status !== 'completed' || originalDoc?.status === 'completed' || context?.skipCloseGate) return data
+  const merged = { ...(originalDoc ?? {}), ...data }
+  const missing = closeGateMissing(merged)
+  if (missing.length) {
+    throw new APIError(`Task can't complete yet; still open: ${missing.slice(0, 10).join('; ')}${missing.length > 10 ? ` (+${missing.length - 10} more)` : ''}`, 400)
   }
   return data
 }
@@ -109,6 +168,9 @@ export const Tasks: CollectionConfig = {
       requireQaPassToComplete,
       setCompletedAtOnCompletion,
       clearClaimOnRelease,
+      lockAsk,
+      appendOnlyNotes,
+      closeGate,
       guardBotContextWrite,
     ],
     afterRead: [stripBotContext, stripStaffOnly(TASK_TRACKING_FIELDS)],
@@ -378,6 +440,157 @@ export const Tasks: CollectionConfig = {
             description: 'Actual hours spent on task',
             width: '50%',
           },
+        },
+      ],
+    },
+    // ============================================================================
+    // STRUCTURED TASK (internal — staff only; board 6aea1fd4, src/lib/tasks/structure.ts)
+    // ============================================================================
+    {
+      type: 'collapsible',
+      label: 'Ask, deliverables, checklist',
+      admin: { initCollapsed: false },
+      fields: [
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'lead',
+              type: 'text',
+              maxLength: 64,
+              access: STAFF_ONLY,
+              admin: { width: '50%', description: 'The one bot leading this task' },
+            },
+            {
+              name: 'version',
+              type: 'number',
+              defaultValue: 0,
+              access: STAFF_ONLY,
+              admin: { width: '50%', readOnly: true, description: '+1 on every edit' },
+            },
+          ],
+        },
+        {
+          name: 'ask',
+          type: 'textarea',
+          maxLength: 4000,
+          access: STAFF_ONLY,
+          admin: { description: "The request in the asker's words. Locked once set; later direction goes in Ask updates." },
+        },
+        {
+          name: 'askUpdates',
+          type: 'array',
+          access: STAFF_ONLY,
+          labels: { singular: 'Ask update', plural: 'Ask updates' },
+          admin: { description: 'Dated direction changes in the asker\'s words (append-only)' },
+          fields: [
+            {
+              type: 'row',
+              fields: [
+                { name: 'at', type: 'date', required: true, admin: { width: '30%', date: { pickerAppearance: 'dayAndTime' } } },
+                { name: 'source', type: 'text', required: true, maxLength: 300, admin: { width: '45%', description: 'Who asked, where' } },
+              ],
+            },
+            { name: 'words', type: 'textarea', required: true, maxLength: 2000 },
+          ],
+        },
+        {
+          name: 'deliverables',
+          type: 'array',
+          access: STAFF_ONLY,
+          labels: { singular: 'Deliverable', plural: 'Deliverables' },
+          admin: { description: 'End deliverables (at least 1 on new tasks)' },
+          fields: [
+            { name: 'text', type: 'text', required: true, maxLength: 1000 },
+            {
+              type: 'row',
+              fields: [
+                {
+                  name: 'status',
+                  type: 'select',
+                  defaultValue: 'open',
+                  options: ['open', 'done', 'dropped'],
+                  admin: { width: '20%' },
+                },
+                { name: 'owner', type: 'text', defaultValue: 'dev', maxLength: 64, admin: { width: '20%', description: 'dev | cm | fin | <bot>' } },
+                { name: 'addedBy', type: 'text', maxLength: 64, admin: { width: '20%', readOnly: true } },
+                { name: 'link', type: 'text', maxLength: 2000, admin: { width: '40%', description: 'File path, URL or Discord link' } },
+              ],
+            },
+            {
+              name: 'dropReason',
+              type: 'text',
+              maxLength: 2000,
+              admin: { condition: (_, row) => row?.status === 'dropped', description: 'Why it was dropped (dropped items stay visible)' },
+            },
+          ],
+        },
+        {
+          name: 'checklist',
+          type: 'array',
+          access: STAFF_ONLY,
+          labels: { singular: 'Checklist item', plural: 'Checklist' },
+          admin: { description: 'Checklist (at least 1 on new tasks, no upper limit)' },
+          fields: [
+            { name: 'text', type: 'text', required: true, maxLength: 1000 },
+            {
+              type: 'row',
+              fields: [
+                {
+                  name: 'status',
+                  type: 'select',
+                  defaultValue: 'open',
+                  options: ['open', 'done', 'dropped'],
+                  admin: { width: '20%' },
+                },
+                { name: 'owner', type: 'text', defaultValue: 'dev', maxLength: 64, admin: { width: '20%', description: 'dev | cm | fin | <bot>' } },
+                { name: 'addedBy', type: 'text', maxLength: 64, admin: { width: '20%', readOnly: true } },
+                { name: 'proof', type: 'text', maxLength: 2000, admin: { width: '40%', description: 'Commit, test output, path or URL' } },
+              ],
+            },
+            {
+              name: 'dropReason',
+              type: 'text',
+              maxLength: 2000,
+              admin: { condition: (_, row) => row?.status === 'dropped', description: 'Why it was dropped (dropped items stay visible)' },
+            },
+          ],
+        },
+        {
+          name: 'changes',
+          type: 'array',
+          access: STAFF_ONLY,
+          labels: { singular: 'Change', plural: 'Changes' },
+          admin: { description: 'One line per edit: when, who, what (append-only)' },
+          fields: [
+            {
+              type: 'row',
+              fields: [
+                { name: 'at', type: 'date', required: true, admin: { width: '30%', date: { pickerAppearance: 'dayAndTime' } } },
+                { name: 'source', type: 'text', required: true, maxLength: 300, admin: { width: '45%', description: 'Who asked, where' } },
+                { name: 'by', type: 'text', admin: { width: '25%', readOnly: true } },
+              ],
+            },
+            { name: 'words', type: 'textarea', required: true, maxLength: 2000 },
+          ],
+        },
+        {
+          name: 'screens',
+          type: 'array',
+          access: STAFF_ONLY,
+          labels: { singular: 'Screen', plural: 'Screens' },
+          admin: { description: 'Screenshots under ~/dev/orca/qa/ccrecap-shots/' },
+          fields: [
+            { name: 'path', type: 'text', required: true, maxLength: 2000 },
+            {
+              type: 'row',
+              fields: [
+                { name: 'caption', type: 'text', maxLength: 300, admin: { width: '40%' } },
+                { name: 'discordLink', type: 'text', maxLength: 2000, admin: { width: '45%' } },
+                { name: 'sentToDrive', type: 'checkbox', defaultValue: false, admin: { width: '15%' } },
+              ],
+            },
+          ],
         },
       ],
     },

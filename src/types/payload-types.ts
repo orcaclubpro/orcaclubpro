@@ -1347,6 +1347,105 @@ export interface Task {
    */
   actualHours?: number | null;
   /**
+   * The one bot leading this task
+   */
+  lead?: string | null;
+  /**
+   * +1 on every edit
+   */
+  version?: number | null;
+  /**
+   * The request in the asker's words. Locked once set; later direction goes in Ask updates.
+   */
+  ask?: string | null;
+  /**
+   * Dated direction changes in the asker's words (append-only)
+   */
+  askUpdates?:
+    | {
+        at: string;
+        /**
+         * Who asked, where
+         */
+        source: string;
+        words: string;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * End deliverables (at least 1 on new tasks)
+   */
+  deliverables?:
+    | {
+        text: string;
+        status?: ('open' | 'done' | 'dropped') | null;
+        /**
+         * dev | cm | fin | <bot>
+         */
+        owner?: string | null;
+        addedBy?: string | null;
+        /**
+         * File path, URL or Discord link
+         */
+        link?: string | null;
+        /**
+         * Why it was dropped (dropped items stay visible)
+         */
+        dropReason?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Checklist (at least 1 on new tasks, no upper limit)
+   */
+  checklist?:
+    | {
+        text: string;
+        status?: ('open' | 'done' | 'dropped') | null;
+        /**
+         * dev | cm | fin | <bot>
+         */
+        owner?: string | null;
+        addedBy?: string | null;
+        /**
+         * Commit, test output, path or URL
+         */
+        proof?: string | null;
+        /**
+         * Why it was dropped (dropped items stay visible)
+         */
+        dropReason?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * One line per edit: when, who, what (append-only)
+   */
+  changes?:
+    | {
+        at: string;
+        /**
+         * Who asked, where
+         */
+        source: string;
+        by?: string | null;
+        words: string;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Screenshots under ~/dev/orca/qa/ccrecap-shots/
+   */
+  screens?:
+    | {
+        path: string;
+        caption?: string | null;
+        discordLink?: string | null;
+        sentToDrive?: boolean | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
    * Internal working context for bots and staff. Never shown to clients.
    */
   botContext?: {
@@ -3218,6 +3317,57 @@ export interface TasksSelect<T extends boolean = true> {
   completedAt?: T;
   estimatedHours?: T;
   actualHours?: T;
+  lead?: T;
+  version?: T;
+  ask?: T;
+  askUpdates?:
+    | T
+    | {
+        at?: T;
+        source?: T;
+        words?: T;
+        id?: T;
+      };
+  deliverables?:
+    | T
+    | {
+        text?: T;
+        status?: T;
+        owner?: T;
+        addedBy?: T;
+        link?: T;
+        dropReason?: T;
+        id?: T;
+      };
+  checklist?:
+    | T
+    | {
+        text?: T;
+        status?: T;
+        owner?: T;
+        addedBy?: T;
+        proof?: T;
+        dropReason?: T;
+        id?: T;
+      };
+  changes?:
+    | T
+    | {
+        at?: T;
+        source?: T;
+        by?: T;
+        words?: T;
+        id?: T;
+      };
+  screens?:
+    | T
+    | {
+        path?: T;
+        caption?: T;
+        discordLink?: T;
+        sentToDrive?: T;
+        id?: T;
+      };
   botContext?:
     | T
     | {

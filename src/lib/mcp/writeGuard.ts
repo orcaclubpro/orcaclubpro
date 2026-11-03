@@ -53,6 +53,13 @@ export const WRITE_TOOL_FIELDS: Record<string, readonly string[]> = {
     'ownerBot',
     'ccqTaskId',
     'qa',
+    'ask',
+    'lead',
+    'askUpdates',
+    'deliverables',
+    'checklist',
+    'changes',
+    'screens',
   ],
   task_claim: ['id', 'leaseMinutes'],
   task_update: [
@@ -68,7 +75,13 @@ export const WRITE_TOOL_FIELDS: Record<string, readonly string[]> = {
     'ownerBot',
     'ccqTaskId',
     'qa',
+    'ask',
+    'lead',
+    'deliverables',
+    'checklist',
+    'screens',
   ],
+  task_add_items: ['id', 'askUpdates', 'deliverables', 'checklist', 'changes', 'screens', 'set', 'order'],
 }
 
 export const isWriteTool = (tool: string): boolean => Object.hasOwn(WRITE_TOOL_FIELDS, tool)

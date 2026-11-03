@@ -20,6 +20,32 @@ import { computeProgress, type Progress } from '@/lib/tasks/progress'
 import { lexicalToPlainText, plainTextToLexical } from '@/lib/tasks/richText'
 import { claimFilter, claimKind, claimRefusal, claimUpdate, isTaskId } from '@/lib/tasks/claim'
 import { taskAdminUrl } from '@/lib/tasks/url'
+import {
+  ARRAY_OF,
+  buildAddItems,
+  buildItem,
+  buildNote,
+  buildScreen,
+  countAdds,
+  describeEdit,
+  fromTemplate,
+  intakeMissing,
+  normItem,
+  normalizeOwner,
+  nowBlock,
+  ownerSlice,
+  patchUpdate,
+  reorderRows,
+  rowId,
+  structureProgress,
+  StructureError,
+  type AddItemsInput,
+  type ItemIn,
+  type ItemPatch,
+  type NoteIn,
+  type Reorder,
+  type ScreenIn,
+} from '@/lib/tasks/structure'
 
 type TaskStatus = 'pending' | 'in-progress' | 'completed' | 'cancelled'
 type TaskPriority = 'low' | 'medium' | 'high' | 'urgent'
@@ -28,6 +54,7 @@ export type TaskListSort = '-updatedAt' | '-createdAt' | 'createdAt' | 'dueDate'
 type QaInput = { status?: 'pending' | 'pass' | 'fail'; commit?: string; date?: string; reportLink?: string }
 
 type Fail = { success: false; error: string }
+type IntakeFail = { success: false; code: 'intake'; missing: string[]; error: string }
 const fail = (error: string): Fail => ({ success: false, error })
 
 const idOf = (v: unknown): string | null =>
@@ -41,10 +68,13 @@ async function staffCaller() {
   return user
 }
 
-/** Compact task row for MCP output. Never includes botContext (task_get adds it). */
-function taskRow(t: Record<string, any>) {
+/**
+ * Task row for MCP output. Never includes botContext (task_get adds it). task_list
+ * rows are compact (summary + progress); `full` adds the structured lists.
+ */
+function taskRow(t: Record<string, any>, full = true) {
   const project = t.project && typeof t.project === 'object' ? t.project : null
-  return {
+  const base = {
     id: String(t.id),
     url: taskAdminUrl(String(t.id)),
     title: t.title,
@@ -72,8 +102,62 @@ function taskRow(t: Record<string, any>) {
     completedAt: t.completedAt ?? null,
     createdAt: t.createdAt ?? null,
     updatedAt: t.updatedAt ?? null,
+    // Structured fields (board 6aea1fd4). Staff-only; empty on legacy text-only tasks.
+    lead: t.lead ?? null,
+    version: Number(t.version) || 0,
+    summary: structureProgress(t).summary,
+    progress: structureProgress(t),
+  }
+  if (!full) return base as typeof base & Partial<ReturnType<typeof structuredLists>>
+  return { ...base, ...structuredLists(t) }
+}
+
+function structuredLists(t: Record<string, any>) {
+  return {
+    ask: t.ask ?? null,
+    askUpdates: rows(t.askUpdates, ['id', 'at', 'words', 'source']),
+    deliverables: (Array.isArray(t.deliverables) ? t.deliverables : []).map((r: any) => normItem(r, 'deliverable')),
+    checklist: (Array.isArray(t.checklist) ? t.checklist : []).map((r: any) => normItem(r, 'checklist')),
+    changes: rows(t.changes, ['id', 'at', 'words', 'source', 'by']),
+    screens: rows(t.screens, ['id', 'path', 'caption', 'discordLink', 'sentToDrive']),
   }
 }
+
+function rows(value: unknown, keys: string[]) {
+  if (!Array.isArray(value)) return []
+  return value.map((r) => Object.fromEntries(keys.map((k) => [k, (r as Record<string, unknown>)?.[k] ?? null])))
+}
+
+type StructuredInput = {
+  ask?: string
+  lead?: string | null
+  askUpdates?: NoteIn[]
+  deliverables?: ItemIn[]
+  checklist?: ItemIn[]
+  changes?: NoteIn[]
+  screens?: ScreenIn[]
+}
+
+/** Validated, id-stamped values for a create/update; only the keys passed are returned. */
+function structuredData(input: StructuredInput, actor: string, now: Date) {
+  const data: Record<string, unknown> = {}
+  if (input.ask !== undefined) data.ask = input.ask.trim()
+  if (input.lead !== undefined) data.lead = input.lead === null ? null : normalizeOwner(input.lead)
+  if (input.askUpdates !== undefined) data.askUpdates = input.askUpdates.map((c) => buildNote('askUpdate', c, actor, now))
+  if (input.deliverables !== undefined) data.deliverables = input.deliverables.map((d) => buildItem('deliverable', d, actor))
+  if (input.checklist !== undefined) data.checklist = input.checklist.map((d) => buildItem('checklist', d, actor))
+  if (input.changes !== undefined) data.changes = input.changes.map((c) => buildNote('change', c, actor, now))
+  if (input.screens !== undefined) data.screens = input.screens.map(buildScreen)
+  return data
+}
+
+const autoChange = (words: string, actor: string, now: Date) => ({
+  id: rowId(),
+  at: now,
+  words: words.slice(0, 2000),
+  source: 'auto',
+  by: actor,
+})
 
 export type TrackedTask = ReturnType<typeof taskRow>
 
@@ -143,10 +227,46 @@ export async function createTrackedTask(input: {
   ownerBot?: string
   ccqTaskId?: string
   qa?: QaInput
-}): Promise<{ success: true; task: TrackedTask } | Fail> {
+} & StructuredInput): Promise<{ success: true; task: TrackedTask } | Fail | IntakeFail> {
   try {
     const user = await staffCaller()
     if (!user) return fail('Unauthorized')
+
+    // Intake (board 6aea1fd4, Chance 11:34/11:46 AM PT): Ask + at least 1
+    // deliverable + at least 1 checklist item, no maximum. Same rule as the poller
+    // (orca-ops ops/poller/dispatch.py template_missing, 527f3d8).
+    const missing = intakeMissing(input)
+    if (missing.length) {
+      return {
+        success: false,
+        code: 'intake',
+        missing,
+        error:
+          `Task not created; missing: ${missing.join(', ')}. A new task needs an Ask, at least 1 deliverable ` +
+          'and at least 1 checklist item (fields ask/deliverables/checklist, or Ask:/Deliverables:/Checklist: ' +
+          'sections in the description). Read-only reviews are exempt.',
+      }
+    }
+    // Text template → structured fields, unless the caller passed them.
+    const tpl = fromTemplate(input.description)
+    const structured = structuredData(
+      {
+        ask: input.ask ?? tpl.ask ?? undefined,
+        lead: input.lead,
+        askUpdates: input.askUpdates,
+        deliverables: input.deliverables ?? (tpl.deliverables.length ? tpl.deliverables : undefined),
+        checklist: input.checklist ?? (tpl.checklist.length ? tpl.checklist : undefined),
+        changes: input.changes ?? (tpl.changes.length ? tpl.changes : undefined),
+        screens: input.screens,
+      },
+      input.actor,
+      new Date(),
+    )
+    structured.changes = [
+      ...((structured.changes as unknown[]) ?? []),
+      autoChange(`created by ${input.actor}`, input.actor, new Date()),
+    ]
+    structured.version = 1
     const payload = await getPayload({ config })
 
     let projectId = input.projectId ?? null
@@ -194,6 +314,7 @@ export async function createTrackedTask(input: {
         ...(input.ownerBot ? { ownerBot: input.ownerBot } : {}),
         ...(input.ccqTaskId ? { ccqTaskId: input.ccqTaskId } : {}),
         ...(input.qa ? { qa: input.qa } : {}),
+        ...structured,
         lastActor: input.actor,
       },
       depth: 1,
@@ -305,10 +426,15 @@ export async function updateTrackedTask(input: {
   ownerBot?: string | null
   ccqTaskId?: string | null
   qa?: QaInput
-}): Promise<{ success: true; task: TrackedTask } | Fail> {
+} & StructuredInput): Promise<{ success: true; task: TrackedTask } | Fail> {
   try {
     const user = await staffCaller()
     if (!user) return fail('Unauthorized')
+    if (input.askUpdates !== undefined || input.changes !== undefined) {
+      return fail('askUpdates and changes are append-only: add them with task_add_items')
+    }
+    const now = new Date()
+    const structured = structuredData(input, input.actor, now)
     const payload = await getPayload({ config })
     const resolved = await resolveTaskId(payload, user, input.id)
     if ('error' in resolved) return fail(resolved.error)
@@ -343,6 +469,17 @@ export async function updateTrackedTask(input: {
     if (input.ccqTaskId !== undefined) data.ccqTaskId = input.ccqTaskId
     // qa is merged, so a bot can record a verdict without restating the rest.
     if (input.qa !== undefined) data.qa = { ...(current.qa ?? {}), ...input.qa }
+    // Whole-array replace (ask stays locked by the collection hook). To append or edit rows, use task_add_items.
+    Object.assign(data, structured)
+    // Every edit bumps version and writes one changes[] line (board 6aea1fd4).
+    const touched = Object.keys(input).filter(
+      (k) => !['actor', 'id', 'clientAccountId'].includes(k) && (input as Record<string, unknown>)[k] !== undefined,
+    )
+    if (touched.length) {
+      data.version = (Number(current.version) || 0) + 1
+      const what = touched.map((k) => (k === 'status' ? `status → ${input.status}` : k)).join(', ')
+      data.changes = [...(Array.isArray(current.changes) ? current.changes : []), autoChange(`updated ${what}`, input.actor, now)]
+    }
 
     const task = await payload.update({
       collection: 'tasks',
@@ -410,6 +547,115 @@ export async function claimTrackedTask(input: {
     }
   } catch (e) {
     return fail(errorMessage(e))
+  }
+}
+
+// ── Add items / edit items ────────────────────────────────────────────────────
+
+/**
+ * task_add_items: append askUpdates, deliverables, checklist items, changes and
+ * screens; edit rows by id (`set`: text, status open|done|dropped + dropReason,
+ * owner, link/proof, screen fields); reorder deliverables or checklist (`order`).
+ * Never a whole-task rewrite:
+ *  - reorder is one compare-and-set on `version` (refused if anyone edited since the read);
+ *  - edits are one `$set` with arrayFilters; appends are one `$push`, so two bots
+ *    adding at the same moment both land;
+ *  - the final write pushes one auto changes[] line ("<actor>: added 2 checklist; …")
+ *    and `$inc`s version.
+ * Raw updates skip Payload hooks: rows are validated and stamped here (structure.ts);
+ * the close gate and ask lock guard other paths, and nothing here changes status or ask.
+ */
+export async function addTaskItems(
+  input: { actor: string; id: string; set?: ItemPatch[]; order?: Reorder[] } & AddItemsInput,
+): Promise<
+  | { success: true; added: Record<string, string[]>; skippedScreens: string[]; edited: number; reordered: string[]; task: TrackedTask }
+  | Fail
+> {
+  try {
+    const user = await staffCaller()
+    if (!user) return fail('Unauthorized')
+    const payload = await getPayload({ config })
+    const resolved = await resolveTaskId(payload, user, input.id)
+    if ('error' in resolved) return fail(resolved.error)
+    const id = resolved.id
+    if (!isTaskId(id)) return fail(`Task ${input.id} not found`)
+
+    const visible = (await payload
+      .findByID({ collection: 'tasks', id, depth: 0, user, overrideAccess: false, disableErrors: true })
+      .catch(() => null)) as Record<string, any> | null
+    if (!visible) return fail(`Task ${input.id} not found (it does not exist or you cannot access it)`)
+
+    const nAdds = countAdds(input)
+    if (!nAdds && !input.set?.length && !input.order?.length) {
+      return fail('Nothing to do: pass items to add, `set` to edit rows by id, or `order` to reorder')
+    }
+    const now = new Date()
+    const model = (payload.db as any).collections.tasks
+
+    // Validate everything before writing anything.
+    const patch = input.set?.length ? patchUpdate(input.set) : null
+    if (patch) {
+      const unknown = input.set!.filter(
+        (p) => !(visible[ARRAY_OF[p.kind]] ?? []).some((r: { id?: string }) => String(r?.id) === p.id),
+      )
+      if (unknown.length) {
+        return fail(`Not on task ${id}: ${unknown.map((p) => `${p.kind} ${p.id}`).join(', ')}; nothing was written`)
+      }
+    }
+    const reorders = (input.order ?? []).map((o) => {
+      const arr = ARRAY_OF[o.kind]
+      if (arr !== 'deliverables' && arr !== 'checklist') throw new StructureError(`Can't reorder ${o.kind}`)
+      return { arr, rows: reorderRows(Array.isArray(visible[arr]) ? visible[arr] : [], o.ids) }
+    })
+    const existingPaths = (Array.isArray(visible.screens) ? visible.screens : []).map((s: { path?: string }) => s?.path ?? '')
+    const toAdd = nAdds ? buildAddItems(input, input.actor, now, existingPaths) : null
+
+    // 1. Reorder: compare-and-set on version (missing version = legacy 0).
+    if (reorders.length) {
+      const v = Number(visible.version) || 0
+      const res = await model.updateOne(
+        { _id: id, ...(v ? { version: v } : { $or: [{ version: { $exists: false } }, { version: null }, { version: 0 }] }) },
+        { $set: Object.fromEntries(reorders.map((r) => [r.arr, r.rows])) },
+      )
+      if (!res.matchedCount) return fail(`Task ${id} changed since you read it (version ${v}); re-read and retry the reorder`)
+    }
+    // 2. Edits by row id.
+    if (patch) {
+      await model.updateOne({ _id: id }, { $set: patch.$set }, { arrayFilters: patch.arrayFilters })
+    }
+    // 3. Appends + the auto change line + version bump, one update.
+    const auto = describeEdit(toAdd, patch?.said ?? [], reorders.map((r) => r.arr))
+    const changes = [...(toAdd?.changes ?? []), ...(auto ? [autoChange(`${input.actor}: ${auto}`, input.actor, now)] : [])]
+    const push: Record<string, { $each: unknown[] }> = {}
+    for (const key of ['askUpdates', 'deliverables', 'checklist', 'screens'] as const) {
+      if (toAdd?.[key].length) push[key] = { $each: toAdd[key] }
+    }
+    if (changes.length) push.changes = { $each: changes }
+    const paths = toAdd?.screens.map((s) => s.path) ?? []
+    // The filter keeps screens deduped under a race: another writer adding the same
+    // path in between makes this match nothing (the caller retries).
+    const res = await model.updateOne(paths.length ? { _id: id, 'screens.path': { $nin: paths } } : { _id: id }, {
+      $push: push,
+      $inc: { version: 1 },
+      $set: { lastActor: input.actor, updatedAt: now },
+    })
+    if (!res.matchedCount) return fail(`A screen with the same path was just added to task ${id}; retry`)
+
+    const added: Record<string, string[]> = {}
+    for (const key of ['askUpdates', 'deliverables', 'checklist', 'changes', 'screens'] as const) {
+      if (toAdd?.[key].length) added[key] = toAdd[key].map((r) => r.id)
+    }
+    const task = await payload.findByID({ collection: 'tasks', id, depth: 1, user, overrideAccess: false })
+    return {
+      success: true,
+      added,
+      skippedScreens: toAdd?.skippedScreens ?? [],
+      edited: input.set?.length ?? 0,
+      reordered: reorders.map((r) => r.arr),
+      task: taskRow(task as Record<string, any>),
+    }
+  } catch (e) {
+    return fail(e instanceof StructureError ? e.message : errorMessage(e))
   }
 }
 
@@ -483,7 +729,7 @@ export async function listTrackedTasks(input: {
     })
     return {
       success: true,
-      items: res.docs.map((d) => taskRow(d as Record<string, any>)),
+      items: res.docs.map((d) => taskRow(d as Record<string, any>, false)),
       total: res.totalDocs,
       page: res.page ?? 1,
       hasNextPage: res.hasNextPage,
@@ -513,7 +759,12 @@ type BotContextRow = {
  */
 export async function getTrackedTask(
   id: string,
-): Promise<{ success: true; task: TrackedTask & { botContext: BotContextRow | null } } | Fail> {
+  owner?: string,
+): Promise<
+  | { success: true; task: TrackedTask & { botContext: BotContextRow | null; now: ReturnType<typeof nowBlock> } }
+  | { success: true; view: ReturnType<typeof ownerView> }
+  | Fail
+> {
   try {
     const user = await staffCaller()
     if (!user) return fail('Unauthorized')
@@ -536,10 +787,12 @@ export async function getTrackedTask(
     }
     if (!doc) return fail(`Task ${id} not found (it does not exist or you cannot access it)`)
     const bc = doc.botContext && typeof doc.botContext === 'object' ? (doc.botContext as Record<string, any>) : null
+    if (owner?.trim()) return { success: true, view: ownerView(doc, owner, bc) }
     return {
       success: true,
       task: {
         ...taskRow(doc),
+        now: nowBlock(lexicalToPlainText(doc.description), whereOf(bc)),
         botContext: bc
           ? {
               brief: bc.brief ?? null,
@@ -554,6 +807,90 @@ export async function getTrackedTask(
           : null,
       },
     }
+  } catch (e) {
+    return fail(errorMessage(e))
+  }
+}
+
+const whereOf = (bc: Record<string, any> | null) =>
+  bc ? [bc.repo, bc.branch, bc.liveUrl].filter((x) => typeof x === 'string' && x.trim()).join(' · ') || null : null
+
+/**
+ * One owner's pickup view of a task (a lane: dev | cm | fin, or a bot): the Ask +
+ * askUpdates, that owner's Now line(s), its open items, the last 5 changes and the
+ * botContext links. Untagged items and untagged next: lines count as dev.
+ */
+function ownerView(doc: Record<string, any>, owner: string, bc: Record<string, any> | null) {
+  const who = owner.trim().toLowerCase()
+  const lists = structuredLists(doc)
+  const { now, open } = ownerSlice(doc, lexicalToPlainText(doc.description), who, whereOf(bc))
+  return {
+    id: String(doc.id),
+    url: taskAdminUrl(String(doc.id)),
+    title: doc.title,
+    status: doc.status,
+    owner: who,
+    summary: structureProgress(doc).summary,
+    lead: doc.lead ?? null,
+    ask: lists.ask,
+    askUpdates: lists.askUpdates,
+    now,
+    openItems: open,
+    lastChanges: lists.changes.slice(-5),
+    links: bc
+      ? { repo: bc.repo ?? null, branch: bc.branch ?? null, liveUrl: bc.liveUrl ?? null, brief: bc.brief ?? null }
+      : null,
+  }
+}
+
+// ── my_work ───────────────────────────────────────────────────────────────────
+
+/**
+ * my_work(owner): that owner's Now lines and open items across every open task
+ * (pending + in-progress), oldest task first. Tasks where the owner has neither
+ * are left out.
+ */
+export async function myWork(input: { owner: string; limit?: number }): Promise<
+  | {
+      success: true
+      owner: string
+      items: { id: string; url: string; title: string; status: string; summary: string; now: ReturnType<typeof nowBlock>; openItems: ReturnType<typeof normItem>[] }[]
+      scanned: number
+    }
+  | Fail
+> {
+  try {
+    const user = await staffCaller()
+    if (!user) return fail('Unauthorized')
+    const who = input.owner.trim().toLowerCase()
+    if (!who) return fail('owner is required')
+    const payload = await getPayload({ config })
+    const res = await payload.find({
+      collection: 'tasks',
+      where: { status: { in: ['pending', 'in-progress'] } },
+      sort: 'createdAt',
+      limit: 500,
+      depth: 0,
+      user,
+      overrideAccess: false,
+    })
+    const items = []
+    for (const d of res.docs as Record<string, any>[]) {
+      const bc = d.botContext && typeof d.botContext === 'object' ? d.botContext : null
+      const { now, open } = ownerSlice(d, lexicalToPlainText(d.description), who, whereOf(bc))
+      if (!now.length && !open.length) continue
+      items.push({
+        id: String(d.id),
+        url: taskAdminUrl(String(d.id)),
+        title: d.title,
+        status: d.status,
+        summary: structureProgress(d).summary,
+        now,
+        openItems: open,
+      })
+      if (items.length >= Math.min(Math.max(input.limit ?? 50, 1), 200)) break
+    }
+    return { success: true, owner: who, items, scanned: res.docs.length }
   } catch (e) {
     return fail(errorMessage(e))
   }
@@ -639,7 +976,7 @@ export async function getPackageOverview(packageId: string): Promise<
           quantity: li.quantity ?? null,
         })),
       },
-      tasks: tasks.map(taskRow),
+      tasks: tasks.map((t) => taskRow(t, false)),
       milestones,
       progress: computeProgress({ tasks, milestones }),
     }

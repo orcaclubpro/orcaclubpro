@@ -16,6 +16,14 @@ import type { Payload } from 'payload'
 import { CUSTOM_LINE_BLOCKED } from './catalogLinePrice'
 import { MCP_PROJECT_CLIENT_ID } from '@/lib/mcp/projectScope'
 
+/** Minimal structure every new task needs since the intake check (board 6aea1fd4). */
+// Items are done so the close gate (all non-dropped items done) doesn't block the completion tests here.
+const INTAKE = {
+  ask: 'test ask',
+  deliverables: [{ text: 'a deliverable', status: 'done' as const }],
+  checklist: [{ text: 'a check', status: 'done' as const }],
+}
+
 const TEST_DB = process.env.TEST_DATABASE_URI ?? ''
 const IS_LOCAL = /^mongodb:\/\/(127\.0\.0\.1|localhost)(:\d+)?\/[\w-]+$/.test(TEST_DB)
 const d = IS_LOCAL ? describe : describe.skip
@@ -1198,7 +1206,7 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
     const out = ok(
       await c.callTool({
         name: 'task_create',
-        arguments: {
+        arguments: { ...INTAKE,
           actor: 'vegapunk',
           title: 'Build hero section',
           description: 'Line one\nLine two',
@@ -1216,7 +1224,7 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
     expect(out.task.lastActor).toBe('vegapunk')
     expect(out.task.description).toBe('Line one\nLine two')
     expect(out.task.qa.status).toBe('pending')
-    await rejected(c, 'task_create', { title: 'no actor', packageId })
+    await rejected(c, 'task_create', { ...INTAKE, title: 'no actor', packageId })
   })
 
   test('task_create rejects a projectId that does not exist and creates nothing', async () => {
@@ -1225,7 +1233,7 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
     const missing = '0123456789abcdef01234567'
     const res: any = await c.callTool({
       name: 'task_create',
-      arguments: { actor: 'orca', title: 'Ghost project task', projectId: missing },
+      arguments: { ...INTAKE, actor: 'orca', title: 'Ghost project task', projectId: missing },
     })
     expect(res.isError).toBe(true)
     expect(JSON.stringify(res.content)).toContain(`Project ${missing} not found`)
@@ -1246,7 +1254,7 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
     const c = await mcpClient()
     const res: any = await c.callTool({
       name: 'task_create',
-      arguments: { actor: 'orca', title: 'Cross-client task', packageId: String(pkg.id), projectId: String(otherProject._id) },
+      arguments: { ...INTAKE, actor: 'orca', title: 'Cross-client task', packageId: String(pkg.id), projectId: String(otherProject._id) },
     })
     expect(res.isError).toBe(true)
     const msg = JSON.stringify(res.content)
@@ -1259,12 +1267,12 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
     const { projectId, packageId } = await trackingFixture()
     const c = await mcpClient()
     const byBoth = ok(
-      await c.callTool({ name: 'task_create', arguments: { actor: 'orca', title: 'Happy both', projectId, packageId } }),
+      await c.callTool({ name: 'task_create', arguments: { ...INTAKE, actor: 'orca', title: 'Happy both', projectId, packageId } }),
     )
     expect(byBoth.task.projectId).toBe(projectId)
     expect(byBoth.task.packageId).toBe(packageId)
     expect(byBoth.task.url).toEndWith(`/admin/collections/tasks/${byBoth.task.id}`)
-    const byProject = ok(await c.callTool({ name: 'task_create', arguments: { actor: 'orca', title: 'Happy project', projectId } }))
+    const byProject = ok(await c.callTool({ name: 'task_create', arguments: { ...INTAKE, actor: 'orca', title: 'Happy project', projectId } }))
     expect(byProject.task.projectId).toBe(projectId)
   })
 
@@ -1274,7 +1282,7 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
     const created = ok(
       await c.callTool({
         name: 'task_create',
-        arguments: { actor: 'orca', title: 'Tracked work', packageId, ccqTaskId: 'T261102-001600' },
+        arguments: { ...INTAKE, actor: 'orca', title: 'Tracked work', packageId, ccqTaskId: 'T261102-001600' },
       }),
     )
     const id = created.task.id
@@ -1311,7 +1319,7 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
   }
 
   async function trackedTask(c: any, packageId: string) {
-    return ok(await c.callTool({ name: 'task_create', arguments: { actor: 'orca', title: 'Move me', packageId } })).task
+    return ok(await c.callTool({ name: 'task_create', arguments: { ...INTAKE, actor: 'orca', title: 'Move me', packageId } })).task
   }
 
   async function reread(id: string) {
@@ -1386,7 +1394,7 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
     const c = await mcpClient()
     const db = payload.db as any
     // The other client's real project, the first client's package and client id.
-    const msg = await rejected(c, 'task_create', {
+    const msg = await rejected(c, 'task_create', { ...INTAKE,
       actor: 'orca',
       title: 'Pinned cross-client',
       projectId: other.projectId,
@@ -1395,7 +1403,7 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
     })
     expect(msg).toContain(other.projectId)
     // Project alone, pinned to the first client: still rejected.
-    const msg2 = await rejected(c, 'task_create', {
+    const msg2 = await rejected(c, 'task_create', { ...INTAKE,
       actor: 'orca',
       title: 'Pinned cross-client',
       projectId: other.projectId,
@@ -1407,7 +1415,7 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
     const out = ok(
       await c.callTool({
         name: 'task_create',
-        arguments: { actor: 'orca', title: 'Pinned ok', projectId: a.projectId, clientAccountId },
+        arguments: { ...INTAKE, actor: 'orca', title: 'Pinned ok', projectId: a.projectId, clientAccountId },
       }),
     )
     expect(out.task.projectId).toBe(a.projectId)
@@ -1441,7 +1449,7 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
       clientAccount: clientAccountId,
     })
     const c = await mcpClient()
-    const msg = await rejected(c, 'task_create', {
+    const msg = await rejected(c, 'task_create', { ...INTAKE,
       actor: 'orca',
       title: 'Clientless mix',
       projectId: String(bare._id),
@@ -1457,19 +1465,19 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
     const out = ok(
       await c.callTool({
         name: 'task_create',
-        arguments: { actor: 'Vegapunk', title: 'Case actor', packageId: a.packageId, ownerBot: 'ORCA' },
+        arguments: { ...INTAKE, actor: 'Vegapunk', title: 'Case actor', packageId: a.packageId, ownerBot: 'ORCA' },
       }),
     )
     expect(out.task.lastActor).toBe('vegapunk')
     expect(out.task.ownerBot).toBe('orca')
-    await rejected(c, 'task_create', { actor: 'Nobody', title: 'Bad actor', packageId: a.packageId })
+    await rejected(c, 'task_create', { ...INTAKE, actor: 'Nobody', title: 'Bad actor', packageId: a.packageId })
   })
 
   test('list_projects filters by client and returns progress', async () => {
     const a = await trackingFixture()
     const other = await otherClientFixture()
     const c = await mcpClient()
-    ok(await c.callTool({ name: 'task_create', arguments: { actor: 'orca', title: 'LP task', projectId: a.projectId } }))
+    ok(await c.callTool({ name: 'task_create', arguments: { ...INTAKE, actor: 'orca', title: 'LP task', projectId: a.projectId } }))
     const out = ok(await c.callTool({ name: 'list_projects', arguments: { clientId: clientAccountId, limit: 100 } }))
     const ids = out.items.map((p: any) => p.id)
     expect(ids).toContain(a.projectId)
@@ -1498,7 +1506,7 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
   test('get_project_progress names the project on open tasks', async () => {
     const a = await trackingFixture()
     const c = await mcpClient()
-    ok(await c.callTool({ name: 'task_create', arguments: { actor: 'orca', title: 'Named open task', projectId: a.projectId } }))
+    ok(await c.callTool({ name: 'task_create', arguments: { ...INTAKE, actor: 'orca', title: 'Named open task', projectId: a.projectId } }))
     const out = ok(await c.callTool({ name: 'get_project_progress', arguments: { projectId: a.projectId } }))
     expect(out.openTasks.length).toBeGreaterThan(0)
     for (const t of out.openTasks) expect(t.projectName).toBe('Tracking Project')
@@ -1513,7 +1521,7 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
       ['a2', a.packageId, 'in-progress'],
       ['b1', b.packageId, 'pending'],
     ] as const) {
-      ok(await c.callTool({ name: 'task_create', arguments: { actor: 'gojo', title, packageId: pkg, status } }))
+      ok(await c.callTool({ name: 'task_create', arguments: { ...INTAKE, actor: 'gojo', title, packageId: pkg, status } }))
     }
     const byPkg = ok(await c.callTool({ name: 'task_list', arguments: { packageId: a.packageId } }))
     expect(byPkg.items.map((t: any) => t.title).sort()).toEqual(['a1', 'a2'])
@@ -1534,7 +1542,7 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
     const c = await mcpClient()
     const titles = ['v2-first', 'v2-second', 'v2-third']
     for (const title of titles) {
-      ok(await c.callTool({ name: 'task_create', arguments: { actor: 'gojo', title, packageId } }))
+      ok(await c.callTool({ name: 'task_create', arguments: { ...INTAKE, actor: 'gojo', title, packageId } }))
       await Bun.sleep(5)
     }
     const oldest = ok(await c.callTool({ name: 'task_list', arguments: { packageId, sort: 'createdAt' } }))
@@ -1637,9 +1645,9 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
   test('MCP get_package returns tasks, milestones and progress percent, without prices', async () => {
     const { packageId } = await trackingFixture()
     const c = await mcpClient()
-    ok(await c.callTool({ name: 'task_create', arguments: { actor: 'gojo', title: 'done one', packageId, status: 'completed' } }))
-    ok(await c.callTool({ name: 'task_create', arguments: { actor: 'gojo', title: 'open one', packageId } }))
-    ok(await c.callTool({ name: 'task_create', arguments: { actor: 'gojo', title: 'dropped', packageId, status: 'cancelled' } }))
+    ok(await c.callTool({ name: 'task_create', arguments: { ...INTAKE, actor: 'gojo', title: 'done one', packageId, status: 'completed' } }))
+    ok(await c.callTool({ name: 'task_create', arguments: { ...INTAKE, actor: 'gojo', title: 'open one', packageId } }))
+    ok(await c.callTool({ name: 'task_create', arguments: { ...INTAKE, actor: 'gojo', title: 'dropped', packageId, status: 'cancelled' } }))
     const out = ok(await c.callTool({ name: 'get_package', arguments: { packageId } }))
     expect(out.package.id).toBe(packageId)
     expect(out.tasks).toHaveLength(3)
@@ -1653,8 +1661,8 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
   test('MCP get_project_progress returns milestones, open tasks and progress', async () => {
     const { projectId, packageId } = await trackingFixture()
     const c = await mcpClient()
-    ok(await c.callTool({ name: 'task_create', arguments: { actor: 'gojo', title: 'p-open', packageId } }))
-    ok(await c.callTool({ name: 'task_create', arguments: { actor: 'gojo', title: 'p-done', projectId, status: 'completed' } }))
+    ok(await c.callTool({ name: 'task_create', arguments: { ...INTAKE, actor: 'gojo', title: 'p-open', packageId } }))
+    ok(await c.callTool({ name: 'task_create', arguments: { ...INTAKE, actor: 'gojo', title: 'p-done', projectId, status: 'completed' } }))
     const out = ok(await c.callTool({ name: 'get_project_progress', arguments: { projectId } }))
     expect(out.project.id).toBe(projectId)
     expect(out.milestones).toHaveLength(2)
@@ -1668,7 +1676,7 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
     const created = ok(
       await c.callTool({
         name: 'task_create',
-        arguments: { actor: 'vegapunk', title: 'secret tracking', packageId, ownerBot: 'finn', ccqTaskId: 'T261102-001700', qa: { status: 'fail', commit: 'abc' } },
+        arguments: { ...INTAKE, actor: 'vegapunk', title: 'secret tracking', packageId, ownerBot: 'finn', ccqTaskId: 'T261102-001700', qa: { status: 'fail', commit: 'abc' } },
       }),
     )
     const id = created.task.id
@@ -1903,7 +1911,7 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
       ok(
         await c.callTool({
           name: 'task_create',
-          arguments: {
+          arguments: { ...INTAKE,
             actor: 'orca',
             title,
             projectId: pid,
