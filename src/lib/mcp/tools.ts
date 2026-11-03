@@ -642,7 +642,7 @@ export function registerOrcaclubTools(server: McpServer): void {
       description:
         'Create a work item on a package and/or project. Pass packageId to file it under a package; the project is ' +
         "taken from the package's linked project, or pass projectId. A task with a ccqTaskId is a tracked dev task: " +
-        'it can only be completed once qa.status is "pass" with qa.commit set. The returned task carries `url`, ' +
+        'it can only be completed once qa.status is "pass" with qa.commit or qa.reportLink set. The returned task carries `url`, ' +
         'a deep link to its admin page (use it in pings). Intake: a new task needs an ask, at ' +
         'least 1 deliverable and at least 1 checklist item (no maximum), passed as fields or as Ask:/Deliverables:/' +
         'Checklist: sections in the description (copied into the fields; "- [ ] [cm] item — proof: x" lines keep their ' +
@@ -674,7 +674,7 @@ export function registerOrcaclubTools(server: McpServer): void {
       description:
         'Change a task: status, owner, links, QA record. `id` may be the full id or a unique 8+ hex-char prefix. ' +
         'Only the fields you pass change; `qa` is merged into the ' +
-        'existing QA record. Completing a tracked task (one with a ccqTaskId) needs qa.status "pass" and qa.commit. ' +
+        'existing QA record. Completing a tracked task (one with a ccqTaskId) needs qa.status "pass" plus qa.commit or qa.reportLink. ' +
         'lead can change; deliverables/checklist/screens replace the whole list (to add, edit, drop or reorder single ' +
         'items use task_add_items). ask is locked once set; askUpdates and changes are append-only (task_add_items). ' +
         'Every edit bumps version and writes one changes line. Completing needs every non-dropped item done.',

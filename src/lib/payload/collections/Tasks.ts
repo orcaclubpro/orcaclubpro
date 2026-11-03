@@ -5,6 +5,7 @@ import { botContextField, guardBotContextWrite, stripBotContext } from '../field
 import { restoreStaffOnly, stripStaffOnly } from '../fields/staffOnlyFields'
 import { isValidActor } from '@/lib/mcp/actor'
 import { closeGateMissing } from '@/lib/tasks/structure'
+import { qaCompletionError } from '@/lib/tasks/qaGate'
 
 /**
  * Bot-tracking fields: internal, never shown to clients (stripped from non-staff
@@ -31,24 +32,10 @@ export const TASK_TRACKING_FIELDS = [
 
 const STAFF_ONLY = { read: staffOnlyField, create: staffOnlyField, update: staffOnlyField }
 
-/**
- * A tracked dev task (one with a `ccqTaskId`) can only be completed once QA has
- * passed it on a recorded commit. Ordinary portal tasks are unaffected.
- */
+/** Close gate: see src/lib/tasks/qaGate.ts (pass + qa.commit or qa.reportLink). */
 export const requireQaPassToComplete: CollectionBeforeChangeHook = ({ data, originalDoc }) => {
-  if (!data) return data
-  const merged = { ...(originalDoc ?? {}), ...data } as Record<string, any>
-  const completing = data.status === 'completed' && originalDoc?.status !== 'completed'
-  if (completing && merged.ccqTaskId) {
-    const qa = (merged.qa ?? {}) as { status?: string; commit?: string }
-    if (qa.status !== 'pass' || !qa.commit) {
-      throw new APIError(
-        `Task ${merged.ccqTaskId} cannot be completed: qa.status must be "pass" with qa.commit set ` +
-          `(got status "${qa.status ?? 'none'}", commit "${qa.commit ?? ''}").`,
-        400,
-      )
-    }
-  }
+  const err = qaCompletionError(data, originalDoc)
+  if (err) throw new APIError(err, 400)
   return data
 }
 
