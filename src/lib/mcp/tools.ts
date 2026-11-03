@@ -593,7 +593,8 @@ export function registerOrcaclubTools(server: McpServer): void {
       description:
         'Create a work item on a package and/or project. Pass packageId to file it under a package; the project is ' +
         "taken from the package's linked project, or pass projectId. A task with a ccqTaskId is a tracked dev task: " +
-        'it can only be completed once qa.status is "pass" with qa.commit set.',
+        'it can only be completed once qa.status is "pass" with qa.commit set. The returned task carries `url`, ' +
+        'a deep link to its admin page (use it in pings).',
       inputSchema: writeSchema({
         title: z.string().min(1),
         description: z.string().optional().describe('Plain text; one paragraph per line.'),
@@ -666,7 +667,7 @@ export function registerOrcaclubTools(server: McpServer): void {
         'e.g. ["orca","vegapunk"]), ccq id, and updatedSince / createdSince (ISO date-time, inclusive). Owner + ' +
         'status together is one call, e.g. { ownerBot: ["orca","vegapunk"], status: ["pending","in-progress"] }. ' +
         'sort: -updatedAt (default), -createdAt, createdAt (oldest first, for pollers) or dueDate. Rows include ' +
-        'createdAt and updatedAt. Paged: limit (default 25, max 100) and page; the envelope carries nextPage (null ' +
+        'createdAt, updatedAt and url (deep link to the task\'s admin page, for pings). Paged: limit (default 25, max 100) and page; the envelope carries nextPage (null ' +
         'on the last page).',
       inputSchema: z
         .object({
@@ -707,7 +708,7 @@ export function registerOrcaclubTools(server: McpServer): void {
       title: 'Get a task',
       description:
         'One task by id (full 24-hex id, or a unique prefix of 8+ hex chars like 6ae9184d; an ambiguous prefix ' +
-        'is an error listing the matches): the task_list row (status, owner, ccq id, QA record, createdAt, updatedAt) plus its ' +
+        'is an error listing the matches): the task_list row (status, owner, ccq id, QA record, createdAt, updatedAt, url) plus its ' +
         'internal botContext (brief, repo, branch, live URL, decisions, notes). Read-only.',
       inputSchema: z.object({ id: z.string().min(1) }).strict(),
     },

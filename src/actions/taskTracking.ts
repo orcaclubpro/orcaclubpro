@@ -19,6 +19,7 @@ import { getCurrentUser } from '@/actions/auth'
 import { computeProgress, type Progress } from '@/lib/tasks/progress'
 import { lexicalToPlainText, plainTextToLexical } from '@/lib/tasks/richText'
 import { claimFilter, claimKind, claimRefusal, claimUpdate, isTaskId } from '@/lib/tasks/claim'
+import { taskAdminUrl } from '@/lib/tasks/url'
 
 type TaskStatus = 'pending' | 'in-progress' | 'completed' | 'cancelled'
 type TaskPriority = 'low' | 'medium' | 'high' | 'urgent'
@@ -45,6 +46,7 @@ function taskRow(t: Record<string, any>) {
   const project = t.project && typeof t.project === 'object' ? t.project : null
   return {
     id: String(t.id),
+    url: taskAdminUrl(String(t.id)),
     title: t.title,
     description: lexicalToPlainText(t.description) || null,
     status: t.status,

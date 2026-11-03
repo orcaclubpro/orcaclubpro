@@ -1263,6 +1263,7 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
     )
     expect(byBoth.task.projectId).toBe(projectId)
     expect(byBoth.task.packageId).toBe(packageId)
+    expect(byBoth.task.url).toEndWith(`/admin/collections/tasks/${byBoth.task.id}`)
     const byProject = ok(await c.callTool({ name: 'task_create', arguments: { actor: 'orca', title: 'Happy project', projectId } }))
     expect(byProject.task.projectId).toBe(projectId)
   })
@@ -1516,6 +1517,7 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
     }
     const byPkg = ok(await c.callTool({ name: 'task_list', arguments: { packageId: a.packageId } }))
     expect(byPkg.items.map((t: any) => t.title).sort()).toEqual(['a1', 'a2'])
+    for (const t of byPkg.items) expect(t.url).toEndWith(`/admin/collections/tasks/${t.id}`)
     const byProject = ok(await c.callTool({ name: 'task_list', arguments: { projectId: b.projectId } }))
     expect(byProject.items.map((t: any) => t.title)).toEqual(['b1'])
     const byStatus = ok(
@@ -1575,6 +1577,7 @@ d('botContext lockdown + MCP write guard (local DB)', () => {
     const c = await mcpClient()
     const out = ok(await c.callTool({ name: 'task_get', arguments: { id: taskId } }))
     expect(out.task.id).toBe(taskId)
+    expect(out.task.url).toMatch(new RegExp(`^https?://[^/]+/admin/collections/tasks/${taskId}$`))
     expect(typeof out.task.createdAt).toBe('string')
     expect(out.task.botContext).toMatchObject({ brief: CTX.brief, repo: CTX.repo, ownerBot: 'vegapunk' })
     for (const id of ['6ae000000000000000000000', 'not-an-id']) {
