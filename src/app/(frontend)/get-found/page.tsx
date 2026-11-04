@@ -76,6 +76,12 @@ export default function GetFoundPage() {
             'Show up when customers ask ChatGPT, Perplexity, or Google AI Overviews. Structured data and content shaped for how models cite sources.',
           href: '/get-found/ai-search',
         },
+        {
+          title: 'AEO',
+          blurb:
+            'Answer engine optimization: pages written answer-first, with question-shaped sections and structured data, so search features and assistants can lift a clean answer.',
+          href: '/get-found/aeo',
+        },
       ]}
       faqs={[
         {

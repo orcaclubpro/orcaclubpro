@@ -72,6 +72,15 @@ export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   const url = pathname + request.nextUrl.search
 
+  // Case-variant URLs (e.g. /get-found/AEO) 308 to the lowercase canonical. Lives here, not in
+  // next.config redirects(), whose case-insensitive matching would loop on the canonical itself.
+  const lowerPath = pathname.toLowerCase()
+  if (lowerPath === '/get-found/aeo' && pathname !== lowerPath) {
+    const target = request.nextUrl.clone()
+    target.pathname = lowerPath
+    return NextResponse.redirect(target, 308)
+  }
+
   // Retired pages with no topical successor: honest 410 (see redirect-map.mjs —
   // next.config redirects() cannot emit 410, so these live here).
   if (GONE_PATHS.includes(pathname)) {

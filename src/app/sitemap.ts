@@ -38,6 +38,7 @@ const NEW_IA_ROUTES: Route[] = [
   { path: '/get-found/meta-ads', priority: 0.8, changeFrequency: 'monthly' },
   { path: '/get-found/local-visibility', priority: 0.8, changeFrequency: 'monthly' },
   { path: '/get-found/ai-search', priority: 0.8, changeFrequency: 'monthly' },
+  { path: '/get-found/aeo', priority: 0.7, changeFrequency: 'monthly' },
 
   // Decision + vertical + company
   { path: '/pricing', priority: 0.9, changeFrequency: 'monthly' },

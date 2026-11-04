@@ -39,7 +39,8 @@ export type SpokePageProps = {
   lastUpdated: string
   /** ISO date. Defaults to lastUpdated. */
   datePublished?: string
-  author: Author
+  /** Optional: omit to render no author block (Article JSON-LD then carries no author). */
+  author?: Author
   cta: CtaProps
 }
 
@@ -71,7 +72,7 @@ export function SpokePage({
       description: schema.description,
       datePublished: datePublished ?? lastUpdated,
       dateModified: lastUpdated,
-      authorName: author.name,
+      authorName: author?.name,
     }),
     breadcrumbSchema(breadcrumbs),
   ]
@@ -144,7 +145,7 @@ export function SpokePage({
                 </div>
               )}
 
-              <AuthorBio {...author} />
+              {author && <AuthorBio {...author} />}
             </div>
           </div>
         </div>

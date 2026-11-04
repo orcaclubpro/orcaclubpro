@@ -138,6 +138,7 @@ export const FOOTER_LINKS: FooterColumn[] = [
       { label: 'SEO', href: '/get-found/seo' },
       { label: 'Local Visibility', href: '/get-found/local-visibility' },
       { label: 'AI Search', href: '/get-found/ai-search' },
+      { label: 'AEO', href: '/get-found/aeo' },
       { label: 'Google Ads', href: '/get-found/google-ads' },
       { label: 'Meta Ads', href: '/get-found/meta-ads' },
     ],
