@@ -265,22 +265,48 @@ describe('Now block', () => {
     'result [cm]: email in #drafts',
   ].join('\n')
 
-  test('one line per lane from the newest lines; untagged = dev; " | " segments count', () => {
+  test('one line per lane from the newest lines; untagged = dev; a next: inside a left-off line does not win', () => {
     const now = nowBlock(desc, 'orcaclubpro · vp/task-structure')
     const dev = now.find((n) => n.lane === 'dev')!
     expect(dev).toMatchObject({
-      next: 'QA the branch',
-      waitingOn: 'shaka',
+      next: 'old untagged next',
+      waitingOn: 'orca',
       leftOff: 'tests green',
       leftOffAt: '12:30',
       where: 'orcaclubpro · vp/task-structure',
     })
     expect(dev.line).toBe(
-      'dev · next: shaka: QA the branch · where: orcaclubpro · vp/task-structure · waiting on: shaka · left off 12:30: tests green',
+      'dev · next: orca: old untagged next · where: orcaclubpro · vp/task-structure · waiting on: orca · left off 12:30: tests green',
     )
     const cm = now.find((n) => n.lane === 'cm')!
     expect(cm).toMatchObject({ next: 'draft the client email', waitingOn: 'gojo', last: 'email in #drafts' })
     expect(now).toHaveLength(2)
+  })
+
+  test('newest real next: is chance; a later left-off line naming shaka leaves waitingOn=chance', () => {
+    for (const leftOff of [
+      'left off [dev] 13:00: built | next [dev]: shaka: QA the branch',
+      'left off 13:00: built | next: shaka: QA the branch',
+    ]) {
+      const dev = nowBlock(['next [dev]: chance: pick a lane', leftOff].join('\n')).find((n) => n.lane === 'dev')!
+      expect(dev).toMatchObject({ waitingOn: 'chance', next: 'pick a lane', leftOff: 'built', leftOffAt: '13:00' })
+    }
+  })
+
+  test('a left-off next: sets nothing: no waitingOn, no lane of its own', () => {
+    const now = nowBlock('left off [dev] 13:00: built | next [cm]: shaka: QA the branch')
+    expect(now.map((n) => n.lane)).toEqual(['dev'])
+    expect(now[0]).toMatchObject({ waitingOn: null, next: null, leftOff: 'built' })
+  })
+
+  test('a next: inside a backtick-quoted left-off line does not win either', () => {
+    const now = nowBlock('next: chance: decide\n    `left off [dev] 12:30: tests green | next [dev]: shaka: QA the branch`')
+    expect(now[0]).toMatchObject({ waitingOn: 'chance', next: 'decide' })
+  })
+
+  test('a real next: after a left-off line still wins; a left-off result: segment still counts', () => {
+    const now = nowBlock('left off 13:00: built | result: shipped\nnext: shaka: QA the branch')
+    expect(now[0]).toMatchObject({ waitingOn: 'shaka', next: 'QA the branch', leftOff: 'built', last: 'shipped' })
   })
 
   test('owner slice: a lane or a bot gets its Now lines and open items', () => {
@@ -298,6 +324,8 @@ describe('Now block', () => {
     expect(dev.open.map((i) => i.line)).toEqual(['- [ ] [dev] build'])
     // a bot sees lanes waiting on it
     expect(ownerSlice(t, desc, 'gojo').now.map((n) => n.lane)).toEqual(['cm'])
-    expect(ownerSlice(t, desc, 'shaka').now.map((n) => n.lane)).toEqual(['dev'])
+    expect(ownerSlice(t, desc, 'orca').now.map((n) => n.lane)).toEqual(['dev'])
+    // named only inside a left-off line, so nothing waits on shaka
+    expect(ownerSlice(t, desc, 'shaka').now).toEqual([])
   })
 })

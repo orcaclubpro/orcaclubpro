@@ -584,17 +584,25 @@ export type NowLine = {
 
 const NOW_KINDS = /^[ \t>*-]*(next|left off|result)[ \t]*(?:\[([\w.-]+)\])?[ \t]*((?:\d{1,2}:\d{2}(?::\d{2})?|[^:\n])*?):[ \t]*(.*)$/i
 
+/** Wider than NOW_KINDS on purpose: a left-off line quoted in backticks still counts as one. */
+const LEFT_OFF_SEGMENT = /^[ \t>*`-]*left off\b/i
+
 /**
  * One line per lane from the newest lane-tagged lines (description is append-only,
  * so the last occurrence wins). Lines and ' | ' segments both count; untagged = dev.
+ * A left-off line is context only: a `next:` segment after `left off` on the same
+ * line is ignored, so next / waitingOn come only from real `next:` lines.
  */
 export function nowBlock(description: string | null | undefined, where: string | null = null): NowLine[] {
   const lanes = new Map<string, Omit<NowLine, 'line'>>()
   for (const raw of (description ?? '').split(/\r?\n/)) {
+    let onLeftOffLine = false
     for (const seg of raw.split(/[ \t]+\|[ \t]+/)) {
+      onLeftOffLine ||= LEFT_OFF_SEGMENT.test(seg)
       const m = NOW_KINDS.exec(seg)
       if (!m) continue
       const kind = m[1].toLowerCase()
+      if (kind === 'next' && onLeftOffLine) continue
       const lane = (m[2] || 'dev').toLowerCase()
       const between = m[3].trim()
       const body = m[4].trim()
