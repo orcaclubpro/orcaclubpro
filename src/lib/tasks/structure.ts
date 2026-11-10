@@ -582,7 +582,7 @@ export type NowLine = {
   line: string
 }
 
-const NOW_KINDS = /^[ \t>*-]*(next|left off|result)[ \t]*(?:\[([\w.-]+)\])?[ \t]*((?:\d{1,2}:\d{2}(?::\d{2})?|[^:\n])*?):[ \t]*(.*)$/i
+export const NOW_KINDS = /^[ \t>*-]*(next|left off|result)[ \t]*(?:\[([\w.-]+)\])?[ \t]*((?:\d{1,2}:\d{2}(?::\d{2})?|[^:\n])*?):[ \t]*(.*)$/i
 
 /** Wider than NOW_KINDS on purpose: a left-off line quoted in backticks still counts as one. */
 const LEFT_OFF_SEGMENT = /^[ \t>*`-]*left off\b/i

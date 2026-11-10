@@ -21,6 +21,16 @@ import { lexicalToPlainText, plainTextToLexical } from '@/lib/tasks/richText'
 import { claimFilter, claimKind, claimRefusal, claimUpdate, isTaskId } from '@/lib/tasks/claim'
 import { taskAdminUrl } from '@/lib/tasks/url'
 import {
+  cardsEnabled,
+  findCard,
+  findCardsByTask,
+  findTaskEvents,
+  recordCard,
+  recordDescriptionEvents,
+  recordNoteEvents,
+  type TaskRefs,
+} from '@/lib/cards/db'
+import {
   ARRAY_OF,
   buildAddItems,
   buildItem,
@@ -61,6 +71,13 @@ const idOf = (v: unknown): string | null =>
   v == null ? null : typeof v === 'object' ? (((v as { id?: unknown }).id as string | undefined) ?? null) : String(v)
 
 const errorMessage = (e: unknown) => (e instanceof Error ? e.message : 'Unexpected error')
+
+/** Plain ids for the cards DB, from a task loaded at depth 1. */
+const taskRefs = (t: Record<string, any>): TaskRefs => ({
+  taskId: String(t.id),
+  projectId: idOf(t.project),
+  clientAccountId: t.project && typeof t.project === 'object' ? idOf(t.project.client) : null,
+})
 
 async function staffCaller() {
   const user = await getCurrentUser()
@@ -321,6 +338,7 @@ export async function createTrackedTask(input: {
       user,
       overrideAccess: false,
     })
+    await recordCard({ ...taskRefs(task as Record<string, any>), description: input.description })
     return { success: true, task: taskRow(task as Record<string, any>) }
   } catch (e) {
     return fail(errorMessage(e))
@@ -489,6 +507,14 @@ export async function updateTrackedTask(input: {
       user,
       overrideAccess: false,
     })
+    if (input.description !== undefined) {
+      await recordDescriptionEvents({
+        ...taskRefs(task as Record<string, any>),
+        before: current.description,
+        after: input.description,
+        actor: input.actor,
+      })
+    }
     return { success: true, task: taskRow(task as Record<string, any>) }
   } catch (e) {
     return fail(errorMessage(e))
@@ -646,6 +672,13 @@ export async function addTaskItems(
       if (toAdd?.[key].length) added[key] = toAdd[key].map((r) => r.id)
     }
     const task = await payload.findByID({ collection: 'tasks', id, depth: 1, user, overrideAccess: false })
+    if (toAdd) {
+      await recordNoteEvents({
+        ...taskRefs(task as Record<string, any>),
+        rows: [...toAdd.askUpdates, ...toAdd.changes],
+        actor: input.actor,
+      })
+    }
     return {
       success: true,
       added,
@@ -656,6 +689,65 @@ export async function addTaskItems(
     }
   } catch (e) {
     return fail(e instanceof StructureError ? e.message : errorMessage(e))
+  }
+}
+
+// ── Cards DB reads ────────────────────────────────────────────────────────────
+
+const CARDS_OFF = { enabled: false, note: 'Cards database is off (CARDS_DATABASE_URI is not set).' }
+const CARDS_DOWN = 'Cards database is unavailable; task data is unaffected. Try again.'
+
+/** The task's full id if the caller can see it (same rule as task_get), else an error message. */
+async function visibleTaskId(
+  user: NonNullable<Awaited<ReturnType<typeof staffCaller>>>,
+  raw: string,
+): Promise<{ id: string } | { error: string }> {
+  const payload = await getPayload({ config })
+  const resolved = await resolveTaskId(payload, user, raw)
+  if ('error' in resolved) return resolved
+  const task = await payload
+    .findByID({ collection: 'tasks', id: resolved.id, depth: 0, user, overrideAccess: false, disableErrors: true })
+    .catch(() => null)
+  return task ? resolved : { error: `Task ${raw} not found (it does not exist or you cannot access it)` }
+}
+
+export async function getCard(input: { slug: string; version?: number }) {
+  const user = await staffCaller()
+  if (!user) return fail('Unauthorized')
+  if (!cardsEnabled()) return { success: true as const, ...CARDS_OFF, card: null }
+  try {
+    const card = await findCard(input.slug, input.version)
+    if (!card) return { success: true as const, enabled: true, card: null }
+    const visible = await visibleTaskId(user, String(card.taskId))
+    return { success: true as const, enabled: true, card: 'error' in visible ? null : card }
+  } catch {
+    return fail(CARDS_DOWN)
+  }
+}
+
+export async function listCards(input: { taskId: string }) {
+  const user = await staffCaller()
+  if (!user) return fail('Unauthorized')
+  if (!cardsEnabled()) return { success: true as const, ...CARDS_OFF, cards: [] }
+  const visible = await visibleTaskId(user, input.taskId)
+  if ('error' in visible) return fail(visible.error)
+  try {
+    return { success: true as const, enabled: true, cards: await findCardsByTask(visible.id) }
+  } catch {
+    return fail(CARDS_DOWN)
+  }
+}
+
+export async function listTaskEvents(input: { taskId: string; limit?: number }) {
+  const user = await staffCaller()
+  if (!user) return fail('Unauthorized')
+  if (!cardsEnabled()) return { success: true as const, ...CARDS_OFF, events: [] }
+  const visible = await visibleTaskId(user, input.taskId)
+  if ('error' in visible) return fail(visible.error)
+  try {
+    return { success: true as const, enabled: true, events: await findTaskEvents(visible.id, input.limit ?? 100) }
+  } catch {
+    return fail(CARDS_DOWN)
   }
 }
 

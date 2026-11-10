@@ -57,6 +57,9 @@ import {
   listProjects,
   getPackageOverview,
   getProjectProgress,
+  getCard,
+  listCards,
+  listTaskEvents,
 } from '@/actions/taskTracking'
 import { getClientStatus } from '@/actions/clientStatus'
 import type { SowFormData } from '@/lib/document-generators'
@@ -850,6 +853,50 @@ export function registerOrcaclubTools(server: McpServer): void {
         .strict(),
     },
     async ({ id, owner }) => run(() => getTrackedTask(id, owner)),
+  )
+
+  // Cards DB (CARDS_DATABASE_URI). Unset: { enabled: false } and empty results, not an error.
+  server.registerTool(
+    'card_get',
+    {
+      title: 'Get a request card',
+      description:
+        'One request card by slug (newest version unless version is passed): Discord message and thread ids, prompt ' +
+        'sha and text, status, approvals, and its task, project and client ids. Returns enabled: false when the cards ' +
+        'database is off. Read-only.',
+      inputSchema: z.object({ slug: z.string().min(1).max(200), version: z.number().int().min(1).optional() }).strict(),
+    },
+    async (input) => run(() => getCard(input)),
+  )
+
+  server.registerTool(
+    'card_list',
+    {
+      title: 'List request cards for a task',
+      description:
+        "A task's request cards, newest version first. taskId is the full id or a unique 8+ hex-char prefix. Returns " +
+        'enabled: false when the cards database is off. Read-only.',
+      inputSchema: z.object({ taskId: z.string().min(1) }).strict(),
+    },
+    async (input) => run(() => listCards(input)),
+  )
+
+  server.registerTool(
+    'task_events',
+    {
+      title: 'List task progress events',
+      description:
+        "A task's append-only progress log, newest first: one row per next / left-off / result / decision line, with " +
+        'kind, text, actor, at and plain project and client ids. taskId is the full id or a unique 8+ hex-char prefix. ' +
+        'Returns enabled: false when the cards database is off. Read-only.',
+      inputSchema: z
+        .object({
+          taskId: z.string().min(1),
+          limit: z.number().int().min(1).max(500).optional().describe('Rows returned (default 100).'),
+        })
+        .strict(),
+    },
+    async (input) => run(() => listTaskEvents(input)),
   )
 
   server.registerTool(
