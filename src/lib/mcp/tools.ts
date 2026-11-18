@@ -62,6 +62,7 @@ import {
   listTaskEvents,
 } from '@/actions/taskTracking'
 import { getClientStatus } from '@/actions/clientStatus'
+import { readOpsView, type OpsViewResult } from '@/actions/opsViews'
 import type { SowFormData } from '@/lib/document-generators'
 import { ACTOR, normalizeActor } from '@/lib/mcp/actor'
 import { checkWriteInput, milestoneRef, prepareSowSave } from '@/lib/mcp/writeGuard'
@@ -879,6 +880,64 @@ export function registerOrcaclubTools(server: McpServer): void {
       inputSchema: z.object({ taskId: z.string().min(1) }).strict(),
     },
     async (input) => run(() => listCards(input)),
+  )
+
+  // Carbonara read views (orcaclub-ops-mcp v3 stage 1a): Fedora's views, mirrored read-only. The text is returned
+  // exactly as Fedora published it (no re-encoding), so it matches the Fedora MCP byte for byte.
+  const opsView = async (fn: () => Promise<OpsViewResult>): Promise<ToolResult> => {
+    try {
+      const r = await fn()
+      return r.ok ? { content: [{ type: 'text', text: r.text }] } : text({ error: r.error }, true)
+    } catch (error) {
+      return text({ error: error instanceof Error ? error.message : 'Unexpected error' }, true)
+    }
+  }
+
+  server.registerTool(
+    'ops_my_queue',
+    {
+      title: "A bot's Carbonara queue (Fedora mirror)",
+      description:
+        "Cards whose next step is this bot's, what each waits on {person, reason, since} and stale flags; Marin " +
+        "(sia) also gets research delivery state (QA sha, ✅, Drive, go-live, cleanup, cancelled / ✅'d-never-" +
+        'uploaded flags). Mirrored read-only from Fedora; no finance data. Read-only.',
+      inputSchema: z.object({ bot: z.string().min(1).max(32) }).strict(),
+    },
+    async ({ bot }) => opsView(() => readOpsView('my_queue', bot)),
+  )
+
+  server.registerTool(
+    'ops_card_get',
+    {
+      title: 'A Carbonara card (Fedora mirror)',
+      description:
+        "One card's fields plus the last 10 events of its event log (24-hex id or 8+ hex prefix). Mirrored " +
+        'read-only from Fedora; no finance data. Read-only.',
+      inputSchema: z.object({ card: z.string().min(8).max(24) }).strict(),
+    },
+    async ({ card }) => opsView(() => readOpsView('card_get', card)),
+  )
+
+  server.registerTool(
+    'ops_waiting_on_chance',
+    {
+      title: 'Cards waiting on Chance (Fedora mirror)',
+      description: 'Every card waiting on Chance, grouped by client, oldest first. Mirrored read-only from Fedora.',
+      inputSchema: z.object({}).strict(),
+    },
+    async () => opsView(() => readOpsView('waiting_on_chance')),
+  )
+
+  server.registerTool(
+    'ops_machine_busy',
+    {
+      title: 'What Fedora is running (Fedora mirror)',
+      description:
+        'claude-run jobs (heartbeats + processes), armed cards (PASS waiting on ✅) and merging/pushing cards, as of ' +
+        "Fedora's last publish. Mirrored read-only.",
+      inputSchema: z.object({}).strict(),
+    },
+    async () => opsView(() => readOpsView('machine_busy')),
   )
 
   server.registerTool(

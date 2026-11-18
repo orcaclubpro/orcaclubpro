@@ -175,6 +175,11 @@ reading a cycle, writing prose, saving, and moving to the next client is a termi
 | Packages & SOW | `list_packages`, `create_package`, `get_sow_draft`, `save_sow` |
 | Milestones | `create_milestone`, `update_milestone`, `toggle_milestone` |
 | Context | `list_clients`, `get_retainer_portfolio`, `get_retainer_summary` |
+| Carbonara views (read-only Fedora mirror) | `ops_my_queue`, `ops_card_get`, `ops_waiting_on_chance`, `ops_machine_busy` |
+
+The `ops_*` tools return the text Fedora published to `POST /api/ops-views` (staff auth + `actor: "orca"`;
+stored in the optional cards database, `CARDS_DATABASE_URI`), unchanged. They have no write side and carry no
+finance data. They go away when the Carbonara MCP moves to Coolify.
 
 Recap drafts store **narrative only**. Every number — hours used, items shipped, per-bucket
 hours, plan terms — is re-derived from the cycle when read, so a draft can never carry a wrong

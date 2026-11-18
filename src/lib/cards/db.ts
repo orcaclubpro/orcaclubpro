@@ -184,3 +184,45 @@ export function findTaskEvents(taskId: string, limit: number) {
     getDb().then((db) => db.collection('task_events').find({ taskId }, NO_ID).sort({ at: -1 }).limit(limit).toArray()),
   )
 }
+
+// ── Carbonara read-view mirror (src/lib/cards/opsViews.ts) ────────────────────
+
+/**
+ * Replaces the stored view snapshots with one publish (one row per view + key). Throws on failure: the publish
+ * route reports it to Fedora, which retries on its next run. Rows a publish no longer carries (a closed card)
+ * are dropped, so the mirror never serves a view Fedora stopped computing.
+ */
+export function storeOpsViews(snaps: Array<{ view: string; key: string; text: string; sha256: string }>) {
+  return withBudget(
+    getDb().then(async (db) => {
+      const col = db.collection('ops_views')
+      const at = new Date()
+      await col.createIndex({ view: 1, key: 1 }, { unique: true })
+      await col.bulkWrite(
+        snaps.map((s) => ({
+          updateOne: {
+            filter: { view: s.view, key: s.key },
+            update: { $set: { text: s.text, sha256: s.sha256, publishedAt: at } },
+            upsert: true,
+          },
+        })),
+        { ordered: false },
+      )
+      await col.deleteMany({ publishedAt: { $lt: at } })
+      return snaps.length
+    }),
+  )
+}
+
+/** Stored snapshots of one view (key + text), for pickSnapshot. */
+export function findOpsViews(view: string) {
+  return withBudget(
+    getDb().then((db) =>
+      db
+        .collection('ops_views')
+        .find({ view }, { projection: { _id: 0, key: 1, text: 1, publishedAt: 1 } })
+        .limit(2000)
+        .toArray(),
+    ),
+  )
+}
