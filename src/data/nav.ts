@@ -108,6 +108,11 @@ export const NAV_ITEMS: NavItem[] = [
         href: '/get-found/meta-ads',
         description: 'Instagram and Facebook demand generation.',
       },
+      {
+        label: 'AI Integration',
+        href: '/get-found/ai-integration',
+        description: 'AI built into how your business runs.',
+      },
     ],
   },
   { label: 'Pricing', href: '/pricing' },
@@ -141,6 +146,7 @@ export const FOOTER_LINKS: FooterColumn[] = [
       { label: 'AEO', href: '/get-found/aeo' },
       { label: 'Google Ads', href: '/get-found/google-ads' },
       { label: 'Meta Ads', href: '/get-found/meta-ads' },
+      { label: 'AI Integration', href: '/get-found/ai-integration' },
     ],
   },
   {

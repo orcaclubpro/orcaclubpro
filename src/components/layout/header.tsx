@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation"
 import {
   X, ArrowRight, Clock, Code2, Server, Search, Sparkles, MapPin,
   TrendingUp, Megaphone, Rocket, ShoppingBag, Target, User,
-  LogOut, LayoutDashboard, ChevronDown,
+  LogOut, LayoutDashboard, ChevronDown, Cpu,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { logoutAction } from "@/actions/auth"
@@ -30,6 +30,7 @@ const ICONS: Record<string, LucideIcon> = {
   '/get-found/ai-search': Sparkles,
   '/get-found/google-ads': Target,
   '/get-found/meta-ads': Megaphone,
+  '/get-found/ai-integration': Cpu,
 }
 
 const HUBS = NAV_ITEMS.filter((item) => item.children?.length)

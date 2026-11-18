@@ -82,6 +82,12 @@ export default function GetFoundPage() {
             'Answer engine optimization: pages written answer-first, with question-shaped sections and structured data, so search features and assistants can lift a clean answer.',
           href: '/get-found/aeo',
         },
+        {
+          title: 'AI Integration',
+          blurb:
+            'AI built into how your business runs: automating repetitive work, drafting content and assets, supporting decisions, and running assessments.',
+          href: '/get-found/ai-integration',
+        },
       ]}
       faqs={[
         {
